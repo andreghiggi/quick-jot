@@ -2,7 +2,7 @@ import { Order, OrderStatus } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Phone, MapPin, ChevronRight, Trash2 } from 'lucide-react';
-import { useOrderStore } from '@/stores/orderStore';
+import { useOrderContext } from '@/contexts/OrderContext';
 import { cn } from '@/lib/utils';
 
 interface OrderCardProps {
@@ -39,15 +39,19 @@ const nextStatusLabel: Record<OrderStatus, string> = {
 };
 
 export function OrderCard({ order }: OrderCardProps) {
-  const { updateOrderStatus, deleteOrder } = useOrderStore();
+  const { updateOrderStatus, deleteOrder } = useOrderContext();
   const config = statusConfig[order.status];
   const createdAt = new Date(order.createdAt);
   const timeAgo = formatTimeAgo(createdAt);
 
-  function handleAdvanceStatus() {
+  async function handleAdvanceStatus() {
     if (config.next) {
-      updateOrderStatus(order.id, config.next);
+      await updateOrderStatus(order.id, config.next);
     }
+  }
+
+  async function handleDelete() {
+    await deleteOrder(order.id);
   }
 
   return (
@@ -112,7 +116,7 @@ export function OrderCard({ order }: OrderCardProps) {
             variant="ghost"
             size="icon"
             className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => deleteOrder(order.id)}
+            onClick={handleDelete}
           >
             <Trash2 className="w-4 h-4" />
           </Button>

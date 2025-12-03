@@ -3,17 +3,25 @@ import { Button } from '@/components/ui/button';
 import { StatsCard } from '@/components/StatsCard';
 import { OrderTabs } from '@/components/OrderTabs';
 import { NewOrderDialog } from '@/components/NewOrderDialog';
-import { useOrderStore } from '@/stores/orderStore';
-import { Plus, ShoppingBag, Clock, DollarSign, TrendingUp } from 'lucide-react';
+import { useOrderContext } from '@/contexts/OrderContext';
+import { Plus, ShoppingBag, Clock, DollarSign, TrendingUp, Loader2 } from 'lucide-react';
 
 const Index = () => {
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
-  const { orders, getTodayOrders, getTodayRevenue, getOrdersByStatus } = useOrderStore();
+  const { orders, loading, getTodayOrders, getTodayRevenue, getOrdersByStatus } = useOrderContext();
   
   const todayOrders = getTodayOrders();
   const todayRevenue = getTodayRevenue();
   const pendingOrders = getOrdersByStatus('pending');
   const preparingOrders = getOrdersByStatus('preparing');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
