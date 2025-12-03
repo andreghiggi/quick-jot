@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrderCard } from './OrderCard';
-import { useOrderStore } from '@/stores/orderStore';
+import { useOrderContext } from '@/contexts/OrderContext';
 import { OrderStatus } from '@/types/order';
 import { cn } from '@/lib/utils';
 import { ClipboardList, ChefHat, PackageCheck, Truck } from 'lucide-react';
@@ -14,7 +14,7 @@ const tabs: { value: OrderStatus | 'all'; label: string; icon: React.ElementType
 ];
 
 export function OrderTabs() {
-  const { orders, getOrdersByStatus } = useOrderStore();
+  const { orders, getOrdersByStatus } = useOrderContext();
 
   function getOrders(filter: OrderStatus | 'all') {
     if (filter === 'all') return orders;

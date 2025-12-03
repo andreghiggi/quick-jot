@@ -6,9 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { defaultProducts, categories } from '@/data/products';
-import { useOrderStore } from '@/stores/orderStore';
-import { Order, OrderItem, Product } from '@/types/order';
-import { Plus, Minus, ShoppingBag, X } from 'lucide-react';
+import { useOrderContext } from '@/contexts/OrderContext';
+import { OrderItem, Product } from '@/types/order';
+import { Plus, Minus, ShoppingBag, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -22,13 +22,14 @@ interface CartItem extends Product {
 }
 
 export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
-  const { addOrder } = useOrderStore();
+  const { addOrder } = useOrderContext();
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -60,7 +61,7 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
     return cart.find((item) => item.id === productId)?.quantity || 0;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!customerName.trim()) {
       toast.error('Informe o nome do cliente');
       return;
@@ -70,6 +71,8 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
       return;
     }
 
+    setIsSubmitting(true);
+
     const orderItems: OrderItem[] = cart.map((item) => ({
       id: crypto.randomUUID(),
       productId: item.id,
@@ -78,8 +81,7 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
       price: item.price,
     }));
 
-    const order: Order = {
-      id: crypto.randomUUID(),
+    const success = await addOrder({
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim() || undefined,
       deliveryAddress: deliveryAddress.trim() || undefined,
@@ -87,13 +89,15 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
       items: orderItems,
       total,
       status: 'pending',
-      createdAt: new Date(),
-    };
+    });
 
-    addOrder(order);
-    toast.success('Pedido criado com sucesso!');
-    resetForm();
-    onOpenChange(false);
+    setIsSubmitting(false);
+
+    if (success) {
+      toast.success('Pedido criado com sucesso!');
+      resetForm();
+      onOpenChange(false);
+    }
   }
 
   function resetForm() {
@@ -263,8 +267,15 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
           <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button className="flex-1" onClick={handleSubmit}>
-            Criar Pedido
+          <Button className="flex-1" onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Criando...
+              </>
+            ) : (
+              'Criar Pedido'
+            )}
           </Button>
         </div>
       </DialogContent>
