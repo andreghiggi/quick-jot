@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { StatsCard } from '@/components/StatsCard';
 import { OrderTabs } from '@/components/OrderTabs';
 import { NewOrderDialog } from '@/components/NewOrderDialog';
 import { useOrderContext } from '@/contexts/OrderContext';
-import { Plus, ShoppingBag, Clock, DollarSign, TrendingUp, Loader2 } from 'lucide-react';
+import { Plus, ShoppingBag, Clock, DollarSign, TrendingUp, Loader2, Package } from 'lucide-react';
 
 const Index = () => {
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
@@ -38,10 +39,18 @@ const Index = () => {
                 <p className="text-xs text-muted-foreground">Gestão de Pedidos</p>
               </div>
             </div>
-            <Button onClick={() => setIsNewOrderOpen(true)} className="gap-2">
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Novo Pedido</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link to="/produtos">
+                <Button variant="outline" className="gap-2">
+                  <Package className="w-4 h-4" />
+                  <span className="hidden sm:inline">Produtos</span>
+                </Button>
+              </Link>
+              <Button onClick={() => setIsNewOrderOpen(true)} className="gap-2">
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Novo Pedido</span>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
