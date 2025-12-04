@@ -98,6 +98,44 @@ export type Database = {
         }
         Relationships: []
       }
+      product_optionals: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          price: number
+          product_id: string
+          type: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          price?: number
+          product_id: string
+          type: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          price?: number
+          product_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_optionals_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           active: boolean
