@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { Product, ProductOptional } from '@/types/product';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, ArrowLeft, Package, Link as LinkIcon, Settings } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Package, Link as LinkIcon, Settings, Upload, Image } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const defaultCategories = ['Lanches', 'Bebidas', 'Porções', 'Sobremesas'];
 const STORE_PHONE_KEY = 'anotaai_store_phone';
@@ -22,9 +23,11 @@ export default function Products() {
   const [isOptionalDialogOpen, setIsOptionalDialogOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: 'Lanches', description: '', active: true });
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: 'Lanches', description: '', active: true, imageUrl: '' });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
   const [storePhone, setStorePhone] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const menuLink = `${window.location.origin}/cardapio`;
 
@@ -39,6 +42,41 @@ export default function Products() {
     setIsSettingsOpen(false);
   }
 
+  async function uploadImage(file: File): Promise<string | null> {
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const { error } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file);
+      
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+      
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Erro ao enviar imagem');
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const imageUrl = await uploadImage(file);
+    if (imageUrl) {
+      setNewProduct({ ...newProduct, imageUrl });
+    }
+  }
+
   async function handleAddProduct() {
     if (!newProduct.name || !newProduct.price) {
       toast.error('Preencha nome e preço');
@@ -49,9 +87,10 @@ export default function Products() {
       price: parseFloat(newProduct.price),
       category: newProduct.category,
       description: newProduct.description || undefined,
+      imageUrl: newProduct.imageUrl || undefined,
       active: newProduct.active,
     });
-    setNewProduct({ name: '', price: '', category: 'Lanches', description: '', active: true });
+    setNewProduct({ name: '', price: '', category: 'Lanches', description: '', active: true, imageUrl: '' });
     setIsProductDialogOpen(false);
   }
 
@@ -166,6 +205,50 @@ export default function Products() {
                         placeholder="Descrição do produto"
                       />
                     </div>
+                    <div>
+                      <Label>Foto do produto</Label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        ref={fileInputRef}
+                        onChange={handleImageSelect}
+                        className="hidden"
+                      />
+                      {newProduct.imageUrl ? (
+                        <div className="relative mt-2">
+                          <img
+                            src={newProduct.imageUrl}
+                            alt="Preview"
+                            className="w-full h-32 object-cover rounded"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6"
+                            onClick={() => setNewProduct({ ...newProduct, imageUrl: '' })}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full mt-2"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploading}
+                        >
+                          {isUploading ? (
+                            'Enviando...'
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Selecionar imagem
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       <Switch
                         checked={newProduct.active}
@@ -201,8 +284,15 @@ export default function Products() {
               {categoryProducts.map((product) => (
                 <Card key={product.id} className={!product.active ? 'opacity-50' : ''}>
                   <CardContent className="py-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
+                    <div className="flex items-start gap-4">
+                      {product.imageUrl && (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-16 h-16 object-cover rounded flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium">{product.name}</h3>
                           {!product.active && <Badge variant="secondary">Inativo</Badge>}
