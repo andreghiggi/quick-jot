@@ -169,8 +169,15 @@ export default function Menu() {
                   onClick={() => setSelectedProduct(product)}
                 >
                   <CardContent className="py-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
+                    <div className="flex items-start gap-4">
+                      {product.imageUrl && (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-16 h-16 object-cover rounded flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
                         <h3 className="font-medium">{product.name}</h3>
                         {product.description && (
                           <p className="text-sm text-muted-foreground">{product.description}</p>
@@ -181,7 +188,7 @@ export default function Menu() {
                           </p>
                         )}
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0">
                         <p className="text-primary font-semibold">
                           R$ {product.price.toFixed(2)}
                         </p>
@@ -214,6 +221,13 @@ export default function Menu() {
           </DialogHeader>
           {selectedProduct && (
             <div className="space-y-4">
+              {selectedProduct.imageUrl && (
+                <img
+                  src={selectedProduct.imageUrl}
+                  alt={selectedProduct.name}
+                  className="w-full h-40 object-cover rounded"
+                />
+              )}
               {selectedProduct.description && (
                 <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>
               )}

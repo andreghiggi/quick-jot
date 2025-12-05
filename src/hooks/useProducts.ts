@@ -28,6 +28,7 @@ export function useProducts() {
         price: Number(product.price),
         category: product.category,
         description: product.description || undefined,
+        imageUrl: product.image_url || undefined,
         active: product.active,
         optionals: (optionalsData || [])
           .filter((opt) => opt.product_id === product.id)
@@ -63,6 +64,7 @@ export function useProducts() {
           price: productData.price,
           category: productData.category,
           description: productData.description || null,
+          image_url: productData.imageUrl || null,
           active: productData.active,
         })
         .select()
@@ -89,6 +91,7 @@ export function useProducts() {
           price: productData.price,
           category: productData.category,
           description: productData.description || null,
+          image_url: productData.imageUrl,
           active: productData.active,
         })
         .eq('id', id);
