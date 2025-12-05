@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, ArrowLeft, Package, Link as LinkIcon, Settings, Upload, Image } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Package, Link as LinkIcon, Settings, Upload, Image, Pencil } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,11 +23,13 @@ export default function Products() {
   const [isOptionalDialogOpen, setIsOptionalDialogOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState({ name: '', price: '', category: 'Lanches', description: '', active: true, imageUrl: '' });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
   const [storePhone, setStorePhone] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const menuLink = `${window.location.origin}/cardapio`;
 
@@ -108,6 +110,37 @@ export default function Products() {
     });
     setNewOptional({ name: '', price: '', type: 'extra' });
     setIsOptionalDialogOpen(false);
+  }
+
+  function openEditDialog(product: Product) {
+    setEditingProduct(product);
+  }
+
+  async function handleEditImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !editingProduct) return;
+    
+    const imageUrl = await uploadImage(file);
+    if (imageUrl) {
+      setEditingProduct({ ...editingProduct, imageUrl });
+    }
+  }
+
+  async function handleUpdateProduct() {
+    if (!editingProduct) return;
+    if (!editingProduct.name || !editingProduct.price) {
+      toast.error('Preencha nome e preço');
+      return;
+    }
+    await updateProduct(editingProduct.id, {
+      name: editingProduct.name,
+      price: editingProduct.price,
+      category: editingProduct.category,
+      description: editingProduct.description,
+      imageUrl: editingProduct.imageUrl,
+      active: editingProduct.active,
+    });
+    setEditingProduct(null);
   }
 
   function copyMenuLink() {
@@ -337,6 +370,13 @@ export default function Products() {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => openEditDialog(product)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => updateProduct(product.id, { active: !product.active })}
                         >
                           {product.active ? 'Desativar' : 'Ativar'}
@@ -431,6 +471,110 @@ export default function Products() {
             </div>
             <Button onClick={saveStorePhone} className="w-full">Salvar</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Produto</DialogTitle>
+          </DialogHeader>
+          {editingProduct && (
+            <div className="space-y-4">
+              <div>
+                <Label>Nome</Label>
+                <Input
+                  value={editingProduct.name}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                  placeholder="Nome do produto"
+                />
+              </div>
+              <div>
+                <Label>Preço (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editingProduct.price}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, price: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <Label>Categoria</Label>
+                <Select value={editingProduct.category} onValueChange={(v) => setEditingProduct({ ...editingProduct, category: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {defaultCategories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Descrição (opcional)</Label>
+                <Input
+                  value={editingProduct.description || ''}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                  placeholder="Descrição do produto"
+                />
+              </div>
+              <div>
+                <Label>Foto do produto</Label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={editFileInputRef}
+                  onChange={handleEditImageSelect}
+                  className="hidden"
+                />
+                {editingProduct.imageUrl ? (
+                  <div className="relative mt-2">
+                    <img
+                      src={editingProduct.imageUrl}
+                      alt="Preview"
+                      className="w-full h-32 object-cover rounded"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6"
+                      onClick={() => setEditingProduct({ ...editingProduct, imageUrl: undefined })}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full mt-2"
+                    onClick={() => editFileInputRef.current?.click()}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      'Enviando...'
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Selecionar imagem
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={editingProduct.active}
+                  onCheckedChange={(v) => setEditingProduct({ ...editingProduct, active: v })}
+                />
+                <Label>Ativo</Label>
+              </div>
+              <Button onClick={handleUpdateProduct} className="w-full">Salvar alterações</Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
