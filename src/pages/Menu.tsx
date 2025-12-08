@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ShoppingCart, Plus, Minus, Trash2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -24,11 +25,20 @@ export default function Menu() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryCity, setDeliveryCity] = useState('');
+  const [deliveryState, setDeliveryState] = useState('');
   const [storePhone, setStorePhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
 
+  const brazilianStates = [
+    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
+    'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
+    'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+  ];
+
   useEffect(() => {
-    const savedPhone = localStorage.getItem(STORE_PHONE_KEY);
+    // Check both keys for backward compatibility
+    const savedPhone = localStorage.getItem(STORE_PHONE_KEY) || localStorage.getItem('anotaai_store_phone');
     if (savedPhone) setStorePhone(savedPhone);
   }, []);
 
@@ -105,7 +115,12 @@ export default function Menu() {
     let message = `*Novo Pedido - Comanda Tech*\n\n`;
     message += `*Cliente:* ${customerName}\n`;
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
-    if (deliveryAddress) message += `*Endereço:* ${deliveryAddress}\n`;
+    if (deliveryAddress || deliveryCity || deliveryState) {
+      let fullAddress = deliveryAddress;
+      if (deliveryCity) fullAddress += ` - ${deliveryCity}`;
+      if (deliveryState) fullAddress += `/${deliveryState}`;
+      message += `*Endereço:* ${fullAddress}\n`;
+    }
     message += `*Pagamento:* ${paymentMethod}\n`;
     message += `\n*Itens:*\n`;
 
@@ -369,12 +384,37 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>Endereço de entrega</Label>
+                    <Label>Endereço (rua, número, bairro)</Label>
                     <Input
                       value={deliveryAddress}
                       onChange={(e) => setDeliveryAddress(e.target.value)}
                       placeholder="Rua, número, bairro"
                     />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Cidade</Label>
+                      <Input
+                        value={deliveryCity}
+                        onChange={(e) => setDeliveryCity(e.target.value)}
+                        placeholder="Nome da cidade"
+                      />
+                    </div>
+                    <div>
+                      <Label>Estado</Label>
+                      <Select value={deliveryState} onValueChange={setDeliveryState}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="UF" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {brazilianStates.map((state) => (
+                            <SelectItem key={state} value={state}>
+                              {state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div>
                     <Label>Forma de pagamento *</Label>
