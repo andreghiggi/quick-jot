@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 const defaultCategories = ['Lanches', 'Bebidas', 'Porções', 'Sobremesas'];
-const STORE_PHONE_KEY = 'anotaai_store_phone';
+const STORE_PHONE_KEY = 'comandatech_store_phone';
 
 export default function Products() {
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional } = useProducts();
