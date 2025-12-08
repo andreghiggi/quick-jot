@@ -63,7 +63,7 @@ export default function Menu() {
     setSelectedProduct(null);
     setSelectedOptionals([]);
     setItemNotes('');
-    toast.success('Adicionado ao carrinho!');
+    toast.success('Adicionado ao carrinho!', { duration: 1500 });
   }
 
   function updateQuantity(index: number, delta: number) {
