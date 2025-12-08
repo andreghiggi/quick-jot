@@ -38,8 +38,19 @@ export default function Menu() {
 
   useEffect(() => {
     // Check both keys for backward compatibility
-    const savedPhone = localStorage.getItem(STORE_PHONE_KEY) || localStorage.getItem('anotaai_store_phone');
-    if (savedPhone) setStorePhone(savedPhone);
+    const newKey = localStorage.getItem(STORE_PHONE_KEY);
+    const oldKey = localStorage.getItem('anotaai_store_phone');
+    console.log('Menu - STORE_PHONE_KEY:', STORE_PHONE_KEY);
+    console.log('Menu - newKey value:', newKey);
+    console.log('Menu - oldKey value:', oldKey);
+    console.log('Menu - All localStorage keys:', Object.keys(localStorage));
+    const savedPhone = newKey || oldKey;
+    if (savedPhone) {
+      console.log('Menu - Setting storePhone to:', savedPhone);
+      setStorePhone(savedPhone);
+    } else {
+      console.log('Menu - No phone found in localStorage');
+    }
   }, []);
 
   const activeProducts = getActiveProducts();
