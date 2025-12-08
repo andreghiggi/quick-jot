@@ -8,10 +8,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ShoppingCart, Plus, Minus, Trash2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
-const STORE_PHONE_KEY = 'anotaai_store_phone';
+const STORE_PHONE_KEY = 'comandatech_store_phone';
 
 export default function Menu() {
   const { products, loading, getActiveProducts, getCategories } = useProducts();
@@ -24,6 +25,7 @@ export default function Menu() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [storePhone, setStorePhone] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
 
   useEffect(() => {
     const savedPhone = localStorage.getItem(STORE_PHONE_KEY);
@@ -91,15 +93,20 @@ export default function Menu() {
       toast.error('Informe seu nome');
       return;
     }
+    if (!paymentMethod) {
+      toast.error('Selecione a forma de pagamento');
+      return;
+    }
     if (cart.length === 0) {
       toast.error('Carrinho vazio');
       return;
     }
 
-    let message = `*Novo Pedido*\n\n`;
+    let message = `*Novo Pedido - Comanda Tech*\n\n`;
     message += `*Cliente:* ${customerName}\n`;
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
     if (deliveryAddress) message += `*Endereço:* ${deliveryAddress}\n`;
+    message += `*Pagamento:* ${paymentMethod}\n`;
     message += `\n*Itens:*\n`;
 
     cart.forEach((item, index) => {
@@ -115,14 +122,20 @@ export default function Menu() {
 
     message += `\n\n*Total: R$ ${cartTotal.toFixed(2)}*`;
 
-    if (!storePhone) {
+    // Use store phone from URL params or localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const phoneFromUrl = urlParams.get('phone');
+    const phoneToUse = phoneFromUrl || storePhone;
+
+    if (!phoneToUse) {
       toast.error('Número do WhatsApp da loja não configurado');
       return;
     }
 
-    const cleanPhone = storePhone.replace(/\D/g, '');
+    const cleanPhone = phoneToUse.replace(/\D/g, '');
+    const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
     const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+    const whatsappUrl = `https://wa.me/${phoneWithCountry}?text=${encodedMessage}`;
 
     window.open(whatsappUrl, '_blank');
   }
@@ -362,6 +375,23 @@ export default function Menu() {
                       onChange={(e) => setDeliveryAddress(e.target.value)}
                       placeholder="Rua, número, bairro"
                     />
+                  </div>
+                  <div>
+                    <Label>Forma de pagamento *</Label>
+                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="Pix" id="pix" />
+                        <Label htmlFor="pix" className="cursor-pointer">Pix</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="Dinheiro" id="dinheiro" />
+                        <Label htmlFor="dinheiro" className="cursor-pointer">Dinheiro</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="Cartão" id="cartao" />
+                        <Label htmlFor="cartao" className="cursor-pointer">Cartão</Label>
+                      </div>
+                    </RadioGroup>
                   </div>
                 </div>
 
