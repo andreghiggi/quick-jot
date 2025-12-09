@@ -55,6 +55,11 @@ export function useOrders() {
   useEffect(() => {
     fetchOrders();
 
+    // Auto-refresh every 30 seconds
+    const refreshInterval = setInterval(() => {
+      fetchOrders();
+    }, 30000);
+
     // Subscribe to realtime updates
     const channel = supabase
       .channel('orders-realtime')
@@ -75,6 +80,7 @@ export function useOrders() {
       .subscribe();
 
     return () => {
+      clearInterval(refreshInterval);
       supabase.removeChannel(channel);
     };
   }, []);
