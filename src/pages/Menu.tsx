@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Plus, Minus, Trash2, Send } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Send, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -30,6 +30,8 @@ export default function Menu() {
   const [deliveryState, setDeliveryState] = useState('');
   const [storePhone, setStorePhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [orderSent, setOrderSent] = useState(false);
+  const [whatsappUrl, setWhatsappUrl] = useState('');
 
   const brazilianStates = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -195,9 +197,9 @@ export default function Menu() {
     const cleanPhone = phoneToUse.replace(/\D/g, '');
     const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
     const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${phoneWithCountry}?text=${encodedMessage}`;
+    const generatedWhatsappUrl = `https://wa.me/${phoneWithCountry}?text=${encodedMessage}`;
 
-    // Clear cart after successful order
+    // Clear cart and show success screen
     setCart([]);
     setCustomerName('');
     setCustomerPhone('');
@@ -205,16 +207,61 @@ export default function Menu() {
     setDeliveryCity('');
     setDeliveryState('');
     setPaymentMethod('');
+    setWhatsappUrl(generatedWhatsappUrl);
+    setOrderSent(true);
     setIsCartOpen(false);
 
-    toast.success('Pedido enviado!');
-    window.open(whatsappUrl, '_blank');
+    // Open WhatsApp
+    window.open(generatedWhatsappUrl, '_blank');
+  }
+
+  function resetOrder() {
+    setOrderSent(false);
+    setWhatsappUrl('');
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Carregando cardápio...</p>
+      </div>
+    );
+  }
+
+  // Show order sent confirmation screen
+  if (orderSent) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-8 text-center space-y-6">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle className="h-8 w-8 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold">Pedido Enviado!</h2>
+              <p className="text-muted-foreground">
+                Seu pedido foi registrado. Clique no botão abaixo se o WhatsApp não abriu automaticamente.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <Button 
+                className="w-full" 
+                size="lg"
+                onClick={() => window.open(whatsappUrl, '_blank')}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Abrir WhatsApp
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={resetOrder}
+              >
+                Fazer novo pedido
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
