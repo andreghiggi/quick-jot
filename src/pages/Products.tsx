@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, ArrowLeft, Package, Link as LinkIcon, Settings, Upload, Image, Pencil } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Package, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -146,6 +147,32 @@ export default function Products() {
   function copyMenuLink() {
     navigator.clipboard.writeText(menuLink);
     toast.success('Link copiado!');
+  }
+
+  async function clearAllProducts() {
+    try {
+      // First delete all product optionals
+      const { error: optionalsError } = await supabase
+        .from('product_optionals')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+
+      if (optionalsError) throw optionalsError;
+
+      // Then delete all products
+      const { error: productsError } = await supabase
+        .from('products')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+
+      if (productsError) throw productsError;
+
+      toast.success('Todos os produtos foram removidos!');
+      window.location.reload();
+    } catch (error) {
+      console.error('Error clearing products:', error);
+      toast.error('Erro ao limpar produtos');
+    }
   }
 
   const groupedProducts = products.reduce((acc, product) => {
@@ -470,6 +497,33 @@ export default function Products() {
               </p>
             </div>
             <Button onClick={saveStorePhone} className="w-full">Salvar</Button>
+
+            <div className="border-t pt-4 mt-4">
+              <Label className="text-destructive">Zona de perigo</Label>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="w-full mt-2">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Zerar todos os produtos
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação irá remover TODOS os produtos e seus opcionais da base de dados. 
+                      Esta ação não pode ser desfeita. As configurações do sistema (número do WhatsApp) serão mantidas.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={clearAllProducts} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Sim, zerar produtos
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

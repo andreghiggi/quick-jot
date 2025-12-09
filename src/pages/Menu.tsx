@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ShoppingCart, Plus, Minus, Trash2, Send } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const STORE_PHONE_KEY = 'comandatech_store_phone';
 
@@ -40,16 +41,9 @@ export default function Menu() {
     // Check both keys for backward compatibility
     const newKey = localStorage.getItem(STORE_PHONE_KEY);
     const oldKey = localStorage.getItem('anotaai_store_phone');
-    console.log('Menu - STORE_PHONE_KEY:', STORE_PHONE_KEY);
-    console.log('Menu - newKey value:', newKey);
-    console.log('Menu - oldKey value:', oldKey);
-    console.log('Menu - All localStorage keys:', Object.keys(localStorage));
     const savedPhone = newKey || oldKey;
     if (savedPhone) {
-      console.log('Menu - Setting storePhone to:', savedPhone);
       setStorePhone(savedPhone);
-    } else {
-      console.log('Menu - No phone found in localStorage');
     }
   }, []);
 
@@ -109,7 +103,7 @@ export default function Menu() {
   const cartTotal = cart.reduce((sum, item) => sum + calculateItemTotal(item), 0);
   const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  function sendToWhatsApp() {
+  async function sendToWhatsApp() {
     if (!customerName.trim()) {
       toast.error('Informe seu nome');
       return;
@@ -123,15 +117,65 @@ export default function Menu() {
       return;
     }
 
+    // Use store phone from URL params or localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const phoneFromUrl = urlParams.get('phone');
+    const phoneToUse = phoneFromUrl || storePhone;
+
+    if (!phoneToUse) {
+      toast.error('Número do WhatsApp da loja não configurado');
+      return;
+    }
+
+    // Build full address
+    let fullAddress = deliveryAddress;
+    if (deliveryCity) fullAddress += ` - ${deliveryCity}`;
+    if (deliveryState) fullAddress += `/${deliveryState}`;
+
+    // Save order to database
+    try {
+      const { data: newOrder, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          customer_name: customerName,
+          customer_phone: customerPhone || null,
+          delivery_address: fullAddress || null,
+          notes: `Pagamento: ${paymentMethod}`,
+          total: cartTotal,
+          status: 'pending',
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Save order items
+      const orderItems = cart.map((item) => ({
+        order_id: newOrder.id,
+        product_id: item.product.id,
+        name: item.product.name + (item.selectedOptionals.length > 0 ? ` (${item.selectedOptionals.map(o => o.name).join(', ')})` : ''),
+        quantity: item.quantity,
+        price: item.product.price + item.selectedOptionals.reduce((sum, opt) => sum + opt.price, 0),
+        notes: item.notes || null,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      console.log('Order saved to database:', newOrder.id);
+    } catch (error) {
+      console.error('Error saving order to database:', error);
+      // Continue to send WhatsApp even if database save fails
+    }
+
+    // Build WhatsApp message
     let message = `*Novo Pedido - Comanda Tech*\n\n`;
     message += `*Cliente:* ${customerName}\n`;
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
-    if (deliveryAddress || deliveryCity || deliveryState) {
-      let fullAddress = deliveryAddress;
-      if (deliveryCity) fullAddress += ` - ${deliveryCity}`;
-      if (deliveryState) fullAddress += `/${deliveryState}`;
-      message += `*Endereço:* ${fullAddress}\n`;
-    }
+    if (fullAddress) message += `*Endereço:* ${fullAddress}\n`;
     message += `*Pagamento:* ${paymentMethod}\n`;
     message += `\n*Itens:*\n`;
 
@@ -148,21 +192,22 @@ export default function Menu() {
 
     message += `\n\n*Total: R$ ${cartTotal.toFixed(2)}*`;
 
-    // Use store phone from URL params or localStorage
-    const urlParams = new URLSearchParams(window.location.search);
-    const phoneFromUrl = urlParams.get('phone');
-    const phoneToUse = phoneFromUrl || storePhone;
-
-    if (!phoneToUse) {
-      toast.error('Número do WhatsApp da loja não configurado');
-      return;
-    }
-
     const cleanPhone = phoneToUse.replace(/\D/g, '');
     const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${phoneWithCountry}?text=${encodedMessage}`;
 
+    // Clear cart after successful order
+    setCart([]);
+    setCustomerName('');
+    setCustomerPhone('');
+    setDeliveryAddress('');
+    setDeliveryCity('');
+    setDeliveryState('');
+    setPaymentMethod('');
+    setIsCartOpen(false);
+
+    toast.success('Pedido enviado!');
     window.open(whatsappUrl, '_blank');
   }
 
