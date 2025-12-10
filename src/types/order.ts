@@ -11,6 +11,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  dailyNumber: number;
   customerName: string;
   customerPhone?: string;
   items: OrderItem[];
@@ -27,4 +28,11 @@ export interface Product {
   price: number;
   category: string;
   description?: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  displayOrder: number;
+  active: boolean;
 }

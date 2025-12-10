@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useProducts } from '@/hooks/useProducts';
+import { useCategories } from '@/hooks/useCategories';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { Product, ProductOptional } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,39 +11,56 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, ArrowLeft, Package, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Trash2, ArrowLeft, Package, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle, FolderOpen, Image } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-const defaultCategories = ['Lanches', 'Bebidas', 'Porções', 'Sobremesas'];
-const STORE_PHONE_KEY = 'comandatech_store_phone';
-
 export default function Products() {
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional } = useProducts();
+  const { categories, addCategory, deleteCategory } = useCategories();
+  const { settings, saveStorePhone, saveBannerUrl, saveStoreName } = useStoreSettings();
+  
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isOptionalDialogOpen, setIsOptionalDialogOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: 'Lanches', description: '', active: true, imageUrl: '' });
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '' });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [storePhone, setStorePhone] = useState('');
+  const [storeName, setStoreName] = useState('');
+  const [bannerUrl, setBannerUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isBannerUploading, setIsBannerUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
+  const bannerFileInputRef = useRef<HTMLInputElement>(null);
 
   const menuLink = `${window.location.origin}/cardapio`;
 
   useEffect(() => {
-    const savedPhone = localStorage.getItem(STORE_PHONE_KEY);
-    if (savedPhone) setStorePhone(savedPhone);
-  }, []);
+    setStorePhone(settings.storePhone);
+    setStoreName(settings.storeName);
+    setBannerUrl(settings.bannerUrl);
+  }, [settings]);
 
-  function saveStorePhone() {
-    localStorage.setItem(STORE_PHONE_KEY, storePhone);
-    toast.success('Número salvo!');
+  // Set default category when categories load
+  useEffect(() => {
+    if (categories.length > 0 && !newProduct.category) {
+      setNewProduct(prev => ({ ...prev, category: categories[0].name }));
+    }
+  }, [categories]);
+
+  async function handleSaveSettings() {
+    await saveStorePhone(storePhone);
+    await saveStoreName(storeName);
+    if (bannerUrl !== settings.bannerUrl) {
+      await saveBannerUrl(bannerUrl);
+    }
     setIsSettingsOpen(false);
   }
 
@@ -70,6 +89,41 @@ export default function Products() {
     }
   }
 
+  async function uploadBanner(file: File): Promise<string | null> {
+    setIsBannerUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `banner_${Date.now()}.${fileExt}`;
+      const { error } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file);
+      
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+      
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading banner:', error);
+      toast.error('Erro ao enviar banner');
+      return null;
+    } finally {
+      setIsBannerUploading(false);
+    }
+  }
+
+  async function handleBannerSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const imageUrl = await uploadBanner(file);
+    if (imageUrl) {
+      setBannerUrl(imageUrl);
+    }
+  }
+
   async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -85,6 +139,10 @@ export default function Products() {
       toast.error('Preencha nome e preço');
       return;
     }
+    if (!newProduct.category) {
+      toast.error('Selecione uma categoria');
+      return;
+    }
     await addProduct({
       name: newProduct.name,
       price: parseFloat(newProduct.price),
@@ -93,7 +151,7 @@ export default function Products() {
       imageUrl: newProduct.imageUrl || undefined,
       active: newProduct.active,
     });
-    setNewProduct({ name: '', price: '', category: 'Lanches', description: '', active: true, imageUrl: '' });
+    setNewProduct({ name: '', price: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '' });
     setIsProductDialogOpen(false);
   }
 
@@ -111,6 +169,17 @@ export default function Products() {
     });
     setNewOptional({ name: '', price: '', type: 'extra' });
     setIsOptionalDialogOpen(false);
+  }
+
+  async function handleAddCategory() {
+    if (!newCategoryName.trim()) {
+      toast.error('Informe o nome da categoria');
+      return;
+    }
+    const success = await addCategory(newCategoryName.trim());
+    if (success) {
+      setNewCategoryName('');
+    }
   }
 
   function openEditDialog(product: Product) {
@@ -151,19 +220,17 @@ export default function Products() {
 
   async function clearAllProducts() {
     try {
-      // First delete all product optionals
       const { error: optionalsError } = await supabase
         .from('product_optionals')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+        .neq('id', '00000000-0000-0000-0000-000000000000');
 
       if (optionalsError) throw optionalsError;
 
-      // Then delete all products
       const { error: productsError } = await supabase
         .from('products')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+        .neq('id', '00000000-0000-0000-0000-000000000000');
 
       if (productsError) throw productsError;
 
@@ -248,11 +315,11 @@ export default function Products() {
                       <Label>Categoria</Label>
                       <Select value={newProduct.category} onValueChange={(v) => setNewProduct({ ...newProduct, category: v })}>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Selecione uma categoria" />
                         </SelectTrigger>
                         <SelectContent>
-                          {defaultCategories.map((cat) => (
-                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -438,6 +505,7 @@ export default function Products() {
         )}
       </main>
 
+      {/* Optional Dialog */}
       <Dialog open={isOptionalDialogOpen} onOpenChange={setIsOptionalDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -479,52 +547,163 @@ export default function Products() {
         </DialogContent>
       </Dialog>
 
+      {/* Settings Dialog */}
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Configurações</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Número do WhatsApp da loja</Label>
-              <Input
-                value={storePhone}
-                onChange={(e) => setStorePhone(e.target.value)}
-                placeholder="5511999999999"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Formato: código do país + DDD + número (ex: 5511999999999)
-              </p>
-            </div>
-            <Button onClick={saveStorePhone} className="w-full">Salvar</Button>
-
-            <div className="border-t pt-4 mt-4">
-              <Label className="text-destructive">Zona de perigo</Label>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="w-full mt-2">
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    Zerar todos os produtos
+          <Tabs defaultValue="geral" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="geral">Geral</TabsTrigger>
+              <TabsTrigger value="categorias">Categorias</TabsTrigger>
+              <TabsTrigger value="perigo">Perigo</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="geral" className="space-y-4 mt-4">
+              <div>
+                <Label>Nome da Loja</Label>
+                <Input
+                  value={storeName}
+                  onChange={(e) => setStoreName(e.target.value)}
+                  placeholder="Nome da sua loja"
+                />
+              </div>
+              <div>
+                <Label>Número do WhatsApp da loja</Label>
+                <Input
+                  value={storePhone}
+                  onChange={(e) => setStorePhone(e.target.value)}
+                  placeholder="5511999999999"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Formato: código do país + DDD + número (ex: 5511999999999)
+                </p>
+              </div>
+              <div>
+                <Label>Banner do Cardápio</Label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={bannerFileInputRef}
+                  onChange={handleBannerSelect}
+                  className="hidden"
+                />
+                {bannerUrl ? (
+                  <div className="relative mt-2">
+                    <img
+                      src={bannerUrl}
+                      alt="Banner Preview"
+                      className="w-full h-32 object-cover rounded"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6"
+                      onClick={() => setBannerUrl('')}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full mt-2"
+                    onClick={() => bannerFileInputRef.current?.click()}
+                    disabled={isBannerUploading}
+                  >
+                    {isBannerUploading ? (
+                      'Enviando...'
+                    ) : (
+                      <>
+                        <Image className="h-4 w-4 mr-2" />
+                        Selecionar banner
+                      </>
+                    )}
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta ação irá remover TODOS os produtos e seus opcionais da base de dados. 
-                      Esta ação não pode ser desfeita. As configurações do sistema (número do WhatsApp) serão mantidas.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={clearAllProducts} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Sim, zerar produtos
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Recomendado: 1200x400 pixels
+                </p>
+              </div>
+              <Button onClick={handleSaveSettings} className="w-full">Salvar Configurações</Button>
+            </TabsContent>
+
+            <TabsContent value="categorias" className="space-y-4 mt-4">
+              <div>
+                <Label>Nova Categoria</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Nome da categoria"
+                  />
+                  <Button onClick={handleAddCategory}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Categorias existentes</Label>
+                {categories.map((cat) => (
+                  <div key={cat.id} className="flex items-center justify-between p-2 border rounded">
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                      <span>{cat.name}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => deleteCategory(cat.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                {categories.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Nenhuma categoria cadastrada</p>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="perigo" className="space-y-4 mt-4">
+              <div className="border border-destructive/30 rounded-lg p-4 bg-destructive/5">
+                <Label className="text-destructive flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Zona de perigo
+                </Label>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Esta ação irá remover TODOS os produtos e seus opcionais da base de dados. 
+                  Esta ação não pode ser desfeita.
+                </p>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full mt-4">
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Zerar todos os produtos
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação irá remover TODOS os produtos e seus opcionais da base de dados. 
+                        Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={clearAllProducts} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Sim, zerar produtos
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
@@ -561,8 +740,8 @@ export default function Products() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {defaultCategories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useProducts } from '@/hooks/useProducts';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useCategories } from '@/hooks/useCategories';
 import { Product, ProductOptional, CartItem } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,14 +12,16 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Plus, Minus, Trash2, Send, CheckCircle } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ShoppingCart, Plus, Minus, Trash2, Send, CheckCircle, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-
-const STORE_PHONE_KEY = 'comandatech_store_phone';
+import { cn } from '@/lib/utils';
 
 export default function Menu() {
-  const { products, loading, getActiveProducts, getCategories } = useProducts();
+  const { products, loading: productsLoading, getActiveProducts } = useProducts();
+  const { settings, loading: settingsLoading } = useStoreSettings();
+  const { categories, loading: categoriesLoading } = useCategories();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedOptionals, setSelectedOptionals] = useState<ProductOptional[]>([]);
@@ -28,10 +32,11 @@ export default function Menu() {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryCity, setDeliveryCity] = useState('');
   const [deliveryState, setDeliveryState] = useState('');
-  const [storePhone, setStorePhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [orderSent, setOrderSent] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const brazilianStates = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -39,20 +44,23 @@ export default function Menu() {
     'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ];
 
-  useEffect(() => {
-    // Check both keys for backward compatibility
-    const newKey = localStorage.getItem(STORE_PHONE_KEY);
-    const oldKey = localStorage.getItem('anotaai_store_phone');
-    const savedPhone = newKey || oldKey;
-    if (savedPhone) {
-      setStorePhone(savedPhone);
-    }
-  }, []);
+  const loading = productsLoading || settingsLoading || categoriesLoading;
 
   const activeProducts = getActiveProducts();
-  const categories = getCategories();
+  
+  // Get unique categories from products
+  const productCategories = [...new Set(activeProducts.map((p) => p.category))];
+  
+  // Filter products based on selected category and search
+  const filteredProducts = activeProducts.filter((product) => {
+    const matchesCategory = !selectedCategory || product.category === selectedCategory;
+    const matchesSearch = !searchQuery || 
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
-  const groupedProducts = activeProducts.reduce((acc, product) => {
+  const groupedProducts = filteredProducts.reduce((acc, product) => {
     if (!acc[product.category]) acc[product.category] = [];
     acc[product.category].push(product);
     return acc;
@@ -119,10 +127,10 @@ export default function Menu() {
       return;
     }
 
-    // Use store phone from URL params or localStorage
+    // Use store phone from URL params or settings
     const urlParams = new URLSearchParams(window.location.search);
     const phoneFromUrl = urlParams.get('phone');
-    const phoneToUse = phoneFromUrl || storePhone;
+    const phoneToUse = phoneFromUrl || settings.storePhone;
 
     if (!phoneToUse) {
       toast.error('Número do WhatsApp da loja não configurado');
@@ -170,11 +178,11 @@ export default function Menu() {
       console.log('Order saved to database:', newOrder.id);
     } catch (error) {
       console.error('Error saving order to database:', error);
-      // Continue to send WhatsApp even if database save fails
     }
 
     // Build WhatsApp message
-    let message = `*Novo Pedido - Comanda Tech*\n\n`;
+    const storeName = settings.storeName || 'Comanda Tech';
+    let message = `*Novo Pedido - ${storeName}*\n\n`;
     message += `*Cliente:* ${customerName}\n`;
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
     if (fullAddress) message += `*Endereço:* ${fullAddress}\n`;
@@ -268,10 +276,22 @@ export default function Menu() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="bg-card border-b border-border sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold">Cardápio</h1>
+      {/* Header with Banner */}
+      <header className="sticky top-0 z-20 bg-card border-b border-border shadow-sm">
+        {settings.bannerUrl && (
+          <div className="w-full h-40 overflow-hidden">
+            <img 
+              src={settings.bannerUrl} 
+              alt="Banner" 
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-xl font-bold text-foreground">
+              {settings.storeName || 'Cardápio'}
+            </h1>
             <Button
               variant="outline"
               className="relative"
@@ -285,60 +305,108 @@ export default function Menu() {
               )}
             </Button>
           </div>
+          
+          {/* Search Bar */}
+          <div className="mt-3 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar produtos..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
-        {categories.map((category) => (
-          <div key={category}>
-            <h2 className="text-lg font-semibold mb-3">{category}</h2>
-            <div className="grid gap-3">
-              {groupedProducts[category]?.map((product) => (
+      {/* Category Pills */}
+      <div className="sticky top-[var(--header-height)] z-10 bg-background border-b border-border">
+        <ScrollArea className="w-full">
+          <div className="flex gap-2 p-4">
+            <Button
+              variant={!selectedCategory ? 'default' : 'outline'}
+              size="sm"
+              className="rounded-full whitespace-nowrap"
+              onClick={() => setSelectedCategory(null)}
+            >
+              Todos
+            </Button>
+            {productCategories.map((category) => (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? 'default' : 'outline'}
+                size="sm"
+                className="rounded-full whitespace-nowrap"
+                onClick={() => setSelectedCategory(category)}
+              >
+                {category}
+              </Button>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Products Grid */}
+      <main className="container mx-auto px-4 py-6 space-y-8">
+        {Object.entries(groupedProducts).map(([category, categoryProducts]) => (
+          <section key={category}>
+            <h2 className="text-lg font-bold mb-4 text-foreground border-l-4 border-primary pl-3">
+              {category}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {categoryProducts.map((product) => (
                 <Card
                   key={product.id}
-                  className="cursor-pointer hover:border-primary transition-colors"
+                  className="cursor-pointer hover:border-primary hover:shadow-md transition-all overflow-hidden"
                   onClick={() => setSelectedProduct(product)}
                 >
-                  <CardContent className="py-4">
-                    <div className="flex items-start gap-4">
-                      {product.imageUrl && (
-                        <img
-                          src={product.imageUrl}
-                          alt={product.name}
-                          className="w-16 h-16 object-cover rounded flex-shrink-0"
-                        />
+                  <CardContent className="p-0">
+                    <div className="flex">
+                      {product.imageUrl ? (
+                        <div className="w-28 h-28 flex-shrink-0">
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-28 h-28 flex-shrink-0 bg-muted flex items-center justify-center">
+                          <span className="text-3xl">🍽️</span>
+                        </div>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium">{product.name}</h3>
-                        {product.description && (
-                          <p className="text-sm text-muted-foreground">{product.description}</p>
-                        )}
-                        {product.optionals && product.optionals.length > 0 && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {product.optionals.length} opcionais disponíveis
+                      <div className="flex-1 p-3 flex flex-col justify-between">
+                        <div>
+                          <h3 className="font-semibold text-foreground line-clamp-1">{product.name}</h3>
+                          {product.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                              {product.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-primary font-bold">
+                            R$ {product.price.toFixed(2)}
                           </p>
-                        )}
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-primary font-semibold">
-                          R$ {product.price.toFixed(2)}
-                        </p>
-                        <Button size="sm" className="mt-2">
-                          <Plus className="h-4 w-4" />
-                        </Button>
+                          <Button size="sm" className="h-8 px-3">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
-          </div>
+          </section>
         ))}
 
-        {activeProducts.length === 0 && (
+        {filteredProducts.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">Nenhum produto disponível</p>
+              <p className="text-muted-foreground">
+                {searchQuery ? 'Nenhum produto encontrado' : 'Nenhum produto disponível'}
+              </p>
             </CardContent>
           </Card>
         )}
@@ -346,7 +414,7 @@ export default function Menu() {
 
       {/* Product Detail Dialog */}
       <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedProduct?.name}</DialogTitle>
           </DialogHeader>
@@ -356,35 +424,41 @@ export default function Menu() {
                 <img
                   src={selectedProduct.imageUrl}
                   alt={selectedProduct.name}
-                  className="w-full h-40 object-cover rounded"
+                  className="w-full h-48 object-cover rounded-lg"
                 />
               )}
               {selectedProduct.description && (
                 <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>
               )}
-              <p className="text-lg font-semibold text-primary">
+              <p className="text-2xl font-bold text-primary">
                 R$ {selectedProduct.price.toFixed(2)}
               </p>
 
               {selectedProduct.optionals && selectedProduct.optionals.length > 0 && (
                 <div className="space-y-3">
-                  <Label>Opcionais</Label>
+                  <Label className="text-base font-semibold">Adicionais</Label>
                   {selectedProduct.optionals
                     .filter((o) => o.active)
                     .map((optional) => (
                       <div
                         key={optional.id}
-                        className="flex items-center justify-between p-2 border rounded"
+                        className={cn(
+                          "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors",
+                          selectedOptionals.some((o) => o.id === optional.id) 
+                            ? "border-primary bg-primary/5" 
+                            : "hover:border-primary/50"
+                        )}
+                        onClick={() => toggleOptional(optional)}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           <Checkbox
                             checked={selectedOptionals.some((o) => o.id === optional.id)}
                             onCheckedChange={() => toggleOptional(optional)}
                           />
-                          <span>{optional.name}</span>
+                          <span className="font-medium">{optional.name}</span>
                         </div>
                         {optional.price > 0 && (
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-primary font-semibold">
                             +R$ {optional.price.toFixed(2)}
                           </span>
                         )}
@@ -399,10 +473,12 @@ export default function Menu() {
                   value={itemNotes}
                   onChange={(e) => setItemNotes(e.target.value)}
                   placeholder="Ex: Sem cebola, bem passado..."
+                  className="mt-2"
                 />
               </div>
 
-              <Button onClick={addToCart} className="w-full">
+              <Button onClick={addToCart} className="w-full" size="lg">
+                <Plus className="h-4 w-4 mr-2" />
                 Adicionar ao carrinho
               </Button>
             </div>
@@ -422,7 +498,7 @@ export default function Menu() {
             ) : (
               <>
                 {cart.map((item, index) => (
-                  <div key={index} className="border rounded p-3">
+                  <div key={index} className="border rounded-lg p-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <p className="font-medium">{item.product.name}</p>
@@ -447,7 +523,7 @@ export default function Menu() {
                         >
                           <Minus className="h-4 w-4" />
                         </Button>
-                        <span className="w-8 text-center">{item.quantity}</span>
+                        <span className="w-8 text-center font-medium">{item.quantity}</span>
                         <Button
                           variant="outline"
                           size="icon"
@@ -557,9 +633,9 @@ export default function Menu() {
 
       {/* Floating cart button */}
       {cart.length > 0 && !isCartOpen && (
-        <div className="fixed bottom-4 left-4 right-4">
+        <div className="fixed bottom-4 left-4 right-4 z-30">
           <Button
-            className="w-full py-6"
+            className="w-full py-6 shadow-lg"
             size="lg"
             onClick={() => setIsCartOpen(true)}
           >

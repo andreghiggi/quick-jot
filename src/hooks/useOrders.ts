@@ -24,6 +24,7 @@ export function useOrders() {
 
       const mappedOrders: Order[] = (ordersData || []).map((order) => ({
         id: order.id,
+        dailyNumber: (order as any).daily_number || 0,
         customerName: order.customer_name,
         customerPhone: order.customer_phone || undefined,
         deliveryAddress: order.delivery_address || undefined,
@@ -85,7 +86,7 @@ export function useOrders() {
     };
   }, []);
 
-  async function addOrder(orderData: Omit<Order, 'id' | 'createdAt'>): Promise<boolean> {
+  async function addOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'dailyNumber'>): Promise<boolean> {
     try {
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
@@ -204,7 +205,7 @@ export function useOrders() {
   function getTodayRevenue(): number {
     const todayOrders = getTodayOrders();
     return todayOrders
-      .filter((order) => order.status !== 'pending')
+      .filter((order) => order.status === 'delivered')
       .reduce((sum, order) => sum + order.total, 0);
   }
 
