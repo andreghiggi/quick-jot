@@ -1,7 +1,7 @@
 import { Order, OrderStatus } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Phone, MapPin, ChevronRight, Trash2 } from 'lucide-react';
+import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer } from 'lucide-react';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { cn } from '@/lib/utils';
 
@@ -9,25 +9,33 @@ interface OrderCardProps {
   order: Order;
 }
 
-const statusConfig: Record<OrderStatus, { label: string; className: string; next?: OrderStatus }> = {
+const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textColor: string; borderColor: string; next?: OrderStatus }> = {
   pending: { 
     label: 'Pendente', 
-    className: 'bg-warning/20 text-warning-foreground border-warning/30',
+    bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+    textColor: 'text-amber-800 dark:text-amber-200',
+    borderColor: 'border-amber-300 dark:border-amber-700',
     next: 'preparing'
   },
   preparing: { 
     label: 'Preparando', 
-    className: 'bg-primary/20 text-primary border-primary/30',
+    bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+    textColor: 'text-blue-800 dark:text-blue-200',
+    borderColor: 'border-blue-300 dark:border-blue-700',
     next: 'ready'
   },
   ready: { 
     label: 'Pronto', 
-    className: 'bg-success/20 text-success border-success/30',
+    bgColor: 'bg-green-100 dark:bg-green-900/30',
+    textColor: 'text-green-800 dark:text-green-200',
+    borderColor: 'border-green-300 dark:border-green-700',
     next: 'delivered'
   },
   delivered: { 
     label: 'Entregue', 
-    className: 'bg-muted text-muted-foreground border-muted',
+    bgColor: 'bg-gray-100 dark:bg-gray-800',
+    textColor: 'text-gray-600 dark:text-gray-400',
+    borderColor: 'border-gray-300 dark:border-gray-600',
   },
 };
 
@@ -54,16 +62,70 @@ export function OrderCard({ order }: OrderCardProps) {
     await deleteOrder(order.id);
   }
 
+  function handlePrint() {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Pedido #${order.dailyNumber}</title>
+        <style>
+          body { font-family: 'Courier New', monospace; padding: 20px; max-width: 300px; margin: 0 auto; }
+          h1 { text-align: center; font-size: 18px; margin-bottom: 5px; }
+          h2 { text-align: center; font-size: 24px; margin: 10px 0; }
+          .divider { border-top: 1px dashed #000; margin: 10px 0; }
+          .item { display: flex; justify-content: space-between; margin: 5px 0; }
+          .total { font-weight: bold; font-size: 16px; margin-top: 10px; }
+          .info { font-size: 12px; margin: 5px 0; }
+          .center { text-align: center; }
+        </style>
+      </head>
+      <body>
+        <h1>COMANDA TECH</h1>
+        <h2>PEDIDO #${order.dailyNumber}</h2>
+        <p class="center info">${createdAt.toLocaleString('pt-BR')}</p>
+        <div class="divider"></div>
+        <p><strong>Cliente:</strong> ${order.customerName}</p>
+        ${order.customerPhone ? `<p class="info"><strong>Tel:</strong> ${order.customerPhone}</p>` : ''}
+        ${order.deliveryAddress ? `<p class="info"><strong>End:</strong> ${order.deliveryAddress}</p>` : ''}
+        <div class="divider"></div>
+        <p><strong>ITENS:</strong></p>
+        ${order.items.map(item => `
+          <div class="item">
+            <span>${item.quantity}x ${item.name}</span>
+            <span>R$ ${(item.price * item.quantity).toFixed(2)}</span>
+          </div>
+        `).join('')}
+        <div class="divider"></div>
+        <div class="item total">
+          <span>TOTAL:</span>
+          <span>R$ ${order.total.toFixed(2)}</span>
+        </div>
+        ${order.notes ? `<div class="divider"></div><p class="info"><strong>Obs:</strong> ${order.notes}</p>` : ''}
+        <div class="divider"></div>
+        <p class="center info">Obrigado pela preferência!</p>
+        <script>window.onload = function() { window.print(); window.close(); }</script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  }
+
   return (
     <div className={cn(
-      "bg-card rounded-xl p-4 shadow-card border border-border animate-slide-up",
-      "hover:shadow-lg transition-shadow duration-200"
+      "bg-card rounded-xl p-4 shadow-card border-2 animate-slide-up",
+      "hover:shadow-lg transition-shadow duration-200",
+      config.borderColor
     )}>
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-muted-foreground">#{order.id.slice(-4)}</span>
-            <Badge variant="outline" className={cn("text-xs", config.className)}>
+            <span className="text-lg font-bold text-primary">#{order.dailyNumber}</span>
+            <Badge className={cn("text-xs border", config.bgColor, config.textColor, config.borderColor)}>
               {config.label}
             </Badge>
           </div>
@@ -112,6 +174,15 @@ export function OrderCard({ order }: OrderCardProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+            onClick={handlePrint}
+            title="Imprimir pedido"
+          >
+            <Printer className="w-4 h-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

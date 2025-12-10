@@ -5,7 +5,7 @@ import { Order, OrderStatus } from '@/types/order';
 interface OrderContextType {
   orders: Order[];
   loading: boolean;
-  addOrder: (orderData: Omit<Order, 'id' | 'createdAt'>) => Promise<boolean>;
+  addOrder: (orderData: Omit<Order, 'id' | 'createdAt' | 'dailyNumber'>) => Promise<boolean>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<boolean>;
   deleteOrder: (orderId: string) => Promise<boolean>;
   getOrdersByStatus: (status: OrderStatus) => Order[];

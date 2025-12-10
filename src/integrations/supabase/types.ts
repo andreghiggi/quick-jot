@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          display_order: number | null
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -67,6 +91,7 @@ export type Database = {
           created_at: string
           customer_name: string
           customer_phone: string | null
+          daily_number: number | null
           delivery_address: string | null
           id: string
           notes: string | null
@@ -78,6 +103,7 @@ export type Database = {
           created_at?: string
           customer_name: string
           customer_phone?: string | null
+          daily_number?: number | null
           delivery_address?: string | null
           id?: string
           notes?: string | null
@@ -89,6 +115,7 @@ export type Database = {
           created_at?: string
           customer_name?: string
           customer_phone?: string | null
+          daily_number?: number | null
           delivery_address?: string | null
           id?: string
           notes?: string | null
@@ -172,12 +199,36 @@ export type Database = {
         }
         Relationships: []
       }
+      store_settings: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_next_daily_order_number: { Args: never; Returns: number }
     }
     Enums: {
       order_status: "pending" | "preparing" | "ready" | "delivered"
