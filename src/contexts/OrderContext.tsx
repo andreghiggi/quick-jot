@@ -1,5 +1,6 @@
 import { createContext, useContext, ReactNode } from 'react';
 import { useOrders } from '@/hooks/useOrders';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { Order, OrderStatus } from '@/types/order';
 
 interface OrderContextType {
@@ -17,7 +18,8 @@ interface OrderContextType {
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export function OrderProvider({ children }: { children: ReactNode }) {
-  const ordersData = useOrders();
+  const { company } = useAuthContext();
+  const ordersData = useOrders({ companyId: company?.id });
 
   return (
     <OrderContext.Provider value={ordersData}>

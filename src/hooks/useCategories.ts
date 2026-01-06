@@ -3,17 +3,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { Category } from '@/types/order';
 import { toast } from 'sonner';
 
-export function useCategories() {
+interface UseCategoriesOptions {
+  companyId?: string | null;
+}
+
+export function useCategories(options: UseCategoriesOptions = {}) {
+  const { companyId } = options;
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function fetchCategories() {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('categories')
         .select('*')
         .eq('active', true)
         .order('display_order', { ascending: true });
+
+      if (companyId) {
+        query = query.eq('company_id', companyId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -22,6 +33,7 @@ export function useCategories() {
         name: cat.name,
         displayOrder: cat.display_order,
         active: cat.active,
+        companyId: cat.company_id || undefined,
       }));
 
       setCategories(mapped);
@@ -34,7 +46,7 @@ export function useCategories() {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [companyId]);
 
   async function addCategory(name: string): Promise<boolean> {
     try {
@@ -46,6 +58,7 @@ export function useCategories() {
           name,
           display_order: maxOrder + 1,
           active: true,
+          company_id: companyId || null,
         });
 
       if (error) throw error;
@@ -62,13 +75,14 @@ export function useCategories() {
 
   async function updateCategory(id: string, data: Partial<Category>): Promise<boolean> {
     try {
+      const updateData: any = {};
+      if (data.name !== undefined) updateData.name = data.name;
+      if (data.displayOrder !== undefined) updateData.display_order = data.displayOrder;
+      if (data.active !== undefined) updateData.active = data.active;
+
       const { error } = await supabase
         .from('categories')
-        .update({
-          name: data.name,
-          display_order: data.displayOrder,
-          active: data.active,
-        })
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;
