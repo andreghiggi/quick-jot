@@ -20,6 +20,7 @@ export interface Order {
   createdAt: Date;
   deliveryAddress?: string;
   notes?: string;
+  companyId?: string;
 }
 
 export interface Product {
@@ -35,4 +36,5 @@ export interface Category {
   name: string;
   displayOrder: number;
   active: boolean;
+  companyId?: string;
 }

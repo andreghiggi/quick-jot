@@ -16,6 +16,7 @@ export interface Product {
   imageUrl?: string;
   active: boolean;
   optionals?: ProductOptional[];
+  companyId?: string;
 }
 
 export interface CartItem {

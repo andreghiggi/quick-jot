@@ -8,7 +8,12 @@ interface StoreSettings {
   storeName: string;
 }
 
-export function useStoreSettings() {
+interface UseStoreSettingsOptions {
+  companyId?: string | null;
+}
+
+export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
+  const { companyId } = options;
   const [settings, setSettings] = useState<StoreSettings>({
     storePhone: '',
     bannerUrl: '',
@@ -18,9 +23,15 @@ export function useStoreSettings() {
 
   async function fetchSettings() {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('store_settings')
         .select('*');
+
+      if (companyId) {
+        query = query.eq('company_id', companyId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -43,7 +54,7 @@ export function useStoreSettings() {
 
   useEffect(() => {
     fetchSettings();
-  }, []);
+  }, [companyId]);
 
   async function updateSetting(key: string, value: string): Promise<boolean> {
     try {
@@ -53,6 +64,7 @@ export function useStoreSettings() {
         .upsert({
           key,
           value,
+          company_id: companyId || null,
           updated_at: new Date().toISOString(),
         }, {
           onConflict: 'key',
