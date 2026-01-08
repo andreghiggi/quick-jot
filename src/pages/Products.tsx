@@ -12,11 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, ArrowLeft, Package, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle, FolderOpen, Image } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle, FolderOpen, Image, Loader2, Package } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { AppLayout } from '@/components/layout/AppLayout';
 
 export default function Products() {
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional } = useProducts();
@@ -251,148 +251,133 @@ export default function Products() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-card border-b border-border sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link to="/">
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="h-5 w-5" />
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" onClick={() => setIsSettingsOpen(true)}>
+        <Settings className="h-4 w-4 mr-2" />
+        <span className="hidden sm:inline">Config</span>
+      </Button>
+      <Button variant="outline" size="sm" onClick={copyMenuLink}>
+        <LinkIcon className="h-4 w-4 mr-2" />
+        <span className="hidden sm:inline">Copiar link</span>
+      </Button>
+      <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Novo Produto</span>
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Produto</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nome</Label>
+              <Input
+                value={newProduct.name}
+                onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                placeholder="Nome do produto"
+              />
+            </div>
+            <div>
+              <Label>Preço (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={newProduct.price}
+                onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <Label>Categoria</Label>
+              <Select value={newProduct.category} onValueChange={(v) => setNewProduct({ ...newProduct, category: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Descrição (opcional)</Label>
+              <Input
+                value={newProduct.description}
+                onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                placeholder="Descrição do produto"
+              />
+            </div>
+            <div>
+              <Label>Foto do produto</Label>
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+              {newProduct.imageUrl ? (
+                <div className="relative mt-2">
+                  <img
+                    src={newProduct.imageUrl}
+                    alt="Preview"
+                    className="w-full h-32 object-cover rounded"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-1 right-1 h-6 w-6"
+                    onClick={() => setNewProduct({ ...newProduct, imageUrl: '' })}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    'Enviando...'
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Selecionar imagem
+                    </>
+                  )}
                 </Button>
-              </Link>
-              <div className="flex items-center gap-2">
-                <Package className="h-6 w-6 text-primary" />
-                <h1 className="text-xl font-bold">Produtos</h1>
-              </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setIsSettingsOpen(true)}>
-                <Settings className="h-4 w-4 mr-2" />
-                Config
-              </Button>
-              <Button variant="outline" size="sm" onClick={copyMenuLink}>
-                <LinkIcon className="h-4 w-4 mr-2" />
-                Copiar link
-              </Button>
-              <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Produto
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Novo Produto</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Nome</Label>
-                      <Input
-                        value={newProduct.name}
-                        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                        placeholder="Nome do produto"
-                      />
-                    </div>
-                    <div>
-                      <Label>Preço (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={newProduct.price}
-                        onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <Label>Categoria</Label>
-                      <Select value={newProduct.category} onValueChange={(v) => setNewProduct({ ...newProduct, category: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma categoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Descrição (opcional)</Label>
-                      <Input
-                        value={newProduct.description}
-                        onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                        placeholder="Descrição do produto"
-                      />
-                    </div>
-                    <div>
-                      <Label>Foto do produto</Label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        ref={fileInputRef}
-                        onChange={handleImageSelect}
-                        className="hidden"
-                      />
-                      {newProduct.imageUrl ? (
-                        <div className="relative mt-2">
-                          <img
-                            src={newProduct.imageUrl}
-                            alt="Preview"
-                            className="w-full h-32 object-cover rounded"
-                          />
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-1 right-1 h-6 w-6"
-                            onClick={() => setNewProduct({ ...newProduct, imageUrl: '' })}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full mt-2"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isUploading}
-                        >
-                          {isUploading ? (
-                            'Enviando...'
-                          ) : (
-                            <>
-                              <Upload className="h-4 w-4 mr-2" />
-                              Selecionar imagem
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={newProduct.active}
-                        onCheckedChange={(v) => setNewProduct({ ...newProduct, active: v })}
-                      />
-                      <Label>Ativo</Label>
-                    </div>
-                    <Button onClick={handleAddProduct} className="w-full">Salvar</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Switch
+                checked={newProduct.active}
+                onCheckedChange={(v) => setNewProduct({ ...newProduct, active: v })}
+              />
+              <Label>Ativo</Label>
             </div>
+            <Button onClick={handleAddProduct} className="w-full">Salvar</Button>
           </div>
-        </div>
-      </header>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
+  return (
+    <AppLayout title="Produtos" actions={headerActions}>
+      <div className="space-y-6">
         <Card className="bg-primary/10 border-primary/20">
           <CardContent className="py-4">
             <p className="text-sm">
@@ -450,10 +435,20 @@ export default function Products() {
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+
+                      <div className="flex flex-col gap-1">
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => openEditDialog(product)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
                           onClick={() => {
                             setSelectedProduct(product);
                             setIsOptionalDialogOpen(true);
@@ -462,22 +457,9 @@ export default function Products() {
                           <Plus className="h-4 w-4" />
                         </Button>
                         <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(product)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateProduct(product.id, { active: !product.active })}
-                        >
-                          {product.active ? 'Desativar' : 'Ativar'}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
                           onClick={() => deleteProduct(product.id)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -503,7 +485,7 @@ export default function Products() {
             </CardContent>
           </Card>
         )}
-      </main>
+      </div>
 
       {/* Optional Dialog */}
       <Dialog open={isOptionalDialogOpen} onOpenChange={setIsOptionalDialogOpen}>
@@ -810,6 +792,6 @@ export default function Products() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </AppLayout>
   );
 }
