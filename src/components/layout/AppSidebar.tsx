@@ -1,0 +1,179 @@
+import { Link, useLocation } from 'react-router-dom';
+import { 
+  ShoppingBag, 
+  Package, 
+  LogOut, 
+  Settings,
+  LayoutDashboard,
+  Building2,
+  Users,
+  ChefHat
+} from 'lucide-react';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
+export function AppSidebar() {
+  const location = useLocation();
+  const { user, profile, company, signOut, isSuperAdmin } = useAuthContext();
+
+  const mainMenuItems = [
+    {
+      title: 'Dashboard',
+      icon: LayoutDashboard,
+      href: '/',
+    },
+    {
+      title: 'Pedidos',
+      icon: ShoppingBag,
+      href: '/pedidos',
+    },
+    {
+      title: 'Produtos',
+      icon: Package,
+      href: '/produtos',
+    },
+    {
+      title: 'Cardápio',
+      icon: ChefHat,
+      href: `/cardapio/${company?.slug || ''}`,
+    },
+  ];
+
+  const adminMenuItems = [
+    {
+      title: 'Empresas',
+      icon: Building2,
+      href: '/admin',
+    },
+    {
+      title: 'Usuários',
+      icon: Users,
+      href: '/admin/usuarios',
+    },
+  ];
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  return (
+    <Sidebar>
+      <SidebarHeader className="border-b border-sidebar-border p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-primary">
+            <ShoppingBag className="w-5 h-5 text-primary-foreground" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-bold text-sidebar-foreground">Comanda Tech</span>
+            <span className="text-xs text-muted-foreground truncate max-w-[140px]">
+              {company?.name || 'Sem empresa'}
+            </span>
+          </div>
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {mainMenuItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.href}
+                  >
+                    <Link to={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {isSuperAdmin() && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Administração</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === item.href || location.pathname.startsWith(item.href + '/')}
+                    >
+                      <Link to={item.href}>
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Configurações</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/configuracoes">
+                    <Settings className="w-4 h-4" />
+                    <span>Configurações</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="border-t border-sidebar-border p-4">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-9 w-9">
+            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+              {getInitials(profile?.full_name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-sidebar-foreground truncate">
+              {profile?.full_name || 'Usuário'}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {user?.email}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={signOut}
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}

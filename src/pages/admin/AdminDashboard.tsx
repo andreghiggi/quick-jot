@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuthContext } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,13 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { 
   Building2, 
-  Users, 
   Plus, 
-  LogOut, 
   Loader2, 
-  ShoppingBag,
   ExternalLink,
   Search
 } from 'lucide-react';
@@ -31,7 +28,6 @@ interface Company {
 }
 
 export default function AdminDashboard() {
-  const { profile, signOut } = useAuthContext();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -126,34 +122,69 @@ export default function AdminDashboard() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="container py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-destructive flex items-center justify-center">
-                <ShoppingBag className="w-5 h-5 text-destructive-foreground" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">Painel Admin</h1>
-                <p className="text-xs text-muted-foreground">Gerenciamento de Empresas</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground hidden sm:block">
-                {profile?.full_name || profile?.email}
-              </span>
-              <Button variant="outline" size="icon" onClick={signOut}>
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </div>
+  const headerActions = (
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2">
+          <Plus className="w-4 h-4" />
+          <span className="hidden sm:inline">Nova Empresa</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Criar Nova Empresa</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleCreateCompany} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="company-name">Nome da Empresa *</Label>
+            <Input
+              id="company-name"
+              placeholder="Ex: Hamburgueria do João"
+              value={newCompanyName}
+              onChange={(e) => {
+                setNewCompanyName(e.target.value);
+                if (!newCompanySlug) {
+                  setNewCompanySlug(generateSlug(e.target.value));
+                }
+              }}
+              disabled={isCreating}
+            />
           </div>
-        </div>
-      </header>
+          <div className="space-y-2">
+            <Label htmlFor="company-slug">Slug (URL)</Label>
+            <Input
+              id="company-slug"
+              placeholder="hamburgueria-do-joao"
+              value={newCompanySlug}
+              onChange={(e) => setNewCompanySlug(e.target.value)}
+              disabled={isCreating}
+            />
+            <p className="text-xs text-muted-foreground">
+              URL do cardápio: /cardapio/{newCompanySlug || 'slug-da-empresa'}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="company-phone">WhatsApp</Label>
+            <Input
+              id="company-phone"
+              placeholder="5511999999999"
+              value={newCompanyPhone}
+              onChange={(e) => setNewCompanyPhone(e.target.value)}
+              disabled={isCreating}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isCreating}>
+            {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            Criar Empresa
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 
-      <main className="container py-6 space-y-6">
+  return (
+    <AppLayout title="Painel Admin" actions={headerActions}>
+      <div className="space-y-6">
         {/* Stats */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
@@ -168,7 +199,7 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Empresas Ativas</CardTitle>
-              <Building2 className="w-4 h-4 text-green-500" />
+              <Building2 className="w-4 h-4 text-success" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -179,7 +210,7 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Empresas Inativas</CardTitle>
-              <Building2 className="w-4 h-4 text-red-500" />
+              <Building2 className="w-4 h-4 text-destructive" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -192,68 +223,9 @@ export default function AdminDashboard() {
         {/* Companies List */}
         <Card>
           <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <CardTitle>Empresas Cadastradas</CardTitle>
-                <CardDescription>Gerencie as empresas do sistema</CardDescription>
-              </div>
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    Nova Empresa
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Criar Nova Empresa</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleCreateCompany} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="company-name">Nome da Empresa *</Label>
-                      <Input
-                        id="company-name"
-                        placeholder="Ex: Hamburgueria do João"
-                        value={newCompanyName}
-                        onChange={(e) => {
-                          setNewCompanyName(e.target.value);
-                          if (!newCompanySlug) {
-                            setNewCompanySlug(generateSlug(e.target.value));
-                          }
-                        }}
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="company-slug">Slug (URL)</Label>
-                      <Input
-                        id="company-slug"
-                        placeholder="hamburgueria-do-joao"
-                        value={newCompanySlug}
-                        onChange={(e) => setNewCompanySlug(e.target.value)}
-                        disabled={isCreating}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        URL do cardápio: /cardapio/{newCompanySlug || 'slug-da-empresa'}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="company-phone">WhatsApp</Label>
-                      <Input
-                        id="company-phone"
-                        placeholder="5511999999999"
-                        value={newCompanyPhone}
-                        onChange={(e) => setNewCompanyPhone(e.target.value)}
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isCreating}>
-                      {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                      Criar Empresa
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
+            <div>
+              <CardTitle>Empresas Cadastradas</CardTitle>
+              <CardDescription>Gerencie as empresas do sistema</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -316,7 +288,7 @@ export default function AdminDashboard() {
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
