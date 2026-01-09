@@ -12,10 +12,11 @@ import {
 interface AppLayoutProps {
   children: ReactNode;
   title?: string;
+  subtitle?: string;
   actions?: ReactNode;
 }
 
-export function AppLayout({ children, title, actions }: AppLayoutProps) {
+export function AppLayout({ children, title, subtitle, actions }: AppLayoutProps) {
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -23,13 +24,10 @@ export function AppLayout({ children, title, actions }: AppLayoutProps) {
         <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border px-4 bg-background/80 backdrop-blur-lg sticky top-0 z-40">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-semibold">{title || 'Dashboard'}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+          <div className="flex flex-col">
+            <span className="font-semibold">{title || 'Dashboard'}</span>
+            {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
+          </div>
           {actions && (
             <div className="ml-auto flex items-center gap-2">
               {actions}

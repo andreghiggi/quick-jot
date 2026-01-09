@@ -1,15 +1,22 @@
 import { cn } from '@/lib/utils';
-import { LucideIcon } from 'lucide-react';
+import { ReactNode } from 'react';
 
 interface StatsCardProps {
   title: string;
   value: string | number;
-  icon: LucideIcon;
+  icon: ReactNode;
   trend?: string;
+  color?: 'primary' | 'warning' | 'success' | 'muted';
   className?: string;
 }
 
-export function StatsCard({ title, value, icon: Icon, trend, className }: StatsCardProps) {
+export function StatsCard({ title, value, icon, trend, color = 'primary', className }: StatsCardProps) {
+  const colorClasses = {
+    primary: 'bg-primary/10 text-primary',
+    warning: 'bg-yellow-500/10 text-yellow-600',
+    success: 'bg-green-500/10 text-green-600',
+    muted: 'bg-muted text-muted-foreground',
+  };
   return (
     <div className={cn(
       "bg-card rounded-xl p-4 shadow-card border border-border",
@@ -24,8 +31,8 @@ export function StatsCard({ title, value, icon: Icon, trend, className }: StatsC
             <p className="text-xs text-success mt-1">{trend}</p>
           )}
         </div>
-        <div className="p-2.5 rounded-lg bg-primary/10">
-          <Icon className="w-5 h-5 text-primary" />
+        <div className={cn("p-2.5 rounded-lg", colorClasses[color])}>
+          {icon}
         </div>
       </div>
     </div>
