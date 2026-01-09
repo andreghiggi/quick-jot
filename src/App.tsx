@@ -11,6 +11,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Auth from "./pages/Auth";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
+import Orders from "./pages/Orders";
+import Settings from "./pages/Settings";
 import Menu from "./pages/Menu";
 import NoCompany from "./pages/NoCompany";
 import NotFound from "./pages/NotFound";
@@ -49,9 +51,21 @@ function AppRoutes() {
       <Route path="/" element={<RootRedirect />} />
       
       {/* Protected Routes */}
+      <Route path="/pedidos" element={
+        <ProtectedRoute requireCompany>
+          <Orders />
+        </ProtectedRoute>
+      } />
+      
       <Route path="/produtos" element={
         <ProtectedRoute requireCompany>
           <Products />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/configuracoes" element={
+        <ProtectedRoute requireCompany>
+          <Settings />
         </ProtectedRoute>
       } />
       

@@ -40,22 +40,22 @@ const Index = () => {
           <StatsCard
             title="Pedidos Hoje"
             value={todayOrders.length}
-            icon={ShoppingBag}
+            icon={<ShoppingBag className="w-5 h-5" />}
           />
           <StatsCard
             title="Aguardando"
             value={pendingOrders.length + preparingOrders.length}
-            icon={Clock}
+            icon={<Clock className="w-5 h-5" />}
           />
           <StatsCard
             title="Faturamento Hoje"
             value={`R$ ${todayRevenue.toFixed(2)}`}
-            icon={DollarSign}
+            icon={<DollarSign className="w-5 h-5" />}
           />
           <StatsCard
             title="Total de Pedidos"
             value={orders.length}
-            icon={TrendingUp}
+            icon={<TrendingUp className="w-5 h-5" />}
           />
         </section>
 
