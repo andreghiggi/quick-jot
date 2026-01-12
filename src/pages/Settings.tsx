@@ -339,7 +339,7 @@ if __name__ == "__main__":
     const storeName = company?.name || 'Minha Loja';
     const companyId = company?.id || '';
     
-    // Gera o script Python como string para o PowerShell
+    // Script Python limpo
     const pythonScript = `import requests
 import time
 import json
@@ -388,48 +388,48 @@ def buscar_itens(order_id):
         return []
 
 def formatar_recibo(pedido, itens):
-    linhas = []
-    linhas.append('=' * 48)
-    linhas.append(STORE_NAME.center(48))
-    linhas.append('=' * 48)
+    L = []
+    L.append('=' * 48)
+    L.append(STORE_NAME.center(48))
+    L.append('=' * 48)
     num = pedido.get('daily_number', '?')
-    linhas.append(('*** PEDIDO #' + str(num) + ' ***').center(48))
-    linhas.append('')
+    L.append(('*** PEDIDO #' + str(num) + ' ***').center(48))
+    L.append('')
     try:
         dt = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
-        linhas.append('Data: ' + dt.strftime('%d/%m/%Y %H:%M'))
+        L.append('Data: ' + dt.strftime('%d/%m/%Y %H:%M'))
     except:
-        linhas.append('Data: ' + pedido.get('created_at', '')[:16])
-    linhas.append('')
-    linhas.append('-' * 48)
-    linhas.append('Cliente: ' + pedido.get('customer_name', ''))
+        L.append('Data: ' + pedido.get('created_at', '')[:16])
+    L.append('')
+    L.append('-' * 48)
+    L.append('Cliente: ' + pedido.get('customer_name', ''))
     if pedido.get('customer_phone'):
-        linhas.append('Telefone: ' + pedido['customer_phone'])
+        L.append('Telefone: ' + pedido['customer_phone'])
     if pedido.get('delivery_address'):
-        linhas.append('Endereco: ' + pedido['delivery_address'])
-    linhas.append('')
-    linhas.append('-' * 48)
-    linhas.append('ITENS:')
+        L.append('Endereco: ' + pedido['delivery_address'])
+    L.append('')
+    L.append('-' * 48)
+    L.append('ITENS:')
     for item in itens:
         qtd = item.get('quantity', 1)
         nome = item.get('name', 'Item')
         preco = item.get('price', 0) * qtd
         linha = str(qtd) + 'x ' + nome + ' - R$ ' + str(round(preco, 2)).replace('.', ',')
-        linhas.append(linha)
+        L.append(linha)
         if item.get('notes'):
-            linhas.append('   -> ' + item['notes'])
+            L.append('   -> ' + item['notes'])
     if pedido.get('notes'):
-        linhas.append('')
-        linhas.append('OBS: ' + pedido['notes'])
-    linhas.append('')
-    linhas.append('=' * 48)
+        L.append('')
+        L.append('OBS: ' + pedido['notes'])
+    L.append('')
+    L.append('=' * 48)
     total = pedido.get('total', 0)
     total_str = 'TOTAL: R$ ' + str(round(total, 2)).replace('.', ',')
-    linhas.append(total_str.center(48))
-    linhas.append('=' * 48)
-    linhas.append('')
-    linhas.append('Obrigado pela preferencia!'.center(48))
-    return chr(10).join(linhas)
+    L.append(total_str.center(48))
+    L.append('=' * 48)
+    L.append('')
+    L.append('Obrigado pela preferencia!'.center(48))
+    return chr(10).join(L)
 
 def imprimir(texto):
     if USE_WIN32:
@@ -444,8 +444,7 @@ def imprimir(texto):
                 try:
                     win32print.StartPagePrinter(hprinter)
                     texto_bytes = texto.encode('cp850', errors='replace')
-                    texto_bytes += b'\\x0a\\x0a\\x0a\\x0a\\x0a'
-                    texto_bytes += b'\\x1d\\x56\\x00'
+                    texto_bytes += b'\\x0a\\x0a\\x0a\\x0a\\x0a\\x1d\\x56\\x00'
                     win32print.WritePrinter(hprinter, texto_bytes)
                     win32print.EndPagePrinter(hprinter)
                 finally:
@@ -521,13 +520,13 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('')
         print('Encerrando...')
-        salvar_historico()`;
+        salvar_historico()
+`;
 
-    // Escapa aspas duplas para o PowerShell
-    const escapedScript = pythonScript.replace(/"/g, '`"').replace(/\$/g, '`$');
+    // Converte para Base64
+    const base64Script = btoa(unescape(encodeURIComponent(pythonScript)));
     
     return `@echo off
-setlocal
 chcp 65001 >nul
 title ${storeName} - Impressao Automatica
 color 0A
@@ -538,7 +537,6 @@ echo   ${storeName} - Instalador de Impressao
 echo ============================================
 echo.
 
-REM Verifica se Python esta instalado
 echo [..] Verificando Python...
 python --version
 if %errorlevel% neq 0 (
@@ -546,41 +544,40 @@ if %errorlevel% neq 0 (
     echo.
     echo [ERRO] Python nao encontrado!
     echo.
-    echo Por favor, instale o Python:
-    echo 1. Acesse https://python.org
-    echo 2. Baixe e instale a versao mais recente
-    echo 3. IMPORTANTE: Marque "Add Python to PATH"
-    echo 4. Reinicie o computador
-    echo 5. Execute este instalador novamente
-    goto :fim
+    echo Instale o Python em https://python.org
+    echo IMPORTANTE: Marque "Add Python to PATH"
+    echo.
+    pause
+    exit /b 1
 )
-
 echo [OK] Python encontrado
 echo.
 
-REM Cria a pasta se nao existir
-echo [..] Criando pasta...
 if not exist "C:\\ComandaTech" mkdir "C:\\ComandaTech"
-echo [OK] Pasta C:\\ComandaTech OK
+echo [OK] Pasta C:\\ComandaTech
 echo.
 
-echo ============================================
-echo   Instalando dependencias...
-echo ============================================
-echo.
-python -m pip install requests pywin32 --quiet
-echo.
+echo [..] Instalando dependencias...
+python -m pip install requests pywin32 -q
 echo [OK] Dependencias instaladas
 echo.
 
-echo [..] Criando script de impressao...
-powershell -ExecutionPolicy Bypass -Command "Set-Content -Path 'C:\\ComandaTech\\printer.py' -Value '${escapedScript}' -Encoding UTF8"
+echo [..] Criando script...
+
+REM Cria arquivo base64 temporario
+echo ${base64Script}> "%temp%\\printer.b64"
+
+REM Decodifica usando certutil
+certutil -decode "%temp%\\printer.b64" "C:\\ComandaTech\\printer.py" >nul 2>&1
 
 if not exist "C:\\ComandaTech\\printer.py" (
     color 0C
-    echo [ERRO] Arquivo printer.py nao foi criado!
-    goto :fim
+    echo [ERRO] Falha ao criar arquivo!
+    pause
+    exit /b 1
 )
+
+del "%temp%\\printer.b64" >nul 2>&1
 
 echo [OK] Script criado
 echo.
@@ -594,12 +591,8 @@ echo.
 cd /d "C:\\ComandaTech"
 python printer.py
 
-:fim
 echo.
-echo ============================================
-echo   Pressione qualquer tecla para fechar...
-echo ============================================
-pause >nul
+pause
 `;
   };
 
