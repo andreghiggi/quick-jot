@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, ShoppingBag } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
+import logoIcon from '@/assets/logo-icon.png';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -121,12 +122,12 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center shadow-primary">
-              <ShoppingBag className="w-8 h-8 text-primary-foreground" />
+            <div className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center bg-white shadow-lg">
+              <img src={logoIcon} alt="ComandaTech" className="w-16 h-16 object-contain" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Comanda Tech</CardTitle>
-          <CardDescription>Sistema de Gestão de Pedidos</CardDescription>
+          <CardTitle className="text-2xl text-primary">ComandaTech</CardTitle>
+          <CardDescription>Software para Restaurantes</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
