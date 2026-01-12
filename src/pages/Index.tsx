@@ -5,7 +5,7 @@ import { OrderTabs } from '@/components/OrderTabs';
 import { NewOrderDialog } from '@/components/NewOrderDialog';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Plus, ShoppingBag, Clock, DollarSign, TrendingUp, Loader2 } from 'lucide-react';
+import { Plus, ShoppingBag, Clock, DollarSign, TrendingUp, Loader2, RefreshCw } from 'lucide-react';
 
 const Index = () => {
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
@@ -28,10 +28,21 @@ const Index = () => {
     <AppLayout 
       title="Dashboard" 
       actions={
-        <Button onClick={() => setIsNewOrderOpen(true)} className="gap-2">
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Novo Pedido</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => window.location.reload()} 
+            className="h-9 w-9"
+            title="Atualizar"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+          <Button onClick={() => setIsNewOrderOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Novo Pedido</span>
+          </Button>
+        </div>
       }
     >
       <div className="space-y-6">
