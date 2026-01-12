@@ -337,194 +337,6 @@ if __name__ == "__main__":
 
   const generateBatScript = () => {
     const storeName = company?.name || 'Minha Loja';
-    const companyId = company?.id || '';
-    
-    // Script Python limpo
-    const pythonScript = `import requests
-import time
-import json
-import os
-from datetime import datetime
-
-try:
-    import win32print
-    USE_WIN32 = True
-except ImportError:
-    USE_WIN32 = False
-    print('[AVISO] pywin32 nao instalado')
-
-SUPABASE_URL = 'https://iwmrtxdzlkasuzutxvhh.supabase.co'
-SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bXJ0eGR6bGthc3V6dXR4dmhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3OTExODMsImV4cCI6MjA4MDM2NzE4M30.VsnT1zdVUwJdv8gBlg8CthBx_bccZp-LsOs2PRq1Uik'
-COMPANY_ID = '${companyId}'
-CHECK_INTERVAL = 5
-STORE_NAME = '${storeName}'
-PRINTER_NAME = ''
-
-pedidos_impressos = set()
-
-def get_printer_name():
-    if PRINTER_NAME:
-        return PRINTER_NAME
-    if USE_WIN32:
-        return win32print.GetDefaultPrinter()
-    return None
-
-def buscar_pedidos():
-    try:
-        url = SUPABASE_URL + '/rest/v1/orders?status=eq.pending&company_id=eq.' + COMPANY_ID + '&order=created_at.desc'
-        headers = {'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY}
-        r = requests.get(url, headers=headers)
-        return r.json() if r.ok else []
-    except:
-        return []
-
-def buscar_itens(order_id):
-    try:
-        url = SUPABASE_URL + '/rest/v1/order_items?order_id=eq.' + order_id
-        headers = {'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY}
-        r = requests.get(url, headers=headers)
-        return r.json() if r.ok else []
-    except:
-        return []
-
-def formatar_recibo(pedido, itens):
-    L = []
-    L.append('=' * 48)
-    L.append(STORE_NAME.center(48))
-    L.append('=' * 48)
-    num = pedido.get('daily_number', '?')
-    L.append(('*** PEDIDO #' + str(num) + ' ***').center(48))
-    L.append('')
-    try:
-        dt = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
-        L.append('Data: ' + dt.strftime('%d/%m/%Y %H:%M'))
-    except:
-        L.append('Data: ' + pedido.get('created_at', '')[:16])
-    L.append('')
-    L.append('-' * 48)
-    L.append('Cliente: ' + pedido.get('customer_name', ''))
-    if pedido.get('customer_phone'):
-        L.append('Telefone: ' + pedido['customer_phone'])
-    if pedido.get('delivery_address'):
-        L.append('Endereco: ' + pedido['delivery_address'])
-    L.append('')
-    L.append('-' * 48)
-    L.append('ITENS:')
-    for item in itens:
-        qtd = item.get('quantity', 1)
-        nome = item.get('name', 'Item')
-        preco = item.get('price', 0) * qtd
-        linha = str(qtd) + 'x ' + nome + ' - R$ ' + str(round(preco, 2)).replace('.', ',')
-        L.append(linha)
-        if item.get('notes'):
-            L.append('   -> ' + item['notes'])
-    if pedido.get('notes'):
-        L.append('')
-        L.append('OBS: ' + pedido['notes'])
-    L.append('')
-    L.append('=' * 48)
-    total = pedido.get('total', 0)
-    total_str = 'TOTAL: R$ ' + str(round(total, 2)).replace('.', ',')
-    L.append(total_str.center(48))
-    L.append('=' * 48)
-    L.append('')
-    L.append('Obrigado pela preferencia!'.center(48))
-    return chr(10).join(L)
-
-def imprimir(texto):
-    if USE_WIN32:
-        try:
-            printer = get_printer_name()
-            if not printer:
-                return False
-            print('[INFO] Impressora: ' + printer)
-            hprinter = win32print.OpenPrinter(printer)
-            try:
-                job = win32print.StartDocPrinter(hprinter, 1, ('Pedido', None, 'RAW'))
-                try:
-                    win32print.StartPagePrinter(hprinter)
-                    texto_bytes = texto.encode('cp850', errors='replace')
-                    texto_bytes += b'\\x0a\\x0a\\x0a\\x0a\\x0a\\x1d\\x56\\x00'
-                    win32print.WritePrinter(hprinter, texto_bytes)
-                    win32print.EndPagePrinter(hprinter)
-                finally:
-                    win32print.EndDocPrinter(hprinter)
-            finally:
-                win32print.ClosePrinter(hprinter)
-            return True
-        except Exception as e:
-            print('[ERRO] ' + str(e))
-            return False
-    else:
-        import tempfile
-        import subprocess
-        try:
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='cp850', errors='replace') as f:
-                f.write(texto)
-                arquivo = f.name
-            subprocess.run(['print', '/d:prn', arquivo], shell=True, timeout=30)
-            time.sleep(2)
-            os.unlink(arquivo)
-            return True
-        except:
-            return False
-
-def carregar_historico():
-    global pedidos_impressos
-    try:
-        if os.path.exists('impressos.json'):
-            with open('impressos.json', 'r') as f:
-                hoje = datetime.now().date().isoformat()
-                pedidos_impressos = set(json.load(f).get(hoje, []))
-    except:
-        pedidos_impressos = set()
-
-def salvar_historico():
-    try:
-        hoje = datetime.now().date().isoformat()
-        with open('impressos.json', 'w') as f:
-            json.dump({hoje: list(pedidos_impressos)}, f)
-    except:
-        pass
-
-if __name__ == '__main__':
-    print('=' * 50)
-    print('  ' + STORE_NAME + ' - Impressao Automatica')
-    print('=' * 50)
-    printer = get_printer_name()
-    if printer:
-        print('  Impressora: ' + printer)
-    else:
-        print('  [AVISO] Nenhuma impressora detectada!')
-    print('  Verificando pedidos a cada ' + str(CHECK_INTERVAL) + 's')
-    print('  Pressione Ctrl+C para parar')
-    print('=' * 50)
-    print()
-    carregar_historico()
-    try:
-        while True:
-            for pedido in buscar_pedidos():
-                order_id = pedido.get('id')
-                if order_id in pedidos_impressos:
-                    continue
-                print('[NOVO] Pedido #' + str(pedido.get('daily_number')) + ' - ' + pedido.get('customer_name'))
-                itens = buscar_itens(order_id)
-                recibo = formatar_recibo(pedido, itens)
-                if imprimir(recibo):
-                    print('[OK] Impresso!')
-                    pedidos_impressos.add(order_id)
-                    salvar_historico()
-                else:
-                    print('[FALHA] Tentando novamente...')
-            time.sleep(CHECK_INTERVAL)
-    except KeyboardInterrupt:
-        print('')
-        print('Encerrando...')
-        salvar_historico()
-`;
-
-    // Converte para Base64
-    const base64Script = btoa(unescape(encodeURIComponent(pythonScript)));
     
     return `@echo off
 chcp 65001 >nul
@@ -533,7 +345,7 @@ color 0A
 
 echo.
 echo ============================================
-echo   ${storeName} - Instalador de Impressao
+echo   ${storeName} - Impressao Automatica
 echo ============================================
 echo.
 
@@ -543,9 +355,8 @@ if %errorlevel% neq 0 (
     color 0C
     echo.
     echo [ERRO] Python nao encontrado!
-    echo.
-    echo Instale o Python em https://python.org
-    echo IMPORTANTE: Marque "Add Python to PATH"
+    echo Instale em https://python.org
+    echo Marque "Add Python to PATH"
     echo.
     pause
     exit /b 1
@@ -553,8 +364,17 @@ if %errorlevel% neq 0 (
 echo [OK] Python encontrado
 echo.
 
-if not exist "C:\\ComandaTech" mkdir "C:\\ComandaTech"
-echo [OK] Pasta C:\\ComandaTech
+if not exist "C:\\ComandaTech\\printer.py" (
+    color 0C
+    echo [ERRO] Arquivo printer.py nao encontrado!
+    echo.
+    echo Baixe o arquivo printer.py e salve em:
+    echo C:\\ComandaTech\\printer.py
+    echo.
+    pause
+    exit /b 1
+)
+echo [OK] Arquivo printer.py encontrado
 echo.
 
 echo [..] Instalando dependencias...
@@ -562,30 +382,9 @@ python -m pip install requests pywin32 -q
 echo [OK] Dependencias instaladas
 echo.
 
-echo [..] Criando script...
-
-REM Cria arquivo base64 temporario
-echo ${base64Script}> "%temp%\\printer.b64"
-
-REM Decodifica usando certutil
-certutil -decode "%temp%\\printer.b64" "C:\\ComandaTech\\printer.py" >nul 2>&1
-
-if not exist "C:\\ComandaTech\\printer.py" (
-    color 0C
-    echo [ERRO] Falha ao criar arquivo!
-    pause
-    exit /b 1
-)
-
-del "%temp%\\printer.b64" >nul 2>&1
-
-echo [OK] Script criado
-echo.
 echo ============================================
 echo   Iniciando impressao automatica...
 echo ============================================
-echo.
-echo Impressora padrao do Windows sera usada.
 echo.
 
 cd /d "C:\\ComandaTech"
@@ -757,19 +556,28 @@ pause
             <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg space-y-3">
               <h4 className="font-medium flex items-center gap-2">
                 <FileText className="w-4 h-4" />
-                Instalação Automática
+                Instalação (2 passos)
               </h4>
-              <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+              <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
                 <li>Instale o Python em <a href="https://python.org" target="_blank" rel="noopener noreferrer" className="text-primary underline">python.org</a> (marque "Add to PATH")</li>
-                <li>Baixe o instalador abaixo</li>
-                <li>Execute como administrador (clique direito → Executar como administrador)</li>
+                <li>Crie a pasta <code className="bg-background px-1 py-0.5 rounded">C:\ComandaTech</code></li>
+                <li>Baixe os 2 arquivos abaixo e salve na pasta criada</li>
+                <li>Execute o .bat como administrador</li>
               </ol>
-              <Button onClick={handleDownloadBat} className="w-full" size="lg">
-                <Download className="w-4 h-4 mr-2" />
-                Baixar Instalador (.bat)
-              </Button>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <Button onClick={handleDownloadScript} size="lg" className="w-full">
+                  <Download className="w-4 h-4 mr-2" />
+                  1. printer.py
+                </Button>
+                <Button onClick={handleDownloadBat} size="lg" variant="secondary" className="w-full">
+                  <Download className="w-4 h-4 mr-2" />
+                  2. iniciar.bat
+                </Button>
+              </div>
+              
               <p className="text-xs text-muted-foreground text-center">
-                O instalador cria a pasta, instala dependências e inicia automaticamente
+                Salve ambos em C:\ComandaTech e execute o .bat
               </p>
             </div>
           </CardContent>
