@@ -8,6 +8,10 @@ interface StoreSettings {
   storeName: string;
   deliveryFeeCity: number;
   deliveryFeeInterior: number;
+  showCardPedidosHoje: boolean;
+  showCardAguardando: boolean;
+  showCardFaturamento: boolean;
+  showCardTotalPedidos: boolean;
 }
 
 interface UseStoreSettingsOptions {
@@ -22,6 +26,10 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     storeName: 'Comanda Tech',
     deliveryFeeCity: 0,
     deliveryFeeInterior: 0,
+    showCardPedidosHoje: true,
+    showCardAguardando: true,
+    showCardFaturamento: true,
+    showCardTotalPedidos: true,
   });
   const [loading, setLoading] = useState(true);
 
@@ -50,6 +58,10 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         storeName: settingsMap['store_name'] || 'Comanda Tech',
         deliveryFeeCity: parseFloat(settingsMap['delivery_fee_city']) || 0,
         deliveryFeeInterior: parseFloat(settingsMap['delivery_fee_interior']) || 0,
+        showCardPedidosHoje: settingsMap['show_card_pedidos_hoje'] !== 'false',
+        showCardAguardando: settingsMap['show_card_aguardando'] !== 'false',
+        showCardFaturamento: settingsMap['show_card_faturamento'] !== 'false',
+        showCardTotalPedidos: settingsMap['show_card_total_pedidos'] !== 'false',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);
@@ -151,6 +163,11 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     return result;
   }
 
+  async function saveCardVisibility(cardKey: string, visible: boolean): Promise<boolean> {
+    const result = await updateSetting(cardKey, visible.toString());
+    return result;
+  }
+
   return {
     settings,
     loading,
@@ -159,6 +176,8 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     saveStoreName,
     saveDeliveryFeeCity,
     saveDeliveryFeeInterior,
+    saveCardVisibility,
+    updateSetting,
     refetch: fetchSettings,
   };
 }
