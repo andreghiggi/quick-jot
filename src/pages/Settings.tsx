@@ -6,17 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Copy, Check, FileText, Truck } from 'lucide-react';
-import { Textarea } from '@/components/ui/textarea';
+import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard } from 'lucide-react';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 
 export default function Settings() {
   const { company, refetchUserData } = useAuthContext();
   const { toast } = useToast();
-  const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior } = useStoreSettings({ companyId: company?.id });
+  const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility } = useStoreSettings({ companyId: company?.id });
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [deliveryFeeCity, setDeliveryFeeCity] = useState('');
   const [deliveryFeeInterior, setDeliveryFeeInterior] = useState('');
   const [savingDelivery, setSavingDelivery] = useState(false);
@@ -27,9 +27,23 @@ export default function Settings() {
     slug: '',
   });
 
+  // Card visibility states
+  const [cardVisibility, setCardVisibility] = useState({
+    showCardPedidosHoje: true,
+    showCardAguardando: true,
+    showCardFaturamento: true,
+    showCardTotalPedidos: true,
+  });
+
   useEffect(() => {
     setDeliveryFeeCity(storeSettings.deliveryFeeCity.toString());
     setDeliveryFeeInterior(storeSettings.deliveryFeeInterior.toString());
+    setCardVisibility({
+      showCardPedidosHoje: storeSettings.showCardPedidosHoje,
+      showCardAguardando: storeSettings.showCardAguardando,
+      showCardFaturamento: storeSettings.showCardFaturamento,
+      showCardTotalPedidos: storeSettings.showCardTotalPedidos,
+    });
   }, [storeSettings]);
 
   useEffect(() => {
@@ -76,6 +90,15 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCardVisibilityChange = async (key: string, value: boolean) => {
+    setCardVisibility(prev => ({ ...prev, [key]: value }));
+    await saveCardVisibility(key.replace(/([A-Z])/g, '_$1').toLowerCase(), value);
+    toast({
+      title: 'Configuração salva',
+      description: 'Visibilidade do card atualizada.',
+    });
   };
 
   const generatePythonScript = () => {
@@ -441,18 +464,6 @@ pause
     });
   };
 
-  const handleCopyScript = () => {
-    const script = generatePythonScript();
-    navigator.clipboard.writeText(script);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    
-    toast({
-      title: 'Copiado!',
-      description: 'O script foi copiado para a área de transferência.',
-    });
-  };
-
   if (!company) {
     return (
       <AppLayout title="Configurações" subtitle="Configure sua empresa">
@@ -469,183 +480,255 @@ pause
     <AppLayout 
       title="Configurações" 
       subtitle="Configure os dados da sua empresa"
-      actions={
-        <Button onClick={handleSave} disabled={loading}>
-          {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-          Salvar
-        </Button>
-      }
     >
-      <div className="max-w-2xl space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5" />
-              Dados da Empresa
-            </CardTitle>
-            <CardDescription>
-              Informações básicas sobre sua empresa
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome da Empresa</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Nome da sua empresa"
-              />
-            </div>
+      <Tabs defaultValue="empresa" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="empresa">Empresa</TabsTrigger>
+          <TabsTrigger value="entrega">Entrega</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="impressao">Impressão</TabsTrigger>
+        </TabsList>
 
-            <div className="space-y-2">
-              <Label htmlFor="slug" className="flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                Slug (URL do cardápio)
-              </Label>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">/cardapio/</span>
-                <Input
-                  id="slug"
-                  value={formData.slug}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-                  placeholder="minha-empresa"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="w-5 h-5" />
-              Contato
-            </CardTitle>
-            <CardDescription>
-              Informações de contato da empresa
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefone / WhatsApp</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address" className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Endereço
-              </Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="Rua, número, bairro, cidade"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Truck className="w-5 h-5" />
-              Taxas de Entrega
-            </CardTitle>
-            <CardDescription>
-              Configure os valores de entrega para cidade e interior
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+        {/* Tab Empresa */}
+        <TabsContent value="empresa" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="w-5 h-5" />
+                Dados da Empresa
+              </CardTitle>
+              <CardDescription>
+                Informações básicas sobre sua empresa
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="deliveryFeeCity">Taxa Cidade (R$)</Label>
+                <Label htmlFor="name">Nome da Empresa</Label>
                 <Input
-                  id="deliveryFeeCity"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={deliveryFeeCity}
-                  onChange={(e) => setDeliveryFeeCity(e.target.value)}
-                  placeholder="0.00"
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Nome da sua empresa"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="deliveryFeeInterior">Taxa Interior (R$)</Label>
-                <Input
-                  id="deliveryFeeInterior"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={deliveryFeeInterior}
-                  onChange={(e) => setDeliveryFeeInterior(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-            <Button 
-              onClick={async () => {
-                setSavingDelivery(true);
-                await saveDeliveryFeeCity(parseFloat(deliveryFeeCity) || 0);
-                await saveDeliveryFeeInterior(parseFloat(deliveryFeeInterior) || 0);
-                setSavingDelivery(false);
-              }}
-              disabled={savingDelivery}
-              className="w-full"
-            >
-              {savingDelivery ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              Salvar Taxas de Entrega
-            </Button>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Printer className="w-5 h-5" />
-              Impressão Automática
-            </CardTitle>
-            <CardDescription>
-              Script para imprimir pedidos automaticamente no Windows (compatível com Epson TM-T20)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg space-y-3">
-              <h4 className="font-medium flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Instalação (2 passos)
-              </h4>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                <li>Instale o Python em <a href="https://python.org" target="_blank" rel="noopener noreferrer" className="text-primary underline">python.org</a> (marque "Add to PATH")</li>
-                <li>Crie a pasta <code className="bg-background px-1 py-0.5 rounded">C:\ComandaTech</code></li>
-                <li>Baixe os 2 arquivos abaixo e salve na pasta criada</li>
-                <li>Execute o .bat como administrador</li>
-              </ol>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <Button onClick={handleDownloadScript} size="lg" className="w-full">
-                  <Download className="w-4 h-4 mr-2" />
-                  1. printer.py
-                </Button>
-                <Button onClick={handleDownloadBat} size="lg" variant="secondary" className="w-full">
-                  <Download className="w-4 h-4 mr-2" />
-                  2. iniciar.bat
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="slug" className="flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  Slug (URL do cardápio)
+                </Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">/cardapio/</span>
+                  <Input
+                    id="slug"
+                    value={formData.slug}
+                    onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                    placeholder="minha-empresa"
+                  />
+                </div>
               </div>
-              
-              <p className="text-xs text-muted-foreground text-center">
-                Salve ambos em C:\ComandaTech e execute o .bat
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Phone className="w-5 h-5" />
+                Contato
+              </CardTitle>
+              <CardDescription>
+                Informações de contato da empresa
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefone / WhatsApp</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address" className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Endereço
+                </Label>
+                <Input
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="Rua, número, bairro, cidade"
+                />
+              </div>
+
+              <Button onClick={handleSave} disabled={loading} className="w-full">
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Salvar Dados da Empresa
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab Entrega */}
+        <TabsContent value="entrega" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="w-5 h-5" />
+                Taxas de Entrega
+              </CardTitle>
+              <CardDescription>
+                Configure os valores de entrega para cidade e interior
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="deliveryFeeCity">Taxa Cidade (R$)</Label>
+                  <Input
+                    id="deliveryFeeCity"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={deliveryFeeCity}
+                    onChange={(e) => setDeliveryFeeCity(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="deliveryFeeInterior">Taxa Interior (R$)</Label>
+                  <Input
+                    id="deliveryFeeInterior"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={deliveryFeeInterior}
+                    onChange={(e) => setDeliveryFeeInterior(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <Button 
+                onClick={async () => {
+                  setSavingDelivery(true);
+                  await saveDeliveryFeeCity(parseFloat(deliveryFeeCity) || 0);
+                  await saveDeliveryFeeInterior(parseFloat(deliveryFeeInterior) || 0);
+                  setSavingDelivery(false);
+                }}
+                disabled={savingDelivery}
+                className="w-full"
+              >
+                {savingDelivery ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Salvar Taxas de Entrega
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab Dashboard */}
+        <TabsContent value="dashboard" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LayoutDashboard className="w-5 h-5" />
+                Cards do Dashboard
+              </CardTitle>
+              <CardDescription>
+                Escolha quais cards deseja exibir na página inicial
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Pedidos Hoje</p>
+                  <p className="text-sm text-muted-foreground">Mostra quantidade de pedidos do dia</p>
+                </div>
+                <Switch
+                  checked={cardVisibility.showCardPedidosHoje}
+                  onCheckedChange={(value) => handleCardVisibilityChange('showCardPedidosHoje', value)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Aguardando</p>
+                  <p className="text-sm text-muted-foreground">Mostra pedidos pendentes e em preparo</p>
+                </div>
+                <Switch
+                  checked={cardVisibility.showCardAguardando}
+                  onCheckedChange={(value) => handleCardVisibilityChange('showCardAguardando', value)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Faturamento Hoje</p>
+                  <p className="text-sm text-muted-foreground">Mostra o valor faturado no dia</p>
+                </div>
+                <Switch
+                  checked={cardVisibility.showCardFaturamento}
+                  onCheckedChange={(value) => handleCardVisibilityChange('showCardFaturamento', value)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Total de Pedidos</p>
+                  <p className="text-sm text-muted-foreground">Mostra o total geral de pedidos</p>
+                </div>
+                <Switch
+                  checked={cardVisibility.showCardTotalPedidos}
+                  onCheckedChange={(value) => handleCardVisibilityChange('showCardTotalPedidos', value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab Impressão */}
+        <TabsContent value="impressao" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Printer className="w-5 h-5" />
+                Impressão Automática
+              </CardTitle>
+              <CardDescription>
+                Script para imprimir pedidos automaticamente no Windows (compatível com Epson TM-T20)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg space-y-3">
+                <h4 className="font-medium">Instalação (4 passos)</h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                  <li>Instale o Python em <a href="https://python.org" target="_blank" rel="noopener noreferrer" className="text-primary underline">python.org</a> (marque "Add to PATH")</li>
+                  <li>Crie a pasta <code className="bg-background px-1 py-0.5 rounded">C:\ComandaTech</code></li>
+                  <li>Baixe os 2 arquivos abaixo e salve na pasta criada</li>
+                  <li>Execute o .bat como administrador</li>
+                </ol>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={handleDownloadScript} size="lg" className="w-full">
+                    <Download className="w-4 h-4 mr-2" />
+                    1. printer.py
+                  </Button>
+                  <Button onClick={handleDownloadBat} size="lg" variant="secondary" className="w-full">
+                    <Download className="w-4 h-4 mr-2" />
+                    2. iniciar.bat
+                  </Button>
+                </div>
+                
+                <p className="text-xs text-muted-foreground text-center">
+                  Salve ambos em C:\ComandaTech e execute o .bat
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </AppLayout>
   );
 }
