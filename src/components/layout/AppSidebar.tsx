@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import logoIcon from '@/assets/logo-icon.png';
 
 export function AppSidebar() {
   const location = useLocation();
@@ -75,11 +76,11 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-primary">
-            <ShoppingBag className="w-5 h-5 text-primary-foreground" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-sm">
+            <img src={logoIcon} alt="ComandaTech" className="w-8 h-8 object-contain" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-sidebar-foreground">Comanda Tech</span>
+            <span className="font-bold text-primary">ComandaTech</span>
             <span className="text-xs text-muted-foreground truncate max-w-[140px]">
               {company?.name || 'Sem empresa'}
             </span>
