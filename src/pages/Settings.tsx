@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Copy, Check } from 'lucide-react';
+import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Copy, Check, FileText } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
 export default function Settings() {
@@ -15,6 +15,7 @@ export default function Settings() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedBat, setCopiedBat] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -249,13 +250,213 @@ if __name__ == "__main__":
         salvar_historico()`;
   };
 
+  const generateBatScript = () => {
+    const pythonScript = generatePythonScript();
+    // Escape special characters for batch file
+    const escapedScript = pythonScript
+      .replace(/"/g, '\\"')
+      .replace(/%/g, '%%');
+    
+    return `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   ComandaTech - Instalador de Impressao
+echo ============================================
+echo.
+
+REM Cria a pasta se nao existir
+if not exist "C:\\ComandaTech" (
+    mkdir "C:\\ComandaTech"
+    echo [OK] Pasta C:\\ComandaTech criada
+) else (
+    echo [OK] Pasta C:\\ComandaTech ja existe
+)
+
+REM Cria o arquivo printer.py
+echo [..] Criando arquivo printer.py...
+
+(
+echo """
+echo ${company?.name || 'Minha Loja'} - Impressao Automatica de Pedidos ^(Windows^)
+echo.
+echo COMO USAR:
+echo 1. Instale Python: https://python.org ^(marque "Add to PATH"^)
+echo 2. Abra o CMD e rode: pip install requests
+echo 3. De duplo clique neste arquivo OU rode: python printer.py
+echo """
+echo.
+echo import requests
+echo import time
+echo import json
+echo import os
+echo import tempfile
+echo import subprocess
+echo from datetime import datetime
+echo.
+echo # ============================================
+echo # CONFIGURACAO
+echo # ============================================
+echo SUPABASE_URL = "${import.meta.env.VITE_SUPABASE_URL}"
+echo SUPABASE_KEY = "${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}"
+echo COMPANY_ID = "${company?.id || ''}"
+echo CHECK_INTERVAL = 5  # segundos
+echo STORE_NAME = "${company?.name || 'Minha Loja'}"
+echo.
+echo # ============================================
+echo pedidos_impressos = set^(^)
+echo.
+echo def buscar_pedidos^(^):
+echo     try:
+echo         r = requests.get^(
+echo             f"{SUPABASE_URL}/rest/v1/orders?status=eq.pending^&company_id=eq.{COMPANY_ID}^&order=created_at.desc",
+echo             headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+echo         ^)
+echo         return r.json^(^) if r.ok else []
+echo     except:
+echo         return []
+echo.
+echo def buscar_itens^(order_id^):
+echo     try:
+echo         r = requests.get^(
+echo             f"{SUPABASE_URL}/rest/v1/order_items?order_id=eq.{order_id}",
+echo             headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+echo         ^)
+echo         return r.json^(^) if r.ok else []
+echo     except:
+echo         return []
+echo.
+echo def formatar_recibo^(pedido, itens^):
+echo     linhas = []
+echo     linhas.append^("=" * 40^)
+echo     linhas.append^(STORE_NAME.center^(40^)^)
+echo     linhas.append^("=" * 40^)
+echo     linhas.append^(f"*** PEDIDO #{pedido.get^('daily_number', '?'^)} ***".center^(40^)^)
+echo     linhas.append^(""^)
+echo     try:
+echo         dt = datetime.fromisoformat^(pedido['created_at'].replace^('Z', '+00:00'^)^)
+echo         linhas.append^(f"Data: {dt.strftime^('%%d/%%m/%%Y %%H:%%M'^)}"^)
+echo     except:
+echo         linhas.append^(f"Data: {pedido.get^('created_at', ''^)[:16]}"^)
+echo     linhas.append^(""^)
+echo     linhas.append^("-" * 40^)
+echo     linhas.append^(f"Cliente: {pedido.get^('customer_name', ''^)}"^)
+echo     if pedido.get^('customer_phone'^):
+echo         linhas.append^(f"Telefone: {pedido['customer_phone']}"^)
+echo     if pedido.get^('delivery_address'^):
+echo         linhas.append^(f"Endereco: {pedido['delivery_address']}"^)
+echo     linhas.append^(""^)
+echo     linhas.append^("-" * 40^)
+echo     linhas.append^("ITENS:"^)
+echo     for item in itens:
+echo         qtd = item.get^('quantity', 1^)
+echo         nome = item.get^('name', 'Item'^)
+echo         preco = item.get^('price', 0^) * qtd
+echo         linhas.append^(f"{qtd}x {nome} - R$ {preco:.2f}".replace^('.', ','^)^)
+echo         if item.get^('notes'^):
+echo             linhas.append^(f"   -^> {item['notes']}"^)
+echo     if pedido.get^('notes'^):
+echo         linhas.append^(""^)
+echo         linhas.append^(f"OBS: {pedido['notes']}"^)
+echo     linhas.append^(""^)
+echo     linhas.append^("=" * 40^)
+echo     total = pedido.get^('total', 0^)
+echo     linhas.append^(f"TOTAL: R$ {total:.2f}".replace^('.', ','^).center^(40^)^)
+echo     linhas.append^("=" * 40^)
+echo     linhas.append^(""^)
+echo     linhas.append^("Obrigado pela preferencia!".center^(40^)^)
+echo     linhas.append^("\\n\\n\\n"^)
+echo     return "\\n".join^(linhas^)
+echo.
+echo def imprimir^(texto^):
+echo     try:
+echo         with tempfile.NamedTemporaryFile^(mode='w', suffix='.txt', delete=False, encoding='utf-8'^) as f:
+echo             f.write^(texto^)
+echo             arquivo = f.name
+echo         subprocess.run^(['notepad.exe', '/p', arquivo], shell=True^)
+echo         time.sleep^(2^)
+echo         try:
+echo             os.unlink^(arquivo^)
+echo         except:
+echo             pass
+echo         return True
+echo     except Exception as e:
+echo         print^(f"ERRO ao imprimir: {e}"^)
+echo         return False
+echo.
+echo def carregar_historico^(^):
+echo     global pedidos_impressos
+echo     try:
+echo         if os.path.exists^("impressos.json"^):
+echo             with open^("impressos.json", "r"^) as f:
+echo                 hoje = datetime.now^(^).date^(^).isoformat^(^)
+echo                 pedidos_impressos = set^(json.load^(f^).get^(hoje, []^)^)
+echo     except:
+echo         pedidos_impressos = set^(^)
+echo.
+echo def salvar_historico^(^):
+echo     try:
+echo         hoje = datetime.now^(^).date^(^).isoformat^(^)
+echo         with open^("impressos.json", "w"^) as f:
+echo             json.dump^({hoje: list^(pedidos_impressos^)}, f^)
+echo     except:
+echo         pass
+echo.
+echo if __name__ == "__main__":
+echo     print^("=" * 50^)
+echo     print^(f"  {STORE_NAME} - Impressao Automatica"^)
+echo     print^("=" * 50^)
+echo     print^(f"  Verificando pedidos a cada {CHECK_INTERVAL}s"^)
+echo     print^("  Pressione Ctrl+C para parar"^)
+echo     print^("=" * 50^)
+echo     print^(^)
+echo     carregar_historico^(^)
+echo     try:
+echo         while True:
+echo             for pedido in buscar_pedidos^(^):
+echo                 order_id = pedido.get^("id"^)
+echo                 if order_id in pedidos_impressos:
+echo                     continue
+echo                 print^(f"[NOVO] Pedido #{pedido.get^('daily_number'^)} - {pedido.get^('customer_name'^)}"^)
+echo                 itens = buscar_itens^(order_id^)
+echo                 recibo = formatar_recibo^(pedido, itens^)
+echo                 if imprimir^(recibo^):
+echo                     print^(f"[OK] Impresso!"^)
+echo                     pedidos_impressos.add^(order_id^)
+echo                     salvar_historico^(^)
+echo             time.sleep^(CHECK_INTERVAL^)
+echo     except KeyboardInterrupt:
+echo         print^("\\nEncerrando..."^)
+echo         salvar_historico^(^)
+) > "C:\\ComandaTech\\printer.py"
+
+echo [OK] Arquivo printer.py criado em C:\\ComandaTech\\
+
+echo.
+echo ============================================
+echo   Instalando dependencias do Python...
+echo ============================================
+pip install requests
+
+echo.
+echo ============================================
+echo   Iniciando impressao automatica...
+echo ============================================
+echo.
+
+cd /d "C:\\ComandaTech"
+python printer.py
+
+pause
+`;
+  };
+
   const handleDownloadScript = () => {
     const script = generatePythonScript();
     const blob = new Blob([script], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `auto_printer_${company?.slug || 'loja'}.py`;
+    a.download = `printer.py`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -264,6 +465,24 @@ if __name__ == "__main__":
     toast({
       title: 'Script baixado',
       description: 'O script Python foi baixado com sucesso.',
+    });
+  };
+
+  const handleDownloadBat = () => {
+    const script = generateBatScript();
+    const blob = new Blob([script], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `instalar_impressao_${company?.slug || 'loja'}.bat`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: 'Instalador baixado',
+      description: 'Salve na área de trabalho e execute como administrador.',
     });
   };
 
@@ -385,27 +604,49 @@ if __name__ == "__main__":
               Impressão Automática
             </CardTitle>
             <CardDescription>
-              Script Python para imprimir pedidos automaticamente no Windows
+              Script para imprimir pedidos automaticamente no Windows
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-muted/50 p-4 rounded-lg space-y-3">
-              <h4 className="font-medium">Como usar:</h4>
+            <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg space-y-3">
+              <h4 className="font-medium flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Instalação Rápida (Recomendado)
+              </h4>
               <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
                 <li>Instale o Python em <a href="https://python.org" target="_blank" rel="noopener noreferrer" className="text-primary underline">python.org</a> (marque "Add to PATH")</li>
-                <li>Abra o CMD e rode: <code className="bg-background px-1 py-0.5 rounded">pip install requests</code></li>
-                <li>Baixe o script abaixo e execute com duplo clique</li>
+                <li>Baixe o instalador .bat abaixo</li>
+                <li>Execute como administrador (clique direito → Executar como administrador)</li>
               </ol>
+              <Button onClick={handleDownloadBat} className="w-full" size="lg">
+                <Download className="w-4 h-4 mr-2" />
+                Baixar Instalador (.bat)
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                O instalador cria a pasta C:\ComandaTech, salva o script e inicia automaticamente
+              </p>
             </div>
 
-            <div className="flex gap-2">
-              <Button onClick={handleDownloadScript} className="flex-1">
-                <Download className="w-4 h-4 mr-2" />
-                Baixar Script Python
-              </Button>
-              <Button variant="outline" onClick={handleCopyScript}>
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              </Button>
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-3">Instalação Manual</h4>
+              <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>Baixe o script Python abaixo</li>
+                  <li>Salve em C:\ComandaTech\printer.py</li>
+                  <li>Abra o CMD e rode: <code className="bg-background px-1 py-0.5 rounded">pip install requests</code></li>
+                  <li>Execute com duplo clique</li>
+                </ol>
+              </div>
+
+              <div className="flex gap-2 mt-3">
+                <Button variant="outline" onClick={handleDownloadScript} className="flex-1">
+                  <Download className="w-4 h-4 mr-2" />
+                  Baixar Script Python
+                </Button>
+                <Button variant="outline" onClick={handleCopyScript}>
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
