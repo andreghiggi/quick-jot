@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCategories } from '@/hooks/useCategories';
@@ -18,10 +19,58 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
+interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  phone: string | null;
+}
+
 export default function Menu() {
-  const { products, loading: productsLoading, getActiveProducts } = useProducts();
-  const { settings, loading: settingsLoading } = useStoreSettings();
-  const { categories, loading: categoriesLoading } = useCategories();
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  
+  const [company, setCompany] = useState<Company | null>(null);
+  const [companyLoading, setCompanyLoading] = useState(true);
+  const [companyNotFound, setCompanyNotFound] = useState(false);
+
+  // Fetch company by slug
+  useEffect(() => {
+    async function fetchCompany() {
+      if (!slug) {
+        // Se não tem slug, redireciona para página inicial
+        navigate('/');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('id, name, slug, phone')
+          .eq('slug', slug)
+          .eq('active', true)
+          .single();
+
+        if (error || !data) {
+          setCompanyNotFound(true);
+        } else {
+          setCompany(data);
+        }
+      } catch (error) {
+        console.error('Error fetching company:', error);
+        setCompanyNotFound(true);
+      } finally {
+        setCompanyLoading(false);
+      }
+    }
+
+    fetchCompany();
+  }, [slug, navigate]);
+
+  const { products, loading: productsLoading, getActiveProducts } = useProducts({ companyId: company?.id });
+  const { settings, loading: settingsLoading } = useStoreSettings({ companyId: company?.id });
+  const { categories, loading: categoriesLoading } = useCategories({ companyId: company?.id });
+  
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedOptionals, setSelectedOptionals] = useState<ProductOptional[]>([]);
@@ -44,7 +93,7 @@ export default function Menu() {
     'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ];
 
-  const loading = productsLoading || settingsLoading || categoriesLoading;
+  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading;
 
   const activeProducts = getActiveProducts();
   
@@ -127,10 +176,8 @@ export default function Menu() {
       return;
     }
 
-    // Use store phone from URL params or settings
-    const urlParams = new URLSearchParams(window.location.search);
-    const phoneFromUrl = urlParams.get('phone');
-    const phoneToUse = phoneFromUrl || settings.storePhone;
+    // Use company phone or settings phone
+    const phoneToUse = company?.phone || settings.storePhone;
 
     if (!phoneToUse) {
       toast.error('Número do WhatsApp da loja não configurado');
@@ -153,6 +200,7 @@ export default function Menu() {
           notes: `Pagamento: ${paymentMethod}`,
           total: cartTotal,
           status: 'pending',
+          company_id: company?.id || null,
         })
         .select()
         .single();
@@ -167,6 +215,7 @@ export default function Menu() {
         quantity: item.quantity,
         price: item.product.price + item.selectedOptionals.reduce((sum, opt) => sum + opt.price, 0),
         notes: item.notes || null,
+        company_id: company?.id || null,
       }));
 
       const { error: itemsError } = await supabase
@@ -181,7 +230,7 @@ export default function Menu() {
     }
 
     // Build WhatsApp message
-    const storeName = settings.storeName || 'Comanda Tech';
+    const storeName = settings.storeName || company?.name || 'Comanda Tech';
     let message = `*Novo Pedido - ${storeName}*\n\n`;
     message += `*Cliente:* ${customerName}\n`;
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
@@ -232,6 +281,26 @@ export default function Menu() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Carregando cardápio...</p>
+      </div>
+    );
+  }
+
+  if (companyNotFound) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-8 text-center space-y-4">
+            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-3xl">🔍</span>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold">Empresa não encontrada</h2>
+              <p className="text-muted-foreground">
+                O cardápio que você está procurando não existe ou está inativo.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -290,7 +359,7 @@ export default function Menu() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-xl font-bold text-foreground">
-              {settings.storeName || 'Cardápio'}
+              {settings.storeName || company?.name || 'Cardápio'}
             </h1>
             <Button
               variant="outline"
