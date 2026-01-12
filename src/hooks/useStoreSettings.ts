@@ -6,6 +6,8 @@ interface StoreSettings {
   storePhone: string;
   bannerUrl: string;
   storeName: string;
+  deliveryFeeCity: number;
+  deliveryFeeInterior: number;
 }
 
 interface UseStoreSettingsOptions {
@@ -18,6 +20,8 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     storePhone: '',
     bannerUrl: '',
     storeName: 'Comanda Tech',
+    deliveryFeeCity: 0,
+    deliveryFeeInterior: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -44,6 +48,8 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         storePhone: settingsMap['store_phone'] || '',
         bannerUrl: settingsMap['banner_url'] || '',
         storeName: settingsMap['store_name'] || 'Comanda Tech',
+        deliveryFeeCity: parseFloat(settingsMap['delivery_fee_city']) || 0,
+        deliveryFeeInterior: parseFloat(settingsMap['delivery_fee_interior']) || 0,
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);
@@ -129,12 +135,30 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     return result;
   }
 
+  async function saveDeliveryFeeCity(value: number): Promise<boolean> {
+    const result = await updateSetting('delivery_fee_city', value.toString());
+    if (result) {
+      toast.success('Taxa cidade salva!');
+    }
+    return result;
+  }
+
+  async function saveDeliveryFeeInterior(value: number): Promise<boolean> {
+    const result = await updateSetting('delivery_fee_interior', value.toString());
+    if (result) {
+      toast.success('Taxa interior salva!');
+    }
+    return result;
+  }
+
   return {
     settings,
     loading,
     saveStorePhone,
     saveBannerUrl,
     saveStoreName,
+    saveDeliveryFeeCity,
+    saveDeliveryFeeInterior,
     refetch: fetchSettings,
   };
 }

@@ -82,6 +82,7 @@ export default function Menu() {
   const [deliveryCity, setDeliveryCity] = useState('');
   const [deliveryState, setDeliveryState] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [deliveryType, setDeliveryType] = useState<'pickup' | 'city' | 'interior' | ''>('');
   const [orderSent, setOrderSent] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -159,12 +160,26 @@ export default function Menu() {
     return (item.product.price + optionalsTotal) * item.quantity;
   }
 
+  // Calculate delivery fee based on type
+  const getDeliveryFee = () => {
+    if (deliveryType === 'city') return settings.deliveryFeeCity || 0;
+    if (deliveryType === 'interior') return settings.deliveryFeeInterior || 0;
+    return 0;
+  };
+
+  const deliveryFee = getDeliveryFee();
   const cartTotal = cart.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+  const orderTotal = cartTotal + deliveryFee;
+
   const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   async function sendToWhatsApp() {
     if (!customerName.trim()) {
       toast.error('Informe seu nome');
+      return;
+    }
+    if (!deliveryType) {
+      toast.error('Selecione o tipo de entrega');
       return;
     }
     if (!paymentMethod) {
@@ -189,6 +204,9 @@ export default function Menu() {
     if (deliveryCity) fullAddress += ` - ${deliveryCity}`;
     if (deliveryState) fullAddress += `/${deliveryState}`;
 
+    // Get delivery type label
+    const deliveryTypeLabel = deliveryType === 'pickup' ? 'Retirada' : deliveryType === 'city' ? 'Entrega Cidade' : 'Entrega Interior';
+
     // Save order to database
     try {
       const { data: newOrder, error: orderError } = await supabase
@@ -197,8 +215,8 @@ export default function Menu() {
           customer_name: customerName,
           customer_phone: customerPhone || null,
           delivery_address: fullAddress || null,
-          notes: `Pagamento: ${paymentMethod}`,
-          total: cartTotal,
+          notes: `Pagamento: ${paymentMethod} | ${deliveryTypeLabel}${deliveryFee > 0 ? ` (R$ ${deliveryFee.toFixed(2)})` : ''}`,
+          total: orderTotal,
           status: 'pending',
           company_id: company?.id || null,
         })
@@ -235,6 +253,7 @@ export default function Menu() {
     message += `*Cliente:* ${customerName}\n`;
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
     if (fullAddress) message += `*Endereço:* ${fullAddress}\n`;
+    message += `*Tipo:* ${deliveryTypeLabel}\n`;
     message += `*Pagamento:* ${paymentMethod}\n`;
     message += `\n*Itens:*\n`;
 
@@ -249,7 +268,11 @@ export default function Menu() {
       message += `\n   R$ ${calculateItemTotal(item).toFixed(2)}`;
     });
 
-    message += `\n\n*Total: R$ ${cartTotal.toFixed(2)}*`;
+    message += `\n\n*Subtotal: R$ ${cartTotal.toFixed(2)}*`;
+    if (deliveryFee > 0) {
+      message += `\n*Taxa de entrega: R$ ${deliveryFee.toFixed(2)}*`;
+    }
+    message += `\n*TOTAL: R$ ${orderTotal.toFixed(2)}*`;
 
     const cleanPhone = phoneToUse.replace(/\D/g, '');
     const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
@@ -263,6 +286,8 @@ export default function Menu() {
     setDeliveryAddress('');
     setDeliveryCity('');
     setDeliveryState('');
+    setDeliveryType('');
+    setPaymentMethod('');
     setPaymentMethod('');
     setWhatsappUrl(generatedWhatsappUrl);
     setOrderSent(true);
@@ -670,6 +695,40 @@ export default function Menu() {
                     </div>
                   </div>
                   <div>
+                    <Label>Tipo de entrega *</Label>
+                    <RadioGroup 
+                      value={deliveryType} 
+                      onValueChange={(value) => setDeliveryType(value as 'pickup' | 'city' | 'interior')} 
+                      className="mt-2"
+                    >
+                      <div className="flex items-center justify-between p-2 border rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="pickup" id="pickup" />
+                          <Label htmlFor="pickup" className="cursor-pointer">Retirada no local</Label>
+                        </div>
+                        <span className="text-sm text-muted-foreground">Grátis</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 border rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="city" id="city" />
+                          <Label htmlFor="city" className="cursor-pointer">Entrega Cidade</Label>
+                        </div>
+                        <span className="text-sm font-medium text-primary">
+                          {settings.deliveryFeeCity > 0 ? `R$ ${settings.deliveryFeeCity.toFixed(2)}` : 'Grátis'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 border rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="interior" id="interior" />
+                          <Label htmlFor="interior" className="cursor-pointer">Entrega Interior</Label>
+                        </div>
+                        <span className="text-sm font-medium text-primary">
+                          {settings.deliveryFeeInterior > 0 ? `R$ ${settings.deliveryFeeInterior.toFixed(2)}` : 'Grátis'}
+                        </span>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                  <div>
                     <Label>Forma de pagamento *</Label>
                     <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2">
                       <div className="flex items-center space-x-2">
@@ -688,10 +747,20 @@ export default function Menu() {
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
+                <div className="border-t pt-4 space-y-2">
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span>Subtotal</span>
+                    <span>R$ {cartTotal.toFixed(2)}</span>
+                  </div>
+                  {deliveryFee > 0 && (
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Taxa de entrega</span>
+                      <span>R$ {deliveryFee.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span className="text-primary">R$ {cartTotal.toFixed(2)}</span>
+                    <span className="text-primary">R$ {orderTotal.toFixed(2)}</span>
                   </div>
                 </div>
 
