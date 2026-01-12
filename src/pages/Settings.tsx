@@ -74,33 +74,59 @@ export default function Settings() {
     const companyId = company?.id || '';
     
     return `"""
-${storeName} - Impressão Automática de Pedidos (Windows)
+${storeName} - Impressao Automatica de Pedidos (Windows)
 
 COMO USAR:
 1. Instale Python: https://python.org (marque "Add to PATH")
-2. Abra o CMD e rode: pip install requests
-3. Dê duplo clique neste arquivo OU rode: python auto_printer.py
+2. Abra o CMD e rode: pip install requests pywin32
+3. De duplo clique neste arquivo OU rode: python auto_printer.py
+
+CONFIGURACAO DA IMPRESSORA:
+- O script usa a impressora PADRAO do Windows
+- Para impressoras em rede/compartilhadas, defina-a como padrao
+- Funciona com Epson TM-T20, Elgin i9, Bematech, etc.
 """
 
 import requests
 import time
 import json
 import os
-import tempfile
-import subprocess
 from datetime import datetime
 
+# Tenta importar win32print (melhor para impressoras termicas)
+try:
+    import win32print
+    import win32ui
+    from PIL import Image, ImageDraw, ImageFont
+    USE_WIN32 = True
+except ImportError:
+    USE_WIN32 = False
+    print("[AVISO] pywin32 nao instalado. Usando metodo alternativo.")
+    print("        Para melhor compatibilidade: pip install pywin32")
+
 # ============================================
-# CONFIGURAÇÃO
+# CONFIGURACAO
 # ============================================
-SUPABASE_URL = "${import.meta.env.VITE_SUPABASE_URL}"
-SUPABASE_KEY = "${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}"
+SUPABASE_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bXJ0eGR6bGthc3V6dXR4dmhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3OTExODMsImV4cCI6MjA4MDM2NzE4M30.VsnT1zdVUwJdv8gBlg8CthBx_bccZp-LsOs2PRq1Uik"
 COMPANY_ID = "${companyId}"
 CHECK_INTERVAL = 5  # segundos
 STORE_NAME = "${storeName}"
 
+# Nome da impressora (deixe vazio para usar a padrao)
+# Exemplo: "EPSON TM-T20" ou "\\\\\\\\SERVIDOR\\\\IMPRESSORA"
+PRINTER_NAME = ""
+
 # ============================================
 pedidos_impressos = set()
+
+def get_printer_name():
+    """Retorna o nome da impressora a ser usada"""
+    if PRINTER_NAME:
+        return PRINTER_NAME
+    if USE_WIN32:
+        return win32print.GetDefaultPrinter()
+    return None
 
 def buscar_pedidos():
     try:
@@ -124,10 +150,10 @@ def buscar_itens(order_id):
 
 def formatar_recibo(pedido, itens):
     linhas = []
-    linhas.append("=" * 40)
-    linhas.append(STORE_NAME.center(40))
-    linhas.append("=" * 40)
-    linhas.append(f"*** PEDIDO #{pedido.get('daily_number', '?')} ***".center(40))
+    linhas.append("=" * 48)
+    linhas.append(STORE_NAME.center(48))
+    linhas.append("=" * 48)
+    linhas.append(f"*** PEDIDO #{pedido.get('daily_number', '?')} ***".center(48))
     linhas.append("")
     
     # Data
@@ -138,16 +164,16 @@ def formatar_recibo(pedido, itens):
         linhas.append(f"Data: {pedido.get('created_at', '')[:16]}")
     
     linhas.append("")
-    linhas.append("-" * 40)
+    linhas.append("-" * 48)
     linhas.append(f"Cliente: {pedido.get('customer_name', '')}")
     
     if pedido.get('customer_phone'):
         linhas.append(f"Telefone: {pedido['customer_phone']}")
     if pedido.get('delivery_address'):
-        linhas.append(f"Endereço: {pedido['delivery_address']}")
+        linhas.append(f"Endereco: {pedido['delivery_address']}")
     
     linhas.append("")
-    linhas.append("-" * 40)
+    linhas.append("-" * 48)
     linhas.append("ITENS:")
     
     for item in itens:
@@ -163,35 +189,88 @@ def formatar_recibo(pedido, itens):
         linhas.append(f"OBS: {pedido['notes']}")
     
     linhas.append("")
-    linhas.append("=" * 40)
+    linhas.append("=" * 48)
     total = pedido.get('total', 0)
-    linhas.append(f"TOTAL: R$ {total:.2f}".replace('.', ',').center(40))
-    linhas.append("=" * 40)
+    linhas.append(f"TOTAL: R$ {total:.2f}".replace('.', ',').center(48))
+    linhas.append("=" * 48)
     linhas.append("")
-    linhas.append("Obrigado pela preferência!".center(40))
-    linhas.append("\\n\\n\\n")
+    linhas.append("Obrigado pela preferencia!".center(48))
     
     return "\\n".join(linhas)
 
-def imprimir(texto):
+def imprimir_win32(texto):
+    """Imprime usando win32print (melhor para impressoras termicas)"""
     try:
-        # Salva em arquivo temporário
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+        printer_name = get_printer_name()
+        if not printer_name:
+            print("[ERRO] Nenhuma impressora encontrada!")
+            return False
+        
+        print(f"[INFO] Usando impressora: {printer_name}")
+        
+        # Abre a impressora
+        hprinter = win32print.OpenPrinter(printer_name)
+        try:
+            # Inicia o documento
+            job = win32print.StartDocPrinter(hprinter, 1, ("Pedido", None, "RAW"))
+            try:
+                win32print.StartPagePrinter(hprinter)
+                
+                # Envia o texto como bytes
+                texto_bytes = texto.encode('cp850', errors='replace')
+                texto_bytes += b"\\n\\n\\n\\n\\n"  # Avanca papel
+                texto_bytes += b"\\x1d\\x56\\x00"  # Comando ESC/POS para corte (se suportado)
+                
+                win32print.WritePrinter(hprinter, texto_bytes)
+                win32print.EndPagePrinter(hprinter)
+            finally:
+                win32print.EndDocPrinter(hprinter)
+        finally:
+            win32print.ClosePrinter(hprinter)
+        
+        return True
+    except Exception as e:
+        print(f"[ERRO] Falha ao imprimir via win32: {e}")
+        return False
+
+def imprimir_alternativo(texto):
+    """Metodo alternativo usando comando print do Windows"""
+    import tempfile
+    import subprocess
+    
+    try:
+        # Salva em arquivo temporario
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='cp850', errors='replace') as f:
             f.write(texto)
+            f.write("\\n\\n\\n\\n\\n")  # Espaco para corte
             arquivo = f.name
         
-        # Imprime via notepad
-        subprocess.run(['notepad.exe', '/p', arquivo], shell=True)
+        # Usa o comando print do Windows (envia direto para impressora padrao)
+        result = subprocess.run(
+            ['print', '/d:prn', arquivo],
+            shell=True,
+            capture_output=True,
+            timeout=30
+        )
+        
         time.sleep(2)
         
         try:
             os.unlink(arquivo)
         except:
             pass
-        return True
+        
+        return result.returncode == 0
     except Exception as e:
-        print(f"ERRO ao imprimir: {e}")
+        print(f"[ERRO] Falha ao imprimir: {e}")
         return False
+
+def imprimir(texto):
+    """Funcao principal de impressao"""
+    if USE_WIN32:
+        return imprimir_win32(texto)
+    else:
+        return imprimir_alternativo(texto)
 
 def carregar_historico():
     global pedidos_impressos
@@ -212,12 +291,19 @@ def salvar_historico():
         pass
 
 # ============================================
-# INÍCIO
+# INICIO
 # ============================================
 if __name__ == "__main__":
     print("=" * 50)
-    print(f"  {STORE_NAME} - Impressão Automática")
+    print(f"  {STORE_NAME} - Impressao Automatica")
     print("=" * 50)
+    
+    printer = get_printer_name()
+    if printer:
+        print(f"  Impressora: {printer}")
+    else:
+        print("  [AVISO] Nenhuma impressora detectada!")
+    
     print(f"  Verificando pedidos a cada {CHECK_INTERVAL}s")
     print("  Pressione Ctrl+C para parar")
     print("=" * 50)
@@ -242,6 +328,8 @@ if __name__ == "__main__":
                     print(f"[OK] Impresso!")
                     pedidos_impressos.add(order_id)
                     salvar_historico()
+                else:
+                    print(f"[FALHA] Nao foi possivel imprimir. Tentando novamente em {CHECK_INTERVAL}s...")
             
             time.sleep(CHECK_INTERVAL)
             
