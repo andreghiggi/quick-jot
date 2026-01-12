@@ -345,75 +345,80 @@ export default function Menu() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header with Banner */}
-      <header className="sticky top-0 z-20 bg-card border-b border-border shadow-sm">
-        {settings.bannerUrl && (
-          <div className="w-full h-40 overflow-hidden">
-            <img 
-              src={settings.bannerUrl} 
-              alt="Banner" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <h1 className="text-xl font-bold text-foreground">
-              {settings.storeName || company?.name || 'Cardápio'}
-            </h1>
-            <Button
-              variant="outline"
-              className="relative"
-              onClick={() => setIsCartOpen(true)}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {cartItemsCount > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                  {cartItemsCount}
-                </Badge>
-              )}
-            </Button>
-          </div>
-          
-          {/* Search Bar */}
-          <div className="mt-3 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar produtos..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+      {/* Fixed Header Container - Banner scrolls away, but name/search/categories stay */}
+      <div className="sticky top-0 z-20">
+        {/* Store Name + Cart + Search - Always visible */}
+        <div className="bg-card border-b border-border shadow-sm">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <h1 className="text-xl font-bold text-foreground">
+                {settings.storeName || company?.name || 'Cardápio'}
+              </h1>
+              <Button
+                variant="outline"
+                className="relative"
+                onClick={() => setIsCartOpen(true)}
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {cartItemsCount > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                    {cartItemsCount}
+                  </Badge>
+                )}
+              </Button>
+            </div>
+            
+            {/* Search Bar */}
+            <div className="mt-3 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar produtos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
         </div>
-      </header>
 
-      {/* Category Pills */}
-      <div className="sticky top-[var(--header-height)] z-10 bg-background border-b border-border">
-        <ScrollArea className="w-full">
-          <div className="flex gap-2 p-4">
-            <Button
-              variant={!selectedCategory ? 'default' : 'outline'}
-              size="sm"
-              className="rounded-full whitespace-nowrap"
-              onClick={() => setSelectedCategory(null)}
-            >
-              Todos
-            </Button>
-            {productCategories.map((category) => (
+        {/* Category Pills - Fixed below header */}
+        <div className="bg-background border-b border-border">
+          <ScrollArea className="w-full">
+            <div className="flex gap-2 p-4">
               <Button
-                key={category}
-                variant={selectedCategory === category ? 'default' : 'outline'}
+                variant={!selectedCategory ? 'default' : 'outline'}
                 size="sm"
                 className="rounded-full whitespace-nowrap"
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => setSelectedCategory(null)}
               >
-                {category}
+                Todos
               </Button>
-            ))}
-          </div>
-        </ScrollArea>
+              {productCategories.map((category) => (
+                <Button
+                  key={category}
+                  variant={selectedCategory === category ? 'default' : 'outline'}
+                  size="sm"
+                  className="rounded-full whitespace-nowrap"
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category}
+                </Button>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
       </div>
+
+      {/* Banner - Scrolls with content */}
+      {settings.bannerUrl && (
+        <div className="w-full h-40 overflow-hidden">
+          <img 
+            src={settings.bannerUrl} 
+            alt="Banner" 
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
 
       {/* Products Grid */}
       <main className="container mx-auto px-4 py-6 space-y-8">
