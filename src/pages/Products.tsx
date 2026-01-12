@@ -21,9 +21,9 @@ import { useAuthContext } from '@/contexts/AuthContext';
 
 export default function Products() {
   const { company } = useAuthContext();
-  const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional } = useProducts();
-  const { categories, addCategory, deleteCategory } = useCategories();
-  const { settings, saveStorePhone, saveBannerUrl, saveStoreName } = useStoreSettings();
+  const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional } = useProducts({ companyId: company?.id });
+  const { categories, addCategory, deleteCategory } = useCategories({ companyId: company?.id });
+  const { settings, saveStorePhone, saveBannerUrl, saveStoreName } = useStoreSettings({ companyId: company?.id });
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isOptionalDialogOpen, setIsOptionalDialogOpen] = useState(false);

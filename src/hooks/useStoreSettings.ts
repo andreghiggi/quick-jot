@@ -58,19 +58,43 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
 
   async function updateSetting(key: string, value: string): Promise<boolean> {
     try {
-      // Try to upsert the setting
-      const { error } = await supabase
+      // First check if setting exists for this company
+      let query = supabase
         .from('store_settings')
-        .upsert({
-          key,
-          value,
-          company_id: companyId || null,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'key',
-        });
+        .select('id')
+        .eq('key', key);
+      
+      if (companyId) {
+        query = query.eq('company_id', companyId);
+      } else {
+        query = query.is('company_id', null);
+      }
 
-      if (error) throw error;
+      const { data: existing } = await query.maybeSingle();
+
+      if (existing) {
+        // Update existing setting
+        const { error } = await supabase
+          .from('store_settings')
+          .update({
+            value,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new setting
+        const { error } = await supabase
+          .from('store_settings')
+          .insert({
+            key,
+            value,
+            company_id: companyId || null,
+          });
+
+        if (error) throw error;
+      }
 
       await fetchSettings();
       return true;
