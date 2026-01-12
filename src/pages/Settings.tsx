@@ -529,23 +529,30 @@ if __name__ == '__main__':
     return `@echo off
 chcp 65001 >nul
 title ${storeName} - Instalador de Impressao
+color 0A
+echo.
 echo ============================================
 echo   ${storeName} - Instalador de Impressao
 echo ============================================
 echo.
 
 REM Verifica se Python esta instalado
-python --version >nul 2>&1
+echo [..] Verificando Python...
+python --version 2>nul
 if errorlevel 1 (
+    color 0C
+    echo.
     echo [ERRO] Python nao encontrado!
     echo.
     echo Por favor, instale o Python:
     echo 1. Acesse https://python.org
     echo 2. Baixe e instale a versao mais recente
     echo 3. IMPORTANTE: Marque "Add Python to PATH"
-    echo 4. Execute este instalador novamente
+    echo 4. Reinicie o computador
+    echo 5. Execute este instalador novamente
     echo.
-    pause
+    echo Pressione qualquer tecla para sair...
+    pause >nul
     exit /b 1
 )
 
@@ -553,41 +560,85 @@ echo [OK] Python encontrado
 echo.
 
 REM Cria a pasta se nao existir
+echo [..] Criando pasta...
 if not exist "C:\\ComandaTech" (
     mkdir "C:\\ComandaTech"
-    echo [OK] Pasta C:\\ComandaTech criada
-) else (
-    echo [OK] Pasta C:\\ComandaTech ja existe
+    if errorlevel 1 (
+        color 0C
+        echo [ERRO] Nao foi possivel criar a pasta C:\\ComandaTech
+        echo Execute como Administrador!
+        pause
+        exit /b 1
+    )
 )
-
+echo [OK] Pasta C:\\ComandaTech OK
 echo.
+
 echo ============================================
-echo   Instalando dependencias...
+echo   Instalando dependencias (pode demorar)...
 echo ============================================
-python -m pip install --upgrade pip >nul 2>&1
-python -m pip install requests pywin32 >nul 2>&1
+echo.
+python -m pip install --upgrade pip
+if errorlevel 1 (
+    echo [AVISO] Erro ao atualizar pip, continuando...
+)
+python -m pip install requests pywin32
+if errorlevel 1 (
+    color 0C
+    echo.
+    echo [ERRO] Falha ao instalar dependencias!
+    echo Verifique sua conexao com a internet.
+    pause
+    exit /b 1
+)
 
 echo.
 echo [OK] Dependencias instaladas
 echo.
 
 echo [..] Criando script de impressao...
+powershell -ExecutionPolicy Bypass -Command "Set-Content -Path 'C:\\ComandaTech\\printer.py' -Value '${escapedScript}' -Encoding UTF8" 2>nul
+if errorlevel 1 (
+    color 0C
+    echo [ERRO] Falha ao criar o script!
+    echo Tente executar como Administrador.
+    pause
+    exit /b 1
+)
 
-powershell -Command "Set-Content -Path 'C:\\ComandaTech\\printer.py' -Value '${escapedScript}' -Encoding UTF8"
+if not exist "C:\\ComandaTech\\printer.py" (
+    color 0C
+    echo [ERRO] Arquivo printer.py nao foi criado!
+    echo Tente executar como Administrador.
+    pause
+    exit /b 1
+)
 
-echo [OK] Script criado
+echo [OK] Script criado em C:\\ComandaTech\\printer.py
 echo.
 echo ============================================
-echo   Iniciando impressao automatica...
+echo   PRONTO! Iniciando impressao automatica...
 echo ============================================
 echo.
-echo A impressora padrao do Windows sera usada.
+echo A impressora PADRAO do Windows sera usada.
 echo Certifique-se que a TM-T20 esta como padrao.
+echo.
+echo Pressione qualquer tecla para iniciar...
+pause >nul
 echo.
 
 cd /d "C:\\ComandaTech"
 python printer.py
 
+echo.
+echo ============================================
+echo   O script foi encerrado.
+echo ============================================
+echo.
+echo Se houve erro acima, verifique:
+echo 1. A impressora esta ligada e como padrao?
+echo 2. O Python esta instalado corretamente?
+echo.
 pause
 `;
   };
