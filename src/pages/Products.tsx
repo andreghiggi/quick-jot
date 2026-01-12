@@ -17,8 +17,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 export default function Products() {
+  const { company } = useAuthContext();
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional } = useProducts();
   const { categories, addCategory, deleteCategory } = useCategories();
   const { settings, saveStorePhone, saveBannerUrl, saveStoreName } = useStoreSettings();
@@ -40,7 +42,7 @@ export default function Products() {
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
 
-  const menuLink = `${window.location.origin}/cardapio`;
+  const menuLink = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
 
   useEffect(() => {
     setStorePhone(settings.storePhone);
