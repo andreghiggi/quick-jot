@@ -7,20 +7,30 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Copy, Check, FileText } from 'lucide-react';
+import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Copy, Check, FileText, Truck } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 
 export default function Settings() {
   const { company, refetchUserData } = useAuthContext();
   const { toast } = useToast();
+  const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior } = useStoreSettings({ companyId: company?.id });
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [deliveryFeeCity, setDeliveryFeeCity] = useState('');
+  const [deliveryFeeInterior, setDeliveryFeeInterior] = useState('');
+  const [savingDelivery, setSavingDelivery] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     address: '',
     slug: '',
   });
+
+  useEffect(() => {
+    setDeliveryFeeCity(storeSettings.deliveryFeeCity.toString());
+    setDeliveryFeeInterior(storeSettings.deliveryFeeInterior.toString());
+  }, [storeSettings]);
 
   useEffect(() => {
     if (company) {
@@ -539,6 +549,59 @@ pause
                 placeholder="Rua, número, bairro, cidade"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="w-5 h-5" />
+              Taxas de Entrega
+            </CardTitle>
+            <CardDescription>
+              Configure os valores de entrega para cidade e interior
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="deliveryFeeCity">Taxa Cidade (R$)</Label>
+                <Input
+                  id="deliveryFeeCity"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={deliveryFeeCity}
+                  onChange={(e) => setDeliveryFeeCity(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryFeeInterior">Taxa Interior (R$)</Label>
+                <Input
+                  id="deliveryFeeInterior"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={deliveryFeeInterior}
+                  onChange={(e) => setDeliveryFeeInterior(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            <Button 
+              onClick={async () => {
+                setSavingDelivery(true);
+                await saveDeliveryFeeCity(parseFloat(deliveryFeeCity) || 0);
+                await saveDeliveryFeeInterior(parseFloat(deliveryFeeInterior) || 0);
+                setSavingDelivery(false);
+              }}
+              disabled={savingDelivery}
+              className="w-full"
+            >
+              {savingDelivery ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Salvar Taxas de Entrega
+            </Button>
           </CardContent>
         </Card>
 
