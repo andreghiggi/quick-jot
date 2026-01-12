@@ -103,7 +103,7 @@ export default function Settings() {
 
   const generatePythonScript = () => {
     const storeName = company?.name || 'Minha Loja';
-    const companyId = company?.id || '';
+    const companySlug = company?.slug || '';
     
     return `"""
 ${storeName} - Impressao Automatica de Pedidos (Windows)
@@ -117,6 +117,10 @@ CONFIGURACAO DA IMPRESSORA:
 - O script usa a impressora PADRAO do Windows
 - Para impressoras em rede/compartilhadas, defina-a como padrao
 - Funciona com Epson TM-T20, Elgin i9, Bematech, etc.
+
+CONFIGURACAO DA EMPRESA:
+- O script usa o SLUG da empresa para buscar o ID automaticamente
+- Se precisar alterar, edite a variavel COMPANY_SLUG abaixo
 """
 
 import requests
@@ -135,11 +139,15 @@ except ImportError:
     print("        Para melhor compatibilidade: python -m pip install pywin32")
 
 # ============================================
-# CONFIGURACAO
+# CONFIGURACAO - EDITE AQUI SE NECESSARIO
 # ============================================
 SUPABASE_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bXJ0eGR6bGthc3V6dXR4dmhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3OTExODMsImV4cCI6MjA4MDM2NzE4M30.VsnT1zdVUwJdv8gBlg8CthBx_bccZp-LsOs2PRq1Uik"
-COMPANY_ID = "${companyId}"
+
+# SLUG da empresa (nome simples usado na URL do cardapio)
+# Exemplo: se o cardapio e /cardapio/avenida-lanches, o slug e "avenida-lanches"
+COMPANY_SLUG = "${companySlug}"
+
 CHECK_INTERVAL = 5  # segundos
 STORE_NAME = "${storeName}"
 
@@ -148,7 +156,32 @@ STORE_NAME = "${storeName}"
 PRINTER_NAME = ""
 
 # ============================================
+# VARIAVEIS GLOBAIS
+# ============================================
+COMPANY_ID = None
 pedidos_impressos = set()
+
+def buscar_company_id():
+    """Busca o ID da empresa pelo slug"""
+    global COMPANY_ID
+    try:
+        print(f"[..] Buscando empresa pelo slug: {COMPANY_SLUG}")
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/companies?slug=eq.{COMPANY_SLUG}&select=id,name",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+        )
+        if r.ok and r.json():
+            data = r.json()[0]
+            COMPANY_ID = data['id']
+            print(f"[OK] Empresa encontrada: {data['name']}")
+            print(f"     ID: {COMPANY_ID}")
+            return True
+        else:
+            print(f"[ERRO] Empresa com slug '{COMPANY_SLUG}' nao encontrada!")
+            return False
+    except Exception as e:
+        print(f"[ERRO] Falha ao buscar empresa: {e}")
+        return False
 
 def get_printer_name():
     """Retorna o nome da impressora a ser usada"""
@@ -159,6 +192,8 @@ def get_printer_name():
     return None
 
 def buscar_pedidos():
+    if not COMPANY_ID:
+        return []
     try:
         r = requests.get(
             f"{SUPABASE_URL}/rest/v1/orders?status=eq.pending&company_id=eq.{COMPANY_ID}&order=created_at.desc",
@@ -327,7 +362,19 @@ if __name__ == "__main__":
     print("=" * 50)
     print(f"  {STORE_NAME} - Impressao Automatica")
     print("=" * 50)
+    print()
     
+    # Busca o ID da empresa pelo slug
+    if not buscar_company_id():
+        print()
+        print("ERRO: Nao foi possivel encontrar a empresa.")
+        print(f"Verifique se o slug '{COMPANY_SLUG}' esta correto.")
+        print("O slug e o nome usado na URL do cardapio.")
+        print()
+        input("Pressione Enter para sair...")
+        exit(1)
+    
+    print()
     printer = get_printer_name()
     if printer:
         print(f"  Impressora: {printer}")
@@ -701,6 +748,25 @@ pause
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Info da empresa para debug */}
+              <div className="bg-muted/50 border rounded-lg p-3 space-y-1">
+                <p className="text-sm font-medium">Dados da Impressão</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Slug:</span>{' '}
+                    <code className="bg-background px-1 py-0.5 rounded">{company?.slug || '-'}</code>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">ID:</span>{' '}
+                    <code className="bg-background px-1 py-0.5 rounded text-[10px]">{company?.id?.slice(0, 8)}...</code>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  O script usa o <strong>slug</strong> para identificar a empresa. Se precisar corrigir manualmente, 
+                  edite a variável <code className="bg-background px-1 rounded">COMPANY_SLUG</code> no arquivo printer.py.
+                </p>
+              </div>
+
               <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg space-y-3">
                 <h4 className="font-medium">Instalação (4 passos)</h4>
                 <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
