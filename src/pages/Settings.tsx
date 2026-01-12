@@ -15,7 +15,6 @@ export default function Settings() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [copiedBat, setCopiedBat] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -78,8 +77,8 @@ ${storeName} - Impressao Automatica de Pedidos (Windows)
 
 COMO USAR:
 1. Instale Python: https://python.org (marque "Add to PATH")
-2. Abra o CMD e rode: pip install requests pywin32
-3. De duplo clique neste arquivo OU rode: python auto_printer.py
+2. Abra o CMD e rode: python -m pip install requests pywin32
+3. De duplo clique neste arquivo OU rode: python printer.py
 
 CONFIGURACAO DA IMPRESSORA:
 - O script usa a impressora PADRAO do Windows
@@ -96,13 +95,11 @@ from datetime import datetime
 # Tenta importar win32print (melhor para impressoras termicas)
 try:
     import win32print
-    import win32ui
-    from PIL import Image, ImageDraw, ImageFont
     USE_WIN32 = True
 except ImportError:
     USE_WIN32 = False
     print("[AVISO] pywin32 nao instalado. Usando metodo alternativo.")
-    print("        Para melhor compatibilidade: pip install pywin32")
+    print("        Para melhor compatibilidade: python -m pip install pywin32")
 
 # ============================================
 # CONFIGURACAO
@@ -339,17 +336,33 @@ if __name__ == "__main__":
   };
 
   const generateBatScript = () => {
-    const pythonScript = generatePythonScript();
-    // Escape special characters for batch file
-    const escapedScript = pythonScript
-      .replace(/"/g, '\\"')
-      .replace(/%/g, '%%');
+    const storeName = company?.name || 'Minha Loja';
+    const companyId = company?.id || '';
     
     return `@echo off
 chcp 65001 >nul
+title ${storeName} - Instalador de Impressao
 echo ============================================
-echo   ComandaTech - Instalador de Impressao
+echo   ${storeName} - Instalador de Impressao
 echo ============================================
+echo.
+
+REM Verifica se Python esta instalado
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERRO] Python nao encontrado!
+    echo.
+    echo Por favor, instale o Python:
+    echo 1. Acesse https://python.org
+    echo 2. Baixe e instale a versao mais recente
+    echo 3. IMPORTANTE: Marque "Add Python to PATH"
+    echo 4. Execute este instalador novamente
+    echo.
+    pause
+    exit /b 1
+)
+
+echo [OK] Python encontrado
 echo.
 
 REM Cria a pasta se nao existir
@@ -360,116 +373,127 @@ if not exist "C:\\ComandaTech" (
     echo [OK] Pasta C:\\ComandaTech ja existe
 )
 
-REM Cria o arquivo printer.py
+echo.
+echo ============================================
+echo   Instalando dependencias...
+echo ============================================
+python -m pip install requests pywin32
+
+echo.
+echo [OK] Dependencias instaladas
+echo.
+
+REM Cria o arquivo printer.py diretamente
 echo [..] Criando arquivo printer.py...
 
-(
-echo """
-echo ${company?.name || 'Minha Loja'} - Impressao Automatica de Pedidos ^(Windows^)
-echo.
-echo COMO USAR:
-echo 1. Instale Python: https://python.org ^(marque "Add to PATH"^)
-echo 2. Abra o CMD e rode: pip install requests
-echo 3. De duplo clique neste arquivo OU rode: python printer.py
-echo """
-echo.
+> "C:\\ComandaTech\\printer.py" (
 echo import requests
 echo import time
 echo import json
 echo import os
-echo import tempfile
-echo import subprocess
 echo from datetime import datetime
 echo.
-echo # ============================================
-echo # CONFIGURACAO
-echo # ============================================
-echo SUPABASE_URL = "${import.meta.env.VITE_SUPABASE_URL}"
-echo SUPABASE_KEY = "${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}"
-echo COMPANY_ID = "${company?.id || ''}"
-echo CHECK_INTERVAL = 5  # segundos
-echo STORE_NAME = "${company?.name || 'Minha Loja'}"
+echo try:
+echo     import win32print
+echo     USE_WIN32 = True
+echo except ImportError:
+echo     USE_WIN32 = False
+echo     print^("[AVISO] pywin32 nao instalado. python -m pip install pywin32"^)
 echo.
-echo # ============================================
+echo SUPABASE_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co"
+echo SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bXJ0eGR6bGthc3V6dXR4dmhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3OTExODMsImV4cCI6MjA4MDM2NzE4M30.VsnT1zdVUwJdv8gBlg8CthBx_bccZp-LsOs2PRq1Uik"
+echo COMPANY_ID = "${companyId}"
+echo CHECK_INTERVAL = 5
+echo STORE_NAME = "${storeName}"
+echo PRINTER_NAME = ""
+echo.
 echo pedidos_impressos = set^(^)
+echo.
+echo def get_printer_name^(^):
+echo     if PRINTER_NAME: return PRINTER_NAME
+echo     if USE_WIN32: return win32print.GetDefaultPrinter^(^)
+echo     return None
 echo.
 echo def buscar_pedidos^(^):
 echo     try:
-echo         r = requests.get^(
-echo             f"{SUPABASE_URL}/rest/v1/orders?status=eq.pending^&company_id=eq.{COMPANY_ID}^&order=created_at.desc",
-echo             headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-echo         ^)
+echo         r = requests.get^(f"{SUPABASE_URL}/rest/v1/orders?status=eq.pending^&company_id=eq.{COMPANY_ID}^&order=created_at.desc", headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}^)
 echo         return r.json^(^) if r.ok else []
-echo     except:
-echo         return []
+echo     except: return []
 echo.
 echo def buscar_itens^(order_id^):
 echo     try:
-echo         r = requests.get^(
-echo             f"{SUPABASE_URL}/rest/v1/order_items?order_id=eq.{order_id}",
-echo             headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-echo         ^)
+echo         r = requests.get^(f"{SUPABASE_URL}/rest/v1/order_items?order_id=eq.{order_id}", headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}^)
 echo         return r.json^(^) if r.ok else []
-echo     except:
-echo         return []
+echo     except: return []
 echo.
 echo def formatar_recibo^(pedido, itens^):
 echo     linhas = []
-echo     linhas.append^("=" * 40^)
-echo     linhas.append^(STORE_NAME.center^(40^)^)
-echo     linhas.append^("=" * 40^)
-echo     linhas.append^(f"*** PEDIDO #{pedido.get^('daily_number', '?'^)} ***".center^(40^)^)
+echo     linhas.append^("=" * 48^)
+echo     linhas.append^(STORE_NAME.center^(48^)^)
+echo     linhas.append^("=" * 48^)
+echo     linhas.append^(f"*** PEDIDO #{pedido.get^('daily_number', '?'^)} ***".center^(48^)^)
 echo     linhas.append^(""^)
 echo     try:
 echo         dt = datetime.fromisoformat^(pedido['created_at'].replace^('Z', '+00:00'^)^)
 echo         linhas.append^(f"Data: {dt.strftime^('%%d/%%m/%%Y %%H:%%M'^)}"^)
-echo     except:
-echo         linhas.append^(f"Data: {pedido.get^('created_at', ''^)[:16]}"^)
+echo     except: linhas.append^(f"Data: {pedido.get^('created_at', ''^)[:16]}"^)
 echo     linhas.append^(""^)
-echo     linhas.append^("-" * 40^)
+echo     linhas.append^("-" * 48^)
 echo     linhas.append^(f"Cliente: {pedido.get^('customer_name', ''^)}"^)
-echo     if pedido.get^('customer_phone'^):
-echo         linhas.append^(f"Telefone: {pedido['customer_phone']}"^)
-echo     if pedido.get^('delivery_address'^):
-echo         linhas.append^(f"Endereco: {pedido['delivery_address']}"^)
+echo     if pedido.get^('customer_phone'^): linhas.append^(f"Telefone: {pedido['customer_phone']}"^)
+echo     if pedido.get^('delivery_address'^): linhas.append^(f"Endereco: {pedido['delivery_address']}"^)
 echo     linhas.append^(""^)
-echo     linhas.append^("-" * 40^)
+echo     linhas.append^("-" * 48^)
 echo     linhas.append^("ITENS:"^)
 echo     for item in itens:
 echo         qtd = item.get^('quantity', 1^)
 echo         nome = item.get^('name', 'Item'^)
 echo         preco = item.get^('price', 0^) * qtd
 echo         linhas.append^(f"{qtd}x {nome} - R$ {preco:.2f}".replace^('.', ','^)^)
-echo         if item.get^('notes'^):
-echo             linhas.append^(f"   -^> {item['notes']}"^)
+echo         if item.get^('notes'^): linhas.append^(f"   -^> {item['notes']}"^)
 echo     if pedido.get^('notes'^):
 echo         linhas.append^(""^)
 echo         linhas.append^(f"OBS: {pedido['notes']}"^)
 echo     linhas.append^(""^)
-echo     linhas.append^("=" * 40^)
+echo     linhas.append^("=" * 48^)
 echo     total = pedido.get^('total', 0^)
-echo     linhas.append^(f"TOTAL: R$ {total:.2f}".replace^('.', ','^).center^(40^)^)
-echo     linhas.append^("=" * 40^)
+echo     linhas.append^(f"TOTAL: R$ {total:.2f}".replace^('.', ','^).center^(48^)^)
+echo     linhas.append^("=" * 48^)
 echo     linhas.append^(""^)
-echo     linhas.append^("Obrigado pela preferencia!".center^(40^)^)
-echo     linhas.append^("\\n\\n\\n"^)
+echo     linhas.append^("Obrigado pela preferencia!".center^(48^)^)
 echo     return "\\n".join^(linhas^)
 echo.
 echo def imprimir^(texto^):
-echo     try:
-echo         with tempfile.NamedTemporaryFile^(mode='w', suffix='.txt', delete=False, encoding='utf-8'^) as f:
-echo             f.write^(texto^)
-echo             arquivo = f.name
-echo         subprocess.run^(['notepad.exe', '/p', arquivo], shell=True^)
-echo         time.sleep^(2^)
+echo     if USE_WIN32:
 echo         try:
+echo             printer = get_printer_name^(^)
+echo             if not printer: return False
+echo             print^(f"[INFO] Usando impressora: {printer}"^)
+echo             hprinter = win32print.OpenPrinter^(printer^)
+echo             try:
+echo                 job = win32print.StartDocPrinter^(hprinter, 1, ^("Pedido", None, "RAW"^)^)
+echo                 try:
+echo                     win32print.StartPagePrinter^(hprinter^)
+echo                     texto_bytes = texto.encode^('cp850', errors='replace'^) + b"\\n\\n\\n\\n\\n\\x1d\\x56\\x00"
+echo                     win32print.WritePrinter^(hprinter, texto_bytes^)
+echo                     win32print.EndPagePrinter^(hprinter^)
+echo                 finally: win32print.EndDocPrinter^(hprinter^)
+echo             finally: win32print.ClosePrinter^(hprinter^)
+echo             return True
+echo         except Exception as e:
+echo             print^(f"[ERRO] {e}"^)
+echo             return False
+echo     else:
+echo         import tempfile, subprocess
+echo         try:
+echo             with tempfile.NamedTemporaryFile^(mode='w', suffix='.txt', delete=False, encoding='cp850', errors='replace'^) as f:
+echo                 f.write^(texto + "\\n\\n\\n\\n\\n"^)
+echo                 arquivo = f.name
+echo             subprocess.run^(['print', '/d:prn', arquivo], shell=True, timeout=30^)
+echo             time.sleep^(2^)
 echo             os.unlink^(arquivo^)
-echo         except:
-echo             pass
-echo         return True
-echo     except Exception as e:
-echo         print^(f"ERRO ao imprimir: {e}"^)
-echo         return False
+echo             return True
+echo         except: return False
 echo.
 echo def carregar_historico^(^):
 echo     global pedidos_impressos
@@ -478,21 +502,22 @@ echo         if os.path.exists^("impressos.json"^):
 echo             with open^("impressos.json", "r"^) as f:
 echo                 hoje = datetime.now^(^).date^(^).isoformat^(^)
 echo                 pedidos_impressos = set^(json.load^(f^).get^(hoje, []^)^)
-echo     except:
-echo         pedidos_impressos = set^(^)
+echo     except: pedidos_impressos = set^(^)
 echo.
 echo def salvar_historico^(^):
 echo     try:
 echo         hoje = datetime.now^(^).date^(^).isoformat^(^)
 echo         with open^("impressos.json", "w"^) as f:
 echo             json.dump^({hoje: list^(pedidos_impressos^)}, f^)
-echo     except:
-echo         pass
+echo     except: pass
 echo.
 echo if __name__ == "__main__":
 echo     print^("=" * 50^)
 echo     print^(f"  {STORE_NAME} - Impressao Automatica"^)
 echo     print^("=" * 50^)
+echo     printer = get_printer_name^(^)
+echo     if printer: print^(f"  Impressora: {printer}"^)
+echo     else: print^("  [AVISO] Nenhuma impressora detectada!"^)
 echo     print^(f"  Verificando pedidos a cada {CHECK_INTERVAL}s"^)
 echo     print^("  Pressione Ctrl+C para parar"^)
 echo     print^("=" * 50^)
@@ -502,33 +527,30 @@ echo     try:
 echo         while True:
 echo             for pedido in buscar_pedidos^(^):
 echo                 order_id = pedido.get^("id"^)
-echo                 if order_id in pedidos_impressos:
-echo                     continue
+echo                 if order_id in pedidos_impressos: continue
 echo                 print^(f"[NOVO] Pedido #{pedido.get^('daily_number'^)} - {pedido.get^('customer_name'^)}"^)
 echo                 itens = buscar_itens^(order_id^)
 echo                 recibo = formatar_recibo^(pedido, itens^)
 echo                 if imprimir^(recibo^):
-echo                     print^(f"[OK] Impresso!"^)
+echo                     print^("[OK] Impresso!"^)
 echo                     pedidos_impressos.add^(order_id^)
 echo                     salvar_historico^(^)
+echo                 else: print^(f"[FALHA] Tentando novamente em {CHECK_INTERVAL}s..."^)
 echo             time.sleep^(CHECK_INTERVAL^)
 echo     except KeyboardInterrupt:
 echo         print^("\\nEncerrando..."^)
 echo         salvar_historico^(^)
-) > "C:\\ComandaTech\\printer.py"
-
-echo [OK] Arquivo printer.py criado em C:\\ComandaTech\\
+)
 
 echo.
-echo ============================================
-echo   Instalando dependencias do Python...
-echo ============================================
-pip install requests
-
+echo [OK] Arquivo printer.py criado em C:\\ComandaTech\\
 echo.
 echo ============================================
 echo   Iniciando impressao automatica...
 echo ============================================
+echo.
+echo A impressora padrao do Windows sera usada.
+echo Certifique-se que a Epson TM-T20 esta como padrao.
 echo.
 
 cd /d "C:\\ComandaTech"
@@ -692,7 +714,7 @@ pause
               Impressão Automática
             </CardTitle>
             <CardDescription>
-              Script para imprimir pedidos automaticamente no Windows
+              Script para imprimir pedidos automaticamente no Windows (compatível com Epson TM-T20)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -711,7 +733,7 @@ pause
                 Baixar Instalador (.bat)
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                O instalador cria a pasta C:\ComandaTech, salva o script e inicia automaticamente
+                O instalador cria a pasta C:\ComandaTech, instala pywin32 e inicia automaticamente
               </p>
             </div>
 
@@ -721,7 +743,7 @@ pause
                 <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
                   <li>Baixe o script Python abaixo</li>
                   <li>Salve em C:\ComandaTech\printer.py</li>
-                  <li>Abra o CMD e rode: <code className="bg-background px-1 py-0.5 rounded">pip install requests</code></li>
+                  <li>Abra o CMD e rode: <code className="bg-background px-1 py-0.5 rounded">python -m pip install requests pywin32</code></li>
                   <li>Execute com duplo clique</li>
                 </ol>
               </div>
