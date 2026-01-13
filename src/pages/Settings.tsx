@@ -195,13 +195,33 @@ def buscar_pedidos():
     if not COMPANY_ID:
         return []
     try:
+        # Busca apenas pedidos pendentes que ainda nao foram impressos
         r = requests.get(
-            f"{SUPABASE_URL}/rest/v1/orders?status=eq.pending&company_id=eq.{COMPANY_ID}&order=created_at.desc",
+            f"{SUPABASE_URL}/rest/v1/orders?status=eq.pending&company_id=eq.{COMPANY_ID}&printed=eq.false&order=created_at.desc",
             headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
         )
         return r.json() if r.ok else []
     except:
         return []
+
+def marcar_impresso(order_id):
+    """Marca o pedido como impresso no banco de dados"""
+    try:
+        from datetime import timezone
+        r = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/orders?id=eq.{order_id}",
+            headers={
+                "apikey": SUPABASE_KEY, 
+                "Authorization": f"Bearer {SUPABASE_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal"
+            },
+            json={"printed": True, "printed_at": datetime.now(timezone.utc).isoformat()}
+        )
+        return r.ok
+    except Exception as e:
+        print(f"[AVISO] Nao foi possivel marcar como impresso: {e}")
+        return False
 
 def buscar_itens(order_id):
     try:
@@ -403,6 +423,9 @@ if __name__ == "__main__":
                 
                 if imprimir(recibo):
                     print(f"[OK] Impresso!")
+                    # Marca como impresso no banco de dados
+                    if marcar_impresso(order_id):
+                        print(f"[OK] Marcado como impresso no sistema")
                     pedidos_impressos.add(order_id)
                     salvar_historico()
                 else:
