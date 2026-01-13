@@ -29,8 +29,35 @@ HEADERS = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
     "Content-Type": "application/json",
-    "Prefer": "return=minimal"
+    "Prefer": "return=representation"
 }
+
+# Histórico de pedidos impressos nesta sessão
+pedidos_impressos_sessao = []
+
+def log(msg, tipo="INFO"):
+    """Log com timestamp"""
+    agora = datetime.now().strftime("%H:%M:%S")
+    print(f"[{agora}] [{tipo}] {msg}")
+
+def buscar_todos_pedidos_hoje():
+    """Busca TODOS os pedidos de hoje para mostrar status"""
+    try:
+        # Pega pedidos das últimas 24 horas
+        url = f"{SUPABASE_URL}/rest/v1/orders"
+        params = {
+            "order": "created_at.desc",
+            "limit": "50"
+        }
+        r = requests.get(url, headers=HEADERS, params=params)
+        if r.ok:
+            return r.json()
+        else:
+            log(f"Erro ao buscar pedidos: {r.status_code}", "ERRO")
+            return []
+    except Exception as e:
+        log(f"Exceção: {e}", "ERRO")
+        return []
 
 def buscar_pedidos_nao_impressos():
     """Busca pedidos pendentes que ainda não foram impressos"""
@@ -43,14 +70,12 @@ def buscar_pedidos_nao_impressos():
         }
         r = requests.get(url, headers=HEADERS, params=params)
         if r.ok:
-            pedidos = r.json()
-            print(f"[DEBUG] Encontrados {len(pedidos)} pedidos não impressos")
-            return pedidos
+            return r.json()
         else:
-            print(f"[ERRO] Falha ao buscar pedidos: {r.status_code} - {r.text}")
+            log(f"Erro HTTP: {r.status_code} - {r.text}", "ERRO")
             return []
     except Exception as e:
-        print(f"[ERRO] Exceção ao buscar pedidos: {e}")
+        log(f"Exceção: {e}", "ERRO")
         return []
 
 def buscar_itens(order_id):
@@ -62,10 +87,10 @@ def buscar_itens(order_id):
         if r.ok:
             return r.json()
         else:
-            print(f"[ERRO] Falha ao buscar itens: {r.status_code}")
+            log(f"Erro ao buscar itens: {r.status_code}", "ERRO")
             return []
     except Exception as e:
-        print(f"[ERRO] Exceção ao buscar itens: {e}")
+        log(f"Exceção ao buscar itens: {e}", "ERRO")
         return []
 
 def marcar_como_impresso(order_id):
@@ -78,13 +103,13 @@ def marcar_como_impresso(order_id):
         }
         r = requests.patch(url, headers=HEADERS, json=data)
         if r.ok:
-            print(f"[DB] Pedido {order_id[:8]}... marcado como impresso")
+            log(f"Marcado como impresso no banco!", "DB")
             return True
         else:
-            print(f"[ERRO] Falha ao marcar impresso: {r.status_code} - {r.text}")
+            log(f"Erro ao marcar: {r.status_code} - {r.text}", "ERRO")
             return False
     except Exception as e:
-        print(f"[ERRO] Exceção ao marcar impresso: {e}")
+        log(f"Exceção ao marcar: {e}", "ERRO")
         return False
 
 def formatar_recibo(pedido, itens):
@@ -147,7 +172,8 @@ def imprimir(texto, order_number):
         with open(arquivo, 'w', encoding='utf-8') as f:
             f.write(texto)
         
-        print(f"[PRINT] Enviando para impressora: {arquivo}")
+        log(f"Arquivo salvo: {arquivo}", "PRINT")
+        log(f"Enviando para impressora...", "PRINT")
         
         # Imprime via notepad (silencioso)
         result = subprocess.run(
@@ -157,20 +183,22 @@ def imprimir(texto, order_number):
             timeout=30
         )
         
+        log(f"Comando executado, aguardando...", "PRINT")
         time.sleep(2)  # Aguarda impressão
         
         # Remove arquivo temporário
         try:
             os.unlink(arquivo)
+            log(f"Arquivo temporário removido", "PRINT")
         except:
             pass
         
         return True
     except subprocess.TimeoutExpired:
-        print(f"[ERRO] Timeout ao imprimir")
+        log(f"Timeout ao imprimir!", "ERRO")
         return False
     except Exception as e:
-        print(f"[ERRO] Falha na impressão: {e}")
+        log(f"Falha na impressão: {e}", "ERRO")
         return False
 
 def processar_pedido(pedido):
@@ -179,56 +207,131 @@ def processar_pedido(pedido):
     order_number = pedido.get("daily_number", "?")
     customer = pedido.get("customer_name", "")
     
-    print(f"\n{'='*50}")
-    print(f"[NOVO PEDIDO] #{order_number} - {customer}")
-    print(f"{'='*50}")
+    print()
+    print("=" * 50)
+    log(f"NOVO PEDIDO DETECTADO!", "***")
+    log(f"Pedido #{order_number} - Cliente: {customer}", "***")
+    print("=" * 50)
     
     # Busca itens
+    log("Buscando itens do pedido...", "INFO")
     itens = buscar_itens(order_id)
     if not itens:
-        print(f"[AVISO] Pedido sem itens, pulando...")
+        log("Pedido sem itens, pulando...", "AVISO")
         return False
     
-    print(f"[INFO] {len(itens)} item(s) no pedido")
+    log(f"{len(itens)} item(s) encontrado(s)", "INFO")
+    for item in itens:
+        log(f"  - {item.get('quantity', 1)}x {item.get('name', 'Item')}", "INFO")
     
     # Formata recibo
+    log("Formatando recibo...", "INFO")
     recibo = formatar_recibo(pedido, itens)
     
     # Imprime
+    log("Iniciando impressão...", "PRINT")
     if imprimir(recibo, order_number):
-        print(f"[OK] Impresso com sucesso!")
+        log("IMPRESSÃO CONCLUÍDA COM SUCESSO!", "OK")
+        
         # Marca como impresso no banco
+        log("Marcando como impresso no banco...", "DB")
         if marcar_como_impresso(order_id):
+            pedidos_impressos_sessao.append({
+                "numero": order_number,
+                "cliente": customer,
+                "hora": datetime.now().strftime("%H:%M:%S")
+            })
             return True
         else:
-            print(f"[AVISO] Impresso mas falhou ao marcar no banco")
-            return True  # Mesmo assim considera sucesso
+            log("Impresso mas falhou ao marcar no banco", "AVISO")
+            return True
     else:
-        print(f"[ERRO] Falha na impressão")
+        log("FALHA NA IMPRESSÃO!", "ERRO")
         return False
+
+def mostrar_status():
+    """Mostra status atual dos pedidos"""
+    print()
+    print("-" * 50)
+    log("Verificando status dos pedidos...", "INFO")
+    
+    todos = buscar_todos_pedidos_hoje()
+    pendentes_nao_impressos = [p for p in todos if p.get('status') == 'pending' and not p.get('printed')]
+    pendentes_impressos = [p for p in todos if p.get('status') == 'pending' and p.get('printed')]
+    outros = [p for p in todos if p.get('status') != 'pending']
+    
+    print()
+    print(f"  📋 PENDENTES NÃO IMPRESSOS: {len(pendentes_nao_impressos)}")
+    for p in pendentes_nao_impressos:
+        print(f"     └─ #{p.get('daily_number')} - {p.get('customer_name')}")
+    
+    print(f"  ✅ PENDENTES JÁ IMPRESSOS: {len(pendentes_impressos)}")
+    for p in pendentes_impressos:
+        hora = p.get('printed_at', '')[:19] if p.get('printed_at') else ''
+        print(f"     └─ #{p.get('daily_number')} - {p.get('customer_name')} (impresso: {hora})")
+    
+    print(f"  📦 OUTROS STATUS: {len(outros)}")
+    for p in outros[:5]:  # Mostra só os 5 últimos
+        print(f"     └─ #{p.get('daily_number')} - {p.get('customer_name')} [{p.get('status')}]")
+    
+    print()
+    print(f"  🖨️  IMPRESSOS NESTA SESSÃO: {len(pedidos_impressos_sessao)}")
+    for p in pedidos_impressos_sessao:
+        print(f"     └─ #{p['numero']} - {p['cliente']} às {p['hora']}")
+    
+    print("-" * 50)
+    print()
 
 # ============================================
 # LOOP PRINCIPAL
 # ============================================
 if __name__ == "__main__":
+    print()
     print("=" * 50)
-    print(f"  {STORE_NAME} - Impressão Automática v2.0")
+    print(f"  {STORE_NAME} - Impressão Automática v2.1")
     print("=" * 50)
-    print(f"  Verificando a cada {CHECK_INTERVAL} segundos")
-    print("  Usando banco de dados para controle")
+    print(f"  URL: {SUPABASE_URL}")
+    print(f"  Intervalo: {CHECK_INTERVAL} segundos")
     print("  Pressione Ctrl+C para parar")
     print("=" * 50)
     print()
     
+    # Mostra status inicial
+    log("Iniciando monitoramento...", "START")
+    mostrar_status()
+    
+    contador = 0
     try:
         while True:
             pedidos = buscar_pedidos_nao_impressos()
             
-            for pedido in pedidos:
-                processar_pedido(pedido)
+            if pedidos:
+                log(f"Encontrados {len(pedidos)} pedido(s) para imprimir!", "INFO")
+                for pedido in pedidos:
+                    processar_pedido(pedido)
+                mostrar_status()
+            else:
+                # A cada 12 verificações (1 minuto), mostra status
+                contador += 1
+                if contador >= 12:
+                    mostrar_status()
+                    contador = 0
+                else:
+                    print(".", end="", flush=True)
             
             time.sleep(CHECK_INTERVAL)
             
     except KeyboardInterrupt:
-        print("\n[INFO] Encerrando...")
-        print("Obrigado por usar o Comanda Tech!")
+        print()
+        print()
+        log("Encerrando...", "INFO")
+        print()
+        print("=" * 50)
+        print("  RESUMO DA SESSÃO")
+        print("=" * 50)
+        print(f"  Total de pedidos impressos: {len(pedidos_impressos_sessao)}")
+        for p in pedidos_impressos_sessao:
+            print(f"    ✅ #{p['numero']} - {p['cliente']} às {p['hora']}")
+        print("=" * 50)
+        print("  Obrigado por usar o Comanda Tech!")
+        print("=" * 50)
