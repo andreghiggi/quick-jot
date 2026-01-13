@@ -438,19 +438,48 @@ export default function Menu() {
     <div className="min-h-screen bg-background pb-24">
       {/* Fixed Header Container - Banner scrolls away, but name/search/categories stay */}
       <div className="sticky top-0 z-20">
-        {/* Store Name + Cart + Search - Always visible */}
+        {/* Store Name + Cart + Search + Categories - Always visible */}
         <div className="bg-card border-b border-border shadow-sm">
           <div className="container mx-auto px-4 py-3">
-            <div className="flex items-center justify-between gap-4">
-              <h1 className="text-xl font-bold text-foreground">
+            <div className="flex items-center justify-between gap-2">
+              {/* Left side: Store name */}
+              <h1 className="text-lg font-bold text-foreground flex-shrink-0">
                 {settings.storeName || company?.name || 'Cardápio'}
               </h1>
+              
+              {/* Center: Category Pills */}
+              <ScrollArea className="flex-1 mx-2">
+                <div className="flex gap-1.5">
+                  <Button
+                    variant={!selectedCategory ? 'default' : 'outline'}
+                    size="sm"
+                    className="rounded-full whitespace-nowrap h-7 px-3 text-xs"
+                    onClick={() => setSelectedCategory(null)}
+                  >
+                    Todos
+                  </Button>
+                  {productCategories.map((category) => (
+                    <Button
+                      key={category}
+                      variant={selectedCategory === category ? 'default' : 'outline'}
+                      size="sm"
+                      className="rounded-full whitespace-nowrap h-7 px-3 text-xs"
+                      onClick={() => setSelectedCategory(category)}
+                    >
+                      {category}
+                    </Button>
+                  ))}
+                </div>
+              </ScrollArea>
+              
+              {/* Right side: Cart button */}
               <Button
                 variant="outline"
-                className="relative"
+                size="sm"
+                className="relative flex-shrink-0"
                 onClick={() => setIsCartOpen(true)}
               >
-                <ShoppingCart className="h-5 w-5" />
+                <ShoppingCart className="h-4 w-4" />
                 {cartItemsCount > 0 && (
                   <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
                     {cartItemsCount}
@@ -460,43 +489,16 @@ export default function Menu() {
             </div>
             
             {/* Search Bar */}
-            <div className="mt-3 relative">
+            <div className="mt-2 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar produtos..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-9"
               />
             </div>
           </div>
-        </div>
-
-        {/* Category Pills - Fixed below header */}
-        <div className="bg-background border-b border-border">
-          <ScrollArea className="w-full">
-            <div className="flex gap-2 p-4">
-              <Button
-                variant={!selectedCategory ? 'default' : 'outline'}
-                size="sm"
-                className="rounded-full whitespace-nowrap"
-                onClick={() => setSelectedCategory(null)}
-              >
-                Todos
-              </Button>
-              {productCategories.map((category) => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? 'default' : 'outline'}
-                  size="sm"
-                  className="rounded-full whitespace-nowrap"
-                  onClick={() => setSelectedCategory(category)}
-                >
-                  {category}
-                </Button>
-              ))}
-            </div>
-          </ScrollArea>
         </div>
       </div>
 
@@ -712,19 +714,19 @@ export default function Menu() {
 
                 <div className="border-t pt-4 space-y-3">
                   <div>
-                    <Label>Seu nome *</Label>
-                    <Input
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Nome"
-                    />
-                  </div>
-                  <div>
                     <Label>Telefone</Label>
                     <Input
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
                       placeholder="(00) 00000-0000"
+                    />
+                  </div>
+                  <div>
+                    <Label>Seu nome *</Label>
+                    <Input
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Nome"
                     />
                   </div>
                   <div>

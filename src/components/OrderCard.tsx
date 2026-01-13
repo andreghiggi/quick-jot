@@ -50,8 +50,16 @@ const nextStatusLabel: Record<OrderStatus, string> = {
 export function OrderCard({ order }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder } = useOrderContext();
   const config = statusConfig[order.status];
+  // Converter para fuso horário de São Paulo
   const createdAt = new Date(order.createdAt);
   const timeAgo = formatTimeAgo(createdAt);
+  
+  // Formatar hora no fuso de SP para exibição
+  const formattedTime = createdAt.toLocaleTimeString('pt-BR', { 
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
 
   async function handleAdvanceStatus() {
     if (config.next) {
@@ -67,46 +75,79 @@ export function OrderCard({ order }: OrderCardProps) {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    // Formatar data/hora no fuso horário de São Paulo
+    const formattedDate = createdAt.toLocaleString('pt-BR', { 
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
     const printContent = `
       <!DOCTYPE html>
       <html>
       <head>
         <title>Pedido #${order.dailyNumber}</title>
         <style>
-          body { font-family: 'Courier New', monospace; padding: 20px; max-width: 300px; margin: 0 auto; }
-          h1 { text-align: center; font-size: 18px; margin-bottom: 5px; }
-          h2 { text-align: center; font-size: 24px; margin: 10px 0; }
-          .divider { border-top: 1px dashed #000; margin: 10px 0; }
-          .item { display: flex; justify-content: space-between; margin: 5px 0; }
-          .total { font-weight: bold; font-size: 16px; margin-top: 10px; }
-          .info { font-size: 12px; margin: 5px 0; }
-          .center { text-align: center; }
+          @page { margin: 0; size: 80mm auto; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px;
+            width: 80mm;
+            padding: 3mm;
+          }
+          .header { text-align: center; margin-bottom: 2mm; }
+          .header h1 { font-size: 14px; font-weight: bold; }
+          .header h2 { font-size: 18px; font-weight: bold; margin: 2mm 0; }
+          .header p { font-size: 10px; }
+          .divider { border-top: 1px dashed #000; margin: 2mm 0; }
+          .section { margin: 2mm 0; }
+          .section p { margin: 1mm 0; font-size: 11px; }
+          .section strong { font-size: 11px; }
+          .items { margin: 2mm 0; }
+          .item { display: flex; justify-content: space-between; margin: 1mm 0; font-size: 11px; }
+          .item-name { flex: 1; }
+          .item-price { text-align: right; }
+          .total-section { margin-top: 2mm; }
+          .total { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; }
+          .notes { font-size: 10px; margin: 2mm 0; }
+          .footer { text-align: center; font-size: 10px; margin-top: 3mm; }
         </style>
       </head>
       <body>
-        <h1>COMANDA TECH</h1>
-        <h2>PEDIDO #${order.dailyNumber}</h2>
-        <p class="center info">${createdAt.toLocaleString('pt-BR')}</p>
-        <div class="divider"></div>
-        <p><strong>Cliente:</strong> ${order.customerName}</p>
-        ${order.customerPhone ? `<p class="info"><strong>Tel:</strong> ${order.customerPhone}</p>` : ''}
-        ${order.deliveryAddress ? `<p class="info"><strong>End:</strong> ${order.deliveryAddress}</p>` : ''}
-        <div class="divider"></div>
-        <p><strong>ITENS:</strong></p>
-        ${order.items.map(item => `
-          <div class="item">
-            <span>${item.quantity}x ${item.name}</span>
-            <span>R$ ${(item.price * item.quantity).toFixed(2)}</span>
-          </div>
-        `).join('')}
-        <div class="divider"></div>
-        <div class="item total">
-          <span>TOTAL:</span>
-          <span>R$ ${order.total.toFixed(2)}</span>
+        <div class="header">
+          <h1>COMANDA TECH</h1>
+          <h2>PEDIDO #${order.dailyNumber}</h2>
+          <p>${formattedDate}</p>
         </div>
-        ${order.notes ? `<div class="divider"></div><p class="info"><strong>Obs:</strong> ${order.notes}</p>` : ''}
         <div class="divider"></div>
-        <p class="center info">Obrigado pela preferência!</p>
+        <div class="section">
+          <p><strong>Cliente:</strong> ${order.customerName}</p>
+          ${order.customerPhone ? `<p><strong>Tel:</strong> ${order.customerPhone}</p>` : ''}
+          ${order.deliveryAddress ? `<p><strong>End:</strong> ${order.deliveryAddress}</p>` : ''}
+        </div>
+        <div class="divider"></div>
+        <div class="items">
+          ${order.items.map(item => `
+            <div class="item">
+              <span class="item-name">${item.quantity}x ${item.name}</span>
+              <span class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="divider"></div>
+        <div class="total-section">
+          <div class="total">
+            <span>TOTAL:</span>
+            <span>R$ ${order.total.toFixed(2)}</span>
+          </div>
+        </div>
+        ${order.notes ? `<div class="divider"></div><p class="notes"><strong>Obs:</strong> ${order.notes}</p>` : ''}
+        <div class="divider"></div>
+        <p class="footer">Obrigado pela preferência!</p>
         <script>window.onload = function() { window.print(); window.close(); }</script>
       </body>
       </html>
