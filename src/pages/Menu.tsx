@@ -87,6 +87,7 @@ export default function Menu() {
   const [whatsappUrl, setWhatsappUrl] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [customerLoaded, setCustomerLoaded] = useState(false);
 
   const brazilianStates = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -95,6 +96,47 @@ export default function Menu() {
   ];
 
   const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading;
+
+  // Load customer data when phone changes (with debounce)
+  useEffect(() => {
+    if (!customerPhone || customerPhone.length < 10 || !company?.id || customerLoaded) return;
+    
+    const cleanPhone = customerPhone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('company_id', company.id)
+          .eq('phone', cleanPhone)
+          .maybeSingle();
+
+        if (data && !error) {
+          // Auto-fill customer data
+          if (data.name && !customerName) setCustomerName(data.name);
+          if (data.address && !deliveryAddress) setDeliveryAddress(data.address);
+          if (data.city && !deliveryCity) setDeliveryCity(data.city);
+          if (data.state && !deliveryState) setDeliveryState(data.state);
+          setCustomerLoaded(true);
+          toast.success('Dados carregados automaticamente!', { duration: 2000 });
+        }
+      } catch (error) {
+        console.error('Error loading customer:', error);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [customerPhone, company?.id]);
+
+  // Reset customerLoaded when phone changes significantly
+  useEffect(() => {
+    const cleanPhone = customerPhone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      setCustomerLoaded(false);
+    }
+  }, [customerPhone]);
 
   const activeProducts = getActiveProducts();
   
@@ -241,6 +283,30 @@ export default function Menu() {
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
+
+      // Save/update customer data for future auto-fill
+      if (customerPhone && company?.id) {
+        const cleanPhone = customerPhone.replace(/\D/g, '');
+        if (cleanPhone.length >= 10) {
+          try {
+            await supabase
+              .from('customers')
+              .upsert({
+                company_id: company.id,
+                phone: cleanPhone,
+                name: customerName,
+                address: deliveryAddress || null,
+                city: deliveryCity || null,
+                state: deliveryState || null,
+              }, { 
+                onConflict: 'company_id,phone',
+                ignoreDuplicates: false 
+              });
+          } catch (customerError) {
+            console.error('Error saving customer data:', customerError);
+          }
+        }
+      }
 
       console.log('Order saved to database:', newOrder.id);
     } catch (error) {
