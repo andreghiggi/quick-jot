@@ -9,10 +9,9 @@ COMO USAR:
 
 import requests
 import time
-import json
-import os
 import tempfile
 import subprocess
+import os
 from datetime import datetime
 
 # ============================================
@@ -20,33 +19,76 @@ from datetime import datetime
 # ============================================
 SUPABASE_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bXJ0eGR6bGthc3V6dXR4dmhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3OTExODMsImV4cCI6MjA4MDM2NzE4M30.VsnT1zdVUwJdv8gBlg8CthBx_bccZp-LsOs2PRq1Uik"
-CHECK_INTERVAL = 5  # segundos
+CHECK_INTERVAL = 5  # segundos entre verificações
 STORE_NAME = "Comanda Tech"
 
 # ============================================
-pedidos_impressos = set()
+# HEADERS para API
+# ============================================
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+}
 
-def buscar_pedidos():
+def buscar_pedidos_nao_impressos():
+    """Busca pedidos pendentes que ainda não foram impressos"""
     try:
-        r = requests.get(
-            f"{SUPABASE_URL}/rest/v1/orders?status=eq.pending&order=created_at.desc",
-            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-        )
-        return r.json() if r.ok else []
-    except:
+        url = f"{SUPABASE_URL}/rest/v1/orders"
+        params = {
+            "status": "eq.pending",
+            "printed": "eq.false",
+            "order": "created_at.asc"
+        }
+        r = requests.get(url, headers=HEADERS, params=params)
+        if r.ok:
+            pedidos = r.json()
+            print(f"[DEBUG] Encontrados {len(pedidos)} pedidos não impressos")
+            return pedidos
+        else:
+            print(f"[ERRO] Falha ao buscar pedidos: {r.status_code} - {r.text}")
+            return []
+    except Exception as e:
+        print(f"[ERRO] Exceção ao buscar pedidos: {e}")
         return []
 
 def buscar_itens(order_id):
+    """Busca itens de um pedido específico"""
     try:
-        r = requests.get(
-            f"{SUPABASE_URL}/rest/v1/order_items?order_id=eq.{order_id}",
-            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-        )
-        return r.json() if r.ok else []
-    except:
+        url = f"{SUPABASE_URL}/rest/v1/order_items"
+        params = {"order_id": f"eq.{order_id}"}
+        r = requests.get(url, headers=HEADERS, params=params)
+        if r.ok:
+            return r.json()
+        else:
+            print(f"[ERRO] Falha ao buscar itens: {r.status_code}")
+            return []
+    except Exception as e:
+        print(f"[ERRO] Exceção ao buscar itens: {e}")
         return []
 
+def marcar_como_impresso(order_id):
+    """Marca o pedido como impresso no banco de dados"""
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/orders?id=eq.{order_id}"
+        data = {
+            "printed": True,
+            "printed_at": datetime.utcnow().isoformat() + "Z"
+        }
+        r = requests.patch(url, headers=HEADERS, json=data)
+        if r.ok:
+            print(f"[DB] Pedido {order_id[:8]}... marcado como impresso")
+            return True
+        else:
+            print(f"[ERRO] Falha ao marcar impresso: {r.status_code} - {r.text}")
+            return False
+    except Exception as e:
+        print(f"[ERRO] Exceção ao marcar impresso: {e}")
+        return False
+
 def formatar_recibo(pedido, itens):
+    """Formata o recibo para impressão"""
     linhas = []
     linhas.append("=" * 40)
     linhas.append(STORE_NAME.center(40))
@@ -68,7 +110,7 @@ def formatar_recibo(pedido, itens):
     if pedido.get('customer_phone'):
         linhas.append(f"Telefone: {pedido['customer_phone']}")
     if pedido.get('delivery_address'):
-        linhas.append(f"Endereço: {pedido['delivery_address']}")
+        linhas.append(f"Endereco: {pedido['delivery_address']}")
     
     linhas.append("")
     linhas.append("-" * 40)
@@ -77,7 +119,7 @@ def formatar_recibo(pedido, itens):
     for item in itens:
         qtd = item.get('quantity', 1)
         nome = item.get('name', 'Item')
-        preco = item.get('price', 0) * qtd
+        preco = float(item.get('price', 0)) * qtd
         linhas.append(f"{qtd}x {nome} - R$ {preco:.2f}".replace('.', ','))
         if item.get('notes'):
             linhas.append(f"   -> {item['notes']}")
@@ -88,87 +130,105 @@ def formatar_recibo(pedido, itens):
     
     linhas.append("")
     linhas.append("=" * 40)
-    total = pedido.get('total', 0)
+    total = float(pedido.get('total', 0))
     linhas.append(f"TOTAL: R$ {total:.2f}".replace('.', ',').center(40))
     linhas.append("=" * 40)
     linhas.append("")
-    linhas.append("Obrigado pela preferência!".center(40))
+    linhas.append("Obrigado pela preferencia!".center(40))
     linhas.append("\n\n\n")
     
     return "\n".join(linhas)
 
-def imprimir(texto):
+def imprimir(texto, order_number):
+    """Envia o texto para a impressora padrão via notepad"""
     try:
         # Salva em arquivo temporário
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+        arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.txt")
+        with open(arquivo, 'w', encoding='utf-8') as f:
             f.write(texto)
-            arquivo = f.name
         
-        # Imprime via notepad
-        subprocess.run(['notepad.exe', '/p', arquivo], shell=True)
-        time.sleep(2)
+        print(f"[PRINT] Enviando para impressora: {arquivo}")
         
+        # Imprime via notepad (silencioso)
+        result = subprocess.run(
+            ['notepad.exe', '/p', arquivo],
+            shell=True,
+            capture_output=True,
+            timeout=30
+        )
+        
+        time.sleep(2)  # Aguarda impressão
+        
+        # Remove arquivo temporário
         try:
             os.unlink(arquivo)
         except:
             pass
+        
         return True
+    except subprocess.TimeoutExpired:
+        print(f"[ERRO] Timeout ao imprimir")
+        return False
     except Exception as e:
-        print(f"ERRO ao imprimir: {e}")
+        print(f"[ERRO] Falha na impressão: {e}")
         return False
 
-def carregar_historico():
-    global pedidos_impressos
-    try:
-        if os.path.exists("impressos.json"):
-            with open("impressos.json", "r") as f:
-                hoje = datetime.now().date().isoformat()
-                pedidos_impressos = set(json.load(f).get(hoje, []))
-    except:
-        pedidos_impressos = set()
-
-def salvar_historico():
-    try:
-        hoje = datetime.now().date().isoformat()
-        with open("impressos.json", "w") as f:
-            json.dump({hoje: list(pedidos_impressos)}, f)
-    except:
-        pass
+def processar_pedido(pedido):
+    """Processa um pedido: busca itens, formata e imprime"""
+    order_id = pedido.get("id")
+    order_number = pedido.get("daily_number", "?")
+    customer = pedido.get("customer_name", "")
+    
+    print(f"\n{'='*50}")
+    print(f"[NOVO PEDIDO] #{order_number} - {customer}")
+    print(f"{'='*50}")
+    
+    # Busca itens
+    itens = buscar_itens(order_id)
+    if not itens:
+        print(f"[AVISO] Pedido sem itens, pulando...")
+        return False
+    
+    print(f"[INFO] {len(itens)} item(s) no pedido")
+    
+    # Formata recibo
+    recibo = formatar_recibo(pedido, itens)
+    
+    # Imprime
+    if imprimir(recibo, order_number):
+        print(f"[OK] Impresso com sucesso!")
+        # Marca como impresso no banco
+        if marcar_como_impresso(order_id):
+            return True
+        else:
+            print(f"[AVISO] Impresso mas falhou ao marcar no banco")
+            return True  # Mesmo assim considera sucesso
+    else:
+        print(f"[ERRO] Falha na impressão")
+        return False
 
 # ============================================
-# INÍCIO
+# LOOP PRINCIPAL
 # ============================================
 if __name__ == "__main__":
     print("=" * 50)
-    print(f"  {STORE_NAME} - Impressão Automática")
+    print(f"  {STORE_NAME} - Impressão Automática v2.0")
     print("=" * 50)
-    print(f"  Verificando pedidos a cada {CHECK_INTERVAL}s")
+    print(f"  Verificando a cada {CHECK_INTERVAL} segundos")
+    print("  Usando banco de dados para controle")
     print("  Pressione Ctrl+C para parar")
     print("=" * 50)
     print()
     
-    carregar_historico()
-    
     try:
         while True:
-            for pedido in buscar_pedidos():
-                order_id = pedido.get("id")
-                
-                if order_id in pedidos_impressos:
-                    continue
-                
-                print(f"[NOVO] Pedido #{pedido.get('daily_number')} - {pedido.get('customer_name')}")
-                
-                itens = buscar_itens(order_id)
-                recibo = formatar_recibo(pedido, itens)
-                
-                if imprimir(recibo):
-                    print(f"[OK] Impresso!")
-                    pedidos_impressos.add(order_id)
-                    salvar_historico()
+            pedidos = buscar_pedidos_nao_impressos()
+            
+            for pedido in pedidos:
+                processar_pedido(pedido)
             
             time.sleep(CHECK_INTERVAL)
             
     except KeyboardInterrupt:
-        print("\nEncerrando...")
-        salvar_historico()
+        print("\n[INFO] Encerrando...")
+        print("Obrigado por usar o Comanda Tech!")
