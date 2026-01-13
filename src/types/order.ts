@@ -21,6 +21,8 @@ export interface Order {
   deliveryAddress?: string;
   notes?: string;
   companyId?: string;
+  printed?: boolean;
+  printedAt?: Date;
 }
 
 export interface Product {

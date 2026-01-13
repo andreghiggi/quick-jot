@@ -53,6 +53,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
         status: order.status as OrderStatus,
         createdAt: new Date(order.created_at),
         companyId: order.company_id || undefined,
+        printed: (order as any).printed || false,
+        printedAt: (order as any).printed_at ? new Date((order as any).printed_at) : undefined,
         items: itemsData
           .filter((item) => item.order_id === order.id)
           .map((item) => ({

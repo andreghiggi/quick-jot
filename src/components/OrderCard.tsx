@@ -1,9 +1,10 @@
 import { Order, OrderStatus } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer } from 'lucide-react';
+import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2 } from 'lucide-react';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface OrderCardProps {
   order: Order;
@@ -128,6 +129,25 @@ export function OrderCard({ order }: OrderCardProps) {
             <Badge className={cn("text-xs border", config.bgColor, config.textColor, config.borderColor)}>
               {config.label}
             </Badge>
+            {order.printed && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Impresso automaticamente</p>
+                    {order.printedAt && (
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(order.printedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           <h3 className="font-semibold text-foreground">{order.customerName}</h3>
         </div>
