@@ -444,28 +444,6 @@ export default function PDV() {
 
         {/* Cart Section - Sticky/Fixed */}
         <div className="lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-6rem)] flex flex-col gap-4">
-          {/* Cash Register Info */}
-          <Card className="bg-primary/5 border-primary/20 shrink-0">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CircleDollarSign className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Caixa Aberto</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {salesCount} vendas | {formatCurrency(totalSales)}
-                  </span>
-                  <Button size="sm" variant="outline" onClick={() => setHistoryDialog(true)}>
-                    <History className="w-4 h-4" />
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => setCloseRegisterDialog(true)}>
-                    <Lock className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Cart */}
           <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
