@@ -200,7 +200,12 @@ export default function WaitersConfig() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Garçons</h1>
-            <p className="text-muted-foreground">Gerencie os garçons da empresa</p>
+            <p className="text-muted-foreground">
+              Gerencie os garçons da empresa{' '}
+              <Badge variant="outline" className="ml-2">
+                {company.name}
+              </Badge>
+            </p>
           </div>
           <Button onClick={openCreateDialog}>
             <Plus className="w-4 h-4 mr-2" />
@@ -215,7 +220,7 @@ export default function WaitersConfig() {
               Lista de Garçons
             </CardTitle>
             <CardDescription>
-              Garçons cadastrados terão acesso ao sistema de mesas e comandas
+              Garçons cadastrados terão acesso ao sistema de mesas e comandas da empresa <strong>{company.name}</strong>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -236,6 +241,7 @@ export default function WaitersConfig() {
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Telefone</TableHead>
+                    <TableHead>Empresa</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -246,6 +252,9 @@ export default function WaitersConfig() {
                       <TableCell className="font-medium">{waiter.name}</TableCell>
                       <TableCell>{waiter.email || '-'}</TableCell>
                       <TableCell>{waiter.phone || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{company.name}</Badge>
+                      </TableCell>
                       <TableCell>
                         <Badge variant={waiter.active ? 'default' : 'secondary'}>
                           {waiter.active ? 'Ativo' : 'Inativo'}
