@@ -11,7 +11,9 @@ import {
   Monitor,
   CreditCard,
   Wallet,
-  CircleDollarSign
+  CircleDollarSign,
+  UtensilsCrossed,
+  Table2
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -68,6 +70,14 @@ export function AppSidebar() {
     },
   ] : [];
 
+  const mesasMenuItems = isModuleEnabled('mesas') ? [
+    {
+      title: 'Garçom',
+      icon: UtensilsCrossed,
+      href: '/garcom',
+    },
+  ] : [];
+
   const financeMenuItems = isModuleEnabled('pdv') ? [
     {
       title: 'Caixa',
@@ -78,6 +88,14 @@ export function AppSidebar() {
       title: 'Formas de Pagamento',
       icon: CreditCard,
       href: '/formas-pagamento',
+    },
+  ] : [];
+
+  const mesasConfigItems = isModuleEnabled('mesas') ? [
+    {
+      title: 'Mesas',
+      icon: Table2,
+      href: '/configuracoes/mesas',
     },
   ] : [];
 
@@ -134,6 +152,19 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
               {pdvMenuItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.href}
+                  >
+                    <Link to={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              {mesasMenuItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
@@ -208,6 +239,19 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {mesasConfigItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.href}
+                  >
+                    <Link to={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

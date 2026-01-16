@@ -20,6 +20,8 @@ import NotFound from "./pages/NotFound";
 import PDV from "./pages/PDV";
 import PaymentMethods from "./pages/PaymentMethods";
 import CashRegisters from "./pages/CashRegisters";
+import TablesConfig from "./pages/TablesConfig";
+import Waiter from "./pages/Waiter";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -88,6 +90,18 @@ function AppRoutes() {
       <Route path="/financeiro/caixa" element={
         <ProtectedRoute requireCompany>
           <CashRegisters />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/configuracoes/mesas" element={
+        <ProtectedRoute requireCompany>
+          <TablesConfig />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/garcom" element={
+        <ProtectedRoute requireCompany>
+          <Waiter />
         </ProtectedRoute>
       } />
       

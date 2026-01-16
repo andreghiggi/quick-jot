@@ -17,6 +17,11 @@ const AVAILABLE_MODULES = [
     name: 'pdv',
     label: 'PDV - Ponto de Venda',
     description: 'Sistema de vendas com abertura/fechamento de caixa e formas de pagamento'
+  },
+  {
+    name: 'mesas',
+    label: 'Controle de Mesas',
+    description: 'Gestão de mesas e comandas para garçons, integrado ao PDV'
   }
 ];
 
