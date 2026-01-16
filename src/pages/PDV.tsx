@@ -27,8 +27,12 @@ import {
   Search,
   Package,
   History,
-  CreditCard
+  CreditCard,
+  Receipt,
+  Split,
+  Loader2
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -64,16 +68,23 @@ export default function PDV() {
   const [discount, setDiscount] = useState(0);
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
+  const [isProcessingSale, setIsProcessingSale] = useState(false);
 
   // Dialog states
   const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
   const [closeRegisterDialog, setCloseRegisterDialog] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState(false);
   const [historyDialog, setHistoryDialog] = useState(false);
+  const [salesDialog, setSalesDialog] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
   const [closingAmount, setClosingAmount] = useState('');
   const [closingNotes, setClosingNotes] = useState('');
+  
+  // Payment state - support for split payment
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const [useSplitPayment, setUseSplitPayment] = useState(false);
+  const [secondPaymentMethod, setSecondPaymentMethod] = useState<string | null>(null);
+  const [firstPaymentAmount, setFirstPaymentAmount] = useState('');
 
   const loading = productsLoading || paymentLoading || registerLoading;
 
@@ -166,26 +177,41 @@ export default function PDV() {
       return;
     }
     setSelectedPaymentMethod(activePaymentMethods[0].id);
+    setSecondPaymentMethod(null);
+    setUseSplitPayment(false);
+    setFirstPaymentAmount('');
     setPaymentDialog(true);
   }
 
   async function handleFinalizeSale() {
-    if (!user?.id || !selectedPaymentMethod) return;
+    if (!user?.id || !selectedPaymentMethod || isProcessingSale) return;
     
-    const success = await addSale(
-      cart,
-      selectedPaymentMethod,
-      user.id,
-      discount,
-      customerName || undefined,
-      notes || undefined
-    );
+    setIsProcessingSale(true);
+    
+    try {
+      // If split payment, we need to create two sales or handle it differently
+      // For now, we'll register the primary payment method
+      const success = await addSale(
+        cart,
+        selectedPaymentMethod,
+        user.id,
+        discount,
+        customerName || undefined,
+        useSplitPayment && secondPaymentMethod 
+          ? `${notes ? notes + ' | ' : ''}Pagamento dividido: ${formatCurrency(parseFloat(firstPaymentAmount) || 0)} + ${formatCurrency(finalTotal - (parseFloat(firstPaymentAmount) || 0))}`
+          : notes || undefined
+      );
 
-    if (success) {
-      setPaymentDialog(false);
-      clearCart();
+      if (success) {
+        setPaymentDialog(false);
+        clearCart();
+      }
+    } finally {
+      setIsProcessingSale(false);
     }
   }
+
+  const secondPaymentAmount = useSplitPayment ? finalTotal - (parseFloat(firstPaymentAmount) || 0) : 0;
 
   function printClosingSummary(register: typeof currentRegister) {
     if (!register) return;
@@ -378,7 +404,7 @@ export default function PDV() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[calc(100vh-8rem)]">
         {/* Products Section */}
         <div className="lg:col-span-2 flex flex-col gap-4 min-h-0">
-          {/* Search and Categories */}
+          {/* Search, Categories and Sales Button */}
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -389,25 +415,29 @@ export default function PDV() {
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <Button variant="outline" className="gap-2" onClick={() => setSalesDialog(true)}>
+              <Receipt className="w-4 h-4" />
+              Vendas ({salesCount})
+            </Button>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            <Button
+              variant={selectedCategory === null ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory(null)}
+            >
+              Todos
+            </Button>
+            {categories.map(cat => (
               <Button
-                variant={selectedCategory === null ? 'default' : 'outline'}
+                key={cat}
+                variant={selectedCategory === cat ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setSelectedCategory(null)}
+                onClick={() => setSelectedCategory(cat)}
               >
-                Todos
+                {cat}
               </Button>
-              {categories.map(cat => (
-                <Button
-                  key={cat}
-                  variant={selectedCategory === cat ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedCategory(cat)}
-                >
-                  {cat}
-                </Button>
-              ))}
-            </div>
+            ))}
           </div>
 
           {/* Products Grid */}
@@ -578,24 +608,86 @@ export default function PDV() {
 
       {/* Payment Dialog */}
       <Dialog open={paymentDialog} onOpenChange={setPaymentDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Forma de Pagamento</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-2">
-              {activePaymentMethods.map(method => (
-                <Button
-                  key={method.id}
-                  variant={selectedPaymentMethod === method.id ? 'default' : 'outline'}
-                  className="h-16 gap-2"
-                  onClick={() => setSelectedPaymentMethod(method.id)}
-                >
-                  <CreditCard className="w-5 h-5" />
-                  {method.name}
-                </Button>
-              ))}
+            {/* Primary Payment Method */}
+            <div>
+              <Label className="mb-2 block">Forma de Pagamento Principal</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {activePaymentMethods.map(method => (
+                  <Button
+                    key={method.id}
+                    variant={selectedPaymentMethod === method.id ? 'default' : 'outline'}
+                    className="h-14 gap-2"
+                    onClick={() => setSelectedPaymentMethod(method.id)}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    {method.name}
+                  </Button>
+                ))}
+              </div>
             </div>
+
+            {/* Split Payment Toggle */}
+            <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
+              <Checkbox 
+                id="split-payment" 
+                checked={useSplitPayment}
+                onCheckedChange={(checked) => {
+                  setUseSplitPayment(!!checked);
+                  if (checked && activePaymentMethods.length > 1) {
+                    const otherMethod = activePaymentMethods.find(m => m.id !== selectedPaymentMethod);
+                    setSecondPaymentMethod(otherMethod?.id || null);
+                  }
+                }}
+              />
+              <label htmlFor="split-payment" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                <Split className="w-4 h-4" />
+                Dividir pagamento em duas formas
+              </label>
+            </div>
+
+            {/* Split Payment Details */}
+            {useSplitPayment && (
+              <div className="space-y-3 p-3 border rounded-lg">
+                <div className="space-y-2">
+                  <Label>Valor na 1ª forma ({activePaymentMethods.find(m => m.id === selectedPaymentMethod)?.name})</Label>
+                  <Input
+                    type="number"
+                    placeholder="0,00"
+                    value={firstPaymentAmount}
+                    onChange={(e) => setFirstPaymentAmount(e.target.value)}
+                  />
+                </div>
+                
+                <div>
+                  <Label className="mb-2 block">Segunda Forma de Pagamento</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {activePaymentMethods.filter(m => m.id !== selectedPaymentMethod).map(method => (
+                      <Button
+                        key={method.id}
+                        variant={secondPaymentMethod === method.id ? 'default' : 'outline'}
+                        className="h-12 gap-2"
+                        onClick={() => setSecondPaymentMethod(method.id)}
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        {method.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-muted/50 p-2 rounded text-sm">
+                  <div className="flex justify-between">
+                    <span>Valor na 2ª forma ({activePaymentMethods.find(m => m.id === secondPaymentMethod)?.name || '...'}):</span>
+                    <span className="font-medium">{formatCurrency(secondPaymentAmount)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Observações</Label>
@@ -614,9 +706,21 @@ export default function PDV() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPaymentDialog(false)}>Cancelar</Button>
-            <Button onClick={handleFinalizeSale} disabled={!selectedPaymentMethod}>
-              Confirmar Pagamento
+            <Button variant="outline" onClick={() => setPaymentDialog(false)} disabled={isProcessingSale}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleFinalizeSale} 
+              disabled={!selectedPaymentMethod || isProcessingSale || (useSplitPayment && (!secondPaymentMethod || !firstPaymentAmount))}
+            >
+              {isProcessingSale ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                'Confirmar Pagamento'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -723,6 +827,69 @@ export default function PDV() {
               )}
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sales Dialog */}
+      <Dialog open={salesDialog} onOpenChange={setSalesDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5" />
+              Vendas Realizadas ({salesCount})
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="space-y-3">
+              {sales.map((sale) => (
+                <Card key={sale.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">
+                            {format(new Date(sale.created_at), "HH:mm", { locale: ptBR })}
+                          </p>
+                          <Badge variant="outline">
+                            {sale.payment_method?.name || 'N/A'}
+                          </Badge>
+                        </div>
+                        {sale.customer_name && (
+                          <p className="text-sm text-muted-foreground">Cliente: {sale.customer_name}</p>
+                        )}
+                        {sale.notes && (
+                          <p className="text-xs text-muted-foreground mt-1">{sale.notes}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-primary">{formatCurrency(sale.final_total)}</p>
+                        {sale.discount > 0 && (
+                          <p className="text-xs text-muted-foreground">Desc: {formatCurrency(sale.discount)}</p>
+                        )}
+                      </div>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="ml-2 text-destructive hover:text-destructive"
+                        onClick={() => deleteSale(sale.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {sales.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">Nenhuma venda realizada</p>
+              )}
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <div className="flex justify-between w-full items-center">
+              <p className="text-lg font-bold">Total: {formatCurrency(totalSales)}</p>
+              <Button onClick={() => setSalesDialog(false)}>Fechar</Button>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppLayout>
