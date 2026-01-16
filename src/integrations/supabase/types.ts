@@ -846,6 +846,47 @@ export type Database = {
         }
         Relationships: []
       }
+      waiters: {
+        Row: {
+          active: boolean | null
+          company_id: string
+          created_at: string | null
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          company_id: string
+          created_at?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          active?: boolean | null
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waiters_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -866,7 +907,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "super_admin" | "company_admin" | "company_user"
+      app_role: "super_admin" | "company_admin" | "company_user" | "waiter"
       order_status: "pending" | "preparing" | "ready" | "delivered"
       table_status: "available" | "occupied" | "reserved"
     }
@@ -996,7 +1037,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "company_admin", "company_user"],
+      app_role: ["super_admin", "company_admin", "company_user", "waiter"],
       order_status: ["pending", "preparing", "ready", "delivered"],
       table_status: ["available", "occupied", "reserved"],
     },

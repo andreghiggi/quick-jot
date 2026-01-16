@@ -36,8 +36,17 @@ import logoIcon from '@/assets/logo-icon.png';
 
 export function AppSidebar() {
   const location = useLocation();
-  const { user, profile, company, signOut, isSuperAdmin } = useAuthContext();
+  const { user, profile, company, signOut, isSuperAdmin, isWaiter, isCompanyAdmin } = useAuthContext();
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+
+  // Waiter-only menu
+  const waiterMenuItems = [
+    {
+      title: 'Mesas',
+      icon: UtensilsCrossed,
+      href: '/garcom',
+    },
+  ];
 
   const mainMenuItems = [
     {
@@ -70,7 +79,7 @@ export function AppSidebar() {
     },
   ] : [];
 
-  const mesasMenuItems = isModuleEnabled('mesas') ? [
+  const mesasMenuItems = isModuleEnabled('mesas') && !isWaiter() ? [
     {
       title: 'Garçom',
       icon: UtensilsCrossed,
@@ -91,11 +100,16 @@ export function AppSidebar() {
     },
   ] : [];
 
-  const mesasConfigItems = isModuleEnabled('mesas') ? [
+  const mesasConfigItems = isModuleEnabled('mesas') && isCompanyAdmin() ? [
     {
       title: 'Mesas',
       icon: Table2,
       href: '/configuracoes/mesas',
+    },
+    {
+      title: 'Garçons',
+      icon: Users,
+      href: '/configuracoes/garcons',
     },
   ] : [];
 
@@ -116,6 +130,76 @@ export function AppSidebar() {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
+
+  // If user is a waiter, show simplified menu
+  if (isWaiter()) {
+    return (
+      <Sidebar>
+        <SidebarHeader className="border-b border-sidebar-border p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-sm">
+              <img src={logoIcon} alt="ComandaTech" className="w-8 h-8 object-contain" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-primary">ComandaTech</span>
+              <span className="text-xs text-muted-foreground truncate max-w-[140px]">
+                {company?.name || 'Sem empresa'}
+              </span>
+            </div>
+          </div>
+        </SidebarHeader>
+
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Garçom</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {waiterMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === item.href}
+                    >
+                      <Link to={item.href}>
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter className="border-t border-sidebar-border p-4">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-9 w-9">
+              <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                {getInitials(profile?.full_name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">
+                {profile?.full_name || 'Garçom'}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={signOut}
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </SidebarFooter>
+      </Sidebar>
+    );
+  }
 
   return (
     <Sidebar>

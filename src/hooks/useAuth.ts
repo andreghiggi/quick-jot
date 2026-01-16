@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export type AppRole = 'super_admin' | 'company_admin' | 'company_user';
+export type AppRole = 'super_admin' | 'company_admin' | 'company_user' | 'waiter';
 
 export interface Company {
   id: string;
@@ -170,6 +170,10 @@ export function useAuth() {
     return hasRole('company_admin') || hasRole('super_admin');
   }
 
+  function isWaiter(): boolean {
+    return hasRole('waiter');
+  }
+
   return {
     user,
     session,
@@ -183,6 +187,7 @@ export function useAuth() {
     hasRole,
     isSuperAdmin,
     isCompanyAdmin,
+    isWaiter,
     refetchUserData: () => user && fetchUserData(user.id),
   };
 }

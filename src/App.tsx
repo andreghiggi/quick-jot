@@ -22,6 +22,7 @@ import PaymentMethods from "./pages/PaymentMethods";
 import CashRegisters from "./pages/CashRegisters";
 import TablesConfig from "./pages/TablesConfig";
 import Waiter from "./pages/Waiter";
+import WaitersConfig from "./pages/WaitersConfig";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -30,7 +31,7 @@ import CompanyModulesPage from "./pages/admin/CompanyModulesPage";
 const queryClient = new QueryClient();
 
 function AppRoutes() {
-  const { user, loading, isSuperAdmin } = useAuthContext();
+  const { user, loading, isSuperAdmin, isWaiter } = useAuthContext();
 
   // Redirect logic for root path
   function RootRedirect() {
@@ -42,6 +43,10 @@ function AppRoutes() {
     
     if (isSuperAdmin()) {
       return <Navigate to="/admin" replace />;
+    }
+
+    if (isWaiter()) {
+      return <Navigate to="/garcom" replace />;
     }
     
     return <Index />;
@@ -96,6 +101,12 @@ function AppRoutes() {
       <Route path="/configuracoes/mesas" element={
         <ProtectedRoute requireCompany>
           <TablesConfig />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/configuracoes/garcons" element={
+        <ProtectedRoute requireCompany>
+          <WaitersConfig />
         </ProtectedRoute>
       } />
       

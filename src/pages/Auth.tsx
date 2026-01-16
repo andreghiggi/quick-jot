@@ -27,7 +27,7 @@ const signupSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, signIn, signUp } = useAuthContext();
+  const { user, loading: authLoading, signIn, signUp, isSuperAdmin, isWaiter } = useAuthContext();
   
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -44,9 +44,16 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && !authLoading) {
-      navigate('/');
+      // Redirect based on role
+      if (isSuperAdmin()) {
+        navigate('/admin');
+      } else if (isWaiter()) {
+        navigate('/garcom');
+      } else {
+        navigate('/');
+      }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, isSuperAdmin, isWaiter]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -70,10 +77,7 @@ export default function Auth() {
     setIsLoading(true);
     const { error } = await signIn(loginEmail, loginPassword);
     setIsLoading(false);
-    
-    if (!error) {
-      navigate('/');
-    }
+    // Redirect is handled by useEffect
   }
 
   async function handleSignup(e: React.FormEvent) {
@@ -103,10 +107,7 @@ export default function Auth() {
     setIsLoading(true);
     const { error } = await signUp(signupEmail, signupPassword, signupFullName);
     setIsLoading(false);
-    
-    if (!error) {
-      navigate('/');
-    }
+    // Redirect is handled by useEffect
   }
 
   if (authLoading) {
