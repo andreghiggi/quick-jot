@@ -9,7 +9,9 @@ import {
   Users,
   ChefHat,
   Monitor,
-  CreditCard
+  CreditCard,
+  Wallet,
+  CircleDollarSign
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -63,6 +65,14 @@ export function AppSidebar() {
       title: 'PDV',
       icon: Monitor,
       href: '/pdv',
+    },
+  ] : [];
+
+  const financeMenuItems = isModuleEnabled('pdv') ? [
+    {
+      title: 'Caixa',
+      icon: CircleDollarSign,
+      href: '/financeiro/caixa',
     },
     {
       title: 'Formas de Pagamento',
@@ -139,6 +149,29 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {financeMenuItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Financeiro</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {financeMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === item.href}
+                    >
+                      <Link to={item.href}>
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {isSuperAdmin() && (
           <SidebarGroup>
