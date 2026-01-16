@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { useTables, TableStatus } from '@/hooks/useTables';
 import { useTabs, Tab } from '@/hooks/useTabs';
 import { useProducts } from '@/hooks/useProducts';
@@ -42,7 +42,7 @@ import {
 import { toast } from 'sonner';
 
 export default function Waiter() {
-  const { company, user } = useAuth();
+  const { company, user } = useAuthContext();
   const { tables, updateTableStatus } = useTables({ companyId: company?.id });
   const { 
     openTabs, 
