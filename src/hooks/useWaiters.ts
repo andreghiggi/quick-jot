@@ -72,10 +72,13 @@ export function useWaiters({ companyId }: UseWaitersProps) {
     name: string;
     phone?: string;
   }): Promise<boolean> {
-    if (!companyId) return false;
+    if (!companyId) {
+      toast.error('Empresa não selecionada');
+      return false;
+    }
 
     try {
-      // 1. Create auth user
+      // 1. Create auth user using admin function via edge function or signUp
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -87,16 +90,33 @@ export function useWaiters({ companyId }: UseWaitersProps) {
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Usuário não criado');
+      if (authError) {
+        console.error('Auth error:', authError);
+        if (authError.message?.includes('already registered')) {
+          toast.error('Este email já está cadastrado no sistema');
+        } else {
+          toast.error(`Erro ao criar usuário: ${authError.message}`);
+        }
+        return false;
+      }
+      
+      if (!authData.user) {
+        toast.error('Usuário não foi criado');
+        return false;
+      }
 
       const userId = authData.user.id;
+      console.log('User created with ID:', userId);
 
       // 2. Add waiter role (need to delete default role first)
-      await supabase
+      const { error: deleteRoleError } = await supabase
         .from('user_roles')
         .delete()
         .eq('user_id', userId);
+      
+      if (deleteRoleError) {
+        console.error('Error deleting default role:', deleteRoleError);
+      }
 
       const { error: roleError } = await supabase
         .from('user_roles')
@@ -105,7 +125,11 @@ export function useWaiters({ companyId }: UseWaitersProps) {
           role: 'waiter' as any,
         });
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error('Error adding waiter role:', roleError);
+        toast.error(`Erro ao definir função: ${roleError.message}`);
+        return false;
+      }
 
       // 3. Add to company_users
       const { error: companyUserError } = await supabase
@@ -116,7 +140,11 @@ export function useWaiters({ companyId }: UseWaitersProps) {
           is_owner: false,
         });
 
-      if (companyUserError) throw companyUserError;
+      if (companyUserError) {
+        console.error('Error adding to company_users:', companyUserError);
+        toast.error(`Erro ao vincular à empresa: ${companyUserError.message}`);
+        return false;
+      }
 
       // 4. Create waiter record
       const { error: waiterError } = await supabase
@@ -129,18 +157,18 @@ export function useWaiters({ companyId }: UseWaitersProps) {
           active: true,
         });
 
-      if (waiterError) throw waiterError;
+      if (waiterError) {
+        console.error('Error creating waiter record:', waiterError);
+        toast.error(`Erro ao criar registro do garçom: ${waiterError.message}`);
+        return false;
+      }
 
       toast.success('Garçom cadastrado com sucesso!');
       fetchWaiters();
       return true;
     } catch (error: any) {
       console.error('Error creating waiter:', error);
-      if (error.message?.includes('already registered')) {
-        toast.error('Este email já está cadastrado');
-      } else {
-        toast.error('Erro ao cadastrar garçom');
-      }
+      toast.error(`Erro inesperado: ${error.message}`);
       return false;
     }
   }
