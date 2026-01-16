@@ -442,10 +442,10 @@ export default function PDV() {
           </ScrollArea>
         </div>
 
-        {/* Cart Section */}
-        <div className="flex flex-col gap-4">
+        {/* Cart Section - Sticky/Fixed */}
+        <div className="lg:sticky lg:top-4 lg:h-[calc(100vh-8rem)] flex flex-col gap-4">
           {/* Cash Register Info */}
-          <Card className="bg-primary/5 border-primary/20">
+          <Card className="bg-primary/5 border-primary/20 shrink-0">
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -468,12 +468,17 @@ export default function PDV() {
           </Card>
 
           {/* Cart */}
-          <Card className="flex-1 flex flex-col">
-            <CardHeader className="pb-2">
+          <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <CardHeader className="pb-2 shrink-0">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <ShoppingCart className="w-5 h-5" />
                   Carrinho
+                  {cart.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                    </Badge>
+                  )}
                 </CardTitle>
                 {cart.length > 0 && (
                   <Button variant="ghost" size="sm" onClick={clearCart}>
@@ -482,14 +487,16 @@ export default function PDV() {
                 )}
               </div>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col">
-              <ScrollArea className="flex-1 -mx-4 px-4">
+            
+            <CardContent className="flex-1 flex flex-col min-h-0 overflow-hidden p-0">
+              {/* Scrollable Cart Items */}
+              <ScrollArea className="flex-1 px-6">
                 {cart.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     Carrinho vazio
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 py-2">
                     {cart.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
                         <div className="flex-1 min-w-0">
@@ -536,35 +543,34 @@ export default function PDV() {
                 )}
               </ScrollArea>
 
+              {/* Fixed Footer - Always visible */}
               {cart.length > 0 && (
-                <>
-                  <Separator className="my-4" />
-                  
-                  {/* Discount */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <Label className="text-sm">Desconto:</Label>
-                    <Input
-                      type="number"
-                      placeholder="0,00"
-                      value={discount || ''}
-                      onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                      className="h-8 w-24"
-                    />
-                  </div>
-
-                  {/* Customer Name */}
-                  <div className="flex items-center gap-2 mb-4">
-                    <Label className="text-sm">Cliente:</Label>
-                    <Input
-                      placeholder="Nome (opcional)"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="h-8 flex-1"
-                    />
+                <div className="shrink-0 border-t bg-card px-6 py-4 space-y-3">
+                  {/* Discount & Customer */}
+                  <div className="flex gap-2">
+                    <div className="flex items-center gap-2 flex-1">
+                      <Label className="text-xs whitespace-nowrap">Desconto:</Label>
+                      <Input
+                        type="number"
+                        placeholder="0,00"
+                        value={discount || ''}
+                        onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 flex-1">
+                      <Label className="text-xs whitespace-nowrap">Cliente:</Label>
+                      <Input
+                        placeholder="Nome"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        className="h-8"
+                      />
+                    </div>
                   </div>
 
                   {/* Totals */}
-                  <div className="space-y-1 mb-4">
+                  <div className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span>Subtotal:</span>
                       <span>{formatCurrency(cartTotal)}</span>
@@ -585,7 +591,7 @@ export default function PDV() {
                     <DollarSign className="w-5 h-5" />
                     Finalizar Venda
                   </Button>
-                </>
+                </div>
               )}
             </CardContent>
           </Card>
