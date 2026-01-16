@@ -19,6 +19,7 @@ import NoCompany from "./pages/NoCompany";
 import NotFound from "./pages/NotFound";
 import PDV from "./pages/PDV";
 import PaymentMethods from "./pages/PaymentMethods";
+import CashRegisters from "./pages/CashRegisters";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -81,6 +82,12 @@ function AppRoutes() {
       <Route path="/formas-pagamento" element={
         <ProtectedRoute requireCompany>
           <PaymentMethods />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/financeiro/caixa" element={
+        <ProtectedRoute requireCompany>
+          <CashRegisters />
         </ProtectedRoute>
       } />
       
