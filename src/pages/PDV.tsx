@@ -4,6 +4,9 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { useCashRegister, PdvSaleItem } from '@/hooks/useCashRegister';
+import { useTabs, Tab } from '@/hooks/useTabs';
+import { useTables } from '@/hooks/useTables';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -30,7 +33,11 @@ import {
   CreditCard,
   Receipt,
   Split,
-  Loader2
+  Loader2,
+  Users,
+  Table2,
+  ClipboardList,
+  Import
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -48,6 +55,9 @@ export default function PDV() {
   const { user, company } = useAuthContext();
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id });
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const { openTabs, getTabTotal, closeTab } = useTabs({ companyId: company?.id });
+  const { tables } = useTables({ companyId: company?.id });
   const { 
     currentRegister, 
     registers,
@@ -61,6 +71,8 @@ export default function PDV() {
     addSale,
     deleteSale
   } = useCashRegister({ companyId: company?.id });
+
+  const mesasEnabled = isModuleEnabled('mesas');
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,15 +88,24 @@ export default function PDV() {
   const [paymentDialog, setPaymentDialog] = useState(false);
   const [historyDialog, setHistoryDialog] = useState(false);
   const [salesDialog, setSalesDialog] = useState(false);
+  const [tabsDialog, setTabsDialog] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
   const [closingAmount, setClosingAmount] = useState('');
   const [closingNotes, setClosingNotes] = useState('');
+  const [importedTab, setImportedTab] = useState<Tab | null>(null);
   
-  // Payment state - support for split payment
+  // Payment state - support for split payment and division by people
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [useSplitPayment, setUseSplitPayment] = useState(false);
   const [secondPaymentMethod, setSecondPaymentMethod] = useState<string | null>(null);
   const [firstPaymentAmount, setFirstPaymentAmount] = useState('');
+  const [divideByPeople, setDivideByPeople] = useState(false);
+  const [numberOfPeople, setNumberOfPeople] = useState('2');
+  const [peoplePaying, setPeoplePaying] = useState<Array<{
+    name: string;
+    amount: string;
+    paymentMethodId: string;
+  }>>([]);
 
   const loading = productsLoading || paymentLoading || registerLoading;
 
@@ -180,29 +201,106 @@ export default function PDV() {
     setSecondPaymentMethod(null);
     setUseSplitPayment(false);
     setFirstPaymentAmount('');
+    setDivideByPeople(false);
+    setNumberOfPeople('2');
+    setPeoplePaying([]);
     setPaymentDialog(true);
   }
 
+  function handleImportTab(tab: Tab) {
+    // Import items from tab to cart
+    if (tab.items && tab.items.length > 0) {
+      const importedItems: CartItem[] = tab.items.map(item => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price
+      }));
+      setCart(importedItems);
+      setImportedTab(tab);
+      setCustomerName(tab.customer_name || '');
+      setNotes(`Comanda #${tab.tab_number}${tab.table ? ` - Mesa ${tab.table.number}` : ''}`);
+      setTabsDialog(false);
+      toast.success(`Comanda #${tab.tab_number} importada!`);
+    } else {
+      toast.error('Comanda sem itens');
+    }
+  }
+
+  function initializePeoplePaying(count: number) {
+    const people: typeof peoplePaying = [];
+    const amountPerPerson = (finalTotal / count).toFixed(2);
+    for (let i = 0; i < count; i++) {
+      people.push({
+        name: `Pessoa ${i + 1}`,
+        amount: amountPerPerson,
+        paymentMethodId: activePaymentMethods[0]?.id || ''
+      });
+    }
+    setPeoplePaying(people);
+  }
+
+  function updatePersonPayment(index: number, field: 'name' | 'amount' | 'paymentMethodId', value: string) {
+    setPeoplePaying(prev => prev.map((p, i) => 
+      i === index ? { ...p, [field]: value } : p
+    ));
+  }
+
+  const totalPeoplePaying = peoplePaying.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+  const remainingAmount = finalTotal - totalPeoplePaying;
+
   async function handleFinalizeSale() {
-    if (!user?.id || !selectedPaymentMethod || isProcessingSale) return;
+    if (!user?.id || isProcessingSale) return;
+    
+    // Validation based on payment mode
+    if (divideByPeople) {
+      if (peoplePaying.length === 0 || Math.abs(remainingAmount) > 0.01) {
+        toast.error('Verifique os valores de cada pessoa');
+        return;
+      }
+    } else if (!selectedPaymentMethod) {
+      toast.error('Selecione uma forma de pagamento');
+      return;
+    }
     
     setIsProcessingSale(true);
     
     try {
-      // If split payment, we need to create two sales or handle it differently
-      // For now, we'll register the primary payment method
+      // Build notes based on payment type
+      let saleNotes = notes || '';
+      
+      if (divideByPeople) {
+        const peopleDetails = peoplePaying.map(p => {
+          const method = activePaymentMethods.find(m => m.id === p.paymentMethodId)?.name || 'N/A';
+          return `${p.name}: ${formatCurrency(parseFloat(p.amount) || 0)} (${method})`;
+        }).join(' | ');
+        saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}Dividido por ${peoplePaying.length} pessoas: ${peopleDetails}`;
+      } else if (useSplitPayment && secondPaymentMethod) {
+        const method1 = activePaymentMethods.find(m => m.id === selectedPaymentMethod)?.name;
+        const method2 = activePaymentMethods.find(m => m.id === secondPaymentMethod)?.name;
+        saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}Pagamento dividido: ${formatCurrency(parseFloat(firstPaymentAmount) || 0)} (${method1}) + ${formatCurrency(secondPaymentAmount)} (${method2})`;
+      }
+
+      // Use primary payment method (for reporting purposes)
+      const primaryPaymentMethod = divideByPeople 
+        ? peoplePaying[0]?.paymentMethodId || activePaymentMethods[0]?.id
+        : selectedPaymentMethod;
+
       const success = await addSale(
         cart,
-        selectedPaymentMethod,
+        primaryPaymentMethod!,
         user.id,
         discount,
         customerName || undefined,
-        useSplitPayment && secondPaymentMethod 
-          ? `${notes ? notes + ' | ' : ''}Pagamento dividido: ${formatCurrency(parseFloat(firstPaymentAmount) || 0)} + ${formatCurrency(finalTotal - (parseFloat(firstPaymentAmount) || 0))}`
-          : notes || undefined
+        saleNotes || undefined
       );
 
       if (success) {
+        // If imported from tab, close the tab
+        if (importedTab) {
+          await closeTab(importedTab.id);
+          setImportedTab(null);
+        }
         setPaymentDialog(false);
         clearCart();
       }
@@ -516,7 +614,7 @@ export default function PDV() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[calc(100vh-8rem)]">
         {/* Products Section */}
         <div className="lg:col-span-2 flex flex-col gap-4 min-h-0">
-          {/* Search, Categories and Sales Button */}
+          {/* Search, Categories and Actions */}
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -527,10 +625,18 @@ export default function PDV() {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline" className="gap-2" onClick={() => setSalesDialog(true)}>
-              <Receipt className="w-4 h-4" />
-              Vendas ({salesCount})
-            </Button>
+            <div className="flex gap-2">
+              {mesasEnabled && openTabs.length > 0 && (
+                <Button variant="outline" className="gap-2" onClick={() => setTabsDialog(true)}>
+                  <ClipboardList className="w-4 h-4" />
+                  Comandas ({openTabs.length})
+                </Button>
+              )}
+              <Button variant="outline" className="gap-2" onClick={() => setSalesDialog(true)}>
+                <Receipt className="w-4 h-4" />
+                Vendas ({salesCount})
+              </Button>
+            </div>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2">
             <Button
@@ -724,66 +830,124 @@ export default function PDV() {
           <DialogHeader>
             <DialogTitle>Forma de Pagamento</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            {/* Primary Payment Method */}
-            <div>
-              <Label className="mb-2 block">Forma de Pagamento Principal</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {activePaymentMethods.map(method => (
-                  <Button
-                    key={method.id}
-                    variant={selectedPaymentMethod === method.id ? 'default' : 'outline'}
-                    className="h-14 gap-2"
-                    onClick={() => setSelectedPaymentMethod(method.id)}
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    {method.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Split Payment Toggle */}
-            <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            {/* Divide by People Toggle */}
+            <div className="flex items-center space-x-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
               <Checkbox 
-                id="split-payment" 
-                checked={useSplitPayment}
+                id="divide-people" 
+                checked={divideByPeople}
                 onCheckedChange={(checked) => {
-                  setUseSplitPayment(!!checked);
-                  if (checked && activePaymentMethods.length > 1) {
-                    const otherMethod = activePaymentMethods.find(m => m.id !== selectedPaymentMethod);
-                    setSecondPaymentMethod(otherMethod?.id || null);
+                  setDivideByPeople(!!checked);
+                  setUseSplitPayment(false);
+                  if (checked) {
+                    initializePeoplePaying(parseInt(numberOfPeople) || 2);
                   }
                 }}
               />
-              <label htmlFor="split-payment" className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                <Split className="w-4 h-4" />
-                Dividir pagamento em duas formas
+              <label htmlFor="divide-people" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Dividir conta por pessoas
               </label>
             </div>
 
-            {/* Split Payment Details */}
-            {useSplitPayment && (
-              <div className="space-y-3 p-3 border rounded-lg">
-                <div className="space-y-2">
-                  <Label>Valor na 1ª forma ({activePaymentMethods.find(m => m.id === selectedPaymentMethod)?.name})</Label>
-                  <Input
-                    type="number"
-                    placeholder="0,00"
-                    value={firstPaymentAmount}
-                    onChange={(e) => setFirstPaymentAmount(e.target.value)}
-                  />
+            {/* Divide by People Details */}
+            {divideByPeople ? (
+              <div className="space-y-4 p-4 border rounded-lg">
+                <div className="flex items-center gap-4">
+                  <Label>Número de pessoas:</Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => {
+                        const newCount = Math.max(2, (parseInt(numberOfPeople) || 2) - 1);
+                        setNumberOfPeople(String(newCount));
+                        initializePeoplePaying(newCount);
+                      }}
+                    >
+                      <Minus className="w-4 h-4" />
+                    </Button>
+                    <span className="w-10 text-center font-bold text-lg">{numberOfPeople}</span>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => {
+                        const newCount = (parseInt(numberOfPeople) || 2) + 1;
+                        setNumberOfPeople(String(newCount));
+                        initializePeoplePaying(newCount);
+                      }}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => initializePeoplePaying(parseInt(numberOfPeople) || 2)}
+                  >
+                    Dividir Igual
+                  </Button>
                 </div>
-                
+
+                <div className="space-y-3">
+                  {peoplePaying.map((person, index) => (
+                    <div key={index} className="p-3 bg-muted rounded-lg space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder={`Pessoa ${index + 1}`}
+                          value={person.name}
+                          onChange={(e) => updatePersonPayment(index, 'name', e.target.value)}
+                          className="flex-1"
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Valor"
+                          value={person.amount}
+                          onChange={(e) => updatePersonPayment(index, 'amount', e.target.value)}
+                          className="w-28"
+                        />
+                      </div>
+                      <div className="flex gap-1 flex-wrap">
+                        {activePaymentMethods.map(method => (
+                          <Button
+                            key={method.id}
+                            size="sm"
+                            variant={person.paymentMethodId === method.id ? 'default' : 'outline'}
+                            onClick={() => updatePersonPayment(index, 'paymentMethodId', method.id)}
+                          >
+                            {method.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className={`p-3 rounded-lg ${Math.abs(remainingAmount) > 0.01 ? 'bg-destructive/10 border border-destructive' : 'bg-green-500/10 border border-green-500'}`}>
+                  <div className="flex justify-between font-medium">
+                    <span>Total das pessoas:</span>
+                    <span>{formatCurrency(totalPeoplePaying)}</span>
+                  </div>
+                  {Math.abs(remainingAmount) > 0.01 && (
+                    <div className="flex justify-between text-sm text-destructive mt-1">
+                      <span>Diferença:</span>
+                      <span>{formatCurrency(remainingAmount)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Primary Payment Method */}
                 <div>
-                  <Label className="mb-2 block">Segunda Forma de Pagamento</Label>
+                  <Label className="mb-2 block">Forma de Pagamento</Label>
                   <div className="grid grid-cols-2 gap-2">
-                    {activePaymentMethods.filter(m => m.id !== selectedPaymentMethod).map(method => (
+                    {activePaymentMethods.map(method => (
                       <Button
                         key={method.id}
-                        variant={secondPaymentMethod === method.id ? 'default' : 'outline'}
-                        className="h-12 gap-2"
-                        onClick={() => setSecondPaymentMethod(method.id)}
+                        variant={selectedPaymentMethod === method.id ? 'default' : 'outline'}
+                        className="h-14 gap-2"
+                        onClick={() => setSelectedPaymentMethod(method.id)}
                       >
                         <CreditCard className="w-4 h-4" />
                         {method.name}
@@ -792,13 +956,64 @@ export default function PDV() {
                   </div>
                 </div>
 
-                <div className="bg-muted/50 p-2 rounded text-sm">
-                  <div className="flex justify-between">
-                    <span>Valor na 2ª forma ({activePaymentMethods.find(m => m.id === secondPaymentMethod)?.name || '...'}):</span>
-                    <span className="font-medium">{formatCurrency(secondPaymentAmount)}</span>
-                  </div>
+                {/* Split Payment Toggle */}
+                <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
+                  <Checkbox 
+                    id="split-payment" 
+                    checked={useSplitPayment}
+                    onCheckedChange={(checked) => {
+                      setUseSplitPayment(!!checked);
+                      if (checked && activePaymentMethods.length > 1) {
+                        const otherMethod = activePaymentMethods.find(m => m.id !== selectedPaymentMethod);
+                        setSecondPaymentMethod(otherMethod?.id || null);
+                      }
+                    }}
+                  />
+                  <label htmlFor="split-payment" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                    <Split className="w-4 h-4" />
+                    Dividir em duas formas de pagamento
+                  </label>
                 </div>
-              </div>
+
+                {/* Split Payment Details */}
+                {useSplitPayment && (
+                  <div className="space-y-3 p-3 border rounded-lg">
+                    <div className="space-y-2">
+                      <Label>Valor na 1ª forma ({activePaymentMethods.find(m => m.id === selectedPaymentMethod)?.name})</Label>
+                      <Input
+                        type="number"
+                        placeholder="0,00"
+                        value={firstPaymentAmount}
+                        onChange={(e) => setFirstPaymentAmount(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label className="mb-2 block">Segunda Forma de Pagamento</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {activePaymentMethods.filter(m => m.id !== selectedPaymentMethod).map(method => (
+                          <Button
+                            key={method.id}
+                            variant={secondPaymentMethod === method.id ? 'default' : 'outline'}
+                            className="h-12 gap-2"
+                            onClick={() => setSecondPaymentMethod(method.id)}
+                          >
+                            <CreditCard className="w-4 h-4" />
+                            {method.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-muted/50 p-2 rounded text-sm">
+                      <div className="flex justify-between">
+                        <span>Valor na 2ª forma ({activePaymentMethods.find(m => m.id === secondPaymentMethod)?.name || '...'}):</span>
+                        <span className="font-medium">{formatCurrency(secondPaymentAmount)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="space-y-2">
@@ -809,6 +1024,18 @@ export default function PDV() {
                 onChange={(e) => setNotes(e.target.value)}
               />
             </div>
+
+            {importedTab && (
+              <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg text-sm">
+                <p className="font-medium text-blue-700">
+                  📋 Comanda #{importedTab.tab_number}
+                  {importedTab.table && ` - Mesa ${importedTab.table.number}`}
+                </p>
+                <p className="text-muted-foreground">
+                  A comanda será fechada automaticamente após o pagamento
+                </p>
+              </div>
+            )}
 
             <div className="bg-muted p-4 rounded-lg">
               <div className="flex justify-between text-lg font-bold">
@@ -823,7 +1050,13 @@ export default function PDV() {
             </Button>
             <Button 
               onClick={handleFinalizeSale} 
-              disabled={!selectedPaymentMethod || isProcessingSale || (useSplitPayment && (!secondPaymentMethod || !firstPaymentAmount))}
+              disabled={
+                isProcessingSale || 
+                (divideByPeople 
+                  ? (peoplePaying.length === 0 || Math.abs(remainingAmount) > 0.01)
+                  : (!selectedPaymentMethod || (useSplitPayment && (!secondPaymentMethod || !firstPaymentAmount)))
+                )
+              }
             >
               {isProcessingSale ? (
                 <>
@@ -1006,6 +1239,60 @@ export default function PDV() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Tabs/Comandas Dialog */}
+      {mesasEnabled && (
+        <Dialog open={tabsDialog} onOpenChange={setTabsDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ClipboardList className="w-5 h-5" />
+                Comandas Abertas ({openTabs.length})
+              </DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh]">
+              <div className="space-y-3">
+                {openTabs.map((tab) => {
+                  const tabTotal = getTabTotal(tab);
+                  const tableName = tab.table ? `Mesa ${tab.table.number}` : 'Sem mesa';
+                  return (
+                    <Card key={tab.id} className="hover:border-primary transition-colors">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">Comanda #{tab.tab_number}</p>
+                              <Badge variant="outline">{tableName}</Badge>
+                            </div>
+                            {tab.customer_name && (
+                              <p className="text-sm text-muted-foreground">Cliente: {tab.customer_name}</p>
+                            )}
+                            <p className="text-sm text-muted-foreground">
+                              {tab.items?.length || 0} itens
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="font-bold text-lg text-primary">{formatCurrency(tabTotal)}</p>
+                            </div>
+                            <Button onClick={() => handleImportTab(tab)} className="gap-2">
+                              <Import className="w-4 h-4" />
+                              Importar
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+                {openTabs.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">Nenhuma comanda aberta</p>
+                )}
+              </div>
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      )}
     </AppLayout>
   );
 }
