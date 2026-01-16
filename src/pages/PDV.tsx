@@ -216,73 +216,185 @@ export default function PDV() {
   function printClosingSummary(register: typeof currentRegister) {
     if (!register) return;
 
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
     const salesByMethod = sales.reduce((acc, sale) => {
       const methodName = sale.payment_method?.name || 'Não informado';
       acc[methodName] = (acc[methodName] || 0) + sale.final_total;
       return acc;
     }, {} as Record<string, number>);
 
+    const formattedOpenDate = new Date(register.opened_at).toLocaleString('pt-BR', { 
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const diferenca = register.difference || 0;
+
     const printContent = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
+        <title>Fechamento de Caixa</title>
         <style>
           @page { margin: 0; size: 80mm auto; }
-          body {
-            font-family: 'Courier New', monospace;
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Courier New', monospace; 
             font-size: 12px;
             width: 80mm;
-            margin: 0;
-            padding: 4mm;
-            box-sizing: border-box;
+            padding: 3mm;
           }
-          .center { text-align: center; }
-          .bold { font-weight: bold; }
-          .line { border-top: 1px dashed #000; margin: 8px 0; }
-          .row { display: flex; justify-content: space-between; margin: 2px 0; }
-          h2 { margin: 4px 0; font-size: 14px; }
+          .header { text-align: center; margin-bottom: 2mm; }
+          .header h1 { font-size: 14px; font-weight: bold; }
+          .header h2 { font-size: 16px; font-weight: bold; margin: 2mm 0; }
+          .header p { font-size: 10px; }
+          .divider { border-top: 1px dashed #000; margin: 2mm 0; }
+          .section { margin: 2mm 0; }
+          .section-title { font-weight: bold; font-size: 11px; margin-bottom: 1mm; }
+          .row { display: flex; justify-content: space-between; margin: 1mm 0; font-size: 11px; }
+          .row.bold { font-weight: bold; font-size: 12px; }
+          .row.total { font-size: 13px; font-weight: bold; margin: 2mm 0; }
+          .row.negative { color: #c00; }
+          .notes { font-size: 10px; margin: 2mm 0; }
+          .footer { text-align: center; font-size: 9px; margin-top: 3mm; color: #666; }
         </style>
       </head>
       <body>
-        <div class="center bold">
+        <div class="header">
+          <h1>${company?.name || 'PDV'}</h1>
           <h2>FECHAMENTO DE CAIXA</h2>
-          <p>${company?.name || 'PDV'}</p>
         </div>
-        <div class="line"></div>
-        <div class="row"><span>Abertura:</span><span>${format(new Date(register.opened_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span></div>
-        <div class="row"><span>Fechamento:</span><span>${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span></div>
-        <div class="line"></div>
-        <div class="row"><span>Valor Inicial:</span><span>R$ ${register.opening_amount.toFixed(2)}</span></div>
-        <div class="row"><span>Total Vendas:</span><span>R$ ${totalSales.toFixed(2)}</span></div>
-        <div class="row"><span>Qtd. Vendas:</span><span>${salesCount}</span></div>
-        <div class="line"></div>
-        <div class="bold">Vendas por Forma de Pagamento:</div>
-        ${Object.entries(salesByMethod).map(([method, total]) => 
-          `<div class="row"><span>${method}:</span><span>R$ ${total.toFixed(2)}</span></div>`
-        ).join('')}
-        <div class="line"></div>
-        <div class="row bold"><span>Valor Esperado:</span><span>R$ ${((register.opening_amount || 0) + totalSales).toFixed(2)}</span></div>
-        <div class="row bold"><span>Valor Informado:</span><span>R$ ${register.closing_amount?.toFixed(2) || '0.00'}</span></div>
-        <div class="row bold"><span>Diferença:</span><span>R$ ${register.difference?.toFixed(2) || '0.00'}</span></div>
-        ${register.notes ? `<div class="line"></div><p>Obs: ${register.notes}</p>` : ''}
-        <div class="line"></div>
-        <div class="center" style="margin-top: 8px;">
-          <p style="font-size: 10px;">Impresso em ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+        <div class="divider"></div>
+        <div class="section">
+          <div class="row"><span>Abertura:</span><span>${formattedOpenDate}</span></div>
+          <div class="row"><span>Fechamento:</span><span>${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
         </div>
+        <div class="divider"></div>
+        <div class="section">
+          <div class="row"><span>Valor Inicial:</span><span>R$ ${register.opening_amount.toFixed(2)}</span></div>
+          <div class="row"><span>Total em Vendas:</span><span>R$ ${totalSales.toFixed(2)}</span></div>
+          <div class="row"><span>Qtd. Vendas:</span><span>${salesCount}</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="section">
+          <p class="section-title">POR FORMA DE PAGAMENTO:</p>
+          ${Object.entries(salesByMethod).map(([method, total]) => 
+            `<div class="row"><span>${method}:</span><span>R$ ${(total as number).toFixed(2)}</span></div>`
+          ).join('')}
+        </div>
+        <div class="divider"></div>
+        <div class="section">
+          <div class="row bold"><span>VALOR ESPERADO:</span><span>R$ ${((register.opening_amount || 0) + totalSales).toFixed(2)}</span></div>
+          <div class="row"><span>Valor Informado:</span><span>R$ ${(register.closing_amount || 0).toFixed(2)}</span></div>
+          <div class="row total ${diferenca < 0 ? 'negative' : ''}">
+            <span>DIFERENÇA:</span>
+            <span>R$ ${diferenca.toFixed(2)}</span>
+          </div>
+        </div>
+        ${register.notes ? `<div class="divider"></div><p class="notes"><strong>Obs:</strong> ${register.notes}</p>` : ''}
+        <div class="divider"></div>
+        <p class="footer">Impresso em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
+        <script>window.onload = function() { window.print(); window.close(); }</script>
       </body>
       </html>
     `;
 
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  }
+
+  function printSaleReceipt(sale: typeof sales[0]) {
     const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.onload = () => {
-        printWindow.print();
-        printWindow.close();
-      };
-    }
+    if (!printWindow) return;
+
+    const formattedDate = new Date(sale.created_at).toLocaleString('pt-BR', { 
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Cupom de Venda</title>
+        <style>
+          @page { margin: 0; size: 80mm auto; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px;
+            width: 80mm;
+            padding: 3mm;
+          }
+          .header { text-align: center; margin-bottom: 2mm; }
+          .header h1 { font-size: 14px; font-weight: bold; }
+          .header h2 { font-size: 16px; font-weight: bold; margin: 2mm 0; }
+          .header p { font-size: 10px; }
+          .divider { border-top: 1px dashed #000; margin: 2mm 0; }
+          .section { margin: 2mm 0; }
+          .section p { margin: 1mm 0; font-size: 11px; }
+          .items { margin: 2mm 0; }
+          .item { display: flex; justify-content: space-between; margin: 1mm 0; font-size: 11px; }
+          .item-name { flex: 1; }
+          .item-price { text-align: right; }
+          .total-section { margin-top: 2mm; }
+          .total { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; }
+          .subtotal { display: flex; justify-content: space-between; font-size: 11px; margin: 1mm 0; }
+          .notes { font-size: 10px; margin: 2mm 0; }
+          .footer { text-align: center; font-size: 10px; margin-top: 3mm; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${company?.name || 'PDV'}</h1>
+          <h2>CUPOM DE VENDA</h2>
+          <p>${formattedDate}</p>
+        </div>
+        <div class="divider"></div>
+        ${sale.customer_name ? `<div class="section"><p><strong>Cliente:</strong> ${sale.customer_name}</p></div><div class="divider"></div>` : ''}
+        <div class="items">
+          ${sale.items?.map(item => `
+            <div class="item">
+              <span class="item-name">${item.quantity}x ${item.product_name}</span>
+              <span class="item-price">R$ ${item.total_price.toFixed(2)}</span>
+            </div>
+          `).join('') || '<p>Sem itens</p>'}
+        </div>
+        <div class="divider"></div>
+        <div class="total-section">
+          <div class="subtotal"><span>Subtotal:</span><span>R$ ${sale.total.toFixed(2)}</span></div>
+          ${sale.discount > 0 ? `<div class="subtotal"><span>Desconto:</span><span>- R$ ${sale.discount.toFixed(2)}</span></div>` : ''}
+          <div class="total">
+            <span>TOTAL:</span>
+            <span>R$ ${sale.final_total.toFixed(2)}</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="section">
+          <p><strong>Pagamento:</strong> ${sale.payment_method?.name || 'N/A'}</p>
+        </div>
+        ${sale.notes ? `<div class="divider"></div><p class="notes"><strong>Obs:</strong> ${sale.notes}</p>` : ''}
+        <div class="divider"></div>
+        <p class="footer">Obrigado pela preferência!</p>
+        <script>window.onload = function() { window.print(); window.close(); }</script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
   }
 
   const formatCurrency = (value: number) => {
@@ -861,11 +973,21 @@ export default function PDV() {
                           <p className="text-xs text-muted-foreground mt-1">{sale.notes}</p>
                         )}
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-primary">{formatCurrency(sale.final_total)}</p>
-                        {sale.discount > 0 && (
-                          <p className="text-xs text-muted-foreground">Desc: {formatCurrency(sale.discount)}</p>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <p className="font-bold text-primary">{formatCurrency(sale.final_total)}</p>
+                          {sale.discount > 0 && (
+                            <p className="text-xs text-muted-foreground">Desc: {formatCurrency(sale.discount)}</p>
+                          )}
+                        </div>
+                        <Button 
+                          size="icon" 
+                          variant="ghost"
+                          onClick={() => printSaleReceipt(sale)}
+                          title="Imprimir cupom"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                   </CardContent>

@@ -87,41 +87,97 @@ export default function CashRegisters() {
   }
 
   function printClosingSummary(register: typeof registers[0]) {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const formattedOpenDate = register.opened_at 
+      ? new Date(register.opened_at).toLocaleString('pt-BR', { 
+          timeZone: 'America/Sao_Paulo',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      : '-';
+    
+    const formattedCloseDate = register.closed_at 
+      ? new Date(register.closed_at).toLocaleString('pt-BR', { 
+          timeZone: 'America/Sao_Paulo',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      : '-';
+
+    const totalVendas = register.expected_amount ? register.expected_amount - register.opening_amount : 0;
+    const diferenca = register.difference || 0;
+
     const printContent = `
+      <!DOCTYPE html>
       <html>
-        <head>
-          <title>Resumo de Fechamento</title>
-          <style>
-            body { font-family: monospace; font-size: 12px; width: 80mm; margin: 0; padding: 10px; }
-            .center { text-align: center; }
-            .bold { font-weight: bold; }
-            .line { border-top: 1px dashed #000; margin: 10px 0; }
-            .row { display: flex; justify-content: space-between; }
-          </style>
-        </head>
-        <body>
-          <div class="center bold">${company?.name || 'Empresa'}</div>
-          <div class="center">RESUMO DE FECHAMENTO</div>
-          <div class="line"></div>
-          <div class="row"><span>Abertura:</span><span>${register.opened_at ? format(new Date(register.opened_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : '-'}</span></div>
-          <div class="row"><span>Fechamento:</span><span>${register.closed_at ? format(new Date(register.closed_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : '-'}</span></div>
-          <div class="line"></div>
-          <div class="row"><span>Valor Inicial:</span><span>${formatCurrency(register.opening_amount)}</span></div>
-          <div class="row"><span>Total Vendas:</span><span>${formatCurrency(register.expected_amount ? register.expected_amount - register.opening_amount : 0)}</span></div>
-          <div class="row bold"><span>Esperado:</span><span>${formatCurrency(register.expected_amount || 0)}</span></div>
-          <div class="row"><span>Informado:</span><span>${formatCurrency(register.closing_amount || 0)}</span></div>
-          <div class="row ${(register.difference || 0) < 0 ? 'bold' : ''}"><span>Diferença:</span><span>${formatCurrency(register.difference || 0)}</span></div>
-          ${register.notes ? `<div class="line"></div><div>Obs: ${register.notes}</div>` : ''}
-        </body>
+      <head>
+        <meta charset="UTF-8">
+        <title>Fechamento de Caixa</title>
+        <style>
+          @page { margin: 0; size: 80mm auto; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px;
+            width: 80mm;
+            padding: 3mm;
+          }
+          .header { text-align: center; margin-bottom: 2mm; }
+          .header h1 { font-size: 14px; font-weight: bold; }
+          .header h2 { font-size: 16px; font-weight: bold; margin: 2mm 0; }
+          .header p { font-size: 10px; }
+          .divider { border-top: 1px dashed #000; margin: 2mm 0; }
+          .section { margin: 2mm 0; }
+          .row { display: flex; justify-content: space-between; margin: 1mm 0; font-size: 11px; }
+          .row.bold { font-weight: bold; font-size: 12px; }
+          .row.total { font-size: 13px; font-weight: bold; margin: 2mm 0; }
+          .row.negative { color: #c00; }
+          .notes { font-size: 10px; margin: 2mm 0; }
+          .footer { text-align: center; font-size: 9px; margin-top: 3mm; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${company?.name || 'EMPRESA'}</h1>
+          <h2>FECHAMENTO DE CAIXA</h2>
+        </div>
+        <div class="divider"></div>
+        <div class="section">
+          <div class="row"><span>Abertura:</span><span>${formattedOpenDate}</span></div>
+          <div class="row"><span>Fechamento:</span><span>${formattedCloseDate}</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="section">
+          <div class="row"><span>Valor Inicial:</span><span>R$ ${register.opening_amount.toFixed(2)}</span></div>
+          <div class="row"><span>Total em Vendas:</span><span>R$ ${totalVendas.toFixed(2)}</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="section">
+          <div class="row bold"><span>VALOR ESPERADO:</span><span>R$ ${(register.expected_amount || 0).toFixed(2)}</span></div>
+          <div class="row"><span>Valor Informado:</span><span>R$ ${(register.closing_amount || 0).toFixed(2)}</span></div>
+          <div class="row total ${diferenca < 0 ? 'negative' : ''}">
+            <span>DIFERENÇA:</span>
+            <span>R$ ${diferenca.toFixed(2)}</span>
+          </div>
+        </div>
+        ${register.notes ? `<div class="divider"></div><p class="notes"><strong>Obs:</strong> ${register.notes}</p>` : ''}
+        <div class="divider"></div>
+        <p class="footer">Impresso em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
+        <script>window.onload = function() { window.print(); window.close(); }</script>
+      </body>
       </html>
     `;
 
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.print();
-    }
+    printWindow.document.write(printContent);
+    printWindow.document.close();
   }
 
   if (loading) {
