@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      cash_registers: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          closing_amount: number | null
+          company_id: string
+          created_at: string | null
+          difference: number | null
+          expected_amount: number | null
+          id: string
+          notes: string | null
+          opened_at: string | null
+          opened_by: string
+          opening_amount: number
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_amount?: number | null
+          company_id: string
+          created_at?: string | null
+          difference?: number | null
+          expected_amount?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string | null
+          opened_by: string
+          opening_amount?: number
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_amount?: number | null
+          company_id?: string
+          created_at?: string | null
+          difference?: number | null
+          expected_amount?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string | null
+          opened_by?: string
+          opening_amount?: number
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_registers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           active: boolean | null
@@ -84,6 +143,41 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      company_modules: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          enabled: boolean | null
+          id: string
+          module_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          module_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          module_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_modules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_users: {
         Row: {
@@ -271,6 +365,156 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_methods: {
+        Row: {
+          active: boolean | null
+          company_id: string
+          created_at: string | null
+          display_order: number | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          company_id: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          company_id?: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_sale_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          product_id: string | null
+          product_name: string
+          quantity: number
+          sale_id: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          product_id?: string | null
+          product_name: string
+          quantity?: number
+          sale_id: string
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          sale_id?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_sales: {
+        Row: {
+          cash_register_id: string
+          company_id: string
+          created_at: string | null
+          created_by: string
+          customer_name: string | null
+          discount: number | null
+          final_total: number
+          id: string
+          notes: string | null
+          payment_method_id: string | null
+          total: number
+        }
+        Insert: {
+          cash_register_id: string
+          company_id: string
+          created_at?: string | null
+          created_by: string
+          customer_name?: string | null
+          discount?: number | null
+          final_total?: number
+          id?: string
+          notes?: string | null
+          payment_method_id?: string | null
+          total?: number
+        }
+        Update: {
+          cash_register_id?: string
+          company_id?: string
+          created_at?: string | null
+          created_by?: string
+          customer_name?: string | null
+          discount?: number | null
+          final_total?: number
+          id?: string
+          notes?: string | null
+          payment_method_id?: string | null
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_sales_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_sales_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_sales_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
             referencedColumns: ["id"]
           },
         ]

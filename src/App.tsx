@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 import { OrderProvider } from "@/contexts/OrderContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useCompanyModules } from "@/hooks/useCompanyModules";
 
 // Pages
 import Auth from "./pages/Auth";
@@ -16,9 +17,12 @@ import Settings from "./pages/Settings";
 import Menu from "./pages/Menu";
 import NoCompany from "./pages/NoCompany";
 import NotFound from "./pages/NotFound";
+import PDV from "./pages/PDV";
+import PaymentMethods from "./pages/PaymentMethods";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import CompanyModulesPage from "./pages/admin/CompanyModulesPage";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +72,18 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
+      <Route path="/pdv" element={
+        <ProtectedRoute requireCompany>
+          <PDV />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/formas-pagamento" element={
+        <ProtectedRoute requireCompany>
+          <PaymentMethods />
+        </ProtectedRoute>
+      } />
+      
       {/* Admin Routes */}
       <Route path="/admin" element={
         <ProtectedRoute requiredRole="super_admin">
@@ -75,9 +91,9 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      <Route path="/admin/empresa/:companyId" element={
+      <Route path="/admin/empresa/:companyId/modulos" element={
         <ProtectedRoute requiredRole="super_admin">
-          <Index />
+          <CompanyModulesPage />
         </ProtectedRoute>
       } />
       

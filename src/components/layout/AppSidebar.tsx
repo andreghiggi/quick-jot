@@ -7,8 +7,11 @@ import {
   LayoutDashboard,
   Building2,
   Users,
-  ChefHat
+  ChefHat,
+  Monitor,
+  CreditCard
 } from 'lucide-react';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import {
@@ -30,6 +33,7 @@ import logoIcon from '@/assets/logo-icon.png';
 export function AppSidebar() {
   const location = useLocation();
   const { user, profile, company, signOut, isSuperAdmin } = useAuthContext();
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
 
   const mainMenuItems = [
     {
@@ -53,6 +57,19 @@ export function AppSidebar() {
       href: `/cardapio/${company?.slug || ''}`,
     },
   ];
+
+  const pdvMenuItems = isModuleEnabled('pdv') ? [
+    {
+      title: 'PDV',
+      icon: Monitor,
+      href: '/pdv',
+    },
+    {
+      title: 'Formas de Pagamento',
+      icon: CreditCard,
+      href: '/formas-pagamento',
+    },
+  ] : [];
 
   const adminMenuItems = [
     {
@@ -94,6 +111,19 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {mainMenuItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.href}
+                  >
+                    <Link to={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              {pdvMenuItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild

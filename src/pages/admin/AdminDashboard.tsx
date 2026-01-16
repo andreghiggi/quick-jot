@@ -260,22 +260,22 @@ export default function AdminDashboard() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredCompanies.map((company) => (
-                      <TableRow key={company.id}>
-                        <TableCell className="font-medium">{company.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{company.slug}</TableCell>
-                        <TableCell>{company.phone || '-'}</TableCell>
+                    filteredCompanies.map((comp) => (
+                      <TableRow key={comp.id}>
+                        <TableCell className="font-medium">{comp.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{comp.slug}</TableCell>
+                        <TableCell>{comp.phone || '-'}</TableCell>
                         <TableCell>
-                          <Badge variant={company.active ? 'default' : 'secondary'}>
-                            {company.active ? 'Ativa' : 'Inativa'}
+                          <Badge variant={comp.active ? 'default' : 'secondary'}>
+                            {comp.active ? 'Ativa' : 'Inativa'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Link to={`/admin/empresa/${company.id}`}>
+                            <Link to={`/admin/empresa/${comp.id}/modulos`}>
                               <Button variant="outline" size="sm" className="gap-1">
                                 <ExternalLink className="w-3 h-3" />
-                                Acessar
+                                Módulos
                               </Button>
                             </Link>
                           </div>
