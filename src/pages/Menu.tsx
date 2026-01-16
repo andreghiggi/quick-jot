@@ -442,10 +442,22 @@ export default function Menu() {
         <div className="bg-card border-b border-border shadow-sm">
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center justify-between gap-2">
-              {/* Left side: Store name */}
-              <h1 className="text-lg font-bold text-foreground flex-shrink-0">
-                {settings.storeName || company?.name || 'Cardápio'}
-              </h1>
+              {/* Left side: Back button + Store name */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => navigate(-1)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m15 18-6-6 6-6"/>
+                  </svg>
+                </Button>
+                <h1 className="text-lg font-bold text-foreground">
+                  {settings.storeName || company?.name || 'Cardápio'}
+                </h1>
+              </div>
               
               {/* Center: Category Pills */}
               <ScrollArea className="flex-1 mx-2">

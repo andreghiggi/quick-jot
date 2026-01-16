@@ -867,14 +867,6 @@ export default function PDV() {
                           <p className="text-xs text-muted-foreground">Desc: {formatCurrency(sale.discount)}</p>
                         )}
                       </div>
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="ml-2 text-destructive hover:text-destructive"
-                        onClick={() => deleteSale(sale.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
