@@ -375,9 +375,9 @@ export default function PDV() {
 
   return (
     <AppLayout title="PDV - Ponto de Venda">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-8rem)]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[calc(100vh-8rem)]">
         {/* Products Section */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
+        <div className="lg:col-span-2 flex flex-col gap-4 min-h-0">
           {/* Search and Categories */}
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
@@ -443,7 +443,7 @@ export default function PDV() {
         </div>
 
         {/* Cart Section - Sticky/Fixed */}
-        <div className="lg:sticky lg:top-4 lg:h-[calc(100vh-8rem)] flex flex-col gap-4">
+        <div className="lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-6rem)] flex flex-col gap-4">
           {/* Cash Register Info */}
           <Card className="bg-primary/5 border-primary/20 shrink-0">
             <CardContent className="p-3">
