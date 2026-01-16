@@ -15,6 +15,7 @@ interface AuthContextType {
   hasRole: (role: AppRole) => boolean;
   isSuperAdmin: () => boolean;
   isCompanyAdmin: () => boolean;
+  isWaiter: () => boolean;
   refetchUserData: () => void;
 }
 
