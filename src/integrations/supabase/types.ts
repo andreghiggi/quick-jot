@@ -676,6 +676,155 @@ export type Database = {
           },
         ]
       }
+      tab_items: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          notes: string | null
+          product_id: string | null
+          product_name: string
+          quantity: number
+          tab_id: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          product_name: string
+          quantity?: number
+          tab_id: string
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          tab_id?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tab_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tab_items_tab_id_fkey"
+            columns: ["tab_id"]
+            isOneToOne: false
+            referencedRelation: "tabs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tables: {
+        Row: {
+          capacity: number | null
+          company_id: string
+          created_at: string | null
+          id: string
+          number: number
+          status: Database["public"]["Enums"]["table_status"]
+          updated_at: string | null
+        }
+        Insert: {
+          capacity?: number | null
+          company_id: string
+          created_at?: string | null
+          id?: string
+          number: number
+          status?: Database["public"]["Enums"]["table_status"]
+          updated_at?: string | null
+        }
+        Update: {
+          capacity?: number | null
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          number?: number
+          status?: Database["public"]["Enums"]["table_status"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tables_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tabs: {
+        Row: {
+          closed_at: string | null
+          company_id: string
+          created_at: string | null
+          created_by: string
+          customer_name: string | null
+          id: string
+          notes: string | null
+          status: string
+          tab_number: number
+          table_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          company_id: string
+          created_at?: string | null
+          created_by: string
+          customer_name?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          tab_number: number
+          table_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          company_id?: string
+          created_at?: string | null
+          created_by?: string
+          customer_name?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          tab_number?: number
+          table_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tabs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tabs_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -719,6 +868,7 @@ export type Database = {
     Enums: {
       app_role: "super_admin" | "company_admin" | "company_user"
       order_status: "pending" | "preparing" | "ready" | "delivered"
+      table_status: "available" | "occupied" | "reserved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -848,6 +998,7 @@ export const Constants = {
     Enums: {
       app_role: ["super_admin", "company_admin", "company_user"],
       order_status: ["pending", "preparing", "ready", "delivered"],
+      table_status: ["available", "occupied", "reserved"],
     },
   },
 } as const
