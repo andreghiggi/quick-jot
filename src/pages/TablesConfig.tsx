@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { useTables } from '@/hooks/useTables';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,7 @@ import {
 import { toast } from 'sonner';
 
 export default function TablesConfig() {
-  const { company } = useAuth();
+  const { company } = useAuthContext();
   const { 
     tables, 
     loading, 
