@@ -61,6 +61,7 @@ export default function Waiter() {
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [selectedTableId, setSelectedTableId] = useState<string>('');
   const [customerName, setCustomerName] = useState('');
+  const [manualTabNumber, setManualTabNumber] = useState('');
   const [tabNotes, setTabNotes] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -125,7 +126,8 @@ export default function Waiter() {
       tableId: selectedTableId || undefined,
       customerName: customerName || undefined,
       notes: tabNotes || undefined,
-      userId: user.id
+      userId: user.id,
+      manualTabNumber: manualTabNumber ? parseInt(manualTabNumber) : undefined
     });
 
     if (newTab) {
@@ -136,6 +138,7 @@ export default function Waiter() {
     setNewTabDialogOpen(false);
     setSelectedTableId('');
     setCustomerName('');
+    setManualTabNumber('');
     setTabNotes('');
   };
 
@@ -336,6 +339,20 @@ export default function Waiter() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
+              <Label>Nº da Comanda (opcional)</Label>
+              <Input
+                type="number"
+                value={manualTabNumber}
+                onChange={(e) => setManualTabNumber(e.target.value)}
+                placeholder="Deixe vazio para gerar automático"
+                min="1"
+              />
+              <p className="text-xs text-muted-foreground">
+                Se não informar, será gerado automaticamente
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <Label>Mesa (opcional)</Label>
               <Select value={selectedTableId || "none"} onValueChange={(val) => setSelectedTableId(val === "none" ? "" : val)}>
                 <SelectTrigger>
@@ -458,15 +475,15 @@ export default function Waiter() {
 
       {/* Add Items Dialog */}
       <Dialog open={addItemDialogOpen} onOpenChange={setAddItemDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="p-4 pb-0">
             <DialogTitle>Adicionar Itens</DialogTitle>
           </DialogHeader>
 
-          <div className="flex gap-4 flex-1 overflow-hidden">
+          <div className="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden p-4">
             {/* Products List */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex gap-2 mb-4">
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+              <div className="flex flex-col sm:flex-row gap-2 mb-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -477,7 +494,7 @@ export default function Waiter() {
                   />
                 </div>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Categoria" />
                   </SelectTrigger>
                   <SelectContent>
@@ -489,17 +506,17 @@ export default function Waiter() {
                 </Select>
               </div>
 
-              <ScrollArea className="flex-1">
-                <div className="grid grid-cols-2 gap-2 pr-4">
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pr-4">
                   {filteredProducts.map((product) => (
                     <Card 
                       key={product.id} 
-                      className="cursor-pointer hover:shadow-md transition-shadow"
+                      className="cursor-pointer hover:shadow-md transition-shadow active:scale-95"
                       onClick={() => handleAddToCart(product)}
                     >
-                      <CardContent className="p-3">
-                        <p className="font-medium text-sm truncate">{product.name}</p>
-                        <p className="text-sm font-bold text-primary">
+                      <CardContent className="p-2 sm:p-3">
+                        <p className="font-medium text-xs sm:text-sm truncate">{product.name}</p>
+                        <p className="text-xs sm:text-sm font-bold text-primary">
                           R$ {product.price.toFixed(2)}
                         </p>
                       </CardContent>
@@ -510,59 +527,65 @@ export default function Waiter() {
             </div>
 
             {/* Cart */}
-            <div className="w-72 border-l pl-4 flex flex-col">
-              <div className="flex items-center gap-2 mb-4">
-                <ShoppingCart className="w-5 h-5" />
-                <h3 className="font-semibold">Carrinho ({cart.length})</h3>
+            <div className="w-full md:w-72 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-4 flex flex-col min-h-0 max-h-[200px] md:max-h-none">
+              <div className="flex items-center gap-2 mb-2 md:mb-4">
+                <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
+                <h3 className="font-semibold text-sm md:text-base">Carrinho ({cart.length})</h3>
               </div>
 
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 min-h-0">
                 <div className="space-y-2 pr-4">
-                  {cart.map((item) => (
-                    <div key={item.productId} className="p-2 bg-muted rounded-lg">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-medium truncate flex-1">{item.productName}</p>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6"
-                          onClick={() => handleRemoveFromCart(item.productId)}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
+                  {cart.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      Toque em um produto para adicionar
+                    </p>
+                  ) : (
+                    cart.map((item) => (
+                      <div key={item.productId} className="p-2 bg-muted rounded-lg">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs sm:text-sm font-medium truncate flex-1">{item.productName}</p>
                           <Button 
-                            variant="outline" 
+                            variant="ghost" 
                             size="icon" 
-                            className="h-6 w-6"
-                            onClick={() => handleUpdateCartQuantity(item.productId, -1)}
+                            className="h-6 w-6 shrink-0"
+                            onClick={() => handleRemoveFromCart(item.productId)}
                           >
-                            <Minus className="w-3 h-3" />
-                          </Button>
-                          <span className="w-8 text-center text-sm">{item.quantity}</span>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-6 w-6"
-                            onClick={() => handleUpdateCartQuantity(item.productId, 1)}
-                          >
-                            <Plus className="w-3 h-3" />
+                            <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
-                        <span className="text-sm font-bold">
-                          R$ {(item.quantity * item.unitPrice).toFixed(2)}
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-6 w-6"
+                              onClick={() => handleUpdateCartQuantity(item.productId, -1)}
+                            >
+                              <Minus className="w-3 h-3" />
+                            </Button>
+                            <span className="w-6 text-center text-xs sm:text-sm">{item.quantity}</span>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-6 w-6"
+                              onClick={() => handleUpdateCartQuantity(item.productId, 1)}
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          <span className="text-xs sm:text-sm font-bold">
+                            R$ {(item.quantity * item.unitPrice).toFixed(2)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </ScrollArea>
 
               {cart.length > 0 && (
-                <div className="border-t pt-4 mt-4 space-y-2">
-                  <div className="flex justify-between font-bold">
+                <div className="border-t pt-3 mt-2 md:mt-4 space-y-2">
+                  <div className="flex justify-between font-bold text-sm md:text-base">
                     <span>Total</span>
                     <span>R$ {cartTotal.toFixed(2)}</span>
                   </div>
@@ -570,6 +593,7 @@ export default function Waiter() {
                     className="w-full" 
                     onClick={handleConfirmItems}
                     disabled={isProcessing}
+                    size="sm"
                   >
                     {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Confirmar Itens
