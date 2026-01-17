@@ -337,12 +337,12 @@ export default function Waiter() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Mesa (opcional)</Label>
-              <Select value={selectedTableId} onValueChange={setSelectedTableId}>
+              <Select value={selectedTableId || "none"} onValueChange={(val) => setSelectedTableId(val === "none" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma mesa" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem mesa</SelectItem>
+                  <SelectItem value="none">Sem mesa</SelectItem>
                   {tables.filter(t => t.status === 'available' || t.status === 'reserved').map((table) => (
                     <SelectItem key={table.id} value={table.id}>
                       Mesa {table.number} - {getStatusLabel(table.status)}
