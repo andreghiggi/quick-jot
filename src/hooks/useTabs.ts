@@ -110,27 +110,47 @@ export function useTabs(options: UseTabsOptions = {}) {
     customerName?: string;
     notes?: string;
     userId: string;
+    manualTabNumber?: number;
   }): Promise<Tab | null> {
     if (!companyId) return null;
 
     try {
-      // Get next tab number
-      const { data: lastTab } = await supabase
-        .from('tabs')
-        .select('tab_number')
-        .eq('company_id', companyId)
-        .order('tab_number', { ascending: false })
-        .limit(1)
-        .single();
+      let tabNumber: number;
 
-      const nextNumber = (lastTab?.tab_number || 0) + 1;
+      if (data.manualTabNumber && data.manualTabNumber > 0) {
+        // Check if manual tab number is already in use for open tabs
+        const { data: existingTab } = await supabase
+          .from('tabs')
+          .select('id')
+          .eq('company_id', companyId)
+          .eq('tab_number', data.manualTabNumber)
+          .eq('status', 'open')
+          .maybeSingle();
+
+        if (existingTab) {
+          toast.error(`Comanda #${data.manualTabNumber} já está em uso`);
+          return null;
+        }
+        tabNumber = data.manualTabNumber;
+      } else {
+        // Get next tab number
+        const { data: lastTab } = await supabase
+          .from('tabs')
+          .select('tab_number')
+          .eq('company_id', companyId)
+          .order('tab_number', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        tabNumber = (lastTab?.tab_number || 0) + 1;
+      }
 
       const { data: newTab, error } = await supabase
         .from('tabs')
         .insert({
           company_id: companyId,
           table_id: data.tableId || null,
-          tab_number: nextNumber,
+          tab_number: tabNumber,
           customer_name: data.customerName || null,
           notes: data.notes || null,
           created_by: data.userId,
@@ -150,7 +170,7 @@ export function useTabs(options: UseTabsOptions = {}) {
       }
 
       await fetchTabs();
-      toast.success(`Comanda #${nextNumber} criada!`);
+      toast.success(`Comanda #${tabNumber} criada!`);
       return newTab as Tab;
     } catch (error) {
       console.error('Error creating tab:', error);
