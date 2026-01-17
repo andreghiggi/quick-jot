@@ -78,88 +78,29 @@ export function useWaiters({ companyId }: UseWaitersProps) {
     }
 
     try {
-      // 1. Create auth user using admin function via edge function or signUp
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            full_name: data.name,
-          },
+      // Call edge function to create waiter without losing current session
+      const { data: result, error } = await supabase.functions.invoke('create-waiter', {
+        body: {
+          email: data.email,
+          password: data.password,
+          name: data.name,
+          phone: data.phone,
         },
       });
 
-      if (authError) {
-        console.error('Auth error:', authError);
-        if (authError.message?.includes('already registered')) {
+      if (error) {
+        console.error('Edge function error:', error);
+        toast.error(`Erro ao criar garçom: ${error.message}`);
+        return false;
+      }
+
+      if (result?.error) {
+        console.error('Waiter creation error:', result.error);
+        if (result.error.includes('already')) {
           toast.error('Este email já está cadastrado no sistema');
         } else {
-          toast.error(`Erro ao criar usuário: ${authError.message}`);
+          toast.error(`Erro: ${result.error}`);
         }
-        return false;
-      }
-      
-      if (!authData.user) {
-        toast.error('Usuário não foi criado');
-        return false;
-      }
-
-      const userId = authData.user.id;
-      console.log('User created with ID:', userId);
-
-      // 2. Add waiter role (need to delete default role first)
-      const { error: deleteRoleError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId);
-      
-      if (deleteRoleError) {
-        console.error('Error deleting default role:', deleteRoleError);
-      }
-
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: 'waiter' as any,
-        });
-
-      if (roleError) {
-        console.error('Error adding waiter role:', roleError);
-        toast.error(`Erro ao definir função: ${roleError.message}`);
-        return false;
-      }
-
-      // 3. Add to company_users
-      const { error: companyUserError } = await supabase
-        .from('company_users')
-        .insert({
-          company_id: companyId,
-          user_id: userId,
-          is_owner: false,
-        });
-
-      if (companyUserError) {
-        console.error('Error adding to company_users:', companyUserError);
-        toast.error(`Erro ao vincular à empresa: ${companyUserError.message}`);
-        return false;
-      }
-
-      // 4. Create waiter record
-      const { error: waiterError } = await supabase
-        .from('waiters')
-        .insert({
-          user_id: userId,
-          company_id: companyId,
-          name: data.name,
-          phone: data.phone || null,
-          active: true,
-        });
-
-      if (waiterError) {
-        console.error('Error creating waiter record:', waiterError);
-        toast.error(`Erro ao criar registro do garçom: ${waiterError.message}`);
         return false;
       }
 
