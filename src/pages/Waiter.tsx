@@ -475,15 +475,15 @@ export default function Waiter() {
 
       {/* Add Items Dialog */}
       <Dialog open={addItemDialogOpen} onOpenChange={setAddItemDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="p-4 pb-0">
+        <DialogContent className="max-w-4xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="p-4 pb-0 shrink-0">
             <DialogTitle>Adicionar Itens</DialogTitle>
           </DialogHeader>
 
-          <div className="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden p-4">
+          <div className="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden p-4 min-h-0">
             {/* Products List */}
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-              <div className="flex flex-col sm:flex-row gap-2 mb-4">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex flex-col sm:flex-row gap-2 mb-4 shrink-0">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -506,8 +506,8 @@ export default function Waiter() {
                 </Select>
               </div>
 
-              <ScrollArea className="flex-1 min-h-0">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pr-4">
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pr-2 pb-4">
                   {filteredProducts.map((product) => (
                     <Card 
                       key={product.id} 
@@ -523,7 +523,7 @@ export default function Waiter() {
                     </Card>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
 
             {/* Cart */}
