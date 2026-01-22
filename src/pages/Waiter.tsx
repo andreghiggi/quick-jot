@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useTables, TableStatus } from '@/hooks/useTables';
@@ -37,9 +37,11 @@ import {
   Search,
   ShoppingCart,
   Trash2,
-  ClipboardList
+  ClipboardList,
+  Printer
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { printProductionTicket } from '@/utils/printProductionTicket';
 
 export default function Waiter() {
   const { company, user } = useAuthContext();
@@ -48,7 +50,7 @@ export default function Waiter() {
     openTabs, 
     loading: loadingTabs, 
     createTab, 
-    addItemToTab,
+    addMultipleItemsToTab,
     removeItemFromTab,
     getTabTotal 
   } = useTabs({ companyId: company?.id });
@@ -181,7 +183,7 @@ export default function Waiter() {
     ));
   };
 
-  const handleConfirmItems = async () => {
+  const handleConfirmItems = async (shouldPrint: boolean = false) => {
     if (!selectedTab || !user?.id || cart.length === 0) {
       toast.error('Selecione uma comanda primeiro');
       return;
@@ -189,26 +191,53 @@ export default function Waiter() {
 
     setIsProcessing(true);
     try {
-      for (const item of cart) {
-        await addItemToTab(selectedTab.id, {
-          productId: item.productId,
-          productName: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          notes: item.notes,
-          userId: user.id
+      const itemsToAdd = cart.map(item => ({
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        notes: item.notes,
+        userId: user.id
+      }));
+
+      await addMultipleItemsToTab(selectedTab.id, itemsToAdd);
+
+      if (shouldPrint) {
+        // Print production ticket
+        printProductionTicket({
+          tabNumber: selectedTab.tab_number,
+          tableNumber: selectedTab.table?.number,
+          customerName: selectedTab.customer_name,
+          items: cart.map(item => ({
+            productName: item.productName,
+            quantity: item.quantity,
+            notes: item.notes
+          })),
+          createdAt: new Date()
         });
+        toast.success(`Pedido enviado para impressão!`);
+      } else {
+        toast.success(`Itens adicionados à Comanda #${selectedTab.tab_number}!`);
       }
 
       setCart([]);
       setAddItemDialogOpen(false);
-      toast.success(`Itens adicionados à Comanda #${selectedTab.tab_number}!`);
     } catch (error) {
       toast.error('Erro ao adicionar itens');
     } finally {
       setIsProcessing(false);
     }
   };
+
+  // Keep selectedTab in sync with openTabs
+  useEffect(() => {
+    if (selectedTab) {
+      const updatedTab = openTabs.find(t => t.id === selectedTab.id);
+      if (updatedTab) {
+        setSelectedTab(updatedTab);
+      }
+    }
+  }, [openTabs]);
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
@@ -614,15 +643,31 @@ export default function Waiter() {
                     <span>Total</span>
                     <span>R$ {cartTotal.toFixed(2)}</span>
                   </div>
-                  <Button 
-                    className="w-full" 
-                    onClick={handleConfirmItems}
-                    disabled={isProcessing}
-                    size="sm"
-                  >
-                    {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Confirmar Itens
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      className="flex-1" 
+                      onClick={() => handleConfirmItems(false)}
+                      disabled={isProcessing}
+                      size="sm"
+                    >
+                      {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Adicionar
+                    </Button>
+                    <Button 
+                      className="flex-1 gap-1" 
+                      onClick={() => handleConfirmItems(true)}
+                      disabled={isProcessing}
+                      size="sm"
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Printer className="w-4 h-4" />
+                      )}
+                      Finalizar
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

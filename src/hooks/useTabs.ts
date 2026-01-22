@@ -186,9 +186,33 @@ export function useTabs(options: UseTabsOptions = {}) {
     unitPrice: number;
     notes?: string;
     userId: string;
-  }): Promise<boolean> {
+  }): Promise<TabItem | null> {
     try {
-      const { error } = await supabase
+      const newItem: Partial<TabItem> = {
+        id: crypto.randomUUID(),
+        tab_id: tabId,
+        product_id: item.productId || null,
+        product_name: item.productName,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        total_price: item.quantity * item.unitPrice,
+        notes: item.notes || null,
+        created_by: item.userId,
+        created_at: new Date().toISOString()
+      };
+
+      // Optimistic update - add item immediately to UI
+      setTabs(prev => prev.map(tab => {
+        if (tab.id === tabId) {
+          return {
+            ...tab,
+            items: [...(tab.items || []), newItem as TabItem]
+          };
+        }
+        return tab;
+      }));
+
+      const { data, error } = await supabase
         .from('tab_items')
         .insert({
           tab_id: tabId,
@@ -199,31 +223,122 @@ export function useTabs(options: UseTabsOptions = {}) {
           total_price: item.quantity * item.unitPrice,
           notes: item.notes || null,
           created_by: item.userId
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        // Rollback optimistic update
+        await fetchTabs();
+        throw error;
+      }
 
-      await fetchTabs();
-      toast.success('Item adicionado!');
-      return true;
+      // Update with real ID from database
+      setTabs(prev => prev.map(tab => {
+        if (tab.id === tabId) {
+          return {
+            ...tab,
+            items: tab.items?.map(i => 
+              i.id === newItem.id ? (data as TabItem) : i
+            )
+          };
+        }
+        return tab;
+      }));
+
+      return data as TabItem;
     } catch (error) {
       console.error('Error adding item to tab:', error);
       toast.error('Erro ao adicionar item');
-      return false;
+      return null;
+    }
+  }
+
+  async function addMultipleItemsToTab(tabId: string, items: Array<{
+    productId?: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    notes?: string;
+    userId: string;
+  }>): Promise<TabItem[]> {
+    const addedItems: TabItem[] = [];
+    
+    // Optimistic update - add all items immediately
+    const optimisticItems = items.map(item => ({
+      id: crypto.randomUUID(),
+      tab_id: tabId,
+      product_id: item.productId || null,
+      product_name: item.productName,
+      quantity: item.quantity,
+      unit_price: item.unitPrice,
+      total_price: item.quantity * item.unitPrice,
+      notes: item.notes || null,
+      created_by: item.userId,
+      created_at: new Date().toISOString()
+    } as TabItem));
+
+    setTabs(prev => prev.map(tab => {
+      if (tab.id === tabId) {
+        return {
+          ...tab,
+          items: [...(tab.items || []), ...optimisticItems]
+        };
+      }
+      return tab;
+    }));
+
+    try {
+      for (const item of items) {
+        const { data, error } = await supabase
+          .from('tab_items')
+          .insert({
+            tab_id: tabId,
+            product_id: item.productId || null,
+            product_name: item.productName,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            total_price: item.quantity * item.unitPrice,
+            notes: item.notes || null,
+            created_by: item.userId
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        addedItems.push(data as TabItem);
+      }
+
+      // Sync with database
+      await fetchTabs();
+      return addedItems;
+    } catch (error) {
+      console.error('Error adding items to tab:', error);
+      toast.error('Erro ao adicionar itens');
+      await fetchTabs(); // Rollback
+      return [];
     }
   }
 
   async function removeItemFromTab(itemId: string): Promise<boolean> {
+    // Optimistic update - remove item immediately from UI
+    setTabs(prev => prev.map(tab => ({
+      ...tab,
+      items: tab.items?.filter(item => item.id !== itemId)
+    })));
+
     try {
       const { error } = await supabase
         .from('tab_items')
         .delete()
         .eq('id', itemId);
 
-      if (error) throw error;
+      if (error) {
+        // Rollback
+        await fetchTabs();
+        throw error;
+      }
 
-      await fetchTabs();
-      toast.success('Item removido!');
       return true;
     } catch (error) {
       console.error('Error removing item from tab:', error);
@@ -296,6 +411,7 @@ export function useTabs(options: UseTabsOptions = {}) {
     loading,
     createTab,
     addItemToTab,
+    addMultipleItemsToTab,
     removeItemFromTab,
     closeTab,
     updateTabNotes,
