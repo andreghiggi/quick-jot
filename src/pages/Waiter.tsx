@@ -175,25 +175,39 @@ export default function Waiter() {
     setCart(cart.filter(item => item.productId !== productId));
   };
 
-  const handleConfirmItems = async () => {
-    if (!selectedTab || !user?.id || cart.length === 0) return;
+  const handleUpdateCartNotes = (productId: string, notes: string) => {
+    setCart(cart.map(item => 
+      item.productId === productId ? { ...item, notes } : item
+    ));
+  };
 
-    setIsProcessing(true);
-    for (const item of cart) {
-      await addItemToTab(selectedTab.id, {
-        productId: item.productId,
-        productName: item.productName,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        notes: item.notes,
-        userId: user.id
-      });
+  const handleConfirmItems = async () => {
+    if (!selectedTab || !user?.id || cart.length === 0) {
+      toast.error('Selecione uma comanda primeiro');
+      return;
     }
 
-    setCart([]);
-    setAddItemDialogOpen(false);
-    setIsProcessing(false);
-    toast.success('Itens adicionados à comanda!');
+    setIsProcessing(true);
+    try {
+      for (const item of cart) {
+        await addItemToTab(selectedTab.id, {
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          notes: item.notes,
+          userId: user.id
+        });
+      }
+
+      setCart([]);
+      setAddItemDialogOpen(false);
+      toast.success(`Itens adicionados à Comanda #${selectedTab.tab_number}!`);
+    } catch (error) {
+      toast.error('Erro ao adicionar itens');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
@@ -477,7 +491,12 @@ export default function Waiter() {
       <Dialog open={addItemDialogOpen} onOpenChange={setAddItemDialogOpen}>
         <DialogContent className="max-w-4xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="p-4 pb-0 shrink-0">
-            <DialogTitle>Adicionar Itens</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              Adicionar Itens
+              {selectedTab && (
+                <Badge variant="secondary">Comanda #{selectedTab.tab_number}</Badge>
+              )}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden p-4 min-h-0">
@@ -541,8 +560,8 @@ export default function Waiter() {
                     </p>
                   ) : (
                     cart.map((item) => (
-                      <div key={item.productId} className="p-2 bg-muted rounded-lg">
-                        <div className="flex items-center justify-between mb-1">
+                      <div key={item.productId} className="p-2 bg-muted rounded-lg space-y-2">
+                        <div className="flex items-center justify-between">
                           <p className="text-xs sm:text-sm font-medium truncate flex-1">{item.productName}</p>
                           <Button 
                             variant="ghost" 
@@ -577,6 +596,12 @@ export default function Waiter() {
                             R$ {(item.quantity * item.unitPrice).toFixed(2)}
                           </span>
                         </div>
+                        <Input
+                          placeholder="Observação..."
+                          value={item.notes}
+                          onChange={(e) => handleUpdateCartNotes(item.productId, e.target.value)}
+                          className="h-7 text-xs"
+                        />
                       </div>
                     ))
                   )}
