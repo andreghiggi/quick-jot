@@ -1,0 +1,17 @@
+{
+  "appId": "app.lovable.aa48df5851294fc5b12ff3e13098e2c6",
+  "appName": "ComandaTech POS",
+  "webDir": "dist",
+  "server": {
+    "url": "https://aa48df58-5129-4fc5-b12f-f3e13098e2c6.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#000000",
+      "showSpinner": true,
+      "spinnerColor": "#ffffff"
+    }
+  }
+}
