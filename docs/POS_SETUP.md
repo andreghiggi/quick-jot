@@ -62,9 +62,76 @@ src/
 
 ## Integração com SDK de Pagamento
 
-Para integrar com SDKs reais (Stone, PagSeguro, Cielo), será necessário:
+### Adquirentes Suportados
+
+| Adquirente | Status | Notas |
+|------------|--------|-------|
+| Vero (Banrisul) | Beta | Requer app Vero instalado |
+| Sicredi | Beta | Utiliza plataforma GetNet |
+| Stone | Pronto | Plugin Capacitor disponível |
+| PagSeguro | Pronto | SDK SmartPOS |
+| Cielo | Pronto | SDK LIO |
+
+### Vero (Banrisul)
+
+A Vero é a adquirente do Banco Banrisul (RS). Para integrar:
+
+1. **Contato comercial**: https://www.vero.com.br/contato
+2. **Credenciamento**: Obter Merchant ID e Terminal ID
+3. **SDK**: O app Vero precisa estar instalado no POS
+
+```typescript
+// Exemplo de integração futura
+import { VeroPlugin } from 'capacitor-vero-plugin';
+
+class VeroSDK implements PaymentSDK {
+  async processPayment(request: PaymentRequest): Promise<PaymentResponse> {
+    const result = await VeroPlugin.startTransaction({
+      value: request.amount * 100, // centavos
+      paymentType: request.paymentMethod === 'credit' ? 'CREDITO' : 
+                   request.paymentMethod === 'debit' ? 'DEBITO' : 'PIX',
+      installments: request.installments || 1,
+    });
+    return {
+      success: result.approved,
+      nsu: result.nsu,
+      authorizationCode: result.authCode,
+      cardBrand: result.cardBrand,
+    };
+  }
+}
+```
+
+### Sicredi
+
+A Sicredi utiliza a plataforma GetNet para processamento de pagamentos.
+
+1. **Contato**: https://www.sicredi.com.br/site/contato
+2. **API GetNet**: https://developers.getnet.com.br/
+3. **Credenciamento**: Através da sua agência Sicredi
+
+```typescript
+// Exemplo de integração futura
+import { GetNetPlugin } from 'capacitor-getnet-plugin';
+
+class SicrediSDK implements PaymentSDK {
+  async processPayment(request: PaymentRequest): Promise<PaymentResponse> {
+    const result = await GetNetPlugin.pay({
+      amount: request.amount,
+      paymentType: request.paymentMethod,
+      installments: request.installments || 1,
+    });
+    return {
+      success: result.status === 'APPROVED',
+      nsu: result.nsu,
+      authorizationCode: result.authorizationCode,
+    };
+  }
+}
+```
 
 ### Stone SDK
+
 ```bash
 npm install @stoneco/stone-capacitor-plugin
 ```
@@ -82,7 +149,7 @@ class StoneSDK implements PaymentSDK {
   
   async processPayment(request: PaymentRequest): Promise<PaymentResponse> {
     const result = await StonePlugin.makeTransaction({
-      amount: request.amount * 100, // centavos
+      amount: request.amount * 100,
       typeOfTransaction: request.paymentMethod === 'credit' ? 1 : 2,
       installments: request.installments || 1,
     });
@@ -96,10 +163,12 @@ class StoneSDK implements PaymentSDK {
 ```
 
 ### PagSeguro SDK
-Similar, usando o plugin nativo do PagSeguro.
+
+Utiliza o SDK SmartPOS do PagBank.
 
 ### Cielo SDK
-Similar, usando o plugin nativo da Cielo.
+
+Utiliza o SDK LIO para terminais Cielo.
 
 ## Funcionalidades
 

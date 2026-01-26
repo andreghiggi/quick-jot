@@ -34,7 +34,7 @@ export interface POSTransaction {
 export interface POSConfig {
   merchantId: string;
   terminalId: string;
-  acquirer: 'stone' | 'pagseguro' | 'cielo' | 'simulator';
+  acquirer: 'stone' | 'pagseguro' | 'cielo' | 'vero' | 'sicredi' | 'simulator';
 }
 
 export interface PaymentRequest {
