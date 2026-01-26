@@ -17,12 +17,13 @@ import Settings from "./pages/Settings";
 import Menu from "./pages/Menu";
 import NoCompany from "./pages/NoCompany";
 import NotFound from "./pages/NotFound";
-import PDV from "./pages/PDV";
+import PDVPage from "./pages/PDV";
 import PaymentMethods from "./pages/PaymentMethods";
 import CashRegisters from "./pages/CashRegisters";
 import TablesConfig from "./pages/TablesConfig";
 import Waiter from "./pages/Waiter";
 import WaitersConfig from "./pages/WaitersConfig";
+import POS from "./pages/POS";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -82,7 +83,13 @@ function AppRoutes() {
       
       <Route path="/pdv" element={
         <ProtectedRoute requireCompany>
-          <PDV />
+          <PDVPage />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/pos" element={
+        <ProtectedRoute requireCompany>
+          <POS />
         </ProtectedRoute>
       } />
       
