@@ -16,6 +16,7 @@ const loginSchema = z.object({
 });
 
 const signupSchema = z.object({
+  companyName: z.string().min(2, 'Nome da empresa deve ter pelo menos 2 caracteres'),
   fullName: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
@@ -37,6 +38,7 @@ export default function Auth() {
   const [loginPassword, setLoginPassword] = useState('');
   
   // Signup form
+  const [signupCompanyName, setSignupCompanyName] = useState('');
   const [signupFullName, setSignupFullName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
@@ -86,6 +88,7 @@ export default function Auth() {
     
     try {
       signupSchema.parse({
+        companyName: signupCompanyName,
         fullName: signupFullName,
         email: signupEmail,
         password: signupPassword,
@@ -105,7 +108,7 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signUp(signupEmail, signupPassword, signupFullName);
+    const { error } = await signUp(signupEmail, signupPassword, signupFullName, signupCompanyName);
     setIsLoading(false);
     // Redirect is handled by useEffect
   }
@@ -173,7 +176,19 @@ export default function Auth() {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Nome Completo</Label>
+                  <Label htmlFor="signup-company">Nome da Empresa</Label>
+                  <Input
+                    id="signup-company"
+                    type="text"
+                    placeholder="Nome do seu estabelecimento"
+                    value={signupCompanyName}
+                    onChange={(e) => setSignupCompanyName(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  {errors.companyName && <p className="text-sm text-destructive">{errors.companyName}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Seu Nome Completo</Label>
                   <Input
                     id="signup-name"
                     type="text"

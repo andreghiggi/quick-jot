@@ -10,12 +10,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useCompanyPlans } from '@/hooks/useCompanyPlans';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { 
   Building2, 
   Plus, 
   Loader2, 
   ExternalLink,
-  Search
+  Search,
+  Play,
+  Pause,
+  Calendar
 } from 'lucide-react';
 
 interface Company {
@@ -27,8 +34,22 @@ interface Company {
   created_at: string;
 }
 
+interface CompanyPlan {
+  id: string;
+  company_id: string;
+  plan_name: string;
+  starts_at: string;
+  expires_at: string | null;
+  active: boolean;
+  activated_at: string | null;
+}
+
 export default function AdminDashboard() {
+  const { user } = useAuthContext();
+  const { activateTrial, deactivatePlan, loading: planLoading } = useCompanyPlans();
+  
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [companyPlans, setCompanyPlans] = useState<Record<string, CompanyPlan>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -45,19 +66,70 @@ export default function AdminDashboard() {
 
   async function fetchCompanies() {
     try {
-      const { data, error } = await supabase
+      const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setCompanies(data || []);
+      if (companiesError) throw companiesError;
+      setCompanies(companiesData || []);
+      
+      // Fetch plans for all companies
+      const { data: plansData, error: plansError } = await supabase
+        .from('company_plans')
+        .select('*');
+      
+      if (plansError) throw plansError;
+      
+      const plansMap: Record<string, CompanyPlan> = {};
+      (plansData || []).forEach((plan: CompanyPlan) => {
+        plansMap[plan.company_id] = plan;
+      });
+      setCompanyPlans(plansMap);
     } catch (error) {
       console.error('Error fetching companies:', error);
       toast.error('Erro ao carregar empresas');
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleActivateTrial(companyId: string) {
+    if (!user) return;
+    const success = await activateTrial(companyId, user.id);
+    if (success) {
+      fetchCompanies();
+    }
+  }
+
+  async function handleDeactivatePlan(companyId: string) {
+    const success = await deactivatePlan(companyId);
+    if (success) {
+      fetchCompanies();
+    }
+  }
+
+  function getPlanStatus(companyId: string): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; expiresAt?: string } {
+    const plan = companyPlans[companyId];
+    if (!plan) {
+      return { label: 'Sem plano', variant: 'outline' };
+    }
+    if (!plan.active) {
+      return { label: 'Aguardando ativação', variant: 'secondary' };
+    }
+    if (plan.expires_at) {
+      const expiresAt = new Date(plan.expires_at);
+      const now = new Date();
+      if (expiresAt < now) {
+        return { label: 'Expirado', variant: 'destructive' };
+      }
+      return { 
+        label: `Trial ativo`, 
+        variant: 'default',
+        expiresAt: format(expiresAt, "dd/MM/yyyy", { locale: ptBR })
+      };
+    }
+    return { label: 'Ativo', variant: 'default' };
   }
 
   function generateSlug(name: string): string {
@@ -241,13 +313,13 @@ export default function AdminDashboard() {
               </div>
             </div>
             
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Empresa</TableHead>
                     <TableHead>Slug</TableHead>
-                    <TableHead>WhatsApp</TableHead>
+                    <TableHead>Plano</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -260,28 +332,68 @@ export default function AdminDashboard() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredCompanies.map((comp) => (
-                      <TableRow key={comp.id}>
-                        <TableCell className="font-medium">{comp.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{comp.slug}</TableCell>
-                        <TableCell>{comp.phone || '-'}</TableCell>
-                        <TableCell>
-                          <Badge variant={comp.active ? 'default' : 'secondary'}>
-                            {comp.active ? 'Ativa' : 'Inativa'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Link to={`/admin/empresa/${comp.id}/modulos`}>
-                              <Button variant="outline" size="sm" className="gap-1">
-                                <ExternalLink className="w-3 h-3" />
-                                Módulos
-                              </Button>
-                            </Link>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    filteredCompanies.map((comp) => {
+                      const planStatus = getPlanStatus(comp.id);
+                      const plan = companyPlans[comp.id];
+                      return (
+                        <TableRow key={comp.id}>
+                          <TableCell className="font-medium">{comp.name}</TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{comp.slug}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant={planStatus.variant}>
+                                {planStatus.label}
+                              </Badge>
+                              {planStatus.expiresAt && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  Expira: {planStatus.expiresAt}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={comp.active ? 'default' : 'secondary'}>
+                              {comp.active ? 'Ativa' : 'Inativa'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2 flex-wrap">
+                              {plan && !plan.active && (
+                                <Button 
+                                  variant="default" 
+                                  size="sm" 
+                                  className="gap-1"
+                                  onClick={() => handleActivateTrial(comp.id)}
+                                  disabled={planLoading}
+                                >
+                                  <Play className="w-3 h-3" />
+                                  Ativar Trial
+                                </Button>
+                              )}
+                              {plan && plan.active && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="gap-1"
+                                  onClick={() => handleDeactivatePlan(comp.id)}
+                                  disabled={planLoading}
+                                >
+                                  <Pause className="w-3 h-3" />
+                                  Pausar
+                                </Button>
+                              )}
+                              <Link to={`/admin/empresa/${comp.id}/modulos`}>
+                                <Button variant="outline" size="sm" className="gap-1">
+                                  <ExternalLink className="w-3 h-3" />
+                                  Módulos
+                                </Button>
+                              </Link>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
