@@ -124,7 +124,7 @@ export function useAuth() {
     return { error: null };
   }
 
-  async function signUp(email: string, password: string, fullName: string) {
+  async function signUp(email: string, password: string, fullName: string, companyName?: string) {
     setLoading(true);
     const redirectUrl = `${window.location.origin}/`;
     
@@ -135,6 +135,7 @@ export function useAuth() {
         emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
+          company_name: companyName || null,
         },
       },
     });

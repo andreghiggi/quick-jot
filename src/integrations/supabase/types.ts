@@ -179,6 +179,53 @@ export type Database = {
           },
         ]
       }
+      company_plans: {
+        Row: {
+          activated_at: string | null
+          activated_by: string | null
+          active: boolean
+          company_id: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          plan_name: string
+          starts_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          activated_by?: string | null
+          active?: boolean
+          company_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          plan_name?: string
+          starts_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          activated_by?: string | null
+          active?: boolean
+          company_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          plan_name?: string
+          starts_at?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_plans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_users: {
         Row: {
           company_id: string
