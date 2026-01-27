@@ -8,6 +8,7 @@ interface StoreSettings {
   storeName: string;
   deliveryFeeCity: number;
   deliveryFeeInterior: number;
+  deliveryMode: 'simple' | 'neighborhood';
   showCardPedidosHoje: boolean;
   showCardAguardando: boolean;
   showCardFaturamento: boolean;
@@ -26,6 +27,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     storeName: 'Comanda Tech',
     deliveryFeeCity: 0,
     deliveryFeeInterior: 0,
+    deliveryMode: 'simple',
     showCardPedidosHoje: true,
     showCardAguardando: true,
     showCardFaturamento: true,
@@ -58,6 +60,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         storeName: settingsMap['store_name'] || 'Comanda Tech',
         deliveryFeeCity: parseFloat(settingsMap['delivery_fee_city']) || 0,
         deliveryFeeInterior: parseFloat(settingsMap['delivery_fee_interior']) || 0,
+        deliveryMode: (settingsMap['delivery_mode'] as 'simple' | 'neighborhood') || 'simple',
         showCardPedidosHoje: settingsMap['show_card_pedidos_hoje'] !== 'false',
         showCardAguardando: settingsMap['show_card_aguardando'] !== 'false',
         showCardFaturamento: settingsMap['show_card_faturamento'] !== 'false',

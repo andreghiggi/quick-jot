@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle, FolderOpen, Image, Loader2, Package } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -630,25 +631,29 @@ export default function Products() {
               </div>
               <div className="space-y-2">
                 <Label>Categorias existentes</Label>
-                {categories.map((cat) => (
-                  <div key={cat.id} className="flex items-center justify-between p-2 border rounded">
-                    <div className="flex items-center gap-2">
-                      <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                      <span>{cat.name}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => deleteCategory(cat.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                <ScrollArea className="h-[200px] rounded border p-2">
+                  <div className="space-y-2">
+                    {categories.map((cat) => (
+                      <div key={cat.id} className="flex items-center justify-between p-2 border rounded">
+                        <div className="flex items-center gap-2">
+                          <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                          <span>{cat.name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => deleteCategory(cat.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    {categories.length === 0 && (
+                      <p className="text-sm text-muted-foreground">Nenhuma categoria cadastrada</p>
+                    )}
                   </div>
-                ))}
-                {categories.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Nenhuma categoria cadastrada</p>
-                )}
+                </ScrollArea>
               </div>
             </TabsContent>
 

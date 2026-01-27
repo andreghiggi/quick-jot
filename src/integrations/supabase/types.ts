@@ -302,6 +302,44 @@ export type Database = {
           },
         ]
       }
+      delivery_neighborhoods: {
+        Row: {
+          active: boolean
+          company_id: string
+          created_at: string
+          delivery_fee: number
+          id: string
+          neighborhood_name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          created_at?: string
+          delivery_fee?: number
+          id?: string
+          neighborhood_name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          created_at?: string
+          delivery_fee?: number
+          id?: string
+          neighborhood_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_neighborhoods_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           company_id: string | null

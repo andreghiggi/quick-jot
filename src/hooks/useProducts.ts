@@ -13,15 +13,19 @@ export function useProducts(options: UseProductsOptions = {}) {
   const [loading, setLoading] = useState(true);
 
   async function fetchProducts() {
+    // Don't fetch if no companyId - prevents showing products from other companies
+    if (!companyId) {
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       let productsQuery = supabase
         .from('products')
         .select('*')
+        .eq('company_id', companyId)
         .order('category', { ascending: true });
-
-      if (companyId) {
-        productsQuery = productsQuery.eq('company_id', companyId);
-      }
 
       const { data: productsData, error: productsError } = await productsQuery;
 
