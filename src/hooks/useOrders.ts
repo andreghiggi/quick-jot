@@ -13,16 +13,19 @@ export function useOrders(options: UseOrdersOptions = {}) {
   const [loading, setLoading] = useState(true);
 
   async function fetchOrders() {
+    // Don't fetch if no companyId - prevents showing orders from other companies
+    if (!companyId) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
+
     try {
-      let ordersQuery = supabase
+      const ordersQuery = supabase
         .from('orders')
         .select('*')
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false });
-
-      // Filter by company_id if provided
-      if (companyId) {
-        ordersQuery = ordersQuery.eq('company_id', companyId);
-      }
 
       const { data: ordersData, error: ordersError } = await ordersQuery;
 

@@ -13,18 +13,20 @@ export function useCategories(options: UseCategoriesOptions = {}) {
   const [loading, setLoading] = useState(true);
 
   async function fetchCategories() {
+    // Don't fetch if no companyId - prevents showing categories from other companies
+    if (!companyId) {
+      setCategories([]);
+      setLoading(false);
+      return;
+    }
+
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('categories')
         .select('*')
+        .eq('company_id', companyId)
         .eq('active', true)
         .order('display_order', { ascending: true });
-
-      if (companyId) {
-        query = query.eq('company_id', companyId);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
 
