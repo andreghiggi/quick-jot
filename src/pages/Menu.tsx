@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCategories } from '@/hooks/useCategories';
+import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { Product, ProductOptional, CartItem } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,6 +71,7 @@ export default function Menu() {
   const { products, loading: productsLoading, getActiveProducts } = useProducts({ companyId: company?.id });
   const { settings, loading: settingsLoading } = useStoreSettings({ companyId: company?.id });
   const { categories, loading: categoriesLoading } = useCategories({ companyId: company?.id });
+  const { neighborhoods, loading: neighborhoodsLoading, getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -82,7 +84,8 @@ export default function Menu() {
   const [deliveryCity, setDeliveryCity] = useState('');
   const [deliveryState, setDeliveryState] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
-  const [deliveryType, setDeliveryType] = useState<'pickup' | 'city' | 'interior' | ''>('');
+  const [deliveryType, setDeliveryType] = useState<'pickup' | 'city' | 'interior' | 'neighborhood' | ''>('');
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('');
   const [orderSent, setOrderSent] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -95,7 +98,7 @@ export default function Menu() {
     'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ];
 
-  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading;
+  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading || neighborhoodsLoading;
 
   // Load customer data when phone changes (with debounce)
   useEffect(() => {
@@ -204,8 +207,13 @@ export default function Menu() {
 
   // Calculate delivery fee based on type
   const getDeliveryFee = () => {
+    if (deliveryType === 'pickup') return 0;
     if (deliveryType === 'city') return settings.deliveryFeeCity || 0;
     if (deliveryType === 'interior') return settings.deliveryFeeInterior || 0;
+    if (deliveryType === 'neighborhood' && selectedNeighborhood) {
+      const neighborhood = getActiveNeighborhoods().find(n => n.id === selectedNeighborhood);
+      return neighborhood?.deliveryFee || 0;
+    }
     return 0;
   };
 
@@ -222,6 +230,10 @@ export default function Menu() {
     }
     if (!deliveryType) {
       toast.error('Selecione o tipo de entrega');
+      return;
+    }
+    if (deliveryType === 'neighborhood' && !selectedNeighborhood) {
+      toast.error('Selecione o bairro');
       return;
     }
     if (!paymentMethod) {
@@ -247,7 +259,13 @@ export default function Menu() {
     if (deliveryState) fullAddress += `/${deliveryState}`;
 
     // Get delivery type label
-    const deliveryTypeLabel = deliveryType === 'pickup' ? 'Retirada' : deliveryType === 'city' ? 'Entrega Cidade' : 'Entrega Interior';
+    let deliveryTypeLabel = 'Retirada';
+    if (deliveryType === 'city') deliveryTypeLabel = 'Entrega Cidade';
+    else if (deliveryType === 'interior') deliveryTypeLabel = 'Entrega Interior';
+    else if (deliveryType === 'neighborhood' && selectedNeighborhood) {
+      const neighborhood = getActiveNeighborhoods().find(n => n.id === selectedNeighborhood);
+      deliveryTypeLabel = `Entrega ${neighborhood?.neighborhoodName || 'Bairro'}`;
+    }
 
     // Save order to database
     try {
@@ -353,7 +371,7 @@ export default function Menu() {
     setDeliveryCity('');
     setDeliveryState('');
     setDeliveryType('');
-    setPaymentMethod('');
+    setSelectedNeighborhood('');
     setPaymentMethod('');
     setWhatsappUrl(generatedWhatsappUrl);
     setOrderSent(true);
@@ -776,37 +794,88 @@ export default function Menu() {
                   </div>
                   <div>
                     <Label>Tipo de entrega *</Label>
-                    <RadioGroup 
-                      value={deliveryType} 
-                      onValueChange={(value) => setDeliveryType(value as 'pickup' | 'city' | 'interior')} 
-                      className="mt-2"
-                    >
-                      <div className="flex items-center justify-between p-2 border rounded-lg">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="pickup" id="pickup" />
-                          <Label htmlFor="pickup" className="cursor-pointer">Retirada no local</Label>
+                    {settings.deliveryMode === 'neighborhood' && getActiveNeighborhoods().length > 0 ? (
+                      /* Neighborhood mode */
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center justify-between p-2 border rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="radio"
+                              id="pickup-nb"
+                              name="deliveryType"
+                              checked={deliveryType === 'pickup'}
+                              onChange={() => {
+                                setDeliveryType('pickup');
+                                setSelectedNeighborhood('');
+                              }}
+                              className="h-4 w-4"
+                            />
+                            <Label htmlFor="pickup-nb" className="cursor-pointer">Retirada no local</Label>
+                          </div>
+                          <span className="text-sm text-muted-foreground">Grátis</span>
                         </div>
-                        <span className="text-sm text-muted-foreground">Grátis</span>
-                      </div>
-                      <div className="flex items-center justify-between p-2 border rounded-lg">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="city" id="city" />
-                          <Label htmlFor="city" className="cursor-pointer">Entrega Cidade</Label>
+                        <div className="p-2 border rounded-lg space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="radio"
+                              id="neighborhood"
+                              name="deliveryType"
+                              checked={deliveryType === 'neighborhood'}
+                              onChange={() => setDeliveryType('neighborhood')}
+                              className="h-4 w-4"
+                            />
+                            <Label htmlFor="neighborhood" className="cursor-pointer">Entrega por bairro</Label>
+                          </div>
+                          {deliveryType === 'neighborhood' && (
+                            <Select value={selectedNeighborhood} onValueChange={setSelectedNeighborhood}>
+                              <SelectTrigger className="mt-2">
+                                <SelectValue placeholder="Selecione o bairro" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getActiveNeighborhoods().map((n) => (
+                                  <SelectItem key={n.id} value={n.id}>
+                                    {n.neighborhoodName} - R$ {n.deliveryFee.toFixed(2)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
                         </div>
-                        <span className="text-sm font-medium text-primary">
-                          {settings.deliveryFeeCity > 0 ? `R$ ${settings.deliveryFeeCity.toFixed(2)}` : 'Grátis'}
-                        </span>
                       </div>
-                      <div className="flex items-center justify-between p-2 border rounded-lg">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="interior" id="interior" />
-                          <Label htmlFor="interior" className="cursor-pointer">Entrega Interior</Label>
+                    ) : (
+                      /* Simple mode - City/Interior */
+                      <RadioGroup 
+                        value={deliveryType} 
+                        onValueChange={(value) => setDeliveryType(value as 'pickup' | 'city' | 'interior')} 
+                        className="mt-2"
+                      >
+                        <div className="flex items-center justify-between p-2 border rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="pickup" id="pickup" />
+                            <Label htmlFor="pickup" className="cursor-pointer">Retirada no local</Label>
+                          </div>
+                          <span className="text-sm text-muted-foreground">Grátis</span>
                         </div>
-                        <span className="text-sm font-medium text-primary">
-                          {settings.deliveryFeeInterior > 0 ? `R$ ${settings.deliveryFeeInterior.toFixed(2)}` : 'Grátis'}
-                        </span>
-                      </div>
-                    </RadioGroup>
+                        <div className="flex items-center justify-between p-2 border rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="city" id="city" />
+                            <Label htmlFor="city" className="cursor-pointer">Entrega Cidade</Label>
+                          </div>
+                          <span className="text-sm font-medium text-primary">
+                            {settings.deliveryFeeCity > 0 ? `R$ ${settings.deliveryFeeCity.toFixed(2)}` : 'Grátis'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between p-2 border rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="interior" id="interior" />
+                            <Label htmlFor="interior" className="cursor-pointer">Entrega Interior</Label>
+                          </div>
+                          <span className="text-sm font-medium text-primary">
+                            {settings.deliveryFeeInterior > 0 ? `R$ ${settings.deliveryFeeInterior.toFixed(2)}` : 'Grátis'}
+                          </span>
+                        </div>
+                      </RadioGroup>
+                    )}
                   </div>
                   <div>
                     <Label>Forma de pagamento *</Label>

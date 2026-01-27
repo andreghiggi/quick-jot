@@ -8,14 +8,18 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard } from 'lucide-react';
+import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2 } from 'lucide-react';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 
 export default function Settings() {
   const { company, refetchUserData } = useAuthContext();
   const { toast } = useToast();
-  const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility } = useStoreSettings({ companyId: company?.id });
+  const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting } = useStoreSettings({ companyId: company?.id });
+  const { neighborhoods, addNeighborhood, deleteNeighborhood } = useDeliveryNeighborhoods({ companyId: company?.id });
   const [loading, setLoading] = useState(false);
   const [deliveryFeeCity, setDeliveryFeeCity] = useState('');
   const [deliveryFeeInterior, setDeliveryFeeInterior] = useState('');
@@ -26,6 +30,11 @@ export default function Settings() {
     address: '',
     slug: '',
   });
+
+  // Neighborhood form state
+  const [newNeighborhoodName, setNewNeighborhoodName] = useState('');
+  const [newNeighborhoodFee, setNewNeighborhoodFee] = useState('');
+  const [deliveryMode, setDeliveryMode] = useState<'simple' | 'neighborhood'>('simple');
 
   // Card visibility states
   const [cardVisibility, setCardVisibility] = useState({
@@ -44,7 +53,11 @@ export default function Settings() {
       showCardFaturamento: storeSettings.showCardFaturamento,
       showCardTotalPedidos: storeSettings.showCardTotalPedidos,
     });
-  }, [storeSettings]);
+    // Check if there are neighborhoods to determine delivery mode
+    if (neighborhoods.length > 0) {
+      setDeliveryMode('neighborhood');
+    }
+  }, [storeSettings, neighborhoods.length]);
 
   useEffect(() => {
     if (company) {
@@ -644,58 +657,186 @@ pause
 
         {/* Tab Entrega */}
         <TabsContent value="entrega" className="space-y-6">
+          {/* Delivery Mode Selection */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Truck className="w-5 h-5" />
-                Taxas de Entrega
+                Modo de Entrega
               </CardTitle>
               <CardDescription>
-                Configure os valores de entrega para cidade e interior
+                Escolha como deseja configurar as taxas de entrega
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryFeeCity">Taxa Cidade (R$)</Label>
-                  <Input
-                    id="deliveryFeeCity"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={deliveryFeeCity}
-                    onChange={(e) => setDeliveryFeeCity(e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryFeeInterior">Taxa Interior (R$)</Label>
-                  <Input
-                    id="deliveryFeeInterior"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={deliveryFeeInterior}
-                    onChange={(e) => setDeliveryFeeInterior(e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-              <Button 
-                onClick={async () => {
-                  setSavingDelivery(true);
-                  await saveDeliveryFeeCity(parseFloat(deliveryFeeCity) || 0);
-                  await saveDeliveryFeeInterior(parseFloat(deliveryFeeInterior) || 0);
-                  setSavingDelivery(false);
+            <CardContent>
+              <RadioGroup
+                value={deliveryMode}
+                onValueChange={(value: 'simple' | 'neighborhood') => {
+                  setDeliveryMode(value);
+                  updateSetting('delivery_mode', value);
                 }}
-                disabled={savingDelivery}
-                className="w-full"
+                className="space-y-3"
               >
-                {savingDelivery ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Salvar Taxas de Entrega
-              </Button>
+                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                  <RadioGroupItem value="simple" id="simple" />
+                  <div className="flex-1">
+                    <Label htmlFor="simple" className="font-medium cursor-pointer">Taxas Simples</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Duas opções: Cidade e Interior
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                  <RadioGroupItem value="neighborhood" id="neighborhood" />
+                  <div className="flex-1">
+                    <Label htmlFor="neighborhood" className="font-medium cursor-pointer">Por Bairro</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Taxa específica para cada bairro
+                    </p>
+                  </div>
+                </div>
+              </RadioGroup>
             </CardContent>
           </Card>
+
+          {/* Simple Mode - City/Interior */}
+          {deliveryMode === 'simple' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Taxas Cidade e Interior</CardTitle>
+                <CardDescription>
+                  Configure os valores de entrega para cidade e interior
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="deliveryFeeCity">Taxa Cidade (R$)</Label>
+                    <Input
+                      id="deliveryFeeCity"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={deliveryFeeCity}
+                      onChange={(e) => setDeliveryFeeCity(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="deliveryFeeInterior">Taxa Interior (R$)</Label>
+                    <Input
+                      id="deliveryFeeInterior"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={deliveryFeeInterior}
+                      onChange={(e) => setDeliveryFeeInterior(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                <Button 
+                  onClick={async () => {
+                    setSavingDelivery(true);
+                    await saveDeliveryFeeCity(parseFloat(deliveryFeeCity) || 0);
+                    await saveDeliveryFeeInterior(parseFloat(deliveryFeeInterior) || 0);
+                    setSavingDelivery(false);
+                  }}
+                  disabled={savingDelivery}
+                  className="w-full"
+                >
+                  {savingDelivery ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Salvar Taxas de Entrega
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Neighborhood Mode */}
+          {deliveryMode === 'neighborhood' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Cadastro de Bairros</CardTitle>
+                <CardDescription>
+                  Adicione os bairros e suas respectivas taxas de entrega
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Add neighborhood form */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nome do bairro"
+                    value={newNeighborhoodName}
+                    onChange={(e) => setNewNeighborhoodName(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Taxa (R$)"
+                    value={newNeighborhoodFee}
+                    onChange={(e) => setNewNeighborhoodFee(e.target.value)}
+                    className="w-28"
+                  />
+                  <Button
+                    onClick={async () => {
+                      if (!newNeighborhoodName.trim()) {
+                        toast({
+                          title: 'Erro',
+                          description: 'Informe o nome do bairro',
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
+                      const success = await addNeighborhood(
+                        newNeighborhoodName.trim(),
+                        parseFloat(newNeighborhoodFee) || 0
+                      );
+                      if (success) {
+                        setNewNeighborhoodName('');
+                        setNewNeighborhoodFee('');
+                      }
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* List of neighborhoods */}
+                <div className="space-y-2">
+                  <Label>Bairros cadastrados</Label>
+                  <ScrollArea className="h-[250px] rounded border p-2">
+                    <div className="space-y-2">
+                      {neighborhoods.map((n) => (
+                        <div key={n.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{n.neighborhoodName}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Taxa: R$ {n.deliveryFee.toFixed(2)}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => deleteNeighborhood(n.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      {neighborhoods.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Nenhum bairro cadastrado
+                        </p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Tab Dashboard */}
