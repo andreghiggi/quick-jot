@@ -631,29 +631,31 @@ export default function Products() {
               </div>
               <div className="space-y-2">
                 <Label>Categorias existentes</Label>
-                <ScrollArea className="h-[200px] rounded border p-2">
-                  <div className="space-y-2">
-                    {categories.map((cat) => (
-                      <div key={cat.id} className="flex items-center justify-between p-2 border rounded">
-                        <div className="flex items-center gap-2">
-                          <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                          <span>{cat.name}</span>
+                <div className="h-[200px] rounded border overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <div className="space-y-2 p-2">
+                      {categories.map((cat) => (
+                        <div key={cat.id} className="flex items-center justify-between p-2 border rounded bg-background">
+                          <div className="flex items-center gap-2">
+                            <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                            <span>{cat.name}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => deleteCategory(cat.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => deleteCategory(cat.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    {categories.length === 0 && (
-                      <p className="text-sm text-muted-foreground">Nenhuma categoria cadastrada</p>
-                    )}
-                  </div>
-                </ScrollArea>
+                      ))}
+                      {categories.length === 0 && (
+                        <p className="text-sm text-muted-foreground p-2">Nenhuma categoria cadastrada</p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
             </TabsContent>
 
