@@ -13,7 +13,8 @@ import {
   Wallet,
   CircleDollarSign,
   UtensilsCrossed,
-  Table2
+  Table2,
+  Plug
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -316,10 +317,24 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton 
+                  asChild
+                  isActive={location.pathname === '/configuracoes'}
+                >
                   <Link to="/configuracoes">
                     <Settings className="w-4 h-4" />
                     <span>Configurações</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild
+                  isActive={location.pathname === '/configuracoes/integracoes'}
+                >
+                  <Link to="/configuracoes/integracoes">
+                    <Plug className="w-4 h-4" />
+                    <span>Integrações</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
