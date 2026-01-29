@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
@@ -57,6 +57,24 @@ export default function Products() {
       setNewProduct(prev => ({ ...prev, category: categories[0].name }));
     }
   }, [categories]);
+
+  // Get unique saved optionals from all products for quick reuse
+  const savedOptionals = useMemo(() => {
+    const optionalsMap = new Map<string, { name: string; price: number; type: 'extra' | 'variation' }>();
+    products.forEach(product => {
+      product.optionals?.forEach(opt => {
+        // Use name as key to avoid duplicates
+        if (!optionalsMap.has(opt.name)) {
+          optionalsMap.set(opt.name, {
+            name: opt.name,
+            price: opt.price,
+            type: opt.type
+          });
+        }
+      });
+    });
+    return Array.from(optionalsMap.values());
+  }, [products]);
 
   async function handleSaveSettings() {
     await saveStorePhone(storePhone);
@@ -497,6 +515,39 @@ export default function Products() {
             <DialogTitle>Adicionar Opcional - {selectedProduct?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Saved optionals quick select */}
+            {savedOptionals.length > 0 && (
+              <div>
+                <Label>Usar opcional salvo</Label>
+                <Select 
+                  value="" 
+                  onValueChange={(value) => {
+                    const saved = savedOptionals.find(o => o.name === value);
+                    if (saved) {
+                      setNewOptional({
+                        name: saved.name,
+                        price: saved.price.toString(),
+                        type: saved.type
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um opcional já usado..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {savedOptionals.map((opt, idx) => (
+                      <SelectItem key={`${opt.name}-${idx}`} value={opt.name}>
+                        {opt.name} {opt.price > 0 ? `(+R$${opt.price.toFixed(2)})` : ''} - {opt.type === 'extra' ? 'Extra' : 'Variação'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ou preencha manualmente abaixo
+                </p>
+              </div>
+            )}
             <div>
               <Label>Nome</Label>
               <Input
