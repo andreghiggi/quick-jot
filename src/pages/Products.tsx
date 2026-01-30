@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useProducts } from '@/hooks/useProducts';
-import { useCategories } from '@/hooks/useCategories';
+import { useCategories, CategorySortMode } from '@/hooks/useCategories';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { Product, ProductOptional } from '@/types/product';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle, FolderOpen, Image, Loader2, Package } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
@@ -23,7 +23,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 export default function Products() {
   const { company } = useAuthContext();
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional } = useProducts({ companyId: company?.id });
-  const { categories, addCategory, deleteCategory } = useCategories({ companyId: company?.id });
+  const { categories, addCategory, deleteCategory, sortMode, saveSortMode, moveCategory } = useCategories({ companyId: company?.id });
   const { settings, saveStorePhone, saveBannerUrl, saveStoreName } = useStoreSettings({ companyId: company?.id });
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
@@ -263,11 +263,29 @@ export default function Products() {
     }
   }
 
-  const groupedProducts = products.reduce((acc, product) => {
-    if (!acc[product.category]) acc[product.category] = [];
-    acc[product.category].push(product);
-    return acc;
-  }, {} as Record<string, Product[]>);
+  // Group products by category, maintaining category order
+  const groupedProducts = useMemo(() => {
+    const grouped = products.reduce((acc, product) => {
+      if (!acc[product.category]) acc[product.category] = [];
+      acc[product.category].push(product);
+      return acc;
+    }, {} as Record<string, Product[]>);
+    
+    // Return entries ordered by category order
+    const orderedEntries: [string, Product[]][] = [];
+    categories.forEach(cat => {
+      if (grouped[cat.name]) {
+        orderedEntries.push([cat.name, grouped[cat.name]]);
+      }
+    });
+    // Add any categories not in the categories list (orphaned)
+    Object.entries(grouped).forEach(([catName, prods]) => {
+      if (!categories.find(c => c.name === catName)) {
+        orderedEntries.push([catName, prods]);
+      }
+    });
+    return orderedEntries;
+  }, [products, categories]);
 
   if (loading) {
     return (
@@ -410,7 +428,7 @@ export default function Products() {
           </CardContent>
         </Card>
 
-        {Object.entries(groupedProducts).map(([category, categoryProducts]) => (
+        {groupedProducts.map(([category, categoryProducts]) => (
           <div key={category}>
             <h2 className="text-lg font-semibold mb-3">{category}</h2>
             <div className="grid gap-3">
@@ -674,31 +692,79 @@ export default function Products() {
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     placeholder="Nome da categoria"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
                   />
                   <Button onClick={handleAddCategory}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
+              
+              <div>
+                <Label>Ordenação</Label>
+                <Select value={sortMode} onValueChange={(v: CategorySortMode) => saveSortMode(v)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Ordem manual</SelectItem>
+                    <SelectItem value="alphabetical">Ordem alfabética</SelectItem>
+                    <SelectItem value="created">Ordem de cadastro</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {sortMode === 'manual' && 'Use as setas para reordenar as categorias'}
+                  {sortMode === 'alphabetical' && 'Categorias ordenadas de A-Z'}
+                  {sortMode === 'created' && 'Categorias ordenadas pela data de criação'}
+                </p>
+              </div>
+
               <div className="space-y-2">
-                <Label>Categorias existentes</Label>
-                <div className="h-[200px] rounded border overflow-hidden">
+                <Label>Categorias existentes ({categories.length})</Label>
+                <div className="h-[250px] rounded border overflow-hidden">
                   <ScrollArea className="h-full">
                     <div className="space-y-2 p-2">
-                      {categories.map((cat) => (
+                      {categories.map((cat, index) => (
                         <div key={cat.id} className="flex items-center justify-between p-2 border rounded bg-background">
-                          <div className="flex items-center gap-2">
-                            <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                            <span>{cat.name}</span>
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {sortMode === 'manual' && (
+                              <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            )}
+                            <FolderOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="truncate">{cat.name}</span>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => deleteCategory(cat.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {sortMode === 'manual' && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => moveCategory(cat.id, 'up')}
+                                  disabled={index === 0}
+                                >
+                                  <ChevronUp className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => moveCategory(cat.id, 'down')}
+                                  disabled={index === categories.length - 1}
+                                >
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                              onClick={() => deleteCategory(cat.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                       {categories.length === 0 && (

@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Category } from '@/types/order';
 import { toast } from 'sonner';
+
+export type CategorySortMode = 'manual' | 'alphabetical' | 'created';
 
 interface UseCategoriesOptions {
   companyId?: string | null;
@@ -11,6 +13,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
   const { companyId } = options;
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortMode, setSortMode] = useState<CategorySortMode>('manual');
 
   async function fetchCategories() {
     // Don't fetch if no companyId - prevents showing categories from other companies
@@ -33,8 +36,8 @@ export function useCategories(options: UseCategoriesOptions = {}) {
       const mapped: Category[] = (data || []).map((cat) => ({
         id: cat.id,
         name: cat.name,
-        displayOrder: cat.display_order,
-        active: cat.active,
+        displayOrder: cat.display_order ?? 0,
+        active: cat.active ?? true,
         companyId: cat.company_id || undefined,
       }));
 
@@ -46,11 +49,84 @@ export function useCategories(options: UseCategoriesOptions = {}) {
     }
   }
 
+  // Load sort mode from store_settings
+  useEffect(() => {
+    async function loadSortMode() {
+      if (!companyId) return;
+      try {
+        const { data } = await supabase
+          .from('store_settings')
+          .select('value')
+          .eq('company_id', companyId)
+          .eq('key', 'category_sort_mode')
+          .maybeSingle();
+        
+        if (data?.value) {
+          setSortMode(data.value as CategorySortMode);
+        }
+      } catch (error) {
+        console.error('Error loading sort mode:', error);
+      }
+    }
+    loadSortMode();
+  }, [companyId]);
+
   useEffect(() => {
     fetchCategories();
   }, [companyId]);
 
+  // Sorted categories based on current sort mode
+  const sortedCategories = useMemo(() => {
+    const sorted = [...categories];
+    switch (sortMode) {
+      case 'alphabetical':
+        return sorted.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+      case 'created':
+        return sorted.sort((a, b) => a.displayOrder - b.displayOrder);
+      case 'manual':
+      default:
+        return sorted.sort((a, b) => a.displayOrder - b.displayOrder);
+    }
+  }, [categories, sortMode]);
+
+  async function saveSortMode(mode: CategorySortMode): Promise<boolean> {
+    if (!companyId) return false;
+    try {
+      // Check if setting exists
+      const { data: existing } = await supabase
+        .from('store_settings')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('key', 'category_sort_mode')
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from('store_settings')
+          .update({ value: mode })
+          .eq('id', existing.id);
+      } else {
+        await supabase
+          .from('store_settings')
+          .insert({ company_id: companyId, key: 'category_sort_mode', value: mode });
+      }
+
+      setSortMode(mode);
+      toast.success('Modo de ordenação salvo!');
+      return true;
+    } catch (error) {
+      console.error('Error saving sort mode:', error);
+      toast.error('Erro ao salvar ordenação');
+      return false;
+    }
+  }
+
   async function addCategory(name: string): Promise<boolean> {
+    if (!companyId) {
+      toast.error('Empresa não identificada');
+      return false;
+    }
+    
     try {
       const maxOrder = categories.reduce((max, c) => Math.max(max, c.displayOrder), 0);
       
@@ -60,10 +136,16 @@ export function useCategories(options: UseCategoriesOptions = {}) {
           name,
           display_order: maxOrder + 1,
           active: true,
-          company_id: companyId || null,
+          company_id: companyId,
         });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          toast.error('Já existe uma categoria com esse nome');
+          return false;
+        }
+        throw error;
+      }
 
       await fetchCategories();
       toast.success('Categoria criada!');
@@ -77,7 +159,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
 
   async function updateCategory(id: string, data: Partial<Category>): Promise<boolean> {
     try {
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (data.name !== undefined) updateData.name = data.name;
       if (data.displayOrder !== undefined) updateData.display_order = data.displayOrder;
       if (data.active !== undefined) updateData.active = data.active;
@@ -97,6 +179,47 @@ export function useCategories(options: UseCategoriesOptions = {}) {
       toast.error('Erro ao atualizar categoria');
       return false;
     }
+  }
+
+  async function reorderCategories(reorderedCategories: Category[]): Promise<boolean> {
+    try {
+      // Update display_order for each category
+      const updates = reorderedCategories.map((cat, index) => 
+        supabase
+          .from('categories')
+          .update({ display_order: index })
+          .eq('id', cat.id)
+      );
+
+      await Promise.all(updates);
+      
+      // Update local state immediately
+      setCategories(reorderedCategories.map((cat, index) => ({
+        ...cat,
+        displayOrder: index
+      })));
+      
+      toast.success('Ordem atualizada!');
+      return true;
+    } catch (error) {
+      console.error('Error reordering categories:', error);
+      toast.error('Erro ao reordenar categorias');
+      return false;
+    }
+  }
+
+  async function moveCategory(id: string, direction: 'up' | 'down'): Promise<boolean> {
+    const currentIndex = sortedCategories.findIndex(c => c.id === id);
+    if (currentIndex === -1) return false;
+    
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= sortedCategories.length) return false;
+    
+    const newOrder = [...sortedCategories];
+    const [removed] = newOrder.splice(currentIndex, 1);
+    newOrder.splice(newIndex, 0, removed);
+    
+    return reorderCategories(newOrder);
   }
 
   async function deleteCategory(id: string): Promise<boolean> {
@@ -119,11 +242,15 @@ export function useCategories(options: UseCategoriesOptions = {}) {
   }
 
   return {
-    categories,
+    categories: sortedCategories,
     loading,
+    sortMode,
+    saveSortMode,
     addCategory,
     updateCategory,
     deleteCategory,
+    reorderCategories,
+    moveCategory,
     refetch: fetchCategories,
   };
 }
