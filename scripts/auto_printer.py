@@ -164,11 +164,28 @@ def formatar_recibo(pedido, itens):
     
     for item in itens:
         qtd = item.get('quantity', 1)
-        nome = item.get('name', 'Item')
+        nome_completo = item.get('name', 'Item')
         preco = float(item.get('price', 0)) * qtd
+        
+        # Separar nome do produto e adicionais
+        # Formato esperado: "Produto (Adicional1, Adicional2)"
+        if '(' in nome_completo and nome_completo.endswith(')'):
+            idx = nome_completo.index('(')
+            nome = nome_completo[:idx].strip()
+            adicionais = nome_completo[idx+1:-1].strip()
+        else:
+            nome = nome_completo
+            adicionais = None
+        
         linhas.append(f"{qtd}x {nome} - R$ {preco:.2f}".replace('.', ','))
+        
+        # Adicionais em linha separada
+        if adicionais:
+            linhas.append(f"   Adicionais: {adicionais}")
+        
+        # Observações
         if item.get('notes'):
-            linhas.append(f"   -> {item['notes']}")
+            linhas.append(f"   Obs: {item['notes']}")
     
     if pedido.get('notes'):
         linhas.append("")

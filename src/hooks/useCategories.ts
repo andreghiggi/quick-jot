@@ -193,11 +193,8 @@ export function useCategories(options: UseCategoriesOptions = {}) {
 
       await Promise.all(updates);
       
-      // Update local state immediately
-      setCategories(reorderedCategories.map((cat, index) => ({
-        ...cat,
-        displayOrder: index
-      })));
+      // Refetch to get updated data from database
+      await fetchCategories();
       
       toast.success('Ordem atualizada!');
       return true;
@@ -209,13 +206,15 @@ export function useCategories(options: UseCategoriesOptions = {}) {
   }
 
   async function moveCategory(id: string, direction: 'up' | 'down'): Promise<boolean> {
-    const currentIndex = sortedCategories.findIndex(c => c.id === id);
+    // Work with the base categories array sorted by displayOrder for consistent reordering
+    const workingList = [...categories].sort((a, b) => a.displayOrder - b.displayOrder);
+    const currentIndex = workingList.findIndex(c => c.id === id);
     if (currentIndex === -1) return false;
     
     const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (newIndex < 0 || newIndex >= sortedCategories.length) return false;
+    if (newIndex < 0 || newIndex >= workingList.length) return false;
     
-    const newOrder = [...sortedCategories];
+    const newOrder = [...workingList];
     const [removed] = newOrder.splice(currentIndex, 1);
     newOrder.splice(newIndex, 0, removed);
     
