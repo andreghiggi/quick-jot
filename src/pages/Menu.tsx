@@ -143,8 +143,17 @@ export default function Menu() {
 
   const activeProducts = getActiveProducts();
   
-  // Get unique categories from products
-  const productCategories = [...new Set(activeProducts.map((p) => p.category))];
+  // Get categories in the order defined by the store owner
+  // Use the sorted categories from useCategories hook, fallback to product categories
+  const orderedCategoryNames = categories.map(c => c.name);
+  const productCategorySet = new Set(activeProducts.map((p) => p.category));
+  
+  // Filter to only categories that have active products, maintaining the configured order
+  const productCategories = orderedCategoryNames.filter(catName => productCategorySet.has(catName));
+  
+  // Also include any product categories not in the categories table (edge case)
+  const unconfiguredCategories = [...productCategorySet].filter(cat => !orderedCategoryNames.includes(cat));
+  const allOrderedCategories = [...productCategories, ...unconfiguredCategories];
   
   // Filter products based on selected category and search
   const filteredProducts = activeProducts.filter((product) => {
@@ -155,11 +164,17 @@ export default function Menu() {
     return matchesCategory && matchesSearch;
   });
 
-  const groupedProducts = filteredProducts.reduce((acc, product) => {
+  // Group products by category, then order groups by the configured category order
+  const productsByCategory = filteredProducts.reduce((acc, product) => {
     if (!acc[product.category]) acc[product.category] = [];
     acc[product.category].push(product);
     return acc;
   }, {} as Record<string, Product[]>);
+  
+  // Create ordered entries based on configured category order
+  const groupedProducts: [string, Product[]][] = allOrderedCategories
+    .filter(catName => productsByCategory[catName])
+    .map(catName => [catName, productsByCategory[catName]]);
 
   function toggleOptional(optional: ProductOptional) {
     setSelectedOptionals((prev) =>
@@ -488,7 +503,7 @@ export default function Menu() {
                   >
                     Todos
                   </Button>
-                  {productCategories.map((category) => (
+                  {allOrderedCategories.map((category) => (
                     <Button
                       key={category}
                       variant={selectedCategory === category ? 'default' : 'outline'}
@@ -545,7 +560,7 @@ export default function Menu() {
 
       {/* Products Grid */}
       <main className="container mx-auto px-4 py-6 space-y-8">
-        {Object.entries(groupedProducts).map(([category, categoryProducts]) => (
+        {groupedProducts.map(([category, categoryProducts]) => (
           <section key={category}>
             <h2 className="text-lg font-bold mb-4 text-foreground border-l-4 border-primary pl-3">
               {category}
