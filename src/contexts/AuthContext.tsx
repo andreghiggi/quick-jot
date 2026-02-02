@@ -8,6 +8,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   roles: AppRole[];
   company: Company | null;
+  realCompany: Company | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string, companyName?: string) => Promise<{ error: Error | null }>;
@@ -17,6 +18,11 @@ interface AuthContextType {
   isCompanyAdmin: () => boolean;
   isWaiter: () => boolean;
   refetchUserData: () => void;
+  // Impersonation
+  isImpersonating: boolean;
+  impersonatedCompany: Company | null;
+  impersonateCompany: (companyId: string) => Promise<boolean>;
+  exitImpersonation: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 import { OrderProvider } from "@/contexts/OrderContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import { useCompanyModules } from "@/hooks/useCompanyModules";
 
 // Pages
@@ -153,9 +154,15 @@ function AppRoutes() {
 }
 
 function AppWithProviders() {
+  const { isImpersonating } = useAuthContext();
+  
   return (
     <OrderProvider>
-      <AppRoutes />
+      <ImpersonationBanner />
+      {/* Add padding when impersonation banner is shown */}
+      <div className={isImpersonating ? 'pt-12' : ''}>
+        <AppRoutes />
+      </div>
     </OrderProvider>
   );
 }
