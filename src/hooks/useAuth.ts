@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -22,13 +22,28 @@ export interface UserProfile {
   avatar_url: string | null;
 }
 
+const IMPERSONATED_COMPANY_KEY = 'impersonated_company';
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [company, setCompany] = useState<Company | null>(null);
+  const [impersonatedCompany, setImpersonatedCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Restore impersonated company from sessionStorage on mount
+  useEffect(() => {
+    const stored = sessionStorage.getItem(IMPERSONATED_COMPANY_KEY);
+    if (stored) {
+      try {
+        setImpersonatedCompany(JSON.parse(stored));
+      } catch {
+        sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -44,6 +59,8 @@ export function useAuth() {
           setProfile(null);
           setRoles([]);
           setCompany(null);
+          setImpersonatedCompany(null);
+          sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
           setLoading(false);
         }
       }
@@ -157,6 +174,8 @@ export function useAuth() {
     setProfile(null);
     setRoles([]);
     setCompany(null);
+    setImpersonatedCompany(null);
+    sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
   }
 
   function hasRole(role: AppRole): boolean {
@@ -175,12 +194,50 @@ export function useAuth() {
     return hasRole('waiter');
   }
 
+  // Impersonation functions for super admin
+  const impersonateCompany = useCallback(async (companyId: string) => {
+    if (!hasRole('super_admin')) {
+      toast.error('Permissão negada');
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', companyId)
+        .single();
+
+      if (error) throw error;
+
+      setImpersonatedCompany(data);
+      sessionStorage.setItem(IMPERSONATED_COMPANY_KEY, JSON.stringify(data));
+      toast.success(`Acessando como: ${data.name}`);
+      return true;
+    } catch (error) {
+      console.error('Error impersonating company:', error);
+      toast.error('Erro ao acessar empresa');
+      return false;
+    }
+  }, [roles]);
+
+  const exitImpersonation = useCallback(() => {
+    setImpersonatedCompany(null);
+    sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
+    toast.info('Modo de suporte encerrado');
+  }, []);
+
+  // The effective company is the impersonated one if super admin is impersonating
+  const effectiveCompany = impersonatedCompany || company;
+  const isImpersonating = !!impersonatedCompany;
+
   return {
     user,
     session,
     profile,
     roles,
-    company,
+    company: effectiveCompany,
+    realCompany: company,
     loading,
     signIn,
     signUp,
@@ -190,5 +247,10 @@ export function useAuth() {
     isCompanyAdmin,
     isWaiter,
     refetchUserData: () => user && fetchUserData(user.id),
+    // Impersonation
+    isImpersonating,
+    impersonatedCompany,
+    impersonateCompany,
+    exitImpersonation,
   };
 }

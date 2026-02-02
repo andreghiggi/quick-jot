@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,8 @@ import {
   Search,
   Play,
   Pause,
-  Calendar
+  Calendar,
+  Eye
 } from 'lucide-react';
 
 interface Company {
@@ -45,7 +46,8 @@ interface CompanyPlan {
 }
 
 export default function AdminDashboard() {
-  const { user } = useAuthContext();
+  const { user, impersonateCompany } = useAuthContext();
+  const navigate = useNavigate();
   const { activateTrial, deactivatePlan, loading: planLoading } = useCompanyPlans();
   
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -106,6 +108,13 @@ export default function AdminDashboard() {
     const success = await deactivatePlan(companyId);
     if (success) {
       fetchCompanies();
+    }
+  }
+
+  async function handleAccessCompany(companyId: string) {
+    const success = await impersonateCompany(companyId);
+    if (success) {
+      navigate('/');
     }
   }
 
@@ -389,6 +398,15 @@ export default function AdminDashboard() {
                                   Módulos
                                 </Button>
                               </Link>
+                              <Button 
+                                variant="secondary" 
+                                size="sm" 
+                                className="gap-1"
+                                onClick={() => handleAccessCompany(comp.id)}
+                              >
+                                <Eye className="w-3 h-3" />
+                                Acessar
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
