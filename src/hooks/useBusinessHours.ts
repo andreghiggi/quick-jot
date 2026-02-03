@@ -2,18 +2,25 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export interface BusinessHour {
+export interface BusinessHourPeriod {
   id?: string;
   companyId: string;
   dayOfWeek: number; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  periodNumber: number; // 1 = first period, 2 = second period
   isOpen: boolean;
   openTime: string | null; // HH:mm format
   closeTime: string | null; // HH:mm format
 }
 
+export interface DayConfig {
+  dayOfWeek: number;
+  isOpen: boolean;
+  periods: { openTime: string; closeTime: string }[];
+}
+
 export interface BusinessHoursConfig {
   alwaysOpen: boolean;
-  hours: BusinessHour[];
+  days: DayConfig[];
 }
 
 const DAY_NAMES = [
@@ -26,14 +33,14 @@ const DAY_NAMES = [
   'Sábado',
 ];
 
-const DEFAULT_HOURS: Omit<BusinessHour, 'companyId'>[] = [
-  { dayOfWeek: 0, isOpen: false, openTime: '08:00', closeTime: '22:00' },
-  { dayOfWeek: 1, isOpen: true, openTime: '08:00', closeTime: '22:00' },
-  { dayOfWeek: 2, isOpen: true, openTime: '08:00', closeTime: '22:00' },
-  { dayOfWeek: 3, isOpen: true, openTime: '08:00', closeTime: '22:00' },
-  { dayOfWeek: 4, isOpen: true, openTime: '08:00', closeTime: '22:00' },
-  { dayOfWeek: 5, isOpen: true, openTime: '08:00', closeTime: '22:00' },
-  { dayOfWeek: 6, isOpen: true, openTime: '08:00', closeTime: '22:00' },
+const DEFAULT_DAYS: Omit<DayConfig, 'companyId'>[] = [
+  { dayOfWeek: 0, isOpen: false, periods: [{ openTime: '08:00', closeTime: '22:00' }] },
+  { dayOfWeek: 1, isOpen: true, periods: [{ openTime: '08:00', closeTime: '22:00' }] },
+  { dayOfWeek: 2, isOpen: true, periods: [{ openTime: '08:00', closeTime: '22:00' }] },
+  { dayOfWeek: 3, isOpen: true, periods: [{ openTime: '08:00', closeTime: '22:00' }] },
+  { dayOfWeek: 4, isOpen: true, periods: [{ openTime: '08:00', closeTime: '22:00' }] },
+  { dayOfWeek: 5, isOpen: true, periods: [{ openTime: '08:00', closeTime: '22:00' }] },
+  { dayOfWeek: 6, isOpen: true, periods: [{ openTime: '08:00', closeTime: '22:00' }] },
 ];
 
 interface UseBusinessHoursOptions {
@@ -44,7 +51,7 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
   const { companyId } = options;
   const [config, setConfig] = useState<BusinessHoursConfig>({
     alwaysOpen: true,
-    hours: [],
+    days: [],
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -60,7 +67,8 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
         .from('business_hours')
         .select('*')
         .eq('company_id', companyId)
-        .order('day_of_week');
+        .order('day_of_week')
+        .order('period_number');
 
       if (error) throw error;
 
@@ -68,22 +76,39 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
         // No config yet - default to always open
         setConfig({
           alwaysOpen: true,
-          hours: DEFAULT_HOURS.map((h) => ({ ...h, companyId })),
+          days: DEFAULT_DAYS,
         });
       } else {
         // Check if always_open is true (from first record)
         const alwaysOpen = data[0]?.always_open ?? true;
         
-        const hours: BusinessHour[] = data.map((row) => ({
-          id: row.id,
-          companyId: row.company_id,
-          dayOfWeek: row.day_of_week,
-          isOpen: row.is_open,
-          openTime: row.open_time,
-          closeTime: row.close_time,
-        }));
+        // Group by day
+        const dayMap = new Map<number, DayConfig>();
+        
+        for (let i = 0; i < 7; i++) {
+          dayMap.set(i, { dayOfWeek: i, isOpen: false, periods: [] });
+        }
+        
+        data.forEach((row) => {
+          const day = dayMap.get(row.day_of_week)!;
+          day.isOpen = row.is_open;
+          if (row.open_time && row.close_time) {
+            day.periods.push({
+              openTime: row.open_time,
+              closeTime: row.close_time,
+            });
+          }
+        });
+        
+        // Ensure each day has at least one period
+        dayMap.forEach((day) => {
+          if (day.periods.length === 0) {
+            day.periods.push({ openTime: '08:00', closeTime: '22:00' });
+          }
+        });
 
-        setConfig({ alwaysOpen, hours });
+        const days = Array.from(dayMap.values()).sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+        setConfig({ alwaysOpen, days });
       }
     } catch (error) {
       console.error('Error fetching business hours:', error);
@@ -107,15 +132,22 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
         .delete()
         .eq('company_id', companyId);
 
-      // Insert new records
-      const records = newConfig.hours.map((hour) => ({
-        company_id: companyId,
-        always_open: newConfig.alwaysOpen,
-        day_of_week: hour.dayOfWeek,
-        is_open: hour.isOpen,
-        open_time: hour.openTime,
-        close_time: hour.closeTime,
-      }));
+      // Insert new records - one per period per day
+      const records: any[] = [];
+      
+      newConfig.days.forEach((day) => {
+        day.periods.forEach((period, periodIndex) => {
+          records.push({
+            company_id: companyId,
+            always_open: newConfig.alwaysOpen,
+            day_of_week: day.dayOfWeek,
+            period_number: periodIndex + 1,
+            is_open: day.isOpen,
+            open_time: period.openTime,
+            close_time: period.closeTime,
+          });
+        });
+      });
 
       const { error } = await supabase
         .from('business_hours')
@@ -138,23 +170,12 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
   const setAlwaysOpen = async (alwaysOpen: boolean): Promise<boolean> => {
     const newConfig = { ...config, alwaysOpen };
     
-    // If switching to custom hours and no hours configured, create defaults
-    if (!alwaysOpen && config.hours.length === 0) {
-      newConfig.hours = DEFAULT_HOURS.map((h) => ({ ...h, companyId: companyId! }));
+    // If switching to custom hours and no days configured, create defaults
+    if (!alwaysOpen && config.days.length === 0) {
+      newConfig.days = DEFAULT_DAYS;
     }
     
     return saveBusinessHours(newConfig);
-  };
-
-  const updateDayHours = async (
-    dayOfWeek: number,
-    updates: Partial<Pick<BusinessHour, 'isOpen' | 'openTime' | 'closeTime'>>
-  ): Promise<boolean> => {
-    const newHours = config.hours.map((hour) =>
-      hour.dayOfWeek === dayOfWeek ? { ...hour, ...updates } : hour
-    );
-    
-    return saveBusinessHours({ ...config, hours: newHours });
   };
 
   // Check if currently open (for menu display)
@@ -167,12 +188,33 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
     const dayOfWeek = spTime.getDay();
     const currentTime = `${String(spTime.getHours()).padStart(2, '0')}:${String(spTime.getMinutes()).padStart(2, '0')}`;
 
-    const todayHours = config.hours.find((h) => h.dayOfWeek === dayOfWeek);
+    const todayConfig = config.days.find((d) => d.dayOfWeek === dayOfWeek);
     
-    if (!todayHours || !todayHours.isOpen) return false;
-    if (!todayHours.openTime || !todayHours.closeTime) return false;
+    if (!todayConfig || !todayConfig.isOpen) return false;
 
-    return currentTime >= todayHours.openTime && currentTime <= todayHours.closeTime;
+    // Check if current time falls within any of the periods
+    return todayConfig.periods.some((period) => {
+      return currentTime >= period.openTime && currentTime <= period.closeTime;
+    });
+  }, [config]);
+
+  // Get formatted hours for display
+  const getFormattedHours = useCallback((): string => {
+    if (config.alwaysOpen) return 'Aberto 24h';
+    
+    const now = new Date();
+    const spTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const dayOfWeek = spTime.getDay();
+    
+    const todayConfig = config.days.find((d) => d.dayOfWeek === dayOfWeek);
+    
+    if (!todayConfig || !todayConfig.isOpen) return 'Fechado hoje';
+    
+    const periodsText = todayConfig.periods
+      .map((p) => `${p.openTime} - ${p.closeTime}`)
+      .join(' | ');
+    
+    return periodsText;
   }, [config]);
 
   return {
@@ -180,10 +222,11 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
     loading,
     saving,
     setAlwaysOpen,
-    updateDayHours,
     saveBusinessHours,
     isCurrentlyOpen,
+    getFormattedHours,
     refetch: fetchBusinessHours,
     DAY_NAMES,
+    DEFAULT_DAYS,
   };
 }

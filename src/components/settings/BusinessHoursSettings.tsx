@@ -5,19 +5,19 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Clock, Save } from 'lucide-react';
-import { useBusinessHours, BusinessHoursConfig, BusinessHour } from '@/hooks/useBusinessHours';
+import { Loader2, Clock, Save, Plus, Trash2 } from 'lucide-react';
+import { useBusinessHours, BusinessHoursConfig, DayConfig } from '@/hooks/useBusinessHours';
 
 interface BusinessHoursSettingsProps {
   companyId?: string;
 }
 
 export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps) {
-  const { config, loading, saving, saveBusinessHours, DAY_NAMES } = useBusinessHours({ companyId });
+  const { config, loading, saving, saveBusinessHours, DAY_NAMES, DEFAULT_DAYS } = useBusinessHours({ companyId });
   
   const [localConfig, setLocalConfig] = useState<BusinessHoursConfig>({
     alwaysOpen: true,
-    hours: [],
+    days: [],
   });
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -31,35 +31,59 @@ export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps)
   const handleModeChange = (mode: 'always' | 'custom') => {
     const alwaysOpen = mode === 'always';
     
-    // If switching to custom and no hours, create defaults
-    let hours = localConfig.hours;
-    if (!alwaysOpen && hours.length === 0) {
-      hours = DAY_NAMES.map((_, index) => ({
-        companyId: companyId!,
-        dayOfWeek: index,
-        isOpen: index !== 0, // Sunday closed by default
-        openTime: '08:00',
-        closeTime: '22:00',
-      }));
+    // If switching to custom and no days, create defaults
+    let days = localConfig.days;
+    if (!alwaysOpen && days.length === 0) {
+      days = DEFAULT_DAYS;
     }
     
-    setLocalConfig({ alwaysOpen, hours });
+    setLocalConfig({ alwaysOpen, days });
     setHasChanges(true);
   };
 
   const handleDayToggle = (dayOfWeek: number, isOpen: boolean) => {
-    const newHours = localConfig.hours.map((hour) =>
-      hour.dayOfWeek === dayOfWeek ? { ...hour, isOpen } : hour
+    const newDays = localConfig.days.map((day) =>
+      day.dayOfWeek === dayOfWeek ? { ...day, isOpen } : day
     );
-    setLocalConfig({ ...localConfig, hours: newHours });
+    setLocalConfig({ ...localConfig, days: newDays });
     setHasChanges(true);
   };
 
-  const handleTimeChange = (dayOfWeek: number, field: 'openTime' | 'closeTime', value: string) => {
-    const newHours = localConfig.hours.map((hour) =>
-      hour.dayOfWeek === dayOfWeek ? { ...hour, [field]: value } : hour
-    );
-    setLocalConfig({ ...localConfig, hours: newHours });
+  const handleTimeChange = (dayOfWeek: number, periodIndex: number, field: 'openTime' | 'closeTime', value: string) => {
+    const newDays = localConfig.days.map((day) => {
+      if (day.dayOfWeek !== dayOfWeek) return day;
+      const newPeriods = day.periods.map((period, idx) =>
+        idx === periodIndex ? { ...period, [field]: value } : period
+      );
+      return { ...day, periods: newPeriods };
+    });
+    setLocalConfig({ ...localConfig, days: newDays });
+    setHasChanges(true);
+  };
+
+  const addPeriod = (dayOfWeek: number) => {
+    const newDays = localConfig.days.map((day) => {
+      if (day.dayOfWeek !== dayOfWeek) return day;
+      if (day.periods.length >= 3) return day; // Max 3 periods
+      return {
+        ...day,
+        periods: [...day.periods, { openTime: '18:00', closeTime: '23:00' }],
+      };
+    });
+    setLocalConfig({ ...localConfig, days: newDays });
+    setHasChanges(true);
+  };
+
+  const removePeriod = (dayOfWeek: number, periodIndex: number) => {
+    const newDays = localConfig.days.map((day) => {
+      if (day.dayOfWeek !== dayOfWeek) return day;
+      if (day.periods.length <= 1) return day; // Keep at least one period
+      return {
+        ...day,
+        periods: day.periods.filter((_, idx) => idx !== periodIndex),
+      };
+    });
+    setLocalConfig({ ...localConfig, days: newDays });
     setHasChanges(true);
   };
 
@@ -79,14 +103,12 @@ export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps)
   }
 
   // Ensure we have 7 days
-  const hoursToDisplay = DAY_NAMES.map((_, index) => {
-    const existing = localConfig.hours.find((h) => h.dayOfWeek === index);
+  const daysToDisplay: DayConfig[] = DAY_NAMES.map((_, index) => {
+    const existing = localConfig.days.find((d) => d.dayOfWeek === index);
     return existing || {
-      companyId: companyId!,
       dayOfWeek: index,
       isOpen: index !== 0,
-      openTime: '08:00',
-      closeTime: '22:00',
+      periods: [{ openTime: '08:00', closeTime: '22:00' }],
     };
   });
 
@@ -126,7 +148,7 @@ export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps)
                 Horário Personalizado
               </Label>
               <p className="text-sm text-muted-foreground">
-                Defina os dias e horários de funcionamento
+                Defina os dias e horários de funcionamento (suporta múltiplos turnos)
               </p>
             </div>
           </div>
@@ -136,40 +158,74 @@ export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps)
         {!localConfig.alwaysOpen && (
           <div className="space-y-3 pt-4 border-t">
             <Label className="text-base font-medium">Configurar Horários</Label>
-            <div className="space-y-2">
-              {hoursToDisplay.map((hour) => (
+            <p className="text-sm text-muted-foreground mb-4">
+              Adicione múltiplos turnos clicando em "+" (ex: almoço e jantar)
+            </p>
+            <div className="space-y-4">
+              {daysToDisplay.map((day) => (
                 <div
-                  key={hour.dayOfWeek}
-                  className="flex items-center gap-4 p-3 border rounded-lg"
+                  key={day.dayOfWeek}
+                  className="p-4 border rounded-lg space-y-3"
                 >
-                  <div className="flex items-center gap-3 min-w-[160px]">
+                  <div className="flex items-center gap-3">
                     <Switch
-                      checked={hour.isOpen}
-                      onCheckedChange={(checked) => handleDayToggle(hour.dayOfWeek, checked)}
+                      checked={day.isOpen}
+                      onCheckedChange={(checked) => handleDayToggle(day.dayOfWeek, checked)}
                     />
-                    <span className={`text-sm font-medium ${!hour.isOpen ? 'text-muted-foreground' : ''}`}>
-                      {DAY_NAMES[hour.dayOfWeek]}
+                    <span className={`text-sm font-medium min-w-[120px] ${!day.isOpen ? 'text-muted-foreground' : ''}`}>
+                      {DAY_NAMES[day.dayOfWeek]}
                     </span>
+                    {!day.isOpen && (
+                      <span className="text-sm text-muted-foreground">Fechado</span>
+                    )}
                   </div>
                   
-                  {hour.isOpen ? (
-                    <div className="flex items-center gap-2 flex-1">
-                      <Input
-                        type="time"
-                        value={hour.openTime || '08:00'}
-                        onChange={(e) => handleTimeChange(hour.dayOfWeek, 'openTime', e.target.value)}
-                        className="w-[120px]"
-                      />
-                      <span className="text-muted-foreground">até</span>
-                      <Input
-                        type="time"
-                        value={hour.closeTime || '22:00'}
-                        onChange={(e) => handleTimeChange(hour.dayOfWeek, 'closeTime', e.target.value)}
-                        className="w-[120px]"
-                      />
+                  {day.isOpen && (
+                    <div className="pl-12 space-y-2">
+                      {day.periods.map((period, periodIndex) => (
+                        <div key={periodIndex} className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground w-16">
+                            Turno {periodIndex + 1}:
+                          </span>
+                          <Input
+                            type="time"
+                            value={period.openTime}
+                            onChange={(e) => handleTimeChange(day.dayOfWeek, periodIndex, 'openTime', e.target.value)}
+                            className="w-[110px]"
+                          />
+                          <span className="text-muted-foreground text-sm">até</span>
+                          <Input
+                            type="time"
+                            value={period.closeTime}
+                            onChange={(e) => handleTimeChange(day.dayOfWeek, periodIndex, 'closeTime', e.target.value)}
+                            className="w-[110px]"
+                          />
+                          {day.periods.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => removePeriod(day.dayOfWeek, periodIndex)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      {day.periods.length < 3 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => addPeriod(day.dayOfWeek)}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Adicionar turno
+                        </Button>
+                      )}
                     </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Fechado</span>
                   )}
                 </div>
               ))}
