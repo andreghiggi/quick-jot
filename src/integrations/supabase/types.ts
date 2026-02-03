@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_hours: {
+        Row: {
+          always_open: boolean
+          close_time: string | null
+          company_id: string
+          created_at: string
+          day_of_week: number
+          id: string
+          is_open: boolean
+          open_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          always_open?: boolean
+          close_time?: string | null
+          company_id: string
+          created_at?: string
+          day_of_week: number
+          id?: string
+          is_open?: boolean
+          open_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          always_open?: boolean
+          close_time?: string | null
+          company_id?: string
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          is_open?: boolean
+          open_time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_hours_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_registers: {
         Row: {
           closed_at: string | null

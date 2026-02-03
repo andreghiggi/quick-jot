@@ -11,9 +11,10 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock } from 'lucide-react';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
+import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
 
 export default function Settings() {
   const { company, refetchUserData } = useAuthContext();
@@ -565,8 +566,9 @@ pause
       subtitle="Configure os dados da sua empresa"
     >
       <Tabs defaultValue="empresa" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="empresa">Empresa</TabsTrigger>
+          <TabsTrigger value="horarios">Horários</TabsTrigger>
           <TabsTrigger value="entrega">Entrega</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="impressao">Impressão</TabsTrigger>
@@ -653,6 +655,11 @@ pause
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Tab Horários */}
+        <TabsContent value="horarios" className="space-y-6">
+          <BusinessHoursSettings companyId={company?.id} />
         </TabsContent>
 
         {/* Tab Entrega */}
