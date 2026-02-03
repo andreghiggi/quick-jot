@@ -4,6 +4,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCategories } from '@/hooks/useCategories';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
+import { useBusinessHours } from '@/hooks/useBusinessHours';
 import { Product, ProductOptional, CartItem } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +16,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ShoppingCart, Plus, Minus, Trash2, Send, CheckCircle, Search } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ShoppingCart, Plus, Minus, Trash2, Send, CheckCircle, Search, Clock, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -72,6 +74,10 @@ export default function Menu() {
   const { settings, loading: settingsLoading } = useStoreSettings({ companyId: company?.id });
   const { categories, loading: categoriesLoading } = useCategories({ companyId: company?.id });
   const { neighborhoods, loading: neighborhoodsLoading, getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
+  const { loading: hoursLoading, isCurrentlyOpen, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
+  
+  const isOpen = isCurrentlyOpen();
+  const formattedHours = getFormattedHours();
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -98,7 +104,7 @@ export default function Menu() {
     'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ];
 
-  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading || neighborhoodsLoading;
+  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading || neighborhoodsLoading || hoursLoading;
 
   // Load customer data when phone changes (with debounce)
   useEffect(() => {
@@ -239,6 +245,11 @@ export default function Menu() {
   const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   async function sendToWhatsApp() {
+    // Check if store is open
+    if (!isOpen) {
+      toast.error('Estabelecimento fechado no momento');
+      return;
+    }
     if (!customerName.trim()) {
       toast.error('Informe seu nome');
       return;
@@ -469,8 +480,27 @@ export default function Menu() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
+      {/* Closed Store Banner */}
+      {!isOpen && (
+        <div className="bg-destructive/10 border-b border-destructive/20">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium text-sm">Estabelecimento fechado</p>
+                <p className="text-xs opacity-80">
+                  {formattedHours === 'Fechado hoje' 
+                    ? 'Não abrimos hoje' 
+                    : `Horário de hoje: ${formattedHours}`}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Fixed Header Container - Banner scrolls away, but name/search/categories stay */}
-      <div className="sticky top-0 z-20">
+      <div className={cn("sticky z-20", isOpen ? "top-0" : "top-0")}>
         {/* Store Name + Cart + Search + Categories - Always visible */}
         <div className="bg-card border-b border-border shadow-sm">
           <div className="container mx-auto px-4 py-3">
@@ -928,9 +958,23 @@ export default function Menu() {
                   </div>
                 </div>
 
-                <Button onClick={sendToWhatsApp} className="w-full" size="lg">
+                {!isOpen && (
+                  <Alert variant="destructive" className="mb-3">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Estabelecimento fechado. Pedidos disponíveis apenas durante o horário de funcionamento.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <Button 
+                  onClick={sendToWhatsApp} 
+                  className="w-full" 
+                  size="lg"
+                  disabled={!isOpen}
+                >
                   <Send className="h-4 w-4 mr-2" />
-                  Enviar pedido pelo WhatsApp
+                  {isOpen ? 'Enviar pedido pelo WhatsApp' : 'Estabelecimento fechado'}
                 </Button>
               </>
             )}

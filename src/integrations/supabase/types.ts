@@ -24,6 +24,7 @@ export type Database = {
           id: string
           is_open: boolean
           open_time: string | null
+          period_number: number | null
           updated_at: string
         }
         Insert: {
@@ -35,6 +36,7 @@ export type Database = {
           id?: string
           is_open?: boolean
           open_time?: string | null
+          period_number?: number | null
           updated_at?: string
         }
         Update: {
@@ -46,6 +48,7 @@ export type Database = {
           id?: string
           is_open?: boolean
           open_time?: string | null
+          period_number?: number | null
           updated_at?: string
         }
         Relationships: [
