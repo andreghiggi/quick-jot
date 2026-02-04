@@ -27,6 +27,7 @@ interface Company {
   name: string;
   slug: string;
   phone: string | null;
+  address: string | null;
 }
 
 export default function Menu() {
@@ -49,7 +50,7 @@ export default function Menu() {
       try {
         const { data, error } = await supabase
           .from('companies')
-          .select('id, name, slug, phone')
+          .select('id, name, slug, phone, address')
           .eq('slug', slug)
           .eq('active', true)
           .single();
@@ -859,6 +860,12 @@ export default function Menu() {
                           </div>
                           <span className="text-sm text-muted-foreground">Grátis</span>
                         </div>
+                        {deliveryType === 'pickup' && company?.address && (
+                          <div className="p-3 bg-muted/50 rounded-lg border border-dashed">
+                            <p className="text-sm font-medium text-foreground">📍 Endereço para retirada:</p>
+                            <p className="text-sm text-muted-foreground mt-1">{company.address}</p>
+                          </div>
+                        )}
                         <div className="p-2 border rounded-lg space-y-2">
                           <div className="flex items-center space-x-2">
                             <input
@@ -901,6 +908,12 @@ export default function Menu() {
                           </div>
                           <span className="text-sm text-muted-foreground">Grátis</span>
                         </div>
+                        {deliveryType === 'pickup' && company?.address && (
+                          <div className="p-3 bg-muted/50 rounded-lg border border-dashed">
+                            <p className="text-sm font-medium text-foreground">📍 Endereço para retirada:</p>
+                            <p className="text-sm text-muted-foreground mt-1">{company.address}</p>
+                          </div>
+                        )}
                         <div className="flex items-center justify-between p-2 border rounded-lg">
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="city" id="city" />
