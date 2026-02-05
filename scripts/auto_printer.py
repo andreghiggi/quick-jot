@@ -42,20 +42,20 @@ def log(msg, tipo="INFO"):
     print(f"[{agora}] [{tipo}] {msg}")
 
 def buscar_empresa_por_slug(slug):
-    """Busca empresa pelo slug e retorna id e nome"""
+    """Busca empresa pelo slug e retorna id, nome e endereço"""
     try:
         url = f"{SUPABASE_URL}/rest/v1/companies"
         params = {"slug": f"eq.{slug}", "active": "eq.true"}
         r = requests.get(url, headers=HEADERS, params=params)
         if r.ok and r.json():
             empresa = r.json()[0]
-            return empresa.get('id'), empresa.get('name')
+            return empresa.get('id'), empresa.get('name'), empresa.get('address')
         else:
             log(f"Empresa não encontrada: {slug}", "ERRO")
-            return None, None
+            return None, None, None
     except Exception as e:
         log(f"Exceção ao buscar empresa: {e}", "ERRO")
-        return None, None
+        return None, None, None
 
 def buscar_todos_pedidos_hoje(company_id):
     """Busca TODOS os pedidos de hoje para mostrar status"""
@@ -133,7 +133,7 @@ def marcar_como_impresso(order_id):
         log(f"Exceção ao marcar: {e}", "ERRO")
         return False
 
-def formatar_recibo(pedido, itens):
+def formatar_recibo(pedido, itens, endereco_loja=None):
     """Formata o recibo para impressão"""
     linhas = []
     linhas.append("=" * 40)
@@ -155,8 +155,15 @@ def formatar_recibo(pedido, itens):
     
     if pedido.get('customer_phone'):
         linhas.append(f"Telefone: {pedido['customer_phone']}")
+    
+    # Verifica se é delivery ou retirada
     if pedido.get('delivery_address'):
         linhas.append(f"Endereco: {pedido['delivery_address']}")
+    else:
+        linhas.append("")
+        linhas.append("*** RETIRADA NO LOCAL ***".center(40))
+        if endereco_loja:
+            linhas.append(f"Local: {endereco_loja}")
     
     linhas.append("")
     linhas.append("-" * 40)
@@ -239,7 +246,7 @@ def imprimir(texto, order_number):
         log(f"Falha na impressão: {e}", "ERRO")
         return False
 
-def processar_pedido(pedido):
+def processar_pedido(pedido, endereco_loja=None):
     """Processa um pedido: busca itens, formata e imprime"""
     order_id = pedido.get("id")
     order_number = pedido.get("daily_number", "?")
@@ -264,7 +271,7 @@ def processar_pedido(pedido):
     
     # Formata recibo
     log("Formatando recibo...", "INFO")
-    recibo = formatar_recibo(pedido, itens)
+    recibo = formatar_recibo(pedido, itens, endereco_loja)
     
     # Imprime
     log("Iniciando impressão...", "PRINT")
@@ -339,7 +346,7 @@ if __name__ == "__main__":
         exit(1)
     
     log(f"Buscando empresa: {slug}...", "INFO")
-    company_id, company_name = buscar_empresa_por_slug(slug)
+    company_id, company_name, company_address = buscar_empresa_por_slug(slug)
     
     if not company_id:
         print(f"Empresa '{slug}' não encontrada ou inativa. Verifique o slug.")
@@ -371,7 +378,7 @@ if __name__ == "__main__":
             if pedidos:
                 log(f"Encontrados {len(pedidos)} pedido(s) para imprimir!", "INFO")
                 for pedido in pedidos:
-                    processar_pedido(pedido)
+                    processar_pedido(pedido, company_address)
                 mostrar_status(company_id)
             else:
                 # A cada 12 verificações (1 minuto), mostra status
