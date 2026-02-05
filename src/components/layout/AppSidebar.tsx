@@ -95,6 +95,11 @@ export function AppSidebar() {
       href: '/financeiro/caixa',
     },
     {
+      title: 'Relatório de Vendas',
+      icon: Wallet,
+      href: '/financeiro/relatorios',
+    },
+    {
       title: 'Formas de Pagamento',
       icon: CreditCard,
       href: '/formas-pagamento',

@@ -25,6 +25,7 @@ import TablesConfig from "./pages/TablesConfig";
 import Waiter from "./pages/Waiter";
 import WaitersConfig from "./pages/WaitersConfig";
 import POS from "./pages/POS";
+import SalesReport from "./pages/SalesReport";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -104,6 +105,12 @@ function AppRoutes() {
       <Route path="/financeiro/caixa" element={
         <ProtectedRoute requireCompany>
           <CashRegisters />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/financeiro/relatorios" element={
+        <ProtectedRoute requireCompany>
+          <SalesReport />
         </ProtectedRoute>
       } />
       
