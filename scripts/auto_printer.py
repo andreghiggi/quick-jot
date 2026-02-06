@@ -134,48 +134,49 @@ def marcar_como_impresso(order_id):
         return False
 
 def formatar_recibo(pedido, itens, endereco_loja=None):
-    """Formata o recibo para impressão"""
+    """Formata o recibo para impressão - Formato WhatsApp Style"""
     linhas = []
-    linhas.append("=" * 40)
-    linhas.append(STORE_NAME.center(40))
-    linhas.append("=" * 40)
-    linhas.append(f"*** PEDIDO #{pedido.get('daily_number', '?')} ***".center(40))
+    
+    # Cabeçalho
+    linhas.append("")
+    linhas.append("========================================")
+    linhas.append("           MEU PEDIDO                   ")
+    linhas.append("========================================")
     linhas.append("")
     
-    # Data
-    try:
-        dt = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
-        linhas.append(f"Data: {dt.strftime('%d/%m/%Y %H:%M')}")
-    except:
-        linhas.append(f"Data: {pedido.get('created_at', '')[:16]}")
-    
-    linhas.append("")
-    linhas.append("-" * 40)
+    # Cliente
     linhas.append(f"Cliente: {pedido.get('customer_name', '')}")
     
+    # Telefone
     if pedido.get('customer_phone'):
         linhas.append(f"Telefone: {pedido['customer_phone']}")
     
-    # Verifica se é delivery ou retirada
+    linhas.append("")
+    
+    # Endereço de Entrega ou Retirada
     if pedido.get('delivery_address'):
-        linhas.append(f"Endereco: {pedido['delivery_address']}")
+        linhas.append("Endereco de Entrega:")
+        linhas.append(f"  {pedido['delivery_address']}")
     else:
-        linhas.append("")
-        linhas.append("*** RETIRADA NO LOCAL ***".center(40))
+        linhas.append("RETIRADA NO LOCAL")
         if endereco_loja:
-            linhas.append(f"Local: {endereco_loja}")
+            linhas.append(f"  {endereco_loja}")
     
     linhas.append("")
-    linhas.append("-" * 40)
-    linhas.append("ITENS:")
+    linhas.append("----------------------------------------")
     
+    # Produtos
+    linhas.append("Produtos:")
+    
+    subtotal = 0
     for item in itens:
         qtd = item.get('quantity', 1)
         nome_completo = item.get('name', 'Item')
-        preco = float(item.get('price', 0)) * qtd
+        preco_unit = float(item.get('price', 0))
+        preco_total = preco_unit * qtd
+        subtotal += preco_total
         
         # Separar nome do produto e adicionais
-        # Formato esperado: "Produto (Adicional1, Adicional2)"
         if '(' in nome_completo and nome_completo.endswith(')'):
             idx = nome_completo.index('(')
             nome = nome_completo[:idx].strip()
@@ -184,27 +185,56 @@ def formatar_recibo(pedido, itens, endereco_loja=None):
             nome = nome_completo
             adicionais = None
         
-        linhas.append(f"{qtd}x {nome} - R$ {preco:.2f}".replace('.', ','))
+        # Formato: PRODUTO - Quantidade: X - R$ XX,XX
+        linha_produto = f"  {nome.upper()} -"
+        linhas.append(linha_produto)
+        linhas.append(f"  Quantidade: {qtd} - R$ {preco_total:.2f}".replace('.', ','))
         
-        # Adicionais em linha separada
+        # Adicionais
         if adicionais:
-            linhas.append(f"   Adicionais: {adicionais}")
+            linhas.append(f"    Adicionais: {adicionais}")
         
-        # Observações
+        # Observações do item
         if item.get('notes'):
-            linhas.append(f"   Obs: {item['notes']}")
-    
-    if pedido.get('notes'):
-        linhas.append("")
-        linhas.append(f"OBS: {pedido['notes']}")
+            linhas.append(f"    Obs: {item['notes']}")
     
     linhas.append("")
-    linhas.append("=" * 40)
+    linhas.append("----------------------------------------")
+    
+    # Subtotal
+    linhas.append(f"Subtotal: R$ {subtotal:.2f}".replace('.', ','))
+    
+    # Taxa de entrega (calculada)
     total = float(pedido.get('total', 0))
-    linhas.append(f"TOTAL: R$ {total:.2f}".replace('.', ',').center(40))
-    linhas.append("=" * 40)
+    taxa_entrega = total - subtotal if total > subtotal else 0
+    
+    if pedido.get('delivery_address') and taxa_entrega > 0:
+        linhas.append(f"Entrega: R$ {taxa_entrega:.2f}".replace('.', ','))
+    
+    # Total
+    linhas.append(f"Total: R$ {total:.2f}".replace('.', ','))
+    
     linhas.append("")
-    linhas.append("Obrigado pela preferencia!".center(40))
+    
+    # Observações gerais do pedido
+    if pedido.get('notes'):
+        linhas.append(f"Observacoes: {pedido['notes']}")
+        linhas.append("")
+    
+    # Número do pedido
+    linhas.append(f"Pedido #{pedido.get('daily_number', '?')}")
+    
+    # Data/Hora
+    try:
+        dt = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
+        linhas.append(f"Data: {dt.strftime('%d/%m/%Y %H:%M')}")
+    except:
+        linhas.append(f"Data: {pedido.get('created_at', '')[:16]}")
+    
+    linhas.append("")
+    linhas.append("========================================")
+    linhas.append("    Obrigado por comprar conosco!       ")
+    linhas.append("========================================")
     linhas.append("\n\n\n")
     
     return "\n".join(linhas)
