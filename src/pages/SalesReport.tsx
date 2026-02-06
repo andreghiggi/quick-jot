@@ -53,9 +53,12 @@ export default function SalesReport() {
 
   // Fetch sales data
   const { data: salesData, isLoading: loadingSales } = useQuery({
-    queryKey: ['sales-report', company?.id, period],
+    queryKey: ['sales-report', company?.id, periodDates.start.toISOString(), periodDates.end.toISOString()],
     queryFn: async () => {
       if (!company?.id) return [];
+      
+      console.log('Fetching sales for company:', company.id);
+      console.log('Period:', periodDates.start.toISOString(), 'to', periodDates.end.toISOString());
       
       const { data: sales, error } = await supabase
         .from('pdv_sales')
@@ -65,15 +68,24 @@ export default function SalesReport() {
         .lte('created_at', periodDates.end.toISOString())
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching sales:', error);
+        throw error;
+      }
+      
+      console.log('Found sales:', sales?.length || 0);
       
       // Fetch items for each sale
       const salesWithItems: SaleData[] = [];
       for (const sale of sales || []) {
-        const { data: items } = await supabase
+        const { data: items, error: itemsError } = await supabase
           .from('pdv_sale_items')
           .select('product_name, quantity, total_price')
           .eq('sale_id', sale.id);
+        
+        if (itemsError) {
+          console.error('Error fetching items for sale:', sale.id, itemsError);
+        }
         
         salesWithItems.push({
           ...sale,
