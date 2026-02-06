@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -46,21 +45,19 @@ function getPeriodDates(period: PeriodType) {
 
 export default function SalesReport() {
   const { company } = useAuthContext();
-  const [period, setPeriod] = useState<PeriodType>('today');
+  const [period, setPeriod] = useState<PeriodType>('last_month'); // Default to last_month to show existing data
   const [productFilter, setProductFilter] = useState<string>('all');
 
   const periodDates = useMemo(() => getPeriodDates(period), [period]);
 
-  // Fetch sales data
+  // Fetch sales data with items in a single optimized query
   const { data: salesData, isLoading: loadingSales } = useQuery({
     queryKey: ['sales-report', company?.id, periodDates.start.toISOString(), periodDates.end.toISOString()],
     queryFn: async () => {
       if (!company?.id) return [];
       
-      console.log('Fetching sales for company:', company.id);
-      console.log('Period:', periodDates.start.toISOString(), 'to', periodDates.end.toISOString());
-      
-      const { data: sales, error } = await supabase
+      // Fetch sales with their items using a join-like approach
+      const { data: sales, error: salesError } = await supabase
         .from('pdv_sales')
         .select('id, created_at, final_total')
         .eq('company_id', company.id)
@@ -68,30 +65,44 @@ export default function SalesReport() {
         .lte('created_at', periodDates.end.toISOString())
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching sales:', error);
-        throw error;
+      if (salesError) {
+        console.error('Error fetching sales:', salesError);
+        throw salesError;
       }
       
-      console.log('Found sales:', sales?.length || 0);
-      
-      // Fetch items for each sale
-      const salesWithItems: SaleData[] = [];
-      for (const sale of sales || []) {
-        const { data: items, error: itemsError } = await supabase
-          .from('pdv_sale_items')
-          .select('product_name, quantity, total_price')
-          .eq('sale_id', sale.id);
-        
-        if (itemsError) {
-          console.error('Error fetching items for sale:', sale.id, itemsError);
+      if (!sales || sales.length === 0) {
+        return [];
+      }
+
+      // Fetch all items for these sales in a single query
+      const saleIds = sales.map(s => s.id);
+      const { data: allItems, error: itemsError } = await supabase
+        .from('pdv_sale_items')
+        .select('sale_id, product_name, quantity, total_price')
+        .in('sale_id', saleIds);
+
+      if (itemsError) {
+        console.error('Error fetching items:', itemsError);
+      }
+
+      // Group items by sale_id
+      const itemsBySaleId = (allItems || []).reduce((acc, item) => {
+        if (!acc[item.sale_id]) {
+          acc[item.sale_id] = [];
         }
-        
-        salesWithItems.push({
-          ...sale,
-          items: items || []
+        acc[item.sale_id].push({
+          product_name: item.product_name,
+          quantity: item.quantity,
+          total_price: item.total_price
         });
-      }
+        return acc;
+      }, {} as Record<string, SaleItem[]>);
+
+      // Combine sales with their items
+      const salesWithItems: SaleData[] = sales.map(sale => ({
+        ...sale,
+        items: itemsBySaleId[sale.id] || []
+      }));
       
       return salesWithItems;
     },
