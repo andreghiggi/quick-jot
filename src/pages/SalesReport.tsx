@@ -45,7 +45,7 @@ function getPeriodDates(period: PeriodType) {
 
 export default function SalesReport() {
   const { company } = useAuthContext();
-  const [period, setPeriod] = useState<PeriodType>('last_month'); // Default to last_month to show existing data
+  const [period, setPeriod] = useState<PeriodType>('week');
   const [productFilter, setProductFilter] = useState<string>('all');
 
   const periodDates = useMemo(() => getPeriodDates(period), [period]);
