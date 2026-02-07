@@ -14,7 +14,8 @@ import {
   CircleDollarSign,
   UtensilsCrossed,
   Table2,
-  Plug
+  Plug,
+  MessageCircle,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -116,6 +117,14 @@ export function AppSidebar() {
       title: 'Garçons',
       icon: Users,
       href: '/configuracoes/garcons',
+    },
+  ] : [];
+
+  const whatsappConfigItems = isModuleEnabled('whatsapp') ? [
+    {
+      title: 'WhatsApp',
+      icon: MessageCircle,
+      href: '/configuracoes/whatsapp',
     },
   ] : [];
 
@@ -344,6 +353,19 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {mesasConfigItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.href}
+                  >
+                    <Link to={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              {whatsappConfigItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem, OrderStatus } from '@/types/order';
 import { toast } from 'sonner';
+import { generateWhatsAppMessage } from '@/utils/whatsappMessages';
 
 interface UseOrdersOptions {
   companyId?: string | null;
@@ -176,22 +177,59 @@ export function useOrders(options: UseOrdersOptions = {}) {
         throw error;
       }
 
-      // If status is 'ready', trigger WhatsApp notification
-      if (status === 'ready') {
-        const order = orders.find((o) => o.id === orderId);
-        if (order?.customerPhone) {
-          try {
-            await supabase.functions.invoke('send-whatsapp', {
-              body: {
-                phone: order.customerPhone,
+      // Send WhatsApp notification via Evolution API if module is enabled
+      const order = orders.find((o) => o.id === orderId);
+      if (order?.customerPhone && companyId) {
+        try {
+          // Check if whatsapp module is enabled
+          const { data: moduleData } = await supabase
+            .from('company_modules')
+            .select('enabled')
+            .eq('company_id', companyId)
+            .eq('module_name', 'whatsapp')
+            .maybeSingle();
+
+          if (moduleData?.enabled) {
+            // Check if instance is connected
+            const { data: instanceData } = await supabase
+              .from('whatsapp_instances')
+              .select('instance_name, status')
+              .eq('company_id', companyId)
+              .maybeSingle();
+
+            if (instanceData?.status === 'connected') {
+              // Get store name
+              const { data: companyData } = await supabase
+                .from('companies')
+                .select('name')
+                .eq('id', companyId)
+                .single();
+
+              const message = generateWhatsAppMessage({
                 customerName: order.customerName,
-                orderId: orderId,
-              },
-            });
-            toast.success('Notificação WhatsApp enviada!');
-          } catch (whatsappError) {
-            console.error('WhatsApp notification failed:', whatsappError);
+                orderNumber: order.dailyNumber,
+                status,
+                storeName: companyData?.name || 'Estabelecimento',
+                deliveryType: order.deliveryAddress ? 'entrega' : 'retirada',
+              });
+
+              if (message) {
+                await supabase.functions.invoke('whatsapp-evolution', {
+                  body: {
+                    action: 'send_message',
+                    instanceName: instanceData.instance_name,
+                    phone: order.customerPhone,
+                    message,
+                    companyId,
+                    orderId,
+                  },
+                });
+                toast.success('Notificação WhatsApp enviada!');
+              }
+            }
           }
+        } catch (whatsappError) {
+          console.error('WhatsApp notification failed:', whatsappError);
         }
       }
 

@@ -22,6 +22,11 @@ const AVAILABLE_MODULES = [
     name: 'mesas',
     label: 'Controle de Mesas',
     description: 'Gestão de mesas e comandas para garçons, integrado ao PDV'
+  },
+  {
+    name: 'whatsapp',
+    label: 'WhatsApp - Notificações',
+    description: 'Envio automático de mensagens de status dos pedidos via WhatsApp (Evolution API)'
   }
 ];
 
