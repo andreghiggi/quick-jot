@@ -358,32 +358,54 @@ export default function Menu() {
       console.error('Error saving order to database:', error);
     }
 
-    // Build WhatsApp message
+    // Build WhatsApp message matching thermal print format
     const storeName = settings.storeName || company?.name || 'Comanda Tech';
-    let message = `*Novo Pedido - ${storeName}*\n\n`;
+    let message = `═══════════════════\n`;
+    message += `      *MEU PEDIDO*\n`;
+    message += `   _${storeName}_\n`;
+    message += `═══════════════════\n\n`;
     message += `*Cliente:* ${customerName}\n`;
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
-    if (fullAddress) message += `*Endereço:* ${fullAddress}\n`;
     message += `*Tipo:* ${deliveryTypeLabel}\n`;
     message += `*Pagamento:* ${paymentMethod}\n`;
-    message += `\n*Itens:*\n`;
+    if (fullAddress) message += `*Endereço:* ${fullAddress}\n`;
+    message += `\n───────────────────\n`;
+    message += `*ITENS DO PEDIDO*\n`;
+    message += `───────────────────\n`;
 
-    cart.forEach((item, index) => {
-      message += `\n${index + 1}. ${item.product.name} x${item.quantity}`;
+    cart.forEach((item) => {
+      // Extract base product name (remove text in parentheses for "Adicionais" line)
+      const productName = item.product.name;
+      const match = productName.match(/^(.*?)\s*\((.+)\)$/);
+      const baseName = match ? match[1].trim() : productName;
+      const inlineOptionals = match ? match[2].trim() : null;
+      
+      message += `\n*${baseName.toUpperCase()}*`;
+      message += `\nQuantidade: ${item.quantity}`;
+      message += `\nR$ ${calculateItemTotal(item).toFixed(2)}`;
+      
+      // Show inline optionals from product name parentheses
+      if (inlineOptionals) {
+        message += `\n_Adicionais: ${inlineOptionals}_`;
+      }
+      
+      // Show selected optionals
       if (item.selectedOptionals.length > 0) {
-        message += `\n   Adicionais: ${item.selectedOptionals.map((o) => o.name).join(', ')}`;
+        message += `\n_Adicionais: ${item.selectedOptionals.map((o) => o.name).join(', ')}_`;
       }
       if (item.notes) {
-        message += `\n   Obs: ${item.notes}`;
+        message += `\n_Obs: ${item.notes}_`;
       }
-      message += `\n   R$ ${calculateItemTotal(item).toFixed(2)}`;
+      message += `\n`;
     });
 
-    message += `\n\n*Subtotal: R$ ${cartTotal.toFixed(2)}*`;
+    message += `\n───────────────────\n`;
+    message += `*Subtotal: R$ ${cartTotal.toFixed(2)}*\n`;
     if (deliveryFee > 0) {
-      message += `\n*Taxa de entrega: R$ ${deliveryFee.toFixed(2)}*`;
+      message += `*Taxa de entrega: R$ ${deliveryFee.toFixed(2)}*\n`;
     }
-    message += `\n*TOTAL: R$ ${orderTotal.toFixed(2)}*`;
+    message += `*TOTAL: R$ ${orderTotal.toFixed(2)}*\n`;
+    message += `───────────────────`;
 
     const cleanPhone = phoneToUse.replace(/\D/g, '');
     const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
