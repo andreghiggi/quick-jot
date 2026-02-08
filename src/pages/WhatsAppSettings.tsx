@@ -5,6 +5,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useWhatsApp } from '@/hooks/useWhatsApp';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { WhatsAppMessageTemplates } from '@/components/whatsapp/WhatsAppMessageTemplates';
+import { WhatsAppAutoReplyInfo } from '@/components/whatsapp/WhatsAppAutoReplyInfo';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -223,6 +224,9 @@ export default function WhatsAppSettings() {
             )}
           </CardContent>
         </Card>
+
+        {/* Auto Reply Info */}
+        <WhatsAppAutoReplyInfo companySlug={company?.slug} />
 
         {/* Message Templates */}
         <WhatsAppMessageTemplates />
