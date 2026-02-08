@@ -33,6 +33,11 @@ serve(async (req) => {
     switch (action) {
       case 'create_instance': {
         const { instanceName, companyId } = params;
+        
+        // Build webhook URL for auto-reply
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook`;
+
         const res = await fetch(`${baseUrl}/instance/create`, {
           method: 'POST',
           headers: {
@@ -43,6 +48,12 @@ serve(async (req) => {
             instanceName,
             integration: 'WHATSAPP-BAILEYS',
             qrcode: true,
+            webhook: {
+              url: webhookUrl,
+              byEvents: false,
+              base64: false,
+              events: ['MESSAGES_UPSERT'],
+            },
           }),
         });
         const data = await res.json();
@@ -58,6 +69,27 @@ serve(async (req) => {
           instance_id: data.instance?.instanceId || data.instanceId || instanceName,
           status: 'disconnected',
         }, { onConflict: 'company_id' });
+
+        // Also set webhook via separate endpoint (some Evolution API versions need this)
+        try {
+          await fetch(`${baseUrl}/webhook/set/${instanceName}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': EVOLUTION_API_KEY,
+            },
+            body: JSON.stringify({
+              url: webhookUrl,
+              webhook_by_events: false,
+              webhook_base64: false,
+              events: ['MESSAGES_UPSERT'],
+              enabled: true,
+            }),
+          });
+          console.log('Webhook configured for instance:', instanceName);
+        } catch (webhookErr) {
+          console.warn('Could not set webhook separately:', webhookErr);
+        }
 
         return new Response(JSON.stringify({ success: true, data }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
