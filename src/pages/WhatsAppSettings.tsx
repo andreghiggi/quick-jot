@@ -18,6 +18,7 @@ import {
   Trash2,
   CheckCircle2,
 } from 'lucide-react';
+import { WhatsAppMessageTemplates } from '@/components/whatsapp/WhatsAppMessageTemplates';
 
 export default function WhatsAppSettings() {
   const navigate = useNavigate();
@@ -199,6 +200,9 @@ export default function WhatsAppSettings() {
             )}
           </CardContent>
         </Card>
+
+        {/* Message Templates */}
+        <WhatsAppMessageTemplates />
 
         {/* Info Card */}
         <Card>
