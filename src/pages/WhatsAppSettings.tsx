@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useWhatsApp } from '@/hooks/useWhatsApp';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
+import { WhatsAppMessageTemplates } from '@/components/whatsapp/WhatsAppMessageTemplates';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,12 +19,12 @@ import {
   Trash2,
   CheckCircle2,
 } from 'lucide-react';
-import { WhatsAppMessageTemplates } from '@/components/whatsapp/WhatsAppMessageTemplates';
 
 export default function WhatsAppSettings() {
   const navigate = useNavigate();
   const { company } = useAuthContext();
-  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const { isModuleEnabled, toggleModule } = useCompanyModules({ companyId: company?.id });
+  const whatsappEnabled = isModuleEnabled('whatsapp');
   const {
     instance,
     loading,
@@ -39,12 +40,7 @@ export default function WhatsAppSettings() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [polling, setPolling] = useState(false);
 
-  // Redirect if module not enabled
-  useEffect(() => {
-    if (!loading && company?.id && !isModuleEnabled('whatsapp')) {
-      navigate('/configuracoes');
-    }
-  }, [loading, company?.id, isModuleEnabled]);
+  // No more redirect - show page with enable option instead
 
   // Auto-poll for connection status when QR is shown
   useEffect(() => {
@@ -86,6 +82,33 @@ export default function WhatsAppSettings() {
   return (
     <AppLayout title="WhatsApp" actions={headerActions}>
       <div className="max-w-2xl mx-auto space-y-6">
+        {/* Enable Module Card */}
+        {!whatsappEnabled && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-green-600" />
+                Módulo WhatsApp
+              </CardTitle>
+              <CardDescription>
+                Habilite o módulo para enviar notificações automáticas de status dos pedidos via WhatsApp.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center py-6 space-y-4">
+              <QrCode className="w-16 h-16 mx-auto text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                O módulo WhatsApp está desabilitado. Ative para conectar seu número e começar a enviar mensagens automáticas.
+              </p>
+              <Button onClick={() => toggleModule('whatsapp', true)} className="gap-2">
+                <MessageCircle className="w-4 h-4" />
+                Habilitar Módulo WhatsApp
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {whatsappEnabled && (
+          <>
         {/* Status Card */}
         <Card>
           <CardHeader>
@@ -216,6 +239,8 @@ export default function WhatsAppSettings() {
             <p>• Status suportados: confirmado, em preparo, pronto, saiu para entrega e finalizado</p>
           </CardContent>
         </Card>
+          </>
+        )}
       </div>
     </AppLayout>
   );

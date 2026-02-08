@@ -120,13 +120,13 @@ export function AppSidebar() {
     },
   ] : [];
 
-  const whatsappConfigItems = isModuleEnabled('whatsapp') ? [
+  const whatsappConfigItems = [
     {
       title: 'WhatsApp',
       icon: MessageCircle,
       href: '/configuracoes/whatsapp',
     },
-  ] : [];
+  ];
 
   const adminMenuItems = [
     {
