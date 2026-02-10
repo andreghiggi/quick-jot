@@ -710,6 +710,7 @@ export type Database = {
           image_url: string | null
           name: string
           price: number
+          tax_rule_id: string | null
           updated_at: string
         }
         Insert: {
@@ -722,6 +723,7 @@ export type Database = {
           image_url?: string | null
           name: string
           price: number
+          tax_rule_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -734,6 +736,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           price?: number
+          tax_rule_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -742,6 +745,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_tax_rule_id_fkey"
+            columns: ["tax_rule_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rules"
             referencedColumns: ["id"]
           },
         ]
@@ -953,6 +963,80 @@ export type Database = {
             columns: ["table_id"]
             isOneToOne: false
             referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_rules: {
+        Row: {
+          active: boolean
+          cest: string | null
+          cfop: string
+          cofins_aliquot: number
+          cofins_cst: string
+          company_id: string
+          created_at: string
+          csosn: string
+          description: string | null
+          icms_aliquot: number
+          icms_origin: string
+          id: string
+          ipi_aliquot: number
+          ipi_cst: string
+          name: string
+          ncm: string
+          pis_aliquot: number
+          pis_cst: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          cest?: string | null
+          cfop: string
+          cofins_aliquot?: number
+          cofins_cst?: string
+          company_id: string
+          created_at?: string
+          csosn: string
+          description?: string | null
+          icms_aliquot?: number
+          icms_origin?: string
+          id?: string
+          ipi_aliquot?: number
+          ipi_cst?: string
+          name: string
+          ncm: string
+          pis_aliquot?: number
+          pis_cst?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          cest?: string | null
+          cfop?: string
+          cofins_aliquot?: number
+          cofins_cst?: string
+          company_id?: string
+          created_at?: string
+          csosn?: string
+          description?: string | null
+          icms_aliquot?: number
+          icms_origin?: string
+          id?: string
+          ipi_aliquot?: number
+          ipi_cst?: string
+          name?: string
+          ncm?: string
+          pis_aliquot?: number
+          pis_cst?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]

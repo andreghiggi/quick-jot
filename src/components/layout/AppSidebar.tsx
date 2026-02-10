@@ -16,6 +16,7 @@ import {
   Table2,
   Plug,
   MessageCircle,
+  Receipt,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -117,6 +118,14 @@ export function AppSidebar() {
       title: 'Garçons',
       icon: Users,
       href: '/configuracoes/garcons',
+    },
+  ] : [];
+
+  const fiscalMenuItems = isModuleEnabled('fiscal') ? [
+    {
+      title: 'Fiscal',
+      icon: Receipt,
+      href: '/fiscal',
     },
   ] : [];
 
@@ -251,6 +260,19 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
               {pdvMenuItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.href}
+                  >
+                    <Link to={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              {fiscalMenuItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild

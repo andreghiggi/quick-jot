@@ -27,6 +27,7 @@ import WaitersConfig from "./pages/WaitersConfig";
 import POS from "./pages/POS";
 import SalesReport from "./pages/SalesReport";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
+import Fiscal from "./pages/Fiscal";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -130,6 +131,12 @@ function AppRoutes() {
       <Route path="/configuracoes/whatsapp" element={
         <ProtectedRoute requireCompany>
           <WhatsAppSettings />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/fiscal" element={
+        <ProtectedRoute requireCompany>
+          <Fiscal />
         </ProtectedRoute>
       } />
       
