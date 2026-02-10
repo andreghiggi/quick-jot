@@ -27,6 +27,11 @@ const AVAILABLE_MODULES = [
     name: 'whatsapp',
     label: 'WhatsApp - Notificações',
     description: 'Envio automático de mensagens de status dos pedidos via WhatsApp (Evolution API)'
+  },
+  {
+    name: 'fiscal',
+    label: 'Fiscal - NFC-e',
+    description: 'Configuração de regras tributárias (Simples Nacional) para emissão de NFC-e'
   }
 ];
 

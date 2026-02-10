@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useProducts } from '@/hooks/useProducts';
+import { useTaxRules } from '@/hooks/useTaxRules';
 import { useCategories, CategorySortMode } from '@/hooks/useCategories';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { Product, ProductOptional } from '@/types/product';
@@ -12,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, GripVertical, FileText } from 'lucide-react';
+import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
@@ -22,9 +24,10 @@ import { useAuthContext } from '@/contexts/AuthContext';
 
 export default function Products() {
   const { company } = useAuthContext();
-  const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional } = useProducts({ companyId: company?.id });
+  const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { categories, addCategory, deleteCategory, sortMode, saveSortMode, moveCategory } = useCategories({ companyId: company?.id });
   const { settings, saveStorePhone, saveBannerUrl, saveStoreName } = useStoreSettings({ companyId: company?.id });
+  const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isOptionalDialogOpen, setIsOptionalDialogOpen] = useState(false);
@@ -42,7 +45,7 @@ export default function Products() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
-
+  const [isBulkTaxOpen, setIsBulkTaxOpen] = useState(false);
   const menuLink = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
 
   useEffect(() => {
@@ -297,6 +300,12 @@ export default function Products() {
 
   const headerActions = (
     <div className="flex items-center gap-2">
+      {taxRules.length > 0 && (
+        <Button variant="outline" size="sm" onClick={() => setIsBulkTaxOpen(true)}>
+          <FileText className="h-4 w-4 mr-2" />
+          <span className="hidden sm:inline">Tributação em massa</span>
+        </Button>
+      )}
       <Button variant="outline" size="sm" onClick={() => setIsSettingsOpen(true)}>
         <Settings className="h-4 w-4 mr-2" />
         <span className="hidden sm:inline">Config</span>
@@ -918,6 +927,19 @@ export default function Products() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Tax Rule Dialog */}
+      <BulkTaxRuleDialog
+        open={isBulkTaxOpen}
+        onOpenChange={setIsBulkTaxOpen}
+        products={products}
+        taxRules={taxRules}
+        onApply={async (productIds, taxRuleId) => {
+          const success = await bulkAssignTaxRule(productIds, taxRuleId);
+          if (success) refetchProducts();
+          return success;
+        }}
+      />
     </AppLayout>
   );
 }
