@@ -304,6 +304,7 @@ export default function Products() {
         <Button variant="outline" size="sm" onClick={() => setIsBulkTaxOpen(true)}>
           <FileText className="h-4 w-4 mr-2" />
           <span className="hidden sm:inline">Tributação em massa</span>
+
         </Button>
       )}
       <Button variant="outline" size="sm" onClick={() => setIsSettingsOpen(true)}>
@@ -934,6 +935,7 @@ export default function Products() {
         onOpenChange={setIsBulkTaxOpen}
         products={products}
         taxRules={taxRules}
+        categories={categories}
         onApply={async (productIds, taxRuleId) => {
           const success = await bulkAssignTaxRule(productIds, taxRuleId);
           if (success) refetchProducts();
