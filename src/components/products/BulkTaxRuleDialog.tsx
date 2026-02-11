@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Product } from '@/types/product';
 import { TaxRule } from '@/hooks/useTaxRules';
 import { Button } from '@/components/ui/button';
@@ -10,18 +10,30 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { FileText } from 'lucide-react';
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 interface BulkTaxRuleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   products: Product[];
   taxRules: TaxRule[];
+  categories?: Category[];
   onApply: (productIds: string[], taxRuleId: string | null) => Promise<boolean>;
 }
 
-export function BulkTaxRuleDialog({ open, onOpenChange, products, taxRules, onApply }: BulkTaxRuleDialogProps) {
+export function BulkTaxRuleDialog({ open, onOpenChange, products, taxRules, categories = [], onApply }: BulkTaxRuleDialogProps) {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [selectedTaxRuleId, setSelectedTaxRuleId] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('_all');
   const [isApplying, setIsApplying] = useState(false);
+
+  const filteredProducts = useMemo(() => {
+    if (selectedCategory === '_all') return products;
+    return products.filter(p => p.category === selectedCategory);
+  }, [products, selectedCategory]);
 
   function toggleProduct(id: string) {
     const next = new Set(selectedProducts);
@@ -34,12 +46,18 @@ export function BulkTaxRuleDialog({ open, onOpenChange, products, taxRules, onAp
   }
 
   function selectAll() {
-    if (selectedProducts.size === products.length) {
-      setSelectedProducts(new Set());
+    const filteredIds = filteredProducts.map(p => p.id);
+    const allSelected = filteredIds.every(id => selectedProducts.has(id));
+    const next = new Set(selectedProducts);
+    if (allSelected) {
+      filteredIds.forEach(id => next.delete(id));
     } else {
-      setSelectedProducts(new Set(products.map(p => p.id)));
+      filteredIds.forEach(id => next.add(id));
     }
+    setSelectedProducts(next);
   }
+
+  const allFilteredSelected = filteredProducts.length > 0 && filteredProducts.every(p => selectedProducts.has(p.id));
 
   async function handleApply() {
     if (selectedProducts.size === 0) return;
@@ -50,6 +68,7 @@ export function BulkTaxRuleDialog({ open, onOpenChange, products, taxRules, onAp
     if (success) {
       setSelectedProducts(new Set());
       setSelectedTaxRuleId('');
+      setSelectedCategory('_all');
       onOpenChange(false);
     }
   }
@@ -82,16 +101,35 @@ export function BulkTaxRuleDialog({ open, onOpenChange, products, taxRules, onAp
             </Select>
           </div>
 
+          {categories.length > 0 && (
+            <div>
+              <Label>Filtrar por Categoria</Label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">Todas as categorias</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label>Selecione os produtos ({selectedProducts.size} selecionados)</Label>
               <Button variant="ghost" size="sm" onClick={selectAll}>
-                {selectedProducts.size === products.length ? 'Desmarcar todos' : 'Selecionar todos'}
+                {allFilteredSelected ? 'Desmarcar todos' : 'Selecionar todos'}
               </Button>
             </div>
             <ScrollArea className="h-[300px] border rounded-md p-2">
               <div className="space-y-2">
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <div
                     key={product.id}
                     className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
@@ -110,6 +148,9 @@ export function BulkTaxRuleDialog({ open, onOpenChange, products, taxRules, onAp
                     )}
                   </div>
                 ))}
+                {filteredProducts.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4 text-sm">Nenhum produto nesta categoria</p>
+                )}
               </div>
             </ScrollArea>
           </div>

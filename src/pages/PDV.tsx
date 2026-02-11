@@ -727,9 +727,33 @@ export default function PDV() {
                       <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{item.product_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatCurrency(item.unit_price)} x {item.quantity}
-                          </p>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Input
+                              type="number"
+                              value={item.unit_price}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val) && val >= 0) {
+                                  setCart(cart.map((c, i) => i === idx ? { ...c, unit_price: val } : c));
+                                }
+                              }}
+                              className="h-6 w-20 text-xs px-1"
+                              step="0.01"
+                            />
+                            <span className="text-xs text-muted-foreground">x</span>
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (!isNaN(val) && val > 0) {
+                                  setCart(cart.map((c, i) => i === idx ? { ...c, quantity: val } : c));
+                                }
+                              }}
+                              className="h-6 w-14 text-xs px-1"
+                              min="1"
+                            />
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1">
@@ -741,7 +765,6 @@ export default function PDV() {
                             >
                               <Minus className="w-3 h-3" />
                             </Button>
-                            <span className="w-8 text-center text-sm">{item.quantity}</span>
                             <Button 
                               size="icon" 
                               variant="outline" 
@@ -813,10 +836,20 @@ export default function PDV() {
                     </div>
                   </div>
 
-                  <Button className="w-full gap-2" size="lg" onClick={openPaymentDialog}>
-                    <DollarSign className="w-5 h-5" />
-                    Finalizar Venda
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button className="flex-1 gap-2" size="lg" onClick={openPaymentDialog}>
+                      <DollarSign className="w-5 h-5" />
+                      Finalizar
+                    </Button>
+                    <Button className="flex-1 gap-2" size="lg" variant="outline" onClick={() => {
+                      openPaymentDialog();
+                      // Mark as fiscal sale via notes
+                      setNotes(prev => prev ? prev + ' [F]' : '[F]');
+                    }}>
+                      <Receipt className="w-5 h-5" />
+                      Finalizar +
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
