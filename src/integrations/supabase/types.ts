@@ -387,6 +387,90 @@ export type Database = {
           },
         ]
       }
+      nfce_records: {
+        Row: {
+          ambiente: string | null
+          chave_acesso: string | null
+          company_id: string
+          created_at: string
+          external_id: string
+          id: string
+          motivo_rejeicao: string | null
+          nfce_id: string | null
+          numero: string | null
+          protocolo: string | null
+          qrcode_url: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          sale_id: string | null
+          serie: string | null
+          status: string
+          updated_at: string
+          valor_total: number
+          webhook_payload: Json | null
+          xml_url: string | null
+        }
+        Insert: {
+          ambiente?: string | null
+          chave_acesso?: string | null
+          company_id: string
+          created_at?: string
+          external_id: string
+          id?: string
+          motivo_rejeicao?: string | null
+          nfce_id?: string | null
+          numero?: string | null
+          protocolo?: string | null
+          qrcode_url?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          sale_id?: string | null
+          serie?: string | null
+          status?: string
+          updated_at?: string
+          valor_total?: number
+          webhook_payload?: Json | null
+          xml_url?: string | null
+        }
+        Update: {
+          ambiente?: string | null
+          chave_acesso?: string | null
+          company_id?: string
+          created_at?: string
+          external_id?: string
+          id?: string
+          motivo_rejeicao?: string | null
+          nfce_id?: string | null
+          numero?: string | null
+          protocolo?: string | null
+          qrcode_url?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          sale_id?: string | null
+          serie?: string | null
+          status?: string
+          updated_at?: string
+          valor_total?: number
+          webhook_payload?: Json | null
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfce_records_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfce_records_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           company_id: string | null
