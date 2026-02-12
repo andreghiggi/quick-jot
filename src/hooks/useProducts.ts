@@ -56,6 +56,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         imageUrl: product.image_url || undefined,
         active: product.active,
         companyId: product.company_id || undefined,
+        taxRuleId: product.tax_rule_id || null,
         optionals: optionalsData
           .filter((opt) => opt.product_id === product.id)
           .map((opt) => ({

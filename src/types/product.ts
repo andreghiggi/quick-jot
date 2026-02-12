@@ -17,6 +17,7 @@ export interface Product {
   active: boolean;
   optionals?: ProductOptional[];
   companyId?: string;
+  taxRuleId?: string | null;
 }
 
 export interface CartItem {
