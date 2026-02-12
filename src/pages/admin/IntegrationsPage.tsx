@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { POSControleSettings } from '@/components/admin/POSControleSettings';
+import { NFCeSettings } from '@/components/admin/NFCeSettings';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plug } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -74,17 +75,15 @@ export default function IntegrationsPage() {
 
         <div className="space-y-6">
           {companyId ? (
-            <POSControleSettings companyId={companyId} />
+            <>
+              <POSControleSettings companyId={companyId} />
+              <NFCeSettings companyId={companyId} />
+            </>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               Carregando configurações...
             </div>
           )}
-
-          {/* Placeholder for future integrations */}
-          <div className="border-2 border-dashed rounded-lg p-6 text-center text-muted-foreground">
-            <p className="text-sm">Mais integrações em breve...</p>
-          </div>
         </div>
       </div>
     </AppLayout>

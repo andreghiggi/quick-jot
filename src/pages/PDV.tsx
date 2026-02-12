@@ -7,6 +7,8 @@ import { useCashRegister, PdvSaleItem } from '@/hooks/useCashRegister';
 import { useTabs, Tab } from '@/hooks/useTabs';
 import { useTables } from '@/hooks/useTables';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
+import { useTaxRules } from '@/hooks/useTaxRules';
+import { emitirNFCe, NFCeItem } from '@/services/nfceService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -56,6 +58,7 @@ export default function PDV() {
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const { taxRules } = useTaxRules({ companyId: company?.id });
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId: company?.id });
   const { tables } = useTables({ companyId: company?.id });
   const { 
@@ -296,6 +299,52 @@ export default function PDV() {
       );
 
       if (success) {
+        // Check if fiscal sale (notes contain [F])
+        const isFiscalSale = saleNotes.includes('[F]');
+        if (isFiscalSale && company?.id && isModuleEnabled('fiscal')) {
+          try {
+            // Build NFC-e items from cart using tax rules
+            const nfceItems: NFCeItem[] = cart.map(item => {
+              // Find the product to get its tax_rule_id
+              const product = products.find(p => p.id === item.product_id);
+              const taxRule = product?.taxRuleId 
+                ? taxRules.find(tr => tr.id === product.taxRuleId) 
+                : null;
+
+              return {
+                codigo: item.product_id || 'AVULSO',
+                descricao: item.product_name,
+                ncm: taxRule?.ncm || '00000000',
+                cfop: taxRule?.cfop || '5102',
+                unidade: 'UN',
+                quantidade: item.quantity,
+                valor_unitario: item.unit_price,
+                csosn: taxRule?.csosn || '102',
+                aliquota_icms: taxRule?.icms_aliquot || 0,
+                cst_pis: taxRule?.pis_cst || '49',
+                aliquota_pis: taxRule?.pis_aliquot || 0,
+                cst_cofins: taxRule?.cofins_cst || '49',
+                aliquota_cofins: taxRule?.cofins_aliquot || 0,
+              };
+            });
+
+            const externalId = `PDV-${currentRegister?.id?.substring(0, 8)}-${Date.now()}`;
+            
+            await emitirNFCe(company.id, null, {
+              external_id: externalId,
+              itens: nfceItems,
+              valor_desconto: discount || 0,
+              valor_frete: 0,
+              observacoes: customerName ? `Cliente: ${customerName}` : undefined,
+            });
+
+            toast.success('NFC-e enviada para processamento!');
+          } catch (nfceError) {
+            console.error('[PDV] NFC-e emission error:', nfceError);
+            toast.error('Venda registrada, mas erro ao emitir NFC-e');
+          }
+        }
+
         // If imported from tab, close the tab
         if (importedTab) {
           await closeTab(importedTab.id);
