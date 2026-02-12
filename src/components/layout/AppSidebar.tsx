@@ -17,6 +17,7 @@ import {
   Plug,
   MessageCircle,
   Receipt,
+  FileText,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -126,6 +127,11 @@ export function AppSidebar() {
       title: 'Fiscal',
       icon: Receipt,
       href: '/fiscal',
+    },
+    {
+      title: 'NFC-e Monitor',
+      icon: FileText,
+      href: '/nfce',
     },
   ] : [];
 
