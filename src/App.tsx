@@ -28,6 +28,7 @@ import POS from "./pages/POS";
 import SalesReport from "./pages/SalesReport";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import Fiscal from "./pages/Fiscal";
+import NFCeMonitor from "./pages/NFCeMonitor";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -137,6 +138,12 @@ function AppRoutes() {
       <Route path="/fiscal" element={
         <ProtectedRoute requireCompany>
           <Fiscal />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/nfce" element={
+        <ProtectedRoute requireCompany>
+          <NFCeMonitor />
         </ProtectedRoute>
       } />
       
