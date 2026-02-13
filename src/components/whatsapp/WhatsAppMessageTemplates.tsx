@@ -2,6 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MessageCircle } from 'lucide-react';
 
+interface WhatsAppMessageTemplatesProps {
+  googleReviewUrl?: string;
+}
+
 const TEMPLATE_MESSAGES = [
   {
     status: 'Confirmado',
@@ -27,15 +31,13 @@ const TEMPLATE_MESSAGES = [
     color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
     example: '{{nome}}, seu pedido #{{num}} está prontinho e já vai sair para entrega. Fique de olho! 🛵',
   },
-  {
-    status: 'Finalizado',
-    statusKey: 'delivered',
-    color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-    example: '{{nome}}, seu pedido #{{num}} foi finalizado. Obrigado por escolher o {{loja}}, esperamos que tenha gostado!',
-  },
 ];
 
-export function WhatsAppMessageTemplates() {
+export function WhatsAppMessageTemplates({ googleReviewUrl }: WhatsAppMessageTemplatesProps) {
+  const deliveredExample = googleReviewUrl
+    ? `{{nome}}, seu pedido #{{num}} foi finalizado. Obrigado por escolher o {{loja}}! ⭐ Avalie nosso atendimento: ${googleReviewUrl}`
+    : '{{nome}}, seu pedido #{{num}} foi finalizado. Obrigado por escolher o {{loja}}, esperamos que tenha gostado!';
+
   return (
     <Card>
       <CardHeader>
@@ -56,6 +58,16 @@ export function WhatsAppMessageTemplates() {
             </p>
           </div>
         ))}
+        {/* Delivered message with review link */}
+        <div className="border rounded-lg p-3 space-y-2">
+          <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">Finalizado</Badge>
+          <p className="text-sm text-foreground leading-relaxed">
+            {deliveredExample}
+          </p>
+          {googleReviewUrl && (
+            <p className="text-xs text-green-600 dark:text-green-400">⭐ Link de avaliação incluído na mensagem</p>
+          )}
+        </div>
         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground">
             <strong>Variáveis:</strong> {'{{nome}}'} = primeiro nome do cliente, {'{{num}}'} = número do pedido, {'{{loja}}'} = nome do estabelecimento. As mensagens são enviadas automaticamente quando qualquer membro da equipe altera o status do pedido.

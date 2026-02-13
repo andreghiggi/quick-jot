@@ -42,47 +42,49 @@ export function generateProductionTicketHTML(data: PrintTicketData): string {
           box-sizing: border-box;
         }
         body {
-          font-family: 'Courier New', monospace;
-          width: 80mm;
-          max-width: 80mm;
+          font-family: 'Courier New', 'Lucida Console', monospace;
+          width: 58mm;
+          max-width: 58mm;
           padding: 2mm;
-          font-size: 12pt;
+          font-size: 10pt;
+          font-weight: bold;
+          line-height: 1.3;
         }
         .header {
           text-align: center;
-          border-bottom: 2px dashed #000;
-          padding-bottom: 3mm;
-          margin-bottom: 3mm;
+          border-bottom: 1px dashed #000;
+          padding-bottom: 2mm;
+          margin-bottom: 2mm;
         }
         .title {
-          font-size: 16pt;
+          font-size: 11pt;
           font-weight: bold;
           letter-spacing: 1px;
         }
         .info {
-          font-size: 14pt;
+          font-size: 11pt;
           font-weight: bold;
-          margin-top: 2mm;
+          margin-top: 1mm;
         }
         .table-info {
-          font-size: 18pt;
+          font-size: 14pt;
           font-weight: bold;
           background: #000;
           color: #fff;
-          padding: 2mm 4mm;
+          padding: 1mm 3mm;
           display: inline-block;
-          margin-top: 2mm;
+          margin-top: 1mm;
         }
         .datetime {
-          font-size: 10pt;
-          margin-top: 2mm;
+          font-size: 8pt;
+          margin-top: 1mm;
         }
         .items {
-          margin: 3mm 0;
+          margin: 2mm 0;
         }
         .item {
           border-bottom: 1px dotted #000;
-          padding: 2mm 0;
+          padding: 1.5mm 0;
         }
         .item:last-child {
           border-bottom: none;
@@ -90,40 +92,40 @@ export function generateProductionTicketHTML(data: PrintTicketData): string {
         .item-header {
           display: flex;
           align-items: baseline;
-          gap: 2mm;
+          gap: 1mm;
         }
         .qty {
-          font-size: 16pt;
+          font-size: 12pt;
           font-weight: bold;
-          min-width: 10mm;
+          min-width: 8mm;
         }
         .name {
-          font-size: 14pt;
+          font-size: 11pt;
           font-weight: bold;
           flex: 1;
           word-break: break-word;
+          text-transform: uppercase;
         }
         .notes {
-          font-size: 11pt;
+          font-size: 9pt;
           font-style: italic;
-          margin-left: 12mm;
-          margin-top: 1mm;
-          color: #333;
+          margin-left: 8mm;
+          margin-top: 0.5mm;
         }
         .footer {
-          border-top: 2px dashed #000;
-          padding-top: 3mm;
-          margin-top: 3mm;
+          border-top: 1px dashed #000;
+          padding-top: 2mm;
+          margin-top: 2mm;
           text-align: center;
-          font-size: 10pt;
+          font-size: 8pt;
         }
         @media print {
           body {
-            width: 80mm;
+            width: 58mm;
           }
           @page {
             margin: 0;
-            size: 80mm auto;
+            size: 58mm auto;
           }
         }
       </style>

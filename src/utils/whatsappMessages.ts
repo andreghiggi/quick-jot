@@ -7,6 +7,7 @@ interface MessageParams {
   storeName: string;
   estimatedTime?: string;
   deliveryType?: 'retirada' | 'entrega';
+  googleReviewUrl?: string;
 }
 
 const STATUS_MAP: Record<OrderStatus, string> = {
@@ -35,6 +36,9 @@ export function generateWhatsAppMessage(params: MessageParams): string | null {
       return `${name}, seu pedido ${num} está pronto para retirada no ${storeName}. Estamos te esperando!`;
 
     case 'delivered':
+      if (params.googleReviewUrl) {
+        return `${name}, seu pedido ${num} foi finalizado. Obrigado por escolher o ${storeName}! ⭐ Avalie nosso atendimento: ${params.googleReviewUrl}`;
+      }
       return `${name}, seu pedido ${num} foi finalizado. Obrigado por escolher o ${storeName}, esperamos que tenha gostado!`;
 
     default:

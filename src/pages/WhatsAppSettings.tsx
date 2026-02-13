@@ -4,11 +4,14 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useWhatsApp } from '@/hooks/useWhatsApp';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { WhatsAppMessageTemplates } from '@/components/whatsapp/WhatsAppMessageTemplates';
 import { WhatsAppAutoReplyInfo } from '@/components/whatsapp/WhatsAppAutoReplyInfo';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   ArrowLeft,
   MessageCircle,
@@ -19,13 +22,17 @@ import {
   RefreshCw,
   Trash2,
   CheckCircle2,
+  Star,
 } from 'lucide-react';
 
 export default function WhatsAppSettings() {
   const navigate = useNavigate();
   const { company } = useAuthContext();
   const { isModuleEnabled, toggleModule } = useCompanyModules({ companyId: company?.id });
+  const { updateSetting } = useStoreSettings({ companyId: company?.id });
   const whatsappEnabled = isModuleEnabled('whatsapp');
+  const [googleReviewUrl, setGoogleReviewUrl] = useState('');
+  const [savingReviewUrl, setSavingReviewUrl] = useState(false);
   const {
     instance,
     loading,
@@ -41,7 +48,26 @@ export default function WhatsAppSettings() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [polling, setPolling] = useState(false);
 
-  // No more redirect - show page with enable option instead
+  // Load google review URL from store settings
+  useEffect(() => {
+    if (!company?.id) return;
+    const loadReviewUrl = async () => {
+      const { data } = await (await import('@/integrations/supabase/client')).supabase
+        .from('store_settings')
+        .select('value')
+        .eq('company_id', company.id)
+        .eq('key', 'google_review_url')
+        .maybeSingle();
+      if (data?.value) setGoogleReviewUrl(data.value);
+    };
+    loadReviewUrl();
+  }, [company?.id]);
+
+  async function saveGoogleReviewUrl() {
+    setSavingReviewUrl(true);
+    await updateSetting('google_review_url', googleReviewUrl);
+    setSavingReviewUrl(false);
+  }
 
   // Auto-poll for connection status when QR is shown
   useEffect(() => {
@@ -228,8 +254,40 @@ export default function WhatsAppSettings() {
         {/* Auto Reply Info */}
         <WhatsAppAutoReplyInfo companySlug={company?.slug} />
 
+        {/* Google Review Link */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Star className="w-4 h-4 text-yellow-500" />
+              Link de Avaliação Google
+            </CardTitle>
+            <CardDescription>
+              Adicione o link de avaliação do Google para incluir automaticamente na mensagem de pedido finalizado.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="google-review-url">URL de avaliação do Google</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="google-review-url"
+                  placeholder="https://g.page/r/seu-link/review"
+                  value={googleReviewUrl}
+                  onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                />
+                <Button onClick={saveGoogleReviewUrl} disabled={savingReviewUrl} size="sm">
+                  {savingReviewUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Cole aqui o link de avaliação do Google Maps do seu estabelecimento. Ele será incluído na mensagem de "Pedido Finalizado".
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Message Templates */}
-        <WhatsAppMessageTemplates />
+        <WhatsAppMessageTemplates googleReviewUrl={googleReviewUrl} />
 
         {/* Info Card */}
         <Card>
