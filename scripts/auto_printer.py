@@ -134,14 +134,27 @@ def marcar_como_impresso(order_id):
         return False
 
 def formatar_recibo(pedido, itens, endereco_loja=None):
-    """Formata o recibo para impressão - Formato WhatsApp Style"""
+    """Formata o recibo para impressão 58mm - fonte grande e legível"""
     linhas = []
     
     # Cabeçalho
     linhas.append("")
-    linhas.append("========================================")
-    linhas.append("           MEU PEDIDO                   ")
-    linhas.append("========================================")
+    linhas.append("================================")
+    linhas.append("        COMANDA TECH            ")
+    linhas.append("================================")
+    
+    # Número do pedido grande
+    num = pedido.get('daily_number', '?')
+    linhas.append(f"      PEDIDO #{num}              ")
+    
+    # Data/Hora
+    try:
+        dt = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
+        linhas.append(f"  {dt.strftime('%d/%m/%Y %H:%M')}")
+    except:
+        linhas.append(f"  {pedido.get('created_at', '')[:16]}")
+    
+    linhas.append("================================")
     linhas.append("")
     
     # Cliente
@@ -149,25 +162,29 @@ def formatar_recibo(pedido, itens, endereco_loja=None):
     
     # Telefone
     if pedido.get('customer_phone'):
-        linhas.append(f"Telefone: {pedido['customer_phone']}")
+        linhas.append(f"Tel: {pedido['customer_phone']}")
     
     linhas.append("")
     
     # Endereço de Entrega ou Retirada
     if pedido.get('delivery_address'):
-        linhas.append("Endereco de Entrega:")
-        linhas.append(f"  {pedido['delivery_address']}")
+        linhas.append("================================")
+        linhas.append("         ENTREGA                ")
+        linhas.append("================================")
+        linhas.append(f"{pedido['delivery_address']}")
     else:
-        linhas.append("RETIRADA NO LOCAL")
+        linhas.append("================================")
+        linhas.append("    RETIRADA NO LOCAL           ")
+        linhas.append("================================")
         if endereco_loja:
-            linhas.append(f"  {endereco_loja}")
+            linhas.append(f"{endereco_loja}")
     
     linhas.append("")
-    linhas.append("----------------------------------------")
+    linhas.append("--------------------------------")
+    linhas.append("PRODUTOS:")
+    linhas.append("--------------------------------")
     
     # Produtos
-    linhas.append("Produtos:")
-    
     subtotal = 0
     for item in itens:
         qtd = item.get('quantity', 1)
@@ -185,21 +202,21 @@ def formatar_recibo(pedido, itens, endereco_loja=None):
             nome = nome_completo
             adicionais = None
         
-        # Formato: PRODUTO - Quantidade: X - R$ XX,XX
-        linha_produto = f"  {nome.upper()} -"
-        linhas.append(linha_produto)
-        linhas.append(f"  Quantidade: {qtd} - R$ {preco_total:.2f}".replace('.', ','))
+        # Nome do produto em maiúsculas
+        linhas.append(f"{qtd}x {nome.upper()}")
+        linhas.append(f"   R$ {preco_total:.2f}".replace('.', ','))
         
         # Adicionais
         if adicionais:
-            linhas.append(f"    Adicionais: {adicionais}")
+            linhas.append(f"   + {adicionais}")
         
         # Observações do item
         if item.get('notes'):
-            linhas.append(f"    Obs: {item['notes']}")
+            linhas.append(f"   Obs: {item['notes']}")
+        
+        linhas.append("")
     
-    linhas.append("")
-    linhas.append("----------------------------------------")
+    linhas.append("--------------------------------")
     
     # Subtotal
     linhas.append(f"Subtotal: R$ {subtotal:.2f}".replace('.', ','))
@@ -209,32 +226,21 @@ def formatar_recibo(pedido, itens, endereco_loja=None):
     taxa_entrega = total - subtotal if total > subtotal else 0
     
     if pedido.get('delivery_address') and taxa_entrega > 0:
-        linhas.append(f"Entrega: R$ {taxa_entrega:.2f}".replace('.', ','))
-    
-    # Total
-    linhas.append(f"Total: R$ {total:.2f}".replace('.', ','))
+        linhas.append(f"Entrega:  R$ {taxa_entrega:.2f}".replace('.', ','))
     
     linhas.append("")
+    linhas.append("================================")
+    linhas.append(f"TOTAL:    R$ {total:.2f}".replace('.', ','))
+    linhas.append("================================")
     
     # Observações gerais do pedido
     if pedido.get('notes'):
-        linhas.append(f"Observacoes: {pedido['notes']}")
         linhas.append("")
-    
-    # Número do pedido
-    linhas.append(f"Pedido #{pedido.get('daily_number', '?')}")
-    
-    # Data/Hora
-    try:
-        dt = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
-        linhas.append(f"Data: {dt.strftime('%d/%m/%Y %H:%M')}")
-    except:
-        linhas.append(f"Data: {pedido.get('created_at', '')[:16]}")
+        linhas.append(f"Obs: {pedido['notes']}")
     
     linhas.append("")
-    linhas.append("========================================")
-    linhas.append("    Obrigado por comprar conosco!       ")
-    linhas.append("========================================")
+    linhas.append("  Obrigado pela preferencia!    ")
+    linhas.append("================================")
     linhas.append("\n\n\n")
     
     return "\n".join(linhas)

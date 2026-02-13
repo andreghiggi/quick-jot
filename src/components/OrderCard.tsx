@@ -85,70 +85,112 @@ export function OrderCard({ order }: OrderCardProps) {
       minute: '2-digit'
     });
 
+    // Calculate subtotal and delivery fee
+    const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const deliveryFee = order.total - subtotal > 0 ? order.total - subtotal : 0;
+
     const printContent = `
       <!DOCTYPE html>
       <html>
       <head>
+        <meta charset="UTF-8">
         <title>Pedido #${order.dailyNumber}</title>
         <style>
-          @page { margin: 0; size: 80mm auto; }
+          @page { margin: 0; size: 58mm auto; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
-            font-family: 'Courier New', monospace; 
-            font-size: 12px;
-            width: 80mm;
-            padding: 3mm;
+            font-family: 'Courier New', 'Lucida Console', monospace; 
+            font-size: 10pt;
+            font-weight: bold;
+            width: 58mm;
+            max-width: 58mm;
+            padding: 2mm;
+            line-height: 1.3;
+            -webkit-print-color-adjust: exact;
           }
+          .center { text-align: center; }
           .header { text-align: center; margin-bottom: 2mm; }
-          .header h1 { font-size: 14px; font-weight: bold; }
-          .header h2 { font-size: 18px; font-weight: bold; margin: 2mm 0; }
-          .header p { font-size: 10px; }
-          .divider { border-top: 1px dashed #000; margin: 2mm 0; }
-          .section { margin: 2mm 0; }
-          .section p { margin: 1mm 0; font-size: 11px; }
-          .section strong { font-size: 11px; }
-          .items { margin: 2mm 0; }
-          .item { display: flex; justify-content: space-between; margin: 1mm 0; font-size: 11px; }
-          .item-name { flex: 1; }
-          .item-price { text-align: right; }
-          .total-section { margin-top: 2mm; }
-          .total { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; }
-          .notes { font-size: 10px; margin: 2mm 0; }
-          .footer { text-align: center; font-size: 10px; margin-top: 3mm; }
+          .store-name { font-size: 12pt; font-weight: bold; }
+          .order-num { font-size: 16pt; font-weight: bold; margin: 1mm 0; }
+          .date { font-size: 8pt; }
+          .divider { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
+          .label { font-size: 9pt; font-weight: bold; }
+          .value { font-size: 10pt; font-weight: bold; }
+          .section { margin: 1mm 0; }
+          .section p { margin: 0.5mm 0; font-size: 10pt; }
+          .item { margin: 1.5mm 0; }
+          .item-name { font-size: 11pt; font-weight: bold; text-transform: uppercase; }
+          .item-detail { font-size: 9pt; margin-left: 2mm; }
+          .item-notes { font-size: 9pt; font-style: italic; margin-left: 2mm; }
+          .total-line { display: flex; justify-content: space-between; font-size: 10pt; margin: 0.5mm 0; }
+          .grand-total { display: flex; justify-content: space-between; font-size: 13pt; font-weight: bold; margin: 1mm 0; }
+          .notes { font-size: 9pt; margin: 1mm 0; }
+          .footer { text-align: center; font-size: 8pt; margin-top: 2mm; }
+          .delivery-badge { 
+            text-align: center; 
+            font-size: 11pt; 
+            font-weight: bold; 
+            padding: 1mm; 
+            margin: 1mm 0;
+            border: 1px solid #000;
+          }
         </style>
       </head>
       <body>
         <div class="header">
-          <h1>COMANDA TECH</h1>
-          <h2>PEDIDO #${order.dailyNumber}</h2>
-          <p>${formattedDate}</p>
+          <div class="store-name">COMANDA TECH</div>
+          <div class="order-num">PEDIDO #${order.dailyNumber}</div>
+          <div class="date">${formattedDate}</div>
         </div>
-        <div class="divider"></div>
+        <hr class="divider">
         <div class="section">
-          <p><strong>Cliente:</strong> ${order.customerName}</p>
-          ${order.customerPhone ? `<p><strong>Tel:</strong> ${order.customerPhone}</p>` : ''}
-          ${order.deliveryAddress ? `<p><strong>End:</strong> ${order.deliveryAddress}</p>` : ''}
+          <p><span class="label">Cliente:</span> ${order.customerName}</p>
+          ${order.customerPhone ? `<p><span class="label">Tel:</span> ${order.customerPhone}</p>` : ''}
         </div>
-        <div class="divider"></div>
-        <div class="items">
-          ${order.items.map(item => `
-            <div class="item">
-              <span class="item-name">${item.quantity}x ${item.name}</span>
-              <span class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</span>
-            </div>
-          `).join('')}
+        ${order.deliveryAddress 
+          ? `<div class="delivery-badge">ENTREGA</div>
+             <div class="section"><p>${order.deliveryAddress}</p></div>` 
+          : `<div class="delivery-badge">RETIRADA NO LOCAL</div>`}
+        <hr class="divider">
+        <div class="section">
+          ${order.items.map(item => {
+            const itemName = item.name;
+            let mainName = itemName;
+            let extras = '';
+            if (itemName.includes('(') && itemName.endsWith(')')) {
+              const idx = itemName.indexOf('(');
+              mainName = itemName.substring(0, idx).trim();
+              extras = itemName.substring(idx + 1, itemName.length - 1).trim();
+            }
+            return `
+              <div class="item">
+                <div class="item-name">${item.quantity}x ${mainName}</div>
+                ${extras ? `<div class="item-detail">+ ${extras}</div>` : ''}
+                ${item.notes ? `<div class="item-notes">Obs: ${item.notes}</div>` : ''}
+                <div class="item-detail">R$ ${(item.price * item.quantity).toFixed(2).replace('.', ',')}</div>
+              </div>
+            `;
+          }).join('')}
         </div>
-        <div class="divider"></div>
-        <div class="total-section">
-          <div class="total">
-            <span>TOTAL:</span>
-            <span>R$ ${order.total.toFixed(2)}</span>
+        <hr class="divider">
+        <div class="total-line">
+          <span>Subtotal:</span>
+          <span>R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
+        </div>
+        ${deliveryFee > 0 ? `
+          <div class="total-line">
+            <span>Entrega:</span>
+            <span>R$ ${deliveryFee.toFixed(2).replace('.', ',')}</span>
           </div>
+        ` : ''}
+        <div class="grand-total">
+          <span>TOTAL:</span>
+          <span>R$ ${order.total.toFixed(2).replace('.', ',')}</span>
         </div>
-        ${order.notes ? `<div class="divider"></div><p class="notes"><strong>Obs:</strong> ${order.notes}</p>` : ''}
-        <div class="divider"></div>
+        ${order.notes ? `<hr class="divider"><p class="notes"><strong>Obs:</strong> ${order.notes}</p>` : ''}
+        <hr class="divider">
         <p class="footer">Obrigado pela preferência!</p>
-        <script>window.onload = function() { window.print(); window.close(); }</script>
+        <script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 200); }</script>
       </body>
       </html>
     `;

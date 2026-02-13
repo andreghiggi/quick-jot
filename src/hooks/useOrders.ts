@@ -198,12 +198,24 @@ export function useOrders(options: UseOrdersOptions = {}) {
               .maybeSingle();
 
             if (instanceData?.status === 'connected') {
-              // Get store name
+              // Get store name and google review URL
               const { data: companyData } = await supabase
                 .from('companies')
                 .select('name')
                 .eq('id', companyId)
                 .single();
+
+              // Get google review URL from store settings
+              let googleReviewUrl: string | undefined;
+              const { data: reviewSetting } = await supabase
+                .from('store_settings')
+                .select('value')
+                .eq('company_id', companyId)
+                .eq('key', 'google_review_url')
+                .maybeSingle();
+              if (reviewSetting?.value) {
+                googleReviewUrl = reviewSetting.value;
+              }
 
               const message = generateWhatsAppMessage({
                 customerName: order.customerName,
@@ -211,6 +223,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
                 status,
                 storeName: companyData?.name || 'Estabelecimento',
                 deliveryType: order.deliveryAddress ? 'entrega' : 'retirada',
+                googleReviewUrl,
               });
 
               if (message) {
