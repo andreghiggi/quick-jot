@@ -198,10 +198,10 @@ export function useOrders(options: UseOrdersOptions = {}) {
               .maybeSingle();
 
             if (instanceData?.status === 'connected') {
-              // Get store name and google review URL
+              // Get store name and address
               const { data: companyData } = await supabase
                 .from('companies')
-                .select('name')
+                .select('name, address')
                 .eq('id', companyId)
                 .single();
 
@@ -223,6 +223,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
                 status,
                 storeName: companyData?.name || 'Estabelecimento',
                 deliveryType: order.deliveryAddress ? 'entrega' : 'retirada',
+                storeAddress: companyData?.address || undefined,
                 googleReviewUrl,
               });
 
