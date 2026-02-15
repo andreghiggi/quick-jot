@@ -545,31 +545,6 @@ export default function Menu() {
                 </h1>
               </div>
               
-              {/* Center: Category Pills */}
-              <ScrollArea className="flex-1 mx-2">
-                <div className="flex gap-1.5">
-                  <Button
-                    variant={!selectedCategory ? 'default' : 'outline'}
-                    size="sm"
-                    className="rounded-full whitespace-nowrap h-7 px-3 text-xs"
-                    onClick={() => setSelectedCategory(null)}
-                  >
-                    Todos
-                  </Button>
-                  {allOrderedCategories.map((category) => (
-                    <Button
-                      key={category}
-                      variant={selectedCategory === category ? 'default' : 'outline'}
-                      size="sm"
-                      className="rounded-full whitespace-nowrap h-7 px-3 text-xs"
-                      onClick={() => setSelectedCategory(category)}
-                    >
-                      {category}
-                    </Button>
-                  ))}
-                </div>
-              </ScrollArea>
-              
               {/* Right side: Cart button */}
               <Button
                 variant="outline"
@@ -584,6 +559,29 @@ export default function Menu() {
                   </Badge>
                 )}
               </Button>
+            </div>
+            
+            {/* Category Pills - horizontally scrollable */}
+            <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <Button
+                variant={!selectedCategory ? 'default' : 'outline'}
+                size="sm"
+                className="rounded-full whitespace-nowrap h-7 px-3 text-xs flex-shrink-0"
+                onClick={() => setSelectedCategory(null)}
+              >
+                Todos
+              </Button>
+              {allOrderedCategories.map((category) => (
+                <Button
+                  key={category}
+                  variant={selectedCategory === category ? 'default' : 'outline'}
+                  size="sm"
+                  className="rounded-full whitespace-nowrap h-7 px-3 text-xs flex-shrink-0"
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category}
+                </Button>
+              ))}
             </div>
             
             {/* Search Bar */}
