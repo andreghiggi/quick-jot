@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Greeting patterns in Portuguese
 const GREETING_PATTERNS = [
-  /^(oi|olá|ola|oie|oii|oiii|hey|eae|eai|e ai|fala|salve|bom dia|boa tarde|boa noite|hello|hi|opa)/i,
+  /^(oi|olá|ola|oie|oii|oiii|hey|eae|eai|e ai|fala|salve|bom dia|boa tarde|boa noite|hello|hi|opa|ou|ow|ei|hei|alô|alo|tudo bem|td bem|blz|beleza|como vai|boa|bão|buenas)/i,
   /^(quero|queria|gostaria).*(pedir|cardapio|cardápio|menu)/i,
   /^(tem|qual).*(cardapio|cardápio|menu)/i,
 ];
@@ -155,8 +155,8 @@ serve(async (req) => {
       });
     }
 
-    const baseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
-    const res = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+    const evolutionBaseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
+    const res = await fetch(`${evolutionBaseUrl}/message/sendText/${instanceName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
