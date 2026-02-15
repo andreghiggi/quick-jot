@@ -128,19 +128,18 @@ serve(async (req) => {
       });
     }
 
-    // Build menu URL - check store_settings for custom domain, then fallback to SITE_URL env
-    let baseUrl = Deno.env.get('SITE_URL') || '';
+    // Check store_settings for company-specific site_url first
+    const { data: siteUrlSetting } = await supabase
+      .from('store_settings')
+      .select('value')
+      .eq('company_id', instanceData.company_id)
+      .eq('key', 'site_url')
+      .maybeSingle();
     
-    // If no SITE_URL configured, try to get from store_settings
-    if (!baseUrl) {
-      const { data: siteUrlSetting } = await supabase
-        .from('store_settings')
-        .select('value')
-        .eq('company_id', instanceData.company_id)
-        .eq('key', 'site_url')
-        .maybeSingle();
-      baseUrl = siteUrlSetting?.value || `https://id-preview--aa48df58-5129-4fc5-b12f-f3e13098e2c6.lovable.app`;
-    }
+    // Priority: company site_url > SITE_URL env > production URL
+    const baseUrl = siteUrlSetting?.value 
+      || Deno.env.get('SITE_URL') 
+      || 'https://appcomandatech.agilizeerp.com.br';
     
     const menuUrl = `${baseUrl.replace(/\/$/, '')}/cardapio/${company.slug}`;
 
