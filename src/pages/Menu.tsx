@@ -98,6 +98,7 @@ export default function Menu() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [customerLoaded, setCustomerLoaded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const brazilianStates = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -246,6 +247,9 @@ export default function Menu() {
   const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   async function sendToWhatsApp() {
+    // Prevent double submission
+    if (isSubmitting) return;
+    
     // Check if store is open
     if (!isOpen) {
       toast.error('Estabelecimento fechado no momento');
@@ -298,6 +302,7 @@ export default function Menu() {
     }
 
     // Save order to database
+    setIsSubmitting(true);
     try {
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
@@ -359,6 +364,9 @@ export default function Menu() {
       console.log('Order saved to database:', newOrder.id);
     } catch (error) {
       console.error('Error saving order to database:', error);
+      setIsSubmitting(false);
+      toast.error('Erro ao salvar pedido. Tente novamente.');
+      return;
     }
 
     // Build WhatsApp message matching thermal print format
@@ -1007,10 +1015,10 @@ export default function Menu() {
                   onClick={sendToWhatsApp} 
                   className="w-full" 
                   size="lg"
-                  disabled={!isOpen}
+                  disabled={!isOpen || isSubmitting}
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  {isOpen ? 'Enviar pedido pelo WhatsApp' : 'Estabelecimento fechado'}
+                  {isSubmitting ? 'Enviando...' : isOpen ? 'Enviar pedido pelo WhatsApp' : 'Estabelecimento fechado'}
                 </Button>
               </>
             )}
