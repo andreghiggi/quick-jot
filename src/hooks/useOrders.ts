@@ -217,12 +217,15 @@ export function useOrders(options: UseOrdersOptions = {}) {
                 googleReviewUrl = reviewSetting.value;
               }
 
+              // Determine delivery type from order notes (contains "Retirada" or "Entrega")
+              const isPickup = order.notes?.includes('Retirada') || !order.deliveryAddress;
+              
               const message = generateWhatsAppMessage({
                 customerName: order.customerName,
                 orderNumber: order.dailyNumber,
                 status,
                 storeName: companyData?.name || 'Estabelecimento',
-                deliveryType: order.deliveryAddress ? 'entrega' : 'retirada',
+                deliveryType: isPickup ? 'retirada' : 'entrega',
                 storeAddress: companyData?.address || undefined,
                 googleReviewUrl,
               });

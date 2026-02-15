@@ -280,10 +280,13 @@ export default function Menu() {
       return;
     }
 
-    // Build full address
-    let fullAddress = deliveryAddress;
-    if (deliveryCity) fullAddress += ` - ${deliveryCity}`;
-    if (deliveryState) fullAddress += `/${deliveryState}`;
+    // Build full address - only for delivery, not pickup
+    let fullAddress = '';
+    if (deliveryType !== 'pickup') {
+      fullAddress = deliveryAddress;
+      if (deliveryCity) fullAddress += ` - ${deliveryCity}`;
+      if (deliveryState) fullAddress += `/${deliveryState}`;
+    }
 
     // Get delivery type label
     let deliveryTypeLabel = 'Retirada';
