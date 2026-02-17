@@ -539,6 +539,7 @@ export type Database = {
           delivery_address: string | null
           id: string
           notes: string | null
+          order_code: string
           printed: boolean | null
           printed_at: string | null
           status: Database["public"]["Enums"]["order_status"]
@@ -554,6 +555,7 @@ export type Database = {
           delivery_address?: string | null
           id?: string
           notes?: string | null
+          order_code?: string
           printed?: boolean | null
           printed_at?: string | null
           status?: Database["public"]["Enums"]["order_status"]
@@ -569,6 +571,7 @@ export type Database = {
           delivery_address?: string | null
           id?: string
           notes?: string | null
+          order_code?: string
           printed?: boolean | null
           printed_at?: string | null
           status?: Database["public"]["Enums"]["order_status"]

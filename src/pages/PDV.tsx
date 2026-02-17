@@ -8,6 +8,7 @@ import { useTabs, Tab } from '@/hooks/useTabs';
 import { useTables } from '@/hooks/useTables';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useTaxRules } from '@/hooks/useTaxRules';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { emitirNFCe, NFCeItem } from '@/services/nfceService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +60,7 @@ export default function PDV() {
   const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
+  const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId: company?.id });
   const { tables } = useTables({ companyId: company?.id });
   const { 
@@ -390,12 +392,12 @@ export default function PDV() {
         <meta charset="UTF-8">
         <title>Fechamento de Caixa</title>
         <style>
-          @page { margin: 0; size: 80mm auto; }
+          @page { margin: 0; size: ${storeSettings.printerPaperSize} auto; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
             font-family: 'Courier New', monospace; 
             font-size: 12px;
-            width: 80mm;
+            width: ${storeSettings.printerPaperSize};
             padding: 3mm;
           }
           .header { text-align: center; margin-bottom: 2mm; }
@@ -477,12 +479,12 @@ export default function PDV() {
         <meta charset="UTF-8">
         <title>Cupom de Venda</title>
         <style>
-          @page { margin: 0; size: 80mm auto; }
+          @page { margin: 0; size: ${storeSettings.printerPaperSize} auto; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
             font-family: 'Courier New', monospace; 
             font-size: 12px;
-            width: 80mm;
+            width: ${storeSettings.printerPaperSize};
             padding: 3mm;
           }
           .header { text-align: center; margin-bottom: 2mm; }

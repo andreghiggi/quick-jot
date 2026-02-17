@@ -165,6 +165,9 @@ COMPANY_SLUG = "${companySlug}"
 CHECK_INTERVAL = 5  # segundos
 STORE_NAME = "${storeName}"
 
+# Largura do papel em caracteres (32 para 58mm, 48 para 80mm)
+PAPER_WIDTH = ${storeSettings.printerPaperSize === '80mm' ? '48' : '32'}
+
 # Nome da impressora (deixe vazio para usar a padrao)
 # Exemplo: "EPSON TM-T20" ou "\\\\\\\\SERVIDOR\\\\IMPRESSORA"
 PRINTER_NAME = ""
@@ -211,7 +214,7 @@ def buscar_pedidos():
     try:
         # Busca apenas pedidos pendentes que ainda nao foram impressos
         r = requests.get(
-            f"{SUPABASE_URL}/rest/v1/orders?status=eq.pending&company_id=eq.{COMPANY_ID}&printed=eq.false&order=created_at.desc",
+            f"{SUPABASE_URL}/rest/v1/orders?status=eq.pending&company_id=eq.{COMPANY_ID}&printed=eq.false&order=created_at.desc&select=*,order_code",
             headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
         )
         return r.json() if r.ok else []
@@ -248,11 +251,14 @@ def buscar_itens(order_id):
         return []
 
 def formatar_recibo(pedido, itens):
+    # Determina largura baseada no tamanho da bobina configurado
+    largura = PAPER_WIDTH
+    
     linhas = []
-    linhas.append("=" * 48)
-    linhas.append(STORE_NAME.center(48))
-    linhas.append("=" * 48)
-    linhas.append(f"*** PEDIDO #{pedido.get('daily_number', '?')} ***".center(48))
+    linhas.append("=" * largura)
+    linhas.append(STORE_NAME.center(largura))
+    linhas.append("=" * largura)
+    linhas.append(f"*** PEDIDO #{pedido.get('order_code', pedido.get('daily_number', '?'))} ***".center(largura))
     linhas.append("")
     
     # Data
@@ -263,7 +269,7 @@ def formatar_recibo(pedido, itens):
         linhas.append(f"Data: {pedido.get('created_at', '')[:16]}")
     
     linhas.append("")
-    linhas.append("-" * 48)
+    linhas.append("-" * largura)
     linhas.append(f"Cliente: {pedido.get('customer_name', '')}")
     
     if pedido.get('customer_phone'):
@@ -272,7 +278,7 @@ def formatar_recibo(pedido, itens):
         linhas.append(f"Endereco: {pedido['delivery_address']}")
     
     linhas.append("")
-    linhas.append("-" * 48)
+    linhas.append("-" * largura)
     linhas.append("ITENS:")
     
     for item in itens:
@@ -288,12 +294,12 @@ def formatar_recibo(pedido, itens):
         linhas.append(f"OBS: {pedido['notes']}")
     
     linhas.append("")
-    linhas.append("=" * 48)
+    linhas.append("=" * largura)
     total = pedido.get('total', 0)
-    linhas.append(f"TOTAL: R$ {total:.2f}".replace('.', ',').center(48))
-    linhas.append("=" * 48)
+    linhas.append(f"TOTAL: R$ {total:.2f}".replace('.', ',').center(largura))
+    linhas.append("=" * largura)
     linhas.append("")
-    linhas.append("Obrigado pela preferencia!".center(48))
+    linhas.append("Obrigado pela preferencia!".center(largura))
     
     return "\\n".join(linhas)
 
@@ -430,7 +436,7 @@ if __name__ == "__main__":
                 if order_id in pedidos_impressos:
                     continue
                 
-                print(f"[NOVO] Pedido #{pedido.get('daily_number')} - {pedido.get('customer_name')}")
+                print(f"[NOVO] Pedido #{pedido.get('order_code', pedido.get('daily_number'))} - {pedido.get('customer_name')}")
                 
                 itens = buscar_itens(order_id)
                 recibo = formatar_recibo(pedido, itens)
@@ -908,6 +914,51 @@ pause
 
         {/* Tab Impressão */}
         <TabsContent value="impressao" className="space-y-6">
+          {/* Paper Size Setting */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Printer className="w-5 h-5" />
+                Tamanho da Bobina
+              </CardTitle>
+              <CardDescription>
+                Selecione o tamanho da bobina da sua impressora térmica
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={storeSettings.printerPaperSize}
+                onValueChange={async (value: '58mm' | '80mm') => {
+                  await updateSetting('printer_paper_size', value);
+                  toast({
+                    title: 'Configuração salva',
+                    description: `Tamanho da bobina alterado para ${value}`,
+                  });
+                }}
+                className="space-y-3"
+              >
+                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                  <RadioGroupItem value="58mm" id="paper-58" />
+                  <div className="flex-1">
+                    <Label htmlFor="paper-58" className="font-medium cursor-pointer">58mm</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Bobina estreita (padrão) — ideal para impressoras compactas
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                  <RadioGroupItem value="80mm" id="paper-80" />
+                  <div className="flex-1">
+                    <Label htmlFor="paper-80" className="font-medium cursor-pointer">80mm</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Bobina larga — mais espaço, menos quebra de linha
+                    </p>
+                  </div>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -928,8 +979,8 @@ pause
                     <code className="bg-background px-1 py-0.5 rounded">{company?.slug || '-'}</code>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">ID:</span>{' '}
-                    <code className="bg-background px-1 py-0.5 rounded text-[10px]">{company?.id?.slice(0, 8)}...</code>
+                    <span className="text-muted-foreground">Bobina:</span>{' '}
+                    <code className="bg-background px-1 py-0.5 rounded">{storeSettings.printerPaperSize}</code>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">

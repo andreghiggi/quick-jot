@@ -12,9 +12,18 @@ interface PrintTicketData {
   customerName?: string | null;
   items: PrintItem[];
   createdAt: Date;
+  paperSize?: '58mm' | '80mm';
+}
+
+function getPaperWidth(size?: '58mm' | '80mm'): string {
+  return size === '80mm' ? '80mm' : '58mm';
 }
 
 export function generateProductionTicketHTML(data: PrintTicketData): string {
+  const paperWidth = getPaperWidth(data.paperSize);
+  const fontSize = data.paperSize === '80mm' ? '11pt' : '10pt';
+  const qtyFontSize = data.paperSize === '80mm' ? '13pt' : '12pt';
+  const nameFontSize = data.paperSize === '80mm' ? '12pt' : '11pt';
   const now = data.createdAt;
   const dateStr = now.toLocaleDateString('pt-BR');
   const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -43,10 +52,10 @@ export function generateProductionTicketHTML(data: PrintTicketData): string {
         }
         body {
           font-family: 'Courier New', 'Lucida Console', monospace;
-          width: 58mm;
-          max-width: 58mm;
+          width: ${paperWidth};
+          max-width: ${paperWidth};
           padding: 2mm;
-          font-size: 10pt;
+          font-size: ${fontSize};
           font-weight: bold;
           line-height: 1.3;
         }
@@ -95,12 +104,12 @@ export function generateProductionTicketHTML(data: PrintTicketData): string {
           gap: 1mm;
         }
         .qty {
-          font-size: 12pt;
+          font-size: ${qtyFontSize};
           font-weight: bold;
           min-width: 8mm;
         }
         .name {
-          font-size: 11pt;
+          font-size: ${nameFontSize};
           font-weight: bold;
           flex: 1;
           word-break: break-word;
@@ -121,11 +130,11 @@ export function generateProductionTicketHTML(data: PrintTicketData): string {
         }
         @media print {
           body {
-            width: 58mm;
+            width: ${paperWidth};
           }
           @page {
             margin: 0;
-            size: 58mm auto;
+            size: ${paperWidth} auto;
           }
         }
       </style>

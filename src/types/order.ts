@@ -12,6 +12,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   dailyNumber: number;
+  orderCode: string;
   customerName: string;
   customerPhone?: string;
   items: OrderItem[];
