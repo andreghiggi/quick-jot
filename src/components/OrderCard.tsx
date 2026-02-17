@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 interface OrderCardProps {
   order: Order;
+  paperSize?: '58mm' | '80mm';
 }
 
 const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textColor: string; borderColor: string; next?: OrderStatus }> = {
@@ -47,7 +48,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
   delivered: '',
 };
 
-export function OrderCard({ order }: OrderCardProps) {
+export function OrderCard({ order, paperSize = '58mm' }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder } = useOrderContext();
   const config = statusConfig[order.status];
   // Converter para fuso horário de São Paulo
@@ -94,16 +95,16 @@ export function OrderCard({ order }: OrderCardProps) {
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Pedido #${order.dailyNumber}</title>
+        <title>Pedido #${order.orderCode || order.dailyNumber}</title>
         <style>
-          @page { margin: 0; size: 58mm auto; }
+          @page { margin: 0; size: ${paperSize} auto; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
             font-family: 'Courier New', 'Lucida Console', monospace; 
-            font-size: 10pt;
+            font-size: ${paperSize === '80mm' ? '11pt' : '10pt'};
             font-weight: bold;
-            width: 58mm;
-            max-width: 58mm;
+            width: ${paperSize};
+            max-width: ${paperSize};
             padding: 2mm;
             line-height: 1.3;
             -webkit-print-color-adjust: exact;
@@ -139,7 +140,7 @@ export function OrderCard({ order }: OrderCardProps) {
       <body>
         <div class="header">
           <div class="store-name">COMANDA TECH</div>
-          <div class="order-num">PEDIDO #${order.dailyNumber}</div>
+          <div class="order-num">PEDIDO #${order.orderCode || order.dailyNumber}</div>
           <div class="date">${formattedDate}</div>
         </div>
         <hr class="divider">
@@ -208,7 +209,7 @@ export function OrderCard({ order }: OrderCardProps) {
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg font-bold text-primary">#{order.dailyNumber}</span>
+            <span className="text-lg font-bold text-primary">#{order.orderCode || order.dailyNumber}</span>
             <Badge className={cn("text-xs border", config.bgColor, config.textColor, config.borderColor)}>
               {config.label}
             </Badge>

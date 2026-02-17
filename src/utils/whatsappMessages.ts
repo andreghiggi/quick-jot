@@ -3,6 +3,7 @@ import { OrderStatus } from '@/types/order';
 interface MessageParams {
   customerName: string;
   orderNumber: number;
+  orderCode?: string;
   status: OrderStatus;
   storeName: string;
   estimatedTime?: string;
@@ -19,8 +20,8 @@ const STATUS_MAP: Record<OrderStatus, string> = {
 };
 
 export function generateWhatsAppMessage(params: MessageParams): string | null {
-  const { customerName, orderNumber, status, storeName, estimatedTime, deliveryType, storeAddress } = params;
-  const num = `#${String(orderNumber).padStart(3, '0')}`;
+  const { customerName, orderNumber, orderCode, status, storeName, estimatedTime, deliveryType, storeAddress } = params;
+  const num = orderCode ? `#${orderCode}` : `#${String(orderNumber).padStart(3, '0')}`;
   const name = customerName.split(' ')[0]; // First name only
 
   switch (status) {

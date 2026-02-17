@@ -4,6 +4,8 @@ import { useOrderContext } from '@/contexts/OrderContext';
 import { OrderStatus } from '@/types/order';
 import { cn } from '@/lib/utils';
 import { ClipboardList, ChefHat, PackageCheck, Truck } from 'lucide-react';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 const tabs: { value: OrderStatus | 'all'; label: string; icon: React.ElementType }[] = [
   { value: 'all', label: 'Todos', icon: ClipboardList },
@@ -15,6 +17,8 @@ const tabs: { value: OrderStatus | 'all'; label: string; icon: React.ElementType
 
 export function OrderTabs() {
   const { orders, getOrdersByStatus } = useOrderContext();
+  const { company } = useAuthContext();
+  const { settings } = useStoreSettings({ companyId: company?.id });
 
   function getOrders(filter: OrderStatus | 'all') {
     if (filter === 'all') return orders;
@@ -62,7 +66,7 @@ export function OrderTabs() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {getOrders(tab.value).length > 0 ? (
               getOrders(tab.value).map((order) => (
-                <OrderCard key={order.id} order={order} />
+                <OrderCard key={order.id} order={order} paperSize={settings.printerPaperSize} />
               ))
             ) : (
               <div className="col-span-full text-center py-12">

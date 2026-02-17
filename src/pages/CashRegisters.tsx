@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCashRegister } from '@/hooks/useCashRegister';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -37,6 +38,7 @@ function formatCurrency(value: number) {
 
 export default function CashRegisters() {
   const { user, company } = useAuthContext();
+  const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   const { 
     currentRegister, 
     registers,
@@ -122,12 +124,12 @@ export default function CashRegisters() {
         <meta charset="UTF-8">
         <title>Fechamento de Caixa</title>
         <style>
-          @page { margin: 0; size: 80mm auto; }
+          @page { margin: 0; size: ${storeSettings.printerPaperSize} auto; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
             font-family: 'Courier New', monospace; 
             font-size: 12px;
-            width: 80mm;
+            width: ${storeSettings.printerPaperSize};
             padding: 3mm;
           }
           .header { text-align: center; margin-bottom: 2mm; }

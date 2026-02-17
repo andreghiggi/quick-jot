@@ -9,6 +9,7 @@ interface StoreSettings {
   deliveryFeeCity: number;
   deliveryFeeInterior: number;
   deliveryMode: 'simple' | 'neighborhood';
+  printerPaperSize: '58mm' | '80mm';
   showCardPedidosHoje: boolean;
   showCardAguardando: boolean;
   showCardFaturamento: boolean;
@@ -28,6 +29,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     deliveryFeeCity: 0,
     deliveryFeeInterior: 0,
     deliveryMode: 'simple',
+    printerPaperSize: '58mm',
     showCardPedidosHoje: true,
     showCardAguardando: true,
     showCardFaturamento: true,
@@ -61,6 +63,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         deliveryFeeCity: parseFloat(settingsMap['delivery_fee_city']) || 0,
         deliveryFeeInterior: parseFloat(settingsMap['delivery_fee_interior']) || 0,
         deliveryMode: (settingsMap['delivery_mode'] as 'simple' | 'neighborhood') || 'simple',
+        printerPaperSize: (settingsMap['printer_paper_size'] as '58mm' | '80mm') || '58mm',
         showCardPedidosHoje: settingsMap['show_card_pedidos_hoje'] !== 'false',
         showCardAguardando: settingsMap['show_card_aguardando'] !== 'false',
         showCardFaturamento: settingsMap['show_card_faturamento'] !== 'false',

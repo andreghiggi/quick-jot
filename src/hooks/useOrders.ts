@@ -49,6 +49,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
       const mappedOrders: Order[] = (ordersData || []).map((order) => ({
         id: order.id,
         dailyNumber: (order as any).daily_number || 0,
+        orderCode: (order as any).order_code || '',
         customerName: order.customer_name,
         customerPhone: order.customer_phone || undefined,
         deliveryAddress: order.delivery_address || undefined,
@@ -90,17 +91,17 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
     // Subscribe to realtime updates
     const channel = supabase
-      .channel('orders-realtime')
+      .channel(`orders-realtime-${companyId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
+        { event: '*', schema: 'public', table: 'orders', filter: `company_id=eq.${companyId}` },
         () => {
           fetchOrders();
         }
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'order_items' },
+        { event: '*', schema: 'public', table: 'order_items', filter: `company_id=eq.${companyId}` },
         () => {
           fetchOrders();
         }
@@ -113,7 +114,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
     };
   }, [companyId]);
 
-  async function addOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'dailyNumber'>): Promise<boolean> {
+  async function addOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'dailyNumber' | 'orderCode'>): Promise<boolean> {
     try {
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
@@ -223,6 +224,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
               const message = generateWhatsAppMessage({
                 customerName: order.customerName,
                 orderNumber: order.dailyNumber,
+                orderCode: order.orderCode,
                 status,
                 storeName: companyData?.name || 'Estabelecimento',
                 deliveryType: isPickup ? 'retirada' : 'entrega',
