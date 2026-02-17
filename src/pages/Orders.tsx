@@ -1,23 +1,49 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { OrderProvider } from '@/contexts/OrderContext';
+import { OrderProvider, useOrderContext } from '@/contexts/OrderContext';
 import { OrderTabs } from '@/components/OrderTabs';
 import { StatsCard } from '@/components/StatsCard';
 import { NewOrderDialog } from '@/components/NewOrderDialog';
-import { useOrders } from '@/hooks/useOrders';
-import { ShoppingBag, Clock, CheckCircle, XCircle, Plus } from 'lucide-react';
+import { OrderDateFilter } from '@/components/OrderDateFilter';
+import { ShoppingBag, Clock, CheckCircle, Truck, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Order } from '@/types/order';
 
 function OrdersContent() {
-  const { orders } = useOrders();
+  const { orders, getOrdersByStatus } = useOrderContext();
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+
+  const filteredOrders = useMemo(() => {
+    if (!startDate && !endDate) return orders;
+    return orders.filter((order) => {
+      const orderDate = new Date(order.createdAt);
+      orderDate.setHours(0, 0, 0, 0);
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        if (orderDate < start) return false;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        if (orderDate > end) return false;
+      }
+      return true;
+    });
+  }, [orders, startDate, endDate]);
 
   const stats = {
-    pending: orders.filter(o => o.status === 'pending').length,
-    preparing: orders.filter(o => o.status === 'preparing').length,
-    ready: orders.filter(o => o.status === 'ready').length,
-    delivered: orders.filter(o => o.status === 'delivered').length,
+    pending: filteredOrders.filter(o => o.status === 'pending').length,
+    preparing: filteredOrders.filter(o => o.status === 'preparing').length,
+    ready: filteredOrders.filter(o => o.status === 'ready').length,
+    delivered: filteredOrders.filter(o => o.status === 'delivered').length,
   };
+
+  const revenue = filteredOrders
+    .filter(o => o.status === 'delivered')
+    .reduce((sum, o) => sum + o.total, 0);
 
   return (
     <AppLayout 
@@ -31,6 +57,15 @@ function OrdersContent() {
       }
     >
       <div className="space-y-6">
+        {/* Date Filter */}
+        <OrderDateFilter
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          onClear={() => { setStartDate(undefined); setEndDate(undefined); }}
+        />
+
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatsCard
@@ -52,15 +87,15 @@ function OrdersContent() {
             color="success"
           />
           <StatsCard
-            title="Entregues"
-            value={stats.delivered}
-            icon={<XCircle className="w-5 h-5" />}
+            title="Faturamento"
+            value={`R$ ${revenue.toFixed(2)}`}
+            icon={<Truck className="w-5 h-5" />}
             color="muted"
           />
         </div>
 
         {/* Orders */}
-        <OrderTabs />
+        <OrderTabs filteredOrders={filteredOrders} />
       </div>
 
       <NewOrderDialog open={isNewOrderOpen} onOpenChange={setIsNewOrderOpen} />

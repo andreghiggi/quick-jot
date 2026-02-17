@@ -1,7 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrderCard } from './OrderCard';
 import { useOrderContext } from '@/contexts/OrderContext';
-import { OrderStatus } from '@/types/order';
+import { Order, OrderStatus } from '@/types/order';
 import { cn } from '@/lib/utils';
 import { ClipboardList, ChefHat, PackageCheck, Truck } from 'lucide-react';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
@@ -15,14 +15,20 @@ const tabs: { value: OrderStatus | 'all'; label: string; icon: React.ElementType
   { value: 'delivered', label: 'Entregues', icon: Truck },
 ];
 
-export function OrderTabs() {
-  const { orders, getOrdersByStatus } = useOrderContext();
+interface OrderTabsProps {
+  filteredOrders?: Order[];
+}
+
+export function OrderTabs({ filteredOrders }: OrderTabsProps) {
+  const { orders } = useOrderContext();
   const { company } = useAuthContext();
   const { settings } = useStoreSettings({ companyId: company?.id });
 
+  const displayOrders = filteredOrders ?? orders;
+
   function getOrders(filter: OrderStatus | 'all') {
-    if (filter === 'all') return orders;
-    return getOrdersByStatus(filter);
+    if (filter === 'all') return displayOrders;
+    return displayOrders.filter((order) => order.status === filter);
   }
 
   function getCount(filter: OrderStatus | 'all') {
