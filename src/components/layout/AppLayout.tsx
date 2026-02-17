@@ -1,13 +1,7 @@
-import { ReactNode } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Separator } from '@/components/ui/separator';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -17,9 +11,12 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, title, subtitle, actions }: AppLayoutProps) {
+  // Memoize sidebar to prevent re-renders on navigation
+  const sidebar = useMemo(() => <AppSidebar />, []);
+
   return (
     <SidebarProvider>
-      <AppSidebar />
+      {sidebar}
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border px-4 bg-background/80 backdrop-blur-lg sticky top-0 z-40">
           <SidebarTrigger className="-ml-1" />

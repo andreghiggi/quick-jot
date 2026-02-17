@@ -27,6 +27,7 @@ import WaitersConfig from "./pages/WaitersConfig";
 import POS from "./pages/POS";
 import SalesReport from "./pages/SalesReport";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
+import Changelog from "./pages/Changelog";
 import Fiscal from "./pages/Fiscal";
 import NFCeMonitor from "./pages/NFCeMonitor";
 
@@ -144,6 +145,12 @@ function AppRoutes() {
       <Route path="/nfce" element={
         <ProtectedRoute requireCompany>
           <NFCeMonitor />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/novidades" element={
+        <ProtectedRoute requireCompany>
+          <Changelog />
         </ProtectedRoute>
       } />
       

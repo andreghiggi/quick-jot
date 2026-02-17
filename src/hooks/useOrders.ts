@@ -208,15 +208,18 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
               // Get google review URL from store settings
               let googleReviewUrl: string | undefined;
-              const { data: reviewSetting } = await supabase
+              let estimatedWaitTime: string | undefined;
+
+              const { data: settings } = await supabase
                 .from('store_settings')
-                .select('value')
+                .select('key, value')
                 .eq('company_id', companyId)
-                .eq('key', 'google_review_url')
-                .maybeSingle();
-              if (reviewSetting?.value) {
-                googleReviewUrl = reviewSetting.value;
-              }
+                .in('key', ['google_review_url', 'estimated_wait_time']);
+
+              settings?.forEach(s => {
+                if (s.key === 'google_review_url' && s.value) googleReviewUrl = s.value;
+                if (s.key === 'estimated_wait_time' && s.value) estimatedWaitTime = s.value;
+              });
 
               // Determine delivery type from order notes (contains "Retirada" or "Entrega")
               const isPickup = order.notes?.includes('Retirada') || !order.deliveryAddress;
@@ -230,6 +233,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
                 deliveryType: isPickup ? 'retirada' : 'entrega',
                 storeAddress: companyData?.address || undefined,
                 googleReviewUrl,
+                estimatedTime: status === 'preparing' ? estimatedWaitTime : undefined,
               });
 
               if (message) {

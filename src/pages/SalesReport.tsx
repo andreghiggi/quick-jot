@@ -50,14 +50,14 @@ export default function SalesReport() {
 
   const periodDates = useMemo(() => getPeriodDates(period), [period]);
 
-  // Fetch sales data with items in a single optimized query
+  // Fetch sales data: PDV sales + delivered orders
   const { data: salesData, isLoading: loadingSales } = useQuery({
     queryKey: ['sales-report', company?.id, periodDates.start.toISOString(), periodDates.end.toISOString()],
     queryFn: async () => {
       if (!company?.id) return [];
       
-      // Fetch sales with their items using a join-like approach
-      const { data: sales, error: salesError } = await supabase
+      // 1. Fetch PDV sales
+      const { data: pdvSales, error: pdvError } = await supabase
         .from('pdv_sales')
         .select('id, created_at, final_total')
         .eq('company_id', company.id)
@@ -65,44 +65,83 @@ export default function SalesReport() {
         .lte('created_at', periodDates.end.toISOString())
         .order('created_at', { ascending: false });
 
-      if (salesError) {
-        console.error('Error fetching sales:', salesError);
-        throw salesError;
-      }
-      
-      if (!sales || sales.length === 0) {
-        return [];
+      if (pdvError) {
+        console.error('Error fetching pdv sales:', pdvError);
       }
 
-      // Fetch all items for these sales in a single query
-      const saleIds = sales.map(s => s.id);
-      const { data: allItems, error: itemsError } = await supabase
-        .from('pdv_sale_items')
-        .select('sale_id, product_name, quantity, total_price')
-        .in('sale_id', saleIds);
+      // 2. Fetch delivered orders
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('id, created_at, total')
+        .eq('company_id', company.id)
+        .eq('status', 'delivered')
+        .gte('created_at', periodDates.start.toISOString())
+        .lte('created_at', periodDates.end.toISOString())
+        .order('created_at', { ascending: false });
 
-      if (itemsError) {
-        console.error('Error fetching items:', itemsError);
+      if (ordersError) {
+        console.error('Error fetching orders:', ordersError);
       }
 
-      // Group items by sale_id
-      const itemsBySaleId = (allItems || []).reduce((acc, item) => {
-        if (!acc[item.sale_id]) {
-          acc[item.sale_id] = [];
-        }
-        acc[item.sale_id].push({
+      const allSaleEntries: { id: string; created_at: string; final_total: number; source: 'pdv' | 'order' }[] = [];
+
+      (pdvSales || []).forEach(s => allSaleEntries.push({ ...s, source: 'pdv' }));
+      (orders || []).forEach(o => allSaleEntries.push({ id: o.id, created_at: o.created_at, final_total: o.total, source: 'order' }));
+
+      if (allSaleEntries.length === 0) return [];
+
+      // Fetch PDV sale items
+      const pdvIds = allSaleEntries.filter(s => s.source === 'pdv').map(s => s.id);
+      const orderIds = allSaleEntries.filter(s => s.source === 'order').map(s => s.id);
+
+      let pdvItems: any[] = [];
+      let orderItems: any[] = [];
+
+      if (pdvIds.length > 0) {
+        const { data } = await supabase
+          .from('pdv_sale_items')
+          .select('sale_id, product_name, quantity, total_price')
+          .in('sale_id', pdvIds);
+        pdvItems = data || [];
+      }
+
+      if (orderIds.length > 0) {
+        const { data } = await supabase
+          .from('order_items')
+          .select('order_id, name, quantity, price')
+          .in('order_id', orderIds);
+        orderItems = data || [];
+      }
+
+      // Build items map
+      const itemsBySaleId: Record<string, SaleItem[]> = {};
+
+      pdvItems.forEach(item => {
+        if (!itemsBySaleId[item.sale_id]) itemsBySaleId[item.sale_id] = [];
+        itemsBySaleId[item.sale_id].push({
           product_name: item.product_name,
           quantity: item.quantity,
-          total_price: item.total_price
+          total_price: item.total_price,
         });
-        return acc;
-      }, {} as Record<string, SaleItem[]>);
+      });
 
-      // Combine sales with their items
-      const salesWithItems: SaleData[] = sales.map(sale => ({
-        ...sale,
-        items: itemsBySaleId[sale.id] || []
-      }));
+      orderItems.forEach(item => {
+        if (!itemsBySaleId[item.order_id]) itemsBySaleId[item.order_id] = [];
+        itemsBySaleId[item.order_id].push({
+          product_name: item.name,
+          quantity: item.quantity,
+          total_price: item.price * item.quantity,
+        });
+      });
+
+      const salesWithItems: SaleData[] = allSaleEntries
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .map(sale => ({
+          id: sale.id,
+          created_at: sale.created_at,
+          final_total: sale.final_total,
+          items: itemsBySaleId[sale.id] || [],
+        }));
       
       return salesWithItems;
     },
