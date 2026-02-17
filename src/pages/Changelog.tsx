@@ -14,6 +14,24 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/02/2026',
+    version: '1.7.1',
+    type: 'improvement',
+    description: 'Ao enviar pedido pelo WhatsApp, cliente agora recebe um toast de confirmação e retorna automaticamente ao cardápio, eliminando risco de envio duplicado.',
+  },
+  {
+    date: '17/02/2026',
+    version: '1.7.0',
+    type: 'feature',
+    description: 'Filtro por intervalo de datas nos pedidos e dashboard, com faturamento baseado apenas em pedidos finalizados.',
+  },
+  {
+    date: '17/02/2026',
+    version: '1.7.0',
+    type: 'fix',
+    description: 'Cards de estatísticas da dashboard e pedidos agora atualizam em tempo real conforme pedidos avançam de etapa.',
+  },
+  {
+    date: '17/02/2026',
     version: '1.7.0',
     type: 'feature',
     description: 'Tempo estimado de preparo configurável nas configurações do WhatsApp, enviado automaticamente ao aceitar pedido.',
