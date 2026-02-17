@@ -32,10 +32,11 @@ export function generateWhatsAppMessage(params: MessageParams): string | null {
       return `${name}, seu pedido ${num} foi confirmado pelo ${storeName}! Em breve começaremos a preparar. 😊`;
 
     case 'preparing':
+      const timeInfo = estimatedTime ? ` Tempo estimado: ${estimatedTime}.` : '';
       if (deliveryType === 'retirada') {
-        return `${name}, seu pedido ${num} já está sendo preparado com carinho pela equipe do ${storeName}. Avisaremos quando estiver disponível para retirada!`;
+        return `${name}, seu pedido ${num} já está sendo preparado com carinho pela equipe do ${storeName}.${timeInfo} Avisaremos quando estiver disponível para retirada!`;
       }
-      return `${name}, seu pedido ${num} já está sendo preparado com carinho pela equipe do ${storeName}. Avisaremos quando estiver pronto!`;
+      return `${name}, seu pedido ${num} já está sendo preparado com carinho pela equipe do ${storeName}.${timeInfo} Avisaremos quando estiver pronto!`;
 
     case 'ready':
       if (deliveryType === 'entrega') {

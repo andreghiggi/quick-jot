@@ -18,6 +18,7 @@ import {
   MessageCircle,
   Receipt,
   FileText,
+  ClipboardList,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -406,6 +407,17 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/novidades'}
+                >
+                  <Link to="/novidades">
+                    <ClipboardList className="w-4 h-4" />
+                    <span>Novidades</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

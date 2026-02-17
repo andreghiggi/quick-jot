@@ -23,6 +23,7 @@ import {
   Trash2,
   CheckCircle2,
   Star,
+  Clock,
 } from 'lucide-react';
 
 export default function WhatsAppSettings() {
@@ -33,6 +34,8 @@ export default function WhatsAppSettings() {
   const whatsappEnabled = isModuleEnabled('whatsapp');
   const [googleReviewUrl, setGoogleReviewUrl] = useState('');
   const [savingReviewUrl, setSavingReviewUrl] = useState(false);
+  const [waitTime, setWaitTime] = useState('');
+  const [savingWaitTime, setSavingWaitTime] = useState(false);
   const {
     instance,
     loading,
@@ -60,13 +63,29 @@ export default function WhatsAppSettings() {
         .maybeSingle();
       if (data?.value) setGoogleReviewUrl(data.value);
     };
+    const loadWaitTime = async () => {
+      const { data } = await (await import('@/integrations/supabase/client')).supabase
+        .from('store_settings')
+        .select('value')
+        .eq('company_id', company.id)
+        .eq('key', 'estimated_wait_time')
+        .maybeSingle();
+      if (data?.value) setWaitTime(data.value);
+    };
     loadReviewUrl();
+    loadWaitTime();
   }, [company?.id]);
 
   async function saveGoogleReviewUrl() {
     setSavingReviewUrl(true);
     await updateSetting('google_review_url', googleReviewUrl);
     setSavingReviewUrl(false);
+  }
+
+  async function saveWaitTime() {
+    setSavingWaitTime(true);
+    await updateSetting('estimated_wait_time', waitTime);
+    setSavingWaitTime(false);
   }
 
   // Auto-poll for connection status when QR is shown
@@ -286,6 +305,37 @@ export default function WhatsAppSettings() {
           </CardContent>
         </Card>
 
+        {/* Estimated Wait Time */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="w-4 h-4 text-primary" />
+              Tempo Estimado de Preparo
+            </CardTitle>
+            <CardDescription>
+              Informe o tempo médio de preparo. Esse tempo será enviado ao cliente quando o pedido entrar em preparo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="wait-time">Tempo estimado (ex: 20-40min)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="wait-time"
+                  placeholder="20-40min"
+                  value={waitTime}
+                  onChange={(e) => setWaitTime(e.target.value)}
+                />
+                <Button onClick={saveWaitTime} disabled={savingWaitTime} size="sm">
+                  {savingWaitTime ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Esse tempo será incluído na mensagem automática de "Em Preparo" enviada ao cliente via WhatsApp.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
         {/* Message Templates */}
         <WhatsAppMessageTemplates googleReviewUrl={googleReviewUrl} />
 
