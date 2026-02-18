@@ -249,10 +249,10 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
     discount: number = 0,
     customerName?: string,
     notes?: string
-  ): Promise<boolean> {
+  ): Promise<string | null> {
     if (!currentRegister || !companyId) {
       toast.error('Nenhum caixa aberto!');
-      return false;
+      return null;
     }
 
     try {
@@ -296,11 +296,11 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
 
       await fetchSales(currentRegister.id);
       toast.success('Venda registrada!');
-      return true;
+      return saleData.id;
     } catch (error) {
       console.error('Error adding sale:', error);
       toast.error('Erro ao registrar venda');
-      return false;
+      return null;
     }
   }
 
