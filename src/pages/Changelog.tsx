@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '18/02/2026',
+    version: '1.8.0',
+    type: 'fix',
+    description: 'Correção completa do fluxo de emissão NFC-e: substituído gatilho [F] por checkbox "Emitir NFC-e" no diálogo de pagamento, vinculação do sale_id à nota fiscal, e melhoria no feedback de erros.',
+  },
+  {
     date: '17/02/2026',
     version: '1.7.1',
     type: 'improvement',

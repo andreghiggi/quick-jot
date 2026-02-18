@@ -86,6 +86,7 @@ export default function PDV() {
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
   const [isProcessingSale, setIsProcessingSale] = useState(false);
+  const [emitNFCe, setEmitNFCe] = useState(false);
 
   // Dialog states
   const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
@@ -209,6 +210,7 @@ export default function PDV() {
     setDivideByPeople(false);
     setNumberOfPeople('2');
     setPeoplePaying([]);
+    setEmitNFCe(false);
     setPaymentDialog(true);
   }
 
@@ -291,7 +293,7 @@ export default function PDV() {
         ? peoplePaying[0]?.paymentMethodId || activePaymentMethods[0]?.id
         : selectedPaymentMethod;
 
-      const success = await addSale(
+      const saleId = await addSale(
         cart,
         primaryPaymentMethod!,
         user.id,
@@ -300,14 +302,11 @@ export default function PDV() {
         saleNotes || undefined
       );
 
-      if (success) {
-        // Check if fiscal sale (notes contain [F])
-        const isFiscalSale = saleNotes.includes('[F]');
-        if (isFiscalSale && company?.id && isModuleEnabled('fiscal')) {
+      if (saleId) {
+        // Emit NFC-e if checkbox was checked
+        if (emitNFCe && company?.id && isModuleEnabled('fiscal')) {
           try {
-            // Build NFC-e items from cart using tax rules
             const nfceItems: NFCeItem[] = cart.map(item => {
-              // Find the product to get its tax_rule_id
               const product = products.find(p => p.id === item.product_id);
               const taxRule = product?.taxRuleId 
                 ? taxRules.find(tr => tr.id === product.taxRuleId) 
@@ -332,7 +331,7 @@ export default function PDV() {
 
             const externalId = `PDV-${currentRegister?.id?.substring(0, 8)}-${Date.now()}`;
             
-            await emitirNFCe(company.id, null, {
+            await emitirNFCe(company.id, saleId, {
               external_id: externalId,
               itens: nfceItems,
               valor_desconto: discount || 0,
@@ -341,9 +340,9 @@ export default function PDV() {
             });
 
             toast.success('NFC-e enviada para processamento!');
-          } catch (nfceError) {
+          } catch (nfceError: any) {
             console.error('[PDV] NFC-e emission error:', nfceError);
-            toast.error('Venda registrada, mas erro ao emitir NFC-e');
+            toast.error(`Venda registrada, mas erro ao emitir NFC-e: ${nfceError.message || 'Erro desconhecido'}`);
           }
         }
 
@@ -892,14 +891,6 @@ export default function PDV() {
                       <DollarSign className="w-5 h-5" />
                       Finalizar
                     </Button>
-                    <Button className="flex-1 gap-2" size="lg" variant="outline" onClick={() => {
-                      openPaymentDialog();
-                      // Mark as fiscal sale via notes
-                      setNotes(prev => prev ? prev + ' [F]' : '[F]');
-                    }}>
-                      <Receipt className="w-5 h-5" />
-                      Finalizar +
-                    </Button>
                   </div>
                 </div>
               )}
@@ -1108,6 +1099,21 @@ export default function PDV() {
                 onChange={(e) => setNotes(e.target.value)}
               />
             </div>
+
+            {/* NFC-e Checkbox */}
+            {isModuleEnabled('fiscal') && (
+              <div className="flex items-center space-x-2 p-3 bg-accent/50 rounded-lg border border-accent">
+                <Checkbox 
+                  id="emit-nfce" 
+                  checked={emitNFCe}
+                  onCheckedChange={(checked) => setEmitNFCe(!!checked)}
+                />
+                <label htmlFor="emit-nfce" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                  <Receipt className="w-4 h-4" />
+                  Emitir NFC-e (Nota Fiscal)
+                </label>
+              </div>
+            )}
 
             {importedTab && (
               <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg text-sm">
