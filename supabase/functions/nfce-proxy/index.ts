@@ -22,13 +22,12 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: authData, error: authError } = await supabase.auth.getClaims(token)
-    if (authError || !authData?.claims) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
     }
 
-    const userId = authData.claims.sub
+    const userId = user.id
     const NFCE_API_KEY = Deno.env.get('NFCE_API_KEY')
     const NFCE_API_URL = Deno.env.get('NFCE_API_URL')
 
@@ -51,9 +50,19 @@ Deno.serve(async (req) => {
     let apiResponse: Response
     let result: any
 
+    async function safeJson(resp: Response): Promise<any> {
+      const text = await resp.text()
+      try {
+        return JSON.parse(text)
+      } catch {
+        console.error('[nfce-proxy] API returned non-JSON:', text.substring(0, 200))
+        return { success: false, error: `API retornou resposta inválida (status ${resp.status}). Verifique a URL configurada em NFCE_API_URL.`, raw: text.substring(0, 500) }
+      }
+    }
+
     switch (action) {
       case 'emitir': {
-        // Emit NFC-e
+        console.log('[nfce-proxy] Emitir NFC-e, URL:', NFCE_API_URL)
         apiResponse = await fetch(NFCE_API_URL, {
           method: 'POST',
           headers: {
@@ -62,7 +71,7 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify(payload),
         })
-        result = await apiResponse.json()
+        result = await safeJson(apiResponse)
 
         // Save record
         if (result.success && result.data) {
@@ -87,7 +96,7 @@ Deno.serve(async (req) => {
         apiResponse = await fetch(`${NFCE_API_URL}/${nfceId}`, {
           headers: { 'x-api-key': NFCE_API_KEY },
         })
-        result = await apiResponse.json()
+        result = await safeJson(apiResponse)
         break
       }
 
@@ -100,7 +109,7 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({ justificativa: payload?.justificativa }),
         })
-        result = await apiResponse.json()
+        result = await safeJson(apiResponse)
 
         if (result.success) {
           await supabase.from('nfce_records')
@@ -116,7 +125,7 @@ Deno.serve(async (req) => {
           method: 'POST',
           headers: { 'x-api-key': NFCE_API_KEY },
         })
-        result = await apiResponse.json()
+        result = await safeJson(apiResponse)
         break
       }
 
@@ -124,7 +133,7 @@ Deno.serve(async (req) => {
         apiResponse = await fetch(`${NFCE_API_URL}/${nfceId}/xml`, {
           headers: { 'x-api-key': NFCE_API_KEY },
         })
-        result = await apiResponse.json()
+        result = await safeJson(apiResponse)
         break
       }
 
@@ -133,7 +142,7 @@ Deno.serve(async (req) => {
         apiResponse = await fetch(`${NFCE_API_URL}?${params}`, {
           headers: { 'x-api-key': NFCE_API_KEY },
         })
-        result = await apiResponse.json()
+        result = await safeJson(apiResponse)
         break
       }
 
