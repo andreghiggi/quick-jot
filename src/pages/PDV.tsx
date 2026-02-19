@@ -9,7 +9,8 @@ import { useTables } from '@/hooks/useTables';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
-import { emitirNFCe, NFCeItem, getDanfeNFCe, printDanfe } from '@/services/nfceService';
+import { emitirNFCe, NFCeItem, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -1454,11 +1455,16 @@ export default function PDV() {
               </Button>
               <Button
                 onClick={async () => {
-                  if (!company?.id || !nfcePostSaleId) return;
+                  if (!nfcePostSaleId) return;
                   setNfcePrinting(true);
                   try {
-                    const danfeResult = await getDanfeNFCe(company.id, nfcePostSaleId);
-                    printDanfe(danfeResult);
+                    const { data } = await supabase
+                      .from('nfce_records')
+                      .select('*')
+                      .eq('nfce_id', nfcePostSaleId)
+                      .maybeSingle();
+                    if (!data) throw new Error('Registro NFC-e não encontrado');
+                    printDanfeFromRecord(data as unknown as NFCeRecord);
                     toast.success('DANFE enviada para impressão');
                   } catch (e: any) {
                     toast.error(e.message || 'Erro ao imprimir DANFE');
