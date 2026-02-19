@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,6 +61,7 @@ export default function NFCeMonitor() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRecord, setSelectedRecord] = useState<NFCeRecord | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const recordsRef = useRef<NFCeRecord[]>([]);
 
   const loadRecords = useCallback(async () => {
     if (!company?.id) return;
@@ -78,7 +79,9 @@ export default function NFCeMonitor() {
 
       const { data, error } = await query;
       if (error) throw error;
-      setRecords((data as unknown as NFCeRecord[]) || []);
+      const recs = (data as unknown as NFCeRecord[]) || [];
+      setRecords(recs);
+      recordsRef.current = recs;
     } catch (error) {
       console.error('Erro ao carregar NFC-e:', error);
       toast.error('Erro ao carregar registros');
@@ -92,30 +95,35 @@ export default function NFCeMonitor() {
     loadRecords();
   }, [loadRecords]);
 
-  // Auto-polling every 10 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadRecords();
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [loadRecords]);
-
-  // Realtime subscription
+  // Auto-consult pending records every 10 seconds to sync status from API
   useEffect(() => {
     if (!company?.id) return;
-    const channel = supabase
-      .channel('nfce-monitor')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'nfce_records',
-        filter: `company_id=eq.${company.id}`,
-      }, () => {
-        loadRecords();
-      })
-      .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    async function consultAndRefresh() {
+      const pending = recordsRef.current.filter(r => 
+        (r.status === 'pendente' || r.status === 'processando') && r.nfce_id
+      );
+      
+      for (const record of pending.slice(0, 5)) {
+        try {
+          await consultarNFCe(company!.id, record.nfce_id!);
+        } catch (e) {
+          console.error('[NFCeMonitor] Consult error:', record.nfce_id, e);
+        }
+      }
+      
+      await loadRecords();
+    }
+
+    // Initial consult after 2s
+    const timeout = setTimeout(consultAndRefresh, 2000);
+    // Then every 10s
+    const interval = setInterval(consultAndRefresh, 10000);
+
+    return () => { 
+      clearTimeout(timeout);
+      clearInterval(interval); 
+    };
   }, [company?.id, loadRecords]);
 
   function handleRefresh() {
