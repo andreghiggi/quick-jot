@@ -137,6 +137,23 @@ Deno.serve(async (req) => {
         break
       }
 
+      case 'danfe': {
+        apiResponse = await fetch(`${NFCE_API_URL}/${nfceId}/danfe`, {
+          headers: { 'x-api-key': NFCE_API_KEY },
+        })
+        // DANFE may return HTML or PDF, handle accordingly
+        const contentType = apiResponse.headers.get('content-type') || ''
+        if (contentType.includes('application/json')) {
+          result = await safeJson(apiResponse)
+        } else {
+          // Return raw content (HTML/PDF) as base64
+          const buffer = await apiResponse.arrayBuffer()
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)))
+          result = { success: apiResponse.ok, content_type: contentType, data: base64 }
+        }
+        break
+      }
+
       case 'listar': {
         const params = new URLSearchParams(payload || {})
         apiResponse = await fetch(`${NFCE_API_URL}?${params}`, {

@@ -13,12 +13,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText, Loader2, RefreshCw, Search, CheckCircle, XCircle, 
-  Clock, AlertTriangle, Ban, Eye, Copy, RotateCcw, X 
+  Clock, AlertTriangle, Ban, Eye, Copy, RotateCcw, X, Printer 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { consultarNFCe, cancelarNFCe, reprocessarNFCe } from '@/services/nfceService';
+import { consultarNFCe, cancelarNFCe, reprocessarNFCe, getDanfeNFCe, printDanfe } from '@/services/nfceService';
 
 interface NFCeRecord {
   id: string;
@@ -92,6 +92,14 @@ export default function NFCeMonitor() {
     loadRecords();
   }, [loadRecords]);
 
+  // Auto-polling every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadRecords();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [loadRecords]);
+
   // Realtime subscription
   useEffect(() => {
     if (!company?.id) return;
@@ -157,6 +165,19 @@ export default function NFCeMonitor() {
       loadRecords();
     } catch (e: any) {
       toast.error(e.message || 'Erro ao cancelar');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handlePrintDanfe(record: NFCeRecord) {
+    if (!company?.id || !record.nfce_id) return;
+    setActionLoading(record.id);
+    try {
+      const danfeResult = await getDanfeNFCe(company.id, record.nfce_id);
+      printDanfe(danfeResult);
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao imprimir DANFE');
     } finally {
       setActionLoading(null);
     }
@@ -342,16 +363,28 @@ export default function NFCeMonitor() {
                                 </Button>
                               )}
                               {record.status === 'autorizada' && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive"
-                                  onClick={() => handleCancelar(record)}
-                                  disabled={isLoading}
-                                  title="Cancelar"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-primary"
+                                    onClick={() => handlePrintDanfe(record)}
+                                    disabled={isLoading}
+                                    title="Imprimir DANFE"
+                                  >
+                                    <Printer className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive"
+                                    onClick={() => handleCancelar(record)}
+                                    disabled={isLoading}
+                                    title="Cancelar"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </TableCell>
