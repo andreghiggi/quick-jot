@@ -104,6 +104,52 @@ export async function listarNFCe(companyId: string, filtros?: Record<string, str
   });
 }
 
+export async function getDanfeNFCe(companyId: string, nfceId: string) {
+  return callNFCeProxy({
+    action: 'danfe',
+    companyId,
+    nfceId,
+  });
+}
+
+export function printDanfe(danfeResult: any) {
+  if (!danfeResult?.data) {
+    throw new Error('DANFE não disponível');
+  }
+  
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    throw new Error('Pop-up bloqueado. Permita pop-ups para imprimir.');
+  }
+
+  const contentType = danfeResult.content_type || 'text/html';
+  
+  if (contentType.includes('text/html') || contentType.includes('application/json')) {
+    // HTML content
+    const html = atob(danfeResult.data);
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => { printWindow.print(); };
+  } else if (contentType.includes('application/pdf')) {
+    // PDF content
+    const binaryStr = atob(danfeResult.data);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    printWindow.location.href = url;
+    printWindow.onload = () => { printWindow.print(); URL.revokeObjectURL(url); };
+  } else {
+    // Fallback: try as HTML
+    const html = atob(danfeResult.data);
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => { printWindow.print(); };
+  }
+}
+
 export async function getNFCeRecords(companyId: string, limit = 50): Promise<NFCeRecord[]> {
   const { data, error } = await supabase
     .from('nfce_records')

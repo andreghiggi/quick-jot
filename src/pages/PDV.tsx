@@ -9,7 +9,7 @@ import { useTables } from '@/hooks/useTables';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
-import { emitirNFCe, NFCeItem } from '@/services/nfceService';
+import { emitirNFCe, NFCeItem, getDanfeNFCe, printDanfe } from '@/services/nfceService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -88,6 +88,12 @@ export default function PDV() {
   const [isProcessingSale, setIsProcessingSale] = useState(false);
   const [emitNFCe, setEmitNFCe] = useState(false);
 
+  // NFC-e post-sale dialog
+  const [nfcePostSaleDialog, setNfcePostSaleDialog] = useState(false);
+  const [nfcePostSaleId, setNfcePostSaleId] = useState<string | null>(null);
+  const [nfceCountdown, setNfceCountdown] = useState(5);
+  const [nfcePrinting, setNfcePrinting] = useState(false);
+
   // Dialog states
   const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
   const [closeRegisterDialog, setCloseRegisterDialog] = useState(false);
@@ -112,6 +118,24 @@ export default function PDV() {
     amount: string;
     paymentMethodId: string;
   }>>([]);
+
+  // Countdown effect for NFC-e post-sale dialog
+  useEffect(() => {
+    if (!nfcePostSaleDialog) return;
+    setNfceCountdown(5);
+    const interval = setInterval(() => {
+      setNfceCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setNfcePostSaleDialog(false);
+          setNfcePostSaleId(null);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [nfcePostSaleDialog]);
 
   const loading = productsLoading || paymentLoading || registerLoading;
 
@@ -303,6 +327,9 @@ export default function PDV() {
       );
 
       if (saleId) {
+        let nfceEmitted = false;
+        let emittedNfceId: string | null = null;
+
         // Emit NFC-e if checkbox was checked
         if (emitNFCe && company?.id && isModuleEnabled('fiscal')) {
           try {
@@ -331,13 +358,19 @@ export default function PDV() {
 
             const externalId = `PDV-${currentRegister?.id?.substring(0, 8)}-${Date.now()}`;
             
-            await emitirNFCe(company.id, saleId, {
+            const nfceResult = await emitirNFCe(company.id, saleId, {
               external_id: externalId,
               itens: nfceItems,
               valor_desconto: discount || 0,
               valor_frete: 0,
               observacoes: customerName ? `Cliente: ${customerName}` : undefined,
             });
+
+            nfceEmitted = true;
+            // Try to get nfce_id from the result
+            if (nfceResult?.data?.id) {
+              emittedNfceId = nfceResult.data.id;
+            }
 
             toast.success('NFC-e enviada para processamento!');
           } catch (nfceError: any) {
@@ -353,6 +386,12 @@ export default function PDV() {
         }
         setPaymentDialog(false);
         clearCart();
+
+        // Show post-sale NFC-e dialog if NFC-e was emitted
+        if (nfceEmitted && emittedNfceId) {
+          setNfcePostSaleId(emittedNfceId);
+          setNfcePostSaleDialog(true);
+        }
       }
     } finally {
       setIsProcessingSale(false);
@@ -1383,6 +1422,62 @@ export default function PDV() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* NFC-e Post-Sale Dialog */}
+      <Dialog open={nfcePostSaleDialog} onOpenChange={(open) => {
+        if (!open) {
+          setNfcePostSaleDialog(false);
+          setNfcePostSaleId(null);
+        }
+      }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5" />
+              NFC-e Emitida
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              Venda finalizada com sucesso! Deseja imprimir o cupom fiscal (DANFE)?
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setNfcePostSaleDialog(false);
+                  setNfcePostSaleId(null);
+                }}
+                className="gap-2"
+              >
+                Não ({nfceCountdown}s)
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!company?.id || !nfcePostSaleId) return;
+                  setNfcePrinting(true);
+                  try {
+                    const danfeResult = await getDanfeNFCe(company.id, nfcePostSaleId);
+                    printDanfe(danfeResult);
+                    toast.success('DANFE enviada para impressão');
+                  } catch (e: any) {
+                    toast.error(e.message || 'Erro ao imprimir DANFE');
+                  } finally {
+                    setNfcePrinting(false);
+                    setNfcePostSaleDialog(false);
+                    setNfcePostSaleId(null);
+                  }
+                }}
+                disabled={nfcePrinting}
+                className="gap-2"
+              >
+                {nfcePrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                Imprimir DANFE
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
