@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '19/02/2026',
+    version: '1.8.1',
+    type: 'improvement',
+    description: 'Impressão automática (script Python) agora usa layout HTML idêntico à impressão manual do painel de Pedidos, com mesmo CSS, fontes e formatação. O script também carrega automaticamente o tamanho do papel (58mm/80mm) configurado pela empresa.',
+  },
+  {
     date: '18/02/2026',
     version: '1.8.0',
     type: 'fix',
