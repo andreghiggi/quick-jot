@@ -104,47 +104,92 @@ export async function listarNFCe(companyId: string, filtros?: Record<string, str
   });
 }
 
-export async function getDanfeNFCe(companyId: string, nfceId: string) {
-  return callNFCeProxy({
-    action: 'danfe',
-    companyId,
-    nfceId,
-  });
+export function generateDanfeHtml(record: NFCeRecord & { request_payload?: any }): string {
+  const items = record.request_payload?.itens || [];
+  const qrcodeUrl = record.qrcode_url || '';
+  const chaveAcesso = record.chave_acesso || '';
+  const chaveFormatada = chaveAcesso.replace(/(.{4})/g, '$1 ').trim();
+  const dataEmissao = record.created_at ? new Date(record.created_at).toLocaleString('pt-BR') : '';
+  const ambiente = record.ambiente === 'producao' ? 'PRODUÇÃO' : 'HOMOLOGAÇÃO';
+
+  const itemsHtml = items.map((item: any, i: number) => `
+    <tr>
+      <td style="text-align:left;padding:2px 4px;font-size:11px;">${String(i + 1).padStart(3, '0')} ${item.descricao || item.produto || ''}</td>
+      <td style="text-align:center;padding:2px;font-size:11px;">${item.quantidade || 1}</td>
+      <td style="text-align:right;padding:2px;font-size:11px;">${Number(item.valor_unitario || 0).toFixed(2)}</td>
+      <td style="text-align:right;padding:2px 4px;font-size:11px;">${(Number(item.quantidade || 1) * Number(item.valor_unitario || 0)).toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>DANFE NFC-e</title>
+<style>
+  @media print { body { margin: 0; } @page { size: 80mm auto; margin: 2mm; } }
+  body { font-family: 'Courier New', monospace; width: 76mm; margin: 0 auto; padding: 4px; font-size: 12px; color: #000; }
+  .center { text-align: center; }
+  .separator { border-top: 1px dashed #000; margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; }
+  .title { font-weight: bold; font-size: 13px; }
+  .small { font-size: 10px; }
+  .qrcode { text-align: center; margin: 8px 0; }
+  .qrcode img { max-width: 180px; }
+</style></head><body>
+  <div class="center title">DANFE NFC-e</div>
+  <div class="center small">Documento Auxiliar da Nota Fiscal de Consumidor Eletrônica</div>
+  <div class="separator"></div>
+  
+  <div class="center small" style="margin:4px 0;">
+    ${record.ambiente !== 'producao' ? '<div style="font-weight:bold;font-size:14px;border:2px solid #000;padding:4px;margin:4px 0;">EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL</div>' : ''}
+  </div>
+
+  <table>
+    <thead>
+      <tr style="border-bottom:1px solid #000;">
+        <th style="text-align:left;padding:2px 4px;font-size:11px;">Descrição</th>
+        <th style="text-align:center;padding:2px;font-size:11px;">Qtd</th>
+        <th style="text-align:right;padding:2px;font-size:11px;">Unit</th>
+        <th style="text-align:right;padding:2px 4px;font-size:11px;">Total</th>
+      </tr>
+    </thead>
+    <tbody>${itemsHtml}</tbody>
+  </table>
+
+  <div class="separator"></div>
+  <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px;padding:2px 4px;">
+    <span>TOTAL</span>
+    <span>R$ ${Number(record.valor_total).toFixed(2)}</span>
+  </div>
+  <div class="separator"></div>
+
+  ${qrcodeUrl ? `
+  <div class="qrcode">
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrcodeUrl)}" alt="QR Code NFC-e" />
+  </div>` : ''}
+
+  <div class="center small" style="margin-top:4px;">
+    <div style="font-weight:bold;">Consulte pela Chave de Acesso em</div>
+    <div>www.nfce.fazenda.gov.br</div>
+    <div style="word-break:break-all;margin-top:4px;font-size:9px;">${chaveFormatada}</div>
+  </div>
+  <div class="separator"></div>
+  <div class="center small">
+    ${record.numero ? `NFC-e nº ${record.numero} Série ${record.serie || '001'}` : ''}
+    ${record.protocolo ? `<br>Protocolo: ${record.protocolo}` : ''}
+    <br>Data: ${dataEmissao}
+    <br>Ambiente: ${ambiente}
+  </div>
+</body></html>`;
 }
 
-export function printDanfe(danfeResult: any) {
+export function printDanfeFromRecord(record: NFCeRecord & { request_payload?: any }) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     throw new Error('Pop-up bloqueado. Permita pop-ups para imprimir.');
   }
-
-  if (danfeResult?.html) {
-    // HTML content returned directly
-    printWindow.document.write(danfeResult.html);
-    printWindow.document.close();
-    setTimeout(() => { printWindow.print(); }, 500);
-  } else if (danfeResult?.data && danfeResult?.content_type?.includes('application/pdf')) {
-    // PDF as base64
-    const binaryStr = atob(danfeResult.data);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
-    }
-    const blob = new Blob([bytes], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    printWindow.location.href = url;
-    setTimeout(() => { printWindow.print(); }, 1000);
-  } else if (danfeResult?.data?.danfe_url || danfeResult?.danfe_url) {
-    // URL to DANFE
-    const url = danfeResult?.data?.danfe_url || danfeResult?.danfe_url;
-    printWindow.location.href = url;
-  } else if (danfeResult?.success === false) {
-    printWindow.close();
-    throw new Error(danfeResult?.error || 'DANFE não disponível na API');
-  } else {
-    printWindow.close();
-    throw new Error('Formato de DANFE não reconhecido. Verifique se a nota foi autorizada.');
-  }
+  const html = generateDanfeHtml(record);
+  printWindow.document.write(html);
+  printWindow.document.close();
+  setTimeout(() => { printWindow.print(); }, 500);
 }
 
 export async function getNFCeRecords(companyId: string, limit = 50): Promise<NFCeRecord[]> {

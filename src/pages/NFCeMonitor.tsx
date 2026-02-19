@@ -18,7 +18,7 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { consultarNFCe, cancelarNFCe, reprocessarNFCe, getDanfeNFCe, printDanfe } from '@/services/nfceService';
+import { consultarNFCe, cancelarNFCe, reprocessarNFCe, printDanfeFromRecord } from '@/services/nfceService';
 
 interface NFCeRecord {
   id: string;
@@ -178,16 +178,11 @@ export default function NFCeMonitor() {
     }
   }
 
-  async function handlePrintDanfe(record: NFCeRecord) {
-    if (!company?.id || !record.nfce_id) return;
-    setActionLoading(record.id);
+  function handlePrintDanfe(record: NFCeRecord) {
     try {
-      const danfeResult = await getDanfeNFCe(company.id, record.nfce_id);
-      printDanfe(danfeResult);
+      printDanfeFromRecord(record);
     } catch (e: any) {
       toast.error(e.message || 'Erro ao imprimir DANFE');
-    } finally {
-      setActionLoading(null);
     }
   }
 
