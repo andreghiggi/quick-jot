@@ -93,10 +93,36 @@ Deno.serve(async (req) => {
       }
 
       case 'consultar': {
+        console.log('[nfce-proxy] Consultar NFC-e:', nfceId)
         apiResponse = await fetch(`${NFCE_API_URL}/${nfceId}`, {
           headers: { 'x-api-key': NFCE_API_KEY },
         })
         result = await safeJson(apiResponse)
+
+        // Update local record with latest status from API
+        if (result.success !== false && result.data) {
+          const d = result.data
+          const updateData: Record<string, any> = {
+            updated_at: new Date().toISOString(),
+          }
+          if (d.status) updateData.status = d.status
+          if (d.numero) updateData.numero = d.numero
+          if (d.serie) updateData.serie = d.serie
+          if (d.chave_acesso) updateData.chave_acesso = d.chave_acesso
+          if (d.protocolo) updateData.protocolo = d.protocolo
+          if (d.qrcode_url) updateData.qrcode_url = d.qrcode_url
+          if (d.xml_url) updateData.xml_url = d.xml_url
+          if (d.motivo_rejeicao) updateData.motivo_rejeicao = d.motivo_rejeicao
+          if (d.ambiente) updateData.ambiente = d.ambiente
+          if (d.valor_total) updateData.valor_total = d.valor_total
+          updateData.webhook_payload = result
+
+          console.log('[nfce-proxy] Updating record with:', JSON.stringify(updateData))
+          await supabase.from('nfce_records')
+            .update(updateData)
+            .eq('nfce_id', nfceId)
+            .eq('company_id', companyId)
+        }
         break
       }
 
@@ -138,18 +164,30 @@ Deno.serve(async (req) => {
       }
 
       case 'danfe': {
+        console.log('[nfce-proxy] Fetching DANFE for:', nfceId)
         apiResponse = await fetch(`${NFCE_API_URL}/${nfceId}/danfe`, {
           headers: { 'x-api-key': NFCE_API_KEY },
         })
-        // DANFE may return HTML or PDF, handle accordingly
+        
         const contentType = apiResponse.headers.get('content-type') || ''
+        console.log('[nfce-proxy] DANFE response status:', apiResponse.status, 'content-type:', contentType)
+        
         if (contentType.includes('application/json')) {
           result = await safeJson(apiResponse)
+        } else if (contentType.includes('application/pdf')) {
+          // Return PDF as base64
+          const arrayBuf = await apiResponse.arrayBuffer()
+          const uint8 = new Uint8Array(arrayBuf)
+          let binary = ''
+          for (let i = 0; i < uint8.length; i++) {
+            binary += String.fromCharCode(uint8[i])
+          }
+          const base64 = btoa(binary)
+          result = { success: apiResponse.ok, content_type: 'application/pdf', data: base64 }
         } else {
-          // Return raw content (HTML/PDF) as base64
-          const buffer = await apiResponse.arrayBuffer()
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)))
-          result = { success: apiResponse.ok, content_type: contentType, data: base64 }
+          // HTML or other text format
+          const textContent = await apiResponse.text()
+          result = { success: apiResponse.ok, content_type: contentType || 'text/html', html: textContent }
         }
         break
       }

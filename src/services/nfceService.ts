@@ -113,25 +113,18 @@ export async function getDanfeNFCe(companyId: string, nfceId: string) {
 }
 
 export function printDanfe(danfeResult: any) {
-  if (!danfeResult?.data) {
-    throw new Error('DANFE não disponível');
-  }
-  
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     throw new Error('Pop-up bloqueado. Permita pop-ups para imprimir.');
   }
 
-  const contentType = danfeResult.content_type || 'text/html';
-  
-  if (contentType.includes('text/html') || contentType.includes('application/json')) {
-    // HTML content
-    const html = atob(danfeResult.data);
-    printWindow.document.write(html);
+  if (danfeResult?.html) {
+    // HTML content returned directly
+    printWindow.document.write(danfeResult.html);
     printWindow.document.close();
-    printWindow.onload = () => { printWindow.print(); };
-  } else if (contentType.includes('application/pdf')) {
-    // PDF content
+    setTimeout(() => { printWindow.print(); }, 500);
+  } else if (danfeResult?.data && danfeResult?.content_type?.includes('application/pdf')) {
+    // PDF as base64
     const binaryStr = atob(danfeResult.data);
     const bytes = new Uint8Array(binaryStr.length);
     for (let i = 0; i < binaryStr.length; i++) {
@@ -140,13 +133,17 @@ export function printDanfe(danfeResult: any) {
     const blob = new Blob([bytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
     printWindow.location.href = url;
-    printWindow.onload = () => { printWindow.print(); URL.revokeObjectURL(url); };
+    setTimeout(() => { printWindow.print(); }, 1000);
+  } else if (danfeResult?.data?.danfe_url || danfeResult?.danfe_url) {
+    // URL to DANFE
+    const url = danfeResult?.data?.danfe_url || danfeResult?.danfe_url;
+    printWindow.location.href = url;
+  } else if (danfeResult?.success === false) {
+    printWindow.close();
+    throw new Error(danfeResult?.error || 'DANFE não disponível na API');
   } else {
-    // Fallback: try as HTML
-    const html = atob(danfeResult.data);
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.onload = () => { printWindow.print(); };
+    printWindow.close();
+    throw new Error('Formato de DANFE não reconhecido. Verifique se a nota foi autorizada.');
   }
 }
 
