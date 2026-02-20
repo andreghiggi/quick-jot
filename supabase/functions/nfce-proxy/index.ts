@@ -73,21 +73,34 @@ Deno.serve(async (req) => {
         })
         result = await safeJson(apiResponse)
 
-        // Save record
-        if (result.success && result.data) {
-          await supabase.from('nfce_records').insert({
+        console.log('[nfce-proxy] Emitir raw result:', JSON.stringify(result).substring(0, 1000))
+
+        // Handle both { data: {...} } and flat response
+        const emitData = result?.data || result
+        if (emitData && (emitData.id || emitData.nfce_id)) {
+          const nfceRecord = {
             company_id: companyId,
             sale_id: saleId || null,
             external_id: payload.external_id,
-            nfce_id: result.data.id,
-            numero: result.data.numero,
-            serie: result.data.serie,
-            status: result.data.status || 'pendente',
-            ambiente: result.data.ambiente || 'homologacao',
-            valor_total: result.data.valor_total || 0,
+            nfce_id: emitData.id || emitData.nfce_id,
+            numero: emitData.numero || emitData.number || null,
+            serie: emitData.serie || emitData.series || null,
+            status: emitData.status || 'pendente',
+            ambiente: emitData.ambiente || emitData.environment || 'homologacao',
+            valor_total: emitData.valor_total || emitData.total || 0,
+            chave_acesso: emitData.chave_acesso || emitData.chave || emitData.access_key || null,
+            protocolo: emitData.protocolo || emitData.protocol || null,
+            qrcode_url: emitData.qrcode_url || emitData.qr_code_url || emitData.url_qrcode || emitData.qrcode || null,
+            xml_url: emitData.xml_url || emitData.url_xml || null,
+            motivo_rejeicao: emitData.motivo_rejeicao || emitData.motivo || null,
             request_payload: payload,
             response_payload: result,
-          })
+          }
+          console.log('[nfce-proxy] Inserting record:', JSON.stringify(nfceRecord))
+          const { error: insertError } = await supabase.from('nfce_records').insert(nfceRecord)
+          if (insertError) console.error('[nfce-proxy] Insert error:', insertError)
+        } else {
+          console.error('[nfce-proxy] Emitir: unexpected response structure, no id found:', JSON.stringify(result).substring(0, 500))
         }
         break
       }
@@ -99,29 +112,63 @@ Deno.serve(async (req) => {
         })
         result = await safeJson(apiResponse)
 
-        // Update local record with latest status from API
-        if (result.success !== false && result.data) {
-          const d = result.data
+        console.log('[nfce-proxy] Consultar raw result:', JSON.stringify(result).substring(0, 1000))
+
+        // Update local record - handle both { data: {...} } and flat response structures
+        const d = result?.data || result
+        if (d && (d.status || d.id || d.nfce_id)) {
           const updateData: Record<string, any> = {
             updated_at: new Date().toISOString(),
+            webhook_payload: result,
           }
-          if (d.status) updateData.status = d.status
-          if (d.numero) updateData.numero = d.numero
-          if (d.serie) updateData.serie = d.serie
-          if (d.chave_acesso) updateData.chave_acesso = d.chave_acesso
-          if (d.protocolo) updateData.protocolo = d.protocolo
-          if (d.qrcode_url) updateData.qrcode_url = d.qrcode_url
-          if (d.xml_url) updateData.xml_url = d.xml_url
-          if (d.motivo_rejeicao) updateData.motivo_rejeicao = d.motivo_rejeicao
-          if (d.ambiente) updateData.ambiente = d.ambiente
-          if (d.valor_total) updateData.valor_total = d.valor_total
-          updateData.webhook_payload = result
+
+          // Status - normalize common variations
+          const rawStatus = d.status || d.situacao || d.situation
+          if (rawStatus) updateData.status = rawStatus
+
+          // Numero/serie
+          if (d.numero || d.number) updateData.numero = d.numero || d.number
+          if (d.serie || d.series) updateData.serie = d.serie || d.series
+
+          // Chave de acesso - try multiple field names
+          const chave = d.chave_acesso || d.chave || d.access_key || d.chnfe
+          if (chave) updateData.chave_acesso = chave
+
+          // Protocolo
+          const proto = d.protocolo || d.protocol || d.nProt
+          if (proto) updateData.protocolo = proto
+
+          // QR Code URL - try multiple field names
+          const qr = d.qrcode_url || d.qr_code_url || d.url_qrcode || d.qrcode || d.qr_code || d.url_consulta_qrcode
+          if (qr) updateData.qrcode_url = qr
+
+          // XML URL
+          const xml = d.xml_url || d.url_xml || d.xml
+          if (xml) updateData.xml_url = xml
+
+          // Motivo rejeição
+          const motivo = d.motivo_rejeicao || d.motivo || d.xMotivo || d.reason
+          if (motivo) updateData.motivo_rejeicao = motivo
+
+          // Ambiente
+          if (d.ambiente || d.environment) updateData.ambiente = d.ambiente || d.environment
+
+          // Valor total
+          if (d.valor_total || d.total || d.vNF) updateData.valor_total = d.valor_total || d.total || d.vNF
 
           console.log('[nfce-proxy] Updating record with:', JSON.stringify(updateData))
-          await supabase.from('nfce_records')
+          const { error: updateError } = await supabase.from('nfce_records')
             .update(updateData)
             .eq('nfce_id', nfceId)
             .eq('company_id', companyId)
+
+          if (updateError) {
+            console.error('[nfce-proxy] Update error:', updateError)
+          } else {
+            console.log('[nfce-proxy] Record updated successfully')
+          }
+        } else {
+          console.log('[nfce-proxy] No data to update, result structure:', JSON.stringify(result).substring(0, 500))
         }
         break
       }
@@ -170,10 +217,13 @@ Deno.serve(async (req) => {
         })
         
         const contentType = apiResponse.headers.get('content-type') || ''
-        console.log('[nfce-proxy] DANFE response status:', apiResponse.status, 'content-type:', contentType)
+        const danfeStatus = apiResponse.status
+        console.log('[nfce-proxy] DANFE response status:', danfeStatus, 'content-type:', contentType)
         
-        if (contentType.includes('application/json')) {
-          result = await safeJson(apiResponse)
+        if (!apiResponse.ok) {
+          const errText = await apiResponse.text()
+          console.error('[nfce-proxy] DANFE error response:', errText.substring(0, 500))
+          result = { success: false, error: `DANFE endpoint retornou ${danfeStatus}`, raw: errText.substring(0, 300) }
         } else if (contentType.includes('application/pdf')) {
           // Return PDF as base64
           const arrayBuf = await apiResponse.arrayBuffer()
@@ -183,11 +233,15 @@ Deno.serve(async (req) => {
             binary += String.fromCharCode(uint8[i])
           }
           const base64 = btoa(binary)
-          result = { success: apiResponse.ok, content_type: 'application/pdf', data: base64 }
+          result = { success: true, content_type: 'application/pdf', data: base64 }
+        } else if (contentType.includes('application/json')) {
+          result = await safeJson(apiResponse)
+          console.log('[nfce-proxy] DANFE JSON result:', JSON.stringify(result).substring(0, 500))
         } else {
           // HTML or other text format
           const textContent = await apiResponse.text()
-          result = { success: apiResponse.ok, content_type: contentType || 'text/html', html: textContent }
+          console.log('[nfce-proxy] DANFE text content type:', contentType, 'length:', textContent.length)
+          result = { success: true, content_type: contentType || 'text/html', html: textContent }
         }
         break
       }
