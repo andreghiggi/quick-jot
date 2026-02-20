@@ -108,6 +108,7 @@ export function generateDanfeHtml(record: NFCeRecord & { request_payload?: any }
   const items = record.request_payload?.itens || [];
   const qrcodeUrl = record.qrcode_url || '';
   const chaveAcesso = record.chave_acesso || '';
+  // Format chave in groups of 4
   const chaveFormatada = chaveAcesso.replace(/(.{4})/g, '$1 ').trim();
   const dataEmissao = record.created_at ? new Date(record.created_at).toLocaleString('pt-BR') : '';
   const ambiente = record.ambiente === 'producao' ? 'PRODUÇÃO' : 'HOMOLOGAÇÃO';
@@ -116,42 +117,51 @@ export function generateDanfeHtml(record: NFCeRecord & { request_payload?: any }
     <tr>
       <td style="text-align:left;padding:2px 4px;font-size:11px;">${String(i + 1).padStart(3, '0')} ${item.descricao || item.produto || ''}</td>
       <td style="text-align:center;padding:2px;font-size:11px;">${item.quantidade || 1}</td>
-      <td style="text-align:right;padding:2px;font-size:11px;">${Number(item.valor_unitario || 0).toFixed(2)}</td>
-      <td style="text-align:right;padding:2px 4px;font-size:11px;">${(Number(item.quantidade || 1) * Number(item.valor_unitario || 0)).toFixed(2)}</td>
+      <td style="text-align:right;padding:2px;font-size:11px;">R$${Number(item.valor_unitario || 0).toFixed(2)}</td>
+      <td style="text-align:right;padding:2px 4px;font-size:11px;">R$${(Number(item.quantidade || 1) * Number(item.valor_unitario || 0)).toFixed(2)}</td>
     </tr>
   `).join('');
+
+  // The qrcode_url from SEFAZ IS the content to be encoded as QR Code
+  const qrCodeImg = qrcodeUrl
+    ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=M&data=${encodeURIComponent(qrcodeUrl)}" alt="QR Code NFC-e" style="max-width:200px;max-height:200px;" />`
+    : '<p style="font-size:10px;color:#999;">[QR Code indisponível]</p>';
 
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>DANFE NFC-e</title>
 <style>
-  @media print { body { margin: 0; } @page { size: 80mm auto; margin: 2mm; } }
-  body { font-family: 'Courier New', monospace; width: 76mm; margin: 0 auto; padding: 4px; font-size: 12px; color: #000; }
+  @media print {
+    body { margin: 0; }
+    @page { size: 80mm auto; margin: 2mm; }
+    .no-print { display: none; }
+  }
+  body { font-family: 'Courier New', monospace; width: 76mm; margin: 0 auto; padding: 4px; font-size: 12px; color: #000; background: #fff; }
   .center { text-align: center; }
-  .separator { border-top: 1px dashed #000; margin: 4px 0; }
+  .separator { border-top: 1px dashed #000; margin: 6px 0; }
   table { width: 100%; border-collapse: collapse; }
-  .title { font-weight: bold; font-size: 13px; }
+  .title { font-weight: bold; font-size: 14px; }
   .small { font-size: 10px; }
+  .bold { font-weight: bold; }
   .qrcode { text-align: center; margin: 8px 0; }
-  .qrcode img { max-width: 180px; }
+  .homolog-warn { font-weight:bold; font-size:11px; border:2px solid #000; padding:3px; margin:4px 0; text-align:center; }
 </style></head><body>
+
   <div class="center title">DANFE NFC-e</div>
   <div class="center small">Documento Auxiliar da Nota Fiscal de Consumidor Eletrônica</div>
   <div class="separator"></div>
-  
-  <div class="center small" style="margin:4px 0;">
-    ${record.ambiente !== 'producao' ? '<div style="font-weight:bold;font-size:14px;border:2px solid #000;padding:4px;margin:4px 0;">EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL</div>' : ''}
-  </div>
+
+  ${record.ambiente !== 'producao' ? '<div class="homolog-warn">AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL</div>' : ''}
 
   <table>
     <thead>
       <tr style="border-bottom:1px solid #000;">
-        <th style="text-align:left;padding:2px 4px;font-size:11px;">Descrição</th>
-        <th style="text-align:center;padding:2px;font-size:11px;">Qtd</th>
-        <th style="text-align:right;padding:2px;font-size:11px;">Unit</th>
-        <th style="text-align:right;padding:2px 4px;font-size:11px;">Total</th>
+        <th style="text-align:left;padding:2px 4px;font-size:10px;">Descrição</th>
+        <th style="text-align:center;padding:2px;font-size:10px;">Qtd</th>
+        <th style="text-align:right;padding:2px;font-size:10px;">Unit</th>
+        <th style="text-align:right;padding:2px 4px;font-size:10px;">Total</th>
       </tr>
     </thead>
-    <tbody>${itemsHtml}</tbody>
+    <tbody>${itemsHtml || '<tr><td colspan="4" style="text-align:center;font-size:11px;padding:4px;">Itens não disponíveis</td></tr>'}</tbody>
   </table>
 
   <div class="separator"></div>
@@ -161,35 +171,52 @@ export function generateDanfeHtml(record: NFCeRecord & { request_payload?: any }
   </div>
   <div class="separator"></div>
 
-  ${qrcodeUrl ? `
   <div class="qrcode">
-    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrcodeUrl)}" alt="QR Code NFC-e" />
-  </div>` : ''}
+    ${qrCodeImg}
+  </div>
 
   <div class="center small" style="margin-top:4px;">
-    <div style="font-weight:bold;">Consulte pela Chave de Acesso em</div>
+    <div class="bold">Consulte pela Chave de Acesso em</div>
     <div>www.nfce.fazenda.gov.br</div>
-    <div style="word-break:break-all;margin-top:4px;font-size:9px;">${chaveFormatada}</div>
+    <div style="word-break:break-all;margin-top:4px;font-size:9px;letter-spacing:1px;">${chaveFormatada || '—'}</div>
   </div>
   <div class="separator"></div>
   <div class="center small">
-    ${record.numero ? `NFC-e nº ${record.numero} Série ${record.serie || '001'}` : ''}
-    ${record.protocolo ? `<br>Protocolo: ${record.protocolo}` : ''}
-    <br>Data: ${dataEmissao}
-    <br>Ambiente: ${ambiente}
+    ${record.numero ? `<div>NFC-e nº ${record.numero} Série ${record.serie || '001'}</div>` : ''}
+    ${record.protocolo ? `<div>Protocolo: ${record.protocolo}</div>` : ''}
+    <div>Data: ${dataEmissao}</div>
+    <div>Ambiente: ${ambiente}</div>
   </div>
+  <div class="separator"></div>
+
+  <div class="no-print" style="text-align:center;margin-top:12px;">
+    <button onclick="window.print()" style="padding:8px 20px;font-size:14px;cursor:pointer;">🖨️ Imprimir</button>
+  </div>
+
 </body></html>`;
 }
 
 export function printDanfeFromRecord(record: NFCeRecord & { request_payload?: any }) {
-  const printWindow = window.open('', '_blank');
+  if (!record.chave_acesso && !record.qrcode_url) {
+    throw new Error('Nota sem dados fiscais. Aguarde a autorização da SEFAZ para imprimir.');
+  }
+
+  const printWindow = window.open('', '_blank', 'width=420,height=750');
   if (!printWindow) {
-    throw new Error('Pop-up bloqueado. Permita pop-ups para imprimir.');
+    throw new Error('Pop-up bloqueado. Permita pop-ups para imprimir o DANFE.');
   }
   const html = generateDanfeHtml(record);
+  printWindow.document.open();
   printWindow.document.write(html);
   printWindow.document.close();
-  setTimeout(() => { printWindow.print(); }, 500);
+  // Wait for QR code image to load, then print
+  printWindow.onload = () => {
+    setTimeout(() => { printWindow.print(); }, 800);
+  };
+  // Fallback if onload doesn't fire
+  setTimeout(() => {
+    try { printWindow.print(); } catch (_) {}
+  }, 2500);
 }
 
 export async function getNFCeRecords(companyId: string, limit = 50): Promise<NFCeRecord[]> {
