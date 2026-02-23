@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.nfce-webhook]
 verify_jwt = false
+
+[functions.extract-menu]
+verify_jwt = false

@@ -905,6 +905,50 @@ export type Database = {
           },
         ]
       }
+      suggestions: {
+        Row: {
+          admin_notes: string | null
+          company_id: string
+          created_at: string
+          description: string
+          expected_date: string | null
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          company_id: string
+          created_at?: string
+          description: string
+          expected_date?: string | null
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string
+          expected_date?: string | null
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggestions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tab_items: {
         Row: {
           created_at: string | null
