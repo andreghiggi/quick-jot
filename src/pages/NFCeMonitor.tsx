@@ -353,7 +353,7 @@ export default function NFCeMonitor() {
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              {record.status === 'rejeitada' && (
+                              {(record.status === 'rejeitada' || record.status === 'erro' || record.status === 'pendente') && (
                                 <Button
                                   variant="ghost"
                                   size="icon"

@@ -44,6 +44,7 @@ import {
   Import
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -87,7 +88,8 @@ export default function PDV() {
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
   const [isProcessingSale, setIsProcessingSale] = useState(false);
-  const [emitNFCe, setEmitNFCe] = useState(false);
+  const [documentMode, setDocumentMode] = useState<'sale_only' | 'sale_with_nfce'>('sale_only');
+  const emitNFCe = documentMode === 'sale_with_nfce';
 
   // NFC-e post-sale dialog
   const [nfcePostSaleDialog, setNfcePostSaleDialog] = useState(false);
@@ -272,7 +274,6 @@ export default function PDV() {
     setDivideByPeople(false);
     setNumberOfPeople('2');
     setPeoplePaying([]);
-    setEmitNFCe(false);
     setPaymentDialog(true);
   }
 
@@ -1201,18 +1202,23 @@ export default function PDV() {
               />
             </div>
 
-            {/* NFC-e Checkbox */}
+            {/* Document Generation Mode - only show if fiscal module enabled */}
             {isModuleEnabled('fiscal') && (
-              <div className="flex items-center space-x-2 p-3 bg-accent/50 rounded-lg border border-accent">
-                <Checkbox 
-                  id="emit-nfce" 
-                  checked={emitNFCe}
-                  onCheckedChange={(checked) => setEmitNFCe(!!checked)}
-                />
-                <label htmlFor="emit-nfce" className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                  <Receipt className="w-4 h-4" />
-                  Emitir NFC-e (Nota Fiscal)
-                </label>
+              <div className="p-3 bg-accent/50 rounded-lg border border-accent space-y-2">
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Receipt className="w-3.5 h-3.5" />
+                  Geração de Documentos
+                </p>
+                <RadioGroup value={documentMode} onValueChange={(v) => setDocumentMode(v as 'sale_only' | 'sale_with_nfce')}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="sale_only" id="doc-sale-only" />
+                    <label htmlFor="doc-sale-only" className="text-sm cursor-pointer">Somente Venda</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="sale_with_nfce" id="doc-sale-nfce" />
+                    <label htmlFor="doc-sale-nfce" className="text-sm cursor-pointer">Venda com NFC-e</label>
+                  </div>
+                </RadioGroup>
               </div>
             )}
 
@@ -1404,6 +1410,66 @@ export default function PDV() {
                             <p className="text-xs text-muted-foreground">Desc: {formatCurrency(sale.discount)}</p>
                           )}
                         </div>
+                        {isModuleEnabled('fiscal') && (
+                          <Button 
+                            size="icon" 
+                            variant="ghost"
+                            onClick={async () => {
+                              // Check if NFC-e already exists for this sale
+                              const { data: existing } = await supabase
+                                .from('nfce_records')
+                                .select('id, status')
+                                .eq('sale_id', sale.id)
+                                .maybeSingle();
+                              
+                              if (existing) {
+                                toast.info(`NFC-e já emitida (${existing.status})`);
+                                return;
+                              }
+
+                              if (!company?.id) return;
+                              try {
+                                const saleItems = sale.items || [];
+                                const nfceItems: NFCeItem[] = saleItems.map((item: any) => {
+                                  const product = products.find(p => p.id === item.product_id);
+                                  const taxRule = product?.taxRuleId 
+                                    ? taxRules.find(tr => tr.id === product.taxRuleId) 
+                                    : null;
+                                  return {
+                                    codigo: item.product_id || 'AVULSO',
+                                    descricao: item.product_name,
+                                    ncm: taxRule?.ncm || '00000000',
+                                    cfop: taxRule?.cfop || '5102',
+                                    unidade: 'UN',
+                                    quantidade: item.quantity,
+                                    valor_unitario: item.unit_price,
+                                    csosn: taxRule?.csosn || '102',
+                                    aliquota_icms: taxRule?.icms_aliquot || 0,
+                                    cst_pis: taxRule?.pis_cst || '49',
+                                    aliquota_pis: taxRule?.pis_aliquot || 0,
+                                    cst_cofins: taxRule?.cofins_cst || '49',
+                                    aliquota_cofins: taxRule?.cofins_aliquot || 0,
+                                  };
+                                });
+
+                                const externalId = `PDV-${sale.cash_register_id?.substring(0, 8)}-${Date.now()}`;
+                                await emitirNFCe(company.id, sale.id, {
+                                  external_id: externalId,
+                                  itens: nfceItems,
+                                  valor_desconto: sale.discount || 0,
+                                  valor_frete: 0,
+                                  observacoes: sale.customer_name ? `Cliente: ${sale.customer_name}` : undefined,
+                                });
+                                toast.success('NFC-e enviada para processamento!');
+                              } catch (err: any) {
+                                toast.error(`Erro ao emitir NFC-e: ${err.message}`);
+                              }
+                            }}
+                            title="Gerar NFC-e"
+                          >
+                            <Receipt className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button 
                           size="icon" 
                           variant="ghost"
@@ -1565,30 +1631,48 @@ export default function PDV() {
         </DialogContent>
       </Dialog>
 
-      {/* Auto-print settings floating panel */}
+      {/* Floating settings panel */}
       {isModuleEnabled('fiscal') && (
         <div className="fixed bottom-4 right-4 z-50">
-          <Card className="shadow-lg border-2 p-3 space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Impressão Automática</p>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="auto-print-sales"
-                checked={storeSettings.autoPrintSales}
-                onCheckedChange={async (checked) => {
-                  await updateSetting('auto_print_sales', checked ? 'true' : 'false');
-                }}
-              />
-              <label htmlFor="auto-print-sales" className="text-xs cursor-pointer">Vendas</label>
+          <Card className="shadow-lg border-2 p-3 space-y-3">
+            {/* Document Generation Mode */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Geração de Documentos</p>
+              <RadioGroup value={documentMode} onValueChange={(v) => setDocumentMode(v as 'sale_only' | 'sale_with_nfce')}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="sale_only" id="float-sale-only" />
+                  <label htmlFor="float-sale-only" className="text-xs cursor-pointer">Somente Venda</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="sale_with_nfce" id="float-sale-nfce" />
+                  <label htmlFor="float-sale-nfce" className="text-xs cursor-pointer">Venda com NFC-e</label>
+                </div>
+              </RadioGroup>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="auto-print-nfce"
-                checked={storeSettings.autoPrintNfce}
-                onCheckedChange={async (checked) => {
-                  await updateSetting('auto_print_nfce', checked ? 'true' : 'false');
-                }}
-              />
-              <label htmlFor="auto-print-nfce" className="text-xs cursor-pointer">NFC-e</label>
+            <Separator />
+            {/* Auto-print */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Impressão Automática</p>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="auto-print-sales"
+                  checked={storeSettings.autoPrintSales}
+                  onCheckedChange={async (checked) => {
+                    await updateSetting('auto_print_sales', checked ? 'true' : 'false');
+                  }}
+                />
+                <label htmlFor="auto-print-sales" className="text-xs cursor-pointer">Vendas</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="auto-print-nfce"
+                  checked={storeSettings.autoPrintNfce}
+                  onCheckedChange={async (checked) => {
+                    await updateSetting('auto_print_nfce', checked ? 'true' : 'false');
+                  }}
+                />
+                <label htmlFor="auto-print-nfce" className="text-xs cursor-pointer">NFC-e</label>
+              </div>
             </div>
           </Card>
         </div>
