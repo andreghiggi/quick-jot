@@ -263,7 +263,7 @@ export default function MenuImport() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <ScrollArea className="max-h-[60vh]">
+              <ScrollArea className="h-[60vh]">
                 <div className="space-y-3">
                   {extractedProducts.map((product, index) => (
                     <div 
