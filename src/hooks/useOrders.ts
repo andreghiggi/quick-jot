@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem, OrderStatus } from '@/types/order';
 import { toast } from 'sonner';
@@ -15,6 +15,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
   const [loading, setLoading] = useState(true);
   const { checkAndNotify } = useOrderNotificationSound(!!companyId);
   const prevPendingCountRef = useRef<number | null>(null);
+  const isInitialLoadRef = useRef(true);
+  const prevOrdersJsonRef = useRef<string>('');
 
   async function fetchOrders() {
     // Don't fetch if no companyId - prevents showing orders from other companies
@@ -75,8 +77,12 @@ export function useOrders(options: UseOrdersOptions = {}) {
           })),
       }));
 
-      setOrders(mappedOrders);
-
+      // Only update state if data actually changed to prevent unnecessary re-renders
+      const ordersJson = JSON.stringify(mappedOrders.map(o => ({ id: o.id, status: o.status, total: o.total, items: o.items.length })));
+      if (ordersJson !== prevOrdersJsonRef.current) {
+        prevOrdersJsonRef.current = ordersJson;
+        setOrders(mappedOrders);
+      }
       // Check for new pending orders and play sound
       const pendingCount = mappedOrders.filter(o => o.status === 'pending').length;
       if (prevPendingCountRef.current !== null && pendingCount > prevPendingCountRef.current) {
@@ -86,8 +92,14 @@ export function useOrders(options: UseOrdersOptions = {}) {
       prevPendingCountRef.current = pendingCount;
     } catch (error) {
       console.error('Error fetching orders:', error);
-      toast.error('Erro ao carregar pedidos');
+      // Only show toast on initial load errors
+      if (isInitialLoadRef.current) {
+        toast.error('Erro ao carregar pedidos');
+      }
     } finally {
+      if (isInitialLoadRef.current) {
+        isInitialLoadRef.current = false;
+      }
       setLoading(false);
     }
   }
