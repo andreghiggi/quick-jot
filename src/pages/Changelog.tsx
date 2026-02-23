@@ -14,6 +14,24 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '23/02/2026',
+    version: '1.9.1',
+    type: 'feature',
+    description: 'Geração de Documentos: card no PDV com opções "Somente Venda" e "Venda com NFC-e" para controlar quando emitir nota fiscal.',
+  },
+  {
+    date: '23/02/2026',
+    version: '1.9.1',
+    type: 'feature',
+    description: 'Emissão posterior de NFC-e: vendas sem nota fiscal agora podem ter a NFC-e gerada diretamente pelo menu de vendas do caixa.',
+  },
+  {
+    date: '23/02/2026',
+    version: '1.9.1',
+    type: 'improvement',
+    description: 'Monitor NFC-e: botão de reprocessar agora disponível para notas pendentes, rejeitadas e com erro.',
+  },
+  {
+    date: '23/02/2026',
     version: '1.9.0',
     type: 'feature',
     description: 'Sistema de Sugestões: lojistas podem enviar ideias e acompanhar o status (pendente, aprovado, implementado) com previsão de entrega.',
