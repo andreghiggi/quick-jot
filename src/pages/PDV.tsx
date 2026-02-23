@@ -61,7 +61,7 @@ export default function PDV() {
   const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
-  const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
+  const { settings: storeSettings, updateSetting } = useStoreSettings({ companyId: company?.id });
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId: company?.id });
   const { tables } = useTables({ companyId: company?.id });
   const { 
@@ -91,8 +91,10 @@ export default function PDV() {
 
   // NFC-e post-sale dialog
   const [nfcePostSaleDialog, setNfcePostSaleDialog] = useState(false);
-  const [nfcePostSaleId, setNfcePostSaleId] = useState<string | null>(null);
-  const [nfceCountdown, setNfceCountdown] = useState(5);
+  const [nfcePostSaleRecord, setNfcePostSaleRecord] = useState<any>(null);
+  const [nfcePolling, setNfcePolling] = useState(false);
+  const [nfceStatus, setNfceStatus] = useState<string>('processando');
+  const [nfceCountdown, setNfceCountdown] = useState(10);
   const [nfcePrinting, setNfcePrinting] = useState(false);
 
   // Dialog states
@@ -120,23 +122,58 @@ export default function PDV() {
     paymentMethodId: string;
   }>>([]);
 
-  // Countdown effect for NFC-e post-sale dialog
+  // NFC-e polling and countdown for post-sale dialog
   useEffect(() => {
-    if (!nfcePostSaleDialog) return;
-    setNfceCountdown(5);
-    const interval = setInterval(() => {
-      setNfceCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setNfcePostSaleDialog(false);
-          setNfcePostSaleId(null);
-          return 0;
+    if (!nfcePostSaleDialog || !nfcePostSaleRecord) return;
+    
+    // If NFC-e is still processing, poll for updates
+    if (nfceStatus === 'processando' || nfceStatus === 'pendente') {
+      setNfcePolling(true);
+      const pollInterval = setInterval(async () => {
+        const { data } = await supabase
+          .from('nfce_records')
+          .select('*')
+          .eq('id', nfcePostSaleRecord.id)
+          .maybeSingle();
+        
+        if (data) {
+          setNfcePostSaleRecord(data);
+          const status = data.status || 'processando';
+          setNfceStatus(status);
+          
+          if (status === 'autorizada' || status === 'rejeitada' || status === 'erro') {
+            setNfcePolling(false);
+            clearInterval(pollInterval);
+            
+            // Auto-print if authorized and setting is enabled
+            if (status === 'autorizada' && storeSettings.autoPrintNfce) {
+              printDanfeFromRecord(data as unknown as NFCeRecord);
+              toast.success('DANFE impressa automaticamente');
+            }
+          }
         }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [nfcePostSaleDialog]);
+      }, 3000);
+      
+      return () => clearInterval(pollInterval);
+    }
+    
+    // Countdown to close dialog (only after status resolved)
+    if (nfceStatus !== 'processando' && nfceStatus !== 'pendente') {
+      setNfceCountdown(10);
+      const countdown = setInterval(() => {
+        setNfceCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(countdown);
+            setNfcePostSaleDialog(false);
+            setNfcePostSaleRecord(null);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(countdown);
+    }
+  }, [nfcePostSaleDialog, nfcePostSaleRecord, nfceStatus, storeSettings.autoPrintNfce]);
 
   const loading = productsLoading || paymentLoading || registerLoading;
 
@@ -386,12 +423,36 @@ export default function PDV() {
           setImportedTab(null);
         }
         setPaymentDialog(false);
+
+        // Auto-print sale receipt if setting is enabled
+        if (storeSettings.autoPrintSales && saleId) {
+          // Find the sale that was just created to print it
+          const { data: newSale } = await supabase
+            .from('pdv_sales')
+            .select('*, items:pdv_sale_items(*), payment_method:payment_methods(name)')
+            .eq('id', saleId)
+            .maybeSingle();
+          if (newSale) {
+            printSaleReceipt(newSale as any);
+          }
+        }
+
         clearCart();
 
         // Show post-sale NFC-e dialog if NFC-e was emitted
-        if (nfceEmitted && emittedNfceId) {
-          setNfcePostSaleId(emittedNfceId);
-          setNfcePostSaleDialog(true);
+        if (nfceEmitted) {
+          // Fetch the nfce_record that was just created
+          const { data: nfceRecord } = await supabase
+            .from('nfce_records')
+            .select('*')
+            .eq('sale_id', saleId)
+            .maybeSingle();
+          
+          if (nfceRecord) {
+            setNfcePostSaleRecord(nfceRecord);
+            setNfceStatus(nfceRecord.status || 'processando');
+            setNfcePostSaleDialog(true);
+          }
         }
       }
     } finally {
@@ -1428,62 +1489,110 @@ export default function PDV() {
       <Dialog open={nfcePostSaleDialog} onOpenChange={(open) => {
         if (!open) {
           setNfcePostSaleDialog(false);
-          setNfcePostSaleId(null);
+          setNfcePostSaleRecord(null);
         }
       }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="w-5 h-5" />
-              NFC-e Emitida
+              NFC-e {nfceStatus === 'autorizada' ? 'Autorizada' : nfceStatus === 'rejeitada' ? 'Rejeitada' : 'Processando...'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              Venda finalizada com sucesso! Deseja imprimir o cupom fiscal (DANFE)?
-            </p>
-            <div className="flex gap-3 justify-center">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setNfcePostSaleDialog(false);
-                  setNfcePostSaleId(null);
-                }}
-                className="gap-2"
-              >
-                Não ({nfceCountdown}s)
-              </Button>
-              <Button
-                onClick={async () => {
-                  if (!nfcePostSaleId) return;
-                  setNfcePrinting(true);
-                  try {
-                    const { data } = await supabase
-                      .from('nfce_records')
-                      .select('*')
-                      .eq('nfce_id', nfcePostSaleId)
-                      .maybeSingle();
-                    if (!data) throw new Error('Registro NFC-e não encontrado');
-                    printDanfeFromRecord(data as unknown as NFCeRecord);
-                    toast.success('DANFE enviada para impressão');
-                  } catch (e: any) {
-                    toast.error(e.message || 'Erro ao imprimir DANFE');
-                  } finally {
-                    setNfcePrinting(false);
+            {nfcePolling ? (
+              <div className="flex flex-col items-center gap-3 py-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">
+                  Aguardando retorno da SEFAZ...
+                </p>
+              </div>
+            ) : nfceStatus === 'autorizada' ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  ✅ NFC-e autorizada com sucesso! Deseja imprimir o DANFE?
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setNfcePostSaleDialog(false);
+                      setNfcePostSaleRecord(null);
+                    }}
+                  >
+                    Não ({nfceCountdown}s)
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (!nfcePostSaleRecord) return;
+                      setNfcePrinting(true);
+                      try {
+                        printDanfeFromRecord(nfcePostSaleRecord as unknown as NFCeRecord);
+                        toast.success('DANFE enviada para impressão');
+                      } catch (e: any) {
+                        toast.error(e.message || 'Erro ao imprimir DANFE');
+                      } finally {
+                        setNfcePrinting(false);
+                        setNfcePostSaleDialog(false);
+                        setNfcePostSaleRecord(null);
+                      }
+                    }}
+                    disabled={nfcePrinting}
+                    className="gap-2"
+                  >
+                    {nfcePrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                    Imprimir DANFE
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-destructive">
+                  ❌ NFC-e {nfceStatus === 'rejeitada' ? 'rejeitada' : 'com erro'}. Verifique no Monitor NFC-e.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
                     setNfcePostSaleDialog(false);
-                    setNfcePostSaleId(null);
-                  }
-                }}
-                disabled={nfcePrinting}
-                className="gap-2"
-              >
-                {nfcePrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-                Imprimir DANFE
-              </Button>
-            </div>
+                    setNfcePostSaleRecord(null);
+                  }}
+                >
+                  Fechar ({nfceCountdown}s)
+                </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Auto-print settings floating panel */}
+      {isModuleEnabled('fiscal') && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <Card className="shadow-lg border-2 p-3 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Impressão Automática</p>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="auto-print-sales"
+                checked={storeSettings.autoPrintSales}
+                onCheckedChange={async (checked) => {
+                  await updateSetting('auto_print_sales', checked ? 'true' : 'false');
+                }}
+              />
+              <label htmlFor="auto-print-sales" className="text-xs cursor-pointer">Vendas</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="auto-print-nfce"
+                checked={storeSettings.autoPrintNfce}
+                onCheckedChange={async (checked) => {
+                  await updateSetting('auto_print_nfce', checked ? 'true' : 'false');
+                }}
+              />
+              <label htmlFor="auto-print-nfce" className="text-xs cursor-pointer">NFC-e</label>
+            </div>
+          </Card>
+        </div>
+      )}
     </AppLayout>
   );
 }

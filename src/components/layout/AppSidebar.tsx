@@ -19,6 +19,8 @@ import {
   Receipt,
   FileText,
   ClipboardList,
+  Lightbulb,
+  Upload,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -149,6 +151,11 @@ export function AppSidebar() {
       title: 'Empresas',
       icon: Building2,
       href: '/admin',
+    },
+    {
+      title: 'Sugestões',
+      icon: Lightbulb,
+      href: '/admin/sugestoes',
     },
     {
       title: 'Usuários',
@@ -415,6 +422,28 @@ export function AppSidebar() {
                   <Link to="/novidades">
                     <ClipboardList className="w-4 h-4" />
                     <span>Novidades</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/sugestoes'}
+                >
+                  <Link to="/sugestoes">
+                    <Lightbulb className="w-4 h-4" />
+                    <span>Sugestões</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/importar-cardapio'}
+                >
+                  <Link to="/importar-cardapio">
+                    <Upload className="w-4 h-4" />
+                    <span>Importar Cardápio</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

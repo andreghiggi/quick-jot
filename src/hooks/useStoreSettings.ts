@@ -14,6 +14,8 @@ interface StoreSettings {
   showCardAguardando: boolean;
   showCardFaturamento: boolean;
   showCardTotalPedidos: boolean;
+  autoPrintSales: boolean;
+  autoPrintNfce: boolean;
 }
 
 interface UseStoreSettingsOptions {
@@ -34,6 +36,8 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     showCardAguardando: true,
     showCardFaturamento: true,
     showCardTotalPedidos: true,
+    autoPrintSales: false,
+    autoPrintNfce: false,
   });
   const [loading, setLoading] = useState(true);
 
@@ -68,6 +72,8 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         showCardAguardando: settingsMap['show_card_aguardando'] !== 'false',
         showCardFaturamento: settingsMap['show_card_faturamento'] !== 'false',
         showCardTotalPedidos: settingsMap['show_card_total_pedidos'] !== 'false',
+        autoPrintSales: settingsMap['auto_print_sales'] === 'true',
+        autoPrintNfce: settingsMap['auto_print_nfce'] === 'true',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);

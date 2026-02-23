@@ -30,11 +30,14 @@ import WhatsAppSettings from "./pages/WhatsAppSettings";
 import Changelog from "./pages/Changelog";
 import Fiscal from "./pages/Fiscal";
 import NFCeMonitor from "./pages/NFCeMonitor";
+import Suggestions from "./pages/Suggestions";
+import MenuImport from "./pages/MenuImport";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import IntegrationsPage from "./pages/admin/IntegrationsPage";
 import CompanyModulesPage from "./pages/admin/CompanyModulesPage";
+import SuggestionsAdmin from "./pages/admin/SuggestionsAdmin";
 
 const queryClient = new QueryClient();
 
@@ -154,6 +157,18 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
+      <Route path="/sugestoes" element={
+        <ProtectedRoute requireCompany>
+          <Suggestions />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/importar-cardapio" element={
+        <ProtectedRoute requireCompany>
+          <MenuImport />
+        </ProtectedRoute>
+      } />
+      
       <Route path="/garcom" element={
         <ProtectedRoute requireCompany>
           <Waiter />
@@ -176,6 +191,12 @@ function AppRoutes() {
       <Route path="/configuracoes/integracoes" element={
         <ProtectedRoute requireCompany>
           <IntegrationsPage />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/admin/sugestoes" element={
+        <ProtectedRoute requiredRole="super_admin">
+          <SuggestionsAdmin />
         </ProtectedRoute>
       } />
       
