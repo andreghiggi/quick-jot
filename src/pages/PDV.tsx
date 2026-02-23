@@ -9,7 +9,7 @@ import { useTables } from '@/hooks/useTables';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
-import { emitirNFCe, NFCeItem, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
+import { emitirNFCe, consultarNFCe, NFCeItem, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -132,6 +132,16 @@ export default function PDV() {
     if (nfceStatus === 'processando' || nfceStatus === 'pendente') {
       setNfcePolling(true);
       const pollInterval = setInterval(async () => {
+        // First, trigger a consult to sync status from the external API
+        if (nfcePostSaleRecord.nfce_id && company?.id) {
+          try {
+            await consultarNFCe(company.id, nfcePostSaleRecord.nfce_id);
+          } catch (e) {
+            console.error('[PDV] NFC-e consult error during polling:', e);
+          }
+        }
+
+        // Then read the updated record from DB
         const { data } = await supabase
           .from('nfce_records')
           .select('*')
@@ -154,7 +164,7 @@ export default function PDV() {
             }
           }
         }
-      }, 3000);
+      }, 4000);
       
       return () => clearInterval(pollInterval);
     }
