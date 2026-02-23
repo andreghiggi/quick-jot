@@ -150,11 +150,53 @@ export default function NFCeMonitor() {
     setActionLoading(record.id);
     try {
       await reprocessarNFCe(company.id, record.nfce_id);
-      toast.success('Reprocessamento solicitado');
-      loadRecords();
+      toast.info('Reprocessamento solicitado. Aguardando retorno...');
+      
+      // Poll for updated status after reprocessing
+      let attempts = 0;
+      const maxAttempts = 10;
+      const pollReprocess = async (): Promise<void> => {
+        attempts++;
+        try {
+          await consultarNFCe(company!.id, record.nfce_id!);
+        } catch (e) {
+          console.error('[NFCeMonitor] Consult after reprocess error:', e);
+        }
+        
+        const { data } = await supabase
+          .from('nfce_records')
+          .select('*')
+          .eq('id', record.id)
+          .maybeSingle();
+        
+        if (data) {
+          const status = data.status;
+          if (status === 'autorizada') {
+            toast.success('NFC-e autorizada com sucesso!');
+            setActionLoading(null);
+            loadRecords();
+            return;
+          }
+          if (status === 'rejeitada' || status === 'erro' || status === 'denegada') {
+            toast.error(`NFC-e ${status}: ${data.motivo_rejeicao || 'Verifique os detalhes'}`);
+            setActionLoading(null);
+            loadRecords();
+            return;
+          }
+        }
+        
+        if (attempts < maxAttempts) {
+          setTimeout(pollReprocess, 4000);
+        } else {
+          toast.warning('Tempo de espera esgotado. Verifique o status manualmente.');
+          setActionLoading(null);
+          loadRecords();
+        }
+      };
+      
+      setTimeout(pollReprocess, 3000);
     } catch (e: any) {
       toast.error(e.message || 'Erro ao reprocessar');
-    } finally {
       setActionLoading(null);
     }
   }

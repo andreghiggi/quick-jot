@@ -9,7 +9,7 @@ import { useTables } from '@/hooks/useTables';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
-import { emitirNFCe, consultarNFCe, NFCeItem, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
+import { emitirNFCe, consultarNFCe, reprocessarNFCe, NFCeItem, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -98,6 +98,7 @@ export default function PDV() {
   const [nfceStatus, setNfceStatus] = useState<string>('processando');
   const [nfceCountdown, setNfceCountdown] = useState(10);
   const [nfcePrinting, setNfcePrinting] = useState(false);
+  const [nfceRetryCount, setNfceRetryCount] = useState(0);
 
   // Dialog states
   const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
@@ -151,6 +152,24 @@ export default function PDV() {
         if (data) {
           setNfcePostSaleRecord(data);
           const status = data.status || 'processando';
+          
+          // If rejected and haven't retried yet, auto-retry once
+          if ((status === 'rejeitada' || status === 'erro') && nfceRetryCount < 1) {
+            console.log('[PDV] NFC-e rejected, auto-retrying (attempt', nfceRetryCount + 1, ')');
+            setNfceRetryCount(prev => prev + 1);
+            setNfceStatus('processando');
+            toast.info('NFC-e rejeitada, tentando reenviar automaticamente...');
+            
+            try {
+              if (data.nfce_id && company?.id) {
+                await reprocessarNFCe(company.id, data.nfce_id);
+              }
+            } catch (retryErr) {
+              console.error('[PDV] NFC-e retry error:', retryErr);
+            }
+            return; // Continue polling after retry
+          }
+          
           setNfceStatus(status);
           
           if (status === 'autorizada' || status === 'rejeitada' || status === 'erro') {
@@ -161,6 +180,10 @@ export default function PDV() {
             if (status === 'autorizada' && storeSettings.autoPrintNfce) {
               printDanfeFromRecord(data as unknown as NFCeRecord);
               toast.success('DANFE impressa automaticamente');
+            }
+            
+            if (status === 'rejeitada' || status === 'erro') {
+              toast.error(`NFC-e ${status}: ${data.motivo_rejeicao || 'Verifique no Monitor NFC-e'}`);
             }
           }
         }
@@ -178,6 +201,7 @@ export default function PDV() {
             clearInterval(countdown);
             setNfcePostSaleDialog(false);
             setNfcePostSaleRecord(null);
+            setNfceRetryCount(0);
             return 0;
           }
           return prev - 1;
@@ -185,7 +209,7 @@ export default function PDV() {
       }, 1000);
       return () => clearInterval(countdown);
     }
-  }, [nfcePostSaleDialog, nfcePostSaleRecord, nfceStatus, storeSettings.autoPrintNfce]);
+  }, [nfcePostSaleDialog, nfcePostSaleRecord, nfceStatus, nfceRetryCount, storeSettings.autoPrintNfce]);
 
   const loading = productsLoading || paymentLoading || registerLoading;
 
@@ -462,6 +486,7 @@ export default function PDV() {
           if (nfceRecord) {
             setNfcePostSaleRecord(nfceRecord);
             setNfceStatus(nfceRecord.status || 'processando');
+            setNfceRetryCount(0);
             setNfcePostSaleDialog(true);
           }
         }
