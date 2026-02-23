@@ -13,6 +13,30 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '23/02/2026',
+    version: '1.9.0',
+    type: 'feature',
+    description: 'Sistema de Sugestões: lojistas podem enviar ideias e acompanhar o status (pendente, aprovado, implementado) com previsão de entrega.',
+  },
+  {
+    date: '23/02/2026',
+    version: '1.9.0',
+    type: 'feature',
+    description: 'Importação de Cardápio por IA: envie uma foto ou PDF do cardápio e o sistema extrai automaticamente produtos, preços e categorias com preview editável.',
+  },
+  {
+    date: '23/02/2026',
+    version: '1.9.0',
+    type: 'improvement',
+    description: 'PDV agora aguarda retorno da SEFAZ (polling) antes de oferecer impressão da NFC-e, evitando impressões de notas ainda não autorizadas.',
+  },
+  {
+    date: '23/02/2026',
+    version: '1.9.0',
+    type: 'feature',
+    description: 'Impressão automática no PDV: toggles para imprimir comprovante de venda e DANFE automaticamente ao finalizar.',
+  },
+  {
     date: '19/02/2026',
     version: '1.8.1',
     type: 'improvement',
