@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -40,6 +40,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     autoPrintNfce: false,
   });
   const [loading, setLoading] = useState(true);
+  const isInitialLoadRef = useRef(true);
 
   async function fetchSettings() {
     try {
@@ -78,6 +79,9 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     } catch (error) {
       console.error('Error fetching store settings:', error);
     } finally {
+      if (isInitialLoadRef.current) {
+        isInitialLoadRef.current = false;
+      }
       setLoading(false);
     }
   }

@@ -20,7 +20,7 @@ export function StatsCard({ title, value, icon, trend, color = 'primary', classN
   return (
     <div className={cn(
       "bg-card rounded-xl p-4 shadow-card border border-border",
-      "hover:shadow-lg transition-all duration-200",
+      "hover:shadow-lg transition-shadow duration-200",
       className
     )}>
       <div className="flex items-start justify-between">
