@@ -41,7 +41,8 @@ import {
   Users,
   Table2,
   ClipboardList,
-  Import
+  Import,
+  CheckCircle
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -194,7 +195,8 @@ export default function PDV() {
     
     // Countdown to close dialog (only after status resolved)
     if (nfceStatus !== 'processando' && nfceStatus !== 'pendente') {
-      setNfceCountdown(10);
+      const autoHandled = (nfceStatus === 'autorizada' && storeSettings.autoPrintNfce);
+      setNfceCountdown(autoHandled ? 3 : 10);
       const countdown = setInterval(() => {
         setNfceCountdown(prev => {
           if (prev <= 1) {
@@ -1609,43 +1611,53 @@ export default function PDV() {
                 </p>
               </div>
             ) : nfceStatus === 'autorizada' ? (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  ✅ NFC-e autorizada com sucesso! Deseja imprimir o DANFE?
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setNfcePostSaleDialog(false);
-                      setNfcePostSaleRecord(null);
-                    }}
-                  >
-                    Não ({nfceCountdown}s)
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      if (!nfcePostSaleRecord) return;
-                      setNfcePrinting(true);
-                      try {
-                        printDanfeFromRecord(nfcePostSaleRecord as unknown as NFCeRecord);
-                        toast.success('DANFE enviada para impressão');
-                      } catch (e: any) {
-                        toast.error(e.message || 'Erro ao imprimir DANFE');
-                      } finally {
-                        setNfcePrinting(false);
+              storeSettings.autoPrintNfce ? (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                  <p className="text-sm text-muted-foreground">
+                    ✅ NFC-e autorizada! DANFE impressa automaticamente.
+                  </p>
+                  <p className="text-xs text-muted-foreground">Fechando em {nfceCountdown}s...</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    ✅ NFC-e autorizada com sucesso! Deseja imprimir o DANFE?
+                  </p>
+                  <div className="flex gap-3 justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
                         setNfcePostSaleDialog(false);
                         setNfcePostSaleRecord(null);
-                      }
-                    }}
-                    disabled={nfcePrinting}
-                    className="gap-2"
-                  >
-                    {nfcePrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-                    Imprimir DANFE
-                  </Button>
-                </div>
-              </>
+                      }}
+                    >
+                      Não ({nfceCountdown}s)
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (!nfcePostSaleRecord) return;
+                        setNfcePrinting(true);
+                        try {
+                          printDanfeFromRecord(nfcePostSaleRecord as unknown as NFCeRecord);
+                          toast.success('DANFE enviada para impressão');
+                        } catch (e: any) {
+                          toast.error(e.message || 'Erro ao imprimir DANFE');
+                        } finally {
+                          setNfcePrinting(false);
+                          setNfcePostSaleDialog(false);
+                          setNfcePostSaleRecord(null);
+                        }
+                      }}
+                      disabled={nfcePrinting}
+                      className="gap-2"
+                    >
+                      {nfcePrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                      Imprimir DANFE
+                    </Button>
+                  </div>
+                </>
+              )
             ) : (
               <>
                 <p className="text-sm text-destructive">
