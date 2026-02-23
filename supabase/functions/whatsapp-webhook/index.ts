@@ -73,7 +73,11 @@ serve(async (req) => {
       || messageData.message?.extendedTextMessage?.text 
       || '';
 
+    // If not a greeting, just acknowledge but don't reply
+    // IMPORTANT: We must return 200 quickly so Evolution API doesn't mark as failed
+    // and doesn't interfere with native WhatsApp notifications
     if (!text || !isGreeting(text)) {
+      console.log('Non-greeting message received, passing through:', text?.slice(0, 50));
       return new Response(JSON.stringify({ ok: true, skipped: 'not_greeting' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
