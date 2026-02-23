@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem, OrderStatus } from '@/types/order';
 import { toast } from 'sonner';
 import { generateWhatsAppMessage } from '@/utils/whatsappMessages';
+import { useOrderNotificationSound } from '@/hooks/useOrderNotificationSound';
 
 interface UseOrdersOptions {
   companyId?: string | null;
@@ -12,6 +13,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
   const { companyId } = options;
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const { checkAndNotify } = useOrderNotificationSound(!!companyId);
+  const prevPendingCountRef = useRef<number | null>(null);
 
   async function fetchOrders() {
     // Don't fetch if no companyId - prevents showing orders from other companies
@@ -73,6 +76,14 @@ export function useOrders(options: UseOrdersOptions = {}) {
       }));
 
       setOrders(mappedOrders);
+
+      // Check for new pending orders and play sound
+      const pendingCount = mappedOrders.filter(o => o.status === 'pending').length;
+      if (prevPendingCountRef.current !== null && pendingCount > prevPendingCountRef.current) {
+        checkAndNotify(pendingCount);
+        toast.info('🔔 Novo pedido recebido!', { duration: 5000 });
+      }
+      prevPendingCountRef.current = pendingCount;
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast.error('Erro ao carregar pedidos');

@@ -3,6 +3,9 @@ project_id = "iwmrtxdzlkasuzutxvhh"
 [functions.send-whatsapp]
 verify_jwt = false
 
+[functions.notify-store-order]
+verify_jwt = false
+
 [functions.whatsapp-evolution]
 verify_jwt = false
 

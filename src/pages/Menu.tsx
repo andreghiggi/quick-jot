@@ -361,6 +361,13 @@ export default function Menu() {
       }
 
       console.log('Order saved to database:', newOrder.id);
+
+      // Notify store via WhatsApp (fire-and-forget, don't block the user)
+      if (company?.id) {
+        supabase.functions.invoke('notify-store-order', {
+          body: { companyId: company.id, orderId: newOrder.id },
+        }).catch(err => console.error('Store notification failed:', err));
+      }
     } catch (error) {
       console.error('Error saving order to database:', error);
       setIsSubmitting(false);

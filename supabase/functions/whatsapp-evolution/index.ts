@@ -48,6 +48,10 @@ serve(async (req) => {
             instanceName,
             integration: 'WHATSAPP-BAILEYS',
             qrcode: true,
+            rejectCall: false,
+            alwaysOnline: false,
+            readMessages: false, // Don't mark as read - preserves native notifications
+            readStatus: false,
             webhook: {
               url: webhookUrl,
               byEvents: false,
