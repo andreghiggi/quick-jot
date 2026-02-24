@@ -60,7 +60,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    switch (action) {
+    // Extract numero and serie from chave de acesso if not provided directly
+    // Chave format: UF(2) AAMM(4) CNPJ(14) MOD(2) SERIE(3) NNF(9) ...
+    function extractFromChave(chave: string): { numero: string | null, serie: string | null } {
+      if (!chave || chave.length < 34) return { numero: null, serie: null }
+      const serie = String(parseInt(chave.substring(22, 25), 10))
+      const numero = String(parseInt(chave.substring(25, 34), 10))
+      return { numero, serie }
+    }
+
+
       case 'emitir': {
         console.log('[nfce-proxy] Emitir NFC-e, URL:', NFCE_API_URL)
         apiResponse = await fetch(NFCE_API_URL, {
@@ -78,17 +87,19 @@ Deno.serve(async (req) => {
         // Handle both { data: {...} } and flat response
         const emitData = result?.data || result
         if (emitData && (emitData.id || emitData.nfce_id)) {
+          const chave = emitData.chave_acesso || emitData.chave || emitData.access_key || null
+          const fromChave = chave ? extractFromChave(chave) : { numero: null, serie: null }
           const nfceRecord = {
             company_id: companyId,
             sale_id: saleId || null,
             external_id: payload.external_id,
             nfce_id: emitData.id || emitData.nfce_id,
-            numero: emitData.numero || emitData.number || null,
-            serie: emitData.serie || emitData.series || null,
+            numero: emitData.numero || emitData.number || fromChave.numero || null,
+            serie: emitData.serie || emitData.series || fromChave.serie || null,
             status: emitData.status || 'pendente',
             ambiente: emitData.ambiente || emitData.environment || 'homologacao',
             valor_total: emitData.valor_total || emitData.total || 0,
-            chave_acesso: emitData.chave_acesso || emitData.chave || emitData.access_key || null,
+            chave_acesso: chave,
             protocolo: emitData.protocolo || emitData.protocol || null,
             qrcode_url: emitData.qrcode_url || emitData.qr_code_url || emitData.url_qrcode || emitData.qrcode || null,
             xml_url: emitData.xml_url || emitData.url_xml || null,
@@ -130,9 +141,15 @@ Deno.serve(async (req) => {
           if (d.numero || d.number) updateData.numero = d.numero || d.number
           if (d.serie || d.series) updateData.serie = d.serie || d.series
 
-          // Chave de acesso - try multiple field names
-          const chave = d.chave_acesso || d.chave || d.access_key || d.chnfe
-          if (chave) updateData.chave_acesso = chave
+          const chaveConsulta = d.chave_acesso || d.chave || d.access_key || d.chnfe
+          const fromChaveConsulta = chaveConsulta ? extractFromChave(chaveConsulta) : { numero: null, serie: null }
+          if (chaveConsulta) updateData.chave_acesso = chaveConsulta
+
+          // Numero/serie - try direct fields first, then extract from chave
+          if (d.numero || d.number) updateData.numero = d.numero || d.number
+          else if (fromChaveConsulta.numero) updateData.numero = fromChaveConsulta.numero
+          if (d.serie || d.series) updateData.serie = d.serie || d.series
+          else if (fromChaveConsulta.serie) updateData.serie = fromChaveConsulta.serie
 
           // Protocolo
           const proto = d.protocolo || d.protocol || d.nProt
