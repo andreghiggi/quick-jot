@@ -215,7 +215,7 @@ export default function PDV() {
             clearInterval(pollInterval);
             
             if (status === 'autorizada' && storeSettings.autoPrintNfce) {
-              printDanfeFromRecord(data as unknown as NFCeRecord);
+              await printDanfeFromRecord(data as unknown as NFCeRecord);
               toast.success('DANFE impressa automaticamente');
             }
             
@@ -531,7 +531,7 @@ export default function PDV() {
             if (initialStatus === 'autorizada') {
               setNfceStatus('autorizada');
               if (storeSettings.autoPrintNfce) {
-                printDanfeFromRecord(nfceRecord as unknown as NFCeRecord);
+                await printDanfeFromRecord(nfceRecord as unknown as NFCeRecord);
                 toast.success('NFC-e autorizada! DANFE impressa automaticamente.');
               }
             } else {
@@ -1574,7 +1574,7 @@ export default function PDV() {
                                     if (initialStatus === 'autorizada') {
                                       setNfceStatus('autorizada');
                                       if (storeSettings.autoPrintNfce) {
-                                        printDanfeFromRecord(nfceRecord as unknown as NFCeRecord);
+                                        await printDanfeFromRecord(nfceRecord as unknown as NFCeRecord);
                                         toast.success('NFC-e autorizada! DANFE impressa automaticamente.');
                                       }
                                     } else {
@@ -1723,11 +1723,11 @@ export default function PDV() {
                       Não ({nfceCountdown}s)
                     </Button>
                     <Button
-                      onClick={() => {
+                      onClick={async () => {
                         if (!nfcePostSaleRecord) return;
                         setNfcePrinting(true);
                         try {
-                          printDanfeFromRecord(nfcePostSaleRecord as unknown as NFCeRecord);
+                          await printDanfeFromRecord(nfcePostSaleRecord as unknown as NFCeRecord);
                           toast.success('DANFE enviada para impressão');
                         } catch (e: any) {
                           toast.error(e.message || 'Erro ao imprimir DANFE');

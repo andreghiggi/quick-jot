@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import QRCode from 'qrcode';
 
 export interface NFCeItem {
   codigo: string;
@@ -104,11 +105,10 @@ export async function listarNFCe(companyId: string, filtros?: Record<string, str
   });
 }
 
-export function generateDanfeHtml(record: NFCeRecord & { request_payload?: any }): string {
+export async function generateDanfeHtml(record: NFCeRecord & { request_payload?: any }): Promise<string> {
   const items = record.request_payload?.itens || [];
   const qrcodeUrl = record.qrcode_url || '';
   const chaveAcesso = record.chave_acesso || '';
-  // Format chave in groups of 4
   const chaveFormatada = chaveAcesso.replace(/(.{4})/g, '$1 ').trim();
   const dataEmissao = record.created_at ? new Date(record.created_at).toLocaleString('pt-BR') : '';
   const ambiente = record.ambiente === 'producao' ? 'PRODUÇÃO' : 'HOMOLOGAÇÃO';
@@ -122,10 +122,16 @@ export function generateDanfeHtml(record: NFCeRecord & { request_payload?: any }
     </tr>
   `).join('');
 
-  // The qrcode_url from SEFAZ IS the content to be encoded as QR Code
-  const qrCodeImg = qrcodeUrl
-    ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=M&data=${encodeURIComponent(qrcodeUrl)}" alt="QR Code NFC-e" style="max-width:200px;max-height:200px;" />`
-    : '<p style="font-size:10px;color:#999;">[QR Code indisponível]</p>';
+  // Generate QR Code as data URL using local library
+  let qrCodeImg = '<p style="font-size:10px;color:#999;">[QR Code indisponível]</p>';
+  if (qrcodeUrl) {
+    try {
+      const qrDataUrl = await QRCode.toDataURL(qrcodeUrl, { width: 200, margin: 1, errorCorrectionLevel: 'M' });
+      qrCodeImg = `<img src="${qrDataUrl}" alt="QR Code NFC-e" style="max-width:200px;max-height:200px;" />`;
+    } catch (e) {
+      console.error('Erro ao gerar QR Code:', e);
+    }
+  }
 
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>DANFE NFC-e</title>
@@ -196,7 +202,7 @@ export function generateDanfeHtml(record: NFCeRecord & { request_payload?: any }
 </body></html>`;
 }
 
-export function printDanfeFromRecord(record: NFCeRecord & { request_payload?: any }) {
+export async function printDanfeFromRecord(record: NFCeRecord & { request_payload?: any }) {
   if (!record.chave_acesso && !record.qrcode_url) {
     throw new Error('Nota sem dados fiscais. Aguarde a autorização da SEFAZ para imprimir.');
   }
@@ -205,18 +211,14 @@ export function printDanfeFromRecord(record: NFCeRecord & { request_payload?: an
   if (!printWindow) {
     throw new Error('Pop-up bloqueado. Permita pop-ups para imprimir o DANFE.');
   }
-  const html = generateDanfeHtml(record);
+  const html = await generateDanfeHtml(record);
   printWindow.document.open();
   printWindow.document.write(html);
   printWindow.document.close();
-  // Wait for QR code image to load, then print
-  printWindow.onload = () => {
-    setTimeout(() => { printWindow.print(); }, 800);
-  };
-  // Fallback if onload doesn't fire
+  // Wait for content to render, then print
   setTimeout(() => {
     try { printWindow.print(); } catch (_) {}
-  }, 2500);
+  }, 500);
 }
 
 export async function getNFCeRecords(companyId: string, limit = 50): Promise<NFCeRecord[]> {
