@@ -1,0 +1,543 @@
+import { useState, useRef, useMemo } from 'react';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
+import { useCategories } from '@/hooks/useCategories';
+import { useProducts } from '@/hooks/useProducts';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
+import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, Layers } from 'lucide-react';
+
+interface ExtractedGroup {
+  name: string;
+  items: { name: string; price: number }[];
+  selected: boolean;
+}
+
+export default function OptionalGroups() {
+  const { company } = useAuthContext();
+  const { groups, loading, addGroup, updateGroup, deleteGroup, addItem, addItemsBulk, deleteItem, setCategoryLinks, setProductLinks } = useOptionalGroups({ companyId: company?.id });
+  const { categories } = useCategories({ companyId: company?.id });
+  const { products } = useProducts({ companyId: company?.id });
+
+  // Dialog states
+  const [isNewGroupOpen, setIsNewGroupOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<OptionalGroup | null>(null);
+  const [isAssociateOpen, setIsAssociateOpen] = useState(false);
+  const [associatingGroup, setAssociatingGroup] = useState<OptionalGroup | null>(null);
+  const [isAddItemOpen, setIsAddItemOpen] = useState(false);
+  const [addItemGroupId, setAddItemGroupId] = useState<string | null>(null);
+
+  // New group form
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupMin, setNewGroupMin] = useState(0);
+  const [newGroupMax, setNewGroupMax] = useState(0);
+
+  // New item form
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemPrice, setNewItemPrice] = useState('');
+
+  // Association state
+  const [selectedCatIds, setSelectedCatIds] = useState<string[]>([]);
+  const [selectedProdIds, setSelectedProdIds] = useState<string[]>([]);
+
+  // Import state
+  const [importStep, setImportStep] = useState<'idle' | 'preview' | 'review'>('idle');
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreviewUrl, setImportPreviewUrl] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [extractedGroups, setExtractedGroups] = useState<ExtractedGroup[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // --- Handlers ---
+
+  async function handleCreateGroup() {
+    if (!newGroupName.trim()) {
+      toast.error('Informe o nome do grupo');
+      return;
+    }
+    await addGroup({ name: newGroupName.trim(), minSelect: newGroupMin, maxSelect: newGroupMax });
+    setNewGroupName('');
+    setNewGroupMin(0);
+    setNewGroupMax(0);
+    setIsNewGroupOpen(false);
+  }
+
+  async function handleUpdateGroup() {
+    if (!editingGroup) return;
+    await updateGroup(editingGroup.id, {
+      name: editingGroup.name,
+      minSelect: editingGroup.minSelect,
+      maxSelect: editingGroup.maxSelect,
+      active: editingGroup.active,
+    });
+    setEditingGroup(null);
+  }
+
+  async function handleAddItem() {
+    if (!addItemGroupId || !newItemName.trim()) {
+      toast.error('Informe o nome do item');
+      return;
+    }
+    await addItem(addItemGroupId, { name: newItemName.trim(), price: parseFloat(newItemPrice) || 0 });
+    setNewItemName('');
+    setNewItemPrice('');
+    setIsAddItemOpen(false);
+    setAddItemGroupId(null);
+  }
+
+  function openAssociate(group: OptionalGroup) {
+    setAssociatingGroup(group);
+    setSelectedCatIds([...group.categoryIds]);
+    setSelectedProdIds([...group.productIds]);
+    setIsAssociateOpen(true);
+  }
+
+  async function handleSaveAssociations() {
+    if (!associatingGroup) return;
+    await setCategoryLinks(associatingGroup.id, selectedCatIds);
+    await setProductLinks(associatingGroup.id, selectedProdIds);
+    toast.success('Associações salvas!');
+    setIsAssociateOpen(false);
+    setAssociatingGroup(null);
+  }
+
+  function toggleCatId(id: string) {
+    setSelectedCatIds(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  }
+
+  function toggleProdId(id: string) {
+    setSelectedProdIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+  }
+
+  // --- Import handlers ---
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setImportFile(f);
+    if (f.type.startsWith('image/')) {
+      setImportPreviewUrl(URL.createObjectURL(f));
+    } else {
+      setImportPreviewUrl(null);
+    }
+    setImportStep('preview');
+  }
+
+  async function handleExtract() {
+    if (!importFile || !company?.id) return;
+    setIsExtracting(true);
+    try {
+      const fileExt = importFile.name.split('.').pop();
+      const fileName = `optionals-import/${company.id}/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, importFile);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+
+      const { data, error } = await supabase.functions.invoke('extract-optionals', {
+        body: { imageUrl: publicUrl }
+      });
+      if (error) throw error;
+
+      if (data?.groups && Array.isArray(data.groups)) {
+        setExtractedGroups(data.groups.map((g: any) => ({
+          name: g.name || 'Sem nome',
+          items: (g.items || []).map((i: any) => ({ name: i.name || '', price: parseFloat(i.price) || 0 })),
+          selected: true,
+        })));
+        setImportStep('review');
+        toast.success(`${data.groups.length} grupos encontrados!`);
+      } else {
+        toast.error('Não foi possível extrair adicionais');
+      }
+    } catch (error: any) {
+      console.error('Error extracting optionals:', error);
+      toast.error(error.message || 'Erro ao processar');
+    } finally {
+      setIsExtracting(false);
+    }
+  }
+
+  async function handleImport() {
+    const selected = extractedGroups.filter(g => g.selected);
+    if (selected.length === 0) {
+      toast.error('Selecione pelo menos um grupo');
+      return;
+    }
+    setIsImporting(true);
+    try {
+      for (const eg of selected) {
+        const groupId = await addGroup({ name: eg.name, minSelect: 0, maxSelect: 0 });
+        if (groupId && eg.items.length > 0) {
+          await addItemsBulk(groupId, eg.items);
+        }
+      }
+      toast.success('Adicionais importados!');
+      resetImport();
+    } catch {
+      toast.error('Erro ao importar');
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
+  function resetImport() {
+    setImportFile(null);
+    setImportPreviewUrl(null);
+    setExtractedGroups([]);
+    setImportStep('idle');
+  }
+
+  // Group products by category for the association dialog
+  const productsByCategory = useMemo(() => {
+    const map: Record<string, typeof products> = {};
+    products.forEach(p => {
+      if (!map[p.category]) map[p.category] = [];
+      map[p.category].push(p);
+    });
+    return map;
+  }, [products]);
+
+  if (loading) {
+    return (
+      <AppLayout title="Grupos de Adicionais">
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+        <Upload className="h-4 w-4 mr-2" />
+        <span className="hidden sm:inline">Importar por Foto</span>
+      </Button>
+      <input
+        type="file"
+        accept="image/*,.pdf,.jpg,.jpeg,.png,.webp"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+      <Button onClick={() => setIsNewGroupOpen(true)}>
+        <Plus className="h-4 w-4 mr-2" />
+        <span className="hidden sm:inline">Novo Grupo</span>
+      </Button>
+    </div>
+  );
+
+  return (
+    <AppLayout title="Grupos de Adicionais" actions={headerActions}>
+      <div className="space-y-6">
+        {/* Import flow */}
+        {importStep === 'preview' && importFile && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Eye className="w-5 h-5" /> Preview do Arquivo
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {importPreviewUrl && (
+                <div className="max-h-72 overflow-auto rounded border">
+                  <img src={importPreviewUrl} alt="Preview" className="w-full" />
+                </div>
+              )}
+              {!importPreviewUrl && (
+                <div className="bg-muted p-6 rounded-lg text-center">
+                  <FileImage className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
+                  <p className="font-medium">{importFile.name}</p>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={resetImport}>Cancelar</Button>
+                <Button onClick={handleExtract} disabled={isExtracting}>
+                  {isExtracting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processando...</> : <><Eye className="w-4 h-4 mr-2" />Extrair Adicionais</>}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {importStep === 'review' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Check className="w-5 h-5" /> Revisar Adicionais Extraídos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ScrollArea className="max-h-[50vh]">
+                <div className="space-y-4">
+                  {extractedGroups.map((eg, gi) => (
+                    <div key={gi} className={`border rounded-lg p-4 ${!eg.selected ? 'opacity-50' : ''}`}>
+                      <div className="flex items-center gap-3 mb-3">
+                        <Checkbox checked={eg.selected} onCheckedChange={() => setExtractedGroups(prev => prev.map((g, i) => i === gi ? { ...g, selected: !g.selected } : g))} />
+                        <Input
+                          value={eg.name}
+                          onChange={(e) => setExtractedGroups(prev => prev.map((g, i) => i === gi ? { ...g, name: e.target.value } : g))}
+                          className="h-8 font-semibold"
+                        />
+                      </div>
+                      <div className="space-y-1 ml-8">
+                        {eg.items.map((item, ii) => (
+                          <div key={ii} className="flex items-center gap-2 text-sm">
+                            <span className="flex-1">{item.name}</span>
+                            <span className="text-muted-foreground">R$ {item.price.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={resetImport}>Cancelar</Button>
+                <Button onClick={handleImport} disabled={isImporting || extractedGroups.filter(g => g.selected).length === 0}>
+                  {isImporting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Importando...</> : <><Check className="w-4 h-4 mr-2" />Importar {extractedGroups.filter(g => g.selected).length} Grupos</>}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Groups list */}
+        {groups.length === 0 && importStep === 'idle' && (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Layers className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-lg font-medium">Nenhum grupo de adicionais</p>
+              <p className="text-muted-foreground mt-1">Crie grupos como "Molhos", "Bordas", "Proteínas" e associe a categorias ou produtos.</p>
+            </CardContent>
+          </Card>
+        )}
+
+        <Accordion type="multiple" className="space-y-3">
+          {groups.map(group => (
+            <AccordionItem key={group.id} value={group.id} className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-3 flex-1 text-left">
+                  <span className="font-semibold">{group.name}</span>
+                  {!group.active && <Badge variant="secondary">Inativo</Badge>}
+                  <Badge variant="outline" className="text-xs">
+                    {group.items.length} {group.items.length === 1 ? 'item' : 'itens'}
+                  </Badge>
+                  {group.minSelect > 0 || group.maxSelect > 0 ? (
+                    <Badge variant="outline" className="text-xs">
+                      {group.minSelect > 0 ? `mín ${group.minSelect}` : ''}{group.minSelect > 0 && group.maxSelect > 0 ? ' / ' : ''}{group.maxSelect > 0 ? `máx ${group.maxSelect}` : ''}
+                    </Badge>
+                  ) : null}
+                  <div className="flex gap-1">
+                    {group.categoryIds.length > 0 && (
+                      <Badge className="text-xs bg-primary/10 text-primary border-primary/20">
+                        {group.categoryIds.length} cat.
+                      </Badge>
+                    )}
+                    {group.productIds.length > 0 && (
+                      <Badge className="text-xs bg-primary/10 text-primary border-primary/20">
+                        {group.productIds.length} prod.
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3 pb-2">
+                  {/* Items */}
+                  {group.items.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum item neste grupo.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {group.items.map(item => (
+                        <div key={item.id} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">{item.name}</span>
+                            {!item.active && <Badge variant="secondary" className="text-xs">Inativo</Badge>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">R$ {item.price.toFixed(2)}</span>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteItem(item.id)}>
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-2 pt-2 border-t">
+                    <Button size="sm" variant="outline" onClick={() => { setAddItemGroupId(group.id); setIsAddItemOpen(true); }}>
+                      <Plus className="h-3 w-3 mr-1" /> Item
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openAssociate(group)}>
+                      <Package className="h-3 w-3 mr-1" /> Associar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingGroup({ ...group })}>
+                      <Pencil className="h-3 w-3 mr-1" /> Editar
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="outline" className="text-destructive border-destructive/30">
+                          <Trash2 className="h-3 w-3 mr-1" /> Excluir
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir grupo "{group.name}"?</AlertDialogTitle>
+                          <AlertDialogDescription>Isso removerá o grupo e todos os itens. Essa ação não pode ser desfeita.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteGroup(group.id)}>Excluir</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
+
+      {/* New Group Dialog */}
+      <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Novo Grupo de Adicionais</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nome do grupo</Label>
+              <Input placeholder="Ex: Molhos, Bordas, Proteínas" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Seleção mínima</Label>
+                <Input type="number" min={0} value={newGroupMin} onChange={(e) => setNewGroupMin(parseInt(e.target.value) || 0)} />
+                <p className="text-xs text-muted-foreground mt-1">0 = opcional</p>
+              </div>
+              <div>
+                <Label>Seleção máxima</Label>
+                <Input type="number" min={0} value={newGroupMax} onChange={(e) => setNewGroupMax(parseInt(e.target.value) || 0)} />
+                <p className="text-xs text-muted-foreground mt-1">0 = sem limite</p>
+              </div>
+            </div>
+            <Button onClick={handleCreateGroup} className="w-full">Criar Grupo</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Group Dialog */}
+      <Dialog open={!!editingGroup} onOpenChange={() => setEditingGroup(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Grupo</DialogTitle></DialogHeader>
+          {editingGroup && (
+            <div className="space-y-4">
+              <div>
+                <Label>Nome</Label>
+                <Input value={editingGroup.name} onChange={(e) => setEditingGroup({ ...editingGroup, name: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Seleção mínima</Label>
+                  <Input type="number" min={0} value={editingGroup.minSelect} onChange={(e) => setEditingGroup({ ...editingGroup, minSelect: parseInt(e.target.value) || 0 })} />
+                </div>
+                <div>
+                  <Label>Seleção máxima</Label>
+                  <Input type="number" min={0} value={editingGroup.maxSelect} onChange={(e) => setEditingGroup({ ...editingGroup, maxSelect: parseInt(e.target.value) || 0 })} />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={editingGroup.active} onCheckedChange={(v) => setEditingGroup({ ...editingGroup, active: v })} />
+                <Label>Ativo</Label>
+              </div>
+              <Button onClick={handleUpdateGroup} className="w-full">Salvar</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Item Dialog */}
+      <Dialog open={isAddItemOpen} onOpenChange={(v) => { setIsAddItemOpen(v); if (!v) setAddItemGroupId(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Adicionar Item</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nome</Label>
+              <Input placeholder="Ex: Cheddar, Bacon, Catupiry" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} />
+            </div>
+            <div>
+              <Label>Preço (R$)</Label>
+              <Input type="number" step="0.01" placeholder="0.00" value={newItemPrice} onChange={(e) => setNewItemPrice(e.target.value)} />
+            </div>
+            <Button onClick={handleAddItem} className="w-full">Adicionar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Associate Dialog */}
+      <Dialog open={isAssociateOpen} onOpenChange={(v) => { setIsAssociateOpen(v); if (!v) setAssociatingGroup(null); }}>
+        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+          <DialogHeader><DialogTitle>Associar "{associatingGroup?.name}"</DialogTitle></DialogHeader>
+          <ScrollArea className="flex-1 pr-2">
+            <div className="space-y-6">
+              {/* Categories */}
+              <div>
+                <Label className="text-sm font-semibold mb-2 block">Categorias de produtos</Label>
+                <p className="text-xs text-muted-foreground mb-3">Todos os produtos dessas categorias terão este grupo de adicionais.</p>
+                <div className="space-y-2">
+                  {categories.map(cat => (
+                    <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox checked={selectedCatIds.includes(cat.id)} onCheckedChange={() => toggleCatId(cat.id)} />
+                      <span className="text-sm">{cat.name}</span>
+                    </label>
+                  ))}
+                  {categories.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma categoria cadastrada.</p>}
+                </div>
+              </div>
+
+              {/* Individual products */}
+              <div>
+                <Label className="text-sm font-semibold mb-2 block">Produtos individuais</Label>
+                <p className="text-xs text-muted-foreground mb-3">Associe a produtos específicos além das categorias.</p>
+                <div className="space-y-3">
+                  {Object.entries(productsByCategory).map(([catName, prods]) => (
+                    <div key={catName}>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">{catName}</p>
+                      <div className="space-y-1 ml-2">
+                        {prods.map(p => (
+                          <label key={p.id} className="flex items-center gap-2 cursor-pointer">
+                            <Checkbox checked={selectedProdIds.includes(p.id)} onCheckedChange={() => toggleProdId(p.id)} />
+                            <span className="text-sm">{p.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {products.length === 0 && <p className="text-sm text-muted-foreground">Nenhum produto cadastrado.</p>}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+          <div className="pt-4 border-t">
+            <Button onClick={handleSaveAssociations} className="w-full">Salvar Associações</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </AppLayout>
+  );
+}

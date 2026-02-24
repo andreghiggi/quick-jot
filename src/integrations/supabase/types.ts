@@ -471,6 +471,164 @@ export type Database = {
           },
         ]
       }
+      optional_group_categories: {
+        Row: {
+          category_id: string
+          group_id: string
+          id: string
+        }
+        Insert: {
+          category_id: string
+          group_id: string
+          id?: string
+        }
+        Update: {
+          category_id?: string
+          group_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "optional_group_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "optional_group_categories_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "optional_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      optional_group_items: {
+        Row: {
+          active: boolean
+          company_id: string
+          created_at: string
+          display_order: number | null
+          group_id: string
+          id: string
+          name: string
+          price: number
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          created_at?: string
+          display_order?: number | null
+          group_id: string
+          id?: string
+          name: string
+          price?: number
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          created_at?: string
+          display_order?: number | null
+          group_id?: string
+          id?: string
+          name?: string
+          price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "optional_group_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "optional_group_items_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "optional_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      optional_group_products: {
+        Row: {
+          group_id: string
+          id: string
+          product_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          product_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "optional_group_products_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "optional_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "optional_group_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      optional_groups: {
+        Row: {
+          active: boolean
+          company_id: string
+          created_at: string
+          display_order: number | null
+          id: string
+          max_select: number
+          min_select: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          max_select?: number
+          min_select?: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          max_select?: number
+          min_select?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "optional_groups_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           company_id: string | null
