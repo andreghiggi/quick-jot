@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.extract-menu]
 verify_jwt = false
+
+[functions.extract-optionals]
+verify_jwt = false

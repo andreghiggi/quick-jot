@@ -21,6 +21,7 @@ import {
   ClipboardList,
   Lightbulb,
   Upload,
+  Layers,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -75,6 +76,11 @@ export function AppSidebar() {
       title: 'Cardápio',
       icon: ChefHat,
       href: `/cardapio/${company?.slug || ''}`,
+    },
+    {
+      title: 'Adicionais',
+      icon: Layers,
+      href: '/adicionais',
     },
   ];
 

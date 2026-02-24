@@ -32,6 +32,7 @@ import Fiscal from "./pages/Fiscal";
 import NFCeMonitor from "./pages/NFCeMonitor";
 import Suggestions from "./pages/Suggestions";
 import MenuImport from "./pages/MenuImport";
+import OptionalGroups from "./pages/OptionalGroups";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -166,6 +167,12 @@ function AppRoutes() {
       <Route path="/importar-cardapio" element={
         <ProtectedRoute requireCompany>
           <MenuImport />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/adicionais" element={
+        <ProtectedRoute requireCompany>
+          <OptionalGroups />
         </ProtectedRoute>
       } />
       
