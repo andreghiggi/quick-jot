@@ -133,9 +133,15 @@ export default function PDV() {
     // If NFC-e is still processing, poll for updates
     if (nfceStatus === 'processando' || nfceStatus === 'pendente') {
       setNfcePolling(true);
+      let pollCount = 0;
       const pollInterval = setInterval(async () => {
-        // First, trigger a consult to sync status from the external API
-        if (nfcePostSaleRecord.nfce_id && company?.id) {
+        pollCount++;
+        
+        // Alternate: odd polls just check DB, even polls also consult external API
+        // First poll always consults external API for fastest response
+        const shouldConsultApi = pollCount <= 2 || pollCount % 2 === 0;
+        
+        if (shouldConsultApi && nfcePostSaleRecord.nfce_id && company?.id) {
           try {
             await consultarNFCe(company.id, nfcePostSaleRecord.nfce_id);
           } catch (e) {
@@ -143,7 +149,7 @@ export default function PDV() {
           }
         }
 
-        // Then read the updated record from DB
+        // Read the updated record from DB
         const { data } = await supabase
           .from('nfce_records')
           .select('*')
@@ -168,7 +174,7 @@ export default function PDV() {
             } catch (retryErr) {
               console.error('[PDV] NFC-e retry error:', retryErr);
             }
-            return; // Continue polling after retry
+            return;
           }
           
           setNfceStatus(status);
@@ -177,7 +183,6 @@ export default function PDV() {
             setNfcePolling(false);
             clearInterval(pollInterval);
             
-            // Auto-print if authorized and setting is enabled
             if (status === 'autorizada' && storeSettings.autoPrintNfce) {
               printDanfeFromRecord(data as unknown as NFCeRecord);
               toast.success('DANFE impressa automaticamente');
@@ -188,7 +193,7 @@ export default function PDV() {
             }
           }
         }
-      }, 4000);
+      }, 2000);
       
       return () => clearInterval(pollInterval);
     }
@@ -442,9 +447,10 @@ export default function PDV() {
             });
 
             nfceEmitted = true;
-            // Try to get nfce_id from the result
-            if (nfceResult?.data?.id) {
-              emittedNfceId = nfceResult.data.id;
+            // Try to get nfce_id from the result - check multiple response structures
+            const emitData = nfceResult?.data || nfceResult;
+            if (emitData?.id) {
+              emittedNfceId = emitData.id;
             }
 
             toast.success('NFC-e enviada para processamento!');
@@ -486,9 +492,20 @@ export default function PDV() {
             .maybeSingle();
           
           if (nfceRecord) {
+            const initialStatus = nfceRecord.status || 'processando';
             setNfcePostSaleRecord(nfceRecord);
-            setNfceStatus(nfceRecord.status || 'processando');
             setNfceRetryCount(0);
+            
+            // If already authorized from the emission response, skip polling entirely
+            if (initialStatus === 'autorizada') {
+              setNfceStatus('autorizada');
+              if (storeSettings.autoPrintNfce) {
+                printDanfeFromRecord(nfceRecord as unknown as NFCeRecord);
+                toast.success('NFC-e autorizada! DANFE impressa automaticamente.');
+              }
+            } else {
+              setNfceStatus(initialStatus);
+            }
             setNfcePostSaleDialog(true);
           }
         }
