@@ -120,7 +120,8 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
         .from('pdv_sales')
         .select(`
           *,
-          payment_method:payment_methods(name)
+          payment_method:payment_methods(name),
+          items:pdv_sale_items(*)
         `)
         .eq('cash_register_id', registerId)
         .order('created_at', { ascending: false });
