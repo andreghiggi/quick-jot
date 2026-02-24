@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
             serie: emitData.serie || emitData.series || fromChave.serie || null,
             status: emitData.status || 'pendente',
             ambiente: emitData.ambiente || emitData.environment || 'homologacao',
-            valor_total: emitData.valor_total || emitData.total || 0,
+            valor_total: emitData.valor_total || emitData.total || (payload?.itens ? payload.itens.reduce((sum: number, item: any) => sum + (Number(item.quantidade || 1) * Number(item.valor_unitario || 0)), 0) : 0),
             chave_acesso: chave,
             protocolo: emitData.protocolo || emitData.protocol || null,
             qrcode_url: emitData.qrcode_url || emitData.qr_code_url || emitData.url_qrcode || emitData.qrcode || null,
