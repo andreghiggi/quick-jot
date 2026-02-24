@@ -89,7 +89,15 @@ export default function PDV() {
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
   const [isProcessingSale, setIsProcessingSale] = useState(false);
-  const [documentMode, setDocumentMode] = useState<'sale_only' | 'sale_with_nfce'>('sale_only');
+  const [documentMode, setDocumentMode] = useState<'sale_only' | 'sale_with_nfce'>(() => {
+    const saved = localStorage.getItem('pdv_document_mode');
+    return (saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only');
+  });
+
+  // Persist documentMode to localStorage
+  useEffect(() => {
+    localStorage.setItem('pdv_document_mode', documentMode);
+  }, [documentMode]);
   const emitNFCe = documentMode === 'sale_with_nfce';
 
   // NFC-e post-sale dialog

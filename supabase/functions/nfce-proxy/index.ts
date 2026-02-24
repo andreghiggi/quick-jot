@@ -69,6 +69,7 @@ Deno.serve(async (req) => {
       return { numero, serie }
     }
 
+    switch (action) {
 
       case 'emitir': {
         console.log('[nfce-proxy] Emitir NFC-e, URL:', NFCE_API_URL)
