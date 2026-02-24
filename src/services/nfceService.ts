@@ -105,9 +105,29 @@ export async function listarNFCe(companyId: string, filtros?: Record<string, str
   });
 }
 
+// Build SEFAZ QR Code URL from chave when not available in DB
+function buildQrcodeUrlFromChave(chave: string, ambiente?: string | null): string | null {
+  if (!chave || chave.length < 44) return null;
+  const uf = chave.substring(0, 2);
+  const sefazUrls: Record<string, string> = {
+    '43': 'https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx',
+    '35': 'https://www.nfce.fazenda.sp.gov.br/NFCeConsultaPublica',
+    '31': 'https://nfce.fazenda.mg.gov.br/portalnfce',
+    '41': 'http://www.nfce.pr.gov.br/nfce/qrcode',
+    '42': 'https://sat.sef.sc.gov.br/nfce/consulta',
+    '33': 'https://www.nfce.fazenda.rj.gov.br/consulta',
+    '29': 'https://nfe.sefaz.ba.gov.br/servicos/nfce/modulos/geral/NFCEC_consulta_chave_acesso.aspx',
+  };
+  const baseUrl = sefazUrls[uf];
+  if (!baseUrl) return null;
+  const ambienteCode = ambiente === 'producao' ? '1' : '2';
+  return `${baseUrl}?p=${chave}|${ambienteCode}|2`;
+}
+
 export async function generateDanfeHtml(record: NFCeRecord & { request_payload?: any }): Promise<string> {
   const items = record.request_payload?.itens || [];
-  const qrcodeUrl = record.qrcode_url || '';
+  // Use qrcode_url from DB, or build from chave_acesso as fallback
+  const qrcodeUrl = record.qrcode_url || buildQrcodeUrlFromChave(record.chave_acesso || '', record.ambiente) || '';
   const chaveAcesso = record.chave_acesso || '';
   const chaveFormatada = chaveAcesso.replace(/(.{4})/g, '$1 ').trim();
   const dataEmissao = record.created_at ? new Date(record.created_at).toLocaleString('pt-BR') : '';
