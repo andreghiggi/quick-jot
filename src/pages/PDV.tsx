@@ -1616,7 +1616,7 @@ export default function PDV() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="w-5 h-5" />
-              NFC-e {nfceStatus === 'autorizada' ? 'Autorizada' : nfceStatus === 'rejeitada' ? 'Rejeitada' : 'Processando...'}
+              NFC-e{nfcePostSaleRecord?.numero ? ` nº ${nfcePostSaleRecord.numero}` : ''} — {nfceStatus === 'autorizada' ? 'Autorizada' : nfceStatus === 'rejeitada' ? 'Rejeitada' : 'Processando...'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 text-center">
@@ -1632,14 +1632,14 @@ export default function PDV() {
                 <div className="flex flex-col items-center gap-3 py-4">
                   <CheckCircle className="w-8 h-8 text-green-600" />
                   <p className="text-sm text-muted-foreground">
-                    ✅ NFC-e autorizada! DANFE impressa automaticamente.
+                    ✅ NFC-e{nfcePostSaleRecord?.numero ? ` nº ${nfcePostSaleRecord.numero}` : ''} autorizada! DANFE impressa automaticamente.
                   </p>
                   <p className="text-xs text-muted-foreground">Fechando em {nfceCountdown}s...</p>
                 </div>
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">
-                    ✅ NFC-e autorizada com sucesso! Deseja imprimir o DANFE?
+                    ✅ NFC-e{nfcePostSaleRecord?.numero ? ` nº ${nfcePostSaleRecord.numero}` : ''} autorizada com sucesso! Deseja imprimir o DANFE?
                   </p>
                   <div className="flex gap-3 justify-center">
                     <Button
