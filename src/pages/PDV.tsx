@@ -109,12 +109,35 @@ export default function PDV() {
   const [nfcePrinting, setNfcePrinting] = useState(false);
   const [nfceRetryCount, setNfceRetryCount] = useState(0);
 
+  // NFC-e status tracking for sales list
+  const [salesNfceStatus, setSalesNfceStatus] = useState<Record<string, { status: string; loading: boolean }>>({});
+
   // Dialog states
   const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
   const [closeRegisterDialog, setCloseRegisterDialog] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState(false);
   const [historyDialog, setHistoryDialog] = useState(false);
-  const [salesDialog, setSalesDialog] = useState(false);
+  const [salesDialog, setSalesDialogRaw] = useState(false);
+  
+  // When sales dialog opens, load NFC-e statuses for all sales
+  const setSalesDialog = async (open: boolean) => {
+    setSalesDialogRaw(open);
+    if (open && sales.length > 0) {
+      const saleIds = sales.map(s => s.id);
+      const { data: nfceRecords } = await supabase
+        .from('nfce_records')
+        .select('sale_id, status')
+        .in('sale_id', saleIds);
+      
+      if (nfceRecords) {
+        const statusMap: Record<string, { status: string; loading: boolean }> = {};
+        nfceRecords.forEach((r: any) => {
+          if (r.sale_id) statusMap[r.sale_id] = { status: r.status, loading: false };
+        });
+        setSalesNfceStatus(statusMap);
+      }
+    }
+  };
   const [tabsDialog, setTabsDialog] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
   const [closingAmount, setClosingAmount] = useState('');
@@ -1435,7 +1458,7 @@ export default function PDV() {
       </Dialog>
 
       {/* Sales Dialog */}
-      <Dialog open={salesDialog} onOpenChange={setSalesDialog}>
+      <Dialog open={salesDialog} onOpenChange={(open) => setSalesDialog(open)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1472,66 +1495,106 @@ export default function PDV() {
                             <p className="text-xs text-muted-foreground">Desc: {formatCurrency(sale.discount)}</p>
                           )}
                         </div>
-                        {isModuleEnabled('fiscal') && (
-                          <Button 
-                            size="icon" 
-                            variant="ghost"
-                            onClick={async () => {
-                              // Check if NFC-e already exists for this sale
-                              const { data: existing } = await supabase
-                                .from('nfce_records')
-                                .select('id, status')
-                                .eq('sale_id', sale.id)
-                                .maybeSingle();
-                              
-                              if (existing) {
-                                toast.info(`NFC-e já emitida (${existing.status})`);
-                                return;
-                              }
+                        {isModuleEnabled('fiscal') && (() => {
+                          const nfceInfo = salesNfceStatus[sale.id];
+                          const hasNfce = !!nfceInfo;
+                          const isGenerating = nfceInfo?.loading;
+                          const nfceStatusText = nfceInfo?.status;
+                          
+                          if (hasNfce && !isGenerating) {
+                            return (
+                              <Badge 
+                                variant={nfceStatusText === 'autorizada' ? 'success' : nfceStatusText === 'rejeitada' || nfceStatusText === 'erro' ? 'destructive' : 'outline'}
+                                className="text-[10px] px-1.5"
+                              >
+                                {nfceStatusText === 'autorizada' ? '✅ NFC-e' : nfceStatusText === 'rejeitada' ? '❌ NFC-e' : `NFC-e: ${nfceStatusText}`}
+                              </Badge>
+                            );
+                          }
+                          
+                          return (
+                            <Button 
+                              size="icon" 
+                              variant="ghost"
+                              disabled={isGenerating}
+                              onClick={async () => {
+                                if (isGenerating || hasNfce) return;
+                                if (!company?.id) return;
+                                
+                                // Set loading state
+                                setSalesNfceStatus(prev => ({ ...prev, [sale.id]: { status: 'processando', loading: true } }));
+                                
+                                try {
+                                  const saleItems = sale.items || [];
+                                  const nfceItems: NFCeItem[] = saleItems.map((item: any) => {
+                                    const product = products.find(p => p.id === item.product_id);
+                                    const taxRule = product?.taxRuleId 
+                                      ? taxRules.find(tr => tr.id === product.taxRuleId) 
+                                      : null;
+                                    return {
+                                      codigo: item.product_id || 'AVULSO',
+                                      descricao: item.product_name,
+                                      ncm: taxRule?.ncm || '00000000',
+                                      cfop: taxRule?.cfop || '5102',
+                                      unidade: 'UN',
+                                      quantidade: item.quantity,
+                                      valor_unitario: item.unit_price,
+                                      csosn: taxRule?.csosn || '102',
+                                      aliquota_icms: taxRule?.icms_aliquot || 0,
+                                      cst_pis: taxRule?.pis_cst || '49',
+                                      aliquota_pis: taxRule?.pis_aliquot || 0,
+                                      cst_cofins: taxRule?.cofins_cst || '49',
+                                      aliquota_cofins: taxRule?.cofins_aliquot || 0,
+                                    };
+                                  });
 
-                              if (!company?.id) return;
-                              try {
-                                const saleItems = sale.items || [];
-                                const nfceItems: NFCeItem[] = saleItems.map((item: any) => {
-                                  const product = products.find(p => p.id === item.product_id);
-                                  const taxRule = product?.taxRuleId 
-                                    ? taxRules.find(tr => tr.id === product.taxRuleId) 
-                                    : null;
-                                  return {
-                                    codigo: item.product_id || 'AVULSO',
-                                    descricao: item.product_name,
-                                    ncm: taxRule?.ncm || '00000000',
-                                    cfop: taxRule?.cfop || '5102',
-                                    unidade: 'UN',
-                                    quantidade: item.quantity,
-                                    valor_unitario: item.unit_price,
-                                    csosn: taxRule?.csosn || '102',
-                                    aliquota_icms: taxRule?.icms_aliquot || 0,
-                                    cst_pis: taxRule?.pis_cst || '49',
-                                    aliquota_pis: taxRule?.pis_aliquot || 0,
-                                    cst_cofins: taxRule?.cofins_cst || '49',
-                                    aliquota_cofins: taxRule?.cofins_aliquot || 0,
-                                  };
-                                });
-
-                                const externalId = `PDV-${sale.cash_register_id?.substring(0, 8)}-${Date.now()}`;
-                                await emitirNFCe(company.id, sale.id, {
-                                  external_id: externalId,
-                                  itens: nfceItems,
-                                  valor_desconto: sale.discount || 0,
-                                  valor_frete: 0,
-                                  observacoes: sale.customer_name ? `Cliente: ${sale.customer_name}` : undefined,
-                                });
-                                toast.success('NFC-e enviada para processamento!');
-                              } catch (err: any) {
-                                toast.error(`Erro ao emitir NFC-e: ${err.message}`);
-                              }
-                            }}
-                            title="Gerar NFC-e"
-                          >
-                            <Receipt className="w-4 h-4" />
-                          </Button>
-                        )}
+                                  const externalId = `PDV-${sale.cash_register_id?.substring(0, 8)}-${Date.now()}`;
+                                  await emitirNFCe(company.id, sale.id, {
+                                    external_id: externalId,
+                                    itens: nfceItems,
+                                    valor_desconto: sale.discount || 0,
+                                    valor_frete: 0,
+                                    observacoes: sale.customer_name ? `Cliente: ${sale.customer_name}` : undefined,
+                                  });
+                                  
+                                  // Fetch the created record and open the post-sale dialog
+                                  const { data: nfceRecord } = await supabase
+                                    .from('nfce_records')
+                                    .select('*')
+                                    .eq('sale_id', sale.id)
+                                    .maybeSingle();
+                                  
+                                  setSalesNfceStatus(prev => ({ ...prev, [sale.id]: { status: nfceRecord?.status || 'processando', loading: false } }));
+                                  
+                                  if (nfceRecord) {
+                                    setSalesDialogRaw(false);
+                                    setNfcePostSaleRecord(nfceRecord);
+                                    setNfceRetryCount(0);
+                                    const initialStatus = nfceRecord.status || 'processando';
+                                    if (initialStatus === 'autorizada') {
+                                      setNfceStatus('autorizada');
+                                      if (storeSettings.autoPrintNfce) {
+                                        printDanfeFromRecord(nfceRecord as unknown as NFCeRecord);
+                                        toast.success('NFC-e autorizada! DANFE impressa automaticamente.');
+                                      }
+                                    } else {
+                                      setNfceStatus(initialStatus);
+                                    }
+                                    setNfcePostSaleDialog(true);
+                                  }
+                                  
+                                  toast.success('NFC-e enviada para processamento!');
+                                } catch (err: any) {
+                                  setSalesNfceStatus(prev => ({ ...prev, [sale.id]: { status: 'erro', loading: false } }));
+                                  toast.error(`Erro ao emitir NFC-e: ${err.message}`);
+                                }
+                              }}
+                              title="Gerar NFC-e"
+                            >
+                              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Receipt className="w-4 h-4" />}
+                            </Button>
+                          );
+                        })()}
                         <Button 
                           size="icon" 
                           variant="ghost"
