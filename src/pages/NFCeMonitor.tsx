@@ -220,9 +220,9 @@ export default function NFCeMonitor() {
     }
   }
 
-  function handlePrintDanfe(record: NFCeRecord) {
+  async function handlePrintDanfe(record: NFCeRecord) {
     try {
-      printDanfeFromRecord(record);
+      await printDanfeFromRecord(record);
     } catch (e: any) {
       toast.error(e.message || 'Erro ao imprimir DANFE');
     }
