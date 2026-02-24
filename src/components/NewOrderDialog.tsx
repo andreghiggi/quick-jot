@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { defaultProducts, categories } from '@/data/products';
+import { useProducts } from '@/hooks/useProducts';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { useOrderContext } from '@/contexts/OrderContext';
-import { OrderItem, Product } from '@/types/order';
+import { OrderItem } from '@/types/order';
 import { Plus, Minus, ShoppingBag, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -17,23 +18,42 @@ interface NewOrderDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-interface CartItem extends Product {
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
   quantity: number;
 }
 
 export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
   const { addOrder } = useOrderContext();
+  const { company } = useAuthContext();
+  const { products, loading: productsLoading, getCategories, getActiveProducts } = useProducts({ companyId: company?.id });
+
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const activeProducts = getActiveProducts();
+  const categories = getCategories();
+
+  // Auto-select first category when products load
+  const currentCategory = selectedCategory && categories.includes(selectedCategory)
+    ? selectedCategory
+    : categories[0] || null;
+
+  const filteredProducts = useMemo(() => {
+    if (!currentCategory) return activeProducts;
+    return activeProducts.filter((p) => p.category === currentCategory);
+  }, [activeProducts, currentCategory]);
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  function addToCart(product: Product) {
+  function addToCart(product: { id: string; name: string; price: number }) {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
@@ -41,7 +61,7 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: 1 }];
     });
   }
 
@@ -106,10 +126,8 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
     setDeliveryAddress('');
     setNotes('');
     setCart([]);
-    setSelectedCategory(categories[0]);
+    setSelectedCategory(null);
   }
-
-  const filteredProducts = defaultProducts.filter((p) => p.category === selectedCategory);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -154,69 +172,83 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
           {/* Products */}
           <div className="space-y-3">
             <Label>Produtos</Label>
-            <div className="flex gap-2 flex-wrap">
-              {categories.map((category) => (
-                <Badge
-                  key={category}
-                  variant={selectedCategory === category ? 'default' : 'outline'}
-                  className={cn(
-                    'cursor-pointer transition-all',
-                    selectedCategory === category && 'shadow-primary'
-                  )}
-                  onClick={() => setSelectedCategory(category)}
-                >
-                  {category}
-                </Badge>
-              ))}
-            </div>
 
-            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-              {filteredProducts.map((product) => {
-                const quantity = getCartQuantity(product.id);
-                return (
-                  <div
-                    key={product.id}
-                    className={cn(
-                      "p-3 rounded-lg border border-border bg-card",
-                      "hover:border-primary/50 transition-colors",
-                      quantity > 0 && "border-primary bg-accent"
-                    )}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm text-foreground">{product.name}</p>
-                        <p className="text-primary font-semibold">
-                          R$ {product.price.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-end gap-2">
-                      {quantity > 0 && (
-                        <>
+            {productsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <span className="ml-2 text-muted-foreground">Carregando produtos...</span>
+              </div>
+            ) : activeProducts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhum produto cadastrado. Cadastre produtos na aba Produtos.
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-2 flex-wrap">
+                  {categories.map((category) => (
+                    <Badge
+                      key={category}
+                      variant={currentCategory === category ? 'default' : 'outline'}
+                      className={cn(
+                        'cursor-pointer transition-all',
+                        currentCategory === category && 'shadow-primary'
+                      )}
+                      onClick={() => setSelectedCategory(category)}
+                    >
+                      {category}
+                    </Badge>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                  {filteredProducts.map((product) => {
+                    const quantity = getCartQuantity(product.id);
+                    return (
+                      <div
+                        key={product.id}
+                        className={cn(
+                          "p-3 rounded-lg border border-border bg-card",
+                          "hover:border-primary/50 transition-colors",
+                          quantity > 0 && "border-primary bg-accent"
+                        )}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm text-foreground">{product.name}</p>
+                            <p className="text-primary font-semibold">
+                              R$ {product.price.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-end gap-2">
+                          {quantity > 0 && (
+                            <>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-7 w-7"
+                                onClick={() => removeFromCart(product.id)}
+                              >
+                                <Minus className="w-3 h-3" />
+                              </Button>
+                              <span className="w-6 text-center font-semibold">{quantity}</span>
+                            </>
+                          )}
                           <Button
                             size="icon"
-                            variant="outline"
+                            variant={quantity > 0 ? 'default' : 'outline'}
                             className="h-7 w-7"
-                            onClick={() => removeFromCart(product.id)}
+                            onClick={() => addToCart(product)}
                           >
-                            <Minus className="w-3 h-3" />
+                            <Plus className="w-3 h-3" />
                           </Button>
-                          <span className="w-6 text-center font-semibold">{quantity}</span>
-                        </>
-                      )}
-                      <Button
-                        size="icon"
-                        variant={quantity > 0 ? 'default' : 'outline'}
-                        className="h-7 w-7"
-                        onClick={() => addToCart(product)}
-                      >
-                        <Plus className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Cart Summary */}
