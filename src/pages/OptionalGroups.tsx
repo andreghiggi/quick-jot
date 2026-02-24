@@ -17,7 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, Layers } from 'lucide-react';
+import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, Layers, Camera } from 'lucide-react';
 
 interface ExtractedGroup {
   name: string;
@@ -60,6 +60,7 @@ export default function OptionalGroups() {
   const [isImporting, setIsImporting] = useState(false);
   const [extractedGroups, setExtractedGroups] = useState<ExtractedGroup[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // --- Handlers ---
 
@@ -222,9 +223,21 @@ export default function OptionalGroups() {
 
   const headerActions = (
     <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" onClick={() => cameraInputRef.current?.click()}>
+        <Camera className="h-4 w-4 mr-2" />
+        <span className="hidden sm:inline">Foto</span>
+      </Button>
+      <input
+        type="file"
+        accept="image/*"
+        capture="environment"
+        ref={cameraInputRef}
+        onChange={handleFileSelect}
+        className="hidden"
+      />
       <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
         <Upload className="h-4 w-4 mr-2" />
-        <span className="hidden sm:inline">Importar por Foto</span>
+        <span className="hidden sm:inline">Arquivo</span>
       </Button>
       <input
         type="file"
