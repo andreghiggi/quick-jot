@@ -69,6 +69,27 @@ Deno.serve(async (req) => {
       return { numero, serie }
     }
 
+    // Build SEFAZ QR Code URL from chave when API doesn't return it
+    function buildQrcodeUrl(chave: string, ambiente: string): string | null {
+      if (!chave || chave.length < 44) return null
+      // UF code is the first 2 digits of the chave
+      const uf = chave.substring(0, 2)
+      // Map UF codes to SEFAZ NFC-e URLs
+      const sefazUrls: Record<string, string> = {
+        '43': 'https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx',
+        '35': 'https://www.nfce.fazenda.sp.gov.br/NFCeConsultaPublica',
+        '31': 'https://nfce.fazenda.mg.gov.br/portalnfce',
+        '41': 'http://www.nfce.pr.gov.br/nfce/qrcode',
+        '42': 'https://sat.sef.sc.gov.br/nfce/consulta',
+        '33': 'https://www.nfce.fazenda.rj.gov.br/consulta',
+        '29': 'https://nfe.sefaz.ba.gov.br/servicos/nfce/modulos/geral/NFCEC_consulta_chave_acesso.aspx',
+      }
+      const baseUrl = sefazUrls[uf]
+      if (!baseUrl) return null
+      const ambienteCode = ambiente === 'producao' ? '1' : '2'
+      return `${baseUrl}?p=${chave}|${ambienteCode}|2`
+    }
+
     switch (action) {
 
       case 'emitir': {
@@ -102,7 +123,7 @@ Deno.serve(async (req) => {
             valor_total: emitData.valor_total || emitData.total || (payload?.itens ? payload.itens.reduce((sum: number, item: any) => sum + (Number(item.quantidade || 1) * Number(item.valor_unitario || 0)), 0) : 0),
             chave_acesso: chave,
             protocolo: emitData.protocolo || emitData.protocol || null,
-            qrcode_url: emitData.qrcode_url || emitData.qr_code_url || emitData.url_qrcode || emitData.qrcode || null,
+            qrcode_url: emitData.qrcode_url || emitData.qr_code_url || emitData.url_qrcode || emitData.qrcode || (chave ? buildQrcodeUrl(chave, emitData.ambiente || emitData.environment || 'homologacao') : null),
             xml_url: emitData.xml_url || emitData.url_xml || null,
             motivo_rejeicao: emitData.motivo_rejeicao || emitData.motivo || null,
             request_payload: payload,
@@ -156,9 +177,15 @@ Deno.serve(async (req) => {
           const proto = d.protocolo || d.protocol || d.nProt
           if (proto) updateData.protocolo = proto
 
-          // QR Code URL - try multiple field names
+          // QR Code URL - try multiple field names, fallback to building from chave
           const qr = d.qrcode_url || d.qr_code_url || d.url_qrcode || d.qrcode || d.qr_code || d.url_consulta_qrcode
-          if (qr) updateData.qrcode_url = qr
+          const chaveForQr = updateData.chave_acesso || chaveConsulta
+          if (qr) {
+            updateData.qrcode_url = qr
+          } else if (chaveForQr) {
+            const builtQr = buildQrcodeUrl(chaveForQr, updateData.ambiente || d.ambiente || 'homologacao')
+            if (builtQr) updateData.qrcode_url = builtQr
+          }
 
           // XML URL
           const xml = d.xml_url || d.url_xml || d.xml
