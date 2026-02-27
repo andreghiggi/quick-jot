@@ -91,6 +91,14 @@ serve(async (req) => {
       });
     }
 
+    // Get sender phone early for cooldown check
+    const senderPhone = messageData.key?.remoteJid?.replace('@s.whatsapp.net', '') || '';
+    if (!senderPhone) {
+      return new Response(JSON.stringify({ ok: true, skipped: 'no_phone' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Find company for this instance
     const { data: instanceData } = await supabase
       .from('whatsapp_instances')
@@ -101,6 +109,27 @@ serve(async (req) => {
     if (!instanceData) {
       console.error('No company found for instance:', instanceName);
       return new Response(JSON.stringify({ ok: true, skipped: 'no_company' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // COOLDOWN: Skip if we already sent an auto-reply to this phone in the last 24 hours
+    const cooldownHours = 24;
+    const cooldownDate = new Date(Date.now() - cooldownHours * 60 * 60 * 1000).toISOString();
+    const { data: recentReply } = await supabase
+      .from('whatsapp_messages')
+      .select('id')
+      .eq('company_id', instanceData.company_id)
+      .eq('phone', senderPhone)
+      .eq('status', 'sent')
+      .gte('created_at', cooldownDate)
+      .is('order_id', null)
+      .limit(1)
+      .maybeSingle();
+
+    if (recentReply) {
+      console.log('Cooldown active for phone:', senderPhone, '- skipping auto-reply');
+      return new Response(JSON.stringify({ ok: true, skipped: 'cooldown_active' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -140,23 +169,13 @@ serve(async (req) => {
       .eq('key', 'site_url')
       .maybeSingle();
     
-    // Priority: company site_url > SITE_URL env > production URL
     const baseUrl = siteUrlSetting?.value 
       || Deno.env.get('SITE_URL') 
       || 'https://appcomandatech.agilizeerp.com.br';
     
     const menuUrl = `${baseUrl.replace(/\/$/, '')}/cardapio/${company.slug}`;
 
-    // Build greeting message
     const greetingMessage = `Olá! 👋 Bem-vindo(a) ao *${company.name}*!\n\nAcesse nosso cardápio digital e faça seu pedido:\n${menuUrl}\n\nQualquer dúvida, estamos à disposição!`;
-
-    // Send auto-reply
-    const senderPhone = messageData.key?.remoteJid?.replace('@s.whatsapp.net', '') || '';
-    if (!senderPhone) {
-      return new Response(JSON.stringify({ ok: true, skipped: 'no_phone' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     const evolutionBaseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
     const res = await fetch(`${evolutionBaseUrl}/message/sendText/${instanceName}`, {
