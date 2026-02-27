@@ -54,7 +54,7 @@ export function WhatsAppAutoReplyInfo({ companySlug, menuUrl }: WhatsAppAutoRepl
 
         <div className="p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground">
-            ✅ A resposta é enviada automaticamente apenas uma vez por conversa de saudação. Mensagens que não são saudação (como perguntas sobre preço, reclamações, etc.) não geram resposta automática.
+            ✅ A resposta automática é enviada <strong>no máximo uma vez a cada 24 horas</strong> para o mesmo número. Mesmo que o cliente envie várias saudações seguidas ("oi", "boa noite", "tudo bem"), apenas a primeira gera resposta. Mensagens que não são saudação não geram resposta automática.
           </p>
         </div>
       </CardContent>
