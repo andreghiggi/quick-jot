@@ -7,6 +7,7 @@ import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 import { OrderProvider } from "@/contexts/OrderContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
+import { ImplementedSuggestionsModal } from "@/components/ImplementedSuggestionsModal";
 import { useCompanyModules } from "@/hooks/useCompanyModules";
 
 // Pages
@@ -222,6 +223,7 @@ function AppWithProviders() {
   return (
     <OrderProvider>
       <ImpersonationBanner />
+      <ImplementedSuggestionsModal />
       {/* Add padding when impersonation banner is shown */}
       <div className={isImpersonating ? 'pt-12' : ''}>
         <AppRoutes />
