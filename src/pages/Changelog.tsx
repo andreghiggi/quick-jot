@@ -13,6 +13,24 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '27/02/2026',
+    version: '1.10.1',
+    type: 'fix',
+    description: 'WhatsApp: cooldown de 24h para respostas automáticas — mesmo número não recebe saudação duplicada, mesmo enviando "oi", "boa noite" ou "tudo bem" várias vezes.',
+  },
+  {
+    date: '27/02/2026',
+    version: '1.10.1',
+    type: 'feature',
+    description: 'Notificação de sugestões implementadas: ao abrir o sistema, lojistas são notificados com um modal sobre suas sugestões que já foram concluídas.',
+  },
+  {
+    date: '24/02/2026',
+    version: '1.10.0',
+    type: 'feature',
+    description: 'Grupos de Adicionais: cadastro de opcionais com mínimo/máximo de seleção, vinculáveis a categorias ou produtos específicos, com importação por IA (foto ou arquivo).',
+  },
+  {
     date: '23/02/2026',
     version: '1.9.1',
     type: 'feature',
