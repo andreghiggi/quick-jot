@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock } from 'lucide-react';
+import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen } from 'lucide-react';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
@@ -572,10 +573,11 @@ pause
       subtitle="Configure os dados da sua empresa"
     >
       <Tabs defaultValue="empresa" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="empresa">Empresa</TabsTrigger>
           <TabsTrigger value="horarios">Horários</TabsTrigger>
           <TabsTrigger value="entrega">Entrega</TabsTrigger>
+          <TabsTrigger value="cardapio">Cardápio</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="impressao">Impressão</TabsTrigger>
         </TabsList>
@@ -850,6 +852,61 @@ pause
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Tab Cardápio */}
+        <TabsContent value="cardapio" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                Layout do Cardápio Online
+              </CardTitle>
+              <CardDescription>
+                Escolha qual layout será exibido no cardápio público para seus clientes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={storeSettings.menuLayout}
+                onValueChange={async (value: 'v1' | 'v2') => {
+                  await updateSetting('menu_layout', value);
+                  toast({
+                    title: 'Layout alterado',
+                    description: `Cardápio online agora usa o layout ${value.toUpperCase()}`,
+                  });
+                }}
+                className="space-y-4"
+              >
+                <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                  <RadioGroupItem value="v1" id="layout-v1" className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="layout-v1" className="font-medium cursor-pointer text-base">V1 — Clássico</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Categorias em pills horizontais no topo. Todos os produtos listados na mesma página com separação por seção. Ideal para cardápios menores.
+                    </p>
+                    <div className="mt-2 flex gap-2">
+                      <Badge variant="secondary" className="text-xs">Atual</Badge>
+                      <Badge variant="outline" className="text-xs">Navegação rápida</Badge>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                  <RadioGroupItem value="v2" id="layout-v2" className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="layout-v2" className="font-medium cursor-pointer text-base">V2 — Categorias</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Banner do estabelecimento + categorias em cards coloridos. O cliente seleciona a categoria para ver os produtos. Visual mais moderno e organizado.
+                    </p>
+                    <div className="mt-2 flex gap-2">
+                      <Badge variant="default" className="text-xs">Novo</Badge>
+                      <Badge variant="outline" className="text-xs">Estilo App</Badge>
+                    </div>
+                  </div>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Tab Dashboard */}

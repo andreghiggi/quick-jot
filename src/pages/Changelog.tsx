@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '02/03/2026',
+    version: '1.11.0',
+    type: 'feature',
+    description: 'Cardápio V2: novo layout com navegação por categorias em cards coloridos, banner do estabelecimento e imagens de fallback por categoria. Ativável em Configurações → Cardápio.',
+  },
+  {
     date: '27/02/2026',
     version: '1.10.1',
     type: 'fix',
