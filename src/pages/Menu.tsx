@@ -21,6 +21,7 @@ import { ShoppingCart, Plus, Minus, Trash2, Send, CheckCircle, Search, Clock, Al
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { MenuV2 } from '@/components/menu/MenuV2';
 
 interface Company {
   id: string;
@@ -481,7 +482,25 @@ export default function Menu() {
 
   // orderSent is no longer used - kept for potential future use
 
+  const isV2 = settings.menuLayout === 'v2';
+
   return (
+    <>
+    {isV2 ? (
+      <MenuV2
+        company={company}
+        settings={settings}
+        activeProducts={activeProducts}
+        allOrderedCategories={allOrderedCategories}
+        cartItemsCount={cartItemsCount}
+        cartTotal={cartTotal}
+        isOpen={isOpen}
+        formattedHours={formattedHours}
+        onProductSelect={setSelectedProduct}
+        onCartOpen={() => setIsCartOpen(true)}
+        onNavigateBack={() => navigate(-1)}
+      />
+    ) : (
     <div className="min-h-screen bg-background pb-24">
       {/* Closed Store Banner */}
       {!isOpen && (
@@ -654,6 +673,22 @@ export default function Menu() {
           </Card>
         )}
       </main>
+
+      {/* Floating cart button - V1 */}
+      {cart.length > 0 && !isCartOpen && (
+        <div className="fixed bottom-4 left-4 right-4 z-30">
+          <Button
+            className="w-full py-6 shadow-lg"
+            size="lg"
+            onClick={() => setIsCartOpen(true)}
+          >
+            <ShoppingCart className="h-5 w-5 mr-2" />
+            Ver carrinho ({cartItemsCount} itens) - R$ {cartTotal.toFixed(2)}
+          </Button>
+        </div>
+      )}
+    </div>
+    )}
 
       {/* Product Detail Dialog */}
       <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
@@ -995,19 +1030,6 @@ export default function Menu() {
         </DialogContent>
       </Dialog>
 
-      {/* Floating cart button */}
-      {cart.length > 0 && !isCartOpen && (
-        <div className="fixed bottom-4 left-4 right-4 z-30">
-          <Button
-            className="w-full py-6 shadow-lg"
-            size="lg"
-            onClick={() => setIsCartOpen(true)}
-          >
-            <ShoppingCart className="h-5 w-5 mr-2" />
-            Ver carrinho ({cartItemsCount} itens) - R$ {cartTotal.toFixed(2)}
-          </Button>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

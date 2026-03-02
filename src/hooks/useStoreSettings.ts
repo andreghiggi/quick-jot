@@ -16,6 +16,7 @@ interface StoreSettings {
   showCardTotalPedidos: boolean;
   autoPrintSales: boolean;
   autoPrintNfce: boolean;
+  menuLayout: 'v1' | 'v2';
 }
 
 interface UseStoreSettingsOptions {
@@ -38,6 +39,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     showCardTotalPedidos: true,
     autoPrintSales: false,
     autoPrintNfce: false,
+    menuLayout: 'v1',
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
@@ -75,6 +77,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         showCardTotalPedidos: settingsMap['show_card_total_pedidos'] !== 'false',
         autoPrintSales: settingsMap['auto_print_sales'] === 'true',
         autoPrintNfce: settingsMap['auto_print_nfce'] === 'true',
+        menuLayout: (settingsMap['menu_layout'] as 'v1' | 'v2') || 'v1',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);
