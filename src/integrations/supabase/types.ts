@@ -1392,6 +1392,27 @@ export type Database = {
           },
         ]
       }
+      whatsapp_auto_reply_locks: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          phone: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          phone: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          phone?: string
+        }
+        Relationships: []
+      }
       whatsapp_instances: {
         Row: {
           company_id: string
