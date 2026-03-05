@@ -1,0 +1,1 @@
+ALTER TABLE public.optional_group_items ADD COLUMN IF NOT EXISTS image_url TEXT DEFAULT NULL;

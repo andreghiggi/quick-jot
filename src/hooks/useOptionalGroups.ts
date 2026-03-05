@@ -9,6 +9,7 @@ export interface OptionalGroupItem {
   price: number;
   active: boolean;
   displayOrder: number;
+  imageUrl?: string | null;
 }
 
 export interface OptionalGroup {
@@ -72,6 +73,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
             price: Number(i.price),
             active: i.active,
             displayOrder: i.display_order ?? 0,
+            imageUrl: (i as any).image_url ?? null,
           })),
         categoryIds: catLinks.filter(c => c.group_id === g.id).map(c => c.category_id),
         productIds: prodLinks.filter(p => p.group_id === g.id).map(p => p.product_id),
@@ -176,9 +178,9 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  async function updateItem(id: string, data: Partial<{ name: string; price: number; active: boolean }>): Promise<boolean> {
+  async function updateItem(id: string, data: Partial<{ name: string; price: number; active: boolean; image_url: string | null }>): Promise<boolean> {
     try {
-      const { error } = await supabase.from('optional_group_items').update(data).eq('id', id);
+      const { error } = await supabase.from('optional_group_items').update(data as any).eq('id', id);
       if (error) throw error;
       await fetchGroups();
       return true;

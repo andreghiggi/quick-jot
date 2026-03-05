@@ -518,6 +518,7 @@ export type Database = {
           display_order: number | null
           group_id: string
           id: string
+          image_url: string | null
           name: string
           price: number
         }
@@ -528,6 +529,7 @@ export type Database = {
           display_order?: number | null
           group_id: string
           id?: string
+          image_url?: string | null
           name: string
           price?: number
         }
@@ -538,6 +540,7 @@ export type Database = {
           display_order?: number | null
           group_id?: string
           id?: string
+          image_url?: string | null
           name?: string
           price?: number
         }
