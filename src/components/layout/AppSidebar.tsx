@@ -350,6 +350,7 @@ export function AppSidebar() {
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
+        </SidebarGroup>
 
         {financeMenuItems.length > 0 && (
           <SidebarGroup>
