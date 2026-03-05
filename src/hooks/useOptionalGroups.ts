@@ -67,6 +67,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
         maxSelect: g.max_select,
         active: g.active,
         displayOrder: g.display_order ?? 0,
+        layout: ((g as any).layout as OptionalGroupLayout) || 'vertical',
         items: items
           .filter(i => i.group_id === g.id)
           .map(i => ({
