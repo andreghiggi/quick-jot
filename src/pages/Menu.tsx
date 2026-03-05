@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCategories } from '@/hooks/useCategories';
+import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { useBusinessHours } from '@/hooks/useBusinessHours';
 import { Product, ProductOptional, CartItem } from '@/types/product';
@@ -77,6 +78,7 @@ export default function Menu() {
   const { categories, loading: categoriesLoading } = useCategories({ companyId: company?.id });
   const { neighborhoods, loading: neighborhoodsLoading, getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
   const { loading: hoursLoading, isCurrentlyOpen, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
+  const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
   
   const isOpen = isCurrentlyOpen();
   const formattedHours = getFormattedHours();
@@ -99,6 +101,9 @@ export default function Menu() {
   const [searchQuery, setSearchQuery] = useState('');
   const [customerLoaded, setCustomerLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Optional group selections state
+  const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Set<string>>>({});
 
   const brazilianStates = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -106,7 +111,31 @@ export default function Menu() {
     'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ];
 
-  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading || neighborhoodsLoading || hoursLoading;
+  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading || neighborhoodsLoading || hoursLoading || groupsLoading;
+
+  // Build category name -> id map for optional groups
+  const categoryIdByName = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach(c => { map[c.name] = c.id; });
+    return map;
+  }, [categories]);
+
+  // Get optional groups applicable to a specific product
+  function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
+    const catId = categoryIdByName[productCategory];
+    return optionalGroups.filter(g => {
+      if (!g.active) return false;
+      if (g.productIds.includes(productId)) return true;
+      if (catId && g.categoryIds.includes(catId)) return true;
+      return false;
+    });
+  }
+
+  // Get applicable groups for the currently selected product
+  const selectedProductGroups = useMemo(() => {
+    if (!selectedProduct) return [];
+    return getGroupsForProduct(selectedProduct.id, selectedProduct.category);
+  }, [selectedProduct, optionalGroups, categoryIdByName]);
 
   // Load customer data when phone changes (with debounce)
   useEffect(() => {
@@ -192,19 +221,68 @@ export default function Menu() {
     );
   }
 
+  function toggleGroupItem(groupId: string, itemId: string, maxSelect: number) {
+    setSelectedGroupItems(prev => {
+      const current = new Set(prev[groupId] || []);
+      if (current.has(itemId)) {
+        current.delete(itemId);
+      } else {
+        if (maxSelect > 0 && current.size >= maxSelect) {
+          toast.error(`Máximo ${maxSelect} seleções neste grupo`);
+          return prev;
+        }
+        current.add(itemId);
+      }
+      return { ...prev, [groupId]: current };
+    });
+  }
+
   function addToCart() {
     if (!selectedProduct) return;
+
+    // Validate min selections for optional groups
+    for (const group of selectedProductGroups) {
+      const selected = selectedGroupItems[group.id];
+      const count = selected ? selected.size : 0;
+      if (group.minSelect > 0 && count < group.minSelect) {
+        toast.error(`Selecione pelo menos ${group.minSelect} item(ns) em "${group.name}"`);
+        return;
+      }
+    }
+
+    // Collect selected group items as ProductOptional-like objects
+    const groupOptionals: ProductOptional[] = [];
+    for (const group of selectedProductGroups) {
+      const selected = selectedGroupItems[group.id];
+      if (!selected) continue;
+      for (const item of group.items) {
+        if (selected.has(item.id)) {
+          groupOptionals.push({
+            id: item.id,
+            productId: selectedProduct.id,
+            name: item.name,
+            price: item.price,
+            type: 'extra',
+            active: true,
+          });
+        }
+      }
+    }
+
+    // Merge old-style optionals + group optionals
+    const allOptionals = [...selectedOptionals, ...groupOptionals];
 
     const newItem: CartItem = {
       product: selectedProduct,
       quantity: 1,
-      selectedOptionals,
+      selectedOptionals: allOptionals,
       notes: itemNotes || undefined,
     };
 
     setCart((prev) => [...prev, newItem]);
     setSelectedProduct(null);
     setSelectedOptionals([]);
+    setSelectedGroupItems({});
     setItemNotes('');
     toast.success('Adicionado ao carrinho!', { duration: 1500 });
   }
@@ -691,7 +769,7 @@ export default function Menu() {
     )}
 
       {/* Product Detail Dialog */}
-      <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
+      <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) { setSelectedProduct(null); setSelectedOptionals([]); setSelectedGroupItems({}); setItemNotes(''); } }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedProduct?.name}</DialogTitle>
@@ -742,6 +820,55 @@ export default function Menu() {
                         )}
                       </div>
                     ))}
+                </div>
+              )}
+
+              {/* Optional Groups (associated by category or product) */}
+              {selectedProductGroups.length > 0 && (
+                <div className="space-y-4">
+                  {selectedProductGroups.map(group => (
+                    <div key={group.id} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-base font-semibold">{group.name}</Label>
+                        {(group.minSelect > 0 || group.maxSelect > 0) && (
+                          <Badge variant="outline" className="text-xs">
+                            {group.minSelect > 0 ? `mín ${group.minSelect}` : ''}
+                            {group.minSelect > 0 && group.maxSelect > 0 ? ' / ' : ''}
+                            {group.maxSelect > 0 ? `máx ${group.maxSelect}` : ''}
+                          </Badge>
+                        )}
+                        {group.minSelect > 0 && (
+                          <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
+                        )}
+                      </div>
+                      {group.items.filter(i => i.active).map(item => {
+                        const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
+                        return (
+                          <div
+                            key={item.id}
+                            className={cn(
+                              "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors",
+                              isSelected ? "border-primary bg-primary/5" : "hover:border-primary/50"
+                            )}
+                            onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                              />
+                              <span className="font-medium">{item.name}</span>
+                            </div>
+                            {item.price > 0 && (
+                              <span className="text-primary font-semibold">
+                                +R$ {item.price.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </div>
               )}
 
