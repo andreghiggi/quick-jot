@@ -22,6 +22,7 @@ import {
   Lightbulb,
   Upload,
   Layers,
+  FolderOpen,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -68,14 +69,22 @@ export function AppSidebar() {
       href: '/pedidos',
     },
     {
-      title: 'Produtos',
-      icon: Package,
-      href: '/produtos',
-    },
-    {
       title: 'Cardápio',
       icon: ChefHat,
       href: `/cardapio/${company?.slug || ''}`,
+    },
+  ];
+
+  const catalogMenuItems = [
+    {
+      title: 'Categorias',
+      icon: FolderOpen,
+      href: '/categorias',
+    },
+    {
+      title: 'Produtos',
+      icon: Package,
+      href: '/produtos',
     },
     {
       title: 'Adicionais',
@@ -306,6 +315,27 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
               {mesasMenuItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.href}
+                  >
+                    <Link to={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Catálogo</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {catalogMenuItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
