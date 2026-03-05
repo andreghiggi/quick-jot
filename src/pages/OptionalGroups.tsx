@@ -27,7 +27,7 @@ interface ExtractedGroup {
 
 export default function OptionalGroups() {
   const { company } = useAuthContext();
-  const { groups, loading, addGroup, updateGroup, deleteGroup, addItem, addItemsBulk, deleteItem, setCategoryLinks, setProductLinks } = useOptionalGroups({ companyId: company?.id });
+  const { groups, loading, addGroup, updateGroup, deleteGroup, addItem, addItemsBulk, updateItem, deleteItem, setCategoryLinks, setProductLinks } = useOptionalGroups({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
   const { products } = useProducts({ companyId: company?.id });
 
