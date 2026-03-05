@@ -120,6 +120,13 @@ export default function Menu() {
     return map;
   }, [categories]);
 
+  // Build category name -> emoji map for MenuV2
+  const categoryEmojiMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach(c => { if (c.emoji) map[c.name] = c.emoji; });
+    return map;
+  }, [categories]);
+
   // Get optional groups applicable to a specific product
   function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
     const catId = categoryIdByName[productCategory];
