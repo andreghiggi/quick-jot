@@ -823,6 +823,55 @@ export default function Menu() {
                 </div>
               )}
 
+              {/* Optional Groups (associated by category or product) */}
+              {selectedProductGroups.length > 0 && (
+                <div className="space-y-4">
+                  {selectedProductGroups.map(group => (
+                    <div key={group.id} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-base font-semibold">{group.name}</Label>
+                        {(group.minSelect > 0 || group.maxSelect > 0) && (
+                          <Badge variant="outline" className="text-xs">
+                            {group.minSelect > 0 ? `mín ${group.minSelect}` : ''}
+                            {group.minSelect > 0 && group.maxSelect > 0 ? ' / ' : ''}
+                            {group.maxSelect > 0 ? `máx ${group.maxSelect}` : ''}
+                          </Badge>
+                        )}
+                        {group.minSelect > 0 && (
+                          <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
+                        )}
+                      </div>
+                      {group.items.filter(i => i.active).map(item => {
+                        const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
+                        return (
+                          <div
+                            key={item.id}
+                            className={cn(
+                              "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors",
+                              isSelected ? "border-primary bg-primary/5" : "hover:border-primary/50"
+                            )}
+                            onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                              />
+                              <span className="font-medium">{item.name}</span>
+                            </div>
+                            {item.price > 0 && (
+                              <span className="text-primary font-semibold">
+                                +R$ {item.price.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div>
                 <Label>Observações (opcional)</Label>
                 <Input
