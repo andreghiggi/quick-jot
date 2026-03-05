@@ -221,13 +221,61 @@ export default function Menu() {
     );
   }
 
+  function toggleGroupItem(groupId: string, itemId: string, maxSelect: number) {
+    setSelectedGroupItems(prev => {
+      const current = new Set(prev[groupId] || []);
+      if (current.has(itemId)) {
+        current.delete(itemId);
+      } else {
+        if (maxSelect > 0 && current.size >= maxSelect) {
+          toast.error(`Máximo ${maxSelect} seleções neste grupo`);
+          return prev;
+        }
+        current.add(itemId);
+      }
+      return { ...prev, [groupId]: current };
+    });
+  }
+
   function addToCart() {
     if (!selectedProduct) return;
+
+    // Validate min selections for optional groups
+    for (const group of selectedProductGroups) {
+      const selected = selectedGroupItems[group.id];
+      const count = selected ? selected.size : 0;
+      if (group.minSelect > 0 && count < group.minSelect) {
+        toast.error(`Selecione pelo menos ${group.minSelect} item(ns) em "${group.name}"`);
+        return;
+      }
+    }
+
+    // Collect selected group items as ProductOptional-like objects
+    const groupOptionals: ProductOptional[] = [];
+    for (const group of selectedProductGroups) {
+      const selected = selectedGroupItems[group.id];
+      if (!selected) continue;
+      for (const item of group.items) {
+        if (selected.has(item.id)) {
+          groupOptionals.push({
+            id: item.id,
+            productId: selectedProduct.id,
+            name: item.name,
+            price: item.price,
+            type: 'extra',
+            active: true,
+          });
+        }
+      }
+    }
+
+    // Merge old-style optionals + group optionals
+    const allOptionals = [...selectedOptionals, ...groupOptionals];
 
     const newItem: CartItem = {
       product: selectedProduct,
       quantity: 1,
-      selectedOptionals,
+      selectedOptionals: allOptionals,
       notes: itemNotes || undefined,
     };
 
