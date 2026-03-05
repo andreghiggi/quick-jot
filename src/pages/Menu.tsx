@@ -593,6 +593,7 @@ export default function Menu() {
         activeProducts={activeProducts}
         allOrderedCategories={allOrderedCategories}
         categoryEmojiMap={categoryEmojiMap}
+        categoryImageMap={categoryImageMap}
         cartItemsCount={cartItemsCount}
         cartTotal={cartTotal}
         isOpen={isOpen}
