@@ -560,10 +560,10 @@ export default function OptionalGroups() {
 
       {/* Associate Dialog */}
       <Dialog open={isAssociateOpen} onOpenChange={(v) => { setIsAssociateOpen(v); if (!v) setAssociatingGroup(null); }}>
-        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader><DialogTitle>Associar "{associatingGroup?.name}"</DialogTitle></DialogHeader>
-          <ScrollArea className="flex-1 pr-2">
-            <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto -mx-6 px-6">
+            <div className="space-y-6 pb-2">
               {/* Categories */}
               <div>
                 <Label className="text-sm font-semibold mb-2 block">Categorias de produtos</Label>
@@ -601,8 +601,8 @@ export default function OptionalGroups() {
                 </div>
               </div>
             </div>
-          </ScrollArea>
-          <div className="pt-4 border-t">
+          </div>
+          <div className="pt-4 border-t flex-shrink-0">
             <Button onClick={handleSaveAssociations} className="w-full">Salvar Associações</Button>
           </div>
         </DialogContent>
