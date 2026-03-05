@@ -505,6 +505,34 @@ export default function OptionalGroups() {
                 <Switch checked={editingGroup.active} onCheckedChange={(v) => setEditingGroup({ ...editingGroup, active: v })} />
                 <Label>Ativo</Label>
               </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Layout no cardápio</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={editingGroup.layout === 'vertical' ? 'default' : 'outline'}
+                    size="sm"
+                    className="flex-1 gap-2"
+                    onClick={() => setEditingGroup({ ...editingGroup, layout: 'vertical' })}
+                  >
+                    <LayoutList className="h-4 w-4" /> Lista
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editingGroup.layout === 'horizontal' ? 'default' : 'outline'}
+                    size="sm"
+                    className="flex-1 gap-2"
+                    onClick={() => setEditingGroup({ ...editingGroup, layout: 'horizontal' })}
+                  >
+                    <LayoutGrid className="h-4 w-4" /> Visual (cards)
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {editingGroup.layout === 'horizontal' 
+                    ? 'Exibe itens em cards horizontais com imagens grandes. Ideal para sabores com fotos.'
+                    : 'Layout padrão em lista vertical com checkboxes.'}
+                </p>
+              </div>
               <Button onClick={handleUpdateGroup} className="w-full">Salvar</Button>
             </div>
           )}
