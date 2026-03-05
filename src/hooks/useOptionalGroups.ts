@@ -9,6 +9,7 @@ export interface OptionalGroupItem {
   price: number;
   active: boolean;
   displayOrder: number;
+  imageUrl?: string | null;
 }
 
 export interface OptionalGroup {
