@@ -178,9 +178,9 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  async function updateItem(id: string, data: Partial<{ name: string; price: number; active: boolean }>): Promise<boolean> {
+  async function updateItem(id: string, data: Partial<{ name: string; price: number; active: boolean; image_url: string | null }>): Promise<boolean> {
     try {
-      const { error } = await supabase.from('optional_group_items').update(data).eq('id', id);
+      const { error } = await supabase.from('optional_group_items').update(data as any).eq('id', id);
       if (error) throw error;
       await fetchGroups();
       return true;
