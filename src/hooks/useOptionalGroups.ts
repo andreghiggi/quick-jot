@@ -12,6 +12,8 @@ export interface OptionalGroupItem {
   imageUrl?: string | null;
 }
 
+export type OptionalGroupLayout = 'vertical' | 'horizontal';
+
 export interface OptionalGroup {
   id: string;
   companyId: string;
@@ -20,6 +22,7 @@ export interface OptionalGroup {
   maxSelect: number;
   active: boolean;
   displayOrder: number;
+  layout: OptionalGroupLayout;
   items: OptionalGroupItem[];
   categoryIds: string[];
   productIds: string[];
