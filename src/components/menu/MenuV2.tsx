@@ -31,7 +31,9 @@ const categoryEmojis: Record<string, string> = {
   'Cervejas': '🍺',
 };
 
-function getCategoryEmoji(category: string): string {
+function getCategoryEmoji(category: string, customEmojiMap?: Record<string, string>): string {
+  // Try custom emoji from database first
+  if (customEmojiMap && customEmojiMap[category]) return customEmojiMap[category];
   // Try exact match
   if (categoryEmojis[category]) return categoryEmojis[category];
   // Try case-insensitive partial match
@@ -67,6 +69,7 @@ interface MenuV2Props {
   };
   activeProducts: Product[];
   allOrderedCategories: string[];
+  categoryEmojiMap?: Record<string, string>;
   cartItemsCount: number;
   cartTotal: number;
   isOpen: boolean;
@@ -81,6 +84,7 @@ export function MenuV2({
   settings,
   activeProducts,
   allOrderedCategories,
+  categoryEmojiMap,
   cartItemsCount,
   cartTotal,
   isOpen,
@@ -178,7 +182,7 @@ export function MenuV2({
                     </div>
                   ) : (
                     <div className="w-28 h-28 flex-shrink-0 bg-muted flex items-center justify-center">
-                      <span className="text-3xl">{getCategoryEmoji(selectedCategory)}</span>
+                      <span className="text-3xl">{getCategoryEmoji(selectedCategory, categoryEmojiMap)}</span>
                     </div>
                   )}
                   <div className="flex-1 p-3 flex flex-col justify-between">
@@ -313,7 +317,7 @@ export function MenuV2({
                     </div>
                   ) : (
                     <div className="w-24 h-24 flex-shrink-0 bg-muted flex items-center justify-center">
-                      <span className="text-2xl">{getCategoryEmoji(product.category)}</span>
+                      <span className="text-2xl">{getCategoryEmoji(product.category, categoryEmojiMap)}</span>
                     </div>
                   )}
                   <div className="flex-1 p-3 flex flex-col justify-between">
@@ -355,7 +359,7 @@ export function MenuV2({
                   categoryGradients[index % categoryGradients.length]
                 )}
               >
-                <span className="text-4xl opacity-80">{getCategoryEmoji(category)}</span>
+                <span className="text-4xl opacity-80">{getCategoryEmoji(category, categoryEmojiMap)}</span>
                 <div className="mt-2">
                   <p className="font-bold text-sm leading-tight line-clamp-2">{category}</p>
                   <p className="text-xs opacity-80 mt-0.5">

@@ -14,6 +14,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, GripVertical, FileText } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -25,7 +27,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 export default function Products() {
   const { company } = useAuthContext();
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, refetch: refetchProducts } = useProducts({ companyId: company?.id });
-  const { categories, addCategory, deleteCategory, sortMode, saveSortMode, moveCategory } = useCategories({ companyId: company?.id });
+  const { categories, addCategory, deleteCategory, updateCategory, sortMode, saveSortMode, moveCategory } = useCategories({ companyId: company?.id });
   const { settings, saveStorePhone, saveBannerUrl, saveStoreName } = useStoreSettings({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
   
@@ -740,7 +742,26 @@ export default function Products() {
                             {sortMode === 'manual' && (
                               <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             )}
-                            <FolderOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button className="text-xl hover:bg-muted rounded p-1 transition-colors flex-shrink-0" title="Alterar ícone">
+                                  {cat.emoji || '🍽️'}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-2" align="start">
+                                <div className="grid grid-cols-6 gap-1">
+                                  {['🍔', '🍕', '🍟', '🌭', '🥪', '🌮', '🍝', '🍣', '🍱', '🥗', '🥩', '🐟', '🦐', '🍗', '🥟', '🍰', '🍩', '🍦', '🧁', '🍇', '☕', '🧃', '🥤', '🍺', '🍷', '🧋', '🥂', '🍸', '🎁', '🍽️'].map(emoji => (
+                                    <button
+                                      key={emoji}
+                                      className={cn("text-xl p-1.5 rounded hover:bg-muted transition-colors", cat.emoji === emoji && "bg-primary/10 ring-1 ring-primary")}
+                                      onClick={() => updateCategory(cat.id, { emoji })}
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                             <span className="truncate">{cat.name}</span>
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">

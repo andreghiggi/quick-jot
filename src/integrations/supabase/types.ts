@@ -126,6 +126,7 @@ export type Database = {
           company_id: string | null
           created_at: string
           display_order: number | null
+          emoji: string | null
           id: string
           name: string
         }
@@ -134,6 +135,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           display_order?: number | null
+          emoji?: string | null
           id?: string
           name: string
         }
@@ -142,6 +144,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           display_order?: number | null
+          emoji?: string | null
           id?: string
           name?: string
         }

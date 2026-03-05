@@ -120,6 +120,13 @@ export default function Menu() {
     return map;
   }, [categories]);
 
+  // Build category name -> emoji map for MenuV2
+  const categoryEmojiMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach(c => { if (c.emoji) map[c.name] = c.emoji; });
+    return map;
+  }, [categories]);
+
   // Get optional groups applicable to a specific product
   function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
     const catId = categoryIdByName[productCategory];
@@ -222,16 +229,24 @@ export default function Menu() {
   }
 
   function toggleGroupItem(groupId: string, itemId: string, maxSelect: number) {
+    const effectiveMax = maxSelect > 0 ? maxSelect : 1;
     setSelectedGroupItems(prev => {
       const current = new Set(prev[groupId] || []);
       if (current.has(itemId)) {
         current.delete(itemId);
       } else {
-        if (maxSelect > 0 && current.size >= maxSelect) {
-          toast.error(`Máximo ${maxSelect} seleções neste grupo`);
-          return prev;
+        if (current.size >= effectiveMax) {
+          if (effectiveMax === 1) {
+            // Replace the single selection
+            current.clear();
+            current.add(itemId);
+          } else {
+            toast.error(`Máximo ${effectiveMax} seleções neste grupo`);
+            return prev;
+          }
+        } else {
+          current.add(itemId);
         }
-        current.add(itemId);
       }
       return { ...prev, [groupId]: current };
     });
@@ -570,6 +585,7 @@ export default function Menu() {
         settings={settings}
         activeProducts={activeProducts}
         allOrderedCategories={allOrderedCategories}
+        categoryEmojiMap={categoryEmojiMap}
         cartItemsCount={cartItemsCount}
         cartTotal={cartTotal}
         isOpen={isOpen}
@@ -830,13 +846,10 @@ export default function Menu() {
                     <div key={group.id} className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Label className="text-base font-semibold">{group.name}</Label>
-                        {(group.minSelect > 0 || group.maxSelect > 0) && (
-                          <Badge variant="outline" className="text-xs">
-                            {group.minSelect > 0 ? `mín ${group.minSelect}` : ''}
-                            {group.minSelect > 0 && group.maxSelect > 0 ? ' / ' : ''}
-                            {group.maxSelect > 0 ? `máx ${group.maxSelect}` : ''}
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className="text-xs">
+                          {group.minSelect > 0 ? `mín ${group.minSelect} / ` : ''}
+                          máx {group.maxSelect > 0 ? group.maxSelect : 1}
+                        </Badge>
                         {group.minSelect > 0 && (
                           <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
                         )}
