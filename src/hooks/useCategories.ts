@@ -40,6 +40,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         active: cat.active ?? true,
         companyId: cat.company_id || undefined,
         emoji: (cat as any).emoji || undefined,
+        imageUrl: (cat as any).image_url || undefined,
       }));
 
       setCategories(mapped);
