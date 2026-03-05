@@ -448,7 +448,7 @@ export default function Products() {
 
         {/* Category filter chips */}
         {groupedProducts.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          <div className="flex gap-2 flex-wrap pb-1">
             <Badge
               variant={selectedCategoryFilter === null ? 'default' : 'outline'}
               className="cursor-pointer whitespace-nowrap flex-shrink-0 px-3 py-1.5 text-sm"
