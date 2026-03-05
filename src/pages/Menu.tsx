@@ -865,8 +865,8 @@ export default function Menu() {
                       </div>
 
                       {group.layout === 'horizontal' ? (
-                        /* Horizontal visual card layout */
-                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+                        /* Visual grid card layout - 3 columns on mobile */
+                        <div className="grid grid-cols-3 gap-2">
                           {group.items.filter(i => i.active).map(item => {
                             const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
                             return (
@@ -874,7 +874,7 @@ export default function Menu() {
                                 key={item.id}
                                 type="button"
                                 className={cn(
-                                  "relative flex-shrink-0 w-28 rounded-xl border-2 overflow-hidden transition-all text-left",
+                                  "relative rounded-xl border-2 overflow-hidden transition-all text-left",
                                   isSelected
                                     ? "border-primary ring-2 ring-primary/30 shadow-md"
                                     : "border-border hover:border-primary/50"
@@ -882,7 +882,7 @@ export default function Menu() {
                                 onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
                               >
                                 {item.imageUrl ? (
-                                  <div className="w-full h-24 overflow-hidden">
+                                  <div className="w-full aspect-square overflow-hidden">
                                     <img
                                       src={item.imageUrl}
                                       alt={item.name}
@@ -890,19 +890,19 @@ export default function Menu() {
                                     />
                                   </div>
                                 ) : (
-                                  <div className="w-full h-24 bg-muted flex items-center justify-center">
+                                  <div className="w-full aspect-square bg-muted flex items-center justify-center">
                                     <span className="text-3xl">🍽️</span>
                                   </div>
                                 )}
-                                <div className="p-2 space-y-0.5">
+                                <div className="p-1.5 space-y-0.5">
                                   <p className={cn(
-                                    "text-xs font-semibold line-clamp-2 leading-tight",
+                                    "text-[11px] font-semibold line-clamp-2 leading-tight text-center",
                                     isSelected ? "text-primary" : "text-foreground"
                                   )}>
                                     {item.name}
                                   </p>
                                   {item.price > 0 && (
-                                    <p className="text-xs text-primary font-medium">
+                                    <p className="text-[10px] text-primary font-medium text-center">
                                       +R$ {item.price.toFixed(2)}
                                     </p>
                                   )}
