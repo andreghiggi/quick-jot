@@ -145,10 +145,11 @@ export default function Menu() {
     });
   }
 
-  // Get applicable groups for the currently selected product
+  // Get applicable groups for the currently selected product, sorted by display_order
   const selectedProductGroups = useMemo(() => {
     if (!selectedProduct) return [];
-    return getGroupsForProduct(selectedProduct.id, selectedProduct.category);
+    return getGroupsForProduct(selectedProduct.id, selectedProduct.category)
+      .sort((a, b) => a.displayOrder - b.displayOrder);
   }, [selectedProduct, optionalGroups, categoryIdByName]);
 
   // Load customer data when phone changes (with debounce)
