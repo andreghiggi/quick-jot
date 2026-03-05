@@ -34,6 +34,7 @@ import NFCeMonitor from "./pages/NFCeMonitor";
 import Suggestions from "./pages/Suggestions";
 import MenuImport from "./pages/MenuImport";
 import OptionalGroups from "./pages/OptionalGroups";
+import Categories from "./pages/Categories";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
