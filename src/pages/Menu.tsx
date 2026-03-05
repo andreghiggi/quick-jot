@@ -862,35 +862,93 @@ export default function Menu() {
                           <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
                         )}
                       </div>
-                      {group.items.filter(i => i.active).map(item => {
-                        const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
-                        return (
-                          <div
-                            key={item.id}
-                            className={cn(
-                              "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors",
-                              isSelected ? "border-primary bg-primary/5" : "hover:border-primary/50"
-                            )}
-                            onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
-                          >
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
-                              />
-                              {item.imageUrl && (
-                                <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
+
+                      {group.layout === 'horizontal' ? (
+                        /* Horizontal visual card layout */
+                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+                          {group.items.filter(i => i.active).map(item => {
+                            const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                className={cn(
+                                  "flex-shrink-0 w-28 rounded-xl border-2 overflow-hidden transition-all text-left",
+                                  isSelected
+                                    ? "border-primary ring-2 ring-primary/30 shadow-md"
+                                    : "border-border hover:border-primary/50"
+                                )}
+                                onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                              >
+                                {item.imageUrl ? (
+                                  <div className="w-full h-24 overflow-hidden">
+                                    <img
+                                      src={item.imageUrl}
+                                      alt={item.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-full h-24 bg-muted flex items-center justify-center">
+                                    <span className="text-3xl">🍽️</span>
+                                  </div>
+                                )}
+                                <div className="p-2 space-y-0.5">
+                                  <p className={cn(
+                                    "text-xs font-semibold line-clamp-2 leading-tight",
+                                    isSelected ? "text-primary" : "text-foreground"
+                                  )}>
+                                    {item.name}
+                                  </p>
+                                  {item.price > 0 && (
+                                    <p className="text-xs text-primary font-medium">
+                                      +R$ {item.price.toFixed(2)}
+                                    </p>
+                                  )}
+                                </div>
+                                {isSelected && (
+                                  <div className="absolute top-1 right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                                    <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        /* Default vertical list layout */
+                        group.items.filter(i => i.active).map(item => {
+                          const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
+                          return (
+                            <div
+                              key={item.id}
+                              className={cn(
+                                "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors",
+                                isSelected ? "border-primary bg-primary/5" : "hover:border-primary/50"
                               )}
-                              <span className="font-medium">{item.name}</span>
+                              onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                                />
+                                {item.imageUrl && (
+                                  <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                                )}
+                                <span className="font-medium">{item.name}</span>
+                              </div>
+                              {item.price > 0 && (
+                                <span className="text-primary font-semibold">
+                                  +R$ {item.price.toFixed(2)}
+                                </span>
+                              )}
                             </div>
-                            {item.price > 0 && (
-                              <span className="text-primary font-semibold">
-                                +R$ {item.price.toFixed(2)}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      )}
                     </div>
                   ))}
                 </div>
