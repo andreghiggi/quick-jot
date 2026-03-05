@@ -68,14 +68,22 @@ export function AppSidebar() {
       href: '/pedidos',
     },
     {
-      title: 'Produtos',
-      icon: Package,
-      href: '/produtos',
-    },
-    {
       title: 'Cardápio',
       icon: ChefHat,
       href: `/cardapio/${company?.slug || ''}`,
+    },
+  ];
+
+  const catalogMenuItems = [
+    {
+      title: 'Categorias',
+      icon: FolderOpen,
+      href: '/categorias',
+    },
+    {
+      title: 'Produtos',
+      icon: Package,
+      href: '/produtos',
     },
     {
       title: 'Adicionais',
