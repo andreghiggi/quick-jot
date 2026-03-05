@@ -873,7 +873,7 @@ export default function Menu() {
                                 key={item.id}
                                 type="button"
                                 className={cn(
-                                  "flex-shrink-0 w-28 rounded-xl border-2 overflow-hidden transition-all text-left",
+                                  "relative flex-shrink-0 w-28 rounded-xl border-2 overflow-hidden transition-all text-left",
                                   isSelected
                                     ? "border-primary ring-2 ring-primary/30 shadow-md"
                                     : "border-border hover:border-primary/50"
