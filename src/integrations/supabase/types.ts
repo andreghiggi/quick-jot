@@ -601,6 +601,7 @@ export type Database = {
           created_at: string
           display_order: number | null
           id: string
+          layout: string
           max_select: number
           min_select: number
           name: string
@@ -612,6 +613,7 @@ export type Database = {
           created_at?: string
           display_order?: number | null
           id?: string
+          layout?: string
           max_select?: number
           min_select?: number
           name: string
@@ -623,6 +625,7 @@ export type Database = {
           created_at?: string
           display_order?: number | null
           id?: string
+          layout?: string
           max_select?: number
           min_select?: number
           name?: string
