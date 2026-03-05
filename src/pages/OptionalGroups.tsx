@@ -375,14 +375,36 @@ export default function OptionalGroups() {
                     <p className="text-sm text-muted-foreground">Nenhum item neste grupo.</p>
                   ) : (
                     <div className="space-y-1">
-                      {group.items.map(item => (
+                     {group.items.map(item => (
                         <div key={item.id} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50">
                           <div className="flex items-center gap-2">
+                            {item.imageUrl ? (
+                              <img src={item.imageUrl} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                            ) : null}
                             <span className="text-sm">{item.name}</span>
                             {!item.active && <Badge variant="secondary" className="text-xs">Inativo</Badge>}
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">R$ {item.price.toFixed(2)}</span>
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  const ext = file.name.split('.').pop();
+                                  const path = `optional-items/${item.id}.${ext}`;
+                                  const { error: uploadErr } = await supabase.storage.from('product-images').upload(path, file, { upsert: true });
+                                  if (uploadErr) { toast.error('Erro ao enviar imagem'); return; }
+                                  const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+                                  await updateItem(item.id, { image_url: urlData.publicUrl + '?t=' + Date.now() });
+                                  toast.success('Imagem atualizada!');
+                                }}
+                              />
+                              <Image className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+                            </label>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteItem(item.id)}>
                               <Trash2 className="h-3 w-3 text-destructive" />
                             </Button>
