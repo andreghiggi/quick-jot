@@ -222,16 +222,24 @@ export default function Menu() {
   }
 
   function toggleGroupItem(groupId: string, itemId: string, maxSelect: number) {
+    const effectiveMax = maxSelect > 0 ? maxSelect : 1;
     setSelectedGroupItems(prev => {
       const current = new Set(prev[groupId] || []);
       if (current.has(itemId)) {
         current.delete(itemId);
       } else {
-        if (maxSelect > 0 && current.size >= maxSelect) {
-          toast.error(`Máximo ${maxSelect} seleções neste grupo`);
-          return prev;
+        if (current.size >= effectiveMax) {
+          if (effectiveMax === 1) {
+            // Replace the single selection
+            current.clear();
+            current.add(itemId);
+          } else {
+            toast.error(`Máximo ${effectiveMax} seleções neste grupo`);
+            return prev;
+          }
+        } else {
+          current.add(itemId);
         }
-        current.add(itemId);
       }
       return { ...prev, [groupId]: current };
     });

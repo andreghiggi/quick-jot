@@ -40,4 +40,5 @@ export interface Category {
   displayOrder: number;
   active: boolean;
   companyId?: string;
+  emoji?: string;
 }
