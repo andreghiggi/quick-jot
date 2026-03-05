@@ -354,23 +354,42 @@ export function MenuV2({
                   setSearchQuery('');
                 }}
                 className={cn(
-                  'relative overflow-hidden rounded-xl p-4 text-left transition-all',
+                  'relative overflow-hidden rounded-xl text-left transition-all',
                   'hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]',
-                  'bg-gradient-to-br text-white shadow-md',
-                  'min-h-[120px] flex flex-col justify-between',
-                  categoryGradients[index % categoryGradients.length]
+                  'shadow-md min-h-[120px] flex flex-col justify-between',
+                  categoryImageMap?.[category]
+                    ? 'text-white'
+                    : cn('bg-gradient-to-br text-white p-4', categoryGradients[index % categoryGradients.length])
                 )}
               >
-                <span className="text-4xl opacity-80">{getCategoryEmoji(category, categoryEmojiMap)}</span>
-                <div className="mt-2">
-                  <p className="font-bold text-sm leading-tight line-clamp-2">{category}</p>
-                  <p className="text-xs opacity-80 mt-0.5">
-                    {productCountByCategory[category]} {productCountByCategory[category] === 1 ? 'item' : 'itens'}
-                  </p>
-                </div>
-                {/* Decorative circle */}
-                <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-white/10" />
-                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white/5" />
+                {categoryImageMap?.[category] ? (
+                  <>
+                    <img
+                      src={categoryImageMap[category]}
+                      alt={category}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                    <div className="relative z-10 mt-auto p-4 pt-12">
+                      <p className="font-bold text-sm leading-tight line-clamp-2">{category}</p>
+                      <p className="text-xs opacity-80 mt-0.5">
+                        {productCountByCategory[category]} {productCountByCategory[category] === 1 ? 'item' : 'itens'}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-4xl opacity-80">{getCategoryEmoji(category, categoryEmojiMap)}</span>
+                    <div className="mt-2">
+                      <p className="font-bold text-sm leading-tight line-clamp-2">{category}</p>
+                      <p className="text-xs opacity-80 mt-0.5">
+                        {productCountByCategory[category]} {productCountByCategory[category] === 1 ? 'item' : 'itens'}
+                      </p>
+                    </div>
+                    <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-white/10" />
+                    <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white/5" />
+                  </>
+                )}
               </button>
             ))}
           </div>
