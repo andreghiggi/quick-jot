@@ -101,6 +101,9 @@ export default function Menu() {
   const [searchQuery, setSearchQuery] = useState('');
   const [customerLoaded, setCustomerLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Optional group selections state
+  const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Set<string>>>({});
 
   const brazilianStates = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
