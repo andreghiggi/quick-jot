@@ -111,7 +111,31 @@ export default function Menu() {
     'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ];
 
-  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading || neighborhoodsLoading || hoursLoading;
+  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading || neighborhoodsLoading || hoursLoading || groupsLoading;
+
+  // Build category name -> id map for optional groups
+  const categoryIdByName = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach(c => { map[c.name] = c.id; });
+    return map;
+  }, [categories]);
+
+  // Get optional groups applicable to a specific product
+  function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
+    const catId = categoryIdByName[productCategory];
+    return optionalGroups.filter(g => {
+      if (!g.active) return false;
+      if (g.productIds.includes(productId)) return true;
+      if (catId && g.categoryIds.includes(catId)) return true;
+      return false;
+    });
+  }
+
+  // Get applicable groups for the currently selected product
+  const selectedProductGroups = useMemo(() => {
+    if (!selectedProduct) return [];
+    return getGroupsForProduct(selectedProduct.id, selectedProduct.category);
+  }, [selectedProduct, optionalGroups, categoryIdByName]);
 
   // Load customer data when phone changes (with debounce)
   useEffect(() => {
