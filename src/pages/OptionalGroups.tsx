@@ -345,15 +345,20 @@ export default function OptionalGroups() {
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-3 flex-1 text-left">
                   <span className="font-semibold">{group.name}</span>
-                  {!group.active && <Badge variant="secondary">Inativo</Badge>}
-                  <Badge variant="outline" className="text-xs">
-                    {group.items.length} {group.items.length === 1 ? 'item' : 'itens'}
-                  </Badge>
-                  {group.minSelect > 0 || group.maxSelect > 0 ? (
-                    <Badge variant="outline" className="text-xs">
-                      {group.minSelect > 0 ? `mín ${group.minSelect}` : ''}{group.minSelect > 0 && group.maxSelect > 0 ? ' / ' : ''}{group.maxSelect > 0 ? `máx ${group.maxSelect}` : ''}
-                    </Badge>
-                  ) : null}
+                   {!group.active && <Badge variant="secondary">Inativo</Badge>}
+                   <Badge variant="outline" className="text-xs">
+                     {group.items.length} {group.items.length === 1 ? 'item' : 'itens'}
+                   </Badge>
+                   {group.minSelect > 0 || group.maxSelect > 0 ? (
+                     <Badge variant="outline" className="text-xs">
+                       {group.minSelect > 0 ? `mín ${group.minSelect}` : ''}{group.minSelect > 0 && group.maxSelect > 0 ? ' / ' : ''}{group.maxSelect > 0 ? `máx ${group.maxSelect}` : ''}
+                     </Badge>
+                   ) : null}
+                   {group.layout === 'horizontal' && (
+                     <Badge variant="outline" className="text-xs gap-1">
+                       <LayoutGrid className="h-3 w-3" /> Visual
+                     </Badge>
+                   )}
                   <div className="flex gap-1">
                     {group.categoryIds.length > 0 && (
                       <Badge className="text-xs bg-primary/10 text-primary border-primary/20">
