@@ -116,13 +116,14 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  async function updateGroup(id: string, data: Partial<{ name: string; minSelect: number; maxSelect: number; active: boolean }>): Promise<boolean> {
+  async function updateGroup(id: string, data: Partial<{ name: string; minSelect: number; maxSelect: number; active: boolean; layout: OptionalGroupLayout }>): Promise<boolean> {
     try {
       const update: any = {};
       if (data.name !== undefined) update.name = data.name;
       if (data.minSelect !== undefined) update.min_select = data.minSelect;
       if (data.maxSelect !== undefined) update.max_select = data.maxSelect;
       if (data.active !== undefined) update.active = data.active;
+      if (data.layout !== undefined) update.layout = data.layout;
 
       const { error } = await supabase.from('optional_groups').update(update).eq('id', id);
       if (error) throw error;
