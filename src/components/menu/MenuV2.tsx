@@ -359,7 +359,7 @@ export function MenuV2({
                   categoryGradients[index % categoryGradients.length]
                 )}
               >
-                <span className="text-4xl opacity-80">{getCategoryEmoji(category)}</span>
+                <span className="text-4xl opacity-80">{getCategoryEmoji(category, categoryEmojiMap)}</span>
                 <div className="mt-2">
                   <p className="font-bold text-sm leading-tight line-clamp-2">{category}</p>
                   <p className="text-xs opacity-80 mt-0.5">
