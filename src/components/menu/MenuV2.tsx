@@ -31,7 +31,9 @@ const categoryEmojis: Record<string, string> = {
   'Cervejas': '🍺',
 };
 
-function getCategoryEmoji(category: string): string {
+function getCategoryEmoji(category: string, customEmojiMap?: Record<string, string>): string {
+  // Try custom emoji from database first
+  if (customEmojiMap && customEmojiMap[category]) return customEmojiMap[category];
   // Try exact match
   if (categoryEmojis[category]) return categoryEmojis[category];
   // Try case-insensitive partial match
