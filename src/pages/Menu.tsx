@@ -282,6 +282,7 @@ export default function Menu() {
     setCart((prev) => [...prev, newItem]);
     setSelectedProduct(null);
     setSelectedOptionals([]);
+    setSelectedGroupItems({});
     setItemNotes('');
     toast.success('Adicionado ao carrinho!', { duration: 1500 });
   }
