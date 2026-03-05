@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCategories } from '@/hooks/useCategories';
+import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { useBusinessHours } from '@/hooks/useBusinessHours';
 import { Product, ProductOptional, CartItem } from '@/types/product';
