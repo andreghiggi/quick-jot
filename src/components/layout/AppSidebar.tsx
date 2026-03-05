@@ -22,6 +22,7 @@ import {
   Lightbulb,
   Upload,
   Layers,
+  FolderOpen,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
