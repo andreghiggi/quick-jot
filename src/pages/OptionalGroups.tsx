@@ -83,6 +83,7 @@ export default function OptionalGroups() {
       minSelect: editingGroup.minSelect,
       maxSelect: editingGroup.maxSelect,
       active: editingGroup.active,
+      layout: editingGroup.layout,
     });
     setEditingGroup(null);
   }
