@@ -164,6 +164,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
       if (data.name !== undefined) updateData.name = data.name;
       if (data.displayOrder !== undefined) updateData.display_order = data.displayOrder;
       if (data.active !== undefined) updateData.active = data.active;
+      if (data.emoji !== undefined) updateData.emoji = data.emoji;
 
       const { error } = await supabase
         .from('categories')
