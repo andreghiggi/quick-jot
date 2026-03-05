@@ -178,6 +178,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
+      <Route path="/categorias" element={
+        <ProtectedRoute requireCompany>
+          <Categories />
+        </ProtectedRoute>
+      } />
+      
       <Route path="/garcom" element={
         <ProtectedRoute requireCompany>
           <Waiter />
