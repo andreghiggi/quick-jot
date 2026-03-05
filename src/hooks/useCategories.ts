@@ -39,6 +39,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         displayOrder: cat.display_order ?? 0,
         active: cat.active ?? true,
         companyId: cat.company_id || undefined,
+        emoji: (cat as any).emoji || undefined,
       }));
 
       setCategories(mapped);
