@@ -742,7 +742,26 @@ export default function Products() {
                             {sortMode === 'manual' && (
                               <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             )}
-                            <FolderOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button className="text-xl hover:bg-muted rounded p-1 transition-colors flex-shrink-0" title="Alterar ícone">
+                                  {cat.emoji || '🍽️'}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-2" align="start">
+                                <div className="grid grid-cols-6 gap-1">
+                                  {['🍔', '🍕', '🍟', '🌭', '🥪', '🌮', '🍝', '🍣', '🍱', '🥗', '🥩', '🐟', '🦐', '🍗', '🥟', '🍰', '🍩', '🍦', '🧁', '🍇', '☕', '🧃', '🥤', '🍺', '🍷', '🧋', '🥂', '🍸', '🎁', '🍽️'].map(emoji => (
+                                    <button
+                                      key={emoji}
+                                      className={cn("text-xl p-1.5 rounded hover:bg-muted transition-colors", cat.emoji === emoji && "bg-primary/10 ring-1 ring-primary")}
+                                      onClick={() => updateCategory(cat.id, { emoji })}
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                             <span className="truncate">{cat.name}</span>
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
