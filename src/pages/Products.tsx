@@ -446,7 +446,30 @@ export default function Products() {
           </CardContent>
         </Card>
 
-        {groupedProducts.map(([category, categoryProducts]) => (
+        {/* Category filter chips */}
+        {groupedProducts.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+            <Badge
+              variant={selectedCategoryFilter === null ? 'default' : 'outline'}
+              className="cursor-pointer whitespace-nowrap flex-shrink-0 px-3 py-1.5 text-sm"
+              onClick={() => setSelectedCategoryFilter(null)}
+            >
+              Todas ({products.length})
+            </Badge>
+            {groupedProducts.map(([category, categoryProducts]) => (
+              <Badge
+                key={category}
+                variant={selectedCategoryFilter === category ? 'default' : 'outline'}
+                className="cursor-pointer whitespace-nowrap flex-shrink-0 px-3 py-1.5 text-sm"
+                onClick={() => setSelectedCategoryFilter(prev => prev === category ? null : category)}
+              >
+                {category} ({categoryProducts.length})
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {filteredGroupedProducts.map(([category, categoryProducts]) => (
           <div key={category}>
             <h2 className="text-lg font-semibold mb-3">{category}</h2>
             <div className="grid gap-3">
