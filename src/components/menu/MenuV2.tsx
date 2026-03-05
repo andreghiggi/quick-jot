@@ -69,6 +69,7 @@ interface MenuV2Props {
   };
   activeProducts: Product[];
   allOrderedCategories: string[];
+  categoryEmojiMap?: Record<string, string>;
   cartItemsCount: number;
   cartTotal: number;
   isOpen: boolean;
