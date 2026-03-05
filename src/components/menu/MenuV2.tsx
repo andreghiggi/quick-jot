@@ -86,6 +86,7 @@ export function MenuV2({
   activeProducts,
   allOrderedCategories,
   categoryEmojiMap,
+  categoryImageMap,
   cartItemsCount,
   cartTotal,
   isOpen,
