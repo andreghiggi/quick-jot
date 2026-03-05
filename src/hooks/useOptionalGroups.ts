@@ -73,6 +73,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
             price: Number(i.price),
             active: i.active,
             displayOrder: i.display_order ?? 0,
+            imageUrl: (i as any).image_url ?? null,
           })),
         categoryIds: catLinks.filter(c => c.group_id === g.id).map(c => c.category_id),
         productIds: prodLinks.filter(p => p.group_id === g.id).map(p => p.product_id),
