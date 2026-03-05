@@ -127,6 +127,13 @@ export default function Menu() {
     return map;
   }, [categories]);
 
+  // Build category name -> image map for MenuV2
+  const categoryImageMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach(c => { if (c.imageUrl) map[c.name] = c.imageUrl; });
+    return map;
+  }, [categories]);
+
   // Get optional groups applicable to a specific product
   function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
     const catId = categoryIdByName[productCategory];
