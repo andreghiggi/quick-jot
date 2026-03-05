@@ -128,6 +128,7 @@ export type Database = {
           display_order: number | null
           emoji: string | null
           id: string
+          image_url: string | null
           name: string
         }
         Insert: {
@@ -137,6 +138,7 @@ export type Database = {
           display_order?: number | null
           emoji?: string | null
           id?: string
+          image_url?: string | null
           name: string
         }
         Update: {
@@ -146,6 +148,7 @@ export type Database = {
           display_order?: number | null
           emoji?: string | null
           id?: string
+          image_url?: string | null
           name?: string
         }
         Relationships: [

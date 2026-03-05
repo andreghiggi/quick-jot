@@ -744,21 +744,76 @@ export default function Products() {
                             )}
                             <Popover>
                               <PopoverTrigger asChild>
-                                <button className="text-xl hover:bg-muted rounded p-1 transition-colors flex-shrink-0" title="Alterar ícone">
-                                  {cat.emoji || '🍽️'}
+                                <button className="hover:bg-muted rounded p-1 transition-colors flex-shrink-0 w-8 h-8 flex items-center justify-center overflow-hidden" title="Alterar ícone">
+                                  {cat.imageUrl ? (
+                                    <img src={cat.imageUrl} alt={cat.name} className="w-7 h-7 rounded object-cover" />
+                                  ) : (
+                                    <span className="text-xl">{cat.emoji || '🍽️'}</span>
+                                  )}
                                 </button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-2" align="start">
-                                <div className="grid grid-cols-6 gap-1">
-                                  {['🍔', '🍕', '🍟', '🌭', '🥪', '🌮', '🍝', '🍣', '🍱', '🥗', '🥩', '🐟', '🦐', '🍗', '🥟', '🍰', '🍩', '🍦', '🧁', '🍇', '☕', '🧃', '🥤', '🍺', '🍷', '🧋', '🥂', '🍸', '🎁', '🍽️'].map(emoji => (
-                                    <button
-                                      key={emoji}
-                                      className={cn("text-xl p-1.5 rounded hover:bg-muted transition-colors", cat.emoji === emoji && "bg-primary/10 ring-1 ring-primary")}
-                                      onClick={() => updateCategory(cat.id, { emoji })}
+                              <PopoverContent className="w-auto p-3" align="start">
+                                <div className="space-y-3">
+                                  <p className="text-xs font-medium text-muted-foreground">Escolha um emoji</p>
+                                  <div className="grid grid-cols-6 gap-1">
+                                    {['🍔', '🍕', '🍟', '🌭', '🥪', '🌮', '🍝', '🍣', '🍱', '🥗', '🥩', '🐟', '🦐', '🍗', '🥟', '🍰', '🍩', '🍦', '🧁', '🍇', '☕', '🧃', '🥤', '🍺', '🍷', '🧋', '🥂', '🍸', '🎁', '🍽️'].map(emoji => (
+                                      <button
+                                        key={emoji}
+                                        className={cn("text-xl p-1.5 rounded hover:bg-muted transition-colors", cat.emoji === emoji && !cat.imageUrl && "bg-primary/10 ring-1 ring-primary")}
+                                        onClick={() => updateCategory(cat.id, { emoji, imageUrl: '' })}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <div className="border-t pt-2">
+                                    <p className="text-xs font-medium text-muted-foreground mb-2">Ou envie uma imagem</p>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      id={`cat-img-${cat.id}`}
+                                      onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        try {
+                                          const ext = file.name.split('.').pop();
+                                          const path = `categories/${cat.id}.${ext}`;
+                                          const { error: uploadError } = await supabase.storage
+                                            .from('product-images')
+                                            .upload(path, file, { upsert: true });
+                                          if (uploadError) throw uploadError;
+                                          const { data: urlData } = supabase.storage
+                                            .from('product-images')
+                                            .getPublicUrl(path);
+                                          await updateCategory(cat.id, { imageUrl: urlData.publicUrl + '?t=' + Date.now() });
+                                        } catch (err) {
+                                          console.error(err);
+                                          toast.error('Erro ao enviar imagem');
+                                        }
+                                        e.target.value = '';
+                                      }}
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full"
+                                      onClick={() => document.getElementById(`cat-img-${cat.id}`)?.click()}
                                     >
-                                      {emoji}
-                                    </button>
-                                  ))}
+                                      <Image className="h-4 w-4 mr-2" />
+                                      Buscar imagem
+                                    </Button>
+                                    {cat.imageUrl && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full mt-1 text-destructive"
+                                        onClick={() => updateCategory(cat.id, { imageUrl: '', emoji: cat.emoji || '🍽️' })}
+                                      >
+                                        Remover imagem
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
                               </PopoverContent>
                             </Popover>

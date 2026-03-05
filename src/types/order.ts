@@ -41,4 +41,5 @@ export interface Category {
   active: boolean;
   companyId?: string;
   emoji?: string;
+  imageUrl?: string;
 }

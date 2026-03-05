@@ -40,6 +40,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         active: cat.active ?? true,
         companyId: cat.company_id || undefined,
         emoji: (cat as any).emoji || undefined,
+        imageUrl: (cat as any).image_url || undefined,
       }));
 
       setCategories(mapped);
@@ -165,6 +166,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
       if (data.displayOrder !== undefined) updateData.display_order = data.displayOrder;
       if (data.active !== undefined) updateData.active = data.active;
       if (data.emoji !== undefined) updateData.emoji = data.emoji;
+      if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl;
 
       const { error } = await supabase
         .from('categories')
