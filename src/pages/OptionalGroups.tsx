@@ -403,7 +403,7 @@ export default function OptionalGroups() {
                                   toast.success('Imagem atualizada!');
                                 }}
                               />
-                              <Image className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+                              <ImageIcon className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
                             </label>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteItem(item.id)}>
                               <Trash2 className="h-3 w-3 text-destructive" />
