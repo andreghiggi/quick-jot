@@ -846,13 +846,10 @@ export default function Menu() {
                     <div key={group.id} className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Label className="text-base font-semibold">{group.name}</Label>
-                        {(group.minSelect > 0 || group.maxSelect > 0) && (
-                          <Badge variant="outline" className="text-xs">
-                            {group.minSelect > 0 ? `mín ${group.minSelect}` : ''}
-                            {group.minSelect > 0 && group.maxSelect > 0 ? ' / ' : ''}
-                            {group.maxSelect > 0 ? `máx ${group.maxSelect}` : ''}
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className="text-xs">
+                          {group.minSelect > 0 ? `mín ${group.minSelect} / ` : ''}
+                          máx {group.maxSelect > 0 ? group.maxSelect : 1}
+                        </Badge>
                         {group.minSelect > 0 && (
                           <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
                         )}
