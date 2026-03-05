@@ -293,6 +293,11 @@ export default function Products() {
     return orderedEntries;
   }, [products, categories]);
 
+  const filteredGroupedProducts = useMemo(() => {
+    if (!selectedCategoryFilter) return groupedProducts;
+    return groupedProducts.filter(([category]) => category === selectedCategoryFilter);
+  }, [groupedProducts, selectedCategoryFilter]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
