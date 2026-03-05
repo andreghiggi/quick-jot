@@ -908,12 +908,19 @@ export default function Menu() {
                       <div className="flex-1">
                         <p className="font-medium">{item.product.name}</p>
                         {item.selectedOptionals.length > 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            + {item.selectedOptionals.map((o) => o.name).join(', ')}
-                          </p>
+                          <div className="mt-1 space-y-0.5">
+                            {item.selectedOptionals.map((o) => (
+                              <p key={o.id} className="text-xs text-muted-foreground flex justify-between pr-2">
+                                <span>+ {o.name}</span>
+                                <span className="text-foreground/70">
+                                  {o.price > 0 ? `R$ ${o.price.toFixed(2)}` : 'Grátis'}
+                                </span>
+                              </p>
+                            ))}
+                          </div>
                         )}
                         {item.notes && (
-                          <p className="text-xs text-muted-foreground">Obs: {item.notes}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Obs: {item.notes}</p>
                         )}
                       </div>
                       <p className="font-semibold">R$ {calculateItemTotal(item).toFixed(2)}</p>
