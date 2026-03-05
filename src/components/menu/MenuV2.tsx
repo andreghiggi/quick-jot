@@ -317,7 +317,7 @@ export function MenuV2({
                     </div>
                   ) : (
                     <div className="w-24 h-24 flex-shrink-0 bg-muted flex items-center justify-center">
-                      <span className="text-2xl">{getCategoryEmoji(product.category)}</span>
+                      <span className="text-2xl">{getCategoryEmoji(product.category, categoryEmojiMap)}</span>
                     </div>
                   )}
                   <div className="flex-1 p-3 flex flex-col justify-between">
