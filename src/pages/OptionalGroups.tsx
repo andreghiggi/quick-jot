@@ -17,7 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, Layers, Camera, ImageIcon } from 'lucide-react';
+import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, Layers, Camera, ImageIcon, LayoutList, LayoutGrid } from 'lucide-react';
 
 interface ExtractedGroup {
   name: string;
@@ -83,6 +83,7 @@ export default function OptionalGroups() {
       minSelect: editingGroup.minSelect,
       maxSelect: editingGroup.maxSelect,
       active: editingGroup.active,
+      layout: editingGroup.layout,
     });
     setEditingGroup(null);
   }
@@ -345,15 +346,20 @@ export default function OptionalGroups() {
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-3 flex-1 text-left">
                   <span className="font-semibold">{group.name}</span>
-                  {!group.active && <Badge variant="secondary">Inativo</Badge>}
-                  <Badge variant="outline" className="text-xs">
-                    {group.items.length} {group.items.length === 1 ? 'item' : 'itens'}
-                  </Badge>
-                  {group.minSelect > 0 || group.maxSelect > 0 ? (
-                    <Badge variant="outline" className="text-xs">
-                      {group.minSelect > 0 ? `mín ${group.minSelect}` : ''}{group.minSelect > 0 && group.maxSelect > 0 ? ' / ' : ''}{group.maxSelect > 0 ? `máx ${group.maxSelect}` : ''}
-                    </Badge>
-                  ) : null}
+                   {!group.active && <Badge variant="secondary">Inativo</Badge>}
+                   <Badge variant="outline" className="text-xs">
+                     {group.items.length} {group.items.length === 1 ? 'item' : 'itens'}
+                   </Badge>
+                   {group.minSelect > 0 || group.maxSelect > 0 ? (
+                     <Badge variant="outline" className="text-xs">
+                       {group.minSelect > 0 ? `mín ${group.minSelect}` : ''}{group.minSelect > 0 && group.maxSelect > 0 ? ' / ' : ''}{group.maxSelect > 0 ? `máx ${group.maxSelect}` : ''}
+                     </Badge>
+                   ) : null}
+                   {group.layout === 'horizontal' && (
+                     <Badge variant="outline" className="text-xs gap-1">
+                       <LayoutGrid className="h-3 w-3" /> Visual
+                     </Badge>
+                   )}
                   <div className="flex gap-1">
                     {group.categoryIds.length > 0 && (
                       <Badge className="text-xs bg-primary/10 text-primary border-primary/20">
@@ -499,6 +505,34 @@ export default function OptionalGroups() {
               <div className="flex items-center gap-2">
                 <Switch checked={editingGroup.active} onCheckedChange={(v) => setEditingGroup({ ...editingGroup, active: v })} />
                 <Label>Ativo</Label>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Layout no cardápio</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={editingGroup.layout === 'vertical' ? 'default' : 'outline'}
+                    size="sm"
+                    className="flex-1 gap-2"
+                    onClick={() => setEditingGroup({ ...editingGroup, layout: 'vertical' })}
+                  >
+                    <LayoutList className="h-4 w-4" /> Lista
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editingGroup.layout === 'horizontal' ? 'default' : 'outline'}
+                    size="sm"
+                    className="flex-1 gap-2"
+                    onClick={() => setEditingGroup({ ...editingGroup, layout: 'horizontal' })}
+                  >
+                    <LayoutGrid className="h-4 w-4" /> Visual (cards)
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {editingGroup.layout === 'horizontal' 
+                    ? 'Exibe itens em cards horizontais com imagens grandes. Ideal para sabores com fotos.'
+                    : 'Layout padrão em lista vertical com checkboxes.'}
+                </p>
               </div>
               <Button onClick={handleUpdateGroup} className="w-full">Salvar</Button>
             </div>

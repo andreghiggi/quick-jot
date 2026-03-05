@@ -12,6 +12,8 @@ export interface OptionalGroupItem {
   imageUrl?: string | null;
 }
 
+export type OptionalGroupLayout = 'vertical' | 'horizontal';
+
 export interface OptionalGroup {
   id: string;
   companyId: string;
@@ -20,6 +22,7 @@ export interface OptionalGroup {
   maxSelect: number;
   active: boolean;
   displayOrder: number;
+  layout: OptionalGroupLayout;
   items: OptionalGroupItem[];
   categoryIds: string[];
   productIds: string[];
@@ -64,6 +67,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
         maxSelect: g.max_select,
         active: g.active,
         displayOrder: g.display_order ?? 0,
+        layout: ((g as any).layout as OptionalGroupLayout) || 'vertical',
         items: items
           .filter(i => i.group_id === g.id)
           .map(i => ({
@@ -112,13 +116,14 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  async function updateGroup(id: string, data: Partial<{ name: string; minSelect: number; maxSelect: number; active: boolean }>): Promise<boolean> {
+  async function updateGroup(id: string, data: Partial<{ name: string; minSelect: number; maxSelect: number; active: boolean; layout: OptionalGroupLayout }>): Promise<boolean> {
     try {
       const update: any = {};
       if (data.name !== undefined) update.name = data.name;
       if (data.minSelect !== undefined) update.min_select = data.minSelect;
       if (data.maxSelect !== undefined) update.max_select = data.maxSelect;
       if (data.active !== undefined) update.active = data.active;
+      if (data.layout !== undefined) update.layout = data.layout;
 
       const { error } = await supabase.from('optional_groups').update(update).eq('id', id);
       if (error) throw error;

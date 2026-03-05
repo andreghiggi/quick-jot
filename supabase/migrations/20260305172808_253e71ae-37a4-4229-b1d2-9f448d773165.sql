@@ -1,0 +1,1 @@
+ALTER TABLE public.optional_groups ADD COLUMN layout text NOT NULL DEFAULT 'vertical';
