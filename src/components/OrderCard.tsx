@@ -49,7 +49,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
   delivered: '',
 };
 
-export function OrderCard({ order, paperSize = '58mm' }: OrderCardProps) {
+export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech' }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder } = useOrderContext();
   const config = statusConfig[order.status];
   // Converter para fuso horário de São Paulo
