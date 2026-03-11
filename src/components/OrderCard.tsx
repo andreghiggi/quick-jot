@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 interface OrderCardProps {
   order: Order;
   paperSize?: '58mm' | '80mm';
+  storeName?: string;
 }
 
 const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textColor: string; borderColor: string; next?: OrderStatus }> = {
@@ -48,7 +49,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
   delivered: '',
 };
 
-export function OrderCard({ order, paperSize = '58mm' }: OrderCardProps) {
+export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech' }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder } = useOrderContext();
   const config = statusConfig[order.status];
   // Converter para fuso horário de São Paulo
@@ -139,7 +140,7 @@ export function OrderCard({ order, paperSize = '58mm' }: OrderCardProps) {
       </head>
       <body>
         <div class="header">
-          <div class="store-name">COMANDA TECH</div>
+          <div class="store-name">${storeName.toUpperCase()}</div>
           <div class="order-num">PEDIDO #${order.orderCode || order.dailyNumber}</div>
           <div class="date">${formattedDate}</div>
         </div>
