@@ -8,7 +8,7 @@ import {
   saveTransaction 
 } from './posStorage';
 
-let syncInterval: NodeJS.Timeout | null = null;
+let syncInterval: ReturnType<typeof setInterval> | null = null;
 let isOnline = navigator.onLine;
 
 // Listen for online/offline events
