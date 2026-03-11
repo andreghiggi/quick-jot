@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 interface OrderCardProps {
   order: Order;
   paperSize?: '58mm' | '80mm';
+  storeName?: string;
 }
 
 const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textColor: string; borderColor: string; next?: OrderStatus }> = {
