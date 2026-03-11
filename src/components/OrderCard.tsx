@@ -140,7 +140,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       </head>
       <body>
         <div class="header">
-          <div class="store-name">COMANDA TECH</div>
+          <div class="store-name">${storeName.toUpperCase()}</div>
           <div class="order-num">PEDIDO #${order.orderCode || order.dailyNumber}</div>
           <div class="date">${formattedDate}</div>
         </div>

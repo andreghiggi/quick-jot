@@ -72,7 +72,7 @@ export function OrderTabs({ filteredOrders }: OrderTabsProps) {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {getOrders(tab.value).length > 0 ? (
               getOrders(tab.value).map((order) => (
-                <OrderCard key={order.id} order={order} paperSize={settings.printerPaperSize} />
+                <OrderCard key={order.id} order={order} paperSize={settings.printerPaperSize} storeName={settings.storeName} />
               ))
             ) : (
               <div className="col-span-full text-center py-12">
