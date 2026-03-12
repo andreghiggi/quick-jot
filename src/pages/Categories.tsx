@@ -231,6 +231,15 @@ export default function Categories() {
                     )}
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => { setEditingCatId(cat.id); setEditingCatName(cat.name); }}
+                      title="Editar nome"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
                     {sortMode === 'manual' && (
                       <>
                         <Button

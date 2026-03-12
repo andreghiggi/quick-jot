@@ -260,6 +260,34 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     });
   }
 
+  async function reorderGroups(reorderedGroups: OptionalGroup[]): Promise<boolean> {
+    try {
+      const updates = reorderedGroups.map((g, index) =>
+        supabase.from('optional_groups').update({ display_order: index }).eq('id', g.id)
+      );
+      await Promise.all(updates);
+      await fetchGroups();
+      toast.success('Ordem atualizada!');
+      return true;
+    } catch (error) {
+      console.error('Error reordering groups:', error);
+      toast.error('Erro ao reordenar grupos');
+      return false;
+    }
+  }
+
+  async function moveGroup(id: string, direction: 'up' | 'down'): Promise<boolean> {
+    const sorted = [...groups].sort((a, b) => a.displayOrder - b.displayOrder);
+    const idx = sorted.findIndex(g => g.id === id);
+    if (idx === -1) return false;
+    const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= sorted.length) return false;
+    const newOrder = [...sorted];
+    const [removed] = newOrder.splice(idx, 1);
+    newOrder.splice(newIdx, 0, removed);
+    return reorderGroups(newOrder);
+  }
+
   return {
     groups,
     loading,
@@ -273,6 +301,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     setCategoryLinks,
     setProductLinks,
     getGroupsForProduct,
+    moveGroup,
     refetch: fetchGroups,
   };
 }
