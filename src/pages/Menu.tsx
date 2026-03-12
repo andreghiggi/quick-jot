@@ -702,11 +702,11 @@ export default function Menu() {
 
       {/* Banner - Scrolls with content */}
       {settings.bannerUrl && (
-        <div className="w-full h-40 overflow-hidden">
+        <div className="w-full bg-black">
           <img 
             src={settings.bannerUrl} 
             alt="Banner" 
-            className="w-full h-full object-cover"
+            className="w-full max-h-56 sm:max-h-64 object-contain mx-auto"
           />
         </div>
       )}

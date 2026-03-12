@@ -277,11 +277,11 @@ export function MenuV2({
 
       {/* Banner */}
       {settings.bannerUrl && (
-        <div className="w-full h-48 sm:h-56 overflow-hidden">
+        <div className="w-full bg-black">
           <img
             src={settings.bannerUrl}
             alt="Banner"
-            className="w-full h-full object-cover"
+            className="w-full max-h-56 sm:max-h-64 object-contain mx-auto"
           />
         </div>
       )}
