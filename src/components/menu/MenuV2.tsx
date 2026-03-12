@@ -277,11 +277,19 @@ export function MenuV2({
 
       {/* Banner */}
       {settings.bannerUrl && (
-        <div className="w-full bg-black">
+        <div className="w-full relative overflow-hidden">
+          {/* Blurred background fill */}
+          <img
+            src={settings.bannerUrl}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-60"
+          />
+          {/* Crisp centered banner */}
           <img
             src={settings.bannerUrl}
             alt="Banner"
-            className="w-full max-h-56 sm:max-h-64 object-contain mx-auto"
+            className="relative w-full max-h-56 sm:max-h-64 object-contain mx-auto"
           />
         </div>
       )}
