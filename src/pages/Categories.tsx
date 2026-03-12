@@ -28,6 +28,8 @@ export default function Categories() {
   } = useCategories({ companyId: company?.id });
 
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editingCatName, setEditingCatName] = useState('');
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
