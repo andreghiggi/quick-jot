@@ -27,7 +27,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 export default function Products() {
   const { company } = useAuthContext();
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, refetch: refetchProducts } = useProducts({ companyId: company?.id });
-  const { categories, addCategory, deleteCategory, updateCategory, sortMode, saveSortMode, moveCategory } = useCategories({ companyId: company?.id });
+  const { categories, addCategory, deleteCategory, updateCategory: _updateCategory, sortMode, saveSortMode, moveCategory } = useCategories({ companyId: company?.id });
   const { settings, saveStorePhone, saveBannerUrl, saveStoreName } = useStoreSettings({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
   
