@@ -39,8 +39,8 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         displayOrder: cat.display_order ?? 0,
         active: cat.active ?? true,
         companyId: cat.company_id || undefined,
-        emoji: (cat as any).emoji || undefined,
-        imageUrl: (cat as any).image_url || undefined,
+        emoji: cat.emoji || undefined,
+        imageUrl: cat.image_url || undefined,
       }));
 
       setCategories(mapped);
@@ -161,6 +161,15 @@ export function useCategories(options: UseCategoriesOptions = {}) {
 
   async function updateCategory(id: string, data: Partial<Category>): Promise<boolean> {
     try {
+      // If renaming, get old name first to update products
+      let oldName: string | null = null;
+      if (data.name !== undefined) {
+        const existing = categories.find(c => c.id === id);
+        if (existing && existing.name !== data.name) {
+          oldName = existing.name;
+        }
+      }
+
       const updateData: Record<string, unknown> = {};
       if (data.name !== undefined) updateData.name = data.name;
       if (data.displayOrder !== undefined) updateData.display_order = data.displayOrder;
@@ -174,6 +183,20 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         .eq('id', id);
 
       if (error) throw error;
+
+      // If category was renamed, update all products referencing the old name
+      if (oldName && data.name && companyId) {
+        const { error: productsError } = await supabase
+          .from('products')
+          .update({ category: data.name })
+          .eq('category', oldName)
+          .eq('company_id', companyId);
+
+        if (productsError) {
+          console.error('Error updating products category:', productsError);
+          toast.error('Categoria renomeada, mas erro ao atualizar produtos');
+        }
+      }
 
       await fetchCategories();
       toast.success('Categoria atualizada!');
