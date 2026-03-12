@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen, Pencil, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +28,8 @@ export default function Categories() {
   } = useCategories({ companyId: company?.id });
 
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editingCatName, setEditingCatName] = useState('');
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
@@ -179,9 +181,65 @@ export default function Categories() {
                         </div>
                       </PopoverContent>
                     </Popover>
-                    <span className="truncate font-medium">{cat.name}</span>
+                    {editingCatId === cat.id ? (
+                      <div className="flex items-center gap-1 flex-1 min-w-0">
+                        <Input
+                          value={editingCatName}
+                          onChange={(e) => setEditingCatName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              if (editingCatName.trim() && editingCatName.trim() !== cat.name) {
+                                updateCategory(cat.id, { name: editingCatName.trim() });
+                              }
+                              setEditingCatId(null);
+                            } else if (e.key === 'Escape') {
+                              setEditingCatId(null);
+                            }
+                          }}
+                          className="h-7 text-sm"
+                          autoFocus
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-primary"
+                          onClick={() => {
+                            if (editingCatName.trim() && editingCatName.trim() !== cat.name) {
+                              updateCategory(cat.id, { name: editingCatName.trim() });
+                            }
+                            setEditingCatId(null);
+                          }}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => setEditingCatId(null)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span
+                        className="truncate font-medium cursor-pointer hover:text-primary transition-colors"
+                        onDoubleClick={() => { setEditingCatId(cat.id); setEditingCatName(cat.name); }}
+                      >
+                        {cat.name}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => { setEditingCatId(cat.id); setEditingCatName(cat.name); }}
+                      title="Editar nome"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
                     {sortMode === 'manual' && (
                       <>
                         <Button

@@ -17,7 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, Layers, Camera, ImageIcon, LayoutList, LayoutGrid } from 'lucide-react';
+import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, Layers, Camera, ImageIcon, LayoutList, LayoutGrid, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface ExtractedGroup {
   name: string;
@@ -27,7 +27,7 @@ interface ExtractedGroup {
 
 export default function OptionalGroups() {
   const { company } = useAuthContext();
-  const { groups, loading, addGroup, updateGroup, deleteGroup, addItem, addItemsBulk, updateItem, deleteItem, setCategoryLinks, setProductLinks } = useOptionalGroups({ companyId: company?.id });
+  const { groups, loading, addGroup, updateGroup, deleteGroup, addItem, addItemsBulk, updateItem, deleteItem, setCategoryLinks, setProductLinks, moveGroup } = useOptionalGroups({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
   const { products } = useProducts({ companyId: company?.id });
 
@@ -344,6 +344,14 @@ export default function OptionalGroups() {
           {groups.map(group => (
             <AccordionItem key={group.id} value={group.id} className="border rounded-lg px-4">
               <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-1 mr-2" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveGroup(group.id, 'up')} disabled={groups.indexOf(group) === 0}>
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveGroup(group.id, 'down')} disabled={groups.indexOf(group) === groups.length - 1}>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
                 <div className="flex items-center gap-3 flex-1 text-left">
                   <span className="font-semibold">{group.name}</span>
                    {!group.active && <Badge variant="secondary">Inativo</Badge>}
