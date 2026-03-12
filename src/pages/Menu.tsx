@@ -716,6 +716,7 @@ export default function Menu() {
             alt="Banner" 
             className="relative w-full max-h-56 sm:max-h-64 object-contain mx-auto"
           />
+        </div>
       )}
 
       {/* Products Grid */}
