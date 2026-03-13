@@ -122,19 +122,21 @@ export function MenuV2({
         <div className="sticky top-0 z-20 bg-card border-b border-border shadow-sm">
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-start gap-2 min-w-0 flex-1">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 flex-shrink-0 mt-0.5"
                   onClick={() => setSelectedCategory(null)}
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <h1 className="text-lg font-bold text-foreground">{selectedCategory}</h1>
-                <Badge variant="secondary" className="text-xs">
-                  {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'itens'}
-                </Badge>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-lg font-bold text-foreground leading-tight break-words">{selectedCategory}</h1>
+                  <Badge variant="secondary" className="text-xs mt-1">
+                    {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'itens'}
+                  </Badge>
+                </div>
               </div>
               <Button
                 variant="outline"
