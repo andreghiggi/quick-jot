@@ -1125,11 +1125,21 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>Seu nome *</Label>
+                    <Label>Nome Completo *</Label>
                     <Input
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Nome"
+                      placeholder="Nome e sobrenome"
+                    />
+                  </div>
+                  <div>
+                    <Label>CPF</Label>
+                    <Input
+                      value={customerCpf}
+                      onChange={(e) => handleCpfChange(e.target.value)}
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                      inputMode="numeric"
                     />
                   </div>
                   <div>
