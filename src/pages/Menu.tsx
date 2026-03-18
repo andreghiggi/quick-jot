@@ -362,8 +362,22 @@ export default function Menu() {
       return;
     }
     if (!customerName.trim()) {
-      toast.error('Informe seu nome');
+      toast.error('Informe seu nome completo');
       return;
+    }
+    // Validate full name (at least first + last name)
+    const nameParts = customerName.trim().split(/\s+/);
+    if (nameParts.length < 2 || nameParts.some(p => p.length < 2)) {
+      toast.error('Informe seu nome completo (nome e sobrenome)');
+      return;
+    }
+    // Validate CPF if provided
+    if (customerCpf) {
+      const cleanCpf = customerCpf.replace(/\D/g, '');
+      if (cleanCpf.length !== 11 || !isValidCpf(cleanCpf)) {
+        toast.error('CPF inválido');
+        return;
+      }
     }
     if (!deliveryType) {
       toast.error('Selecione o tipo de entrega');
