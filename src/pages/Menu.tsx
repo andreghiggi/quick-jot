@@ -91,6 +91,7 @@ export default function Menu() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerCpf, setCustomerCpf] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryCity, setDeliveryCity] = useState('');
   const [deliveryState, setDeliveryState] = useState('');
