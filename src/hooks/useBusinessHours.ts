@@ -94,8 +94,8 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
           day.isOpen = row.is_open;
           if (row.open_time && row.close_time) {
             day.periods.push({
-              openTime: row.open_time,
-              closeTime: row.close_time,
+              openTime: row.open_time.substring(0, 5),
+              closeTime: row.close_time.substring(0, 5),
             });
           }
         });
