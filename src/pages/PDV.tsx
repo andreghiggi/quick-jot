@@ -635,7 +635,7 @@ export default function PDV() {
         </div>
         ${register.notes ? `<div class="divider"></div><p class="notes"><strong>Obs:</strong> ${register.notes}</p>` : ''}
         <div class="divider"></div>
-        <p class="footer">Impresso em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
+        <p class="footer">Impresso em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
         <script>window.onload = function() { window.print(); window.close(); }</script>
       </body>
       </html>
