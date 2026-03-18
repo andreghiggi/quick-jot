@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { MenuV2 } from '@/components/menu/MenuV2';
+import { AddedToCartDialog } from '@/components/menu/AddedToCartDialog';
 
 interface Company {
   id: string;
