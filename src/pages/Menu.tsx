@@ -102,6 +102,8 @@ export default function Menu() {
   const [searchQuery, setSearchQuery] = useState('');
   const [customerLoaded, setCustomerLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAddedToCart, setShowAddedToCart] = useState(false);
+  const [lastAddedItem, setLastAddedItem] = useState<CartItem | null>(null);
   
   // Optional group selections state
   const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Set<string>>>({});
