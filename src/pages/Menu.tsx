@@ -996,8 +996,11 @@ export default function Menu() {
           setIsCartOpen(true);
         }}
         lastAddedItem={lastAddedItem}
+        cartItems={cart}
         cartItemsCount={cartItemsCount}
         cartTotal={cartTotal}
+        onUpdateQuantity={updateQuantity}
+        onRemoveItem={removeFromCart}
       />
 
       {/* Cart Dialog */}
