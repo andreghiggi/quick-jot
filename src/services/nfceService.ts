@@ -130,7 +130,7 @@ export async function generateDanfeHtml(record: NFCeRecord & { request_payload?:
   const qrcodeUrl = record.qrcode_url || buildQrcodeUrlFromChave(record.chave_acesso || '', record.ambiente) || '';
   const chaveAcesso = record.chave_acesso || '';
   const chaveFormatada = chaveAcesso.replace(/(.{4})/g, '$1 ').trim();
-  const dataEmissao = record.created_at ? new Date(record.created_at).toLocaleString('pt-BR') : '';
+  const dataEmissao = record.created_at ? new Date(record.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
   const ambiente = record.ambiente === 'producao' ? 'PRODUÇÃO' : 'HOMOLOGAÇÃO';
 
   const itemsHtml = items.map((item: any, i: number) => `
