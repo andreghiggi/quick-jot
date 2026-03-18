@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { MenuV2 } from '@/components/menu/MenuV2';
+import { AddedToCartDialog } from '@/components/menu/AddedToCartDialog';
 
 interface Company {
   id: string;
@@ -101,6 +102,8 @@ export default function Menu() {
   const [searchQuery, setSearchQuery] = useState('');
   const [customerLoaded, setCustomerLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAddedToCart, setShowAddedToCart] = useState(false);
+  const [lastAddedItem, setLastAddedItem] = useState<CartItem | null>(null);
   
   // Optional group selections state
   const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Set<string>>>({});
@@ -303,11 +306,12 @@ export default function Menu() {
     };
 
     setCart((prev) => [...prev, newItem]);
+    setLastAddedItem(newItem);
     setSelectedProduct(null);
     setSelectedOptionals([]);
     setSelectedGroupItems({});
     setItemNotes('');
-    toast.success('Adicionado ao carrinho!', { duration: 1500 });
+    setShowAddedToCart(true);
   }
 
   function updateQuantity(index: number, delta: number) {
@@ -981,6 +985,20 @@ export default function Menu() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Added to Cart Confirmation Dialog */}
+      <AddedToCartDialog
+        open={showAddedToCart}
+        onClose={() => setShowAddedToCart(false)}
+        onContinueShopping={() => setShowAddedToCart(false)}
+        onGoToCart={() => {
+          setShowAddedToCart(false);
+          setIsCartOpen(true);
+        }}
+        lastAddedItem={lastAddedItem}
+        cartItemsCount={cartItemsCount}
+        cartTotal={cartTotal}
+      />
 
       {/* Cart Dialog */}
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
