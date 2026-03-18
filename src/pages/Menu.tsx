@@ -558,6 +558,7 @@ export default function Menu() {
     setCart([]);
     setCustomerName('');
     setCustomerPhone('');
+    setCustomerCpf('');
     setDeliveryAddress('');
     setDeliveryCity('');
     setDeliveryState('');
