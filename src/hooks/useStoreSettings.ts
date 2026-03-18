@@ -45,16 +45,16 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
   const isInitialLoadRef = useRef(true);
 
   async function fetchSettings() {
+    if (!companyId) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('store_settings')
-        .select('*');
-
-      if (companyId) {
-        query = query.eq('company_id', companyId);
-      }
-
-      const { data, error } = await query;
+        .select('*')
+        .eq('company_id', companyId);
 
       if (error) throw error;
 
