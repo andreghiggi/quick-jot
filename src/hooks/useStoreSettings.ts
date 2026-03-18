@@ -95,19 +95,18 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
 
   async function updateSetting(key: string, value: string): Promise<boolean> {
     try {
-      // First check if setting exists for this company
-      let query = supabase
-        .from('store_settings')
-        .select('id')
-        .eq('key', key);
-      
-      if (companyId) {
-        query = query.eq('company_id', companyId);
-      } else {
-        query = query.is('company_id', null);
+      if (!companyId) {
+        toast.error('Empresa não identificada');
+        return false;
       }
 
-      const { data: existing } = await query.maybeSingle();
+      // First check if setting exists for this company
+      const { data: existing } = await supabase
+        .from('store_settings')
+        .select('id')
+        .eq('key', key)
+        .eq('company_id', companyId)
+        .maybeSingle();
 
       if (existing) {
         // Update existing setting
