@@ -986,6 +986,20 @@ export default function Menu() {
         </DialogContent>
       </Dialog>
 
+      {/* Added to Cart Confirmation Dialog */}
+      <AddedToCartDialog
+        open={showAddedToCart}
+        onClose={() => setShowAddedToCart(false)}
+        onContinueShopping={() => setShowAddedToCart(false)}
+        onGoToCart={() => {
+          setShowAddedToCart(false);
+          setIsCartOpen(true);
+        }}
+        lastAddedItem={lastAddedItem}
+        cartItemsCount={cartItemsCount}
+        cartTotal={cartTotal}
+      />
+
       {/* Cart Dialog */}
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
