@@ -91,6 +91,7 @@ export default function Menu() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerCpf, setCustomerCpf] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryCity, setDeliveryCity] = useState('');
   const [deliveryState, setDeliveryState] = useState('');
@@ -113,6 +114,35 @@ export default function Menu() {
     'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
     'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ];
+
+  function isValidCpf(cpf: string): boolean {
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(cpf.charAt(i)) * (10 - i);
+    let rest = (sum * 10) % 11;
+    if (rest === 10) rest = 0;
+    if (rest !== parseInt(cpf.charAt(9))) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(cpf.charAt(i)) * (11 - i);
+    rest = (sum * 10) % 11;
+    if (rest === 10) rest = 0;
+    return rest === parseInt(cpf.charAt(10));
+  }
+
+  function formatCpf(cpf: string): string {
+    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  }
+
+  function handleCpfChange(value: string) {
+    // Only allow digits, dots and dash
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    // Auto-format as user types
+    let formatted = digits;
+    if (digits.length > 9) formatted = `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9)}`;
+    else if (digits.length > 6) formatted = `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6)}`;
+    else if (digits.length > 3) formatted = `${digits.slice(0,3)}.${digits.slice(3)}`;
+    setCustomerCpf(formatted);
+  }
 
   const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading || neighborhoodsLoading || hoursLoading || groupsLoading;
 
@@ -361,8 +391,22 @@ export default function Menu() {
       return;
     }
     if (!customerName.trim()) {
-      toast.error('Informe seu nome');
+      toast.error('Informe seu nome completo');
       return;
+    }
+    // Validate full name (at least first + last name)
+    const nameParts = customerName.trim().split(/\s+/);
+    if (nameParts.length < 2 || nameParts.some(p => p.length < 2)) {
+      toast.error('Informe seu nome completo (nome e sobrenome)');
+      return;
+    }
+    // Validate CPF if provided
+    if (customerCpf) {
+      const cleanCpf = customerCpf.replace(/\D/g, '');
+      if (cleanCpf.length !== 11 || !isValidCpf(cleanCpf)) {
+        toast.error('CPF inválido');
+        return;
+      }
     }
     if (!deliveryType) {
       toast.error('Selecione o tipo de entrega');
@@ -488,6 +532,7 @@ export default function Menu() {
     message += `   _${storeName}_\n`;
     message += `═══════════════════\n\n`;
     message += `*Cliente:* ${customerName}\n`;
+    if (customerCpf) message += `*CPF:* ${formatCpf(customerCpf.replace(/\D/g, ''))}\n`;
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
     message += `*Tipo:* ${deliveryTypeLabel}\n`;
     message += `*Pagamento:* ${paymentMethod}\n`;
@@ -542,6 +587,7 @@ export default function Menu() {
     setCart([]);
     setCustomerName('');
     setCustomerPhone('');
+    setCustomerCpf('');
     setDeliveryAddress('');
     setDeliveryCity('');
     setDeliveryState('');
@@ -996,8 +1042,11 @@ export default function Menu() {
           setIsCartOpen(true);
         }}
         lastAddedItem={lastAddedItem}
+        cartItems={cart}
         cartItemsCount={cartItemsCount}
         cartTotal={cartTotal}
+        onUpdateQuantity={updateQuantity}
+        onRemoveItem={removeFromCart}
       />
 
       {/* Cart Dialog */}
@@ -1076,11 +1125,21 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>Seu nome *</Label>
+                    <Label>Nome Completo *</Label>
                     <Input
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Nome"
+                      placeholder="Nome e sobrenome"
+                    />
+                  </div>
+                  <div>
+                    <Label>CPF</Label>
+                    <Input
+                      value={customerCpf}
+                      onChange={(e) => handleCpfChange(e.target.value)}
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                      inputMode="numeric"
                     />
                   </div>
                   <div>
