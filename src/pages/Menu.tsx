@@ -503,6 +503,7 @@ export default function Menu() {
     message += `   _${storeName}_\n`;
     message += `═══════════════════\n\n`;
     message += `*Cliente:* ${customerName}\n`;
+    if (customerCpf) message += `*CPF:* ${formatCpf(customerCpf.replace(/\D/g, ''))}\n`;
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
     message += `*Tipo:* ${deliveryTypeLabel}\n`;
     message += `*Pagamento:* ${paymentMethod}\n`;
