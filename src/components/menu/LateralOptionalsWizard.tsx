@@ -291,7 +291,7 @@ export function LateralOptionalsWizard({
             disabled={!canAdvance()}
             className="flex-1"
           >
-            {isFirst ? 'Personalizar' : 'Próximo'}
+            Próximo
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         )}
