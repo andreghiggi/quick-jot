@@ -24,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { MenuV2 } from '@/components/menu/MenuV2';
 import { AddedToCartDialog } from '@/components/menu/AddedToCartDialog';
+import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
 
 interface Company {
   id: string;
