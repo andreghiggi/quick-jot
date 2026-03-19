@@ -859,6 +859,20 @@ export default function Menu() {
             <DialogTitle>{selectedProduct?.name}</DialogTitle>
           </DialogHeader>
           {selectedProduct && (
+            settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0)) ? (
+              <LateralOptionalsWizard
+                product={selectedProduct}
+                groups={selectedProductGroups}
+                oldStyleOptionals={selectedProduct.optionals?.filter(o => o.active) || []}
+                selectedOptionals={selectedOptionals}
+                selectedGroupItems={selectedGroupItems}
+                itemNotes={itemNotes}
+                onToggleOptional={toggleOptional}
+                onToggleGroupItem={toggleGroupItem}
+                onNotesChange={setItemNotes}
+                onAddToCart={addToCart}
+              />
+            ) : (
             <div className="space-y-4">
               {selectedProduct.imageUrl && (
                 <img
@@ -1029,6 +1043,7 @@ export default function Menu() {
                 Adicionar ao carrinho
               </Button>
             </div>
+            )
           )}
         </DialogContent>
       </Dialog>
