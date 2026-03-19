@@ -80,6 +80,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         autoPrintSales: settingsMap['auto_print_sales'] === 'true',
         autoPrintNfce: settingsMap['auto_print_nfce'] === 'true',
         menuLayout: (settingsMap['menu_layout'] as 'v1' | 'v2') || 'v1',
+        lateralScrollOptionals: settingsMap['lateral_scroll_optionals'] === 'true',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);
