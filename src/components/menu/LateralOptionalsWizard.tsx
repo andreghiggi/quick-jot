@@ -103,27 +103,6 @@ export function LateralOptionalsWizard({
 
       {/* Step content with slide animation */}
       <div className="min-h-[300px]">
-        {step.type === 'info' && (
-          <div className="space-y-4 animate-in slide-in-from-right-4 duration-200">
-            {product.imageUrl && (
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                className="w-full h-48 object-cover rounded-lg"
-              />
-            )}
-            {product.description && (
-              <p className="text-sm text-muted-foreground">{product.description}</p>
-            )}
-            <p className="text-2xl font-bold text-primary">R$ {product.price.toFixed(2)}</p>
-            {groups.length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                Personalize seu pedido nas próximas etapas →
-              </p>
-            )}
-          </div>
-        )}
-
         {step.type === 'group' && step.group && (
           <div key={step.group.id} className="space-y-3 animate-in slide-in-from-right-4 duration-200">
             <div className="flex items-center gap-2 flex-wrap">
