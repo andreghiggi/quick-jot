@@ -17,6 +17,7 @@ interface StoreSettings {
   autoPrintSales: boolean;
   autoPrintNfce: boolean;
   menuLayout: 'v1' | 'v2';
+  lateralScrollOptionals: boolean;
 }
 
 interface UseStoreSettingsOptions {
