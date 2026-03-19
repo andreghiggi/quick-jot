@@ -51,9 +51,7 @@ export function LateralOptionalsWizard({
   onAddToCart,
 }: LateralOptionalsWizardProps) {
   // Build steps: product info, then each group, then old-style optionals (if any), then notes+confirm
-  const steps: { type: 'info' | 'group' | 'oldOptionals' | 'confirm'; group?: OptionalGroup }[] = [
-    { type: 'info' },
-  ];
+  const steps: { type: 'group' | 'oldOptionals' | 'confirm'; group?: OptionalGroup }[] = [];
 
   groups.forEach((g) => steps.push({ type: 'group', group: g }));
 
