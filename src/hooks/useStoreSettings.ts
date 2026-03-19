@@ -41,6 +41,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     autoPrintSales: false,
     autoPrintNfce: false,
     menuLayout: 'v1',
+    lateralScrollOptionals: false,
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
