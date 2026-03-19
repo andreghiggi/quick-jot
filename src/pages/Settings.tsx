@@ -907,6 +907,38 @@ pause
               </RadioGroup>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                Rolagem Lateral de Adicionais
+              </CardTitle>
+              <CardDescription>
+                Quando ativado, os grupos de adicionais são exibidos em etapas laterais (estilo cross-selling), ao invés de todos listados para baixo
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Rolagem Lateral</p>
+                  <p className="text-sm text-muted-foreground">Adicionais navegam por etapas laterais</p>
+                </div>
+                <Switch
+                  checked={storeSettings.lateralScrollOptionals}
+                  onCheckedChange={async (value) => {
+                    await updateSetting('lateral_scroll_optionals', value.toString());
+                    toast({
+                      title: value ? 'Rolagem lateral ativada' : 'Rolagem lateral desativada',
+                      description: value
+                        ? 'Adicionais serão exibidos em etapas laterais no cardápio'
+                        : 'Adicionais voltaram ao modo padrão (vertical)',
+                    });
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Tab Dashboard */}
