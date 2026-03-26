@@ -513,6 +513,7 @@ export default function Menu() {
                 company_id: company.id,
                 phone: cleanPhone,
                 name: customerName,
+                cpf: customerCpf.replace(/\D/g, '') || null,
                 address: deliveryAddress || null,
                 city: deliveryCity || null,
                 state: deliveryState || null,
