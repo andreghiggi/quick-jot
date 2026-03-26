@@ -405,13 +405,23 @@ export default function Menu() {
       toast.error('Informe seu nome completo (nome e sobrenome)');
       return;
     }
-    // Validate CPF if provided
-    if (customerCpf) {
-      const cleanCpf = customerCpf.replace(/\D/g, '');
-      if (cleanCpf.length !== 11 || !isValidCpf(cleanCpf)) {
-        toast.error('CPF inválido');
-        return;
-      }
+    // Validate CPF (required)
+    const cleanCpf = customerCpf.replace(/\D/g, '');
+    if (!cleanCpf || cleanCpf.length !== 11 || !isValidCpf(cleanCpf)) {
+      toast.error('Informe um CPF válido');
+      return;
+    }
+    if (!deliveryAddress.trim()) {
+      toast.error('Informe o endereço');
+      return;
+    }
+    if (!deliveryCity.trim()) {
+      toast.error('Informe a cidade');
+      return;
+    }
+    if (!deliveryState) {
+      toast.error('Selecione o estado');
+      return;
     }
     if (!deliveryType) {
       toast.error('Selecione o tipo de entrega');
