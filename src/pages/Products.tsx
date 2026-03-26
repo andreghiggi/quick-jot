@@ -103,19 +103,10 @@ export default function Products() {
   async function uploadImage(file: File): Promise<string | null> {
     setIsUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const { error } = await supabase.storage
-        .from('product-images')
-        .upload(fileName, file);
-      
-      if (error) throw error;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(fileName);
-      
-      return publicUrl;
+      const fileName = `${Date.now()}`;
+      const result = await uploadCompressedImage(supabase, 'product-images', `${fileName}.webp`, file);
+      if (!result) throw new Error('Upload failed');
+      return result.publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
       toast.error('Erro ao enviar imagem');
