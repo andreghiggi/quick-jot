@@ -1137,7 +1137,7 @@ export default function Menu() {
 
                 <div className="border-t pt-4 space-y-3">
                   <div>
-                    <Label>Telefone</Label>
+                    <Label>Telefone *</Label>
                     <Input
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
