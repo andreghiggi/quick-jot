@@ -25,8 +25,8 @@ export function generateProductionTicketHTML(data: PrintTicketData): string {
   const qtyFontSize = data.paperSize === '80mm' ? '13pt' : '12pt';
   const nameFontSize = data.paperSize === '80mm' ? '12pt' : '11pt';
   const now = data.createdAt;
-  const dateStr = now.toLocaleDateString('pt-BR');
-  const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const timeStr = now.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
 
   const itemsHTML = data.items.map(item => `
     <div class="item">
