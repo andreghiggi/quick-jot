@@ -909,6 +909,7 @@ export default function PDV() {
                       <img 
                         src={product.imageUrl} 
                         alt={product.name}
+                        loading="lazy"
                         className="w-full h-20 object-cover rounded-md mb-2"
                       />
                     ) : (

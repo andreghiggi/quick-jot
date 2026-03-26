@@ -807,6 +807,7 @@ export default function Menu() {
                           <img
                             src={product.imageUrl}
                             alt={product.name}
+                            loading="lazy"
                             className="w-full h-full object-cover"
                           />
                         </div>

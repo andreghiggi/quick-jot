@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { uploadCompressedImage } from '@/utils/imageUtils';
 
 export default function Products() {
   const { company } = useAuthContext();
@@ -103,19 +104,10 @@ export default function Products() {
   async function uploadImage(file: File): Promise<string | null> {
     setIsUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const { error } = await supabase.storage
-        .from('product-images')
-        .upload(fileName, file);
-      
-      if (error) throw error;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(fileName);
-      
-      return publicUrl;
+      const fileName = `${Date.now()}`;
+      const result = await uploadCompressedImage(supabase, 'product-images', `${fileName}.webp`, file);
+      if (!result) throw new Error('Upload failed');
+      return result.publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
       toast.error('Erro ao enviar imagem');
@@ -128,19 +120,10 @@ export default function Products() {
   async function uploadBanner(file: File): Promise<string | null> {
     setIsBannerUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `banner_${Date.now()}.${fileExt}`;
-      const { error } = await supabase.storage
-        .from('product-images')
-        .upload(fileName, file);
-      
-      if (error) throw error;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(fileName);
-      
-      return publicUrl;
+      const fileName = `banner_${Date.now()}`;
+      const result = await uploadCompressedImage(supabase, 'product-images', `${fileName}.webp`, file, { maxWidth: 1920 });
+      if (!result) throw new Error('Upload failed');
+      return result.publicUrl;
     } catch (error) {
       console.error('Error uploading banner:', error);
       toast.error('Erro ao enviar banner');
@@ -815,16 +798,10 @@ export default function Products() {
                                         const file = e.target.files?.[0];
                                         if (!file) return;
                                         try {
-                                          const ext = file.name.split('.').pop();
-                                          const path = `categories/${cat.id}.${ext}`;
-                                          const { error: uploadError } = await supabase.storage
-                                            .from('product-images')
-                                            .upload(path, file, { upsert: true });
-                                          if (uploadError) throw uploadError;
-                                          const { data: urlData } = supabase.storage
-                                            .from('product-images')
-                                            .getPublicUrl(path);
-                                          await updateCategory(cat.id, { imageUrl: urlData.publicUrl + '?t=' + Date.now() });
+                                          const path = `categories/${cat.id}.webp`;
+                                          const result = await uploadCompressedImage(supabase, 'product-images', path, file, { upsert: true });
+                                          if (!result) throw new Error('Upload failed');
+                                          await updateCategory(cat.id, { imageUrl: result.publicUrl + '?t=' + Date.now() });
                                         } catch (err) {
                                           console.error(err);
                                           toast.error('Erro ao enviar imagem');
