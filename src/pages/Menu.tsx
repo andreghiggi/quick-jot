@@ -391,6 +391,10 @@ export default function Menu() {
       toast.error('Estabelecimento fechado no momento');
       return;
     }
+    if (!customerPhone.trim() || customerPhone.replace(/\D/g, '').length < 10) {
+      toast.error('Informe um número de telefone válido');
+      return;
+    }
     if (!customerName.trim()) {
       toast.error('Informe seu nome completo');
       return;
