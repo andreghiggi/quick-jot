@@ -119,19 +119,10 @@ export default function Products() {
   async function uploadBanner(file: File): Promise<string | null> {
     setIsBannerUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `banner_${Date.now()}.${fileExt}`;
-      const { error } = await supabase.storage
-        .from('product-images')
-        .upload(fileName, file);
-      
-      if (error) throw error;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(fileName);
-      
-      return publicUrl;
+      const fileName = `banner_${Date.now()}`;
+      const result = await uploadCompressedImage(supabase, 'product-images', `${fileName}.webp`, file, { maxWidth: 1920 });
+      if (!result) throw new Error('Upload failed');
+      return result.publicUrl;
     } catch (error) {
       console.error('Error uploading banner:', error);
       toast.error('Erro ao enviar banner');
