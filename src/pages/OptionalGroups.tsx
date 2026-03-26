@@ -5,6 +5,7 @@ import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useCategories } from '@/hooks/useCategories';
 import { useProducts } from '@/hooks/useProducts';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadCompressedImage } from '@/utils/imageUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
