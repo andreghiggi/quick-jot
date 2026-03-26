@@ -1153,7 +1153,7 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>CPF</Label>
+                    <Label>CPF *</Label>
                     <Input
                       value={customerCpf}
                       onChange={(e) => handleCpfChange(e.target.value)}
@@ -1163,7 +1163,7 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>Endereço (rua, número, bairro)</Label>
+                    <Label>Endereço (rua, número, bairro) *</Label>
                     <Input
                       value={deliveryAddress}
                       onChange={(e) => setDeliveryAddress(e.target.value)}
@@ -1172,7 +1172,7 @@ export default function Menu() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label>Cidade</Label>
+                      <Label>Cidade *</Label>
                       <Input
                         value={deliveryCity}
                         onChange={(e) => setDeliveryCity(e.target.value)}
@@ -1180,7 +1180,7 @@ export default function Menu() {
                       />
                     </div>
                     <div>
-                      <Label>Estado</Label>
+                      <Label>Estado *</Label>
                       <Select value={deliveryState} onValueChange={setDeliveryState}>
                         <SelectTrigger>
                           <SelectValue placeholder="UF" />
