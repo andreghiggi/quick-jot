@@ -409,12 +409,11 @@ export default function OptionalGroups() {
                                 onChange={async (e) => {
                                   const file = e.target.files?.[0];
                                   if (!file) return;
-                                  const ext = file.name.split('.').pop();
-                                  const path = `optional-items/${item.id}.${ext}`;
-                                  const { error: uploadErr } = await supabase.storage.from('product-images').upload(path, file, { upsert: true });
-                                  if (uploadErr) { toast.error('Erro ao enviar imagem'); return; }
-                                  const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
-                                  await updateItem(item.id, { image_url: urlData.publicUrl + '?t=' + Date.now() });
+                                  const path = `optional-items/${item.id}.webp`;
+                                  const result = await uploadCompressedImage(supabase, 'product-images', path, file, { upsert: true });
+                                  if (!result) { toast.error('Erro ao enviar imagem'); return; }
+                                  await updateItem(item.id, { image_url: result.publicUrl + '?t=' + Date.now() });
+                                  toast.success('Imagem atualizada!');
                                   toast.success('Imagem atualizada!');
                                 }}
                               />
