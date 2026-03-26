@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { uploadCompressedImage } from '@/utils/imageUtils';
 
 export default function Products() {
   const { company } = useAuthContext();
