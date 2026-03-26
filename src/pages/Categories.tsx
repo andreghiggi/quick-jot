@@ -13,6 +13,7 @@ import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen, 
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadCompressedImage } from '@/utils/imageUtils';
 
 export default function Categories() {
   const { company } = useAuthContext();
