@@ -326,7 +326,7 @@ export function MenuV2({
                 <div className="flex">
                   {product.imageUrl ? (
                     <div className="w-24 h-24 flex-shrink-0">
-                      <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                      <img src={product.imageUrl} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
                     </div>
                   ) : (
                     <div className="w-24 h-24 flex-shrink-0 bg-muted flex items-center justify-center">
