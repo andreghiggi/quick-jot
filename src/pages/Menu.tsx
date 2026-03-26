@@ -391,6 +391,10 @@ export default function Menu() {
       toast.error('Estabelecimento fechado no momento');
       return;
     }
+    if (!customerPhone.trim() || customerPhone.replace(/\D/g, '').length < 10) {
+      toast.error('Informe um número de telefone válido');
+      return;
+    }
     if (!customerName.trim()) {
       toast.error('Informe seu nome completo');
       return;
@@ -1133,7 +1137,7 @@ export default function Menu() {
 
                 <div className="border-t pt-4 space-y-3">
                   <div>
-                    <Label>Telefone</Label>
+                    <Label>Telefone *</Label>
                     <Input
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
