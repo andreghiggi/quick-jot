@@ -205,6 +205,7 @@ export default function Menu() {
         if (data && !error) {
           // Auto-fill customer data
           if (data.name && !customerName) setCustomerName(data.name);
+          if (data.cpf && !customerCpf) setCustomerCpf(data.cpf);
           if (data.address && !deliveryAddress) setDeliveryAddress(data.address);
           if (data.city && !deliveryCity) setDeliveryCity(data.city);
           if (data.state && !deliveryState) setDeliveryState(data.state);
@@ -512,6 +513,7 @@ export default function Menu() {
                 company_id: company.id,
                 phone: cleanPhone,
                 name: customerName,
+                cpf: customerCpf.replace(/\D/g, '') || null,
                 address: deliveryAddress || null,
                 city: deliveryCity || null,
                 state: deliveryState || null,
