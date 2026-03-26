@@ -798,16 +798,10 @@ export default function Products() {
                                         const file = e.target.files?.[0];
                                         if (!file) return;
                                         try {
-                                          const ext = file.name.split('.').pop();
-                                          const path = `categories/${cat.id}.${ext}`;
-                                          const { error: uploadError } = await supabase.storage
-                                            .from('product-images')
-                                            .upload(path, file, { upsert: true });
-                                          if (uploadError) throw uploadError;
-                                          const { data: urlData } = supabase.storage
-                                            .from('product-images')
-                                            .getPublicUrl(path);
-                                          await updateCategory(cat.id, { imageUrl: urlData.publicUrl + '?t=' + Date.now() });
+                                          const path = `categories/${cat.id}.webp`;
+                                          const result = await uploadCompressedImage(supabase, 'product-images', path, file, { upsert: true });
+                                          if (!result) throw new Error('Upload failed');
+                                          await updateCategory(cat.id, { imageUrl: result.publicUrl + '?t=' + Date.now() });
                                         } catch (err) {
                                           console.error(err);
                                           toast.error('Erro ao enviar imagem');
