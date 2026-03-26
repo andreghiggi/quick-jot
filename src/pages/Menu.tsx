@@ -405,13 +405,23 @@ export default function Menu() {
       toast.error('Informe seu nome completo (nome e sobrenome)');
       return;
     }
-    // Validate CPF if provided
-    if (customerCpf) {
-      const cleanCpf = customerCpf.replace(/\D/g, '');
-      if (cleanCpf.length !== 11 || !isValidCpf(cleanCpf)) {
-        toast.error('CPF inválido');
-        return;
-      }
+    // Validate CPF (required)
+    const cleanCpf = customerCpf.replace(/\D/g, '');
+    if (!cleanCpf || cleanCpf.length !== 11 || !isValidCpf(cleanCpf)) {
+      toast.error('Informe um CPF válido');
+      return;
+    }
+    if (!deliveryAddress.trim()) {
+      toast.error('Informe o endereço');
+      return;
+    }
+    if (!deliveryCity.trim()) {
+      toast.error('Informe a cidade');
+      return;
+    }
+    if (!deliveryState) {
+      toast.error('Selecione o estado');
+      return;
     }
     if (!deliveryType) {
       toast.error('Selecione o tipo de entrega');
@@ -1153,7 +1163,7 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>CPF</Label>
+                    <Label>CPF *</Label>
                     <Input
                       value={customerCpf}
                       onChange={(e) => handleCpfChange(e.target.value)}
@@ -1163,7 +1173,7 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>Endereço (rua, número, bairro)</Label>
+                    <Label>Endereço (rua, número, bairro) *</Label>
                     <Input
                       value={deliveryAddress}
                       onChange={(e) => setDeliveryAddress(e.target.value)}
@@ -1172,7 +1182,7 @@ export default function Menu() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label>Cidade</Label>
+                      <Label>Cidade *</Label>
                       <Input
                         value={deliveryCity}
                         onChange={(e) => setDeliveryCity(e.target.value)}
@@ -1180,7 +1190,7 @@ export default function Menu() {
                       />
                     </div>
                     <div>
-                      <Label>Estado</Label>
+                      <Label>Estado *</Label>
                       <Select value={deliveryState} onValueChange={setDeliveryState}>
                         <SelectTrigger>
                           <SelectValue placeholder="UF" />
