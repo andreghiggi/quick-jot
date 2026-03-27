@@ -14,6 +14,12 @@ export interface OptionalGroupItem {
 
 export type OptionalGroupLayout = 'vertical' | 'horizontal';
 
+export interface ProductOverride {
+  productId: string;
+  minSelectOverride: number | null;
+  maxSelectOverride: number | null;
+}
+
 export interface OptionalGroup {
   id: string;
   companyId: string;
@@ -26,6 +32,7 @@ export interface OptionalGroup {
   items: OptionalGroupItem[];
   categoryIds: string[];
   productIds: string[];
+  productOverrides: ProductOverride[];
 }
 
 interface UseOptionalGroupsOptions {
@@ -82,6 +89,13 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
           .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
         categoryIds: catLinks.filter(c => c.group_id === g.id).map(c => c.category_id),
         productIds: prodLinks.filter(p => p.group_id === g.id).map(p => p.product_id),
+        productOverrides: prodLinks
+          .filter(p => p.group_id === g.id)
+          .map(p => ({
+            productId: p.product_id,
+            minSelectOverride: (p as any).min_select_override ?? null,
+            maxSelectOverride: (p as any).max_select_override ?? null,
+          })),
       }));
 
       setGroups(mapped);
@@ -230,12 +244,17 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  async function setProductLinks(groupId: string, productIds: string[]): Promise<boolean> {
+  async function setProductLinks(groupId: string, productIds: string[], overrides?: Record<string, { min: number | null; max: number | null }>): Promise<boolean> {
     try {
       await supabase.from('optional_group_products').delete().eq('group_id', groupId);
       if (productIds.length > 0) {
-        const rows = productIds.map(pid => ({ group_id: groupId, product_id: pid }));
-        const { error } = await supabase.from('optional_group_products').insert(rows);
+        const rows = productIds.map(pid => ({
+          group_id: groupId,
+          product_id: pid,
+          min_select_override: overrides?.[pid]?.min ?? null,
+          max_select_override: overrides?.[pid]?.max ?? null,
+        }));
+        const { error } = await supabase.from('optional_group_products').insert(rows as any);
         if (error) throw error;
       }
       await fetchGroups();
@@ -247,17 +266,28 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  /** Get groups applicable to a specific product (by direct link or category link) */
+  /** Get groups applicable to a specific product (by direct link or category link), with per-product overrides applied */
   function getGroupsForProduct(productId: string, productCategory: string, categoryIdByName: Record<string, string>): OptionalGroup[] {
     const catId = categoryIdByName[productCategory];
-    return groups.filter(g => {
-      if (!g.active) return false;
-      // Direct product link
-      if (g.productIds.includes(productId)) return true;
-      // Category link
-      if (catId && g.categoryIds.includes(catId)) return true;
-      return false;
-    });
+    return groups
+      .filter(g => {
+        if (!g.active) return false;
+        if (g.productIds.includes(productId)) return true;
+        if (catId && g.categoryIds.includes(catId)) return true;
+        return false;
+      })
+      .map(g => {
+        // Apply per-product overrides if they exist
+        const override = g.productOverrides.find(o => o.productId === productId);
+        if (override && (override.minSelectOverride !== null || override.maxSelectOverride !== null)) {
+          return {
+            ...g,
+            minSelect: override.minSelectOverride ?? g.minSelect,
+            maxSelect: override.maxSelectOverride ?? g.maxSelect,
+          };
+        }
+        return g;
+      });
   }
 
   async function reorderGroups(reorderedGroups: OptionalGroup[]): Promise<boolean> {

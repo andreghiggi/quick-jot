@@ -168,15 +168,27 @@ export default function Menu() {
     return map;
   }, [categories]);
 
-  // Get optional groups applicable to a specific product
+  // Get optional groups applicable to a specific product (with per-product overrides)
   function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
     const catId = categoryIdByName[productCategory];
-    return optionalGroups.filter(g => {
-      if (!g.active) return false;
-      if (g.productIds.includes(productId)) return true;
-      if (catId && g.categoryIds.includes(catId)) return true;
-      return false;
-    });
+    return optionalGroups
+      .filter(g => {
+        if (!g.active) return false;
+        if (g.productIds.includes(productId)) return true;
+        if (catId && g.categoryIds.includes(catId)) return true;
+        return false;
+      })
+      .map(g => {
+        const override = g.productOverrides?.find(o => o.productId === productId);
+        if (override && (override.minSelectOverride !== null || override.maxSelectOverride !== null)) {
+          return {
+            ...g,
+            minSelect: override.minSelectOverride ?? g.minSelect,
+            maxSelect: override.maxSelectOverride ?? g.maxSelect,
+          };
+        }
+        return g;
+      });
   }
 
   // Get applicable groups for the currently selected product, sorted by display_order
