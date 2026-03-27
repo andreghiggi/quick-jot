@@ -18,6 +18,7 @@ export interface Product {
   optionals?: ProductOptional[];
   companyId?: string;
   taxRuleId?: string | null;
+  displayOrder?: number;
 }
 
 export interface CartItem {

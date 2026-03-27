@@ -25,7 +25,8 @@ export function useProducts(options: UseProductsOptions = {}) {
         .from('products')
         .select('*')
         .eq('company_id', companyId)
-        .order('category', { ascending: true });
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: true });
 
       const { data: productsData, error: productsError } = await productsQuery;
 
@@ -57,6 +58,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         active: product.active,
         companyId: product.company_id || undefined,
         taxRuleId: product.tax_rule_id || null,
+        displayOrder: product.display_order ?? 0,
         optionals: optionalsData
           .filter((opt) => opt.product_id === product.id)
           .map((opt) => ({
@@ -233,6 +235,27 @@ export function useProducts(options: UseProductsOptions = {}) {
     return [...new Set(products.map((p) => p.category))];
   }
 
+  async function moveProduct(productId: string, direction: 'up' | 'down', categoryProducts: Product[]): Promise<void> {
+    const idx = categoryProducts.findIndex(p => p.id === productId);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= categoryProducts.length) return;
+
+    const currentOrder = (categoryProducts[idx] as any).displayOrder ?? idx;
+    const swapOrder = (categoryProducts[swapIdx] as any).displayOrder ?? swapIdx;
+
+    try {
+      await Promise.all([
+        supabase.from('products').update({ display_order: swapOrder }).eq('id', categoryProducts[idx].id),
+        supabase.from('products').update({ display_order: currentOrder }).eq('id', categoryProducts[swapIdx].id),
+      ]);
+      await fetchProducts();
+    } catch (error) {
+      console.error('Error moving product:', error);
+      toast.error('Erro ao reordenar produto');
+    }
+  }
+
   return {
     products,
     loading,
@@ -244,6 +267,7 @@ export function useProducts(options: UseProductsOptions = {}) {
     deleteOptional,
     getActiveProducts,
     getCategories,
+    moveProduct,
     refetch: fetchProducts,
   };
 }

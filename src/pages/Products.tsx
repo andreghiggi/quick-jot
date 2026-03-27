@@ -27,7 +27,7 @@ import { uploadCompressedImage } from '@/utils/imageUtils';
 
 export default function Products() {
   const { company } = useAuthContext();
-  const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, refetch: refetchProducts } = useProducts({ companyId: company?.id });
+  const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { categories, addCategory, deleteCategory, updateCategory: _updateCategory, sortMode, saveSortMode, moveCategory } = useCategories({ companyId: company?.id });
   
   // Wrap updateCategory to also refetch products when a category is renamed
@@ -510,9 +510,27 @@ export default function Products() {
 
                       <div className="flex flex-col gap-1">
                         <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          disabled={categoryProducts.indexOf(product) === 0}
+                          onClick={() => moveProduct(product.id, 'up', categoryProducts)}
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          disabled={categoryProducts.indexOf(product) === categoryProducts.length - 1}
+                          onClick={() => moveProduct(product.id, 'down', categoryProducts)}
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                        <Button
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-7 w-7"
                           onClick={() => openEditDialog(product)}
                         >
                           <Pencil className="h-4 w-4" />
@@ -520,7 +538,7 @@ export default function Products() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-7 w-7"
                           onClick={() => {
                             setSelectedProduct(product);
                             setIsOptionalDialogOpen(true);
@@ -531,7 +549,7 @@ export default function Products() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive"
+                          className="h-7 w-7 text-destructive"
                           onClick={() => deleteProduct(product.id)}
                         >
                           <Trash2 className="h-4 w-4" />
