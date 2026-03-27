@@ -446,7 +446,6 @@ export default function OptionalGroups() {
                                   if (!result) { toast.error('Erro ao enviar imagem'); return; }
                                   await updateItem(item.id, { image_url: result.publicUrl + '?t=' + Date.now() });
                                   toast.success('Imagem atualizada!');
-                                  toast.success('Imagem atualizada!');
                                 }}
                               />
                               <ImageIcon className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
