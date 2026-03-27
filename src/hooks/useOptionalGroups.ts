@@ -89,6 +89,13 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
           .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
         categoryIds: catLinks.filter(c => c.group_id === g.id).map(c => c.category_id),
         productIds: prodLinks.filter(p => p.group_id === g.id).map(p => p.product_id),
+        productOverrides: prodLinks
+          .filter(p => p.group_id === g.id)
+          .map(p => ({
+            productId: p.product_id,
+            minSelectOverride: (p as any).min_select_override ?? null,
+            maxSelectOverride: (p as any).max_select_override ?? null,
+          })),
       }));
 
       setGroups(mapped);
