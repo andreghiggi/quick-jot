@@ -389,6 +389,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     loading,
     addGroup,
     updateGroup,
+    duplicateGroup,
     deleteGroup,
     addItem,
     addItemsBulk,

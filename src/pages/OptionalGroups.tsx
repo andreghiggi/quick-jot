@@ -454,6 +454,9 @@ export default function OptionalGroups() {
                     <Button size="sm" variant="outline" onClick={() => setEditingGroup({ ...group })}>
                       <Pencil className="h-3 w-3 mr-1" /> Editar
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => duplicateGroup(group.id)}>
+                      <Copy className="h-3 w-3 mr-1" /> Duplicar
+                    </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button size="sm" variant="outline" className="text-destructive border-destructive/30">
