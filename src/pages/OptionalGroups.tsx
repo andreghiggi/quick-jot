@@ -130,6 +130,14 @@ export default function OptionalGroups() {
 
   function toggleProdId(id: string) {
     setSelectedProdIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+    // Clean overrides when removing
+    if (selectedProdIds.includes(id)) {
+      setProdOverrides(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
   }
 
   // --- Import handlers ---
