@@ -105,6 +105,20 @@ export default function OptionalGroups() {
     setAddItemGroupId(null);
   }
 
+  async function handleEditItem() {
+    if (!editingItem) return;
+    if (!editingItem.name.trim()) {
+      toast.error('Informe o nome do item');
+      return;
+    }
+    await updateItem(editingItem.id, {
+      name: editingItem.name.trim(),
+      price: parseFloat(editingItem.price) || 0,
+      active: editingItem.active,
+    });
+    setEditingItem(null);
+  }
+
   function openAssociate(group: OptionalGroup) {
     setAssociatingGroup(group);
     setSelectedCatIds([...group.categoryIds]);
