@@ -73,15 +73,27 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
     return map;
   }, [categories]);
 
-  // Get groups for a product
+  // Get groups for a product (with per-product overrides)
   function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
     const catId = categoryIdByName[productCategory];
-    return optionalGroups.filter(g => {
-      if (!g.active) return false;
-      if (g.productIds.includes(productId)) return true;
-      if (catId && g.categoryIds.includes(catId)) return true;
-      return false;
-    });
+    return optionalGroups
+      .filter(g => {
+        if (!g.active) return false;
+        if (g.productIds.includes(productId)) return true;
+        if (catId && g.categoryIds.includes(catId)) return true;
+        return false;
+      })
+      .map(g => {
+        const override = g.productOverrides?.find(o => o.productId === productId);
+        if (override && (override.minSelectOverride !== null || override.maxSelectOverride !== null)) {
+          return {
+            ...g,
+            minSelect: override.minSelectOverride ?? g.minSelect,
+            maxSelect: override.maxSelectOverride ?? g.maxSelect,
+          };
+        }
+        return g;
+      });
   }
 
   const total = cart.reduce((sum, item) => {
