@@ -335,6 +335,7 @@ export function useProducts(options: UseProductsOptions = {}) {
     getActiveProducts,
     getCategories,
     moveProduct,
+    duplicateProduct,
     refetch: fetchProducts,
   };
 }

@@ -549,6 +549,15 @@ export default function Products() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-7 w-7"
+                          title="Duplicar produto"
+                          onClick={() => duplicateProduct(product.id)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-7 w-7 text-destructive"
                           onClick={() => deleteProduct(product.id)}
                         >
