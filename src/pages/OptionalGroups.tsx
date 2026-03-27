@@ -49,6 +49,9 @@ export default function OptionalGroups() {
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
 
+  // Edit item state
+  const [editingItem, setEditingItem] = useState<{ id: string; name: string; price: string; active: boolean } | null>(null);
+
   // Association state
   const [selectedCatIds, setSelectedCatIds] = useState<string[]>([]);
   const [selectedProdIds, setSelectedProdIds] = useState<string[]>([]);
@@ -100,6 +103,20 @@ export default function OptionalGroups() {
     setNewItemPrice('');
     setIsAddItemOpen(false);
     setAddItemGroupId(null);
+  }
+
+  async function handleEditItem() {
+    if (!editingItem) return;
+    if (!editingItem.name.trim()) {
+      toast.error('Informe o nome do item');
+      return;
+    }
+    await updateItem(editingItem.id, {
+      name: editingItem.name.trim(),
+      price: parseFloat(editingItem.price) || 0,
+      active: editingItem.active,
+    });
+    setEditingItem(null);
   }
 
   function openAssociate(group: OptionalGroup) {
@@ -429,11 +446,13 @@ export default function OptionalGroups() {
                                   if (!result) { toast.error('Erro ao enviar imagem'); return; }
                                   await updateItem(item.id, { image_url: result.publicUrl + '?t=' + Date.now() });
                                   toast.success('Imagem atualizada!');
-                                  toast.success('Imagem atualizada!');
                                 }}
                               />
                               <ImageIcon className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
                             </label>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingItem({ id: item.id, name: item.name, price: item.price.toFixed(2), active: item.active })}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteItem(item.id)}>
                               <Trash2 className="h-3 w-3 text-destructive" />
                             </Button>
@@ -666,6 +685,29 @@ export default function OptionalGroups() {
           <div className="pt-4 border-t flex-shrink-0">
             <Button onClick={handleSaveAssociations} className="w-full">Salvar Associações</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Edit Item Dialog */}
+      <Dialog open={!!editingItem} onOpenChange={() => setEditingItem(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Item</DialogTitle></DialogHeader>
+          {editingItem && (
+            <div className="space-y-4">
+              <div>
+                <Label>Nome</Label>
+                <Input value={editingItem.name} onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })} />
+              </div>
+              <div>
+                <Label>Preço (R$)</Label>
+                <Input type="number" min={0} step="0.01" value={editingItem.price} onChange={(e) => setEditingItem({ ...editingItem, price: e.target.value })} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={editingItem.active} onCheckedChange={(v) => setEditingItem({ ...editingItem, active: v })} />
+                <Label>Ativo</Label>
+              </div>
+              <Button onClick={handleEditItem} className="w-full">Salvar</Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </AppLayout>
