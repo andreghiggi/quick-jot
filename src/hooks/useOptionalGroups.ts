@@ -151,6 +151,72 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
+  async function duplicateGroup(id: string): Promise<string | null> {
+    if (!companyId) return null;
+    const source = groups.find(g => g.id === id);
+    if (!source) return null;
+    try {
+      // Create new group
+      const { data: newGroup, error: gErr } = await supabase
+        .from('optional_groups')
+        .insert({
+          company_id: companyId,
+          name: `${source.name} (cópia)`,
+          min_select: source.minSelect,
+          max_select: source.maxSelect,
+          active: source.active,
+          layout: source.layout,
+        })
+        .select()
+        .single();
+      if (gErr) throw gErr;
+
+      // Duplicate items
+      if (source.items.length > 0) {
+        const itemRows = source.items.map(i => ({
+          group_id: newGroup.id,
+          company_id: companyId,
+          name: i.name,
+          price: i.price,
+          active: i.active,
+          image_url: i.imageUrl ?? null,
+        }));
+        const { error: iErr } = await supabase.from('optional_group_items').insert(itemRows);
+        if (iErr) throw iErr;
+      }
+
+      // Duplicate category links
+      if (source.categoryIds.length > 0) {
+        const catRows = source.categoryIds.map(cid => ({ group_id: newGroup.id, category_id: cid }));
+        const { error: cErr } = await supabase.from('optional_group_categories').insert(catRows);
+        if (cErr) throw cErr;
+      }
+
+      // Duplicate product links with overrides
+      if (source.productIds.length > 0) {
+        const prodRows = source.productIds.map(pid => {
+          const ov = source.productOverrides.find(o => o.productId === pid);
+          return {
+            group_id: newGroup.id,
+            product_id: pid,
+            min_select_override: ov?.minSelectOverride ?? null,
+            max_select_override: ov?.maxSelectOverride ?? null,
+          };
+        });
+        const { error: pErr } = await supabase.from('optional_group_products').insert(prodRows as any);
+        if (pErr) throw pErr;
+      }
+
+      await fetchGroups();
+      toast.success('Grupo duplicado!');
+      return newGroup.id;
+    } catch (error) {
+      console.error('Error duplicating group:', error);
+      toast.error('Erro ao duplicar grupo');
+      return null;
+    }
+  }
+
   async function deleteGroup(id: string): Promise<boolean> {
     try {
       const { error } = await supabase.from('optional_groups').delete().eq('id', id);
