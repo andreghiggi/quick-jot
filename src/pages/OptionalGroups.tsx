@@ -688,6 +688,29 @@ export default function OptionalGroups() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Edit Item Dialog */}
+      <Dialog open={!!editingItem} onOpenChange={() => setEditingItem(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Item</DialogTitle></DialogHeader>
+          {editingItem && (
+            <div className="space-y-4">
+              <div>
+                <Label>Nome</Label>
+                <Input value={editingItem.name} onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })} />
+              </div>
+              <div>
+                <Label>Preço (R$)</Label>
+                <Input type="number" min={0} step="0.01" value={editingItem.price} onChange={(e) => setEditingItem({ ...editingItem, price: e.target.value })} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={editingItem.active} onCheckedChange={(v) => setEditingItem({ ...editingItem, active: v })} />
+                <Label>Ativo</Label>
+              </div>
+              <Button onClick={handleEditItem} className="w-full">Salvar</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
