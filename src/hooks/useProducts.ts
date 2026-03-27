@@ -235,6 +235,73 @@ export function useProducts(options: UseProductsOptions = {}) {
     return [...new Set(products.map((p) => p.category))];
   }
 
+  async function duplicateProduct(productId: string): Promise<string | null> {
+    const source = products.find(p => p.id === productId);
+    if (!source) return null;
+
+    try {
+      // 1. Duplicate the product
+      const { data: newProduct, error: prodError } = await supabase
+        .from('products')
+        .insert({
+          name: `${source.name} (cópia)`,
+          price: source.price,
+          category: source.category,
+          description: source.description || null,
+          image_url: source.imageUrl || null,
+          active: source.active,
+          company_id: source.companyId || companyId || null,
+          tax_rule_id: source.taxRuleId || null,
+          display_order: (source.displayOrder ?? 0) + 1,
+        })
+        .select()
+        .single();
+
+      if (prodError) throw prodError;
+
+      // 2. Duplicate product_optionals
+      if (source.optionals && source.optionals.length > 0) {
+        const optInserts = source.optionals.map(opt => ({
+          product_id: newProduct.id,
+          name: opt.name,
+          price: opt.price,
+          type: opt.type,
+          active: opt.active,
+          company_id: source.companyId || companyId || null,
+        }));
+        const { error: optError } = await supabase.from('product_optionals').insert(optInserts);
+        if (optError) throw optError;
+      }
+
+      // 3. Duplicate optional_group_products associations
+      const { data: groupLinks, error: glError } = await supabase
+        .from('optional_group_products')
+        .select('*')
+        .eq('product_id', productId);
+
+      if (glError) throw glError;
+
+      if (groupLinks && groupLinks.length > 0) {
+        const glInserts = groupLinks.map(gl => ({
+          group_id: gl.group_id,
+          product_id: newProduct.id,
+          min_select_override: gl.min_select_override,
+          max_select_override: gl.max_select_override,
+        }));
+        const { error: glInsertError } = await supabase.from('optional_group_products').insert(glInserts);
+        if (glInsertError) throw glInsertError;
+      }
+
+      await fetchProducts();
+      toast.success('Produto duplicado!');
+      return newProduct.id;
+    } catch (error) {
+      console.error('Error duplicating product:', error);
+      toast.error('Erro ao duplicar produto');
+      return null;
+    }
+  }
+
   async function moveProduct(productId: string, direction: 'up' | 'down', categoryProducts: Product[]): Promise<void> {
     const idx = categoryProducts.findIndex(p => p.id === productId);
     if (idx < 0) return;
