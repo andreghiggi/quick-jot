@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, GripVertical, FileText } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, GripVertical, FileText, Copy } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
@@ -27,7 +27,7 @@ import { uploadCompressedImage } from '@/utils/imageUtils';
 
 export default function Products() {
   const { company } = useAuthContext();
-  const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
+  const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, duplicateProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { categories, addCategory, deleteCategory, updateCategory: _updateCategory, sortMode, saveSortMode, moveCategory } = useCategories({ companyId: company?.id });
   
   // Wrap updateCategory to also refetch products when a category is renamed
@@ -545,6 +545,15 @@ export default function Products() {
                           }}
                         >
                           <Plus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Duplicar produto"
+                          onClick={() => duplicateProduct(product.id)}
+                        >
+                          <Copy className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
