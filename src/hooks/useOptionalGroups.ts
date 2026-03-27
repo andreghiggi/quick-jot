@@ -266,17 +266,28 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  /** Get groups applicable to a specific product (by direct link or category link) */
+  /** Get groups applicable to a specific product (by direct link or category link), with per-product overrides applied */
   function getGroupsForProduct(productId: string, productCategory: string, categoryIdByName: Record<string, string>): OptionalGroup[] {
     const catId = categoryIdByName[productCategory];
-    return groups.filter(g => {
-      if (!g.active) return false;
-      // Direct product link
-      if (g.productIds.includes(productId)) return true;
-      // Category link
-      if (catId && g.categoryIds.includes(catId)) return true;
-      return false;
-    });
+    return groups
+      .filter(g => {
+        if (!g.active) return false;
+        if (g.productIds.includes(productId)) return true;
+        if (catId && g.categoryIds.includes(catId)) return true;
+        return false;
+      })
+      .map(g => {
+        // Apply per-product overrides if they exist
+        const override = g.productOverrides.find(o => o.productId === productId);
+        if (override && (override.minSelectOverride !== null || override.maxSelectOverride !== null)) {
+          return {
+            ...g,
+            minSelect: override.minSelectOverride ?? g.minSelect,
+            maxSelect: override.maxSelectOverride ?? g.maxSelect,
+          };
+        }
+        return g;
+      });
   }
 
   async function reorderGroups(reorderedGroups: OptionalGroup[]): Promise<boolean> {
