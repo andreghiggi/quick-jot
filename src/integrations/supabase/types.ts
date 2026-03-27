@@ -972,6 +972,7 @@ export type Database = {
           company_id: string | null
           created_at: string
           description: string | null
+          display_order: number | null
           id: string
           image_url: string | null
           name: string
@@ -985,6 +986,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           description?: string | null
+          display_order?: number | null
           id?: string
           image_url?: string | null
           name: string
@@ -998,6 +1000,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           description?: string | null
+          display_order?: number | null
           id?: string
           image_url?: string | null
           name?: string
