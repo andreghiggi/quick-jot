@@ -106,13 +106,19 @@ export default function OptionalGroups() {
     setAssociatingGroup(group);
     setSelectedCatIds([...group.categoryIds]);
     setSelectedProdIds([...group.productIds]);
+    // Load existing overrides
+    const overridesMap: Record<string, { min: number | null; max: number | null }> = {};
+    group.productOverrides?.forEach(o => {
+      overridesMap[o.productId] = { min: o.minSelectOverride, max: o.maxSelectOverride };
+    });
+    setProdOverrides(overridesMap);
     setIsAssociateOpen(true);
   }
 
   async function handleSaveAssociations() {
     if (!associatingGroup) return;
     await setCategoryLinks(associatingGroup.id, selectedCatIds);
-    await setProductLinks(associatingGroup.id, selectedProdIds);
+    await setProductLinks(associatingGroup.id, selectedProdIds, prodOverrides);
     toast.success('Associações salvas!');
     setIsAssociateOpen(false);
     setAssociatingGroup(null);
