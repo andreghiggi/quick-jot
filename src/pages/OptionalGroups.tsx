@@ -52,6 +52,7 @@ export default function OptionalGroups() {
   // Association state
   const [selectedCatIds, setSelectedCatIds] = useState<string[]>([]);
   const [selectedProdIds, setSelectedProdIds] = useState<string[]>([]);
+  const [prodOverrides, setProdOverrides] = useState<Record<string, { min: number | null; max: number | null }>>({});
 
   // Import state
   const [importStep, setImportStep] = useState<'idle' | 'preview' | 'review'>('idle');
