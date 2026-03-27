@@ -18,7 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, Layers, Camera, ImageIcon, LayoutList, LayoutGrid, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, Layers, Camera, ImageIcon, LayoutList, LayoutGrid, ChevronUp, ChevronDown, Copy } from 'lucide-react';
 
 interface ExtractedGroup {
   name: string;
@@ -28,7 +28,7 @@ interface ExtractedGroup {
 
 export default function OptionalGroups() {
   const { company } = useAuthContext();
-  const { groups, loading, addGroup, updateGroup, deleteGroup, addItem, addItemsBulk, updateItem, deleteItem, setCategoryLinks, setProductLinks, moveGroup } = useOptionalGroups({ companyId: company?.id });
+  const { groups, loading, addGroup, updateGroup, duplicateGroup, deleteGroup, addItem, addItemsBulk, updateItem, deleteItem, setCategoryLinks, setProductLinks, moveGroup } = useOptionalGroups({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
   const { products } = useProducts({ companyId: company?.id });
 
@@ -453,6 +453,9 @@ export default function OptionalGroups() {
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => setEditingGroup({ ...group })}>
                       <Pencil className="h-3 w-3 mr-1" /> Editar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => duplicateGroup(group.id)}>
+                      <Copy className="h-3 w-3 mr-1" /> Duplicar
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
