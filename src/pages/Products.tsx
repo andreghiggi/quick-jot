@@ -27,7 +27,7 @@ import { uploadCompressedImage } from '@/utils/imageUtils';
 
 export default function Products() {
   const { company } = useAuthContext();
-  const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, refetch: refetchProducts } = useProducts({ companyId: company?.id });
+  const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { categories, addCategory, deleteCategory, updateCategory: _updateCategory, sortMode, saveSortMode, moveCategory } = useCategories({ companyId: company?.id });
   
   // Wrap updateCategory to also refetch products when a category is renamed
