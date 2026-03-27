@@ -451,6 +451,9 @@ export default function OptionalGroups() {
                               />
                               <ImageIcon className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
                             </label>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingItem({ id: item.id, name: item.name, price: item.price.toFixed(2), active: item.active })}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteItem(item.id)}>
                               <Trash2 className="h-3 w-3 text-destructive" />
                             </Button>
