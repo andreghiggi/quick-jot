@@ -25,7 +25,8 @@ export function useProducts(options: UseProductsOptions = {}) {
         .from('products')
         .select('*')
         .eq('company_id', companyId)
-        .order('category', { ascending: true });
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: true });
 
       const { data: productsData, error: productsError } = await productsQuery;
 
