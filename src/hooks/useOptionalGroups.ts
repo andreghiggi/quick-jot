@@ -244,12 +244,17 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  async function setProductLinks(groupId: string, productIds: string[]): Promise<boolean> {
+  async function setProductLinks(groupId: string, productIds: string[], overrides?: Record<string, { min: number | null; max: number | null }>): Promise<boolean> {
     try {
       await supabase.from('optional_group_products').delete().eq('group_id', groupId);
       if (productIds.length > 0) {
-        const rows = productIds.map(pid => ({ group_id: groupId, product_id: pid }));
-        const { error } = await supabase.from('optional_group_products').insert(rows);
+        const rows = productIds.map(pid => ({
+          group_id: groupId,
+          product_id: pid,
+          min_select_override: overrides?.[pid]?.min ?? null,
+          max_select_override: overrides?.[pid]?.max ?? null,
+        }));
+        const { error } = await supabase.from('optional_group_products').insert(rows as any);
         if (error) throw error;
       }
       await fetchGroups();
