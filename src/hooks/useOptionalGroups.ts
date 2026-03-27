@@ -14,6 +14,12 @@ export interface OptionalGroupItem {
 
 export type OptionalGroupLayout = 'vertical' | 'horizontal';
 
+export interface ProductOverride {
+  productId: string;
+  minSelectOverride: number | null;
+  maxSelectOverride: number | null;
+}
+
 export interface OptionalGroup {
   id: string;
   companyId: string;
@@ -26,6 +32,7 @@ export interface OptionalGroup {
   items: OptionalGroupItem[];
   categoryIds: string[];
   productIds: string[];
+  productOverrides: ProductOverride[];
 }
 
 interface UseOptionalGroupsOptions {
