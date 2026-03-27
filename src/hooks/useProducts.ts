@@ -58,6 +58,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         active: product.active,
         companyId: product.company_id || undefined,
         taxRuleId: product.tax_rule_id || null,
+        displayOrder: product.display_order ?? 0,
         optionals: optionalsData
           .filter((opt) => opt.product_id === product.id)
           .map((opt) => ({
