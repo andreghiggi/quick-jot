@@ -568,16 +568,22 @@ export type Database = {
         Row: {
           group_id: string
           id: string
+          max_select_override: number | null
+          min_select_override: number | null
           product_id: string
         }
         Insert: {
           group_id: string
           id?: string
+          max_select_override?: number | null
+          min_select_override?: number | null
           product_id: string
         }
         Update: {
           group_id?: string
           id?: string
+          max_select_override?: number | null
+          min_select_override?: number | null
           product_id?: string
         }
         Relationships: [
