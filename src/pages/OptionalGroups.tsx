@@ -610,13 +610,48 @@ export default function OptionalGroups() {
                   {Object.entries(productsByCategory).map(([catName, prods]) => (
                     <div key={catName}>
                       <p className="text-xs font-medium text-muted-foreground mb-1">{catName}</p>
-                      <div className="space-y-1 ml-2">
-                        {prods.map(p => (
-                          <label key={p.id} className="flex items-center gap-2 cursor-pointer">
-                            <Checkbox checked={selectedProdIds.includes(p.id)} onCheckedChange={() => toggleProdId(p.id)} />
-                            <span className="text-sm">{p.name}</span>
-                          </label>
-                        ))}
+                      <div className="space-y-2 ml-2">
+                        {prods.map(p => {
+                          const isSelected = selectedProdIds.includes(p.id);
+                          const override = prodOverrides[p.id] || { min: null, max: null };
+                          return (
+                            <div key={p.id} className="space-y-1">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <Checkbox checked={isSelected} onCheckedChange={() => toggleProdId(p.id)} />
+                                <span className="text-sm">{p.name}</span>
+                              </label>
+                              {isSelected && (
+                                <div className="flex items-center gap-2 ml-6 text-xs">
+                                  <span className="text-muted-foreground whitespace-nowrap">Mín:</span>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    placeholder={String(associatingGroup?.minSelect ?? 0)}
+                                    value={override.min ?? ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value === '' ? null : parseInt(e.target.value);
+                                      setProdOverrides(prev => ({ ...prev, [p.id]: { ...prev[p.id] || { min: null, max: null }, min: val } }));
+                                    }}
+                                    className="h-7 w-16 text-xs"
+                                  />
+                                  <span className="text-muted-foreground whitespace-nowrap">Máx:</span>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    placeholder={String(associatingGroup?.maxSelect ?? 0)}
+                                    value={override.max ?? ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value === '' ? null : parseInt(e.target.value);
+                                      setProdOverrides(prev => ({ ...prev, [p.id]: { ...prev[p.id] || { min: null, max: null }, max: val } }));
+                                    }}
+                                    className="h-7 w-16 text-xs"
+                                  />
+                                  <span className="text-muted-foreground text-[10px]">(vazio = padrão do grupo)</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
