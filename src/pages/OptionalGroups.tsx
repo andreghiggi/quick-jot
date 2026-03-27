@@ -49,6 +49,9 @@ export default function OptionalGroups() {
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
 
+  // Edit item state
+  const [editingItem, setEditingItem] = useState<{ id: string; name: string; price: string; active: boolean } | null>(null);
+
   // Association state
   const [selectedCatIds, setSelectedCatIds] = useState<string[]>([]);
   const [selectedProdIds, setSelectedProdIds] = useState<string[]>([]);
