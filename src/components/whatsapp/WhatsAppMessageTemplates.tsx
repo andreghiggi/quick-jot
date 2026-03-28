@@ -11,7 +11,7 @@ interface WhatsAppMessageTemplatesProps {
   updateSetting: (key: string, value: string) => Promise<boolean>;
 }
 
-const SYSTEM_VARIABLES = ['{{nome}}', '{{num}}', '{{loja}}', '{{tempo}}', '{{endereco}}', '{{link_cardapio}}'];
+const SYSTEM_VARIABLES = ['{{nome}}', '{{num}}', '{{loja}}', '{{tempo}}', '{{endereco}}', '{{link_cardapio}}', '{{chave_pix}}'];
 
 const TEMPLATE_CONFIGS = [
   {
@@ -20,6 +20,13 @@ const TEMPLATE_CONFIGS = [
     color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
     defaultMsg: '{{nome}}, seu pedido {{num}} foi confirmado pelo {{loja}}! Em breve começaremos a preparar. 😊',
     hint: 'Enviada quando o pedido é confirmado.',
+  },
+  {
+    status: 'Cobrança PIX',
+    settingKey: 'whatsapp_msg_pix',
+    color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200',
+    defaultMsg: '💳 *Pagamento via PIX*\n\n{{nome}}, para finalizar seu pedido {{num}}, faça o pagamento via PIX:\n\n🔑 Chave PIX para copiar:\n`{{chave_pix}}`\n\nCopie a chave acima e cole no seu app de pagamento. Obrigado! 😊',
+    hint: 'Enviada junto com a confirmação quando o cliente escolheu PIX. Use {{chave_pix}} para inserir a chave cadastrada.',
   },
   {
     status: 'Em Preparo',
@@ -377,7 +384,7 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
 
         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground">
-            <strong>Variáveis disponíveis:</strong> {'{{nome}}'} = primeiro nome do cliente, {'{{num}}'} = código do pedido, {'{{loja}}'} = nome do estabelecimento, {'{{tempo}}'} = tempo estimado de preparo, {'{{endereco}}'} = endereço da loja, {'{{link_cardapio}}'} = link do cardápio público. As variáveis são substituídas automaticamente ao enviar.
+            <strong>Variáveis disponíveis:</strong> {'{{nome}}'} = primeiro nome do cliente, {'{{num}}'} = código do pedido, {'{{loja}}'} = nome do estabelecimento, {'{{tempo}}'} = tempo estimado de preparo, {'{{endereco}}'} = endereço da loja, {'{{link_cardapio}}'} = link do cardápio público, {'{{chave_pix}}'} = chave PIX cadastrada. As variáveis são substituídas automaticamente ao enviar.
           </p>
         </div>
       </CardContent>
