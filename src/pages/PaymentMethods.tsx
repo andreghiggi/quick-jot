@@ -28,9 +28,12 @@ export default function PaymentMethods() {
   const [editDialog, setEditDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [newMethodName, setNewMethodName] = useState('');
-  const [editingMethod, setEditingMethod] = useState<{ id: string; name: string } | null>(null);
+  const [newMethodPixKey, setNewMethodPixKey] = useState('');
+  const [editingMethod, setEditingMethod] = useState<{ id: string; name: string; pix_key: string } | null>(null);
   const [deletingMethodId, setDeletingMethodId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isPixName = (name: string) => name.toLowerCase().includes('pix');
 
   async function handleAdd() {
     if (!newMethodName.trim()) {
@@ -39,12 +42,13 @@ export default function PaymentMethods() {
     }
 
     setIsSubmitting(true);
-    const success = await addPaymentMethod(newMethodName.trim());
+    const success = await addPaymentMethod(newMethodName.trim(), isPixName(newMethodName) ? newMethodPixKey.trim() || undefined : undefined);
     setIsSubmitting(false);
 
     if (success) {
       setAddDialog(false);
       setNewMethodName('');
+      setNewMethodPixKey('');
     }
   }
 
@@ -55,7 +59,13 @@ export default function PaymentMethods() {
     }
 
     setIsSubmitting(true);
-    const success = await updatePaymentMethod(editingMethod.id, { name: editingMethod.name.trim() });
+    const updateData: any = { name: editingMethod.name.trim() };
+    if (isPixName(editingMethod.name)) {
+      updateData.pix_key = editingMethod.pix_key?.trim() || null;
+    } else {
+      updateData.pix_key = null;
+    }
+    const success = await updatePaymentMethod(editingMethod.id, updateData);
     setIsSubmitting(false);
 
     if (success) {
@@ -81,8 +91,8 @@ export default function PaymentMethods() {
     await updatePaymentMethod(id, { active });
   }
 
-  function openEditDialog(method: { id: string; name: string }) {
-    setEditingMethod({ ...method });
+  function openEditDialog(method: { id: string; name: string; pix_key?: string | null }) {
+    setEditingMethod({ id: method.id, name: method.name, pix_key: method.pix_key || '' });
     setEditDialog(true);
   }
 
@@ -138,10 +148,15 @@ export default function PaymentMethods() {
                     key={method.id} 
                     className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
                   >
-                    <div className="flex items-center gap-3">
-                      <GripVertical className="w-4 h-4 text-muted-foreground" />
-                      <CreditCard className="w-5 h-5 text-primary" />
-                      <span className="font-medium">{method.name}</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <CreditCard className="w-5 h-5 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <span className="font-medium">{method.name}</span>
+                        {method.pix_key && (
+                          <p className="text-xs text-muted-foreground truncate">Chave: {method.pix_key}</p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2">
@@ -215,6 +230,17 @@ export default function PaymentMethods() {
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
               />
             </div>
+            {isPixName(newMethodName) && (
+              <div className="space-y-2">
+                <Label>Chave PIX</Label>
+                <Input
+                  placeholder="Ex: email@exemplo.com, CPF, CNPJ ou telefone"
+                  value={newMethodPixKey}
+                  onChange={(e) => setNewMethodPixKey(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialog(false)}>Cancelar</Button>
@@ -242,6 +268,17 @@ export default function PaymentMethods() {
                 onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
               />
             </div>
+            {editingMethod && isPixName(editingMethod.name) && (
+              <div className="space-y-2">
+                <Label>Chave PIX</Label>
+                <Input
+                  placeholder="Ex: email@exemplo.com, CPF, CNPJ ou telefone"
+                  value={editingMethod.pix_key || ''}
+                  onChange={(e) => setEditingMethod(prev => prev ? { ...prev, pix_key: e.target.value } : null)}
+                />
+                <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialog(false)}>Cancelar</Button>

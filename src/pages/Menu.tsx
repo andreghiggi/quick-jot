@@ -488,7 +488,7 @@ export default function Menu() {
           customer_name: customerName,
           customer_phone: customerPhone || null,
           delivery_address: fullAddress || null,
-          notes: `Pagamento: ${paymentMethod} | ${deliveryTypeLabel}${deliveryFee > 0 ? ` (R$ ${deliveryFee.toFixed(2)})` : ''}`,
+          notes: `Pagamento: ${paymentMethod}${(() => { const pm = activePaymentMethods.find(m => m.name === paymentMethod); return pm?.pix_key ? ` (Chave PIX: ${pm.pix_key})` : ''; })()} | ${deliveryTypeLabel}${deliveryFee > 0 ? ` (R$ ${deliveryFee.toFixed(2)})` : ''}`,
           total: orderTotal,
           status: 'pending',
           company_id: company?.id || null,
@@ -566,6 +566,10 @@ export default function Menu() {
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
     message += `*Tipo:* ${deliveryTypeLabel}\n`;
     message += `*Pagamento:* ${paymentMethod}\n`;
+    const selectedPixMethod = activePaymentMethods.find(m => m.name === paymentMethod);
+    if (selectedPixMethod?.pix_key) {
+      message += `*Chave PIX:* ${selectedPixMethod.pix_key}\n`;
+    }
     if (fullAddress) message += `*Endereço:* ${fullAddress}\n`;
     message += `\n───────────────────\n`;
     message += `*ITENS DO PEDIDO*\n`;
@@ -1345,6 +1349,19 @@ export default function Menu() {
                         </>
                       )}
                     </RadioGroup>
+                    {/* Show PIX key when a PIX method is selected */}
+                    {paymentMethod && (() => {
+                      const selectedPm = activePaymentMethods.find(m => m.name === paymentMethod);
+                      if (selectedPm?.pix_key) {
+                        return (
+                          <div className="mt-3 p-3 bg-accent/50 border border-border rounded-lg">
+                            <p className="text-sm font-medium text-foreground">🔑 Chave PIX:</p>
+                            <p className="text-sm font-mono mt-1 select-all text-muted-foreground break-all">{selectedPm.pix_key}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
 

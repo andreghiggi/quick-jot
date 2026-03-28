@@ -8,6 +8,7 @@ export interface PaymentMethod {
   name: string;
   active: boolean;
   display_order: number;
+  pix_key: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -48,19 +49,22 @@ export function usePaymentMethods(options: UsePaymentMethodsOptions = {}) {
     }
   }
 
-  async function addPaymentMethod(name: string): Promise<boolean> {
+  async function addPaymentMethod(name: string, pixKey?: string): Promise<boolean> {
     if (!companyId) return false;
 
     try {
       const maxOrder = paymentMethods.reduce((max, m) => Math.max(max, m.display_order), 0);
       
+      const insertData: any = {
+        company_id: companyId,
+        name,
+        display_order: maxOrder + 1
+      };
+      if (pixKey) insertData.pix_key = pixKey;
+
       const { error } = await supabase
         .from('payment_methods')
-        .insert({
-          company_id: companyId,
-          name,
-          display_order: maxOrder + 1
-        });
+        .insert(insertData);
 
       if (error) throw error;
 
