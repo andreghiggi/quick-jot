@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { MessageCircle, Pencil, Save, X, Loader2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -58,6 +57,137 @@ const TEMPLATE_CONFIGS = [
     hint: 'Enviada automaticamente 30 minutos após o pedido ser entregue, com link para novo pedido.',
   },
 ];
+
+// Editor that prevents editing/deleting variables
+function ProtectedVariableEditor({ value, onChange, variables }: { value: string; onChange: (v: string) => void; variables: string[] }) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const isInternalUpdate = useRef(false);
+
+  // Split text into segments (text parts and variables)
+  const splitIntoSegments = useCallback((text: string) => {
+    const regex = new RegExp(`(${variables.map(v => v.replace(/[{}]/g, '\\$&')).join('|')})`, 'g');
+    return text.split(regex).filter(Boolean);
+  }, [variables]);
+
+  // Rebuild text from contenteditable
+  const extractText = useCallback(() => {
+    if (!editorRef.current) return value;
+    let result = '';
+    editorRef.current.childNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        result += node.textContent || '';
+      } else if (node instanceof HTMLElement) {
+        if (node.dataset.variable) {
+          result += node.dataset.variable;
+        } else {
+          result += node.textContent || '';
+        }
+      }
+    });
+    return result;
+  }, [value]);
+
+  // Render segments into the contenteditable
+  const renderContent = useCallback(() => {
+    if (!editorRef.current) return;
+    const sel = window.getSelection();
+    // Save cursor position roughly
+    let cursorOffset = 0;
+    let foundCursor = false;
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      const preRange = document.createRange();
+      preRange.selectNodeContents(editorRef.current);
+      preRange.setEnd(range.startContainer, range.startOffset);
+      cursorOffset = preRange.toString().length;
+      foundCursor = true;
+    }
+
+    isInternalUpdate.current = true;
+    editorRef.current.innerHTML = '';
+    const segments = splitIntoSegments(value);
+    segments.forEach(seg => {
+      if (variables.includes(seg)) {
+        const span = document.createElement('span');
+        span.contentEditable = 'false';
+        span.dataset.variable = seg;
+        span.className = 'inline-flex items-center bg-secondary text-secondary-foreground px-1.5 py-0 rounded text-xs font-mono mx-0.5 select-none';
+        span.textContent = seg;
+        editorRef.current!.appendChild(span);
+      } else {
+        const textNode = document.createTextNode(seg);
+        editorRef.current!.appendChild(textNode);
+      }
+    });
+
+    // Restore cursor
+    if (foundCursor && sel) {
+      try {
+        let remaining = cursorOffset;
+        const walker = document.createTreeWalker(editorRef.current, NodeFilter.SHOW_TEXT);
+        let node: Node | null;
+        while ((node = walker.nextNode())) {
+          const len = node.textContent?.length || 0;
+          if (remaining <= len) {
+            const newRange = document.createRange();
+            newRange.setStart(node, remaining);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            break;
+          }
+          remaining -= len;
+        }
+      } catch {}
+    }
+    isInternalUpdate.current = false;
+  }, [value, variables, splitIntoSegments]);
+
+  useEffect(() => {
+    renderContent();
+  }, [value]);
+
+  const handleInput = useCallback(() => {
+    if (isInternalUpdate.current) return;
+    const newText = extractText();
+    onChange(newText);
+  }, [extractText, onChange]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !editorRef.current) return;
+    
+    const range = sel.getRangeAt(0);
+    
+    // Prevent deleting into a variable span
+    if (e.key === 'Backspace') {
+      const node = range.startContainer;
+      if (range.startOffset === 0 && node.previousSibling instanceof HTMLElement && node.previousSibling.dataset.variable) {
+        e.preventDefault();
+      }
+    }
+    if (e.key === 'Delete') {
+      const node = range.startContainer;
+      const offset = range.startOffset;
+      const len = node.textContent?.length || 0;
+      if (offset === len && node.nextSibling instanceof HTMLElement && node.nextSibling.dataset.variable) {
+        e.preventDefault();
+      }
+    }
+  }, []);
+
+  return (
+    <div
+      ref={editorRef}
+      contentEditable
+      suppressContentEditableWarning
+      onInput={handleInput}
+      onKeyDown={handleKeyDown}
+      className="min-h-[80px] p-3 border rounded-md bg-background text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-ring whitespace-pre-wrap"
+      style={{ wordBreak: 'break-word' }}
+    />
+  );
+}
 
 export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSetting }: WhatsAppMessageTemplatesProps) {
   const [customMessages, setCustomMessages] = useState<Record<string, string>>({});
@@ -194,15 +324,13 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
 
             {editingKey === config.settingKey ? (
               <div className="space-y-2">
-                <Textarea
+                <ProtectedVariableEditor
                   value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  rows={3}
-                  className="text-sm"
-                  placeholder="Digite a mensagem personalizada..."
+                  onChange={setEditValue}
+                  variables={SYSTEM_VARIABLES}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {config.hint} Use as variáveis abaixo para dados dinâmicos.
+                  {config.hint} As variáveis destacadas não podem ser removidas. Clique em uma variável abaixo para adicioná-la.
                 </p>
                 <div className="flex gap-2 flex-wrap">
                   {SYSTEM_VARIABLES.map(v => (
