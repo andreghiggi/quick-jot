@@ -23,11 +23,47 @@ function isGreeting(message: string): boolean {
 
 function sanitizeBaseUrl(url: string | null): string {
   if (!url) return PRODUCTION_URL;
-  // Block any Lovable preview/dev URLs
   if (url.includes('lovable.app') || url.includes('lovableproject.com') || url.includes('localhost')) {
     return PRODUCTION_URL;
   }
   return url;
+}
+
+const DAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+function formatBusinessHours(hours: any[]): string {
+  if (!hours || hours.length === 0) return 'não definido';
+  
+  // Filter only today's hours that are open
+  const openHours = hours.filter(h => h.is_open && h.open_time && h.close_time);
+  if (openHours.length === 0) return 'fechado hoje';
+  
+  return openHours
+    .sort((a, b) => (a.period_number || 1) - (b.period_number || 1))
+    .map(h => `${h.open_time.slice(0, 5)} às ${h.close_time.slice(0, 5)}`)
+    .join(' e ');
+}
+
+function isWithinBusinessHours(hours: any[]): boolean {
+  if (!hours || hours.length === 0) return true; // No hours configured = always open
+  
+  // Check always_open flag
+  if (hours.some(h => h.always_open)) return true;
+  
+  const now = new Date();
+  // Convert to Brazil timezone (UTC-3)
+  const brTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  const currentMinutes = brTime.getHours() * 60 + brTime.getMinutes();
+  
+  const openHours = hours.filter(h => h.is_open && h.open_time && h.close_time);
+  
+  return openHours.some(h => {
+    const [openH, openM] = h.open_time.split(':').map(Number);
+    const [closeH, closeM] = h.close_time.split(':').map(Number);
+    const openMin = openH * 60 + openM;
+    const closeMin = closeH * 60 + closeM;
+    return currentMinutes >= openMin && currentMinutes <= closeMin;
+  });
 }
 
 serve(async (req) => {
@@ -110,14 +146,12 @@ serve(async (req) => {
       .insert({ company_id: companyId, phone: senderPhone });
 
     if (lockError) {
-      // Unique constraint violation = another execution is already handling this
       console.log('Lock conflict for', senderPhone, '- another execution handling');
       return new Response(JSON.stringify({ ok: true, skipped: 'lock_conflict' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Helper to release lock before returning
     const releaseLock = () =>
       supabase.from('whatsapp_auto_reply_locks')
         .delete()
@@ -146,10 +180,17 @@ serve(async (req) => {
         });
       }
 
-      // Get company + module check in parallel
-      const [companyRes, moduleRes] = await Promise.all([
+      // Get company + module check + business hours + settings in parallel
+      const now = new Date();
+      const brTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+      const dayOfWeek = brTime.getDay();
+
+      const [companyRes, moduleRes, hoursRes, settingsRes, schedulingModuleRes] = await Promise.all([
         supabase.from('companies').select('name, slug').eq('id', companyId).single(),
         supabase.from('company_modules').select('enabled').eq('company_id', companyId).eq('module_name', 'whatsapp').maybeSingle(),
+        supabase.from('business_hours').select('*').eq('company_id', companyId).eq('day_of_week', dayOfWeek),
+        supabase.from('store_settings').select('key, value').eq('company_id', companyId).in('key', ['site_url', 'whatsapp_msg_autoreply_closed', 'whatsapp_msg_autoreply_closed_scheduling']),
+        supabase.from('company_modules').select('enabled').eq('company_id', companyId).eq('module_name', 'agendamento').maybeSingle(),
       ]);
 
       if (!companyRes.data || !moduleRes.data?.enabled) {
@@ -160,19 +201,48 @@ serve(async (req) => {
       }
 
       const company = companyRes.data;
+      const businessHours = hoursRes.data || [];
+      const hasScheduling = schedulingModuleRes.data?.enabled || false;
 
-      // Get site URL, sanitize against Lovable preview URLs
-      const { data: siteUrlSetting } = await supabase
-        .from('store_settings')
-        .select('value')
-        .eq('company_id', companyId)
-        .eq('key', 'site_url')
-        .maybeSingle();
+      // Get settings map
+      const settingsMap: Record<string, string> = {};
+      settingsRes.data?.forEach((s: any) => {
+        if (s.value) settingsMap[s.key] = s.value;
+      });
 
-      const baseUrl = sanitizeBaseUrl(siteUrlSetting?.value || Deno.env.get('SITE_URL') || null);
+      const baseUrl = sanitizeBaseUrl(settingsMap['site_url'] || Deno.env.get('SITE_URL') || null);
       const menuUrl = `${baseUrl.replace(/\/$/, '')}/cardapio/${company.slug}`;
 
-      const greetingMessage = `Olá! 👋 Bem-vindo(a) ao *${company.name}*!\n\nAcesse nosso cardápio digital e faça seu pedido:\n${menuUrl}\n\nQualquer dúvida, estamos à disposição!`;
+      // Try to get sender name from contacts
+      const senderName = messageData.pushName || 'cliente';
+      const firstName = senderName.split(' ')[0];
+
+      // Check if within business hours
+      const withinHours = isWithinBusinessHours(businessHours);
+      const hoursText = formatBusinessHours(businessHours);
+
+      let greetingMessage: string;
+
+      if (!withinHours && businessHours.length > 0) {
+        // Outside business hours - use custom template
+        const templateKey = hasScheduling ? 'whatsapp_msg_autoreply_closed_scheduling' : 'whatsapp_msg_autoreply_closed';
+        const customTemplate = settingsMap[templateKey];
+
+        if (customTemplate) {
+          greetingMessage = customTemplate
+            .split('{{nome}}').join(firstName)
+            .split('{{loja}}').join(company.name)
+            .split('{{horario}}').join(hoursText)
+            .split('{{link_cardapio}}').join(menuUrl);
+        } else if (hasScheduling) {
+          greetingMessage = `Olá, ${firstName}! Que bom te ver por aqui 😊\n\nNo momento estamos fora do horário de atendimento, mas você já pode deixar seu pedido agendado!\n\n⏰ Nosso horário de atendimento hoje é ${hoursText}.\n\nQuando iniciarmos, seu pedido entrará na fila de produção e você será avisado assim que começar o preparo.\n\n👉 Faça seu pedido aqui:\n${menuUrl}`;
+        } else {
+          greetingMessage = `Olá, ${firstName}! Que bom te ver por aqui 😊\n\nNo momento estamos fora do horário de atendimento, mas já já voltamos!\n\n⏰ Nosso horário de atendimento hoje é ${hoursText}.\n\nAssim que abrirmos, você pode fazer seu pedido direto por aqui:\n${menuUrl}\n\nSe quiser, já dá uma olhadinha no cardápio e escolhe o que vai pedir 😏\n\nTe esperamos!`;
+        }
+      } else {
+        // Within business hours or no hours configured - default greeting
+        greetingMessage = `Olá! 👋 Bem-vindo(a) ao *${company.name}*!\n\nAcesse nosso cardápio digital e faça seu pedido:\n${menuUrl}\n\nQualquer dúvida, estamos à disposição!`;
+      }
 
       // Send message
       const evolutionBaseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
@@ -196,14 +266,12 @@ serve(async (req) => {
         status: res.ok ? 'sent' : 'failed',
       });
 
-      // Release lock
       await releaseLock();
 
-      return new Response(JSON.stringify({ ok: true, replied: true }), {
+      return new Response(JSON.stringify({ ok: true, replied: true, outsideHours: !withinHours }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (innerError) {
-      // Always release lock on error
       await releaseLock();
       throw innerError;
     }

@@ -11,7 +11,7 @@ interface WhatsAppMessageTemplatesProps {
   updateSetting: (key: string, value: string) => Promise<boolean>;
 }
 
-const SYSTEM_VARIABLES = ['{{nome}}', '{{num}}', '{{loja}}', '{{tempo}}', '{{endereco}}', '{{link_cardapio}}', '{{chave_pix}}'];
+const SYSTEM_VARIABLES = ['{{nome}}', '{{num}}', '{{loja}}', '{{tempo}}', '{{endereco}}', '{{link_cardapio}}', '{{chave_pix}}', '{{google_review}}', '{{horario}}'];
 
 const TEMPLATE_CONFIGS = [
   {
@@ -54,7 +54,7 @@ const TEMPLATE_CONFIGS = [
     settingKey: 'whatsapp_msg_delivered',
     color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
     defaultMsg: '{{nome}}, seu pedido {{num}} foi finalizado. Obrigado por escolher o {{loja}}, esperamos que tenha gostado!',
-    hint: 'Enviada quando o pedido é finalizado.',
+    hint: 'Enviada quando o pedido é finalizado. Use {{google_review}} para link de avaliação e {{link_cardapio}} para link do cardápio.',
   },
   {
     status: 'Follow-up (30min após entrega)',
@@ -62,6 +62,20 @@ const TEMPLATE_CONFIGS = [
     color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
     defaultMsg: '{{nome}}, que bom ter você como cliente do {{loja}}! 😊\n\nEsperamos que tenha gostado do seu pedido. Quando quiser pedir novamente, é só acessar nosso cardápio:\n\n🛒 {{link_cardapio}}\n\nTe esperamos! 💛',
     hint: 'Enviada automaticamente 30 minutos após o pedido ser entregue, com link para novo pedido.',
+  },
+  {
+    status: 'Auto-resposta (Fora do horário)',
+    settingKey: 'whatsapp_msg_autoreply_closed',
+    color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
+    defaultMsg: 'Olá, {{nome}}! Que bom te ver por aqui 😊\n\nNo momento estamos fora do horário de atendimento, mas já já voltamos!\n\n⏰ Nosso horário de atendimento hoje é {{horario}}.\n\nAssim que abrirmos, você pode fazer seu pedido direto por aqui:\n{{link_cardapio}}\n\nSe quiser, já dá uma olhadinha no cardápio e escolhe o que vai pedir 😏\n\nTe esperamos!',
+    hint: 'Enviada quando o cliente manda mensagem fora do horário de atendimento (sem agendamento ativo). Use {{horario}} para mostrar o horário do dia.',
+  },
+  {
+    status: 'Auto-resposta (Agendamento ativo)',
+    settingKey: 'whatsapp_msg_autoreply_closed_scheduling',
+    color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
+    defaultMsg: 'Olá, {{nome}}! Que bom te ver por aqui 😊\n\nNo momento estamos fora do horário de atendimento, mas você já pode deixar seu pedido agendado!\n\n⏰ Nosso horário de atendimento hoje é {{horario}}.\n\nQuando iniciarmos, seu pedido entrará na fila de produção e você será avisado assim que começar o preparo.\n\n👉 Faça seu pedido aqui:\n{{link_cardapio}}',
+    hint: 'Enviada quando o cliente manda mensagem fora do horário e o módulo de agendamento está ativo. Use {{horario}} para mostrar o horário do dia.',
   },
 ];
 
@@ -384,7 +398,7 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
 
         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground">
-            <strong>Variáveis disponíveis:</strong> {'{{nome}}'} = primeiro nome do cliente, {'{{num}}'} = código do pedido, {'{{loja}}'} = nome do estabelecimento, {'{{tempo}}'} = tempo estimado de preparo, {'{{endereco}}'} = endereço da loja, {'{{link_cardapio}}'} = link do cardápio público, {'{{chave_pix}}'} = chave PIX cadastrada. As variáveis são substituídas automaticamente ao enviar.
+            <strong>Variáveis disponíveis:</strong> {'{{nome}}'} = primeiro nome do cliente, {'{{num}}'} = código do pedido, {'{{loja}}'} = nome do estabelecimento, {'{{tempo}}'} = tempo estimado de preparo, {'{{endereco}}'} = endereço da loja, {'{{link_cardapio}}'} = link do cardápio público, {'{{chave_pix}}'} = chave PIX cadastrada, {'{{google_review}}'} = link de avaliação Google, {'{{horario}}'} = horário de atendimento do dia. As variáveis são substituídas automaticamente ao enviar.
           </p>
         </div>
       </CardContent>
