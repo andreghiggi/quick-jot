@@ -8,6 +8,7 @@ interface OrderContextType {
   loading: boolean;
   addOrder: (orderData: Omit<Order, 'id' | 'createdAt' | 'dailyNumber' | 'orderCode'>) => Promise<boolean>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<boolean>;
+  sendConfirmationWhatsApp: (orderId: string) => Promise<boolean>;
   deleteOrder: (orderId: string) => Promise<boolean>;
   getOrdersByStatus: (status: OrderStatus) => Order[];
   getTodayOrders: () => Order[];

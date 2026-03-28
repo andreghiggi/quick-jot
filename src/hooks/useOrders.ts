@@ -425,6 +425,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
     loading,
     addOrder,
     updateOrderStatus,
+    sendConfirmationWhatsApp,
     deleteOrder,
     getOrdersByStatus,
     getTodayOrders,
