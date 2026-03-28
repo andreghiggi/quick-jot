@@ -28,9 +28,12 @@ export default function PaymentMethods() {
   const [editDialog, setEditDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [newMethodName, setNewMethodName] = useState('');
-  const [editingMethod, setEditingMethod] = useState<{ id: string; name: string } | null>(null);
+  const [newMethodPixKey, setNewMethodPixKey] = useState('');
+  const [editingMethod, setEditingMethod] = useState<{ id: string; name: string; pix_key: string } | null>(null);
   const [deletingMethodId, setDeletingMethodId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isPixName = (name: string) => name.toLowerCase().includes('pix');
 
   async function handleAdd() {
     if (!newMethodName.trim()) {
@@ -40,11 +43,20 @@ export default function PaymentMethods() {
 
     setIsSubmitting(true);
     const success = await addPaymentMethod(newMethodName.trim());
+    if (success && isPixName(newMethodName) && newMethodPixKey.trim()) {
+      // Find the newly added method and update its pix_key
+      const methods = paymentMethods;
+      const newest = methods[methods.length - 1];
+      if (newest) {
+        await updatePaymentMethod(newest.id, { pix_key: newMethodPixKey.trim() } as any);
+      }
+    }
     setIsSubmitting(false);
 
     if (success) {
       setAddDialog(false);
       setNewMethodName('');
+      setNewMethodPixKey('');
     }
   }
 
