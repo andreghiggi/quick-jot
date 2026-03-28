@@ -191,7 +191,12 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
 
   async function handleSubmit() {
     if (!customerName.trim()) {
-      toast.error('Informe o nome do cliente');
+      toast.error('Informe o nome completo do cliente');
+      return;
+    }
+    const nameParts = customerName.trim().split(/\s+/);
+    if (nameParts.length < 2 || nameParts.some(p => p.length < 2)) {
+      toast.error('Informe nome e sobrenome do cliente');
       return;
     }
     if (cart.length === 0) {
@@ -262,8 +267,8 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
           {/* Customer Info */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="customerName">Nome do cliente *</Label>
-              <Input id="customerName" placeholder="Nome do cliente" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+              <Label htmlFor="customerName">Nome Completo *</Label>
+              <Input id="customerName" placeholder="Nome e sobrenome" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="customerPhone">Telefone</Label>
