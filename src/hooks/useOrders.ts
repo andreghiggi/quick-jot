@@ -225,7 +225,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
               // Get store name and address
               const { data: companyData } = await supabase
                 .from('companies')
-                .select('name, address')
+                .select('name, address, slug')
                 .eq('id', companyId)
                 .single();
 
@@ -248,6 +248,9 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
               // Determine delivery type from order notes (contains "Retirada" or "Entrega")
               const isPickup = order.notes?.includes('Retirada') || !order.deliveryAddress;
+
+              // Build menu link
+              const menuLink = companyData?.slug ? `https://appcomandatech.agilizeerp.com.br/cardapio/${companyData.slug}` : '';
               
               const message = generateWhatsAppMessage({
                 customerName: order.customerName,
@@ -260,6 +263,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
                 googleReviewUrl,
                 estimatedTime: status === 'preparing' ? estimatedWaitTime : undefined,
                 customTemplates: Object.keys(customTemplates).length > 0 ? customTemplates : undefined,
+                menuLink,
               });
 
               if (message) {
