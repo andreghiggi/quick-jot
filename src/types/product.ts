@@ -19,6 +19,7 @@ export interface Product {
   companyId?: string;
   taxRuleId?: string | null;
   displayOrder?: number;
+  pdvItem?: boolean;
 }
 
 export interface CartItem {

@@ -4,6 +4,7 @@ import { useTaxRules } from '@/hooks/useTaxRules';
 import { useCategories, CategorySortMode } from '@/hooks/useCategories';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { Product, ProductOptional } from '@/types/product';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +29,7 @@ import { uploadCompressedImage } from '@/utils/imageUtils';
 export default function Products() {
   const { company } = useAuthContext();
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, duplicateProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { categories, addCategory, deleteCategory, updateCategory: _updateCategory, sortMode, saveSortMode, moveCategory } = useCategories({ companyId: company?.id });
   
   // Wrap updateCategory to also refetch products when a category is renamed
@@ -46,7 +48,7 @@ export default function Products() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '' });
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
   const [newCategoryName, setNewCategoryName] = useState('');
   const [storePhone, setStorePhone] = useState('');
@@ -170,7 +172,7 @@ export default function Products() {
       imageUrl: newProduct.imageUrl || undefined,
       active: newProduct.active,
     });
-    setNewProduct({ name: '', price: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '' });
+    setNewProduct({ name: '', price: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true });
     setIsProductDialogOpen(false);
   }
 
@@ -228,6 +230,7 @@ export default function Products() {
       description: editingProduct.description,
       imageUrl: editingProduct.imageUrl,
       active: editingProduct.active,
+      pdvItem: editingProduct.pdvItem,
     });
     setEditingProduct(null);
   }
@@ -417,6 +420,15 @@ export default function Products() {
               />
               <Label>Ativo</Label>
             </div>
+            {isModuleEnabled('pdv') && (
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={newProduct.pdvItem}
+                  onCheckedChange={(v) => setNewProduct({ ...newProduct, pdvItem: v })}
+                />
+                <Label>Item de PDV</Label>
+              </div>
+            )}
             <Button onClick={handleAddProduct} className="w-full">Salvar</Button>
           </div>
         </DialogContent>
@@ -1041,6 +1053,15 @@ export default function Products() {
                 />
                 <Label>Ativo</Label>
               </div>
+              {isModuleEnabled('pdv') && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={editingProduct.pdvItem !== false}
+                    onCheckedChange={(v) => setEditingProduct({ ...editingProduct, pdvItem: v })}
+                  />
+                  <Label>Item de PDV</Label>
+                </div>
+              )}
               <Button onClick={handleUpdateProduct} className="w-full">Salvar alterações</Button>
             </div>
           )}
