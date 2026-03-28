@@ -356,12 +356,12 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {financeMenuItems.length > 0 && (
+        {(financeMenuItems.length > 0 || paymentMethodsMenuItem.length > 0) && (
           <SidebarGroup>
             <SidebarGroupLabel>Financeiro</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {financeMenuItems.map((item) => (
+                {[...financeMenuItems, ...paymentMethodsMenuItem].map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild
