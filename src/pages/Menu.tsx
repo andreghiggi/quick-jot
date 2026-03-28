@@ -488,7 +488,7 @@ export default function Menu() {
           customer_name: customerName,
           customer_phone: customerPhone || null,
           delivery_address: fullAddress || null,
-          notes: `Pagamento: ${paymentMethod} | ${deliveryTypeLabel}${deliveryFee > 0 ? ` (R$ ${deliveryFee.toFixed(2)})` : ''}`,
+          notes: `Pagamento: ${paymentMethod}${(() => { const pm = activePaymentMethods.find(m => m.name === paymentMethod); return pm?.pix_key ? ` (Chave PIX: ${pm.pix_key})` : ''; })()} | ${deliveryTypeLabel}${deliveryFee > 0 ? ` (R$ ${deliveryFee.toFixed(2)})` : ''}`,
           total: orderTotal,
           status: 'pending',
           company_id: company?.id || null,
