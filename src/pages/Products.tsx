@@ -1052,6 +1052,15 @@ export default function Products() {
                 />
                 <Label>Ativo</Label>
               </div>
+              {isModuleEnabled('pdv') && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={editingProduct.pdvItem !== false}
+                    onCheckedChange={(v) => setEditingProduct({ ...editingProduct, pdvItem: v })}
+                  />
+                  <Label>Item de PDV</Label>
+                </div>
+              )}
               <Button onClick={handleUpdateProduct} className="w-full">Salvar alterações</Button>
             </div>
           )}
