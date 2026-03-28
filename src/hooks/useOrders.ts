@@ -290,6 +290,89 @@ export function useOrders(options: UseOrdersOptions = {}) {
     }
   }
 
+  async function sendConfirmationWhatsApp(orderId: string): Promise<boolean> {
+    try {
+      const order = orders.find((o) => o.id === orderId);
+      if (!order?.customerPhone || !companyId) {
+        toast.error('Pedido sem telefone ou empresa não identificada');
+        return false;
+      }
+
+      const { data: moduleData } = await supabase
+        .from('company_modules')
+        .select('enabled')
+        .eq('company_id', companyId)
+        .eq('module_name', 'whatsapp')
+        .maybeSingle();
+
+      if (!moduleData?.enabled) {
+        toast.error('Módulo WhatsApp não está habilitado');
+        return false;
+      }
+
+      const { data: instanceData } = await supabase
+        .from('whatsapp_instances')
+        .select('instance_name, status')
+        .eq('company_id', companyId)
+        .maybeSingle();
+
+      if (instanceData?.status !== 'connected') {
+        toast.error('WhatsApp não está conectado');
+        return false;
+      }
+
+      const { data: companyData } = await supabase
+        .from('companies')
+        .select('name, address')
+        .eq('id', companyId)
+        .single();
+
+      const { data: settings } = await supabase
+        .from('store_settings')
+        .select('key, value')
+        .eq('company_id', companyId)
+        .in('key', ['whatsapp_msg_pending']);
+
+      const customTemplates: Record<string, string> = {};
+      settings?.forEach(s => {
+        if (s.key?.startsWith('whatsapp_msg_') && s.value) customTemplates[s.key] = s.value;
+      });
+
+      const isPickup = order.notes?.includes('Retirada') || !order.deliveryAddress;
+
+      const message = generateWhatsAppMessage({
+        customerName: order.customerName,
+        orderNumber: order.dailyNumber,
+        orderCode: order.orderCode,
+        status: 'pending',
+        storeName: companyData?.name || 'Estabelecimento',
+        deliveryType: isPickup ? 'retirada' : 'entrega',
+        storeAddress: companyData?.address || undefined,
+        customTemplates: Object.keys(customTemplates).length > 0 ? customTemplates : undefined,
+      });
+
+      if (message) {
+        await supabase.functions.invoke('whatsapp-evolution', {
+          body: {
+            action: 'send_message',
+            instanceName: instanceData.instance_name,
+            phone: order.customerPhone,
+            message,
+            companyId,
+            orderId,
+          },
+        });
+        toast.success('Confirmação enviada via WhatsApp!');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('WhatsApp confirmation failed:', error);
+      toast.error('Erro ao enviar confirmação via WhatsApp');
+      return false;
+    }
+  }
+
   async function deleteOrder(orderId: string): Promise<boolean> {
     try {
       // Delete order items first
