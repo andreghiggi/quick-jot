@@ -337,7 +337,7 @@ export default function WhatsAppSettings() {
           </CardContent>
         </Card>
         {/* Message Templates */}
-        <WhatsAppMessageTemplates googleReviewUrl={googleReviewUrl} />
+        <WhatsAppMessageTemplates googleReviewUrl={googleReviewUrl} companyId={company?.id} updateSetting={updateSetting} />
 
         {/* Info Card */}
         <Card>

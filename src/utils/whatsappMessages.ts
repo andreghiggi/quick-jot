@@ -16,7 +16,7 @@ interface MessageParams {
 function applyTemplate(template: string, vars: Record<string, string>): string {
   let result = template;
   for (const [key, value] of Object.entries(vars)) {
-    result = result.replaceAll(key, value);
+    result = result.split(key).join(value);
   }
   // Clean up empty variable placeholders (e.g. {{tempo}} when no time set)
   result = result.replace(/\s*Tempo estimado:\s*\.\s*/g, ' ');
