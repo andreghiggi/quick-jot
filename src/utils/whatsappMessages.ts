@@ -11,6 +11,7 @@ interface MessageParams {
   googleReviewUrl?: string;
   storeAddress?: string;
   customTemplates?: Record<string, string>;
+  menuLink?: string;
 }
 
 function applyTemplate(template: string, vars: Record<string, string>): string {
