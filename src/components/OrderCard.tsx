@@ -156,13 +156,28 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
         </div>
         <hr class="divider">
         <div class="section">
-          <p><span class="label">Cliente:</span> ${order.customerName}</p>
-          ${order.customerPhone ? `<p><span class="label">Tel:</span> ${order.customerPhone}</p>` : ''}
+          <p><span class="label">CLIENTE:</span> ${order.customerName}</p>
+          ${order.customerPhone ? `<p><span class="label">TEL:</span> ${order.customerPhone}</p>` : ''}
+          ${(() => {
+            // Extract CPF, city, state from notes if present
+            const notes = order.notes || '';
+            const cpfMatch = notes.match(/CPF:\s*([^\n|]+)/i);
+            const cidadeMatch = notes.match(/Cidade:\s*([^\n|]+)/i);
+            const estadoMatch = notes.match(/Estado:\s*([^\n|]+)/i);
+            let extraInfo = '';
+            if (cpfMatch) extraInfo += `<p><span class="label">CPF:</span> ${cpfMatch[1].trim()}</p>`;
+            if (cidadeMatch || estadoMatch) {
+              const city = cidadeMatch ? cidadeMatch[1].trim() : '';
+              const state = estadoMatch ? estadoMatch[1].trim() : '';
+              extraInfo += `<p><span class="label">LOCAL:</span> ${[city, state].filter(Boolean).join(' - ')}</p>`;
+            }
+            return extraInfo;
+          })()}
         </div>
         ${order.deliveryAddress 
-          ? `<div class="delivery-badge">ENTREGA</div>
-             <div class="section"><p>${order.deliveryAddress}</p></div>` 
-          : `<div class="delivery-badge">RETIRADA NO LOCAL</div>`}
+          ? `<div class="delivery-badge">🛵 ENTREGA</div>
+             <div class="section"><p><span class="label">END:</span> ${order.deliveryAddress}</p></div>` 
+          : `<div class="delivery-badge">🏪 RETIRADA NO LOCAL</div>`}
         <hr class="divider">
         <div class="section">
           ${order.items.map(item => {
