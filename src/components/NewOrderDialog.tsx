@@ -267,8 +267,8 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
           {/* Customer Info */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="customerName">Nome do cliente *</Label>
-              <Input id="customerName" placeholder="Nome do cliente" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+              <Label htmlFor="customerName">Nome Completo *</Label>
+              <Input id="customerName" placeholder="Nome e sobrenome" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="customerPhone">Telefone</Label>
