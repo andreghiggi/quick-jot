@@ -99,8 +99,8 @@ export default function PaymentMethods() {
     await updatePaymentMethod(id, { active });
   }
 
-  function openEditDialog(method: { id: string; name: string }) {
-    setEditingMethod({ ...method });
+  function openEditDialog(method: { id: string; name: string; pix_key?: string | null }) {
+    setEditingMethod({ id: method.id, name: method.name, pix_key: method.pix_key || '' });
     setEditDialog(true);
   }
 
