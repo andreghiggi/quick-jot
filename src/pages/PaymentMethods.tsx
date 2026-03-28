@@ -67,7 +67,13 @@ export default function PaymentMethods() {
     }
 
     setIsSubmitting(true);
-    const success = await updatePaymentMethod(editingMethod.id, { name: editingMethod.name.trim() });
+    const updateData: any = { name: editingMethod.name.trim() };
+    if (isPixName(editingMethod.name)) {
+      updateData.pix_key = editingMethod.pix_key?.trim() || null;
+    } else {
+      updateData.pix_key = null;
+    }
+    const success = await updatePaymentMethod(editingMethod.id, updateData);
     setIsSubmitting(false);
 
     if (success) {
