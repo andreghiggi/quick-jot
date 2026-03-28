@@ -42,15 +42,7 @@ export default function PaymentMethods() {
     }
 
     setIsSubmitting(true);
-    const success = await addPaymentMethod(newMethodName.trim());
-    if (success && isPixName(newMethodName) && newMethodPixKey.trim()) {
-      // Find the newly added method and update its pix_key
-      const methods = paymentMethods;
-      const newest = methods[methods.length - 1];
-      if (newest) {
-        await updatePaymentMethod(newest.id, { pix_key: newMethodPixKey.trim() } as any);
-      }
-    }
+    const success = await addPaymentMethod(newMethodName.trim(), isPixName(newMethodName) ? newMethodPixKey.trim() || undefined : undefined);
     setIsSubmitting(false);
 
     if (success) {
