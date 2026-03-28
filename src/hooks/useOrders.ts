@@ -340,7 +340,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
       const isPickup = order.notes?.includes('Retirada') || !order.deliveryAddress;
 
-      const message = generateWhatsAppMessage({
+      let message = generateWhatsAppMessage({
         customerName: order.customerName,
         orderNumber: order.dailyNumber,
         orderCode: order.orderCode,
@@ -350,6 +350,25 @@ export function useOrders(options: UseOrdersOptions = {}) {
         storeAddress: companyData?.address || undefined,
         customTemplates: Object.keys(customTemplates).length > 0 ? customTemplates : undefined,
       });
+
+      // Append PIX key if payment method is PIX
+      if (message && order.notes) {
+        const paymentMatch = order.notes.match(/Pagamento:\s*(.+?)(\s*\||$)/i);
+        const paymentName = paymentMatch?.[1]?.trim();
+        if (paymentName && paymentName.toLowerCase().includes('pix')) {
+          const { data: pixMethod } = await supabase
+            .from('payment_methods')
+            .select('pix_key')
+            .eq('company_id', companyId)
+            .ilike('name', '%pix%')
+            .not('pix_key', 'is', null)
+            .maybeSingle();
+
+          if (pixMethod?.pix_key) {
+            message += `\n\n💳 *Pagamento via PIX*\n🔑 Chave: ${pixMethod.pix_key}`;
+          }
+        }
+      }
 
       if (message) {
         await supabase.functions.invoke('whatsapp-evolution', {
