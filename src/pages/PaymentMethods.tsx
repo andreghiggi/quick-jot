@@ -156,10 +156,15 @@ export default function PaymentMethods() {
                     key={method.id} 
                     className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
                   >
-                    <div className="flex items-center gap-3">
-                      <GripVertical className="w-4 h-4 text-muted-foreground" />
-                      <CreditCard className="w-5 h-5 text-primary" />
-                      <span className="font-medium">{method.name}</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <CreditCard className="w-5 h-5 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <span className="font-medium">{method.name}</span>
+                        {method.pix_key && (
+                          <p className="text-xs text-muted-foreground truncate">Chave: {method.pix_key}</p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2">
