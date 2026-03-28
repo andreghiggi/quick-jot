@@ -230,6 +230,7 @@ export default function Products() {
       description: editingProduct.description,
       imageUrl: editingProduct.imageUrl,
       active: editingProduct.active,
+      pdvItem: editingProduct.pdvItem,
     });
     setEditingProduct(null);
   }
