@@ -1,0 +1,1 @@
+ALTER TABLE public.payment_methods ADD COLUMN pix_key text DEFAULT NULL;

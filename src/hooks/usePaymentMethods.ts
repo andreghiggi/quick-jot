@@ -8,6 +8,7 @@ export interface PaymentMethod {
   name: string;
   active: boolean;
   display_order: number;
+  pix_key: string | null;
   created_at: string;
   updated_at: string;
 }
