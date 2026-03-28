@@ -118,7 +118,7 @@ export default function PaymentMethods() {
               Formas de Pagamento
             </CardTitle>
             <CardDescription>
-              Configure as formas de pagamento disponíveis no PDV
+              Configure as formas de pagamento do seu estabelecimento (cardápio e PDV)
             </CardDescription>
           </CardHeader>
           <CardContent>

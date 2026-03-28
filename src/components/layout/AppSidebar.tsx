@@ -120,12 +120,16 @@ export function AppSidebar() {
       icon: Wallet,
       href: '/financeiro/relatorios',
     },
+  ] : [];
+
+  // Formas de pagamento disponível para todas as empresas
+  const paymentMethodsMenuItem = [
     {
       title: 'Formas de Pagamento',
       icon: CreditCard,
       href: '/formas-pagamento',
     },
-  ] : [];
+  ];
 
   const mesasConfigItems = isModuleEnabled('mesas') && isCompanyAdmin() ? [
     {
@@ -352,12 +356,12 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {financeMenuItems.length > 0 && (
+        {(financeMenuItems.length > 0 || paymentMethodsMenuItem.length > 0) && (
           <SidebarGroup>
             <SidebarGroupLabel>Financeiro</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {financeMenuItems.map((item) => (
+                {[...financeMenuItems, ...paymentMethodsMenuItem].map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild
