@@ -4,6 +4,7 @@ import { useTaxRules } from '@/hooks/useTaxRules';
 import { useCategories, CategorySortMode } from '@/hooks/useCategories';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { Product, ProductOptional } from '@/types/product';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
