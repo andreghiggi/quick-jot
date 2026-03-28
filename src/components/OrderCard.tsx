@@ -306,6 +306,18 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           >
             <Trash2 className="w-4 h-4" />
           </Button>
+          {order.status === 'pending' && (
+            <Button
+              size="sm"
+              variant={confirmed ? 'outline' : 'secondary'}
+              onClick={handleConfirmOrder}
+              disabled={confirming || confirmed}
+              className="gap-1"
+            >
+              {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              {confirmed ? 'Confirmado' : 'Confirmar'}
+            </Button>
+          )}
           {config.next && (
             <Button 
               size="sm" 
