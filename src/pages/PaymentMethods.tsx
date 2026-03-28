@@ -238,6 +238,17 @@ export default function PaymentMethods() {
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
               />
             </div>
+            {isPixName(newMethodName) && (
+              <div className="space-y-2">
+                <Label>Chave PIX</Label>
+                <Input
+                  placeholder="Ex: email@exemplo.com, CPF, CNPJ ou telefone"
+                  value={newMethodPixKey}
+                  onChange={(e) => setNewMethodPixKey(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialog(false)}>Cancelar</Button>
