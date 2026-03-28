@@ -237,11 +237,13 @@ export function useOrders(options: UseOrdersOptions = {}) {
                 .from('store_settings')
                 .select('key, value')
                 .eq('company_id', companyId)
-                .in('key', ['google_review_url', 'estimated_wait_time']);
+                .in('key', ['google_review_url', 'estimated_wait_time', 'whatsapp_msg_pending', 'whatsapp_msg_preparing', 'whatsapp_msg_ready_pickup', 'whatsapp_msg_ready_delivery', 'whatsapp_msg_delivered']);
 
+              const customTemplates: Record<string, string> = {};
               settings?.forEach(s => {
                 if (s.key === 'google_review_url' && s.value) googleReviewUrl = s.value;
                 if (s.key === 'estimated_wait_time' && s.value) estimatedWaitTime = s.value;
+                if (s.key?.startsWith('whatsapp_msg_') && s.value) customTemplates[s.key] = s.value;
               });
 
               // Determine delivery type from order notes (contains "Retirada" or "Entrega")
@@ -257,6 +259,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
                 storeAddress: companyData?.address || undefined,
                 googleReviewUrl,
                 estimatedTime: status === 'preparing' ? estimatedWaitTime : undefined,
+                customTemplates: Object.keys(customTemplates).length > 0 ? customTemplates : undefined,
               });
 
               if (message) {
