@@ -1321,18 +1321,29 @@ export default function Menu() {
                   <div>
                     <Label>Forma de pagamento *</Label>
                     <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Pix" id="pix" />
-                        <Label htmlFor="pix" className="cursor-pointer">Pix</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Dinheiro" id="dinheiro" />
-                        <Label htmlFor="dinheiro" className="cursor-pointer">Dinheiro</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Cartão" id="cartao" />
-                        <Label htmlFor="cartao" className="cursor-pointer">Cartão</Label>
-                      </div>
+                      {activePaymentMethods.length > 0 ? (
+                        activePaymentMethods.map((method) => (
+                          <div key={method.id} className="flex items-center space-x-2">
+                            <RadioGroupItem value={method.name} id={`payment-${method.id}`} />
+                            <Label htmlFor={`payment-${method.id}`} className="cursor-pointer">{method.name}</Label>
+                          </div>
+                        ))
+                      ) : (
+                        <>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Pix" id="pix" />
+                            <Label htmlFor="pix" className="cursor-pointer">Pix</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Dinheiro" id="dinheiro" />
+                            <Label htmlFor="dinheiro" className="cursor-pointer">Dinheiro</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Cartão" id="cartao" />
+                            <Label htmlFor="cartao" className="cursor-pointer">Cartão</Label>
+                          </div>
+                        </>
+                      )}
                     </RadioGroup>
                   </div>
                 </div>
