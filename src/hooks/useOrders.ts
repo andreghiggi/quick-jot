@@ -351,9 +351,19 @@ export function useOrders(options: UseOrdersOptions = {}) {
         customTemplates: Object.keys(customTemplates).length > 0 ? customTemplates : undefined,
       });
 
+      // Append order summary
+      if (message && order.items.length > 0) {
+        message += '\n\n📋 *Resumo do pedido:*';
+        order.items.forEach(item => {
+          message += `\n• ${item.quantity}x ${item.name} - R$ ${(item.price * item.quantity).toFixed(2)}`;
+          if (item.notes) message += ` _(${item.notes})_`;
+        });
+        message += `\n\n💰 *Total: R$ ${order.total.toFixed(2)}*`;
+      }
+
       // Append PIX key if payment method is PIX
       if (message && order.notes) {
-        const paymentMatch = order.notes.match(/Pagamento:\s*(.+?)(\s*\||$)/i);
+        const paymentMatch = order.notes.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i);
         const paymentName = paymentMatch?.[1]?.trim();
         if (paymentName && paymentName.toLowerCase().includes('pix')) {
           const { data: pixMethod } = await supabase
@@ -365,7 +375,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
             .maybeSingle();
 
           if (pixMethod?.pix_key) {
-            message += `\n\n💳 *Pagamento via PIX*\n🔑 Chave: ${pixMethod.pix_key}`;
+            message += `\n\n💳 *Pagamento via PIX*\n\n🔑 Chave PIX para copiar:\n\`${pixMethod.pix_key}\`\n\nCopie a chave acima e cole no seu app de pagamento.`;
           }
         }
       }
