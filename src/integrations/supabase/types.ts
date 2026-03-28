@@ -716,6 +716,7 @@ export type Database = {
           customer_phone: string | null
           daily_number: number | null
           delivery_address: string | null
+          followup_sent: boolean
           id: string
           notes: string | null
           order_code: string
@@ -732,6 +733,7 @@ export type Database = {
           customer_phone?: string | null
           daily_number?: number | null
           delivery_address?: string | null
+          followup_sent?: boolean
           id?: string
           notes?: string | null
           order_code?: string
@@ -748,6 +750,7 @@ export type Database = {
           customer_phone?: string | null
           daily_number?: number | null
           delivery_address?: string | null
+          followup_sent?: boolean
           id?: string
           notes?: string | null
           order_code?: string

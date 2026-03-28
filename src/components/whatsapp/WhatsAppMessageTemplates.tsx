@@ -12,7 +12,7 @@ interface WhatsAppMessageTemplatesProps {
   updateSetting: (key: string, value: string) => Promise<boolean>;
 }
 
-const SYSTEM_VARIABLES = ['{{nome}}', '{{num}}', '{{loja}}', '{{tempo}}', '{{endereco}}'];
+const SYSTEM_VARIABLES = ['{{nome}}', '{{num}}', '{{loja}}', '{{tempo}}', '{{endereco}}', '{{link_cardapio}}'];
 
 const TEMPLATE_CONFIGS = [
   {
@@ -49,6 +49,13 @@ const TEMPLATE_CONFIGS = [
     color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
     defaultMsg: '{{nome}}, seu pedido {{num}} foi finalizado. Obrigado por escolher o {{loja}}, esperamos que tenha gostado!',
     hint: 'Enviada quando o pedido é finalizado.',
+  },
+  {
+    status: 'Follow-up (30min após entrega)',
+    settingKey: 'whatsapp_msg_followup',
+    color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
+    defaultMsg: '{{nome}}, que bom ter você como cliente do {{loja}}! 😊\n\nEsperamos que tenha gostado do seu pedido. Quando quiser pedir novamente, é só acessar nosso cardápio:\n\n🛒 {{link_cardapio}}\n\nTe esperamos! 💛',
+    hint: 'Enviada automaticamente 30 minutos após o pedido ser entregue, com link para novo pedido.',
   },
 ];
 
@@ -242,7 +249,7 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
 
         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground">
-            <strong>Variáveis disponíveis:</strong> {'{{nome}}'} = primeiro nome do cliente, {'{{num}}'} = código do pedido, {'{{loja}}'} = nome do estabelecimento, {'{{tempo}}'} = tempo estimado de preparo, {'{{endereco}}'} = endereço da loja. As variáveis são substituídas automaticamente ao enviar.
+            <strong>Variáveis disponíveis:</strong> {'{{nome}}'} = primeiro nome do cliente, {'{{num}}'} = código do pedido, {'{{loja}}'} = nome do estabelecimento, {'{{tempo}}'} = tempo estimado de preparo, {'{{endereco}}'} = endereço da loja, {'{{link_cardapio}}'} = link do cardápio público. As variáveis são substituídas automaticamente ao enviar.
           </p>
         </div>
       </CardContent>
