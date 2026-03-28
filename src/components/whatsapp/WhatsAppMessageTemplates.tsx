@@ -11,7 +11,7 @@ interface WhatsAppMessageTemplatesProps {
   updateSetting: (key: string, value: string) => Promise<boolean>;
 }
 
-const SYSTEM_VARIABLES = ['{{nome}}', '{{num}}', '{{loja}}', '{{tempo}}', '{{endereco}}', '{{link_cardapio}}', '{{chave_pix}}'];
+const SYSTEM_VARIABLES = ['{{nome}}', '{{num}}', '{{loja}}', '{{tempo}}', '{{endereco}}', '{{link_cardapio}}', '{{chave_pix}}', '{{google_review}}', '{{horario}}'];
 
 const TEMPLATE_CONFIGS = [
   {
