@@ -82,7 +82,7 @@ export default function Menu() {
   const { neighborhoods, loading: neighborhoodsLoading, getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
   const { loading: hoursLoading, isCurrentlyOpen, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
-  
+  const { activePaymentMethods, loading: paymentMethodsLoading } = usePaymentMethods({ companyId: company?.id });
   const isOpen = isCurrentlyOpen();
   const formattedHours = getFormattedHours();
   
