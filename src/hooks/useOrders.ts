@@ -361,7 +361,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         message += `\n\n💰 *Total: R$ ${order.total.toFixed(2)}*`;
       }
 
-      // Append PIX key if payment method is PIX
+      // Append PIX message if payment method is PIX
       if (message && order.notes) {
         const paymentMatch = order.notes.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i);
         const paymentName = paymentMatch?.[1]?.trim();
@@ -375,7 +375,27 @@ export function useOrders(options: UseOrdersOptions = {}) {
             .maybeSingle();
 
           if (pixMethod?.pix_key) {
-            message += `\n\n💳 *Pagamento via PIX*\n\n🔑 Chave PIX para copiar:\n\`${pixMethod.pix_key}\`\n\nCopie a chave acima e cole no seu app de pagamento.`;
+            const pixTemplate = customTemplates['whatsapp_msg_pix'];
+            const name = order.customerName.split(' ')[0];
+            const num = order.orderCode ? `#${order.orderCode}` : `#${String(order.dailyNumber).padStart(3, '0')}`;
+            
+            if (pixTemplate) {
+              let pixMsg = pixTemplate;
+              const pixVars: Record<string, string> = {
+                '{{nome}}': name,
+                '{{num}}': num,
+                '{{loja}}': companyData?.name || 'Estabelecimento',
+                '{{chave_pix}}': pixMethod.pix_key,
+                '{{tempo}}': '',
+                '{{endereco}}': companyData?.address || '',
+              };
+              for (const [key, value] of Object.entries(pixVars)) {
+                pixMsg = pixMsg.split(key).join(value);
+              }
+              message += '\n\n' + pixMsg;
+            } else {
+              message += `\n\n💳 *Pagamento via PIX*\n\n🔑 Chave PIX para copiar:\n\`${pixMethod.pix_key}\`\n\nCopie a chave acima e cole no seu app de pagamento.`;
+            }
           }
         }
       }
