@@ -193,15 +193,13 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
 
             {editingKey === config.settingKey ? (
               <div className="space-y-2">
-                <Textarea
+                <ProtectedVariableEditor
                   value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  rows={3}
-                  className="text-sm"
-                  placeholder="Digite a mensagem personalizada..."
+                  onChange={setEditValue}
+                  variables={SYSTEM_VARIABLES}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {config.hint} Use as variáveis abaixo para dados dinâmicos.
+                  {config.hint} As variáveis destacadas não podem ser removidas. Clique em uma variável abaixo para adicioná-la.
                 </p>
                 <div className="flex gap-2 flex-wrap">
                   {SYSTEM_VARIABLES.map(v => (
