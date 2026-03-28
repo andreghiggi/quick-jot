@@ -122,6 +122,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       if (productData.description !== undefined) updateData.description = productData.description || null;
       if (productData.imageUrl !== undefined) updateData.image_url = productData.imageUrl;
       if (productData.active !== undefined) updateData.active = productData.active;
+      if (productData.pdvItem !== undefined) updateData.pdv_item = productData.pdvItem;
 
       const { error } = await supabase
         .from('products')

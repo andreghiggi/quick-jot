@@ -251,7 +251,7 @@ export default function PDV() {
 
   const loading = productsLoading || paymentLoading || registerLoading;
 
-  const activeProducts = products.filter(p => p.active);
+  const activeProducts = products.filter(p => p.active && p.pdvItem !== false);
   const categories = [...new Set(activeProducts.map(p => p.category))];
 
   const filteredProducts = activeProducts.filter(p => {
