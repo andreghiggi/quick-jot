@@ -566,6 +566,10 @@ export default function Menu() {
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
     message += `*Tipo:* ${deliveryTypeLabel}\n`;
     message += `*Pagamento:* ${paymentMethod}\n`;
+    const selectedPixMethod = activePaymentMethods.find(m => m.name === paymentMethod);
+    if (selectedPixMethod?.pix_key) {
+      message += `*Chave PIX:* ${selectedPixMethod.pix_key}\n`;
+    }
     if (fullAddress) message += `*Endereço:* ${fullAddress}\n`;
     message += `\n───────────────────\n`;
     message += `*ITENS DO PEDIDO*\n`;
