@@ -12,7 +12,7 @@ interface WhatsAppMessageTemplatesProps {
   updateSetting: (key: string, value: string) => Promise<boolean>;
 }
 
-const SYSTEM_VARIABLES = ['{{nome}}', '{{num}}', '{{loja}}', '{{tempo}}', '{{endereco}}'];
+const SYSTEM_VARIABLES = ['{{nome}}', '{{num}}', '{{loja}}', '{{tempo}}', '{{endereco}}', '{{link_cardapio}}'];
 
 const TEMPLATE_CONFIGS = [
   {
