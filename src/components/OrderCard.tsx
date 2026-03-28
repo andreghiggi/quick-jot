@@ -66,6 +66,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     minute: '2-digit' 
   });
 
+  async function handleConfirmOrder() {
+    setConfirming(true);
+    const success = await sendConfirmationWhatsApp(order.id);
+    setConfirming(false);
+    if (success) setConfirmed(true);
+  }
+
   async function handleAdvanceStatus() {
     if (config.next) {
       await updateOrderStatus(order.id, config.next);
