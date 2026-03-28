@@ -59,6 +59,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         companyId: product.company_id || undefined,
         taxRuleId: product.tax_rule_id || null,
         displayOrder: product.display_order ?? 0,
+        pdvItem: product.pdv_item ?? true,
         optionals: optionalsData
           .filter((opt) => opt.product_id === product.id)
           .map((opt) => ({
