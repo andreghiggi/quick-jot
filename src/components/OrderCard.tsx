@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Order, OrderStatus } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2 } from 'lucide-react';
+import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2 } from 'lucide-react';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -50,8 +51,10 @@ const nextStatusLabel: Record<OrderStatus, string> = {
 };
 
 export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech' }: OrderCardProps) {
-  const { updateOrderStatus, deleteOrder } = useOrderContext();
+  const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
   const config = statusConfig[order.status];
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
   // Converter para fuso horário de São Paulo
   const createdAt = new Date(order.createdAt);
   const timeAgo = formatTimeAgo(createdAt);
@@ -62,6 +65,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     hour: '2-digit', 
     minute: '2-digit' 
   });
+
+  async function handleConfirmOrder() {
+    setConfirming(true);
+    const success = await sendConfirmationWhatsApp(order.id);
+    setConfirming(false);
+    if (success) setConfirmed(true);
+  }
 
   async function handleAdvanceStatus() {
     if (config.next) {
@@ -296,6 +306,18 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           >
             <Trash2 className="w-4 h-4" />
           </Button>
+          {order.status === 'pending' && (
+            <Button
+              size="sm"
+              variant={confirmed ? 'outline' : 'secondary'}
+              onClick={handleConfirmOrder}
+              disabled={confirming || confirmed}
+              className="gap-1"
+            >
+              {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              {confirmed ? 'Confirmado' : 'Confirmar'}
+            </Button>
+          )}
           {config.next && (
             <Button 
               size="sm" 
