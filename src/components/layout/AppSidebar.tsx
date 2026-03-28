@@ -120,12 +120,16 @@ export function AppSidebar() {
       icon: Wallet,
       href: '/financeiro/relatorios',
     },
+  ] : [];
+
+  // Formas de pagamento disponível para todas as empresas
+  const paymentMethodsMenuItem = [
     {
       title: 'Formas de Pagamento',
       icon: CreditCard,
       href: '/formas-pagamento',
     },
-  ] : [];
+  ];
 
   const mesasConfigItems = isModuleEnabled('mesas') && isCompanyAdmin() ? [
     {
