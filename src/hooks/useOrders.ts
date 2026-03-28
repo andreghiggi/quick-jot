@@ -259,6 +259,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
                 storeAddress: companyData?.address || undefined,
                 googleReviewUrl,
                 estimatedTime: status === 'preparing' ? estimatedWaitTime : undefined,
+                customTemplates: Object.keys(customTemplates).length > 0 ? customTemplates : undefined,
               });
 
               if (message) {
