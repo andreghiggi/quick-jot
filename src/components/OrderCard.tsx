@@ -51,8 +51,10 @@ const nextStatusLabel: Record<OrderStatus, string> = {
 };
 
 export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech' }: OrderCardProps) {
-  const { updateOrderStatus, deleteOrder } = useOrderContext();
+  const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
   const config = statusConfig[order.status];
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
   // Converter para fuso horário de São Paulo
   const createdAt = new Date(order.createdAt);
   const timeAgo = formatTimeAgo(createdAt);
