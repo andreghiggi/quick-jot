@@ -384,7 +384,7 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
 
         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground">
-            <strong>Variáveis disponíveis:</strong> {'{{nome}}'} = primeiro nome do cliente, {'{{num}}'} = código do pedido, {'{{loja}}'} = nome do estabelecimento, {'{{tempo}}'} = tempo estimado de preparo, {'{{endereco}}'} = endereço da loja, {'{{link_cardapio}}'} = link do cardápio público. As variáveis são substituídas automaticamente ao enviar.
+            <strong>Variáveis disponíveis:</strong> {'{{nome}}'} = primeiro nome do cliente, {'{{num}}'} = código do pedido, {'{{loja}}'} = nome do estabelecimento, {'{{tempo}}'} = tempo estimado de preparo, {'{{endereco}}'} = endereço da loja, {'{{link_cardapio}}'} = link do cardápio público, {'{{chave_pix}}'} = chave PIX cadastrada. As variáveis são substituídas automaticamente ao enviar.
           </p>
         </div>
       </CardContent>
