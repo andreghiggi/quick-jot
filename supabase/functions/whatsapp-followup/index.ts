@@ -77,18 +77,23 @@ Deno.serve(async (req) => {
 
       if (!companyData) continue;
 
-      // Get custom followup message template
-      const { data: settingData } = await supabase
+      // Get custom followup message template and google review url
+      const { data: settingsData } = await supabase
         .from("store_settings")
-        .select("value")
+        .select("key, value")
         .eq("company_id", companyId)
-        .eq("key", "whatsapp_msg_followup")
-        .maybeSingle();
+        .in("key", ["whatsapp_msg_followup", "google_review_url"]);
 
-      const menuLink = `https://comandatech.com.br/${companyData.slug}`;
+      const settingsMap: Record<string, string> = {};
+      settingsData?.forEach((s: any) => {
+        if (s.value) settingsMap[s.key] = s.value;
+      });
+
+      const menuLink = `https://appcomandatech.agilizeerp.com.br/cardapio/${companyData.slug}`;
+      const googleReviewUrl = settingsMap['google_review_url'] || '';
       const defaultMessage = `{{nome}}, que bom ter você como cliente do {{loja}}! 😊\n\nEsperamos que tenha gostado do seu pedido. Quando quiser pedir novamente, é só acessar nosso cardápio:\n\n🛒 {{link_cardapio}}\n\nTe esperamos! 💛`;
 
-      const template = settingData?.value || defaultMessage;
+      const template = settingsMap['whatsapp_msg_followup'] || defaultMessage;
 
       const companyOrders = orders.filter((o) => o.company_id === companyId);
 
@@ -99,7 +104,8 @@ Deno.serve(async (req) => {
         const message = template
           .split("{{nome}}").join(firstName)
           .split("{{loja}}").join(companyData.name)
-          .split("{{link_cardapio}}").join(menuLink);
+          .split("{{link_cardapio}}").join(menuLink)
+          .split("{{google_review}}").join(googleReviewUrl);
 
         try {
           const { error: sendError } = await supabase.functions.invoke("whatsapp-evolution", {
