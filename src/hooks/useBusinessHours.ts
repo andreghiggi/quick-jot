@@ -213,8 +213,13 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
     if (config.alwaysOpen) return 'Aberto 24h';
     
     const now = new Date();
-    const spTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-    const dayOfWeek = spTime.getDay();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      weekday: 'short',
+    });
+    const weekdayStr = formatter.format(now);
+    const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const dayOfWeek = dayMap[weekdayStr] ?? now.getDay();
     
     const todayConfig = config.days.find((d) => d.dayOfWeek === dayOfWeek);
     
