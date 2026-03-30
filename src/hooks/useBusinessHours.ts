@@ -183,10 +183,20 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
     if (config.alwaysOpen) return true;
 
     const now = new Date();
-    // Use São Paulo timezone
-    const spTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-    const dayOfWeek = spTime.getDay();
-    const currentTime = `${String(spTime.getHours()).padStart(2, '0')}:${String(spTime.getMinutes()).padStart(2, '0')}`;
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      hour: 'numeric',
+      minute: 'numeric',
+      weekday: 'short',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(now);
+    const hours = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+    const minutes = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+    const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const weekdayStr = parts.find(p => p.type === 'weekday')?.value || '';
+    const dayOfWeek = dayMap[weekdayStr] ?? now.getDay();
+    const currentTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
     const todayConfig = config.days.find((d) => d.dayOfWeek === dayOfWeek);
     
