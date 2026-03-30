@@ -197,9 +197,7 @@ serve(async (req) => {
       }
 
       // Get company + module check + business hours + settings in parallel
-      const now = new Date();
-      const brTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-      const dayOfWeek = brTime.getDay();
+      const { dayOfWeek } = getSaoPauloTime();
 
       const [companyRes, moduleRes, hoursRes, settingsRes, schedulingModuleRes] = await Promise.all([
         supabase.from('companies').select('name, slug').eq('id', companyId).single(),
