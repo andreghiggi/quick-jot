@@ -44,16 +44,32 @@ function formatBusinessHours(hours: any[]): string {
     .join(' e ');
 }
 
+function getSaoPauloTime(): { hours: number; minutes: number; dayOfWeek: number } {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    hour: 'numeric',
+    minute: 'numeric',
+    weekday: 'short',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(now);
+  const hours = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+  const minutes = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+  const weekdayStr = parts.find(p => p.type === 'weekday')?.value || '';
+  const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const dayOfWeek = dayMap[weekdayStr] ?? new Date().getDay();
+  return { hours, minutes, dayOfWeek };
+}
+
 function isWithinBusinessHours(hours: any[]): boolean {
   if (!hours || hours.length === 0) return true; // No hours configured = always open
   
   // Check always_open flag
   if (hours.some(h => h.always_open)) return true;
   
-  const now = new Date();
-  // Convert to Brazil timezone (UTC-3)
-  const brTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-  const currentMinutes = brTime.getHours() * 60 + brTime.getMinutes();
+  const { hours: h, minutes: m } = getSaoPauloTime();
+  const currentMinutes = h * 60 + m;
   
   const openHours = hours.filter(h => h.is_open && h.open_time && h.close_time);
   
