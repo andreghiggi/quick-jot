@@ -266,7 +266,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
           'apikey': EVOLUTION_API_KEY,
         },
-        body: JSON.stringify({ number: senderPhone, text: greetingMessage }),
+        body: JSON.stringify({ number: senderPhone, text: greetingMessage, linkPreview: false }),
       });
 
       const responseData = await res.json();

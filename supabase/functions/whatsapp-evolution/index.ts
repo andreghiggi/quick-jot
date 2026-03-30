@@ -150,6 +150,7 @@ serve(async (req) => {
           body: JSON.stringify({
             number: fullPhone,
             text: message,
+            linkPreview: false,
           }),
         });
         const data = await res.json();
