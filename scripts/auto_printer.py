@@ -13,7 +13,7 @@ import tempfile
 import subprocess
 import os
 import webbrowser
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 # ============================================
 # CONFIGURAÇÃO
