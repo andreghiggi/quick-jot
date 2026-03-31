@@ -40,7 +40,7 @@ pedidos_impressos_sessao = []
 
 def log(msg, tipo="INFO"):
     """Log com timestamp"""
-    agora = datetime.now().strftime("%H:%M:%S")
+    agora = datetime.now(timezone(timedelta(hours=-3))).strftime("%H:%M:%S")
     print(f"[{agora}] [{tipo}] {msg}")
 
 def buscar_empresa_por_slug(slug):
