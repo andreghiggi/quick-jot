@@ -13,7 +13,7 @@ import tempfile
 import subprocess
 import os
 import webbrowser
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 # ============================================
 # CONFIGURAÇÃO
@@ -40,7 +40,7 @@ pedidos_impressos_sessao = []
 
 def log(msg, tipo="INFO"):
     """Log com timestamp"""
-    agora = datetime.now().strftime("%H:%M:%S")
+    agora = datetime.now(timezone(timedelta(hours=-3))).strftime("%H:%M:%S")
     print(f"[{agora}] [{tipo}] {msg}")
 
 def buscar_empresa_por_slug(slug):
@@ -141,7 +141,7 @@ def marcar_como_impresso(order_id):
         url = f"{SUPABASE_URL}/rest/v1/orders?id=eq.{order_id}"
         data = {
             "printed": True,
-            "printed_at": datetime.utcnow().isoformat() + "Z"
+            "printed_at": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
         }
         r = requests.patch(url, headers=HEADERS, json=data)
         if r.ok:
@@ -162,10 +162,11 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     # Número do pedido
     order_num = pedido.get('order_code') or pedido.get('daily_number', '?')
     
-    # Data/Hora formatada
+    # Data/Hora formatada (convertido para fuso São Paulo UTC-3)
     try:
-        dt = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
-        formatted_date = dt.strftime('%d/%m/%Y %H:%M')
+        dt_utc = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
+        dt_sp = dt_utc.astimezone(timezone(timedelta(hours=-3)))
+        formatted_date = dt_sp.strftime('%d/%m/%Y %H:%M')
     except:
         formatted_date = pedido.get('created_at', '')[:16]
     
