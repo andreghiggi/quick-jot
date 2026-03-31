@@ -162,10 +162,11 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     # Número do pedido
     order_num = pedido.get('order_code') or pedido.get('daily_number', '?')
     
-    # Data/Hora formatada
+    # Data/Hora formatada (convertido para fuso São Paulo UTC-3)
     try:
-        dt = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
-        formatted_date = dt.strftime('%d/%m/%Y %H:%M')
+        dt_utc = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
+        dt_sp = dt_utc.astimezone(timezone(timedelta(hours=-3)))
+        formatted_date = dt_sp.strftime('%d/%m/%Y %H:%M')
     except:
         formatted_date = pedido.get('created_at', '')[:16]
     
