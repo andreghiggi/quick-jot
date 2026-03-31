@@ -141,7 +141,7 @@ def marcar_como_impresso(order_id):
         url = f"{SUPABASE_URL}/rest/v1/orders?id=eq.{order_id}"
         data = {
             "printed": True,
-            "printed_at": datetime.utcnow().isoformat() + "Z"
+            "printed_at": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
         }
         r = requests.patch(url, headers=HEADERS, json=data)
         if r.ok:
