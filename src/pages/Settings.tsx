@@ -672,12 +672,62 @@ pause
 
         {/* Tab Entrega */}
         <TabsContent value="entrega" className="space-y-6">
-          {/* Delivery Mode Selection */}
+          {/* Delivery Modes Enable/Disable */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Truck className="w-5 h-5" />
-                Modo de Entrega
+                Modalidades de Entrega
+              </CardTitle>
+              <CardDescription>
+                Selecione quais opções de entrega seu estabelecimento oferece. Pelo menos uma deve estar ativa.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">🛵 Delivery (Entrega)</p>
+                  <p className="text-sm text-muted-foreground">Entrega no endereço do cliente</p>
+                </div>
+                <Switch
+                  checked={storeSettings.enableDelivery}
+                  onCheckedChange={async (checked) => {
+                    if (!checked && !storeSettings.enablePickup) {
+                      toast({ title: 'Atenção', description: 'Pelo menos uma modalidade deve estar ativa.', variant: 'destructive' });
+                      return;
+                    }
+                    await updateSetting('enable_delivery', checked.toString());
+                    toast({ title: 'Configuração salva', description: checked ? 'Delivery ativado' : 'Delivery desativado' });
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">📍 Retirada no Local</p>
+                  <p className="text-sm text-muted-foreground">Cliente retira no estabelecimento</p>
+                </div>
+                <Switch
+                  checked={storeSettings.enablePickup}
+                  onCheckedChange={async (checked) => {
+                    if (!checked && !storeSettings.enableDelivery) {
+                      toast({ title: 'Atenção', description: 'Pelo menos uma modalidade deve estar ativa.', variant: 'destructive' });
+                      return;
+                    }
+                    await updateSetting('enable_pickup', checked.toString());
+                    toast({ title: 'Configuração salva', description: checked ? 'Retirada ativada' : 'Retirada desativada' });
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Delivery Mode Selection - only show when delivery is enabled */}
+          {storeSettings.enableDelivery && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="w-5 h-5" />
+                Modo de Taxas de Entrega
               </CardTitle>
               <CardDescription>
                 Escolha como deseja configurar as taxas de entrega
@@ -713,6 +763,7 @@ pause
               </RadioGroup>
             </CardContent>
           </Card>
+          )}
 
           {/* Simple Mode - City/Interior */}
           {deliveryMode === 'simple' && (
