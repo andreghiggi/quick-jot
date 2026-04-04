@@ -766,7 +766,7 @@ pause
           )}
 
           {/* Simple Mode - City/Interior */}
-          {deliveryMode === 'simple' && (
+          {storeSettings.enableDelivery && deliveryMode === 'simple' && (
             <Card>
               <CardHeader>
                 <CardTitle>Taxas Cidade e Interior</CardTitle>
