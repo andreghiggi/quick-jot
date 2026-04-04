@@ -18,6 +18,8 @@ interface StoreSettings {
   autoPrintNfce: boolean;
   menuLayout: 'v1' | 'v2';
   lateralScrollOptionals: boolean;
+  enableDelivery: boolean;
+  enablePickup: boolean;
 }
 
 interface UseStoreSettingsOptions {
