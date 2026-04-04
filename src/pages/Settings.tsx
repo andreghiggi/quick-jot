@@ -819,7 +819,7 @@ pause
           )}
 
           {/* Neighborhood Mode */}
-          {deliveryMode === 'neighborhood' && (
+          {storeSettings.enableDelivery && deliveryMode === 'neighborhood' && (
             <Card>
               <CardHeader>
                 <CardTitle>Cadastro de Bairros</CardTitle>
