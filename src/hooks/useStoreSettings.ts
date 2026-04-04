@@ -85,6 +85,8 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         autoPrintNfce: settingsMap['auto_print_nfce'] === 'true',
         menuLayout: (settingsMap['menu_layout'] as 'v1' | 'v2') || 'v1',
         lateralScrollOptionals: settingsMap['lateral_scroll_optionals'] === 'true',
+        enableDelivery: settingsMap['enable_delivery'] !== 'false',
+        enablePickup: settingsMap['enable_pickup'] !== 'false',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);
