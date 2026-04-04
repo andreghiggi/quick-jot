@@ -1230,6 +1230,8 @@ export default function Menu() {
                     {settings.deliveryMode === 'neighborhood' && getActiveNeighborhoods().length > 0 ? (
                       /* Neighborhood mode */
                       <div className="mt-2 space-y-2">
+                        {settings.enablePickup && (
+                        <>
                         <div className="flex items-center justify-between p-2 border rounded-lg">
                           <div className="flex items-center space-x-2">
                             <input
@@ -1253,6 +1255,9 @@ export default function Menu() {
                             <p className="text-sm text-muted-foreground mt-1">{company.address}</p>
                           </div>
                         )}
+                        </>
+                        )}
+                        {settings.enableDelivery && (
                         <div className="p-2 border rounded-lg space-y-2">
                           <div className="flex items-center space-x-2">
                             <input
@@ -1280,6 +1285,7 @@ export default function Menu() {
                             </Select>
                           )}
                         </div>
+                        )}
                       </div>
                     ) : (
                       /* Simple mode - City/Interior */
@@ -1288,6 +1294,8 @@ export default function Menu() {
                         onValueChange={(value) => setDeliveryType(value as 'pickup' | 'city' | 'interior')} 
                         className="mt-2"
                       >
+                        {settings.enablePickup && (
+                        <>
                         <div className="flex items-center justify-between p-2 border rounded-lg">
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="pickup" id="pickup" />
@@ -1301,6 +1309,10 @@ export default function Menu() {
                             <p className="text-sm text-muted-foreground mt-1">{company.address}</p>
                           </div>
                         )}
+                        </>
+                        )}
+                        {settings.enableDelivery && (
+                        <>
                         <div className="flex items-center justify-between p-2 border rounded-lg">
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="city" id="city" />
@@ -1319,6 +1331,8 @@ export default function Menu() {
                             {settings.deliveryFeeInterior > 0 ? `R$ ${settings.deliveryFeeInterior.toFixed(2)}` : 'Grátis'}
                           </span>
                         </div>
+                        </>
+                        )}
                       </RadioGroup>
                     )}
                   </div>
