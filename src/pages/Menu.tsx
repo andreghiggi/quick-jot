@@ -632,6 +632,7 @@ export default function Menu() {
     setDeliveryType('');
     setSelectedNeighborhood('');
     setPaymentMethod('');
+    setChangeFor('');
     setIsCartOpen(false);
     setIsSubmitting(false);
 
