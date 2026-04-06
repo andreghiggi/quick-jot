@@ -347,6 +347,7 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     <div class="section">
         <p><span class="label">Cliente:</span> {customer_name}</p>
         {phone_html}
+        {payment_html}
     </div>
     {delivery_section}
     <hr class="divider">
