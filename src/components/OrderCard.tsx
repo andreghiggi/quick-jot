@@ -171,6 +171,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               const state = estadoMatch ? estadoMatch[1].trim() : '';
               extraInfo += `<p><span class="label">LOCAL:</span> ${[city, state].filter(Boolean).join(' - ')}</p>`;
             }
+            // Extract payment method and change info
+            const pagamentoMatch = notes.match(/Pagamento:\s*([^(|]+)/i);
+            const trocoMatch = notes.match(/Troco para R\$\s*([^\)]+)/i);
+            const pixKeyMatch = notes.match(/Chave PIX:\s*([^)]+)\)/i);
+            if (pagamentoMatch) extraInfo += `<p><span class="label">PAGAMENTO:</span> ${pagamentoMatch[1].trim()}</p>`;
+            if (trocoMatch) extraInfo += `<p><span class="label">TROCO PARA:</span> R$ ${trocoMatch[1].trim()}</p>`;
+            if (pixKeyMatch) extraInfo += `<p><span class="label">CHAVE PIX:</span> ${pixKeyMatch[1].trim()}</p>`;
             return extraInfo;
           })()}
         </div>

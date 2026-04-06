@@ -267,6 +267,20 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     subtotal_str = f"{subtotal:.2f}".replace('.', ',')
     total_str = f"{total:.2f}".replace('.', ',')
     
+    # Extract payment info from notes
+    import re
+    payment_html = ''
+    if notes:
+        pagamento_match = re.search(r'Pagamento:\s*([^(|]+)', notes, re.IGNORECASE)
+        troco_match = re.search(r'Troco para R\$\s*([^\)]+)', notes, re.IGNORECASE)
+        pix_match = re.search(r'Chave PIX:\s*([^)]+)\)', notes, re.IGNORECASE)
+        if pagamento_match:
+            payment_html += f'<p><span class="label">PAGAMENTO:</span> {pagamento_match.group(1).strip()}</p>'
+        if troco_match:
+            payment_html += f'<p><span class="label">TROCO PARA:</span> R$ {troco_match.group(1).strip()}</p>'
+        if pix_match:
+            payment_html += f'<p><span class="label">CHAVE PIX:</span> {pix_match.group(1).strip()}</p>'
+    
     # Notes section
     notes_html = ''
     if notes:
@@ -333,6 +347,7 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     <div class="section">
         <p><span class="label">Cliente:</span> {customer_name}</p>
         {phone_html}
+        {payment_html}
     </div>
     {delivery_section}
     <hr class="divider">
