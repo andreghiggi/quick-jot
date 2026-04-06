@@ -1364,7 +1364,44 @@ export default function Menu() {
                         </>
                       )}
                     </RadioGroup>
+                    {/* Show change field when Dinheiro is selected */}
+                    {paymentMethod.toLowerCase() === 'dinheiro' && (
+                      <div className="mt-3 p-3 bg-accent/50 border border-border rounded-lg">
+                        <Label htmlFor="changeFor" className="text-sm font-medium">💵 Troco para quanto?</Label>
+                        <Input
+                          id="changeFor"
+                          placeholder="Ex: 50,00 (deixe vazio se não precisa de troco)"
+                          value={changeFor}
+                          onChange={(e) => setChangeFor(e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
                     {/* Show PIX key when a PIX method is selected */}
+                    {paymentMethod && (() => {
+                      const selectedPm = activePaymentMethods.find(m => m.name === paymentMethod);
+                      if (selectedPm?.pix_key) {
+                        return (
+                          <div className="mt-3 p-3 bg-accent/50 border border-border rounded-lg">
+                            <p className="text-sm font-medium text-foreground">🔑 Chave PIX:</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-sm font-mono select-all text-muted-foreground break-all flex-1">{selectedPm.pix_key}</p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(selectedPm.pix_key!);
+                                  toast.success('Chave PIX copiada!');
+                                }}
+                                className="shrink-0 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                              >
+                                Copiar
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                     {paymentMethod && (() => {
                       const selectedPm = activePaymentMethods.find(m => m.name === paymentMethod);
                       if (selectedPm?.pix_key) {
