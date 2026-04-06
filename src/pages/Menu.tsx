@@ -567,6 +567,9 @@ export default function Menu() {
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
     message += `*Tipo:* ${deliveryTypeLabel}\n`;
     message += `*Pagamento:* ${paymentMethod}\n`;
+    if (changeFor.trim()) {
+      message += `*Troco para:* R$ ${changeFor.trim()}\n`;
+    }
     const selectedPixMethod = activePaymentMethods.find(m => m.name === paymentMethod);
     if (selectedPixMethod?.pix_key) {
       message += `*Chave PIX:* ${selectedPixMethod.pix_key}\n`;
