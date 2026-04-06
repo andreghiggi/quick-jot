@@ -98,6 +98,7 @@ export default function Menu() {
   const [deliveryCity, setDeliveryCity] = useState('');
   const [deliveryState, setDeliveryState] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [changeFor, setChangeFor] = useState('');
   const [deliveryType, setDeliveryType] = useState<'pickup' | 'city' | 'interior' | 'neighborhood' | ''>('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('');
   const [orderSent] = useState(false);
