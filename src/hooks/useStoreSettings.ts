@@ -92,6 +92,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         enableDelivery: settingsMap['enable_delivery'] !== 'false',
         enablePickup: settingsMap['enable_pickup'] !== 'false',
         acceptOrderScheduling: settingsMap['accept_order_scheduling'] === 'true',
+        floatingPhoto: settingsMap['floating_photo'] === 'true',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);
