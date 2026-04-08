@@ -910,10 +910,11 @@ export default function Menu() {
 
       {/* Product Detail Dialog */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) { setSelectedProduct(null); setSelectedOptionals([]); setSelectedGroupItems({}); setItemNotes(''); } }}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedProduct?.name}</DialogTitle>
+        <DialogContent className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
+            <DialogTitle className="pr-6">{selectedProduct?.name}</DialogTitle>
           </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 py-4">
           {selectedProduct && (
             settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0)) ? (
               <LateralOptionalsWizard
@@ -982,7 +983,7 @@ export default function Menu() {
                 <div className="space-y-4">
                   {selectedProductGroups.map(group => (
                     <div key={group.id} className="space-y-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Label className="text-base font-semibold">{group.name}</Label>
                         <Badge variant="outline" className="text-xs">
                           {group.minSelect > 0 ? `mín ${group.minSelect} / ` : ''}
@@ -1093,13 +1094,18 @@ export default function Menu() {
                   className="mt-2"
                 />
               </div>
-
+            </div>
+            )
+          )}
+          </div>
+          {/* Fixed bottom button - only for non-wizard flow */}
+          {selectedProduct && !(settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) && (
+            <div className="px-6 py-4 border-t flex-shrink-0 bg-background">
               <Button onClick={addToCart} className="w-full" size="lg">
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar ao carrinho
               </Button>
             </div>
-            )
           )}
         </DialogContent>
       </Dialog>
@@ -1123,11 +1129,11 @@ export default function Menu() {
 
       {/* Cart Dialog */}
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle>Seu Pedido</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             {cart.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">Carrinho vazio</p>
             ) : (
