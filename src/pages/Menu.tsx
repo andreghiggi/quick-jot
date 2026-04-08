@@ -942,7 +942,7 @@ export default function Menu() {
                           />
                         </div>
                       ) : (
-                        <div className="w-28 h-28 flex-shrink-0 bg-muted flex items-center justify-center">
+                        <div className="w-28 min-h-[7rem] flex-shrink-0 bg-muted flex items-center justify-center">
                           <span className="text-3xl">🍽️</span>
                         </div>
                       )}
