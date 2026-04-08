@@ -25,7 +25,7 @@ const TEMPLATE_CONFIGS = [
     status: 'Cobrança PIX',
     settingKey: 'whatsapp_msg_pix',
     color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200',
-    defaultMsg: '💳 *Pagamento via PIX*\n\n{{nome}}, para finalizar seu pedido {{num}}, faça o pagamento via PIX:\n\n🔑 Chave PIX para copiar:\n`{{chave_pix}}`\n\nCopie a chave acima e cole no seu app de pagamento. Obrigado! 😊',
+    defaultMsg: '💳 *Pagamento via PIX* (Enviar comprovante no WhatsApp)\n\n{{nome}}, para finalizar seu pedido {{num}}, faça o pagamento via PIX:\n\n🔑 *Chave PIX para copiar:*\n{{chave_pix}}\n\n⚠️ Copie a chave acima e cole no seu app de pagamento, após envie o comprovante de pagamento aqui. Obrigado! 😊',
     hint: 'Enviada junto com a confirmação quando o cliente escolheu PIX. Use {{chave_pix}} para inserir a chave cadastrada.',
   },
   {
