@@ -69,7 +69,7 @@ export function AppSidebar() {
       href: '/pedidos',
     },
     {
-      title: 'Cardápio',
+      title: 'Ver cardápio',
       icon: ChefHat,
       href: `/cardapio/${company?.slug || ''}`,
     },
