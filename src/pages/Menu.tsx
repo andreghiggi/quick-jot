@@ -572,66 +572,7 @@ export default function Menu() {
         }).catch(err => console.error('Store notification failed:', err));
       }
 
-      // Send scheduled order confirmation via WhatsApp if ordering outside business hours
-      if (!isOpen && schedulingEnabled && customerPhone && company?.id) {
-        (async () => {
-          try {
-            const { data: moduleData } = await supabase
-              .from('company_modules')
-              .select('enabled')
-              .eq('company_id', company.id)
-              .eq('module_name', 'whatsapp')
-              .maybeSingle();
-
-            if (!moduleData?.enabled) return;
-
-            const { data: instanceData } = await supabase
-              .from('whatsapp_instances')
-              .select('instance_name, status')
-              .eq('company_id', company.id)
-              .maybeSingle();
-
-            if (instanceData?.status !== 'connected') return;
-
-            // Get scheduled message template and business hours
-            const { data: settingsData } = await supabase
-              .from('store_settings')
-              .select('key, value')
-              .eq('company_id', company.id)
-              .eq('key', 'whatsapp_msg_scheduled')
-              .maybeSingle();
-
-            const orderCode = newOrder.order_code || '';
-            const num = orderCode ? `#${orderCode}` : `#${String(newOrder.daily_number || 0).padStart(3, '0')}`;
-            const firstName = customerName.split(' ')[0];
-
-            let scheduledMsg: string;
-            if (settingsData?.value) {
-              scheduledMsg = settingsData.value
-                .split('{{nome}}').join(firstName)
-                .split('{{num}}').join(num)
-                .split('{{loja}}').join(company.name)
-                .split('{{horario}}').join(formattedHours || '');
-            } else {
-              scheduledMsg = `Olá, ${firstName}! Seu pedido ${num} foi agendado com sucesso 😊\n\n⏰ Nosso horário de atendimento hoje é: ${formattedHours || ''}\n\nQuando iniciarmos, seu pedido será confirmado.\n\nApós a confirmação, ele entrará na fila aguardando o início da produção conforme a ordem de agendamento.\n\nVocê será avisado(a) assim que o preparo começar, e é a partir desse momento que passa a contar o tempo estimado para entrega do pedido.\n\nAté breve! 👋`;
-            }
-
-            const cleanPhone = customerPhone.replace(/\D/g, '');
-            await supabase.functions.invoke('whatsapp-evolution', {
-              body: {
-                action: 'send_message',
-                instanceName: instanceData.instance_name,
-                phone: cleanPhone,
-                message: scheduledMsg,
-                companyId: company.id,
-                orderId: newOrder.id,
-              },
-            });
-          } catch (err) {
-            console.error('Scheduled order WhatsApp failed:', err);
-          }
-        })();
-      }
+      // Send scheduled order confirmation is handled server-side in notify-store-order
     } catch (error) {
       console.error('Error saving order to database:', error);
       setIsSubmitting(false);
