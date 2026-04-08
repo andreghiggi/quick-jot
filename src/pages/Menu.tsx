@@ -1503,7 +1503,7 @@ export default function Menu() {
                   </div>
                 </div>
 
-                {!isOpen && (
+                {!canOrder && (
                   <Alert variant="destructive" className="mb-3">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
@@ -1512,14 +1512,23 @@ export default function Menu() {
                   </Alert>
                 )}
 
+                {!isOpen && schedulingEnabled && (
+                  <Alert className="mb-3 border-primary/30 bg-primary/5">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <AlertDescription className="text-foreground">
+                      ⏰ Estamos fora do horário, mas você pode deixar seu pedido agendado! Quando abrirmos, ele entrará na fila de produção.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <Button 
                   onClick={sendToWhatsApp} 
                   className="w-full" 
                   size="lg"
-                  disabled={!isOpen || isSubmitting}
+                  disabled={!canOrder || isSubmitting}
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  {isSubmitting ? 'Enviando...' : isOpen ? 'Enviar pedido pelo WhatsApp' : 'Estabelecimento fechado'}
+                  {isSubmitting ? 'Enviando...' : !canOrder ? 'Estabelecimento fechado' : !isOpen ? '⏰ Agendar pedido' : 'Enviar pedido pelo WhatsApp'}
                 </Button>
               </>
             )}
