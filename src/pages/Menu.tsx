@@ -310,6 +310,7 @@ export default function Menu() {
   }, [customerPhone]);
 
   const activeProducts = getActiveProducts();
+  const newProducts = getNewProducts();
   
   // Get categories in the order defined by the store owner
   // Use the sorted categories from useCategories hook, fallback to product categories
