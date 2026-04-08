@@ -83,15 +83,6 @@ export default function Products() {
     return Array.from(optionalsMap.values());
   }, [products]);
 
-  async function handleSaveSettings() {
-    await saveStorePhone(storePhone);
-    await saveStoreName(storeName);
-    if (bannerUrl !== settings.bannerUrl) {
-      await saveBannerUrl(bannerUrl);
-    }
-    setIsSettingsOpen(false);
-  }
-
   async function uploadImage(file: File): Promise<string | null> {
     setIsUploading(true);
     try {
