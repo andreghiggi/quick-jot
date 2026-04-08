@@ -79,6 +79,7 @@ export default function Settings() {
       setFormData({
         name: company.name || '',
         phone: company.phone || '',
+        cnpj: (company as any).cnpj || '',
         address_street: (company as any).address_street || '',
         address_number: (company as any).address_number || '',
         address_complement: (company as any).address_complement || '',
