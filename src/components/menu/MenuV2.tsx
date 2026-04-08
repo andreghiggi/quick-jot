@@ -68,6 +68,7 @@ interface MenuV2Props {
     [key: string]: any;
   };
   activeProducts: Product[];
+  newProducts?: Product[];
   allOrderedCategories: string[];
   categoryEmojiMap?: Record<string, string>;
   categoryImageMap?: Record<string, string>;
