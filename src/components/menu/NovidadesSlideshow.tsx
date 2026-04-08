@@ -108,24 +108,26 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
 
     const threshold = 20; // percentage
     if (offset < -threshold) {
-      // swiped left → next
       setIsAutoAnimating(true);
       setOffset(-100);
       if (autoAnimRef.current) clearTimeout(autoAnimRef.current);
       autoAnimRef.current = setTimeout(() => {
+        setSkipTransition(true);
         setIsAutoAnimating(false);
         setCurrentIndex((prev) => (prev + 1) % totalProducts);
         setOffset(0);
+        requestAnimationFrame(() => { requestAnimationFrame(() => { setSkipTransition(false); }); });
       }, 400);
     } else if (offset > threshold) {
-      // swiped right → prev
       setIsAutoAnimating(true);
       setOffset(100);
       if (autoAnimRef.current) clearTimeout(autoAnimRef.current);
       autoAnimRef.current = setTimeout(() => {
+        setSkipTransition(true);
         setIsAutoAnimating(false);
         setCurrentIndex((prev) => (prev - 1 + totalProducts) % totalProducts);
         setOffset(0);
+        requestAnimationFrame(() => { requestAnimationFrame(() => { setSkipTransition(false); }); });
       }, 400);
     } else {
       // snap back
