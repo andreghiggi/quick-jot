@@ -266,7 +266,7 @@ export function useProducts(options: UseProductsOptions = {}) {
     return [...new Set(products.map((p) => p.category))];
   }
 
-
+  async function duplicateProduct(productId: string): Promise<string | null> {
     const source = products.find(p => p.id === productId);
     if (!source) return null;
 
