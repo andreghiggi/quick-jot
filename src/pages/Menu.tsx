@@ -146,7 +146,7 @@ export default function Menu() {
     toast.success('Link copiado!');
   }, [menuLink]);
 
-
+  function isValidCpf(cpf: string): boolean {
     if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
     let sum = 0;
     for (let i = 0; i < 9; i++) sum += parseInt(cpf.charAt(i)) * (10 - i);
