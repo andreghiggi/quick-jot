@@ -86,6 +86,7 @@ export function MenuV2({
   company,
   settings,
   activeProducts,
+  newProducts = [],
   allOrderedCategories,
   categoryEmojiMap,
   categoryImageMap,
