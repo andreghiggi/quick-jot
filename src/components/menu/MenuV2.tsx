@@ -71,6 +71,7 @@ interface MenuV2Props {
   allOrderedCategories: string[];
   categoryEmojiMap?: Record<string, string>;
   categoryImageMap?: Record<string, string>;
+  categoryAnimatedMap?: Record<string, boolean>;
   cartItemsCount: number;
   cartTotal: number;
   isOpen: boolean;
@@ -87,6 +88,7 @@ export function MenuV2({
   allOrderedCategories,
   categoryEmojiMap,
   categoryImageMap,
+  categoryAnimatedMap,
   cartItemsCount,
   cartTotal,
   isOpen,
