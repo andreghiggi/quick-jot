@@ -1240,7 +1240,6 @@ export default function Menu() {
                           <p className="text-xs text-muted-foreground mt-1">Obs: {item.notes}</p>
                         )}
                       </div>
-                      <p className="font-semibold">R$ {calculateItemTotal(item).toFixed(2)}</p>
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-2">
