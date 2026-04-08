@@ -80,30 +80,30 @@ serve(async (req) => {
       );
     }
 
-    // Get order details if not provided
+    // Fetch order from DB
+    const { data: order } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+
+    const { data: items } = await supabase
+      .from('order_items')
+      .select('*')
+      .eq('order_id', orderId);
+
+    if (!order) {
+      return new Response(
+        JSON.stringify({ ok: true, skipped: 'order_not_found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Build store notification message
     let message = '';
     if (orderSummary) {
       message = `🔔 *NOVO PEDIDO RECEBIDO!*\n\n${orderSummary}`;
     } else {
-      // Fetch order from DB
-      const { data: order } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('id', orderId)
-        .single();
-
-      const { data: items } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', orderId);
-
-      if (!order) {
-        return new Response(
-          JSON.stringify({ ok: true, skipped: 'order_not_found' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
       const itemsList = (items || [])
         .map((item: any) => `• ${item.quantity}x ${item.name} - R$ ${(Number(item.price) * item.quantity).toFixed(2)}${item.notes ? ` (${item.notes})` : ''}`)
         .join('\n');
