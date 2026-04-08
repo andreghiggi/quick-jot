@@ -1129,7 +1129,7 @@ export default function Menu() {
 
       {/* Cart Dialog */}
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
           <DialogHeader>
             <DialogTitle>Seu Pedido</DialogTitle>
           </DialogHeader>
