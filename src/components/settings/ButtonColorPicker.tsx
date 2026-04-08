@@ -25,6 +25,10 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
     setHexInput(value || DEFAULT_BUTTON_COLOR);
   }, [value]);
 
+  const handleColorWheelInput = (e: React.FormEvent<HTMLInputElement>) => {
+    setHexInput((e.target as HTMLInputElement).value);
+  };
+
   const handleColorWheelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const color = e.target.value;
     setHexInput(color);
@@ -138,6 +142,7 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
             <input
               type="color"
               value={displayColor}
+              onInput={handleColorWheelInput}
               onChange={handleColorWheelChange}
               className="w-12 h-12 rounded-lg cursor-pointer border border-border p-0.5"
               style={{ appearance: 'auto' }}
