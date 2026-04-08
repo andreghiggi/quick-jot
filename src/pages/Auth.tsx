@@ -214,6 +214,18 @@ export default function Auth() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="signup-cnpj">CNPJ</Label>
+                  <Input
+                    id="signup-cnpj"
+                    type="text"
+                    placeholder="00.000.000/0000-00"
+                    value={signupCnpj}
+                    onChange={(e) => setSignupCnpj(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="signup-address-street">Endereço (rua, avenida, travessa...) *</Label>
                   <Input
                     id="signup-address-street"
