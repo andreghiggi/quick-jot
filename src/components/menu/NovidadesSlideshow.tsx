@@ -27,7 +27,7 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
         {product.description && (
           <p className="text-xs text-muted-foreground mt-0.5 break-words whitespace-normal">{product.description}</p>
         )}
-        <p className="text-sm font-bold text-primary mt-1">R$ {formatPrice(product.price)}</p>
+        <p className="text-sm font-bold text-green-600 mt-1">R$ {formatPrice(product.price)}</p>
       </div>
     </button>
   );

@@ -103,7 +103,7 @@ export function AddedToCartDialog({
                       </p>
                     )}
                     <div className="flex items-center justify-between mt-1.5">
-                      <p className="text-primary font-bold text-sm">
+                      <p className="text-green-600 font-bold text-sm">
                         R$ {formatPrice(calculateItemTotal(item))}
                       </p>
                       <div className="flex items-center gap-2">

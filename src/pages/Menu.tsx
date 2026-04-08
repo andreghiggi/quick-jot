@@ -956,7 +956,7 @@ export default function Menu() {
                           )}
                         </div>
                         <div className="flex items-center justify-between mt-2">
-                          <p className="text-primary font-bold">
+                          <p className="text-green-600 font-bold">
                             R$ {formatPrice(product.price)}
                           </p>
                           <Button size="sm" className="h-8 px-3">
@@ -1036,7 +1036,7 @@ export default function Menu() {
               {selectedProduct.description && (
                 <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>
               )}
-              <p className="text-2xl font-bold text-primary">
+              <p className="text-2xl font-bold text-green-600">
                 R$ {formatPrice(selectedProduct.price)}
               </p>
 
@@ -1064,7 +1064,7 @@ export default function Menu() {
                           <span className="font-medium">{optional.name}</span>
                         </div>
                         {optional.price > 0 && (
-                          <span className="text-primary font-semibold">
+                          <span className="text-green-600 font-semibold">
                             +R$ {formatPrice(optional.price)}
                           </span>
                         )}
@@ -1127,7 +1127,7 @@ export default function Menu() {
                                     {item.name}
                                   </p>
                                   {item.price > 0 && (
-                                    <p className="text-[10px] text-primary font-medium text-center">
+                                    <p className="text-[10px] text-green-600 font-medium text-center">
                                       +R$ {formatPrice(item.price)}
                                     </p>
                                   )}
@@ -1167,7 +1167,7 @@ export default function Menu() {
                                 <span className="font-medium">{item.name}</span>
                               </div>
                               {item.price > 0 && (
-                                <span className="text-primary font-semibold">
+                                <span className="text-green-600 font-semibold">
                                   +R$ {formatPrice(item.price)}
                                 </span>
                               )}
@@ -1500,7 +1500,7 @@ export default function Menu() {
                             <RadioGroupItem value="city" id="city" />
                             <Label htmlFor="city" className="cursor-pointer">Entrega Cidade</Label>
                           </div>
-                          <span className="text-sm font-medium text-primary">
+                          <span className="text-sm font-medium text-green-600">
                             {settings.deliveryFeeCity > 0 ? `R$ ${settings.deliveryFeeCity.toFixed(2)}` : 'Grátis'}
                           </span>
                         </div>
@@ -1509,7 +1509,7 @@ export default function Menu() {
                             <RadioGroupItem value="interior" id="interior" />
                             <Label htmlFor="interior" className="cursor-pointer">Entrega Interior</Label>
                           </div>
-                          <span className="text-sm font-medium text-primary">
+                          <span className="text-sm font-medium text-green-600">
                             {settings.deliveryFeeInterior > 0 ? `R$ ${settings.deliveryFeeInterior.toFixed(2)}` : 'Grátis'}
                           </span>
                         </div>
@@ -1599,7 +1599,7 @@ export default function Menu() {
                   )}
                   <div className="flex items-center justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span className="text-primary">R$ {formatPrice(orderTotal)}</span>
+                    <span className="text-green-600">R$ {formatPrice(orderTotal)}</span>
                   </div>
                 </div>
 

@@ -149,7 +149,7 @@ export function LateralOptionalsWizard({
                           {item.name}
                         </p>
                         {item.price > 0 && (
-                          <p className="text-[10px] text-primary font-medium text-center">
+                          <p className="text-[10px] text-green-600 font-medium text-center">
                             +R$ {formatPrice(item.price)}
                           </p>
                         )}
@@ -189,7 +189,7 @@ export function LateralOptionalsWizard({
                         <span className="font-medium">{item.name}</span>
                       </div>
                       {item.price > 0 && (
-                        <span className="text-primary font-semibold">+R$ {formatPrice(item.price)}</span>
+                        <span className="text-green-600 font-semibold">+R$ {formatPrice(item.price)}</span>
                       )}
                     </div>
                   );
@@ -223,7 +223,7 @@ export function LateralOptionalsWizard({
                     <span className="font-medium">{optional.name}</span>
                   </div>
                   {optional.price > 0 && (
-                    <span className="text-primary font-semibold">+R$ {formatPrice(optional.price)}</span>
+                    <span className="text-green-600 font-semibold">+R$ {formatPrice(optional.price)}</span>
                   )}
                 </div>
               ))}
@@ -262,7 +262,7 @@ export function LateralOptionalsWizard({
                   + {selectedOptionals.map((o) => o.name).join(', ')}
                 </p>
               )}
-              <p className="text-lg font-bold text-primary pt-1">Total: R$ {formatPrice(totalPrice)}</p>
+              <p className="text-lg font-bold text-green-600 pt-1">Total: R$ {formatPrice(totalPrice)}</p>
             </div>
           </div>
         )}
