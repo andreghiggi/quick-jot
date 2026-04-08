@@ -381,6 +381,7 @@ export default function Products() {
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium">{product.name}</h3>
                           {!product.active && <Badge variant="secondary">Inativo</Badge>}
+                          {product.isNew && <Badge variant="default" className="bg-amber-500 text-white text-xs">⭐ Novidade</Badge>}
                         </div>
                         {product.description && (
                           <p className="text-sm text-muted-foreground">{product.description}</p>
