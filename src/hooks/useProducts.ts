@@ -234,8 +234,32 @@ export function useProducts(options: UseProductsOptions = {}) {
     return products.filter((p) => p.active);
   }
 
-  function getCategories(): string[] {
-    return [...new Set(products.map((p) => p.category))];
+  function getNewProducts(): Product[] {
+    return products.filter((p) => p.active && p.isNew);
+  }
+
+  async function toggleNewProduct(productId: string, isNew: boolean): Promise<boolean> {
+    if (isNew) {
+      const currentNewCount = products.filter(p => p.isNew).length;
+      if (currentNewCount >= 5) {
+        toast.error('Limite de 5 produtos em novidade atingido!');
+        return false;
+      }
+    }
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_new: isNew } as any)
+        .eq('id', productId);
+      if (error) throw error;
+      await fetchProducts();
+      toast.success(isNew ? 'Produto marcado como novidade!' : 'Produto removido das novidades');
+      return true;
+    } catch (error) {
+      console.error('Error toggling new product:', error);
+      toast.error('Erro ao atualizar produto');
+      return false;
+    }
   }
 
   async function duplicateProduct(productId: string): Promise<string | null> {
