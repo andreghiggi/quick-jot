@@ -100,7 +100,7 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
           Cor dos Botões
         </CardTitle>
         <CardDescription>
-          Escolha a cor dos botões do cardápio. Use o círculo de cores, digite o código hex ou extraia de uma imagem.
+          Escolha a cor dos botões e da área de novidades do cardápio. A cor padrão é vermelha.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
