@@ -103,6 +103,11 @@ export default function Auth() {
         email: signupEmail,
         password: signupPassword,
         confirmPassword: signupConfirmPassword,
+        addressStreet: signupAddressStreet,
+        addressNumber: signupAddressNumber,
+        addressComplement: signupAddressComplement,
+        addressNeighborhood: signupAddressNeighborhood,
+        addressReference: signupAddressReference,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
