@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,42 +13,15 @@ const DEFAULT_BUTTON_COLOR = '#ef4444';
 
 export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
   const effectiveValue = value || DEFAULT_BUTTON_COLOR;
-  const [hexInput, setHexInput] = useState(effectiveValue);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [isEyedropping, setIsEyedropping] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setHexInput(value || DEFAULT_BUTTON_COLOR);
-  }, [value]);
-
-  const handleColorWheelInput = (e: React.FormEvent<HTMLInputElement>) => {
-    setHexInput((e.target as HTMLInputElement).value);
-  };
-
-  const handleColorWheelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const color = e.target.value;
-    setHexInput(color);
-    onChange(color);
-  };
-
-  const handleHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value;
-    if (!val.startsWith('#')) val = '#' + val;
-    setHexInput(val);
-    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-      onChange(val);
-    }
-  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
     setImageUrl(url);
-    setIsEyedropping(true);
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -82,22 +54,17 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
 
     const pixel = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
     const hex = '#' + [pixel[0], pixel[1], pixel[2]].map(c => c.toString(16).padStart(2, '0')).join('');
-    setHexInput(hex);
     onChange(hex);
   }, [onChange]);
 
   const handleReset = () => {
-    setHexInput('#ef4444');
-    onChange('#ef4444');
+    onChange(DEFAULT_BUTTON_COLOR);
   };
 
   const handleRemoveImage = () => {
     setImageUrl(null);
-    setIsEyedropping(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
-
-  const displayColor = effectiveValue;
 
   return (
     <Card>
@@ -107,7 +74,7 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
           Cor dos Botões
         </CardTitle>
         <CardDescription>
-          Escolha a cor dos botões e da área de novidades do cardápio. A cor padrão é vermelha.
+          Carregue a sua logomarca e extraia a cor desejada para personalizar os botões do seu cardápio.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -135,41 +102,8 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
           )}
         </div>
 
-        {/* Color wheel + Hex input */}
-        <div className="flex items-end gap-4">
-          <div className="space-y-2">
-            <Label className="text-sm">Círculo de Cores</Label>
-            <input
-              type="color"
-              value={displayColor}
-              onInput={handleColorWheelInput}
-              onChange={handleColorWheelChange}
-              className="w-12 h-12 rounded-lg cursor-pointer border border-border p-0.5"
-              style={{ appearance: 'auto' }}
-            />
-          </div>
-          <div className="flex-1 space-y-2">
-            <Label htmlFor="hex-input" className="text-sm">Código Hexadecimal</Label>
-            <Input
-              id="hex-input"
-              value={hexInput}
-              onChange={handleHexChange}
-              placeholder="#FF0000"
-              maxLength={7}
-            />
-          </div>
-        </div>
-
         {/* Image eyedropper */}
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Pipette className="w-4 h-4 text-muted-foreground" />
-            <Label className="text-sm">Conta-gotas de Imagem</Label>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Envie uma imagem (ex: sua logo) e clique sobre ela para extrair a cor desejada.
-          </p>
-
           <input
             ref={fileInputRef}
             type="file"
@@ -210,22 +144,22 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
 
         {/* Preview button */}
         <div className="space-y-2">
-            <Label className="text-sm">Prévia do Botão</Label>
-            <div className="flex gap-3">
-              <button
-                className="px-6 py-2.5 rounded-lg text-white font-medium text-sm shadow-sm"
-                style={{ backgroundColor: effectiveValue }}
-              >
-                Adicionar ao Carrinho
-              </button>
-              <button
-                className="px-6 py-2.5 rounded-lg font-medium text-sm border-2"
-                style={{ borderColor: effectiveValue, color: effectiveValue }}
-              >
-                Ver Detalhes
-              </button>
-            </div>
+          <Label className="text-sm">Prévia do Botão</Label>
+          <div className="flex gap-3">
+            <button
+              className="px-6 py-2.5 rounded-lg text-white font-medium text-sm shadow-sm"
+              style={{ backgroundColor: effectiveValue }}
+            >
+              Adicionar ao Carrinho
+            </button>
+            <button
+              className="px-6 py-2.5 rounded-lg font-medium text-sm border-2"
+              style={{ borderColor: effectiveValue, color: effectiveValue }}
+            >
+              Ver Detalhes
+            </button>
           </div>
+        </div>
       </CardContent>
     </Card>
   );
