@@ -77,9 +77,9 @@ export function generateWhatsAppMessage(params: MessageParams): string | null {
   switch (status) {
     case 'pending':
       if (deliveryType === 'retirada') {
-        return `${name}, seu pedido ${num} foi confirmado pelo ${storeName}! Avisaremos quando estiver pronto para retirada. 😊`;
+        return `*${name}, seu pedido ${num} foi realizado com sucesso!* Avisaremos quando estiver pronto para retirada. 😊`;
       }
-      return `${name}, seu pedido ${num} foi confirmado pelo ${storeName}! Em breve começaremos a preparar. 😊`;
+      return `*${name}, seu pedido ${num} foi realizado com sucesso!* Em breve vamos começar preparar seu pedido e vamos te atualizando por aqui! 😊`;
 
     case 'preparing':
       const timeInfo = estimatedTime ? ` Tempo estimado: ${estimatedTime}.` : '';
