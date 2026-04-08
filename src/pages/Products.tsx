@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, GripVertical, FileText, Copy } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
