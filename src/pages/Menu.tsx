@@ -978,10 +978,11 @@ export default function Menu() {
               {selectedProduct.imageUrl && (
                 <div className="w-full h-48 rounded-lg overflow-hidden">
                   <img
-                    key={`modal-img-${selectedProduct.id}`}
+                    key={selectedProduct.id}
                     src={selectedProduct.imageUrl}
                     alt={selectedProduct.name}
-                    className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")}
+                    className={cn("w-full object-cover", floatingPhoto && "kenburns-animate")}
+                    style={{ height: '110%', animationPlayState: 'running' }}
                   />
                 </div>
               )}
