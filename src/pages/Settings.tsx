@@ -701,6 +701,67 @@ pause
               </Button>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Image className="w-5 h-5" />
+                Banner do Cardápio
+              </CardTitle>
+              <CardDescription>
+                Imagem exibida no topo do cardápio online (recomendado: 1200x400 pixels)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <input
+                type="file"
+                accept="image/*"
+                ref={bannerFileInputRef}
+                onChange={handleBannerSelect}
+                className="hidden"
+              />
+              {bannerUrl ? (
+                <div className="relative">
+                  <img
+                    src={bannerUrl}
+                    alt="Banner Preview"
+                    className="w-full h-32 object-cover rounded-lg border"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 h-7 w-7"
+                    onClick={handleRemoveBanner}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => bannerFileInputRef.current?.click()}
+                  disabled={isBannerUploading}
+                >
+                  {isBannerUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Selecionar banner
+                    </>
+                  )}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Tab Horários */}
