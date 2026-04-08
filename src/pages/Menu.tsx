@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
@@ -108,6 +108,7 @@ export default function Menu() {
   const [deliveryType, setDeliveryType] = useState<'pickup' | 'city' | 'interior' | 'neighborhood' | ''>('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('');
   const [orderSent] = useState(false);
+  const modalImageRef = useRef<HTMLImageElement | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [customerLoaded, setCustomerLoaded] = useState(false);
@@ -208,6 +209,26 @@ export default function Menu() {
     return getGroupsForProduct(selectedProduct.id, selectedProduct.category)
       .sort((a, b) => a.displayOrder - b.displayOrder);
   }, [selectedProduct, optionalGroups, categoryIdByName]);
+
+  useEffect(() => {
+    if (!selectedProduct?.id || selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0)) {
+      return;
+    }
+
+    const img = modalImageRef.current;
+    if (!img || !floatingPhoto) return;
+
+    img.style.animation = 'none';
+    void img.offsetHeight;
+
+    const timer = window.setTimeout(() => {
+      if (modalImageRef.current) {
+        modalImageRef.current.style.animation = '';
+      }
+    }, 10);
+
+    return () => window.clearTimeout(timer);
+  }, [selectedProduct?.id, selectedProductGroups.length, selectedProduct?.optionals, floatingPhoto]);
 
   // Load customer data when phone changes (with debounce)
   useEffect(() => {
@@ -978,9 +999,11 @@ export default function Menu() {
               {selectedProduct.imageUrl && (
                 <div className="w-full h-48 rounded-lg overflow-hidden">
                   <img
-                    key={`modal-img-${selectedProduct.id}`}
+                    ref={modalImageRef}
+                    key={`${selectedProduct.id}-${Date.now()}`}
                     src={selectedProduct.imageUrl}
                     alt={selectedProduct.name}
+                    style={{ animation: 'none' }}
                     className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")}
                   />
                 </div>
