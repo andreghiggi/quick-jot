@@ -145,7 +145,7 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
     <div className="bg-primary border-b border-primary">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-white flex items-center gap-1.5">
+          <h2 className="text-sm font-bold text-primary bg-white rounded-full px-3 py-1 flex items-center gap-1.5">
             ⭐ NOVIDADES
           </h2>
           {totalProducts > 1 && (
@@ -156,7 +156,7 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
                   onClick={() => { if (!isAutoAnimating) { goTo(i); startTimer(); } }}
                   className={cn(
                     "w-2 h-2 rounded-full transition-colors duration-300",
-                    i === currentIndex ? "bg-white" : "bg-white/40"
+                    i === currentIndex ? "bg-primary-foreground" : "bg-primary-foreground/40"
                   )}
                 />
               ))}
