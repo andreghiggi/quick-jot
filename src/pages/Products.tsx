@@ -633,11 +633,7 @@ export default function Products() {
           <DialogHeader>
             <DialogTitle>Configurações</DialogTitle>
           </DialogHeader>
-          <Tabs defaultValue="categorias" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="categorias">Categorias</TabsTrigger>
-              <TabsTrigger value="perigo">Perigo</TabsTrigger>
-            </TabsList>
+          <div className="space-y-4">
 
             <TabsContent value="categorias" className="space-y-4 mt-4">
               <div>
