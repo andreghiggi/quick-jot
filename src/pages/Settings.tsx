@@ -702,6 +702,16 @@ pause
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="cnpj">CNPJ</Label>
+                <Input
+                  id="cnpj"
+                  value={formData.cnpj}
+                  onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                  placeholder="00.000.000/0000-00"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="slug" className="flex items-center gap-2">
                   <Globe className="w-4 h-4" />
                   Slug (URL do cardápio)
@@ -731,6 +741,20 @@ pause
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  E-mail
+                </Label>
+                <Input
+                  id="email"
+                  value={profile?.email || ''}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">O e-mail é definido no cadastro e não pode ser alterado aqui.</p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="phone">Telefone / WhatsApp</Label>
                 <Input
                   id="phone"
@@ -739,12 +763,22 @@ pause
                   placeholder="(00) 00000-0000"
                 />
               </div>
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Endereço
+              </CardTitle>
+              <CardDescription>
+                Endereço da empresa
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="address_street" className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  Endereço (rua, avenida, travessa...) *
-                </Label>
+                <Label htmlFor="address_street">Endereço (rua, avenida, travessa...) *</Label>
                 <Input
                   id="address_street"
                   value={formData.address_street}
