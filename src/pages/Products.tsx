@@ -33,7 +33,7 @@ export default function Products() {
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isOptionalDialogOpen, setIsOptionalDialogOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true });
