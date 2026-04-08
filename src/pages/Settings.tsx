@@ -21,7 +21,10 @@ import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettin
 export default function Settings() {
   const { company, refetchUserData } = useAuthContext();
   const { toast } = useToast();
-  const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting } = useStoreSettings({ companyId: company?.id });
+  const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
+  const [bannerUrl, setBannerUrl] = useState('');
+  const [isBannerUploading, setIsBannerUploading] = useState(false);
+  const bannerFileInputRef = useRef<HTMLInputElement>(null);
   const { neighborhoods, addNeighborhood, deleteNeighborhood } = useDeliveryNeighborhoods({ companyId: company?.id });
   const [loading, setLoading] = useState(false);
   const [deliveryFeeCity, setDeliveryFeeCity] = useState('');
