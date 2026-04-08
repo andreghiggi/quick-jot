@@ -173,6 +173,7 @@ export type Database = {
           address_number: string | null
           address_reference: string | null
           address_street: string | null
+          cnpj: string | null
           created_at: string | null
           id: string
           logo_url: string | null
@@ -189,6 +190,7 @@ export type Database = {
           address_number?: string | null
           address_reference?: string | null
           address_street?: string | null
+          cnpj?: string | null
           created_at?: string | null
           id?: string
           logo_url?: string | null
@@ -205,6 +207,7 @@ export type Database = {
           address_number?: string | null
           address_reference?: string | null
           address_street?: string | null
+          cnpj?: string | null
           created_at?: string | null
           id?: string
           logo_url?: string | null
