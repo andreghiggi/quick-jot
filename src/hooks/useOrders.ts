@@ -370,6 +370,15 @@ export function useOrders(options: UseOrdersOptions = {}) {
         resumo += `\n🏪 *Retirada no local*`;
       }
 
+      // Add PIX payment note inline in resumo if applicable
+      if (order.notes) {
+        const paymentMatch = order.notes.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i);
+        const paymentName = paymentMatch?.[1]?.trim();
+        if (paymentName && paymentName.toLowerCase().includes('pix')) {
+          resumo += `\n💳 *Pagamento via PIX* (Enviar comprovante no WhatsApp)`;
+        }
+      }
+
       let message = generateWhatsAppMessage({
         customerName: order.customerName,
         orderNumber: order.dailyNumber,
