@@ -220,10 +220,6 @@ export default function Products() {
 
         </Button>
       )}
-      <Button variant="outline" size="sm" onClick={() => setIsSettingsOpen(true)}>
-        <Settings className="h-4 w-4 mr-2" />
-        <span className="hidden sm:inline">Config</span>
-      </Button>
       <Button variant="outline" size="sm" onClick={copyMenuLink}>
         <LinkIcon className="h-4 w-4 mr-2" />
         <span className="hidden sm:inline">Copiar link</span>
