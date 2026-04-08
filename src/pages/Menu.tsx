@@ -114,6 +114,7 @@ export default function Menu() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddedToCart, setShowAddedToCart] = useState(false);
   const [lastAddedItem, setLastAddedItem] = useState<CartItem | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Optional group selections state
   const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Set<string>>>({});
