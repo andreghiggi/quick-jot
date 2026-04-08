@@ -87,7 +87,7 @@ export function LateralOptionalsWizard({
   const totalPrice = product.price + groupOptionalsPrices + oldOptionalsPrices;
 
   return (
-    <div className="relative">
+    <div className="flex flex-col h-full">
       {/* Progress bar */}
       <div className="flex gap-1 mb-4">
         {steps.map((_, i) => (
@@ -101,8 +101,8 @@ export function LateralOptionalsWizard({
         ))}
       </div>
 
-      {/* Step content with slide animation */}
-      <div className="min-h-[300px]">
+      {/* Step content */}
+      <div className="flex-1 min-h-0">
         {step.type === 'group' && step.group && (
           <div key={step.group.id} className="space-y-3 animate-in slide-in-from-right-4 duration-200">
             <div className="flex items-center gap-2 flex-wrap">
@@ -268,8 +268,8 @@ export function LateralOptionalsWizard({
         )}
       </div>
 
-      {/* Navigation */}
-      <div className="flex gap-2 mt-4 pt-3 border-t">
+      {/* Navigation - sticky at bottom */}
+      <div className="flex gap-2 mt-4 pt-3 border-t flex-shrink-0">
         {!isFirst && (
           <Button
             variant="outline"
