@@ -35,9 +35,10 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
 
 export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlideshowProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [offset, setOffset] = useState(0); // percentage offset for drag
+  const [offset, setOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isAutoAnimating, setIsAutoAnimating] = useState(false);
+  const [skipTransition, setSkipTransition] = useState(false);
   const touchStartX = useRef(0);
   const containerWidth = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -48,14 +49,22 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
 
   const goTo = useCallback((newIndex: number) => {
     const dir = newIndex > currentIndex ? -1 : 1;
+    setSkipTransition(false);
     setIsAutoAnimating(true);
     setOffset(dir * 100);
 
     if (autoAnimRef.current) clearTimeout(autoAnimRef.current);
     autoAnimRef.current = setTimeout(() => {
+      setSkipTransition(true);
       setIsAutoAnimating(false);
       setCurrentIndex(((newIndex % totalProducts) + totalProducts) % totalProducts);
       setOffset(0);
+      // Re-enable transition after the snap
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setSkipTransition(false);
+        });
+      });
     }, 700);
   }, [currentIndex, totalProducts]);
 
@@ -99,24 +108,26 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
 
     const threshold = 20; // percentage
     if (offset < -threshold) {
-      // swiped left → next
       setIsAutoAnimating(true);
       setOffset(-100);
       if (autoAnimRef.current) clearTimeout(autoAnimRef.current);
       autoAnimRef.current = setTimeout(() => {
+        setSkipTransition(true);
         setIsAutoAnimating(false);
         setCurrentIndex((prev) => (prev + 1) % totalProducts);
         setOffset(0);
+        requestAnimationFrame(() => { requestAnimationFrame(() => { setSkipTransition(false); }); });
       }, 400);
     } else if (offset > threshold) {
-      // swiped right → prev
       setIsAutoAnimating(true);
       setOffset(100);
       if (autoAnimRef.current) clearTimeout(autoAnimRef.current);
       autoAnimRef.current = setTimeout(() => {
+        setSkipTransition(true);
         setIsAutoAnimating(false);
         setCurrentIndex((prev) => (prev - 1 + totalProducts) % totalProducts);
         setOffset(0);
+        requestAnimationFrame(() => { requestAnimationFrame(() => { setSkipTransition(false); }); });
       }, 400);
     } else {
       // snap back
@@ -163,7 +174,7 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
             className="flex"
             style={{
               transform: `translateX(${offset}%)`,
-              transition: isDragging ? 'none' : 'transform 0.7s cubic-bezier(0.25, 0.1, 0.25, 1)',
+              transition: (isDragging || skipTransition) ? 'none' : 'transform 0.7s cubic-bezier(0.25, 0.1, 0.25, 1)',
             }}
           >
             {/* Previous (off-screen left) */}
