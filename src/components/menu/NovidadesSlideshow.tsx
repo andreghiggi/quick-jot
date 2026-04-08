@@ -9,42 +9,47 @@ interface NovidadesSlideshowProps {
 
 export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlideshowProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [direction, setDirection] = useState<'left' | 'right'>('left');
+  const [animState, setAnimState] = useState<'enter' | 'exit'>('enter');
   const touchStartX = useRef(0);
   const touchDeltaX = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isTransitioning = useRef(false);
 
-  const goTo = useCallback((index: number) => {
-    setIsAnimating(true);
+  const transition = useCallback((newIndex: number, dir: 'left' | 'right') => {
+    if (isTransitioning.current) return;
+    isTransitioning.current = true;
+    setDirection(dir);
+    setAnimState('exit');
     setTimeout(() => {
-      setCurrentIndex(index);
-      setIsAnimating(false);
+      setCurrentIndex(newIndex);
+      setAnimState('enter');
+      setTimeout(() => {
+        isTransitioning.current = false;
+      }, 300);
     }, 300);
   }, []);
 
   const goNext = useCallback(() => {
-    goTo((currentIndex + 1) % products.length);
-  }, [currentIndex, products.length, goTo]);
+    transition((currentIndex + 1) % products.length, 'left');
+  }, [currentIndex, products.length, transition]);
 
   const goPrev = useCallback(() => {
-    goTo((currentIndex - 1 + products.length) % products.length);
-  }, [currentIndex, products.length, goTo]);
+    transition((currentIndex - 1 + products.length) % products.length, 'right');
+  }, [currentIndex, products.length, transition]);
 
-  // Auto-advance every 4 seconds
-  useEffect(() => {
-    if (products.length <= 1) return;
-    timerRef.current = setInterval(goNext, 4000);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [products.length, goNext]);
-
-  const resetTimer = useCallback(() => {
+  const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (products.length > 1) {
       timerRef.current = setInterval(goNext, 4000);
     }
   }, [products.length, goNext]);
+
+  useEffect(() => {
+    if (products.length <= 1) return;
+    startTimer();
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [products.length, startTimer]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -60,16 +65,23 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
     const threshold = 50;
     if (touchDeltaX.current < -threshold) {
       goNext();
-      resetTimer();
+      startTimer();
     } else if (touchDeltaX.current > threshold) {
       goPrev();
-      resetTimer();
+      startTimer();
     }
   };
 
   if (products.length === 0) return null;
 
   const product = products[currentIndex];
+
+  const slideClass = cn(
+    "w-full flex items-center gap-3 bg-card rounded-xl shadow-sm border border-border overflow-hidden text-left hover:shadow-md transition-all duration-300 ease-in-out",
+    animState === 'exit' && direction === 'left' && "-translate-x-full opacity-0",
+    animState === 'exit' && direction === 'right' && "translate-x-full opacity-0",
+    animState === 'enter' && "translate-x-0 opacity-100",
+  );
 
   return (
     <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-b border-amber-200 dark:border-amber-800">
@@ -83,7 +95,7 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
               {products.map((_, i) => (
                 <button
                   key={i}
-                  onClick={() => { goTo(i); resetTimer(); }}
+                  onClick={() => { transition(i, i > currentIndex ? 'left' : 'right'); startTimer(); }}
                   className={cn(
                     "w-2 h-2 rounded-full transition-colors duration-300",
                     i === currentIndex ? "bg-amber-500" : "bg-amber-300 dark:bg-amber-700"
@@ -94,24 +106,18 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
           )}
         </div>
         <div
+          className="overflow-hidden"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
           <button
-            className={cn(
-              "w-full flex items-center gap-3 bg-card rounded-xl shadow-sm border border-border overflow-hidden text-left hover:shadow-md transition-all duration-300",
-              isAnimating ? "opacity-0 translate-x-4" : "opacity-100 translate-x-0"
-            )}
+            className={slideClass}
             onClick={() => onProductSelect(product)}
           >
             {product.imageUrl ? (
               <div className="w-24 h-24 flex-shrink-0 overflow-hidden">
-                <img
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
+                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
               </div>
             ) : (
               <div className="w-24 h-24 flex-shrink-0 bg-muted flex items-center justify-center">
