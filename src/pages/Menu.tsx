@@ -866,7 +866,7 @@ export default function Menu() {
                 <Card
                   key={product.id}
                   className="cursor-pointer hover:border-primary hover:shadow-md transition-all overflow-hidden"
-                  onClick={() => setSelectedProduct(product)}
+                  onClick={() => handleProductSelect(product)}
                 >
                   <CardContent className="p-0">
                     <div className="flex">
@@ -897,9 +897,22 @@ export default function Menu() {
                           <p className="text-primary font-bold">
                             R$ {product.price.toFixed(2)}
                           </p>
-                          <Button size="sm" className="h-8 px-3">
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            {!(product.optionals?.some(o => o.active) || getGroupsForProduct(product.id, product.category).length > 0) && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 text-muted-foreground"
+                                onClick={(e) => handleOpenNotes(e, product)}
+                                title="Adicionar observação"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button size="sm" className="h-8 px-3">
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
