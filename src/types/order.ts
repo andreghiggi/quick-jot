@@ -42,4 +42,5 @@ export interface Category {
   companyId?: string;
   emoji?: string;
   imageUrl?: string;
+  animated?: boolean;
 }
