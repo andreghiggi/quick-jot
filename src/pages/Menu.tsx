@@ -469,9 +469,17 @@ export default function Menu() {
     // Build full address - only for delivery, not pickup
     let fullAddress = '';
     if (deliveryType !== 'pickup') {
-      fullAddress = deliveryAddress;
-      if (deliveryCity) fullAddress += ` - ${deliveryCity}`;
-      if (deliveryState) fullAddress += `/${deliveryState}`;
+      const isStructuredAddr = company?.slug?.startsWith('lancheria-da-i9');
+      if (isStructuredAddr) {
+        fullAddress = `${deliveryAddress}, ${deliveryNumber}`;
+        if (deliveryComplement.trim()) fullAddress += ` - ${deliveryComplement.trim()}`;
+        fullAddress += ` - ${deliveryNeighborhood}`;
+        fullAddress += ` | Ref: ${deliveryReference}`;
+      } else {
+        fullAddress = deliveryAddress;
+        if (deliveryCity) fullAddress += ` - ${deliveryCity}`;
+        if (deliveryState) fullAddress += `/${deliveryState}`;
+      }
     }
 
     // Get delivery type label
