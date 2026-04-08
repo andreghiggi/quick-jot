@@ -159,7 +159,6 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
                     i === currentIndex ? "bg-white" : "bg-white/40"
                   )}
                 />
-                />
               ))}
             </div>
           )}
