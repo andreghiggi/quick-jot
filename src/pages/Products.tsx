@@ -20,6 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { uploadCompressedImage } from '@/utils/imageUtils';
+import { cn } from '@/lib/utils';
 
 export default function Products() {
   const { company } = useAuthContext();
