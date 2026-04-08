@@ -23,7 +23,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ShoppingCart, Plus, Minus, Trash2, Send, CheckCircle, Search, Clock, AlertCircle, MessageSquare, Copy, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
+import { cn, formatPrice } from '@/lib/utils';
 import { MenuV2 } from '@/components/menu/MenuV2';
 import { AddedToCartDialog } from '@/components/menu/AddedToCartDialog';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
@@ -957,7 +957,7 @@ export default function Menu() {
                         </div>
                         <div className="flex items-center justify-between mt-2">
                           <p className="text-primary font-bold">
-                            R$ {product.price.toFixed(2)}
+                            R$ {formatPrice(product.price)}
                           </p>
                           <Button size="sm" className="h-8 px-3">
                             <Plus className="h-4 w-4" />
@@ -992,7 +992,7 @@ export default function Menu() {
             onClick={() => setIsCartOpen(true)}
           >
             <ShoppingCart className="h-5 w-5 mr-2" />
-            Ver carrinho ({cartItemsCount} itens) - R$ {cartTotal.toFixed(2)}
+            Ver carrinho ({cartItemsCount} itens) - R$ {formatPrice(cartTotal)}
           </Button>
         </div>
       )}
@@ -1037,7 +1037,7 @@ export default function Menu() {
                 <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>
               )}
               <p className="text-2xl font-bold text-primary">
-                R$ {selectedProduct.price.toFixed(2)}
+                R$ {formatPrice(selectedProduct.price)}
               </p>
 
               {selectedProduct.optionals && selectedProduct.optionals.length > 0 && (
@@ -1065,7 +1065,7 @@ export default function Menu() {
                         </div>
                         {optional.price > 0 && (
                           <span className="text-primary font-semibold">
-                            +R$ {optional.price.toFixed(2)}
+                            +R$ {formatPrice(optional.price)}
                           </span>
                         )}
                       </div>
@@ -1128,7 +1128,7 @@ export default function Menu() {
                                   </p>
                                   {item.price > 0 && (
                                     <p className="text-[10px] text-primary font-medium text-center">
-                                      +R$ {item.price.toFixed(2)}
+                                      +R$ {formatPrice(item.price)}
                                     </p>
                                   )}
                                 </div>
@@ -1168,7 +1168,7 @@ export default function Menu() {
                               </div>
                               {item.price > 0 && (
                                 <span className="text-primary font-semibold">
-                                  +R$ {item.price.toFixed(2)}
+                                  +R$ {formatPrice(item.price)}
                                 </span>
                               )}
                             </div>
@@ -1246,7 +1246,7 @@ export default function Menu() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <p className="font-medium line-clamp-2">{item.product.name}</p>
-                          <p className="font-semibold flex-shrink-0 ml-2">R$ {calculateItemTotal(item).toFixed(2)}</p>
+                          <p className="font-semibold flex-shrink-0 ml-2">R$ {formatPrice(calculateItemTotal(item))}</p>
                         </div>
                         {item.selectedOptionals.length > 0 && (
                           <div className="mt-1 space-y-0.5">
@@ -1460,7 +1460,7 @@ export default function Menu() {
                               <SelectContent>
                                 {getActiveNeighborhoods().map((n) => (
                                   <SelectItem key={n.id} value={n.id}>
-                                    {n.neighborhoodName} - R$ {n.deliveryFee.toFixed(2)}
+                                    {n.neighborhoodName} - R$ {formatPrice(n.deliveryFee)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1589,17 +1589,17 @@ export default function Menu() {
                 <div className="border-t pt-4 space-y-2">
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span>Subtotal</span>
-                    <span>R$ {cartTotal.toFixed(2)}</span>
+                    <span>R$ {formatPrice(cartTotal)}</span>
                   </div>
                   {deliveryFee > 0 && (
                     <div className="flex items-center justify-between text-muted-foreground">
                       <span>Taxa de entrega</span>
-                      <span>R$ {deliveryFee.toFixed(2)}</span>
+                      <span>R$ {formatPrice(deliveryFee)}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span className="text-primary">R$ {orderTotal.toFixed(2)}</span>
+                    <span className="text-primary">R$ {formatPrice(orderTotal)}</span>
                   </div>
                 </div>
 
