@@ -17,6 +17,7 @@ const loginSchema = z.object({
 
 const signupSchema = z.object({
   companyName: z.string().min(2, 'Nome da empresa deve ter pelo menos 2 caracteres'),
+  cnpj: z.string().optional(),
   fullName: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
