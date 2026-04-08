@@ -49,6 +49,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     enableDelivery: true,
     enablePickup: true,
     acceptOrderScheduling: false,
+    floatingPhoto: false,
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
