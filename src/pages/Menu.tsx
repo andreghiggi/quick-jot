@@ -783,6 +783,7 @@ export default function Menu() {
         settings={settings}
         activeProducts={activeProducts}
         newProducts={newProducts}
+        allOrderedCategories={allOrderedCategories}
         categoryEmojiMap={categoryEmojiMap}
         categoryImageMap={categoryImageMap}
         floatingPhoto={floatingPhoto}
