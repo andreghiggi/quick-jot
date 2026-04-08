@@ -123,6 +123,7 @@ export type Database = {
       categories: {
         Row: {
           active: boolean | null
+          animated: boolean
           company_id: string | null
           created_at: string
           display_order: number | null
@@ -133,6 +134,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          animated?: boolean
           company_id?: string | null
           created_at?: string
           display_order?: number | null
@@ -143,6 +145,7 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          animated?: boolean
           company_id?: string | null
           created_at?: string
           display_order?: number | null

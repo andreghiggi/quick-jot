@@ -1,0 +1,1 @@
+ALTER TABLE public.categories ADD COLUMN animated boolean NOT NULL DEFAULT false;
