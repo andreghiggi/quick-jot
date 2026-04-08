@@ -27,6 +27,7 @@ export default function Settings() {
   const [bannerUrl, setBannerUrl] = useState('');
   const [isBannerUploading, setIsBannerUploading] = useState(false);
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
+  const [showDangerZone, setShowDangerZone] = useState(false);
   const { neighborhoods, addNeighborhood, deleteNeighborhood } = useDeliveryNeighborhoods({ companyId: company?.id });
   const [loading, setLoading] = useState(false);
   const [deliveryFeeCity, setDeliveryFeeCity] = useState('');
