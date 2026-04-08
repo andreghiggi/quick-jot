@@ -23,7 +23,11 @@ function applyTemplate(template: string, vars: Record<string, string>): string {
   // Clean up empty variable placeholders (e.g. {{tempo}} when no time set)
   result = result.replace(/\s*Tempo estimado:\s*\.\s*/g, ' ');
   result = result.replace(/\s*em aproximadamente\s*\.\s*/g, '. ');
-  return result.replace(/\s{2,}/g, ' ').trim();
+  // Clean up multiple consecutive spaces (but preserve newlines)
+  result = result.replace(/[^\S\n]{2,}/g, ' ');
+  // Clean up more than 2 consecutive newlines
+  result = result.replace(/\n{3,}/g, '\n\n');
+  return result.trim();
 }
 
 export function generateWhatsAppMessage(params: MessageParams): string | null {
