@@ -48,6 +48,11 @@ export default function Auth() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [signupAddressStreet, setSignupAddressStreet] = useState('');
+  const [signupAddressNumber, setSignupAddressNumber] = useState('');
+  const [signupAddressComplement, setSignupAddressComplement] = useState('');
+  const [signupAddressNeighborhood, setSignupAddressNeighborhood] = useState('');
+  const [signupAddressReference, setSignupAddressReference] = useState('');
 
   useEffect(() => {
     if (user && !authLoading) {
