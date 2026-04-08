@@ -22,6 +22,7 @@ interface StoreSettings {
   enablePickup: boolean;
   acceptOrderScheduling: boolean;
   floatingPhoto: boolean;
+  buttonColor: string;
 }
 
 interface UseStoreSettingsOptions {
@@ -50,6 +51,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     enablePickup: true,
     acceptOrderScheduling: false,
     floatingPhoto: false,
+    buttonColor: '',
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
@@ -93,6 +95,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         enablePickup: settingsMap['enable_pickup'] !== 'false',
         acceptOrderScheduling: settingsMap['accept_order_scheduling'] === 'true',
         floatingPhoto: settingsMap['floating_photo'] === 'true',
+        buttonColor: settingsMap['button_color'] || '',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);

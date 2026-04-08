@@ -19,6 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
+import { ButtonColorPicker } from '@/components/settings/ButtonColorPicker';
 
 export default function Settings() {
   const { company, profile, refetchUserData } = useAuthContext();
@@ -1313,6 +1314,16 @@ pause
               </div>
             </CardContent>
           </Card>
+          <ButtonColorPicker
+            value={storeSettings.buttonColor}
+            onChange={async (color) => {
+              await updateSetting('button_color', color);
+              toast({
+                title: color ? 'Cor dos botões atualizada' : 'Cor dos botões resetada',
+                description: color ? `Cor definida para ${color}` : 'Os botões usarão a cor padrão',
+              });
+            }}
+          />
         </TabsContent>
 
         {/* Tab Dashboard */}
