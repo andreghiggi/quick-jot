@@ -76,7 +76,7 @@ export default function Menu() {
     fetchCompany();
   }, [slug, navigate]);
 
-  const { products, loading: productsLoading, getActiveProducts } = useProducts({ companyId: company?.id });
+  const { products, loading: productsLoading, getActiveProducts, getNewProducts } = useProducts({ companyId: company?.id });
   const { settings, loading: settingsLoading } = useStoreSettings({ companyId: company?.id });
   const { categories, loading: categoriesLoading } = useCategories({ companyId: company?.id });
   const { neighborhoods, loading: neighborhoodsLoading, getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
@@ -310,6 +310,7 @@ export default function Menu() {
   }, [customerPhone]);
 
   const activeProducts = getActiveProducts();
+  const newProducts = getNewProducts();
   
   // Get categories in the order defined by the store owner
   // Use the sorted categories from useCategories hook, fallback to product categories
@@ -781,6 +782,7 @@ export default function Menu() {
         company={company}
         settings={settings}
         activeProducts={activeProducts}
+        newProducts={newProducts}
         allOrderedCategories={allOrderedCategories}
         categoryEmojiMap={categoryEmojiMap}
         categoryImageMap={categoryImageMap}
@@ -890,7 +892,44 @@ export default function Menu() {
         </div>
       </div>
 
-      {/* Banner - Scrolls with content */}
+      {/* NOVIDADES Carousel */}
+      {newProducts.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-b border-amber-200 dark:border-amber-800">
+          <div className="container mx-auto px-4 py-4">
+            <h2 className="text-sm font-bold text-amber-700 dark:text-amber-400 mb-3 flex items-center gap-1.5">
+              ⭐ NOVIDADES
+            </h2>
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {newProducts.map((product) => (
+                <button
+                  key={product.id}
+                  className="flex-shrink-0 w-36 bg-card rounded-xl shadow-sm border border-border overflow-hidden text-left hover:shadow-md transition-shadow"
+                  onClick={() => setSelectedProduct(product)}
+                >
+                  {product.imageUrl ? (
+                    <div className="w-full h-24 overflow-hidden">
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-24 bg-muted flex items-center justify-center">
+                      <span className="text-3xl">🍽️</span>
+                    </div>
+                  )}
+                  <div className="p-2">
+                    <p className="text-xs font-medium text-foreground line-clamp-2 break-words">{product.name}</p>
+                    <p className="text-xs font-bold text-primary mt-0.5">R$ {product.price.toFixed(2)}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {settings.bannerUrl && (
         <div className="w-full relative overflow-hidden">
           {/* Blurred background fill */}

@@ -13,17 +13,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy } from 'lucide-react';
+import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star } from 'lucide-react';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { uploadCompressedImage } from '@/utils/imageUtils';
+import { cn } from '@/lib/utils';
 
 export default function Products() {
   const { company } = useAuthContext();
-  const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, duplicateProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
+  const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, duplicateProduct, toggleNewProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
@@ -381,6 +382,7 @@ export default function Products() {
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium">{product.name}</h3>
                           {!product.active && <Badge variant="secondary">Inativo</Badge>}
+                          {product.isNew && <Badge variant="default" className="bg-amber-500 text-white text-xs">⭐ Novidade</Badge>}
                         </div>
                         {product.description && (
                           <p className="text-sm text-muted-foreground">{product.description}</p>
@@ -446,6 +448,15 @@ export default function Products() {
                           }}
                         >
                           <Plus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn("h-7 w-7", product.isNew ? "text-amber-500" : "text-muted-foreground")}
+                          title={product.isNew ? "Remover novidade" : "Marcar como novidade"}
+                          onClick={() => toggleNewProduct(product.id, !product.isNew)}
+                        >
+                          <Star className={cn("h-4 w-4", product.isNew && "fill-current")} />
                         </Button>
                         <Button
                           variant="ghost"
