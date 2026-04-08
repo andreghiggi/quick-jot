@@ -47,6 +47,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     lateralScrollOptionals: false,
     enableDelivery: true,
     enablePickup: true,
+    acceptOrderScheduling: false,
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
