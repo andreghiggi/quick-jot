@@ -235,6 +235,28 @@ export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps)
           </div>
         )}
 
+        {/* Order Scheduling Toggle */}
+        {!localConfig.alwaysOpen && (
+          <div className="border rounded-lg p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="w-5 h-5 text-primary" />
+                <div>
+                  <Label className="font-medium">Aceitar agendamento de pedidos</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Permite que clientes façam pedidos fora do horário de funcionamento. Os pedidos entram na fila quando o estabelecimento abrir.
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={isModuleEnabled('agendamento')}
+                onCheckedChange={(checked) => toggleModule('agendamento', checked)}
+                disabled={modulesLoading}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Save Button */}
         <Button
           onClick={handleSave}
