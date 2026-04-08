@@ -99,31 +99,6 @@ export default function Products() {
     }
   }
 
-  async function uploadBanner(file: File): Promise<string | null> {
-    setIsBannerUploading(true);
-    try {
-      const fileName = `banner_${Date.now()}`;
-      const result = await uploadCompressedImage(supabase, 'product-images', `${fileName}.webp`, file, { maxWidth: 1920 });
-      if (!result) throw new Error('Upload failed');
-      return result.publicUrl;
-    } catch (error) {
-      console.error('Error uploading banner:', error);
-      toast.error('Erro ao enviar banner');
-      return null;
-    } finally {
-      setIsBannerUploading(false);
-    }
-  }
-
-  async function handleBannerSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    const imageUrl = await uploadBanner(file);
-    if (imageUrl) {
-      setBannerUrl(imageUrl);
-    }
-  }
 
   async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
