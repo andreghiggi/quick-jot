@@ -1211,9 +1211,19 @@ export default function Menu() {
               <>
                 {cart.map((item, index) => (
                   <div key={index} className="border rounded-lg p-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium">{item.product.name}</p>
+                    <div className="flex items-start gap-3">
+                      {item.product.imageUrl && (
+                        <img
+                          src={item.product.imageUrl}
+                          alt={item.product.name}
+                          className="w-16 h-16 rounded-md object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <p className="font-medium line-clamp-2">{item.product.name}</p>
+                          <p className="font-semibold flex-shrink-0 ml-2">R$ {calculateItemTotal(item).toFixed(2)}</p>
+                        </div>
                         {item.selectedOptionals.length > 0 && (
                           <div className="mt-1 space-y-0.5">
                             {item.selectedOptionals.map((o) => (
@@ -1230,7 +1240,6 @@ export default function Menu() {
                           <p className="text-xs text-muted-foreground mt-1">Obs: {item.notes}</p>
                         )}
                       </div>
-                      <p className="font-semibold">R$ {calculateItemTotal(item).toFixed(2)}</p>
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-2">
