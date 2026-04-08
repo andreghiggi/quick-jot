@@ -401,9 +401,6 @@ export function MenuV2({
                     <span className="text-4xl opacity-80">{getCategoryEmoji(category, categoryEmojiMap)}</span>
                     <div className="mt-2">
                       <p className="font-bold text-sm leading-tight line-clamp-2">{category}</p>
-                      <p className="text-xs opacity-80 mt-0.5">
-                        {productCountByCategory[category]} {productCountByCategory[category] === 1 ? 'item' : 'itens'}
-                      </p>
                     </div>
                     <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-white/10" />
                     <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white/5" />
