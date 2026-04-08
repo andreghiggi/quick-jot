@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useTaxRules } from '@/hooks/useTaxRules';
-import { useCategories, CategorySortMode } from '@/hooks/useCategories';
+import { useCategories } from '@/hooks/useCategories';
 
 import { Product, ProductOptional } from '@/types/product';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
