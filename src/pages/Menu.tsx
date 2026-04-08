@@ -1130,10 +1130,10 @@ export default function Menu() {
       {/* Cart Dialog */}
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
         <DialogContent className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
-          <DialogHeader>
+          <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle>Seu Pedido</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             {cart.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">Carrinho vazio</p>
             ) : (
