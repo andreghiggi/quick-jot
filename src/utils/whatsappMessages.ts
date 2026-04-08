@@ -27,7 +27,7 @@ function applyTemplate(template: string, vars: Record<string, string>): string {
 }
 
 export function generateWhatsAppMessage(params: MessageParams): string | null {
-  const { customerName, orderNumber, orderCode, status, storeName, estimatedTime, deliveryType, storeAddress, customTemplates, menuLink, googleReviewUrl } = params;
+  const { customerName, orderNumber, orderCode, status, storeName, estimatedTime, deliveryType, storeAddress, customTemplates, menuLink, googleReviewUrl, resumo } = params;
   const num = orderCode ? `#${orderCode}` : `#${String(orderNumber).padStart(3, '0')}`;
   const name = customerName.split(' ')[0];
 
@@ -39,6 +39,7 @@ export function generateWhatsAppMessage(params: MessageParams): string | null {
     '{{endereco}}': storeAddress || '',
     '{{google_review}}': googleReviewUrl || '',
     '{{link_cardapio}}': menuLink || '',
+    '{{resumo}}': resumo || '',
   };
 
   // Determine which template key to use
