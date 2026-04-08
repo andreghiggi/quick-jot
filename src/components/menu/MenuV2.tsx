@@ -337,7 +337,7 @@ export function MenuV2({
                 <div className="flex">
                   {product.imageUrl ? (
                     <div className="w-24 h-24 flex-shrink-0 overflow-hidden">
-                      <img src={product.imageUrl} alt={product.name} loading={floatingPhoto ? "eager" : "lazy"} className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")} />
+                      <img src={product.imageUrl} alt={product.name} loading="eager" className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")} style={floatingPhoto ? { animationDelay: '-999s' } : undefined} />
                     </div>
                   ) : (
                     <div className="w-24 h-24 flex-shrink-0 bg-muted flex items-center justify-center">
