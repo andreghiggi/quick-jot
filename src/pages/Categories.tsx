@@ -227,6 +227,14 @@ export default function Categories() {
                     )}
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-1 mr-1" title="Imagem em movimento">
+                      <Film className={cn("h-3.5 w-3.5", cat.animated ? "text-primary" : "text-muted-foreground")} />
+                      <Switch
+                        checked={cat.animated || false}
+                        onCheckedChange={(checked) => updateCategory(cat.id, { animated: checked })}
+                        className="scale-75"
+                      />
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
