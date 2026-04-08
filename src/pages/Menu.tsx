@@ -640,6 +640,10 @@ export default function Menu() {
     setCustomerPhone('');
     setCustomerCpf('');
     setDeliveryAddress('');
+    setDeliveryNumber('');
+    setDeliveryComplement('');
+    setDeliveryNeighborhood('');
+    setDeliveryReference('');
     setDeliveryCity('');
     setDeliveryState('');
     setDeliveryType('');
