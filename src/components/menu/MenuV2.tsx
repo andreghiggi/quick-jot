@@ -245,7 +245,7 @@ export function MenuV2({
 
   // Main category view
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-24" style={buttonColorStyle}>
       {/* Closed Store Banner */}
       {!isOpen && (
         <div className="bg-destructive/10 border-b border-destructive/20">
