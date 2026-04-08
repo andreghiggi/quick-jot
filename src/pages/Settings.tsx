@@ -738,15 +738,59 @@ pause
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address" className="flex items-center gap-2">
+                <Label htmlFor="address_street" className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
-                  Endereço
+                  Endereço (rua, avenida, travessa...) *
                 </Label>
                 <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Rua, número, bairro, cidade"
+                  id="address_street"
+                  value={formData.address_street}
+                  onChange={(e) => setFormData({ ...formData, address_street: e.target.value })}
+                  placeholder="Ex: Rua das Flores"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="address_number">Número *</Label>
+                  <Input
+                    id="address_number"
+                    value={formData.address_number}
+                    onChange={(e) => setFormData({ ...formData, address_number: e.target.value })}
+                    placeholder="Ex: 123"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address_complement">Complemento</Label>
+                  <Input
+                    id="address_complement"
+                    value={formData.address_complement}
+                    onChange={(e) => setFormData({ ...formData, address_complement: e.target.value })}
+                    placeholder="Ex: Sala 2"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address_neighborhood">Bairro *</Label>
+                <Input
+                  id="address_neighborhood"
+                  value={formData.address_neighborhood}
+                  onChange={(e) => setFormData({ ...formData, address_neighborhood: e.target.value })}
+                  placeholder="Ex: Centro"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address_reference">Ponto de Referência</Label>
+                <Input
+                  id="address_reference"
+                  value={formData.address_reference}
+                  onChange={(e) => setFormData({ ...formData, address_reference: e.target.value })}
+                  placeholder="Ex: Próximo à praça central"
                 />
               </div>
 
