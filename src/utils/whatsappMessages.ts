@@ -82,7 +82,7 @@ export function generateWhatsAppMessage(params: MessageParams): string | null {
       return `*${name}, seu pedido ${num} foi realizado com sucesso!* Em breve vamos começar preparar seu pedido e vamos te atualizando por aqui! 😊`;
 
     case 'preparing':
-      const timeInfo = estimatedTime ? ` Tempo estimado: ${estimatedTime}.` : '';
+      const timeInfo = estimatedTime ? ` *Tempo estimado:* ${estimatedTime}.` : '';
       if (deliveryType === 'retirada') {
         return `${name}, seu pedido ${num} já está sendo preparado com carinho pela equipe do ${storeName}.${timeInfo} Avisaremos quando estiver disponível para retirada!`;
       }
