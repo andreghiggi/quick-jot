@@ -91,6 +91,18 @@ Deno.serve(async (req) => {
 
       const menuLink = `https://appcomandatech.agilizeerp.com.br/cardapio/${companyData.slug}`;
       const googleReviewUrl = settingsMap['google_review_url'] || '';
+
+      // Skip followup if explicitly disabled for this company
+      if (settingsMap['whatsapp_followup_enabled'] === 'false') {
+        // Mark all orders as followup_sent to prevent future checks
+        const companyOrders = orders.filter((o) => o.company_id === companyId);
+        for (const order of companyOrders) {
+          await supabase.from("orders").update({ followup_sent: true }).eq("id", order.id);
+        }
+        console.log(`Followup disabled for company ${companyId}, marking ${companyOrders.length} orders`);
+        continue;
+      }
+
       const defaultMessage = `{{nome}}, que bom ter você como cliente do {{loja}}! 😊\n\nEsperamos que tenha gostado do seu pedido. Quando quiser pedir novamente, é só acessar nosso cardápio:\n\n🛒 {{link_cardapio}}\n\nTe esperamos! 💛`;
 
       const template = settingsMap['whatsapp_msg_followup'] || defaultMessage;
