@@ -25,7 +25,7 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
       <div className="py-2 pr-3 min-w-0">
         <p className="text-sm font-medium text-foreground line-clamp-2 break-words">{product.name}</p>
         {product.description && (
-          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{product.description}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 break-words whitespace-normal">{product.description}</p>
         )}
         <p className="text-sm font-bold text-primary mt-1">R$ {product.price.toFixed(2)}</p>
       </div>
@@ -142,10 +142,10 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
   const nextIndex = (currentIndex + 1) % totalProducts;
 
   return (
-    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-b border-amber-200 dark:border-amber-800">
+    <div className="bg-destructive border-b border-destructive">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+          <h2 className="text-sm font-bold text-white flex items-center gap-1.5">
             ⭐ NOVIDADES
           </h2>
           {totalProducts > 1 && (
@@ -156,7 +156,7 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
                   onClick={() => { if (!isAutoAnimating) { goTo(i); startTimer(); } }}
                   className={cn(
                     "w-2 h-2 rounded-full transition-colors duration-300",
-                    i === currentIndex ? "bg-amber-500" : "bg-amber-300 dark:bg-amber-700"
+                    i === currentIndex ? "bg-white" : "bg-white/40"
                   )}
                 />
               ))}
