@@ -123,7 +123,13 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signUp(signupEmail, signupPassword, signupFullName, signupCompanyName);
+    const { error } = await signUp(signupEmail, signupPassword, signupFullName, signupCompanyName, {
+      street: signupAddressStreet,
+      number: signupAddressNumber,
+      complement: signupAddressComplement || undefined,
+      neighborhood: signupAddressNeighborhood,
+      reference: signupAddressReference || undefined,
+    });
     setIsLoading(false);
     // Redirect is handled by useEffect
   }
