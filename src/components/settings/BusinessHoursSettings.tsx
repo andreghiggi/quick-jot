@@ -5,8 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Clock, Save, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Clock, Save, Plus, Trash2, CalendarClock } from 'lucide-react';
 import { useBusinessHours, BusinessHoursConfig, DayConfig } from '@/hooks/useBusinessHours';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 
 interface BusinessHoursSettingsProps {
   companyId?: string;
@@ -14,6 +15,7 @@ interface BusinessHoursSettingsProps {
 
 export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps) {
   const { config, loading, saving, saveBusinessHours, DAY_NAMES, DEFAULT_DAYS } = useBusinessHours({ companyId });
+  const { isModuleEnabled, toggleModule, loading: modulesLoading } = useCompanyModules({ companyId });
   
   const [localConfig, setLocalConfig] = useState<BusinessHoursConfig>({
     alwaysOpen: true,
