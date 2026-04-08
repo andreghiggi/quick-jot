@@ -980,11 +980,13 @@ export default function Menu() {
             ) : (
             <div className="space-y-4">
               {selectedProduct.imageUrl && (
-                <img
-                  src={selectedProduct.imageUrl}
-                  alt={selectedProduct.name}
-                  className="w-full h-48 object-cover rounded-lg"
-                />
+                <div className="w-full h-48 rounded-lg overflow-hidden">
+                  <img
+                    src={selectedProduct.imageUrl}
+                    alt={selectedProduct.name}
+                    className={cn("w-full h-full object-cover", categoryAnimatedMap?.[selectedProduct.category] && "kenburns-animate")}
+                  />
+                </div>
               )}
               {selectedProduct.description && (
                 <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>
