@@ -451,6 +451,15 @@ export default function Products() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className={cn("h-7 w-7", product.isNew ? "text-amber-500" : "text-muted-foreground")}
+                          title={product.isNew ? "Remover novidade" : "Marcar como novidade"}
+                          onClick={() => toggleNewProduct(product.id, !product.isNew)}
+                        >
+                          <Star className={cn("h-4 w-4", product.isNew && "fill-current")} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-7 w-7"
                           title="Duplicar produto"
                           onClick={() => duplicateProduct(product.id)}
