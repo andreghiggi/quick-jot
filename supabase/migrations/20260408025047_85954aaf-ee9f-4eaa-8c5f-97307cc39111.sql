@@ -1,0 +1,1 @@
+UPDATE public.categories SET animated = true WHERE company_id = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
