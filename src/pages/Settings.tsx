@@ -147,6 +147,37 @@ export default function Settings() {
     }
   };
 
+  async function clearAllProducts() {
+    try {
+      const { error: optionalsError } = await supabase
+        .from('product_optionals')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (optionalsError) throw optionalsError;
+
+      const { error: productsError } = await supabase
+        .from('products')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (productsError) throw productsError;
+
+      toast({
+        title: 'Produtos zerados',
+        description: 'Todos os produtos foram removidos com sucesso.',
+      });
+      window.location.reload();
+    } catch (error) {
+      console.error('Error clearing products:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao limpar produtos.',
+        variant: 'destructive',
+      });
+    }
+  }
+
   const handleCardVisibilityChange = async (key: string, value: boolean) => {
     setCardVisibility(prev => ({ ...prev, [key]: value }));
     await saveCardVisibility(key.replace(/([A-Z])/g, '_$1').toLowerCase(), value);
