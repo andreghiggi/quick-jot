@@ -184,7 +184,7 @@ export function MenuV2({
                         src={product.imageUrl}
                         alt={product.name}
                         loading="lazy"
-                        className={cn("w-full h-full object-cover", categoryAnimatedMap?.[product.category] && "kenburns-animate")}
+                        className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")}
                       />
                     </div>
                   ) : (
