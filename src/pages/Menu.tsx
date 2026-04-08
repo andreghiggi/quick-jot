@@ -313,6 +313,35 @@ export default function Menu() {
     });
   }
 
+  // Smart product select: skip dialog if product has no optionals/groups
+  function handleProductSelect(product: Product) {
+    const groups = getGroupsForProduct(product.id, product.category);
+    const hasOldOptionals = product.optionals && product.optionals.filter(o => o.active).length > 0;
+    const hasGroups = groups.length > 0;
+
+    if (!hasOldOptionals && !hasGroups) {
+      // No optionals - add directly to cart
+      const newItem: CartItem = {
+        product,
+        quantity: 1,
+        selectedOptionals: [],
+        notes: undefined,
+      };
+      setCart((prev) => [...prev, newItem]);
+      setLastAddedItem(newItem);
+      setShowAddedToCart(true);
+      return;
+    }
+
+    setSelectedProduct(product);
+  }
+
+  // Open dialog specifically for notes on a product without optionals
+  function handleOpenNotes(e: React.MouseEvent, product: Product) {
+    e.stopPropagation();
+    setSelectedProduct(product);
+  }
+
   function addToCart() {
     if (!selectedProduct) return;
 
