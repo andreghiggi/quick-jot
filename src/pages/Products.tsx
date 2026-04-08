@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useCategories, CategorySortMode } from '@/hooks/useCategories';
-import { useStoreSettings } from '@/hooks/useStoreSettings';
+
 import { Product, ProductOptional } from '@/types/product';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,6 @@ export default function Products() {
     }
     return result;
   };
-  const { settings, saveStorePhone, saveBannerUrl, saveStoreName } = useStoreSettings({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
@@ -51,23 +50,12 @@ export default function Products() {
   const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [storePhone, setStorePhone] = useState('');
-  const [storeName, setStoreName] = useState('');
-  const [bannerUrl, setBannerUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [isBannerUploading, setIsBannerUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
-  const bannerFileInputRef = useRef<HTMLInputElement>(null);
   const [isBulkTaxOpen, setIsBulkTaxOpen] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   const menuLink = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
-
-  useEffect(() => {
-    setStorePhone(settings.storePhone);
-    setStoreName(settings.storeName);
-    setBannerUrl(settings.bannerUrl);
-  }, [settings]);
 
   // Set default category when categories load
   useEffect(() => {
@@ -94,15 +82,6 @@ export default function Products() {
     return Array.from(optionalsMap.values());
   }, [products]);
 
-  async function handleSaveSettings() {
-    await saveStorePhone(storePhone);
-    await saveStoreName(storeName);
-    if (bannerUrl !== settings.bannerUrl) {
-      await saveBannerUrl(bannerUrl);
-    }
-    setIsSettingsOpen(false);
-  }
-
   async function uploadImage(file: File): Promise<string | null> {
     setIsUploading(true);
     try {
@@ -119,31 +98,6 @@ export default function Products() {
     }
   }
 
-  async function uploadBanner(file: File): Promise<string | null> {
-    setIsBannerUploading(true);
-    try {
-      const fileName = `banner_${Date.now()}`;
-      const result = await uploadCompressedImage(supabase, 'product-images', `${fileName}.webp`, file, { maxWidth: 1920 });
-      if (!result) throw new Error('Upload failed');
-      return result.publicUrl;
-    } catch (error) {
-      console.error('Error uploading banner:', error);
-      toast.error('Erro ao enviar banner');
-      return null;
-    } finally {
-      setIsBannerUploading(false);
-    }
-  }
-
-  async function handleBannerSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    const imageUrl = await uploadBanner(file);
-    if (imageUrl) {
-      setBannerUrl(imageUrl);
-    }
-  }
 
   async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -679,82 +633,11 @@ export default function Products() {
           <DialogHeader>
             <DialogTitle>Configurações</DialogTitle>
           </DialogHeader>
-          <Tabs defaultValue="geral" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="geral">Geral</TabsTrigger>
+          <Tabs defaultValue="categorias" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="categorias">Categorias</TabsTrigger>
               <TabsTrigger value="perigo">Perigo</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="geral" className="space-y-4 mt-4">
-              <div>
-                <Label>Nome da Loja</Label>
-                <Input
-                  value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
-                  placeholder="Nome da sua loja"
-                />
-              </div>
-              <div>
-                <Label>Número do WhatsApp da loja</Label>
-                <Input
-                  value={storePhone}
-                  onChange={(e) => setStorePhone(e.target.value)}
-                  placeholder="5511999999999"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Formato: código do país + DDD + número (ex: 5511999999999)
-                </p>
-              </div>
-              <div>
-                <Label>Banner do Cardápio</Label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={bannerFileInputRef}
-                  onChange={handleBannerSelect}
-                  className="hidden"
-                />
-                {bannerUrl ? (
-                  <div className="relative mt-2">
-                    <img
-                      src={bannerUrl}
-                      alt="Banner Preview"
-                      className="w-full h-32 object-cover rounded"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-1 right-1 h-6 w-6"
-                      onClick={() => setBannerUrl('')}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full mt-2"
-                    onClick={() => bannerFileInputRef.current?.click()}
-                    disabled={isBannerUploading}
-                  >
-                    {isBannerUploading ? (
-                      'Enviando...'
-                    ) : (
-                      <>
-                        <Image className="h-4 w-4 mr-2" />
-                        Selecionar banner
-                      </>
-                    )}
-                  </Button>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  Recomendado: 1200x400 pixels
-                </p>
-              </div>
-              <Button onClick={handleSaveSettings} className="w-full">Salvar Configurações</Button>
-            </TabsContent>
 
             <TabsContent value="categorias" className="space-y-4 mt-4">
               <div>

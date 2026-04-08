@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +12,8 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen } from 'lucide-react';
+import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen, Image, Upload } from 'lucide-react';
+import { uploadCompressedImage } from '@/utils/imageUtils';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
@@ -20,7 +21,10 @@ import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettin
 export default function Settings() {
   const { company, refetchUserData } = useAuthContext();
   const { toast } = useToast();
-  const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting } = useStoreSettings({ companyId: company?.id });
+  const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
+  const [bannerUrl, setBannerUrl] = useState('');
+  const [isBannerUploading, setIsBannerUploading] = useState(false);
+  const bannerFileInputRef = useRef<HTMLInputElement>(null);
   const { neighborhoods, addNeighborhood, deleteNeighborhood } = useDeliveryNeighborhoods({ companyId: company?.id });
   const [loading, setLoading] = useState(false);
   const [deliveryFeeCity, setDeliveryFeeCity] = useState('');
@@ -59,6 +63,7 @@ export default function Settings() {
     if (neighborhoods.length > 0) {
       setDeliveryMode('neighborhood');
     }
+    setBannerUrl(storeSettings.bannerUrl);
   }, [storeSettings, neighborhoods.length]);
 
   useEffect(() => {
@@ -71,6 +76,39 @@ export default function Settings() {
       });
     }
   }, [company]);
+
+  async function uploadBanner(file: File): Promise<string | null> {
+    setIsBannerUploading(true);
+    try {
+      const fileName = `banner_${Date.now()}`;
+      const result = await uploadCompressedImage(supabase, 'product-images', `${fileName}.webp`, file, { maxWidth: 1920 });
+      if (!result) throw new Error('Upload failed');
+      return result.publicUrl;
+    } catch (error) {
+      console.error('Error uploading banner:', error);
+      toast({ title: 'Erro ao enviar banner', variant: 'destructive' });
+      return null;
+    } finally {
+      setIsBannerUploading(false);
+    }
+  }
+
+  async function handleBannerSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const imageUrl = await uploadBanner(file);
+    if (imageUrl) {
+      setBannerUrl(imageUrl);
+      await saveBannerUrl(imageUrl);
+      toast({ title: 'Banner salvo', description: 'O banner foi atualizado com sucesso.' });
+    }
+  }
+
+  async function handleRemoveBanner() {
+    setBannerUrl('');
+    await saveBannerUrl('');
+    toast({ title: 'Banner removido' });
+  }
 
   const handleSave = async () => {
     if (!company?.id) return;
@@ -661,6 +699,64 @@ pause
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 Salvar Dados da Empresa
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Image className="w-5 h-5" />
+                Banner do Cardápio
+              </CardTitle>
+              <CardDescription>
+                Imagem exibida no topo do cardápio online (recomendado: 1200x400 pixels)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <input
+                type="file"
+                accept="image/*"
+                ref={bannerFileInputRef}
+                onChange={handleBannerSelect}
+                className="hidden"
+              />
+              {bannerUrl ? (
+                <div className="relative">
+                  <img
+                    src={bannerUrl}
+                    alt="Banner Preview"
+                    className="w-full h-32 object-cover rounded-lg border"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 h-7 w-7"
+                    onClick={handleRemoveBanner}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => bannerFileInputRef.current?.click()}
+                  disabled={isBannerUploading}
+                >
+                  {isBannerUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Selecionar banner
+                    </>
+                  )}
+                </Button>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
