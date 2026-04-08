@@ -920,8 +920,8 @@ export default function Menu() {
       <main className="container mx-auto px-4 py-6 space-y-8">
         {groupedProducts.map(([category, categoryProducts]) => (
           <section key={category}>
-            <h2 className="text-lg font-bold mb-4 text-foreground border-l-4 border-primary pl-3">
-              {category}
+            <h2 className="text-lg font-bold mb-4 text-white">
+              <span className="bg-destructive px-3 py-1 rounded-md">{category}</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {categoryProducts.map((product) => (
