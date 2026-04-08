@@ -124,8 +124,29 @@ export default function Menu() {
     'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
     'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ];
+  // Check if current user is an admin of this company
+  useEffect(() => {
+    async function checkAdmin() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user || !company?.id) return;
+      const { data } = await supabase
+        .from('company_users')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .eq('company_id', company.id)
+        .maybeSingle();
+      setIsAdmin(!!data);
+    }
+    checkAdmin();
+  }, [company?.id]);
 
-  function isValidCpf(cpf: string): boolean {
+  const menuLink = `${window.location.origin}/cardapio/${slug}`;
+  const copyMenuLink = useCallback(() => {
+    navigator.clipboard.writeText(menuLink);
+    toast.success('Link copiado!');
+  }, [menuLink]);
+
+
     if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
     let sum = 0;
     for (let i = 0; i < 9; i++) sum += parseInt(cpf.charAt(i)) * (10 - i);
