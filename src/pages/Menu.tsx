@@ -782,7 +782,7 @@ export default function Menu() {
         company={company}
         settings={settings}
         activeProducts={activeProducts}
-        allOrderedCategories={allOrderedCategories}
+        newProducts={newProducts}
         categoryEmojiMap={categoryEmojiMap}
         categoryImageMap={categoryImageMap}
         floatingPhoto={floatingPhoto}
