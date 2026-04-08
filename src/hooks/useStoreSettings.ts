@@ -21,6 +21,7 @@ interface StoreSettings {
   enableDelivery: boolean;
   enablePickup: boolean;
   acceptOrderScheduling: boolean;
+  floatingPhoto: boolean;
 }
 
 interface UseStoreSettingsOptions {
