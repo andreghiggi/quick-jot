@@ -757,17 +757,17 @@ export default function Menu() {
   const isV2 = settings.menuLayout === 'v2';
 
   const adminBanner = isAdmin ? (
-    <div className="bg-primary/10 border-b border-primary/20 px-4 py-3">
+    <div className="bg-gray-900 border-b border-gray-700 px-4 py-3">
       <div className="max-w-3xl mx-auto flex items-center justify-between gap-2">
-        <p className="text-sm truncate">
-          <strong>Link do cardápio:</strong>{' '}
-          <a href={menuLink} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+        <p className="text-sm text-white truncate">
+          <strong>🔗 Link do cardápio:</strong>{' '}
+          <a href={menuLink} target="_blank" rel="noopener noreferrer" className="text-blue-300 underline">
             {menuLink}
           </a>
         </p>
-        <Button variant="outline" size="sm" onClick={copyMenuLink} className="flex-shrink-0">
+        <Button variant="destructive" size="sm" onClick={copyMenuLink} className="flex-shrink-0">
           <Copy className="h-4 w-4 mr-2" />
-          Copiar
+          Copiar link
         </Button>
       </div>
     </div>
