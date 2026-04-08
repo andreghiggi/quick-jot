@@ -976,7 +976,7 @@ export default function Menu() {
             ) : (
             <div className="space-y-4">
               {selectedProduct.imageUrl && (
-                <div className="w-full h-48 rounded-lg overflow-hidden">
+                <div key={selectedProduct.id} className="w-full h-48 rounded-lg overflow-hidden">
                   <img
                     src={selectedProduct.imageUrl}
                     alt={selectedProduct.name}
