@@ -76,8 +76,6 @@ interface MenuV2Props {
   isOpen: boolean;
   formattedHours: string;
   onProductSelect: (product: Product) => void;
-  onProductOpenNotes: (e: React.MouseEvent, product: Product) => void;
-  getGroupsForProduct: (productId: string, productCategory: string) => any[];
   onCartOpen: () => void;
   onNavigateBack: () => void;
 }
