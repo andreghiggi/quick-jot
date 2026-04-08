@@ -84,7 +84,10 @@ export default function Menu() {
   const { loading: hoursLoading, isCurrentlyOpen, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentMethodsLoading } = usePaymentMethods({ companyId: company?.id });
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const isOpen = isCurrentlyOpen();
+  const schedulingEnabled = isModuleEnabled('agendamento');
+  const canOrder = isOpen || schedulingEnabled;
   const formattedHours = getFormattedHours();
   
   const [cart, setCart] = useState<CartItem[]>([]);
