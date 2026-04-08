@@ -35,12 +35,13 @@ export function AddedToCartDialog({
   cartTotal,
   onUpdateQuantity,
   onRemoveItem,
+  buttonColorStyle,
 }: AddedToCartDialogProps) {
   if (!lastAddedItem) return null;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-sm mx-auto p-0 gap-0 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
+      <DialogContent style={buttonColorStyle} className="max-w-sm mx-auto p-0 gap-0 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Success header */}
         <div className="bg-primary/10 px-6 pt-5 pb-3 text-center flex-shrink-0">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/20 mb-2">
