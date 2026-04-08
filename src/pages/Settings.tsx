@@ -759,9 +759,6 @@ pause
               )}
             </CardContent>
           </Card>
-              </Button>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* Tab Horários */}
