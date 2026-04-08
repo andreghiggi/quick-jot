@@ -168,6 +168,11 @@ export type Database = {
         Row: {
           active: boolean | null
           address: string | null
+          address_complement: string | null
+          address_neighborhood: string | null
+          address_number: string | null
+          address_reference: string | null
+          address_street: string | null
           created_at: string | null
           id: string
           logo_url: string | null
@@ -179,6 +184,11 @@ export type Database = {
         Insert: {
           active?: boolean | null
           address?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_reference?: string | null
+          address_street?: string | null
           created_at?: string | null
           id?: string
           logo_url?: string | null
@@ -190,6 +200,11 @@ export type Database = {
         Update: {
           active?: boolean | null
           address?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_reference?: string | null
+          address_street?: string | null
           created_at?: string | null
           id?: string
           logo_url?: string | null
