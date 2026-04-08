@@ -355,10 +355,13 @@ export function useOrders(options: UseOrdersOptions = {}) {
         resumo += `\n\n💰 *Total: R$ ${order.total.toFixed(2)}*`;
       }
 
-      // Add payment method info to resumo
+      // Add payment method info to resumo (skip PIX since the dedicated PIX block handles it)
       if (order.notes) {
         const paymentMatch = order.notes.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i);
-        if (paymentMatch) resumo += `\n💳 *Pagamento:* ${paymentMatch[1].trim()}`;
+        const paymentName = paymentMatch?.[1]?.trim();
+        if (paymentMatch && !(paymentName && paymentName.toLowerCase().includes('pix'))) {
+          resumo += `\n💳 *Pagamento:* ${paymentName}`;
+        }
         const trocoMatch = order.notes.match(/Troco para R\$\s*([^\)]+)/i);
         if (trocoMatch) resumo += `\n💵 *Troco para:* R$ ${trocoMatch[1].trim()}`;
       }
@@ -424,7 +427,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
               }
               message += '\n\n' + pixMsg;
             } else {
-              message += `\n\n${name}, para finalizar seu pedido ${num}, faça o pagamento via PIX:\n\n🔑 *Chave PIX para copiar:*\n${pixMethod.pix_key}\n\n⚠️ Copie a chave acima e cole no seu app de pagamento, após envie o comprovante de pagamento aqui. Obrigado! 😊`;
+              message += `\n\n💳 *Pagamento via PIX* (Enviar comprovante no WhatsApp)\n\n${name}, para finalizar seu pedido ${num}, faça o pagamento via PIX:\n\n🔑 *Chave PIX para copiar:*\n${pixMethod.pix_key}\n\n⚠️ Copie a chave acima e cole no seu app de pagamento, após envie o comprovante de pagamento aqui. Obrigado! 😊`;
             }
           }
         }
