@@ -17,6 +17,7 @@ const loginSchema = z.object({
 
 const signupSchema = z.object({
   companyName: z.string().min(2, 'Nome da empresa deve ter pelo menos 2 caracteres'),
+  cnpj: z.string().optional(),
   fullName: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
@@ -53,6 +54,7 @@ export default function Auth() {
   const [signupAddressComplement, setSignupAddressComplement] = useState('');
   const [signupAddressNeighborhood, setSignupAddressNeighborhood] = useState('');
   const [signupAddressReference, setSignupAddressReference] = useState('');
+  const [signupCnpj, setSignupCnpj] = useState('');
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -99,6 +101,7 @@ export default function Auth() {
     try {
       signupSchema.parse({
         companyName: signupCompanyName,
+        cnpj: signupCnpj,
         fullName: signupFullName,
         email: signupEmail,
         password: signupPassword,
@@ -129,6 +132,7 @@ export default function Auth() {
       complement: signupAddressComplement || undefined,
       neighborhood: signupAddressNeighborhood,
       reference: signupAddressReference || undefined,
+      cnpj: signupCnpj || undefined,
     });
     setIsLoading(false);
     // Redirect is handled by useEffect
@@ -207,6 +211,18 @@ export default function Auth() {
                     disabled={isLoading}
                   />
                   {errors.companyName && <p className="text-sm text-destructive">{errors.companyName}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-cnpj">CNPJ</Label>
+                  <Input
+                    id="signup-cnpj"
+                    type="text"
+                    placeholder="00.000.000/0000-00"
+                    value={signupCnpj}
+                    onChange={(e) => setSignupCnpj(e.target.value)}
+                    disabled={isLoading}
+                  />
                 </div>
 
                 <div className="space-y-2">

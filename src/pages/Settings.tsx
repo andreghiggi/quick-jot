@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen, Image, Upload, AlertTriangle } from 'lucide-react';
+import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen, Image, Upload, AlertTriangle, Mail } from 'lucide-react';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
@@ -21,7 +21,7 @@ import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
 
 export default function Settings() {
-  const { company, refetchUserData } = useAuthContext();
+  const { company, profile, refetchUserData } = useAuthContext();
   const { toast } = useToast();
   const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
   const [bannerUrl, setBannerUrl] = useState('');
@@ -36,6 +36,7 @@ export default function Settings() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    cnpj: '',
     address_street: '',
     address_number: '',
     address_complement: '',
@@ -78,6 +79,7 @@ export default function Settings() {
       setFormData({
         name: company.name || '',
         phone: company.phone || '',
+        cnpj: (company as any).cnpj || '',
         address_street: (company as any).address_street || '',
         address_number: (company as any).address_number || '',
         address_complement: (company as any).address_complement || '',
@@ -139,6 +141,7 @@ export default function Settings() {
         .update({
           name: formData.name,
           phone: formData.phone,
+          cnpj: formData.cnpj,
           address: fullAddress,
           address_street: formData.address_street,
           address_number: formData.address_number,
@@ -699,6 +702,16 @@ pause
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="cnpj">CNPJ</Label>
+                <Input
+                  id="cnpj"
+                  value={formData.cnpj}
+                  onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                  placeholder="00.000.000/0000-00"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="slug" className="flex items-center gap-2">
                   <Globe className="w-4 h-4" />
                   Slug (URL do cardápio)
@@ -728,6 +741,20 @@ pause
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  E-mail
+                </Label>
+                <Input
+                  id="email"
+                  value={profile?.email || ''}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">O e-mail é definido no cadastro e não pode ser alterado aqui.</p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="phone">Telefone / WhatsApp</Label>
                 <Input
                   id="phone"
@@ -736,12 +763,22 @@ pause
                   placeholder="(00) 00000-0000"
                 />
               </div>
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Endereço
+              </CardTitle>
+              <CardDescription>
+                Endereço da empresa
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="address_street" className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  Endereço (rua, avenida, travessa...) *
-                </Label>
+                <Label htmlFor="address_street">Endereço (rua, avenida, travessa...) *</Label>
                 <Input
                   id="address_street"
                   value={formData.address_street}

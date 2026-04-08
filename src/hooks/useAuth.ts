@@ -147,6 +147,7 @@ export function useAuth() {
     complement?: string;
     neighborhood: string;
     reference?: string;
+    cnpj?: string;
   }) {
     setLoading(true);
     const redirectUrl = `${window.location.origin}/`;
@@ -198,6 +199,7 @@ export function useAuth() {
             address_complement: addressData.complement || null,
             address_neighborhood: addressData.neighborhood,
             address_reference: addressData.reference || null,
+            cnpj: addressData.cnpj || null,
           } as any)
           .eq('id', companyUser.company_id);
       }
