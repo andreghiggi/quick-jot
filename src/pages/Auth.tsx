@@ -101,6 +101,7 @@ export default function Auth() {
     try {
       signupSchema.parse({
         companyName: signupCompanyName,
+        cnpj: signupCnpj,
         fullName: signupFullName,
         email: signupEmail,
         password: signupPassword,
