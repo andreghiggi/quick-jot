@@ -667,10 +667,10 @@ pause
     >
       <Tabs defaultValue="empresa" className="space-y-6">
         <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="empresa">Empresa</TabsTrigger>
+          <TabsTrigger value="empresa">Geral</TabsTrigger>
+          <TabsTrigger value="layout">Layout</TabsTrigger>
           <TabsTrigger value="horarios">Horários</TabsTrigger>
           <TabsTrigger value="entrega">Entrega</TabsTrigger>
-          <TabsTrigger value="layout">Layout</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="impressao">Impressão</TabsTrigger>
         </TabsList>
