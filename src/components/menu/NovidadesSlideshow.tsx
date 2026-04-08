@@ -25,7 +25,7 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
       <div className="py-2 pr-3 min-w-0">
         <p className="text-sm font-medium text-foreground line-clamp-2 break-words">{product.name}</p>
         {product.description && (
-          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{product.description}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 break-words whitespace-normal">{product.description}</p>
         )}
         <p className="text-sm font-bold text-primary mt-1">R$ {product.price.toFixed(2)}</p>
       </div>
