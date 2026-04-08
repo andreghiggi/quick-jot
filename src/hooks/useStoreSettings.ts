@@ -20,6 +20,7 @@ interface StoreSettings {
   lateralScrollOptionals: boolean;
   enableDelivery: boolean;
   enablePickup: boolean;
+  acceptOrderScheduling: boolean;
 }
 
 interface UseStoreSettingsOptions {
