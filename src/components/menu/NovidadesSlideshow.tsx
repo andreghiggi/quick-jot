@@ -7,81 +7,128 @@ interface NovidadesSlideshowProps {
   onProductSelect: (product: Product) => void;
 }
 
+function ProductCard({ product, onClick }: { product: Product; onClick: () => void }) {
+  return (
+    <button
+      className="w-full flex-shrink-0 flex items-center gap-3 bg-card rounded-xl shadow-sm border border-border overflow-hidden text-left hover:shadow-md"
+      onClick={onClick}
+    >
+      {product.imageUrl ? (
+        <div className="w-24 h-24 flex-shrink-0 overflow-hidden">
+          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+        </div>
+      ) : (
+        <div className="w-24 h-24 flex-shrink-0 bg-muted flex items-center justify-center">
+          <span className="text-3xl">🍽️</span>
+        </div>
+      )}
+      <div className="py-2 pr-3 min-w-0">
+        <p className="text-sm font-medium text-foreground line-clamp-2 break-words">{product.name}</p>
+        {product.description && (
+          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{product.description}</p>
+        )}
+        <p className="text-sm font-bold text-primary mt-1">R$ {product.price.toFixed(2)}</p>
+      </div>
+    </button>
+  );
+}
+
 export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlideshowProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState<'left' | 'right'>('left');
-  const [animState, setAnimState] = useState<'enter' | 'exit'>('enter');
+  const [offset, setOffset] = useState(0); // percentage offset for drag
+  const [isDragging, setIsDragging] = useState(false);
+  const [isAutoAnimating, setIsAutoAnimating] = useState(false);
   const touchStartX = useRef(0);
-  const touchDeltaX = useRef(0);
+  const containerWidth = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isTransitioning = useRef(false);
+  const autoAnimRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const transition = useCallback((newIndex: number, dir: 'left' | 'right') => {
-    if (isTransitioning.current) return;
-    isTransitioning.current = true;
-    setDirection(dir);
-    setAnimState('exit');
-    setTimeout(() => {
-      setCurrentIndex(newIndex);
-      setAnimState('enter');
-      setTimeout(() => {
-        isTransitioning.current = false;
-      }, 300);
-    }, 300);
-  }, []);
+  const totalProducts = products.length;
+
+  const goTo = useCallback((newIndex: number) => {
+    const dir = newIndex > currentIndex ? -1 : 1;
+    setIsAutoAnimating(true);
+    setOffset(dir * 100);
+
+    if (autoAnimRef.current) clearTimeout(autoAnimRef.current);
+    autoAnimRef.current = setTimeout(() => {
+      setIsAutoAnimating(false);
+      setCurrentIndex(((newIndex % totalProducts) + totalProducts) % totalProducts);
+      setOffset(0);
+    }, 700);
+  }, [currentIndex, totalProducts]);
 
   const goNext = useCallback(() => {
-    transition((currentIndex + 1) % products.length, 'left');
-  }, [currentIndex, products.length, transition]);
-
-  const goPrev = useCallback(() => {
-    transition((currentIndex - 1 + products.length) % products.length, 'right');
-  }, [currentIndex, products.length, transition]);
+    goTo(currentIndex + 1);
+  }, [currentIndex, goTo]);
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
-    if (products.length > 1) {
+    if (totalProducts > 1) {
       timerRef.current = setInterval(goNext, 4000);
     }
-  }, [products.length, goNext]);
+  }, [totalProducts, goNext]);
 
   useEffect(() => {
-    if (products.length <= 1) return;
+    if (totalProducts <= 1) return;
     startTimer();
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [products.length, startTimer]);
+  }, [totalProducts, startTimer]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (isAutoAnimating) return;
     touchStartX.current = e.touches[0].clientX;
-    touchDeltaX.current = 0;
+    containerWidth.current = containerRef.current?.offsetWidth || 1;
+    setIsDragging(true);
+    if (timerRef.current) clearInterval(timerRef.current);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
+    if (!isDragging || isAutoAnimating) return;
+    const delta = e.touches[0].clientX - touchStartX.current;
+    const pct = (delta / containerWidth.current) * 100;
+    setOffset(pct);
   };
 
   const handleTouchEnd = () => {
-    if (products.length <= 1) return;
-    const threshold = 50;
-    if (touchDeltaX.current < -threshold) {
-      goNext();
-      startTimer();
-    } else if (touchDeltaX.current > threshold) {
-      goPrev();
-      startTimer();
+    if (!isDragging || isAutoAnimating) return;
+    setIsDragging(false);
+
+    if (totalProducts <= 1) { setOffset(0); startTimer(); return; }
+
+    const threshold = 20; // percentage
+    if (offset < -threshold) {
+      // swiped left → next
+      setIsAutoAnimating(true);
+      setOffset(-100);
+      if (autoAnimRef.current) clearTimeout(autoAnimRef.current);
+      autoAnimRef.current = setTimeout(() => {
+        setIsAutoAnimating(false);
+        setCurrentIndex((prev) => (prev + 1) % totalProducts);
+        setOffset(0);
+      }, 400);
+    } else if (offset > threshold) {
+      // swiped right → prev
+      setIsAutoAnimating(true);
+      setOffset(100);
+      if (autoAnimRef.current) clearTimeout(autoAnimRef.current);
+      autoAnimRef.current = setTimeout(() => {
+        setIsAutoAnimating(false);
+        setCurrentIndex((prev) => (prev - 1 + totalProducts) % totalProducts);
+        setOffset(0);
+      }, 400);
+    } else {
+      // snap back
+      setOffset(0);
     }
+    startTimer();
   };
 
   if (products.length === 0) return null;
 
-  const product = products[currentIndex];
-
-  const slideClass = cn(
-    "w-full flex items-center gap-3 bg-card rounded-xl shadow-sm border border-border overflow-hidden text-left hover:shadow-md transition-all duration-300 ease-in-out",
-    animState === 'exit' && direction === 'left' && "-translate-x-full opacity-0",
-    animState === 'exit' && direction === 'right' && "translate-x-full opacity-0",
-    animState === 'enter' && "translate-x-0 opacity-100",
-  );
+  const prevIndex = (currentIndex - 1 + totalProducts) % totalProducts;
+  const nextIndex = (currentIndex + 1) % totalProducts;
 
   return (
     <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-b border-amber-200 dark:border-amber-800">
@@ -90,12 +137,12 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
           <h2 className="text-sm font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
             ⭐ NOVIDADES
           </h2>
-          {products.length > 1 && (
+          {totalProducts > 1 && (
             <div className="flex gap-1.5">
               {products.map((_, i) => (
                 <button
                   key={i}
-                  onClick={() => { transition(i, i > currentIndex ? 'left' : 'right'); startTimer(); }}
+                  onClick={() => { if (!isAutoAnimating) { goTo(i); startTimer(); } }}
                   className={cn(
                     "w-2 h-2 rounded-full transition-colors duration-300",
                     i === currentIndex ? "bg-amber-500" : "bg-amber-300 dark:bg-amber-700"
@@ -106,32 +153,32 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
           )}
         </div>
         <div
+          ref={containerRef}
           className="overflow-hidden"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <button
-            className={slideClass}
-            onClick={() => onProductSelect(product)}
+          <div
+            className="flex"
+            style={{
+              transform: `translateX(${offset}%)`,
+              transition: isDragging ? 'none' : 'transform 0.7s cubic-bezier(0.25, 0.1, 0.25, 1)',
+            }}
           >
-            {product.imageUrl ? (
-              <div className="w-24 h-24 flex-shrink-0 overflow-hidden">
-                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-24 h-24 flex-shrink-0 bg-muted flex items-center justify-center">
-                <span className="text-3xl">🍽️</span>
-              </div>
-            )}
-            <div className="py-2 pr-3 min-w-0">
-              <p className="text-sm font-medium text-foreground line-clamp-2 break-words">{product.name}</p>
-              {product.description && (
-                <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{product.description}</p>
-              )}
-              <p className="text-sm font-bold text-primary mt-1">R$ {product.price.toFixed(2)}</p>
+            {/* Previous (off-screen left) */}
+            <div className="w-full flex-shrink-0" style={{ marginLeft: '-100%' }}>
+              <ProductCard product={products[prevIndex]} onClick={() => onProductSelect(products[prevIndex])} />
             </div>
-          </button>
+            {/* Current */}
+            <div className="w-full flex-shrink-0">
+              <ProductCard product={products[currentIndex]} onClick={() => onProductSelect(products[currentIndex])} />
+            </div>
+            {/* Next (off-screen right) */}
+            <div className="w-full flex-shrink-0">
+              <ProductCard product={products[nextIndex]} onClick={() => onProductSelect(products[nextIndex])} />
+            </div>
+          </div>
         </div>
       </div>
     </div>
