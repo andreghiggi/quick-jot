@@ -21,6 +21,11 @@ const signupSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   confirmPassword: z.string(),
+  addressStreet: z.string().min(2, 'Endereço é obrigatório'),
+  addressNumber: z.string().min(1, 'Número é obrigatório'),
+  addressComplement: z.string().optional(),
+  addressNeighborhood: z.string().min(2, 'Bairro é obrigatório'),
+  addressReference: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Senhas não conferem',
   path: ['confirmPassword'],
@@ -43,6 +48,11 @@ export default function Auth() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [signupAddressStreet, setSignupAddressStreet] = useState('');
+  const [signupAddressNumber, setSignupAddressNumber] = useState('');
+  const [signupAddressComplement, setSignupAddressComplement] = useState('');
+  const [signupAddressNeighborhood, setSignupAddressNeighborhood] = useState('');
+  const [signupAddressReference, setSignupAddressReference] = useState('');
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -93,6 +103,11 @@ export default function Auth() {
         email: signupEmail,
         password: signupPassword,
         confirmPassword: signupConfirmPassword,
+        addressStreet: signupAddressStreet,
+        addressNumber: signupAddressNumber,
+        addressComplement: signupAddressComplement,
+        addressNeighborhood: signupAddressNeighborhood,
+        addressReference: signupAddressReference,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -108,7 +123,13 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signUp(signupEmail, signupPassword, signupFullName, signupCompanyName);
+    const { error } = await signUp(signupEmail, signupPassword, signupFullName, signupCompanyName, {
+      street: signupAddressStreet,
+      number: signupAddressNumber,
+      complement: signupAddressComplement || undefined,
+      neighborhood: signupAddressNeighborhood,
+      reference: signupAddressReference || undefined,
+    });
     setIsLoading(false);
     // Redirect is handled by useEffect
   }
@@ -187,6 +208,68 @@ export default function Auth() {
                   />
                   {errors.companyName && <p className="text-sm text-destructive">{errors.companyName}</p>}
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-address-street">Endereço (rua, avenida, travessa...) *</Label>
+                  <Input
+                    id="signup-address-street"
+                    type="text"
+                    placeholder="Ex: Rua das Flores"
+                    value={signupAddressStreet}
+                    onChange={(e) => setSignupAddressStreet(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  {errors.addressStreet && <p className="text-sm text-destructive">{errors.addressStreet}</p>}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-address-number">Número *</Label>
+                    <Input
+                      id="signup-address-number"
+                      type="text"
+                      placeholder="Ex: 123"
+                      value={signupAddressNumber}
+                      onChange={(e) => setSignupAddressNumber(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    {errors.addressNumber && <p className="text-sm text-destructive">{errors.addressNumber}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-address-complement">Complemento</Label>
+                    <Input
+                      id="signup-address-complement"
+                      type="text"
+                      placeholder="Ex: Sala 2"
+                      value={signupAddressComplement}
+                      onChange={(e) => setSignupAddressComplement(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-address-neighborhood">Bairro *</Label>
+                  <Input
+                    id="signup-address-neighborhood"
+                    type="text"
+                    placeholder="Ex: Centro"
+                    value={signupAddressNeighborhood}
+                    onChange={(e) => setSignupAddressNeighborhood(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  {errors.addressNeighborhood && <p className="text-sm text-destructive">{errors.addressNeighborhood}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-address-reference">Ponto de Referência</Label>
+                  <Input
+                    id="signup-address-reference"
+                    type="text"
+                    placeholder="Ex: Próximo à praça central"
+                    value={signupAddressReference}
+                    onChange={(e) => setSignupAddressReference(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Seu Nome Completo</Label>
                   <Input
