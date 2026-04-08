@@ -81,6 +81,7 @@ interface MenuV2Props {
   onProductSelect: (product: Product) => void;
   onCartOpen: () => void;
   onNavigateBack: () => void;
+  buttonColorStyle?: React.CSSProperties;
 }
 
 export function MenuV2({
@@ -99,6 +100,7 @@ export function MenuV2({
   onProductSelect,
   onCartOpen,
   onNavigateBack,
+  buttonColorStyle,
 }: MenuV2Props) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,7 +124,7 @@ export function MenuV2({
   // If a category is selected, show products in that category
   if (selectedCategory) {
     return (
-      <div className="min-h-screen bg-background pb-24">
+      <div className="min-h-screen bg-background pb-24" style={buttonColorStyle}>
         {/* Category Header */}
         <div className="sticky top-0 z-20 bg-card border-b border-border shadow-sm">
           <div className="container mx-auto px-4 py-3">
@@ -243,7 +245,7 @@ export function MenuV2({
 
   // Main category view
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-24" style={buttonColorStyle}>
       {/* Closed Store Banner */}
       {!isOpen && (
         <div className="bg-destructive/10 border-b border-destructive/20">

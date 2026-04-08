@@ -202,6 +202,29 @@ export default function Menu() {
   // Floating photo animation enabled per establishment
   const floatingPhoto = settings.floatingPhoto;
 
+  // Convert buttonColor hex to HSL for CSS variable override
+  const buttonColorStyle = useMemo(() => {
+    const hex = settings.buttonColor;
+    if (!hex || !/^#[0-9A-Fa-f]{6}$/.test(hex)) return undefined;
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+      else if (max === g) h = ((b - r) / d + 2) / 6;
+      else h = ((r - g) / d + 4) / 6;
+    }
+    const hsl = `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    const fg = lum > 0.5 ? '0 0% 0%' : '0 0% 100%';
+    return { '--primary': hsl, '--primary-foreground': fg } as React.CSSProperties;
+  }, [settings.buttonColor]);
+
   // Get optional groups applicable to a specific product (with per-product overrides)
   function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
     const catId = categoryIdByName[productCategory];
@@ -795,9 +818,10 @@ export default function Menu() {
         onProductSelect={setSelectedProduct}
         onCartOpen={() => setIsCartOpen(true)}
         onNavigateBack={() => navigate(-1)}
+        buttonColorStyle={buttonColorStyle}
       />
     ) : (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-24" style={buttonColorStyle}>
       {/* Closed Store Banner */}
       {!isOpen && (
         <div className="bg-destructive/10 border-b border-destructive/20">
@@ -1001,7 +1025,7 @@ export default function Menu() {
 
       {/* Product Detail Dialog */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) { setSelectedProduct(null); setSelectedOptionals([]); setSelectedGroupItems({}); setItemNotes(''); } }}>
-        <DialogContent className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <DialogContent style={buttonColorStyle} className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle className="pr-6">{selectedProduct?.name}</DialogTitle>
           </DialogHeader>
@@ -1224,7 +1248,7 @@ export default function Menu() {
 
       {/* Cart Dialog */}
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <DialogContent className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogContent style={buttonColorStyle} className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle>Seu Pedido</DialogTitle>
           </DialogHeader>
