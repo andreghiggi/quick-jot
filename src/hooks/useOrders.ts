@@ -327,7 +327,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
       const { data: companyData } = await supabase
         .from('companies')
-        .select('name, address')
+        .select('name, address, slug')
         .eq('id', companyId)
         .single();
 
@@ -335,7 +335,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         .from('store_settings')
         .select('key, value')
         .eq('company_id', companyId)
-        .in('key', ['whatsapp_msg_pending']);
+        .in('key', ['whatsapp_msg_pending', 'whatsapp_msg_pix']);
 
       const customTemplates: Record<string, string> = {};
       settings?.forEach(s => {
@@ -343,6 +343,32 @@ export function useOrders(options: UseOrdersOptions = {}) {
       });
 
       const isPickup = order.notes?.includes('Retirada') || !order.deliveryAddress;
+      const menuLink = companyData?.slug ? `https://appcomandatech.agilizeerp.com.br/cardapio/${companyData.slug}` : '';
+
+      // Build resumo string with items, payment, and delivery info
+      let resumo = '';
+      if (order.items.length > 0) {
+        order.items.forEach(item => {
+          resumo += `\n• ${item.quantity}x ${item.name} - R$ ${(item.price * item.quantity).toFixed(2)}`;
+          if (item.notes) resumo += ` _(${item.notes})_`;
+        });
+        resumo += `\n\n💰 *Total: R$ ${order.total.toFixed(2)}*`;
+      }
+
+      // Add payment method info to resumo
+      if (order.notes) {
+        const paymentMatch = order.notes.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i);
+        if (paymentMatch) resumo += `\n💳 *Pagamento:* ${paymentMatch[1].trim()}`;
+        const trocoMatch = order.notes.match(/Troco para R\$\s*([^\)]+)/i);
+        if (trocoMatch) resumo += `\n💵 *Troco para:* R$ ${trocoMatch[1].trim()}`;
+      }
+
+      // Add delivery info to resumo
+      if (order.deliveryAddress) {
+        resumo += `\n🛵 *Entrega:* ${order.deliveryAddress}`;
+      } else {
+        resumo += `\n🏪 *Retirada no local*`;
+      }
 
       let message = generateWhatsAppMessage({
         customerName: order.customerName,
@@ -353,16 +379,13 @@ export function useOrders(options: UseOrdersOptions = {}) {
         deliveryType: isPickup ? 'retirada' : 'entrega',
         storeAddress: companyData?.address || undefined,
         customTemplates: Object.keys(customTemplates).length > 0 ? customTemplates : undefined,
+        menuLink,
+        resumo: resumo.trim(),
       });
 
-      // Append order summary
-      if (message && order.items.length > 0) {
-        message += '\n\n📋 *Resumo do pedido:*';
-        order.items.forEach(item => {
-          message += `\n• ${item.quantity}x ${item.name} - R$ ${(item.price * item.quantity).toFixed(2)}`;
-          if (item.notes) message += ` _(${item.notes})_`;
-        });
-        message += `\n\n💰 *Total: R$ ${order.total.toFixed(2)}*`;
+      // If template doesn't have {{resumo}}, append summary (backward compat)
+      if (message && !customTemplates['whatsapp_msg_pending']?.includes('{{resumo}}') && order.items.length > 0) {
+        message += '\n\n📋 *Resumo do pedido:*' + resumo;
       }
 
       // Append PIX message if payment method is PIX
