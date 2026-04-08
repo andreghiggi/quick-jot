@@ -77,12 +77,12 @@ Deno.serve(async (req) => {
 
       if (!companyData) continue;
 
-      // Get custom followup message template and google review url
+      // Get custom followup message template, google review url, and followup enabled flag
       const { data: settingsData } = await supabase
         .from("store_settings")
         .select("key, value")
         .eq("company_id", companyId)
-        .in("key", ["whatsapp_msg_followup", "google_review_url"]);
+        .in("key", ["whatsapp_msg_followup", "google_review_url", "whatsapp_followup_enabled"]);
 
       const settingsMap: Record<string, string> = {};
       settingsData?.forEach((s: any) => {
