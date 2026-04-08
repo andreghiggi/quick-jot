@@ -80,8 +80,8 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
   }, [onChange]);
 
   const handleReset = () => {
-    setHexInput('');
-    onChange('');
+    setHexInput('#ef4444');
+    onChange('#ef4444');
   };
 
   const handleRemoveImage = () => {
