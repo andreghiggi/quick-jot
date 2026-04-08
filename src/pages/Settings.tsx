@@ -21,7 +21,7 @@ import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
 
 export default function Settings() {
-  const { company, refetchUserData } = useAuthContext();
+  const { company, profile, refetchUserData } = useAuthContext();
   const { toast } = useToast();
   const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
   const [bannerUrl, setBannerUrl] = useState('');
