@@ -183,7 +183,7 @@ export function MenuV2({
                       <img
                         src={product.imageUrl}
                         alt={product.name}
-                        loading="lazy"
+                        loading={floatingPhoto ? "eager" : "lazy"}
                         className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")}
                       />
                     </div>
