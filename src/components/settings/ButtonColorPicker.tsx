@@ -93,7 +93,7 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const displayColor = value || '#000000';
+  const displayColor = effectiveValue;
 
   return (
     <Card>
