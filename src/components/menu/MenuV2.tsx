@@ -124,7 +124,7 @@ export function MenuV2({
   // If a category is selected, show products in that category
   if (selectedCategory) {
     return (
-      <div className="min-h-screen bg-background pb-24">
+      <div className="min-h-screen bg-background pb-24" style={buttonColorStyle}>
         {/* Category Header */}
         <div className="sticky top-0 z-20 bg-card border-b border-border shadow-sm">
           <div className="container mx-auto px-4 py-3">
