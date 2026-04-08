@@ -20,6 +20,7 @@ export interface Product {
   taxRuleId?: string | null;
   displayOrder?: number;
   pdvItem?: boolean;
+  isNew?: boolean;
 }
 
 export interface CartItem {
