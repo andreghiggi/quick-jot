@@ -1101,12 +1101,12 @@ pause
               <div className="flex items-center justify-between">
                 <p className="text-sm">
                   <strong>Link do cardápio:</strong>{' '}
-                  <a href={`${window.location.origin}/cardapio/${slug}`} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                    {`${window.location.origin}/cardapio/${slug}`}
+                  <a href={`${window.location.origin}/cardapio/${formData.slug}`} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                    {`${window.location.origin}/cardapio/${formData.slug}`}
                   </a>
                 </p>
                 <Button variant="outline" size="sm" onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/cardapio/${slug}`);
+                  navigator.clipboard.writeText(`${window.location.origin}/cardapio/${formData.slug}`);
                   toast({ title: 'Link copiado!' });
                 }}>
                   <Copy className="h-4 w-4 mr-2" />
