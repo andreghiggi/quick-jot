@@ -1244,6 +1244,7 @@ export default function Menu() {
         cartTotal={cartTotal}
         onUpdateQuantity={updateQuantity}
         onRemoveItem={removeFromCart}
+        buttonColorStyle={buttonColorStyle}
       />
 
       {/* Cart Dialog */}
