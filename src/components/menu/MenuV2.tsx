@@ -186,8 +186,9 @@ export function MenuV2({
                       <img
                         src={product.imageUrl}
                         alt={product.name}
-                        loading={floatingPhoto ? "eager" : "lazy"}
+                        loading="eager"
                         className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")}
+                        style={floatingPhoto ? { animationDelay: '-999s' } : undefined}
                       />
                     </div>
                   ) : (
