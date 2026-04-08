@@ -10,8 +10,11 @@ interface ButtonColorPickerProps {
   onChange: (color: string) => void;
 }
 
+const DEFAULT_BUTTON_COLOR = '#ef4444';
+
 export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
-  const [hexInput, setHexInput] = useState(value || '');
+  const effectiveValue = value || DEFAULT_BUTTON_COLOR;
+  const [hexInput, setHexInput] = useState(effectiveValue);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isEyedropping, setIsEyedropping] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -19,7 +22,7 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setHexInput(value || '');
+    setHexInput(value || DEFAULT_BUTTON_COLOR);
   }, [value]);
 
   const handleColorWheelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
