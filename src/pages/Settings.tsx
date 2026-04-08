@@ -36,6 +36,7 @@ export default function Settings() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    cnpj: '',
     address_street: '',
     address_number: '',
     address_complement: '',
