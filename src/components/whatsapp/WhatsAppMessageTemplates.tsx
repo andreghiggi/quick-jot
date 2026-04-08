@@ -46,7 +46,7 @@ const TEMPLATE_CONFIGS = [
     status: 'Pronto (Entrega)',
     settingKey: 'whatsapp_msg_ready_delivery',
     color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
-    defaultMsg: '{{nome}}, seu pedido {{num}} está prontinho e já vai sair para entrega. Fique de olho! 🛵',
+    defaultMsg: '*{{nome}}, seu pedido {{num}} ficou pronto e está indo até você.* Fique de olho! 🛵',
     hint: 'Enviada quando o pedido está saindo para entrega.',
   },
   {
