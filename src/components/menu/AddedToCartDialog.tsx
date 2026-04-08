@@ -16,6 +16,7 @@ interface AddedToCartDialogProps {
   cartTotal: number;
   onUpdateQuantity: (index: number, delta: number) => void;
   onRemoveItem: (index: number) => void;
+  buttonColorStyle?: React.CSSProperties;
 }
 
 function calculateItemTotal(item: CartItem): number {
