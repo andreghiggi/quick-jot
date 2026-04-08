@@ -759,7 +759,7 @@ pause
                   <img
                     src={bannerUrl}
                     alt="Banner Preview"
-                    className="w-full h-32 object-cover rounded-lg border"
+                    className="w-full rounded-lg border object-contain"
                   />
                   <Button
                     variant="destructive"
