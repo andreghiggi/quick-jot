@@ -78,7 +78,11 @@ export default function Settings() {
       setFormData({
         name: company.name || '',
         phone: company.phone || '',
-        address: company.address || '',
+        address_street: (company as any).address_street || '',
+        address_number: (company as any).address_number || '',
+        address_complement: (company as any).address_complement || '',
+        address_neighborhood: (company as any).address_neighborhood || '',
+        address_reference: (company as any).address_reference || '',
         slug: company.slug || '',
       });
     }
