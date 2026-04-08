@@ -25,6 +25,10 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
     setHexInput(value || DEFAULT_BUTTON_COLOR);
   }, [value]);
 
+  const handleColorWheelInput = (e: React.FormEvent<HTMLInputElement>) => {
+    setHexInput((e.target as HTMLInputElement).value);
+  };
+
   const handleColorWheelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const color = e.target.value;
     setHexInput(color);
