@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes kenburns {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+  100% {
+    transform: scale(1.12) translate(-2%, -2%);
+  }
+}
+
+.kenburns-animate {
+  animation: kenburns 7s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.kenburns-animate:hover {
+  animation-play-state: paused;
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;

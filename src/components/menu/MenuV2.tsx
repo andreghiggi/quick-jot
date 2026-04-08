@@ -71,6 +71,7 @@ interface MenuV2Props {
   allOrderedCategories: string[];
   categoryEmojiMap?: Record<string, string>;
   categoryImageMap?: Record<string, string>;
+  categoryAnimatedMap?: Record<string, boolean>;
   cartItemsCount: number;
   cartTotal: number;
   isOpen: boolean;
@@ -87,6 +88,7 @@ export function MenuV2({
   allOrderedCategories,
   categoryEmojiMap,
   categoryImageMap,
+  categoryAnimatedMap,
   cartItemsCount,
   cartTotal,
   isOpen,
@@ -177,12 +179,12 @@ export function MenuV2({
               <CardContent className="p-0">
                 <div className="flex">
                   {product.imageUrl ? (
-                    <div className="w-28 h-28 flex-shrink-0">
+                    <div className="w-28 h-28 flex-shrink-0 overflow-hidden">
                       <img
                         src={product.imageUrl}
                         alt={product.name}
                         loading="lazy"
-                        className="w-full h-full object-cover"
+                        className={cn("w-full h-full object-cover", categoryAnimatedMap?.[product.category] && "kenburns-animate")}
                       />
                     </div>
                   ) : (
@@ -325,8 +327,8 @@ export function MenuV2({
               <CardContent className="p-0">
                 <div className="flex">
                   {product.imageUrl ? (
-                    <div className="w-24 h-24 flex-shrink-0">
-                      <img src={product.imageUrl} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
+                    <div className="w-24 h-24 flex-shrink-0 overflow-hidden">
+                      <img src={product.imageUrl} alt={product.name} loading="lazy" className={cn("w-full h-full object-cover", categoryAnimatedMap?.[product.category] && "kenburns-animate")} />
                     </div>
                   ) : (
                     <div className="w-24 h-24 flex-shrink-0 bg-muted flex items-center justify-center">

@@ -41,6 +41,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         companyId: cat.company_id || undefined,
         emoji: cat.emoji || undefined,
         imageUrl: cat.image_url || undefined,
+        animated: (cat as any).animated ?? false,
       }));
 
       setCategories(mapped);
@@ -176,6 +177,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
       if (data.active !== undefined) updateData.active = data.active;
       if (data.emoji !== undefined) updateData.emoji = data.emoji;
       if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl;
+      if (data.animated !== undefined) updateData.animated = data.animated;
 
       const { error } = await supabase
         .from('categories')

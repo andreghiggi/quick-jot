@@ -176,6 +176,13 @@ export default function Menu() {
     return map;
   }, [categories]);
 
+  // Build category name -> animated map for MenuV2
+  const categoryAnimatedMap = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    categories.forEach(c => { if (c.animated) map[c.name] = true; });
+    return map;
+  }, [categories]);
+
   // Get optional groups applicable to a specific product (with per-product overrides)
   function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
     const catId = categoryIdByName[productCategory];
@@ -764,6 +771,7 @@ export default function Menu() {
         allOrderedCategories={allOrderedCategories}
         categoryEmojiMap={categoryEmojiMap}
         categoryImageMap={categoryImageMap}
+        categoryAnimatedMap={categoryAnimatedMap}
         cartItemsCount={cartItemsCount}
         cartTotal={cartTotal}
         isOpen={isOpen}
