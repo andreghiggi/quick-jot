@@ -409,8 +409,8 @@ export default function Menu() {
     // Prevent double submission
     if (isSubmitting) return;
     
-    // Check if store is open
-    if (!isOpen) {
+    // Check if store is open or scheduling is enabled
+    if (!canOrder) {
       toast.error('Estabelecimento fechado no momento');
       return;
     }
