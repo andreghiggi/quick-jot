@@ -11,7 +11,7 @@ interface AuthContextType {
   realCompany: Company | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string, companyName?: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, companyName?: string, addressData?: { street: string; number: string; complement?: string; neighborhood: string; reference?: string }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
   isSuperAdmin: () => boolean;
