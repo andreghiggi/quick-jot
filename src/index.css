@@ -13,6 +13,7 @@
 
 .kenburns-animate {
   animation: kenburns 6s ease-in-out infinite alternate;
+  animation-delay: -3s;
   will-change: transform;
   height: 110%;
 }
