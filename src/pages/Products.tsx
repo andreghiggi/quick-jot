@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useTaxRules } from '@/hooks/useTaxRules';
-import { useCategories, CategorySortMode } from '@/hooks/useCategories';
+import { useCategories } from '@/hooks/useCategories';
 
 import { Product, ProductOptional } from '@/types/product';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
@@ -13,11 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, GripVertical, FileText, Copy } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { Plus, Trash2, Link as LinkIcon, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy } from 'lucide-react';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -28,26 +25,17 @@ export default function Products() {
   const { company } = useAuthContext();
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, duplicateProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
-  const { categories, addCategory, deleteCategory, updateCategory: _updateCategory, sortMode, saveSortMode, moveCategory } = useCategories({ companyId: company?.id });
-  
-  // Wrap updateCategory to also refetch products when a category is renamed
-  const updateCategory = async (id: string, data: Partial<import('@/types/order').Category>) => {
-    const result = await _updateCategory(id, data);
-    if (result && data.name !== undefined) {
-      await refetchProducts();
-    }
-    return result;
-  };
+  const { categories } = useCategories({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isOptionalDialogOpen, setIsOptionalDialogOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
-  const [newCategoryName, setNewCategoryName] = useState('');
+  
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
@@ -144,16 +132,6 @@ export default function Products() {
     setIsOptionalDialogOpen(false);
   }
 
-  async function handleAddCategory() {
-    if (!newCategoryName.trim()) {
-      toast.error('Informe o nome da categoria');
-      return;
-    }
-    const success = await addCategory(newCategoryName.trim());
-    if (success) {
-      setNewCategoryName('');
-    }
-  }
 
   function openEditDialog(product: Product) {
     setEditingProduct(product);
@@ -239,10 +217,6 @@ export default function Products() {
 
         </Button>
       )}
-      <Button variant="outline" size="sm" onClick={() => setIsSettingsOpen(true)}>
-        <Settings className="h-4 w-4 mr-2" />
-        <span className="hidden sm:inline">Config</span>
-      </Button>
       <Button variant="outline" size="sm" onClick={copyMenuLink}>
         <LinkIcon className="h-4 w-4 mr-2" />
         <span className="hidden sm:inline">Copiar link</span>
@@ -602,173 +576,6 @@ export default function Products() {
         </DialogContent>
       </Dialog>
 
-      {/* Settings Dialog */}
-      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Configurações</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-2">
-              <div>
-                <Label>Nova Categoria</Label>
-                <div className="flex gap-2 mt-1">
-                  <Input
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    placeholder="Nome da categoria"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
-                  />
-                  <Button onClick={handleAddCategory}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              <div>
-                <Label>Ordenação</Label>
-                <Select value={sortMode} onValueChange={(v: CategorySortMode) => saveSortMode(v)}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manual">Ordem manual</SelectItem>
-                    <SelectItem value="alphabetical">Ordem alfabética</SelectItem>
-                    <SelectItem value="created">Ordem de cadastro</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {sortMode === 'manual' && 'Use as setas para reordenar as categorias'}
-                  {sortMode === 'alphabetical' && 'Categorias ordenadas de A-Z'}
-                  {sortMode === 'created' && 'Categorias ordenadas pela data de criação'}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Categorias existentes ({categories.length})</Label>
-                <div className="h-[250px] rounded border overflow-hidden">
-                  <ScrollArea className="h-full">
-                    <div className="space-y-2 p-2">
-                      {categories.map((cat, index) => (
-                        <div key={cat.id} className="flex items-center justify-between p-2 border rounded bg-background">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {sortMode === 'manual' && (
-                              <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            )}
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <button className="hover:bg-muted rounded p-1 transition-colors flex-shrink-0 w-8 h-8 flex items-center justify-center overflow-hidden" title="Alterar ícone">
-                                  {cat.imageUrl ? (
-                                    <img src={cat.imageUrl} alt={cat.name} className="w-7 h-7 rounded object-cover" />
-                                  ) : (
-                                    <span className="text-xl">{cat.emoji || '🍽️'}</span>
-                                  )}
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-3" align="start">
-                                <div className="space-y-3">
-                                  <p className="text-xs font-medium text-muted-foreground">Escolha um emoji</p>
-                                  <div className="grid grid-cols-6 gap-1">
-                                    {['🍔', '🍕', '🍟', '🌭', '🥪', '🌮', '🍝', '🍣', '🍱', '🥗', '🥩', '🐟', '🦐', '🍗', '🥟', '🍰', '🍩', '🍦', '🧁', '🍇', '☕', '🧃', '🥤', '🍺', '🍷', '🧋', '🥂', '🍸', '🎁', '🍽️'].map(emoji => (
-                                      <button
-                                        key={emoji}
-                                        className={cn("text-xl p-1.5 rounded hover:bg-muted transition-colors", cat.emoji === emoji && !cat.imageUrl && "bg-primary/10 ring-1 ring-primary")}
-                                        onClick={() => updateCategory(cat.id, { emoji, imageUrl: '' })}
-                                      >
-                                        {emoji}
-                                      </button>
-                                    ))}
-                                  </div>
-                                  <div className="border-t pt-2">
-                                    <p className="text-xs font-medium text-muted-foreground mb-2">Ou envie uma imagem</p>
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      id={`cat-img-${cat.id}`}
-                                      onChange={async (e) => {
-                                        const file = e.target.files?.[0];
-                                        if (!file) return;
-                                        try {
-                                          const path = `categories/${cat.id}.webp`;
-                                          const result = await uploadCompressedImage(supabase, 'product-images', path, file, { upsert: true });
-                                          if (!result) throw new Error('Upload failed');
-                                          await updateCategory(cat.id, { imageUrl: result.publicUrl + '?t=' + Date.now() });
-                                        } catch (err) {
-                                          console.error(err);
-                                          toast.error('Erro ao enviar imagem');
-                                        }
-                                        e.target.value = '';
-                                      }}
-                                    />
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="w-full"
-                                      onClick={() => document.getElementById(`cat-img-${cat.id}`)?.click()}
-                                    >
-                                      <Image className="h-4 w-4 mr-2" />
-                                      Buscar imagem
-                                    </Button>
-                                    {cat.imageUrl && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="w-full mt-1 text-destructive"
-                                        onClick={() => updateCategory(cat.id, { imageUrl: '', emoji: cat.emoji || '🍽️' })}
-                                      >
-                                        Remover imagem
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                            <span className="truncate">{cat.name}</span>
-                          </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            {sortMode === 'manual' && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => moveCategory(cat.id, 'up')}
-                                  disabled={index === 0}
-                                >
-                                  <ChevronUp className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => moveCategory(cat.id, 'down')}
-                                  disabled={index === categories.length - 1}
-                                >
-                                  <ChevronDown className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive h-8 w-8 p-0"
-                              onClick={() => deleteCategory(cat.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                      {categories.length === 0 && (
-                        <p className="text-sm text-muted-foreground p-2">Nenhuma categoria cadastrada</p>
-                      )}
-                    </div>
-                  </ScrollArea>
-                </div>
-              </div>
-            </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Product Dialog */}
       <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
