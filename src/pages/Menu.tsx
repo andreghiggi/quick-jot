@@ -980,7 +980,7 @@ export default function Menu() {
                   <img
                     src={selectedProduct.imageUrl}
                     alt={selectedProduct.name}
-                    className={cn("w-full h-full object-cover", categoryAnimatedMap?.[selectedProduct.category] && "kenburns-animate")}
+                    className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")}
                   />
                 </div>
               )}
