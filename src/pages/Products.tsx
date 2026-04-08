@@ -40,7 +40,7 @@ export default function Products() {
     }
     return result;
   };
-  const { settings, saveStorePhone, saveBannerUrl, saveStoreName } = useStoreSettings({ companyId: company?.id });
+  const { settings } = useStoreSettings({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
