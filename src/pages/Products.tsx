@@ -192,29 +192,6 @@ export default function Products() {
     toast.success('Link copiado!');
   }
 
-  async function clearAllProducts() {
-    try {
-      const { error: optionalsError } = await supabase
-        .from('product_optionals')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      if (optionalsError) throw optionalsError;
-
-      const { error: productsError } = await supabase
-        .from('products')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      if (productsError) throw productsError;
-
-      toast.success('Todos os produtos foram removidos!');
-      window.location.reload();
-    } catch (error) {
-      console.error('Error clearing products:', error);
-      toast.error('Erro ao limpar produtos');
-    }
-  }
 
   // Group products by category, maintaining category order
   const groupedProducts = useMemo(() => {
