@@ -27,6 +27,7 @@ export default function Settings() {
   const [bannerUrl, setBannerUrl] = useState('');
   const [isBannerUploading, setIsBannerUploading] = useState(false);
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
+  const [showDangerZone, setShowDangerZone] = useState(false);
   const { neighborhoods, addNeighborhood, deleteNeighborhood } = useDeliveryNeighborhoods({ companyId: company?.id });
   const [loading, setLoading] = useState(false);
   const [deliveryFeeCity, setDeliveryFeeCity] = useState('');
@@ -797,39 +798,49 @@ pause
 
           <Card className="border-destructive/30">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="w-5 h-5" />
-                Zona de Perigo
-              </CardTitle>
-              <CardDescription>
-                Estas ações são irreversíveis. Tenha certeza antes de continuar.
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="w-5 h-5" />
+                    Zona de Perigo
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Ative apenas se precisar executar ações irreversíveis
+                  </CardDescription>
+                </div>
+                <Switch
+                  checked={showDangerZone}
+                  onCheckedChange={setShowDangerZone}
+                />
+              </div>
             </CardHeader>
-            <CardContent>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="w-full">
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    Zerar todos os produtos
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta ação irá remover TODOS os produtos e seus opcionais da base de dados. 
-                      Esta ação não pode ser desfeita.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={clearAllProducts} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Sim, zerar produtos
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </CardContent>
+            {showDangerZone && (
+              <CardContent>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full">
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Zerar todos os produtos
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação irá remover TODOS os produtos e seus opcionais da base de dados. 
+                        Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={clearAllProducts} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Sim, zerar produtos
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardContent>
+            )}
           </Card>
         </TabsContent>
 
