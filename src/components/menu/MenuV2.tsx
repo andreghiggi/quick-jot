@@ -180,9 +180,9 @@ export function MenuV2({
               onClick={() => onProductSelect(product)}
             >
               <CardContent className="p-0">
-                <div className="flex">
+                <div className="flex h-full">
                   {product.imageUrl ? (
-                    <div className="w-28 h-28 flex-shrink-0 overflow-hidden">
+                    <div className="w-28 min-h-[7rem] flex-shrink-0 overflow-hidden">
                       <img
                         src={product.imageUrl}
                         alt={product.name}
