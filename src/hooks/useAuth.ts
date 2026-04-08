@@ -147,6 +147,7 @@ export function useAuth() {
     complement?: string;
     neighborhood: string;
     reference?: string;
+    cnpj?: string;
   }) {
     setLoading(true);
     const redirectUrl = `${window.location.origin}/`;
