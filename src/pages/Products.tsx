@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Link as LinkIcon, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy } from 'lucide-react';
+import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy } from 'lucide-react';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -217,10 +217,6 @@ export default function Products() {
 
         </Button>
       )}
-      <Button variant="outline" size="sm" onClick={copyMenuLink}>
-        <LinkIcon className="h-4 w-4 mr-2" />
-        <span className="hidden sm:inline">Copiar link</span>
-      </Button>
       <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
         <DialogTrigger asChild>
           <Button>
@@ -342,16 +338,6 @@ export default function Products() {
   return (
     <AppLayout title="Produtos" actions={headerActions}>
       <div className="space-y-6">
-        <Card className="bg-primary/10 border-primary/20">
-          <CardContent className="py-4">
-            <p className="text-sm">
-              <strong>Link do cardápio:</strong>{' '}
-              <a href={menuLink} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                {menuLink}
-              </a>
-            </p>
-          </CardContent>
-        </Card>
 
         {/* Category filter chips */}
         {groupedProducts.length > 1 && (
