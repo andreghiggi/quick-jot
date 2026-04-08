@@ -108,6 +108,7 @@ export default function Menu() {
   const [deliveryType, setDeliveryType] = useState<'pickup' | 'city' | 'interior' | 'neighborhood' | ''>('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('');
   const [orderSent] = useState(false);
+  const modalImageRef = useRef<HTMLImageElement | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [customerLoaded, setCustomerLoaded] = useState(false);
