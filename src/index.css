@@ -4,16 +4,17 @@
 
 @keyframes kenburns {
   0% {
-    transform: scale(1) translate(0, 0);
+    transform: translateY(0%);
   }
   100% {
-    transform: scale(1.12) translate(-2%, -2%);
+    transform: translateY(-10%);
   }
 }
 
 .kenburns-animate {
-  animation: kenburns 7s ease-in-out infinite alternate;
+  animation: kenburns 6s ease-in-out infinite alternate;
   will-change: transform;
+  height: 110%;
 }
 
 .kenburns-animate:hover {
