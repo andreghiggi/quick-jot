@@ -896,7 +896,6 @@ export default function Menu() {
       {newProducts.length > 0 && (
         <NovidadesSlideshow products={newProducts} onProductSelect={setSelectedProduct} />
       )}
-      )}
 
       {settings.bannerUrl && (
         <div className="w-full relative overflow-hidden">
