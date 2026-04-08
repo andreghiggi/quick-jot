@@ -793,44 +793,7 @@ export default function Products() {
                   </ScrollArea>
                 </div>
               </div>
-            </TabsContent>
-
-            <TabsContent value="perigo" className="space-y-4 mt-4">
-              <div className="border border-destructive/30 rounded-lg p-4 bg-destructive/5">
-                <Label className="text-destructive flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  Zona de perigo
-                </Label>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Esta ação irá remover TODOS os produtos e seus opcionais da base de dados. 
-                  Esta ação não pode ser desfeita.
-                </p>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="w-full mt-4">
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      Zerar todos os produtos
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Esta ação irá remover TODOS os produtos e seus opcionais da base de dados. 
-                        Esta ação não pode ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={clearAllProducts} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Sim, zerar produtos
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </TabsContent>
-          </Tabs>
+            </div>
         </DialogContent>
       </Dialog>
 
