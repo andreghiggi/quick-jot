@@ -539,7 +539,9 @@ export default function Menu() {
                 phone: cleanPhone,
                 name: customerName,
                 cpf: customerCpf.replace(/\D/g, '') || null,
-                address: deliveryAddress || null,
+                address: company?.slug?.startsWith('lancheria-da-i9')
+                  ? `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood} | Ref: ${deliveryReference}`
+                  : (deliveryAddress || null),
                 city: deliveryCity || null,
                 state: deliveryState || null,
               }, { 
