@@ -97,14 +97,14 @@ export function generateWhatsAppMessage(params: MessageParams): string | null {
     case 'delivered':
       if (deliveryType === 'retirada') {
         if (params.googleReviewUrl) {
-          return `${name}, seu pedido ${num} foi retirado com sucesso. Obrigado por escolher o ${storeName}! ⭐ Avalie nosso atendimento: ${params.googleReviewUrl}`;
+          return `*${name}, seu pedido ${num} foi concluído com sucesso.* Obrigado por escolher o ${storeName}!\n\n*Clique no link abaixo e compartilhe conosco como foi sua experiência:*\n${params.googleReviewUrl}\n\n*Para os próximos pedidos anote o nosso link:*\n${menuLink}`;
         }
-        return `${name}, seu pedido ${num} foi retirado com sucesso. Obrigado por escolher o ${storeName}, esperamos que tenha gostado!`;
+        return `*${name}, seu pedido ${num} foi concluído com sucesso.* Obrigado por escolher o ${storeName}, esperamos que tenha gostado!\n\n*Para os próximos pedidos anote o nosso link:*\n${menuLink}`;
       }
       if (params.googleReviewUrl) {
-        return `${name}, seu pedido ${num} foi finalizado. Obrigado por escolher o ${storeName}! ⭐ Avalie nosso atendimento: ${params.googleReviewUrl}`;
+        return `*${name}, seu pedido ${num} foi concluído com sucesso.* Obrigado por escolher o ${storeName}!\n\n*Clique no link abaixo e compartilhe conosco como foi sua experiência:*\n${params.googleReviewUrl}\n\n*Para os próximos pedidos anote o nosso link:*\n${menuLink}`;
       }
-      return `${name}, seu pedido ${num} foi finalizado. Obrigado por escolher o ${storeName}, esperamos que tenha gostado!`;
+      return `*${name}, seu pedido ${num} foi concluído com sucesso.* Obrigado por escolher o ${storeName}, esperamos que tenha gostado!\n\n*Para os próximos pedidos anote o nosso link:*\n${menuLink}`;
 
     default:
       return null;

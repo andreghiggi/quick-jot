@@ -237,7 +237,7 @@ serve(async (req) => {
                 .split('{{loja}}').join(company?.name || '')
                 .split('{{horario}}').join(formattedHours);
             } else {
-              scheduledMsg = `Olá, ${firstName}! Seu pedido ${num} foi agendado com sucesso 😊\n\n⏰ Nosso horário de atendimento hoje é: ${formattedHours}\n\nQuando iniciarmos, seu pedido será confirmado.\n\nApós a confirmação, ele entrará na fila aguardando o início da produção conforme a ordem de agendamento.\n\nVocê será avisado(a) assim que o preparo começar, e é a partir desse momento que passa a contar o tempo estimado para entrega do pedido.\n\nAté breve! 👋`;
+              scheduledMsg = `Olá, *${firstName}*! Seu pedido ${num} foi agendado com sucesso 😊\n\n⏰ *Nosso horário de atendimento hoje é: ${formattedHours}*\n\nQuando iniciarmos, seu pedido será confirmado.\n\n*Após a confirmação, ele entrará na fila aguardando o início da produção conforme a ordem de agendamento.*\n\nVocê será avisado(a) assim que o preparo começar, e é a partir desse momento que passa a contar o tempo estimado para entrega do pedido.\n\nAté breve! 👋`;
             }
 
             const customerPhone = order.customer_phone.replace(/\D/g, '');
