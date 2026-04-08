@@ -10,8 +10,11 @@ interface ButtonColorPickerProps {
   onChange: (color: string) => void;
 }
 
+const DEFAULT_BUTTON_COLOR = '#ef4444';
+
 export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
-  const [hexInput, setHexInput] = useState(value || '');
+  const effectiveValue = value || DEFAULT_BUTTON_COLOR;
+  const [hexInput, setHexInput] = useState(effectiveValue);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isEyedropping, setIsEyedropping] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -19,7 +22,7 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setHexInput(value || '');
+    setHexInput(value || DEFAULT_BUTTON_COLOR);
   }, [value]);
 
   const handleColorWheelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,7 +93,7 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const displayColor = value || '#000000';
+  const displayColor = effectiveValue;
 
   return (
     <Card>
@@ -108,17 +111,19 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
         <div className="flex items-center gap-4">
           <div
             className="w-16 h-16 rounded-xl border-2 border-border shadow-sm"
-            style={{ backgroundColor: value || '#e5e7eb' }}
+            style={{ backgroundColor: effectiveValue }}
           />
           <div className="flex-1">
             <p className="text-sm font-medium">
-              {value ? `Cor selecionada: ${value}` : 'Nenhuma cor personalizada'}
+              Cor selecionada: {effectiveValue}
             </p>
             <p className="text-xs text-muted-foreground">
-              {value ? 'Esta cor será aplicada aos botões do cardápio' : 'Os botões usarão a cor padrão do sistema'}
+              {effectiveValue === DEFAULT_BUTTON_COLOR
+                ? 'Cor padrão do sistema (vermelho)'
+                : 'Esta cor será aplicada aos botões e à área de novidades do cardápio'}
             </p>
           </div>
-          {value && (
+          {effectiveValue !== DEFAULT_BUTTON_COLOR && (
             <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground">
               <RotateCcw className="w-4 h-4 mr-1" />
               Resetar
@@ -199,25 +204,23 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
         </div>
 
         {/* Preview button */}
-        {value && (
-          <div className="space-y-2">
+        <div className="space-y-2">
             <Label className="text-sm">Prévia do Botão</Label>
             <div className="flex gap-3">
               <button
                 className="px-6 py-2.5 rounded-lg text-white font-medium text-sm shadow-sm"
-                style={{ backgroundColor: value }}
+                style={{ backgroundColor: effectiveValue }}
               >
                 Adicionar ao Carrinho
               </button>
               <button
                 className="px-6 py-2.5 rounded-lg font-medium text-sm border-2"
-                style={{ borderColor: value, color: value }}
+                style={{ borderColor: effectiveValue, color: effectiveValue }}
               >
                 Ver Detalhes
               </button>
             </div>
           </div>
-        )}
       </CardContent>
     </Card>
   );
