@@ -71,7 +71,7 @@ interface MenuV2Props {
   allOrderedCategories: string[];
   categoryEmojiMap?: Record<string, string>;
   categoryImageMap?: Record<string, string>;
-  categoryAnimatedMap?: Record<string, boolean>;
+  floatingPhoto?: boolean;
   cartItemsCount: number;
   cartTotal: number;
   isOpen: boolean;
