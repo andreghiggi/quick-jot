@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen, Image, Upload, AlertTriangle, Copy } from 'lucide-react';
+import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen, Image, Upload, AlertTriangle } from 'lucide-react';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
@@ -1096,26 +1096,6 @@ pause
 
         {/* Tab Layout */}
         <TabsContent value="layout" className="space-y-6">
-          <Card className="bg-primary/10 border-primary/20">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm">
-                  <strong>Link do cardápio:</strong>{' '}
-                  <a href={`${window.location.origin}/cardapio/${formData.slug}`} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                    {`${window.location.origin}/cardapio/${formData.slug}`}
-                  </a>
-                </p>
-                <Button variant="outline" size="sm" onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/cardapio/${formData.slug}`);
-                  toast({ title: 'Link copiado!' });
-                }}>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copiar link
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

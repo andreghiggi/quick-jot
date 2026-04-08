@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
@@ -19,7 +19,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ShoppingCart, Plus, Minus, Trash2, Send, CheckCircle, Search, Clock, AlertCircle, MessageSquare } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Send, CheckCircle, Search, Clock, AlertCircle, MessageSquare, Copy, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -114,6 +114,7 @@ export default function Menu() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddedToCart, setShowAddedToCart] = useState(false);
   const [lastAddedItem, setLastAddedItem] = useState<CartItem | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Optional group selections state
   const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Set<string>>>({});
@@ -123,6 +124,27 @@ export default function Menu() {
     'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
     'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ];
+  // Check if current user is an admin of this company
+  useEffect(() => {
+    async function checkAdmin() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user || !company?.id) return;
+      const { data } = await supabase
+        .from('company_users')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .eq('company_id', company.id)
+        .maybeSingle();
+      setIsAdmin(!!data);
+    }
+    checkAdmin();
+  }, [company?.id]);
+
+  const menuLink = `${window.location.origin}/cardapio/${slug}`;
+  const copyMenuLink = useCallback(() => {
+    navigator.clipboard.writeText(menuLink);
+    toast.success('Link copiado!');
+  }, [menuLink]);
 
   function isValidCpf(cpf: string): boolean {
     if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
@@ -734,8 +756,26 @@ export default function Menu() {
 
   const isV2 = settings.menuLayout === 'v2';
 
+  const adminBanner = isAdmin ? (
+    <div className="bg-primary/10 border-b border-primary/20 px-4 py-3">
+      <div className="max-w-3xl mx-auto flex items-center justify-between gap-2">
+        <p className="text-sm truncate">
+          <strong>Link do cardápio:</strong>{' '}
+          <a href={menuLink} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+            {menuLink}
+          </a>
+        </p>
+        <Button variant="outline" size="sm" onClick={copyMenuLink} className="flex-shrink-0">
+          <Copy className="h-4 w-4 mr-2" />
+          Copiar
+        </Button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <>
+    {adminBanner}
     {isV2 ? (
       <MenuV2
         company={company}
