@@ -313,35 +313,6 @@ export default function Menu() {
     });
   }
 
-  // Smart product select: skip dialog if product has no optionals/groups
-  function handleProductSelect(product: Product) {
-    const groups = getGroupsForProduct(product.id, product.category);
-    const hasOldOptionals = product.optionals && product.optionals.filter(o => o.active).length > 0;
-    const hasGroups = groups.length > 0;
-
-    if (!hasOldOptionals && !hasGroups) {
-      // No optionals - add directly to cart
-      const newItem: CartItem = {
-        product,
-        quantity: 1,
-        selectedOptionals: [],
-        notes: undefined,
-      };
-      setCart((prev) => [...prev, newItem]);
-      setLastAddedItem(newItem);
-      setShowAddedToCart(true);
-      return;
-    }
-
-    setSelectedProduct(product);
-  }
-
-  // Open dialog specifically for notes on a product without optionals
-  function handleOpenNotes(e: React.MouseEvent, product: Product) {
-    e.stopPropagation();
-    setSelectedProduct(product);
-  }
-
   function addToCart() {
     if (!selectedProduct) return;
 
@@ -734,9 +705,7 @@ export default function Menu() {
         cartTotal={cartTotal}
         isOpen={isOpen}
         formattedHours={formattedHours}
-        onProductSelect={handleProductSelect}
-        onProductOpenNotes={handleOpenNotes}
-        getGroupsForProduct={getGroupsForProduct}
+        onProductSelect={setSelectedProduct}
         onCartOpen={() => setIsCartOpen(true)}
         onNavigateBack={() => navigate(-1)}
       />
@@ -868,7 +837,7 @@ export default function Menu() {
                 <Card
                   key={product.id}
                   className="cursor-pointer hover:border-primary hover:shadow-md transition-all overflow-hidden"
-                  onClick={() => handleProductSelect(product)}
+                  onClick={() => setSelectedProduct(product)}
                 >
                   <CardContent className="p-0">
                     <div className="flex">
@@ -899,22 +868,9 @@ export default function Menu() {
                           <p className="text-primary font-bold">
                             R$ {product.price.toFixed(2)}
                           </p>
-                          <div className="flex items-center gap-1">
-                            {!(product.optionals?.some(o => o.active) || getGroupsForProduct(product.id, product.category).length > 0) && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0 text-muted-foreground"
-                                onClick={(e) => handleOpenNotes(e, product)}
-                                title="Adicionar observação"
-                              >
-                                <MessageSquare className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Button size="sm" className="h-8 px-3">
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <Button size="sm" className="h-8 px-3">
+                            <Plus className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -954,7 +910,7 @@ export default function Menu() {
 
       {/* Product Detail Dialog */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) { setSelectedProduct(null); setSelectedOptionals([]); setSelectedGroupItems({}); setItemNotes(''); } }}>
-        <DialogContent className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogContent className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle className="pr-6">{selectedProduct?.name}</DialogTitle>
           </DialogHeader>
