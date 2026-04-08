@@ -68,11 +68,6 @@ export function AppSidebar() {
       icon: ShoppingBag,
       href: '/pedidos',
     },
-    {
-      title: 'Ver cardápio',
-      icon: ChefHat,
-      href: `/cardapio/${company?.slug || ''}`,
-    },
   ];
 
   const catalogMenuItems = [
@@ -90,6 +85,11 @@ export function AppSidebar() {
       title: 'Adicionais',
       icon: Layers,
       href: '/adicionais',
+    },
+    {
+      title: 'Ver cardápio',
+      icon: ChefHat,
+      href: `/cardapio/${company?.slug || ''}`,
     },
   ];
 
