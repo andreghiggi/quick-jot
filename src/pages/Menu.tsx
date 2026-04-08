@@ -860,7 +860,7 @@ export default function Menu() {
                 <Card
                   key={product.id}
                   className="cursor-pointer hover:border-primary hover:shadow-md transition-all overflow-hidden"
-                  onClick={() => setSelectedProduct(product)}
+                  onClick={() => handleProductSelect(product)}
                 >
                   <CardContent className="p-0">
                     <div className="flex">
