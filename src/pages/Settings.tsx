@@ -63,6 +63,7 @@ export default function Settings() {
     if (neighborhoods.length > 0) {
       setDeliveryMode('neighborhood');
     }
+    setBannerUrl(storeSettings.bannerUrl);
   }, [storeSettings, neighborhoods.length]);
 
   useEffect(() => {
