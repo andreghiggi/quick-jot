@@ -142,6 +142,7 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
             <input
               type="color"
               value={displayColor}
+              onInput={handleColorWheelInput}
               onChange={handleColorWheelChange}
               className="w-12 h-12 rounded-lg cursor-pointer border border-border p-0.5"
               style={{ appearance: 'auto' }}
