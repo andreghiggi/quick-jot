@@ -1249,7 +1249,7 @@ export default function Menu() {
 
       {/* Cart Dialog */}
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <DialogContent className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogContent style={buttonColorStyle} className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle>Seu Pedido</DialogTitle>
           </DialogHeader>
