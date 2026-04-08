@@ -92,8 +92,6 @@ export function MenuV2({
   isOpen,
   formattedHours,
   onProductSelect,
-  onProductOpenNotes,
-  getGroupsForProduct,
   onCartOpen,
   onNavigateBack,
 }: MenuV2Props) {
