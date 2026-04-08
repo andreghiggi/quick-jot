@@ -19,6 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
+import { ButtonColorPicker } from '@/components/settings/ButtonColorPicker';
 
 export default function Settings() {
   const { company, profile, refetchUserData } = useAuthContext();
