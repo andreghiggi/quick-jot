@@ -705,9 +705,7 @@ export default function Menu() {
         cartTotal={cartTotal}
         isOpen={isOpen}
         formattedHours={formattedHours}
-        onProductSelect={handleProductSelect}
-        onProductOpenNotes={handleOpenNotes}
-        getGroupsForProduct={getGroupsForProduct}
+        onProductSelect={setSelectedProduct}
         onCartOpen={() => setIsCartOpen(true)}
         onNavigateBack={() => navigate(-1)}
       />
