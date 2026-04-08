@@ -22,6 +22,7 @@ interface StoreSettings {
   enablePickup: boolean;
   acceptOrderScheduling: boolean;
   floatingPhoto: boolean;
+  buttonColor: string;
 }
 
 interface UseStoreSettingsOptions {
