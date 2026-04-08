@@ -933,7 +933,7 @@ export default function Menu() {
                   <CardContent className="p-0">
                     <div className="flex">
                       {product.imageUrl ? (
-                        <div className="w-28 h-28 flex-shrink-0">
+                        <div className="w-28 h-28 flex-shrink-0 overflow-hidden">
                           <img
                             src={product.imageUrl}
                             alt={product.name}
