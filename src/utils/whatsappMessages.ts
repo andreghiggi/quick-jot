@@ -17,6 +17,8 @@ interface MessageParams {
 
 function applyTemplate(template: string, vars: Record<string, string>): string {
   let result = template;
+  // Convert literal \n sequences (stored as two chars: backslash + n) to real newlines
+  result = result.replace(/\\n/g, '\n');
   for (const [key, value] of Object.entries(vars)) {
     result = result.split(key).join(value);
   }
