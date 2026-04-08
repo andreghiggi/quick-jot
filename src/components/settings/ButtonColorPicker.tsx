@@ -204,25 +204,23 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
         </div>
 
         {/* Preview button */}
-        {value && (
-          <div className="space-y-2">
+        <div className="space-y-2">
             <Label className="text-sm">Prévia do Botão</Label>
             <div className="flex gap-3">
               <button
                 className="px-6 py-2.5 rounded-lg text-white font-medium text-sm shadow-sm"
-                style={{ backgroundColor: value }}
+                style={{ backgroundColor: effectiveValue }}
               >
                 Adicionar ao Carrinho
               </button>
               <button
                 className="px-6 py-2.5 rounded-lg font-medium text-sm border-2"
-                style={{ borderColor: value, color: value }}
+                style={{ borderColor: effectiveValue, color: effectiveValue }}
               >
                 Ver Detalhes
               </button>
             </div>
           </div>
-        )}
       </CardContent>
     </Card>
   );
