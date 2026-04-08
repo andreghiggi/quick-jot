@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, Clock, Save, Plus, Trash2, CalendarClock } from 'lucide-react';
 import { useBusinessHours, BusinessHoursConfig, DayConfig } from '@/hooks/useBusinessHours';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 
 interface BusinessHoursSettingsProps {
   companyId?: string;
@@ -16,6 +17,7 @@ interface BusinessHoursSettingsProps {
 export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps) {
   const { config, loading, saving, saveBusinessHours, DAY_NAMES, DEFAULT_DAYS } = useBusinessHours({ companyId });
   const { isModuleEnabled, toggleModule, loading: modulesLoading } = useCompanyModules({ companyId });
+  const { updateSetting } = useStoreSettings({ companyId });
   
   const [localConfig, setLocalConfig] = useState<BusinessHoursConfig>({
     alwaysOpen: true,
@@ -250,7 +252,12 @@ export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps)
               </div>
               <Switch
                 checked={isModuleEnabled('agendamento')}
-                onCheckedChange={(checked) => toggleModule('agendamento', checked)}
+                onCheckedChange={async (checked) => {
+                  const moduleOk = await toggleModule('agendamento', checked);
+                  if (moduleOk) {
+                    await updateSetting('accept_order_scheduling', checked ? 'true' : 'false');
+                  }
+                }}
                 disabled={modulesLoading}
               />
             </div>
