@@ -7,6 +7,7 @@ import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { useBusinessHours } from '@/hooks/useBusinessHours';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { Product, ProductOptional, CartItem } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,7 +84,10 @@ export default function Menu() {
   const { loading: hoursLoading, isCurrentlyOpen, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentMethodsLoading } = usePaymentMethods({ companyId: company?.id });
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const isOpen = isCurrentlyOpen();
+  const schedulingEnabled = isModuleEnabled('agendamento');
+  const canOrder = isOpen || schedulingEnabled;
   const formattedHours = getFormattedHours();
   
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -405,8 +409,8 @@ export default function Menu() {
     // Prevent double submission
     if (isSubmitting) return;
     
-    // Check if store is open
-    if (!isOpen) {
+    // Check if store is open or scheduling is enabled
+    if (!canOrder) {
       toast.error('Estabelecimento fechado no momento');
       return;
     }
@@ -1222,23 +1226,23 @@ export default function Menu() {
                   </div>
                   {company?.slug?.startsWith('lancheria-da-i9') ? (
                     <>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="col-span-2">
-                          <Label>Logradouro (rua, avenida, travessa) *</Label>
+                    <div className="space-y-1">
+                        <Label>Logradouro (rua, avenida, travessa) *</Label>
+                        <div className="grid grid-cols-[1fr_5rem] gap-3">
                           <Input
                             value={deliveryAddress}
                             onChange={(e) => setDeliveryAddress(e.target.value)}
                             placeholder="Ex: Rua das Flores"
                           />
-                        </div>
-                        <div>
-                          <Label>Número *</Label>
-                          <Input
-                            value={deliveryNumber}
-                            onChange={(e) => setDeliveryNumber(e.target.value)}
-                            placeholder="123"
-                            inputMode="numeric"
-                          />
+                          <div>
+                            <Label className="text-xs">Nº *</Label>
+                            <Input
+                              value={deliveryNumber}
+                              onChange={(e) => setDeliveryNumber(e.target.value)}
+                              placeholder="123"
+                              inputMode="numeric"
+                            />
+                          </div>
                         </div>
                       </div>
                       <div>
@@ -1479,30 +1483,6 @@ export default function Menu() {
                       }
                       return null;
                     })()}
-                    {paymentMethod && (() => {
-                      const selectedPm = activePaymentMethods.find(m => m.name === paymentMethod);
-                      if (selectedPm?.pix_key) {
-                        return (
-                          <div className="mt-3 p-3 bg-accent/50 border border-border rounded-lg">
-                            <p className="text-sm font-medium text-foreground">🔑 Chave PIX:</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <p className="text-sm font-mono select-all text-muted-foreground break-all flex-1">{selectedPm.pix_key}</p>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(selectedPm.pix_key!);
-                                  toast.success('Chave PIX copiada!');
-                                }}
-                                className="shrink-0 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-                              >
-                                Copiar
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
                   </div>
                 </div>
 
@@ -1523,7 +1503,7 @@ export default function Menu() {
                   </div>
                 </div>
 
-                {!isOpen && (
+                {!canOrder && (
                   <Alert variant="destructive" className="mb-3">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
@@ -1532,14 +1512,23 @@ export default function Menu() {
                   </Alert>
                 )}
 
+                {!isOpen && schedulingEnabled && (
+                  <Alert className="mb-3 border-primary/30 bg-primary/5">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <AlertDescription className="text-foreground">
+                      ⏰ Estamos fora do horário, mas você pode deixar seu pedido agendado! Quando abrirmos, ele entrará na fila de produção.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <Button 
                   onClick={sendToWhatsApp} 
                   className="w-full" 
                   size="lg"
-                  disabled={!isOpen || isSubmitting}
+                  disabled={!canOrder || isSubmitting}
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  {isSubmitting ? 'Enviando...' : isOpen ? 'Enviar pedido pelo WhatsApp' : 'Estabelecimento fechado'}
+                  {isSubmitting ? 'Enviando...' : !canOrder ? 'Estabelecimento fechado' : !isOpen ? '⏰ Agendar pedido' : 'Enviar pedido pelo WhatsApp'}
                 </Button>
               </>
             )}
