@@ -141,6 +141,7 @@ export default function Settings() {
         .update({
           name: formData.name,
           phone: formData.phone,
+          cnpj: formData.cnpj,
           address: fullAddress,
           address_street: formData.address_street,
           address_number: formData.address_number,
