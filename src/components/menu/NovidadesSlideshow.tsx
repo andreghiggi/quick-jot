@@ -142,7 +142,7 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
   const nextIndex = (currentIndex + 1) % totalProducts;
 
   return (
-    <div className="bg-destructive border-b border-destructive">
+    <div className="bg-primary border-b border-primary">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-bold text-white flex items-center gap-1.5">
