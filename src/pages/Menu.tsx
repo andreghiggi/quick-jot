@@ -430,17 +430,16 @@ export default function Menu() {
       toast.error('Informe um CPF válido');
       return;
     }
-    if (!deliveryAddress.trim()) {
-      toast.error('Informe o endereço');
-      return;
-    }
-    if (!deliveryCity.trim()) {
-      toast.error('Informe a cidade');
-      return;
-    }
-    if (!deliveryState) {
-      toast.error('Selecione o estado');
-      return;
+    const isStructuredAddress = company?.slug?.startsWith('lancheria-da-i9');
+    if (isStructuredAddress) {
+      if (!deliveryAddress.trim()) { toast.error('Informe o logradouro'); return; }
+      if (!deliveryNumber.trim()) { toast.error('Informe o número'); return; }
+      if (!deliveryNeighborhood.trim()) { toast.error('Informe o bairro'); return; }
+      if (!deliveryReference.trim()) { toast.error('Informe o ponto de referência'); return; }
+    } else {
+      if (!deliveryAddress.trim()) { toast.error('Informe o endereço'); return; }
+      if (!deliveryCity.trim()) { toast.error('Informe a cidade'); return; }
+      if (!deliveryState) { toast.error('Selecione o estado'); return; }
     }
     if (!deliveryType) {
       toast.error('Selecione o tipo de entrega');
