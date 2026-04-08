@@ -338,16 +338,6 @@ export default function Products() {
   return (
     <AppLayout title="Produtos" actions={headerActions}>
       <div className="space-y-6">
-        <Card className="bg-primary/10 border-primary/20">
-          <CardContent className="py-4">
-            <p className="text-sm">
-              <strong>Link do cardápio:</strong>{' '}
-              <a href={menuLink} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                {menuLink}
-              </a>
-            </p>
-          </CardContent>
-        </Card>
 
         {/* Category filter chips */}
         {groupedProducts.length > 1 && (
