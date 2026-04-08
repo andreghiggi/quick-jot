@@ -81,6 +81,7 @@ interface MenuV2Props {
   onProductSelect: (product: Product) => void;
   onCartOpen: () => void;
   onNavigateBack: () => void;
+  buttonColorStyle?: React.CSSProperties;
 }
 
 export function MenuV2({
