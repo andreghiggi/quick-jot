@@ -984,6 +984,7 @@ export type Database = {
           display_order: number | null
           id: string
           image_url: string | null
+          is_new: boolean
           name: string
           pdv_item: boolean
           price: number
@@ -999,6 +1000,7 @@ export type Database = {
           display_order?: number | null
           id?: string
           image_url?: string | null
+          is_new?: boolean
           name: string
           pdv_item?: boolean
           price: number
@@ -1014,6 +1016,7 @@ export type Database = {
           display_order?: number | null
           id?: string
           image_url?: string | null
+          is_new?: boolean
           name?: string
           pdv_item?: boolean
           price?: number
