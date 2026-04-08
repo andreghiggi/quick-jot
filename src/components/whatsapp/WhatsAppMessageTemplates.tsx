@@ -53,7 +53,7 @@ const TEMPLATE_CONFIGS = [
     status: 'Finalizado',
     settingKey: 'whatsapp_msg_delivered',
     color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-    defaultMsg: '{{nome}}, seu pedido {{num}} foi finalizado. Obrigado por escolher o {{loja}}, esperamos que tenha gostado!',
+    defaultMsg: '*{{nome}}, seu pedido {{num}} foi concluído com sucesso.* Obrigado por escolher o {{loja}}, esperamos que tenha gostado!\n\n*Clique no link abaixo e compartilhe conosco como foi sua experiência:*\n{{google_review}}\n\n*Para os próximos pedidos anote o nosso link:*\n{{link_cardapio}}',
     hint: 'Enviada quando o pedido é finalizado. Use {{google_review}} para link de avaliação e {{link_cardapio}} para link do cardápio.',
   },
   {
