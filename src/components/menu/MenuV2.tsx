@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { NovidadesSlideshow } from '@/components/menu/NovidadesSlideshow';
 import { Product, ProductOptional, CartItem } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

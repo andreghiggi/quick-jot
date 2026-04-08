@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { NovidadesSlideshow } from '@/components/menu/NovidadesSlideshow';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
