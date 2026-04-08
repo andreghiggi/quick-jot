@@ -84,7 +84,7 @@ export default function Menu() {
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentMethodsLoading } = usePaymentMethods({ companyId: company?.id });
   const isOpen = isCurrentlyOpen();
-  const schedulingEnabled = settings.acceptOrderScheduling || company?.slug?.startsWith('lancheria-da-i9');
+  const schedulingEnabled = settings.acceptOrderScheduling;
   const canOrder = isOpen || schedulingEnabled;
   const formattedHours = getFormattedHours();
   
