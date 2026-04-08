@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, Clock, Save, Plus, Trash2, CalendarClock } from 'lucide-react';
 import { useBusinessHours, BusinessHoursConfig, DayConfig } from '@/hooks/useBusinessHours';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 
 interface BusinessHoursSettingsProps {
   companyId?: string;
