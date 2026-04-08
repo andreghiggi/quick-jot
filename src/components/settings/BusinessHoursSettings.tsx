@@ -17,6 +17,7 @@ interface BusinessHoursSettingsProps {
 export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps) {
   const { config, loading, saving, saveBusinessHours, DAY_NAMES, DEFAULT_DAYS } = useBusinessHours({ companyId });
   const { isModuleEnabled, toggleModule, loading: modulesLoading } = useCompanyModules({ companyId });
+  const { updateSetting } = useStoreSettings({ companyId });
   
   const [localConfig, setLocalConfig] = useState<BusinessHoursConfig>({
     alwaysOpen: true,
