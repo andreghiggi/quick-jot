@@ -796,25 +796,35 @@ pause
 
           <Separator className="my-6" />
 
-          <Card className="border-destructive/30">
+          <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-destructive">
-                    <AlertTriangle className="w-5 h-5" />
-                    Zona de Perigo
-                  </CardTitle>
-                  <CardDescription className="mt-1">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <CardTitle>Ativar Zona de Perigo</CardTitle>
+                  <CardDescription>
                     Ative apenas se precisar executar ações irreversíveis
                   </CardDescription>
                 </div>
                 <Switch
                   checked={showDangerZone}
                   onCheckedChange={setShowDangerZone}
+                  aria-label="Ativar Zona de Perigo"
                 />
               </div>
             </CardHeader>
-            {showDangerZone && (
+          </Card>
+
+          {showDangerZone && (
+            <Card className="border-destructive/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="w-5 h-5" />
+                  Zona de Perigo
+                </CardTitle>
+                <CardDescription>
+                  Estas ações são irreversíveis. Tenha certeza antes de continuar.
+                </CardDescription>
+              </CardHeader>
               <CardContent>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -840,8 +850,8 @@ pause
                   </AlertDialogContent>
                 </AlertDialog>
               </CardContent>
-            )}
-          </Card>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Tab Horários */}
