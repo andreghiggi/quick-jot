@@ -77,6 +77,39 @@ export default function Settings() {
     }
   }, [company]);
 
+  async function uploadBanner(file: File): Promise<string | null> {
+    setIsBannerUploading(true);
+    try {
+      const fileName = `banner_${Date.now()}`;
+      const result = await uploadCompressedImage(supabase, 'product-images', `${fileName}.webp`, file, { maxWidth: 1920 });
+      if (!result) throw new Error('Upload failed');
+      return result.publicUrl;
+    } catch (error) {
+      console.error('Error uploading banner:', error);
+      toast({ title: 'Erro ao enviar banner', variant: 'destructive' });
+      return null;
+    } finally {
+      setIsBannerUploading(false);
+    }
+  }
+
+  async function handleBannerSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const imageUrl = await uploadBanner(file);
+    if (imageUrl) {
+      setBannerUrl(imageUrl);
+      await saveBannerUrl(imageUrl);
+      toast({ title: 'Banner salvo', description: 'O banner foi atualizado com sucesso.' });
+    }
+  }
+
+  async function handleRemoveBanner() {
+    setBannerUrl('');
+    await saveBannerUrl('');
+    toast({ title: 'Banner removido' });
+  }
+
   const handleSave = async () => {
     if (!company?.id) return;
 
