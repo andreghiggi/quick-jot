@@ -252,7 +252,12 @@ export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps)
               </div>
               <Switch
                 checked={isModuleEnabled('agendamento')}
-                onCheckedChange={(checked) => toggleModule('agendamento', checked)}
+                onCheckedChange={async (checked) => {
+                  const moduleOk = await toggleModule('agendamento', checked);
+                  if (moduleOk) {
+                    await updateSetting('accept_order_scheduling', checked ? 'true' : 'false');
+                  }
+                }}
                 disabled={modulesLoading}
               />
             </div>
