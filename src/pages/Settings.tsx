@@ -990,6 +990,38 @@ pause
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                Foto Flutuante nos Produtos
+              </CardTitle>
+              <CardDescription>
+                Ativa animação de deslizamento vertical nas fotos dos produtos do cardápio
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Foto Flutuante</p>
+                  <p className="text-sm text-muted-foreground">Aplica efeito de movimento suave nas imagens dos produtos</p>
+                </div>
+                <Switch
+                  checked={storeSettings.floatingPhoto}
+                  onCheckedChange={async (value) => {
+                    await updateSetting('floating_photo', value.toString());
+                    toast({
+                      title: value ? 'Foto flutuante ativada' : 'Foto flutuante desativada',
+                      description: value
+                        ? 'As fotos dos produtos terão animação de deslizamento'
+                        : 'As fotos dos produtos ficarão estáticas',
+                    });
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Tab Dashboard */}
