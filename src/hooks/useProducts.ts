@@ -364,9 +364,11 @@ export function useProducts(options: UseProductsOptions = {}) {
     updateOptional,
     deleteOptional,
     getActiveProducts,
+    getNewProducts,
     getCategories,
     moveProduct,
     duplicateProduct,
+    toggleNewProduct,
     refetch: fetchProducts,
   };
 }
