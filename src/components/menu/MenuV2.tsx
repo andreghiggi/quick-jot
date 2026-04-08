@@ -327,8 +327,8 @@ export function MenuV2({
               <CardContent className="p-0">
                 <div className="flex">
                   {product.imageUrl ? (
-                    <div className="w-24 h-24 flex-shrink-0">
-                      <img src={product.imageUrl} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
+                    <div className="w-24 h-24 flex-shrink-0 overflow-hidden">
+                      <img src={product.imageUrl} alt={product.name} loading="lazy" className={cn("w-full h-full object-cover", categoryAnimatedMap?.[product.category] && "kenburns-animate")} />
                     </div>
                   ) : (
                     <div className="w-24 h-24 flex-shrink-0 bg-muted flex items-center justify-center">
