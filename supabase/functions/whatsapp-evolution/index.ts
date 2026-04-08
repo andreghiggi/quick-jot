@@ -141,6 +141,12 @@ serve(async (req) => {
         const cleanPhone = phone.replace(/\D/g, '');
         const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
 
+        // Normalize line breaks: convert literal \n text to real newlines, normalize \r\n and \r
+        const normalizedMessage = message
+          .replace(/\\n/g, '\n')
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n');
+
         const res = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
           method: 'POST',
           headers: {
@@ -149,7 +155,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             number: fullPhone,
-            text: message,
+            text: normalizedMessage,
             linkPreview: false,
           }),
         });
