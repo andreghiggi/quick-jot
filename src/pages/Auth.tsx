@@ -208,6 +208,68 @@ export default function Auth() {
                   />
                   {errors.companyName && <p className="text-sm text-destructive">{errors.companyName}</p>}
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-address-street">Endereço (rua, avenida, travessa...) *</Label>
+                  <Input
+                    id="signup-address-street"
+                    type="text"
+                    placeholder="Ex: Rua das Flores"
+                    value={signupAddressStreet}
+                    onChange={(e) => setSignupAddressStreet(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  {errors.addressStreet && <p className="text-sm text-destructive">{errors.addressStreet}</p>}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-address-number">Número *</Label>
+                    <Input
+                      id="signup-address-number"
+                      type="text"
+                      placeholder="Ex: 123"
+                      value={signupAddressNumber}
+                      onChange={(e) => setSignupAddressNumber(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    {errors.addressNumber && <p className="text-sm text-destructive">{errors.addressNumber}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-address-complement">Complemento</Label>
+                    <Input
+                      id="signup-address-complement"
+                      type="text"
+                      placeholder="Ex: Sala 2"
+                      value={signupAddressComplement}
+                      onChange={(e) => setSignupAddressComplement(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-address-neighborhood">Bairro *</Label>
+                  <Input
+                    id="signup-address-neighborhood"
+                    type="text"
+                    placeholder="Ex: Centro"
+                    value={signupAddressNeighborhood}
+                    onChange={(e) => setSignupAddressNeighborhood(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  {errors.addressNeighborhood && <p className="text-sm text-destructive">{errors.addressNeighborhood}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-address-reference">Ponto de Referência</Label>
+                  <Input
+                    id="signup-address-reference"
+                    type="text"
+                    placeholder="Ex: Próximo à praça central"
+                    value={signupAddressReference}
+                    onChange={(e) => setSignupAddressReference(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Seu Nome Completo</Label>
                   <Input
