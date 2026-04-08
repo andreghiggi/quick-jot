@@ -1313,6 +1313,16 @@ pause
               </div>
             </CardContent>
           </Card>
+          <ButtonColorPicker
+            value={storeSettings.buttonColor}
+            onChange={async (color) => {
+              await updateSetting('button_color', color);
+              toast({
+                title: color ? 'Cor dos botões atualizada' : 'Cor dos botões resetada',
+                description: color ? `Cor definida para ${color}` : 'Os botões usarão a cor padrão',
+              });
+            }}
+          />
         </TabsContent>
 
         {/* Tab Dashboard */}
