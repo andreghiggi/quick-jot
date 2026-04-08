@@ -679,82 +679,11 @@ export default function Products() {
           <DialogHeader>
             <DialogTitle>Configurações</DialogTitle>
           </DialogHeader>
-          <Tabs defaultValue="geral" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="geral">Geral</TabsTrigger>
+          <Tabs defaultValue="categorias" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="categorias">Categorias</TabsTrigger>
               <TabsTrigger value="perigo">Perigo</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="geral" className="space-y-4 mt-4">
-              <div>
-                <Label>Nome da Loja</Label>
-                <Input
-                  value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
-                  placeholder="Nome da sua loja"
-                />
-              </div>
-              <div>
-                <Label>Número do WhatsApp da loja</Label>
-                <Input
-                  value={storePhone}
-                  onChange={(e) => setStorePhone(e.target.value)}
-                  placeholder="5511999999999"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Formato: código do país + DDD + número (ex: 5511999999999)
-                </p>
-              </div>
-              <div>
-                <Label>Banner do Cardápio</Label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={bannerFileInputRef}
-                  onChange={handleBannerSelect}
-                  className="hidden"
-                />
-                {bannerUrl ? (
-                  <div className="relative mt-2">
-                    <img
-                      src={bannerUrl}
-                      alt="Banner Preview"
-                      className="w-full h-32 object-cover rounded"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-1 right-1 h-6 w-6"
-                      onClick={() => setBannerUrl('')}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full mt-2"
-                    onClick={() => bannerFileInputRef.current?.click()}
-                    disabled={isBannerUploading}
-                  >
-                    {isBannerUploading ? (
-                      'Enviando...'
-                    ) : (
-                      <>
-                        <Image className="h-4 w-4 mr-2" />
-                        Selecionar banner
-                      </>
-                    )}
-                  </Button>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  Recomendado: 1200x400 pixels
-                </p>
-              </div>
-              <Button onClick={handleSaveSettings} className="w-full">Salvar Configurações</Button>
-            </TabsContent>
 
             <TabsContent value="categorias" className="space-y-4 mt-4">
               <div>
