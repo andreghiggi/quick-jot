@@ -427,7 +427,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
               }
               message += '\n\n' + pixMsg;
             } else {
-              message += `\n\n${name}, para finalizar seu pedido ${num}, faça o pagamento via PIX:\n\n🔑 *Chave PIX para copiar:*\n${pixMethod.pix_key}\n\n⚠️ Copie a chave acima e cole no seu app de pagamento, após envie o comprovante de pagamento aqui. Obrigado! 😊`;
+              message += `\n\n💳 *Pagamento via PIX* (Enviar comprovante no WhatsApp)\n\n${name}, para finalizar seu pedido ${num}, faça o pagamento via PIX:\n\n🔑 *Chave PIX para copiar:*\n${pixMethod.pix_key}\n\n⚠️ Copie a chave acima e cole no seu app de pagamento, após envie o comprovante de pagamento aqui. Obrigado! 😊`;
             }
           }
         }
