@@ -205,7 +205,7 @@ export function MenuV2({
                       )}
                     </div>
                     <div className="flex items-center justify-between mt-2">
-                      <p className="text-primary font-bold">R$ {product.price.toFixed(2)}</p>
+                      <p className="text-primary font-bold">R$ {formatPrice(product.price)}</p>
                       <Button size="sm" className="h-8 px-3">
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -232,7 +232,7 @@ export function MenuV2({
           <div className="fixed bottom-4 left-4 right-4 z-30">
             <Button className="w-full py-6 shadow-lg" size="lg" onClick={onCartOpen}>
               <ShoppingCart className="h-5 w-5 mr-2" />
-              Ver carrinho ({cartItemsCount} itens) - R$ {cartTotal.toFixed(2)}
+              Ver carrinho ({cartItemsCount} itens) - R$ {formatPrice(cartTotal)}
             </Button>
           </div>
         )}
@@ -348,7 +348,7 @@ export function MenuV2({
                       <h3 className="font-semibold text-foreground line-clamp-2 break-words">{product.name}</h3>
                       <p className="text-xs text-muted-foreground">{product.category}</p>
                     </div>
-                    <p className="text-primary font-bold">R$ {product.price.toFixed(2)}</p>
+                    <p className="text-primary font-bold">R$ {formatPrice(product.price)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -425,7 +425,7 @@ export function MenuV2({
         <div className="fixed bottom-4 left-4 right-4 z-30">
           <Button className="w-full py-6 shadow-lg" size="lg" onClick={onCartOpen}>
             <ShoppingCart className="h-5 w-5 mr-2" />
-            Ver carrinho ({cartItemsCount} itens) - R$ {cartTotal.toFixed(2)}
+            Ver carrinho ({cartItemsCount} itens) - R$ {formatPrice(cartTotal)}
           </Button>
         </div>
       )}
