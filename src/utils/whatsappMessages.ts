@@ -77,12 +77,12 @@ export function generateWhatsAppMessage(params: MessageParams): string | null {
   switch (status) {
     case 'pending':
       if (deliveryType === 'retirada') {
-        return `${name}, seu pedido ${num} foi confirmado pelo ${storeName}! Avisaremos quando estiver pronto para retirada. 😊`;
+        return `*${name}, seu pedido ${num} foi realizado com sucesso!* Avisaremos quando estiver pronto para retirada. 😊`;
       }
-      return `${name}, seu pedido ${num} foi confirmado pelo ${storeName}! Em breve começaremos a preparar. 😊`;
+      return `*${name}, seu pedido ${num} foi realizado com sucesso!* Em breve vamos começar preparar seu pedido e vamos te atualizando por aqui! 😊`;
 
     case 'preparing':
-      const timeInfo = estimatedTime ? ` Tempo estimado: ${estimatedTime}.` : '';
+      const timeInfo = estimatedTime ? ` *Tempo estimado:* ${estimatedTime}.` : '';
       if (deliveryType === 'retirada') {
         return `${name}, seu pedido ${num} já está sendo preparado com carinho pela equipe do ${storeName}.${timeInfo} Avisaremos quando estiver disponível para retirada!`;
       }
@@ -90,21 +90,21 @@ export function generateWhatsAppMessage(params: MessageParams): string | null {
 
     case 'ready':
       if (deliveryType === 'entrega') {
-        return `${name}, seu pedido ${num} está prontinho e já vai sair para entrega${estimatedTime ? ` em aproximadamente ${estimatedTime}` : ''}. Fique de olho! 🛵`;
+        return `*${name}, seu pedido ${num} ficou pronto e está indo até você.* Fique de olho! 🛵`;
       }
       return `${name}, seu pedido ${num} está pronto e disponível para retirada no ${storeName}!${storeAddress ? `\n📍 Endereço: ${storeAddress}` : ''}\nEstamos te esperando! 🏪`;
 
     case 'delivered':
       if (deliveryType === 'retirada') {
         if (params.googleReviewUrl) {
-          return `${name}, seu pedido ${num} foi retirado com sucesso. Obrigado por escolher o ${storeName}! ⭐ Avalie nosso atendimento: ${params.googleReviewUrl}`;
+          return `*${name}, seu pedido ${num} foi concluído com sucesso.* Obrigado por escolher o ${storeName}!\n\n*Clique no link abaixo e compartilhe conosco como foi sua experiência:*\n${params.googleReviewUrl}\n\n*Para os próximos pedidos anote o nosso link:*\n${menuLink}`;
         }
-        return `${name}, seu pedido ${num} foi retirado com sucesso. Obrigado por escolher o ${storeName}, esperamos que tenha gostado!`;
+        return `*${name}, seu pedido ${num} foi concluído com sucesso.* Obrigado por escolher o ${storeName}, esperamos que tenha gostado!\n\n*Para os próximos pedidos anote o nosso link:*\n${menuLink}`;
       }
       if (params.googleReviewUrl) {
-        return `${name}, seu pedido ${num} foi finalizado. Obrigado por escolher o ${storeName}! ⭐ Avalie nosso atendimento: ${params.googleReviewUrl}`;
+        return `*${name}, seu pedido ${num} foi concluído com sucesso.* Obrigado por escolher o ${storeName}!\n\n*Clique no link abaixo e compartilhe conosco como foi sua experiência:*\n${params.googleReviewUrl}\n\n*Para os próximos pedidos anote o nosso link:*\n${menuLink}`;
       }
-      return `${name}, seu pedido ${num} foi finalizado. Obrigado por escolher o ${storeName}, esperamos que tenha gostado!`;
+      return `*${name}, seu pedido ${num} foi concluído com sucesso.* Obrigado por escolher o ${storeName}, esperamos que tenha gostado!\n\n*Para os próximos pedidos anote o nosso link:*\n${menuLink}`;
 
     default:
       return null;
