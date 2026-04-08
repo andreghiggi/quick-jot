@@ -217,10 +217,6 @@ export default function Products() {
 
         </Button>
       )}
-      <Button variant="outline" size="sm" onClick={copyMenuLink}>
-        <LinkIcon className="h-4 w-4 mr-2" />
-        <span className="hidden sm:inline">Copiar link</span>
-      </Button>
       <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
         <DialogTrigger asChild>
           <Button>

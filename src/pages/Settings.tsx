@@ -1099,6 +1099,38 @@ pause
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                Link do Cardápio
+              </CardTitle>
+              <CardDescription>
+                Compartilhe este link com seus clientes para acessar o cardápio online
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`}
+                  className="flex-1 font-mono text-sm"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const link = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
+                    navigator.clipboard.writeText(link);
+                    toast({ title: 'Link copiado!' });
+                  }}
+                >
+                  <LinkIcon className="h-4 w-4 mr-2" />
+                  Copiar link
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <BookOpen className="w-5 h-5" />
                 Layout do Cardápio Online
               </CardTitle>
