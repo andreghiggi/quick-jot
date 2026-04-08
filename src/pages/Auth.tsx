@@ -21,6 +21,11 @@ const signupSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   confirmPassword: z.string(),
+  addressStreet: z.string().min(2, 'Endereço é obrigatório'),
+  addressNumber: z.string().min(1, 'Número é obrigatório'),
+  addressComplement: z.string().optional(),
+  addressNeighborhood: z.string().min(2, 'Bairro é obrigatório'),
+  addressReference: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Senhas não conferem',
   path: ['confirmPassword'],
