@@ -174,7 +174,7 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
             className="flex"
             style={{
               transform: `translateX(${offset}%)`,
-              transition: isDragging ? 'none' : 'transform 0.7s cubic-bezier(0.25, 0.1, 0.25, 1)',
+              transition: (isDragging || skipTransition) ? 'none' : 'transform 0.7s cubic-bezier(0.25, 0.1, 0.25, 1)',
             }}
           >
             {/* Previous (off-screen left) */}
