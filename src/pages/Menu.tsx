@@ -210,6 +210,26 @@ export default function Menu() {
       .sort((a, b) => a.displayOrder - b.displayOrder);
   }, [selectedProduct, optionalGroups, categoryIdByName]);
 
+  useEffect(() => {
+    if (!selectedProduct?.id || selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0)) {
+      return;
+    }
+
+    const img = modalImageRef.current;
+    if (!img || !floatingPhoto) return;
+
+    img.style.animation = 'none';
+    void img.offsetHeight;
+
+    const timer = window.setTimeout(() => {
+      if (modalImageRef.current) {
+        modalImageRef.current.style.animation = '';
+      }
+    }, 10);
+
+    return () => window.clearTimeout(timer);
+  }, [selectedProduct?.id, selectedProductGroups.length, selectedProduct?.optionals, floatingPhoto]);
+
   // Load customer data when phone changes (with debounce)
   useEffect(() => {
     if (!customerPhone || customerPhone.length < 10 || !company?.id || customerLoaded) return;
