@@ -12,6 +12,7 @@ interface MessageParams {
   storeAddress?: string;
   customTemplates?: Record<string, string>;
   menuLink?: string;
+  resumo?: string;
 }
 
 function applyTemplate(template: string, vars: Record<string, string>): string {
