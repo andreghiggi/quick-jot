@@ -35,9 +35,10 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
 
 export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlideshowProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [offset, setOffset] = useState(0); // percentage offset for drag
+  const [offset, setOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isAutoAnimating, setIsAutoAnimating] = useState(false);
+  const [skipTransition, setSkipTransition] = useState(false);
   const touchStartX = useRef(0);
   const containerWidth = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -48,14 +49,22 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
 
   const goTo = useCallback((newIndex: number) => {
     const dir = newIndex > currentIndex ? -1 : 1;
+    setSkipTransition(false);
     setIsAutoAnimating(true);
     setOffset(dir * 100);
 
     if (autoAnimRef.current) clearTimeout(autoAnimRef.current);
     autoAnimRef.current = setTimeout(() => {
+      setSkipTransition(true);
       setIsAutoAnimating(false);
       setCurrentIndex(((newIndex % totalProducts) + totalProducts) % totalProducts);
       setOffset(0);
+      // Re-enable transition after the snap
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setSkipTransition(false);
+        });
+      });
     }, 700);
   }, [currentIndex, totalProducts]);
 
