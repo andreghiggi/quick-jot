@@ -199,6 +199,7 @@ export function useAuth() {
             address_complement: addressData.complement || null,
             address_neighborhood: addressData.neighborhood,
             address_reference: addressData.reference || null,
+            cnpj: addressData.cnpj || null,
           } as any)
           .eq('id', companyUser.company_id);
       }
