@@ -135,16 +135,6 @@ export default function Products() {
     setIsOptionalDialogOpen(false);
   }
 
-  async function handleAddCategory() {
-    if (!newCategoryName.trim()) {
-      toast.error('Informe o nome da categoria');
-      return;
-    }
-    const success = await addCategory(newCategoryName.trim());
-    if (success) {
-      setNewCategoryName('');
-    }
-  }
 
   function openEditDialog(product: Product) {
     setEditingProduct(product);
