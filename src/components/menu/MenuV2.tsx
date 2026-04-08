@@ -308,28 +308,30 @@ export function MenuV2({
             <h2 className="text-sm font-bold text-amber-700 dark:text-amber-400 mb-3 flex items-center gap-1.5">
               ⭐ NOVIDADES
             </h2>
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
-              {newProducts.map((product) => (
-                <button
-                  key={product.id}
-                  className="flex-shrink-0 w-36 bg-card rounded-xl shadow-sm border border-border overflow-hidden text-left hover:shadow-md transition-shadow"
-                  onClick={() => onProductSelect(product)}
-                >
-                  {product.imageUrl ? (
-                    <div className="w-full h-24 overflow-hidden">
-                      <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+            <div className="overflow-hidden">
+              <div className="animate-marquee gap-3">
+                {[...newProducts, ...newProducts].map((product, idx) => (
+                  <button
+                    key={`${product.id}-${idx}`}
+                    className="flex-shrink-0 w-36 bg-card rounded-xl shadow-sm border border-border overflow-hidden text-left hover:shadow-md transition-shadow mr-3"
+                    onClick={() => onProductSelect(product)}
+                  >
+                    {product.imageUrl ? (
+                      <div className="w-full h-24 overflow-hidden">
+                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-full h-24 bg-muted flex items-center justify-center">
+                        <span className="text-3xl">🍽️</span>
+                      </div>
+                    )}
+                    <div className="p-2">
+                      <p className="text-xs font-medium text-foreground line-clamp-2 break-words">{product.name}</p>
+                      <p className="text-xs font-bold text-primary mt-0.5">R$ {product.price.toFixed(2)}</p>
                     </div>
-                  ) : (
-                    <div className="w-full h-24 bg-muted flex items-center justify-center">
-                      <span className="text-3xl">🍽️</span>
-                    </div>
-                  )}
-                  <div className="p-2">
-                    <p className="text-xs font-medium text-foreground line-clamp-2 break-words">{product.name}</p>
-                    <p className="text-xs font-bold text-primary mt-0.5">R$ {product.price.toFixed(2)}</p>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
