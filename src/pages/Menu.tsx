@@ -999,9 +999,11 @@ export default function Menu() {
               {selectedProduct.imageUrl && (
                 <div className="w-full h-48 rounded-lg overflow-hidden">
                   <img
-                    key={`modal-img-${selectedProduct.id}`}
+                    ref={modalImageRef}
+                    key={`${selectedProduct.id}-${Date.now()}`}
                     src={selectedProduct.imageUrl}
                     alt={selectedProduct.name}
+                    style={{ animation: 'none' }}
                     className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")}
                   />
                 </div>
