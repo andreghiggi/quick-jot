@@ -54,6 +54,7 @@ export default function Auth() {
   const [signupAddressComplement, setSignupAddressComplement] = useState('');
   const [signupAddressNeighborhood, setSignupAddressNeighborhood] = useState('');
   const [signupAddressReference, setSignupAddressReference] = useState('');
+  const [signupCnpj, setSignupCnpj] = useState('');
 
   useEffect(() => {
     if (user && !authLoading) {
