@@ -132,6 +132,7 @@ export default function Auth() {
       complement: signupAddressComplement || undefined,
       neighborhood: signupAddressNeighborhood,
       reference: signupAddressReference || undefined,
+      cnpj: signupCnpj || undefined,
     });
     setIsLoading(false);
     // Redirect is handled by useEffect
