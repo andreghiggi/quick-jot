@@ -233,9 +233,45 @@ export default function Menu() {
           // Auto-fill customer data
           if (data.name && !customerName) setCustomerName(data.name);
           if (data.cpf && !customerCpf) setCustomerCpf(data.cpf);
-          if (data.address && !deliveryAddress) setDeliveryAddress(data.address);
           if (data.city && !deliveryCity) setDeliveryCity(data.city);
           if (data.state && !deliveryState) setDeliveryState(data.state);
+
+          // Parse structured address for i9 format: "Logradouro, Número - Complemento - Bairro | Ref: Referência"
+          if (data.address && company?.slug?.startsWith('lancheria-da-i9')) {
+            const addr = data.address;
+            // Split by " | Ref: " to get reference
+            const [mainPart, refPart] = addr.split(/\s*\|\s*Ref:\s*/);
+            if (refPart && !deliveryReference) setDeliveryReference(refPart.trim());
+
+            // Split main part by " - " to get bairro
+            const dashParts = mainPart.split(/\s*-\s*/);
+            if (dashParts.length >= 2) {
+              // Last part is bairro
+              const bairro = dashParts.pop()?.trim() || '';
+              if (bairro && !deliveryNeighborhood) setDeliveryNeighborhood(bairro);
+              // If there's a complement (middle part)
+              if (dashParts.length >= 2) {
+                const complement = dashParts.pop()?.trim() || '';
+                if (complement && !deliveryComplement) setDeliveryComplement(complement);
+              }
+              // Remaining is "Logradouro, Número"
+              const streetNum = dashParts.join(' - ');
+              const commaIdx = streetNum.lastIndexOf(',');
+              if (commaIdx > 0) {
+                const street = streetNum.substring(0, commaIdx).trim();
+                const num = streetNum.substring(commaIdx + 1).trim();
+                if (street && !deliveryAddress) setDeliveryAddress(street);
+                if (num && !deliveryNumber) setDeliveryNumber(num);
+              } else {
+                if (streetNum && !deliveryAddress) setDeliveryAddress(streetNum);
+              }
+            } else {
+              if (mainPart && !deliveryAddress) setDeliveryAddress(mainPart);
+            }
+          } else if (data.address && !deliveryAddress) {
+            setDeliveryAddress(data.address);
+          }
+
           setCustomerLoaded(true);
           toast.success('Dados carregados automaticamente!', { duration: 2000 });
         }
