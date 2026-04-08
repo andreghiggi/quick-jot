@@ -1,3 +1,4 @@
+import { formatPrice } from '@/lib/utils';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, ShoppingCart, ArrowLeft, Plus, Minus, Trash2 } from 'lucide-react';
@@ -102,8 +103,8 @@ export function AddedToCartDialog({
                       </p>
                     )}
                     <div className="flex items-center justify-between mt-1.5">
-                      <p className="text-primary font-bold text-sm">
-                        R$ {calculateItemTotal(item).toFixed(2)}
+                      <p className="text-green-600 font-bold text-sm">
+                        R$ {formatPrice(calculateItemTotal(item))}
                       </p>
                       <div className="flex items-center gap-2">
                         <button
@@ -132,7 +133,7 @@ export function AddedToCartDialog({
         <div className="px-6 py-3 bg-muted/50 border-t border-border flex-shrink-0">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground font-medium">Total</span>
-            <span className="font-bold text-foreground text-base">R$ {cartTotal.toFixed(2)}</span>
+            <span className="font-bold text-foreground text-base">R$ {formatPrice(cartTotal)}</span>
           </div>
         </div>
 

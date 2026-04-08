@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { cn, formatPrice } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, Plus, ShoppingCart } from 'lucide-react';
 
 interface OptionalGroupItem {
@@ -149,8 +149,8 @@ export function LateralOptionalsWizard({
                           {item.name}
                         </p>
                         {item.price > 0 && (
-                          <p className="text-[10px] text-primary font-medium text-center">
-                            +R$ {item.price.toFixed(2)}
+                          <p className="text-[10px] text-green-600 font-medium text-center">
+                            +R$ {formatPrice(item.price)}
                           </p>
                         )}
                       </div>
@@ -189,7 +189,7 @@ export function LateralOptionalsWizard({
                         <span className="font-medium">{item.name}</span>
                       </div>
                       {item.price > 0 && (
-                        <span className="text-primary font-semibold">+R$ {item.price.toFixed(2)}</span>
+                        <span className="text-green-600 font-semibold">+R$ {formatPrice(item.price)}</span>
                       )}
                     </div>
                   );
@@ -223,7 +223,7 @@ export function LateralOptionalsWizard({
                     <span className="font-medium">{optional.name}</span>
                   </div>
                   {optional.price > 0 && (
-                    <span className="text-primary font-semibold">+R$ {optional.price.toFixed(2)}</span>
+                    <span className="text-green-600 font-semibold">+R$ {formatPrice(optional.price)}</span>
                   )}
                 </div>
               ))}
@@ -245,7 +245,7 @@ export function LateralOptionalsWizard({
             {/* Summary */}
             <div className="border rounded-lg p-3 space-y-1 bg-muted/30">
               <p className="font-semibold text-sm">{product.name}</p>
-              <p className="text-xs text-muted-foreground">R$ {product.price.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">R$ {formatPrice(product.price)}</p>
               {groups.map((g) => {
                 const sel = selectedGroupItems[g.id];
                 if (!sel || sel.size === 0) return null;
@@ -262,7 +262,7 @@ export function LateralOptionalsWizard({
                   + {selectedOptionals.map((o) => o.name).join(', ')}
                 </p>
               )}
-              <p className="text-lg font-bold text-primary pt-1">Total: R$ {totalPrice.toFixed(2)}</p>
+              <p className="text-lg font-bold text-green-600 pt-1">Total: R$ {formatPrice(totalPrice)}</p>
             </div>
           </div>
         )}
@@ -283,7 +283,7 @@ export function LateralOptionalsWizard({
         {isLast ? (
           <Button onClick={onAddToCart} className="flex-1" size="lg">
             <ShoppingCart className="h-4 w-4 mr-2" />
-            Adicionar — R$ {totalPrice.toFixed(2)}
+            Adicionar — R$ {formatPrice(totalPrice)}
           </Button>
         ) : (
           <Button

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Product } from '@/types/product';
-import { cn } from '@/lib/utils';
+import { cn, formatPrice } from '@/lib/utils';
 
 interface NovidadesSlideshowProps {
   products: Product[];
@@ -27,7 +27,7 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
         {product.description && (
           <p className="text-xs text-muted-foreground mt-0.5 break-words whitespace-normal">{product.description}</p>
         )}
-        <p className="text-sm font-bold text-primary mt-1">R$ {product.price.toFixed(2)}</p>
+        <p className="text-sm font-bold text-green-600 mt-1">R$ {formatPrice(product.price)}</p>
       </div>
     </button>
   );
