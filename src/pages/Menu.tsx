@@ -76,7 +76,7 @@ export default function Menu() {
     fetchCompany();
   }, [slug, navigate]);
 
-  const { products, loading: productsLoading, getActiveProducts } = useProducts({ companyId: company?.id });
+  const { products, loading: productsLoading, getActiveProducts, getNewProducts } = useProducts({ companyId: company?.id });
   const { settings, loading: settingsLoading } = useStoreSettings({ companyId: company?.id });
   const { categories, loading: categoriesLoading } = useCategories({ companyId: company?.id });
   const { neighborhoods, loading: neighborhoodsLoading, getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
