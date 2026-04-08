@@ -262,7 +262,11 @@ export function useProducts(options: UseProductsOptions = {}) {
     }
   }
 
-  async function duplicateProduct(productId: string): Promise<string | null> {
+  function getCategories(): string[] {
+    return [...new Set(products.map((p) => p.category))];
+  }
+
+
     const source = products.find(p => p.id === productId);
     if (!source) return null;
 
