@@ -758,6 +758,30 @@ export default function Menu() {
 
   const isV2 = settings.menuLayout === 'v2';
 
+  // Convert buttonColor hex to HSL for CSS variable override
+  const buttonColorStyle = useMemo(() => {
+    const hex = settings.buttonColor;
+    if (!hex || !/^#[0-9A-Fa-f]{6}$/.test(hex)) return undefined;
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+      else if (max === g) h = ((b - r) / d + 2) / 6;
+      else h = ((r - g) / d + 4) / 6;
+    }
+    const hsl = `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+    // Also compute a foreground color (white or black) based on luminance
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    const fg = lum > 0.5 ? '0 0% 0%' : '0 0% 100%';
+    return { '--primary': hsl, '--primary-foreground': fg } as React.CSSProperties;
+  }, [settings.buttonColor]);
+
   const adminBanner = isAdmin ? (
     <div className="bg-gray-900 border-b border-gray-700 px-4 py-3">
       <div className="max-w-3xl mx-auto flex items-center justify-between gap-2">
@@ -795,9 +819,10 @@ export default function Menu() {
         onProductSelect={setSelectedProduct}
         onCartOpen={() => setIsCartOpen(true)}
         onNavigateBack={() => navigate(-1)}
+        buttonColorStyle={buttonColorStyle}
       />
     ) : (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-24" style={buttonColorStyle}>
       {/* Closed Store Banner */}
       {!isOpen && (
         <div className="bg-destructive/10 border-b border-destructive/20">
