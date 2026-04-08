@@ -976,8 +976,9 @@ export default function Menu() {
             ) : (
             <div className="space-y-4">
               {selectedProduct.imageUrl && (
-                <div key={selectedProduct.id} className="w-full h-48 rounded-lg overflow-hidden">
+                <div className="w-full h-48 rounded-lg overflow-hidden">
                   <img
+                    key={`modal-img-${selectedProduct.id}`}
                     src={selectedProduct.imageUrl}
                     alt={selectedProduct.name}
                     className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")}
