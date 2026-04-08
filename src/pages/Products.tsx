@@ -13,13 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, AlertTriangle, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, GripVertical, FileText, Copy } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, Settings, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, GripVertical, FileText, Copy } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -194,29 +192,6 @@ export default function Products() {
     toast.success('Link copiado!');
   }
 
-  async function clearAllProducts() {
-    try {
-      const { error: optionalsError } = await supabase
-        .from('product_optionals')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      if (optionalsError) throw optionalsError;
-
-      const { error: productsError } = await supabase
-        .from('products')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      if (productsError) throw productsError;
-
-      toast.success('Todos os produtos foram removidos!');
-      window.location.reload();
-    } catch (error) {
-      console.error('Error clearing products:', error);
-      toast.error('Erro ao limpar produtos');
-    }
-  }
 
   // Group products by category, maintaining category order
   const groupedProducts = useMemo(() => {
@@ -633,13 +608,7 @@ export default function Products() {
           <DialogHeader>
             <DialogTitle>Configurações</DialogTitle>
           </DialogHeader>
-          <Tabs defaultValue="categorias" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="categorias">Categorias</TabsTrigger>
-              <TabsTrigger value="perigo">Perigo</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="categorias" className="space-y-4 mt-4">
+          <div className="space-y-4 mt-2">
               <div>
                 <Label>Nova Categoria</Label>
                 <div className="flex gap-2 mt-1">
@@ -797,44 +766,7 @@ export default function Products() {
                   </ScrollArea>
                 </div>
               </div>
-            </TabsContent>
-
-            <TabsContent value="perigo" className="space-y-4 mt-4">
-              <div className="border border-destructive/30 rounded-lg p-4 bg-destructive/5">
-                <Label className="text-destructive flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  Zona de perigo
-                </Label>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Esta ação irá remover TODOS os produtos e seus opcionais da base de dados. 
-                  Esta ação não pode ser desfeita.
-                </p>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="w-full mt-4">
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      Zerar todos os produtos
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Esta ação irá remover TODOS os produtos e seus opcionais da base de dados. 
-                        Esta ação não pode ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={clearAllProducts} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Sim, zerar produtos
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </TabsContent>
-          </Tabs>
+            </div>
         </DialogContent>
       </Dialog>
 

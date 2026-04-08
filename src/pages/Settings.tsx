@@ -12,8 +12,10 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen, Image, Upload } from 'lucide-react';
+import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen, Image, Upload, AlertTriangle } from 'lucide-react';
 import { uploadCompressedImage } from '@/utils/imageUtils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Separator } from '@/components/ui/separator';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
@@ -144,6 +146,37 @@ export default function Settings() {
       setLoading(false);
     }
   };
+
+  async function clearAllProducts() {
+    try {
+      const { error: optionalsError } = await supabase
+        .from('product_optionals')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (optionalsError) throw optionalsError;
+
+      const { error: productsError } = await supabase
+        .from('products')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (productsError) throw productsError;
+
+      toast({
+        title: 'Produtos zerados',
+        description: 'Todos os produtos foram removidos com sucesso.',
+      });
+      window.location.reload();
+    } catch (error) {
+      console.error('Error clearing products:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao limpar produtos.',
+        variant: 'destructive',
+      });
+    }
+  }
 
   const handleCardVisibilityChange = async (key: string, value: boolean) => {
     setCardVisibility(prev => ({ ...prev, [key]: value }));
@@ -757,6 +790,45 @@ pause
                   )}
                 </Button>
               )}
+            </CardContent>
+          </Card>
+
+          <Separator className="my-6" />
+
+          <Card className="border-destructive/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="w-5 h-5" />
+                Zona de Perigo
+              </CardTitle>
+              <CardDescription>
+                Estas ações são irreversíveis. Tenha certeza antes de continuar.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="w-full">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Zerar todos os produtos
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação irá remover TODOS os produtos e seus opcionais da base de dados. 
+                      Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={clearAllProducts} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Sim, zerar produtos
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
         </TabsContent>
