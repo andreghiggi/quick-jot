@@ -301,40 +301,9 @@ export function MenuV2({
         </div>
       )}
 
-      {/* NOVIDADES Carousel */}
+      {/* NOVIDADES Slideshow */}
       {newProducts.length > 0 && (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-b border-amber-200 dark:border-amber-800">
-          <div className="container mx-auto px-4 py-4">
-            <h2 className="text-sm font-bold text-amber-700 dark:text-amber-400 mb-3 flex items-center gap-1.5">
-              ⭐ NOVIDADES
-            </h2>
-            <div className="overflow-hidden">
-              <div className="animate-marquee gap-3">
-                {[...newProducts, ...newProducts].map((product, idx) => (
-                  <button
-                    key={`${product.id}-${idx}`}
-                    className="flex-shrink-0 w-36 bg-card rounded-xl shadow-sm border border-border overflow-hidden text-left hover:shadow-md transition-shadow mr-3"
-                    onClick={() => onProductSelect(product)}
-                  >
-                    {product.imageUrl ? (
-                      <div className="w-full h-24 overflow-hidden">
-                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-                      </div>
-                    ) : (
-                      <div className="w-full h-24 bg-muted flex items-center justify-center">
-                        <span className="text-3xl">🍽️</span>
-                      </div>
-                    )}
-                    <div className="p-2">
-                      <p className="text-xs font-medium text-foreground line-clamp-2 break-words">{product.name}</p>
-                      <p className="text-xs font-bold text-primary mt-0.5">R$ {product.price.toFixed(2)}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <NovidadesSlideshow products={newProducts} onProductSelect={onProductSelect} />
       )}
 
       {/* Search */}
