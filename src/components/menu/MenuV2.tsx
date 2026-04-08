@@ -71,7 +71,7 @@ interface MenuV2Props {
   allOrderedCategories: string[];
   categoryEmojiMap?: Record<string, string>;
   categoryImageMap?: Record<string, string>;
-  categoryAnimatedMap?: Record<string, boolean>;
+  floatingPhoto?: boolean;
   cartItemsCount: number;
   cartTotal: number;
   isOpen: boolean;
@@ -88,7 +88,7 @@ export function MenuV2({
   allOrderedCategories,
   categoryEmojiMap,
   categoryImageMap,
-  categoryAnimatedMap,
+  floatingPhoto,
   cartItemsCount,
   cartTotal,
   isOpen,
@@ -184,7 +184,7 @@ export function MenuV2({
                         src={product.imageUrl}
                         alt={product.name}
                         loading="lazy"
-                        className={cn("w-full h-full object-cover", categoryAnimatedMap?.[product.category] && "kenburns-animate")}
+                        className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")}
                       />
                     </div>
                   ) : (
@@ -328,7 +328,7 @@ export function MenuV2({
                 <div className="flex">
                   {product.imageUrl ? (
                     <div className="w-24 h-24 flex-shrink-0 overflow-hidden">
-                      <img src={product.imageUrl} alt={product.name} loading="lazy" className={cn("w-full h-full object-cover", categoryAnimatedMap?.[product.category] && "kenburns-animate")} />
+                      <img src={product.imageUrl} alt={product.name} loading="lazy" className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")} />
                     </div>
                   ) : (
                     <div className="w-24 h-24 flex-shrink-0 bg-muted flex items-center justify-center">

@@ -577,7 +577,7 @@ pause
           <TabsTrigger value="empresa">Empresa</TabsTrigger>
           <TabsTrigger value="horarios">Horários</TabsTrigger>
           <TabsTrigger value="entrega">Entrega</TabsTrigger>
-          <TabsTrigger value="cardapio">Cardápio</TabsTrigger>
+          <TabsTrigger value="layout">Layout</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="impressao">Impressão</TabsTrigger>
         </TabsList>
@@ -905,8 +905,8 @@ pause
           )}
         </TabsContent>
 
-        {/* Tab Cardápio */}
-        <TabsContent value="cardapio" className="space-y-6">
+        {/* Tab Layout */}
+        <TabsContent value="layout" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -984,6 +984,38 @@ pause
                       description: value
                         ? 'Adicionais serão exibidos em etapas laterais no cardápio'
                         : 'Adicionais voltaram ao modo padrão (vertical)',
+                    });
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                Foto Flutuante nos Produtos
+              </CardTitle>
+              <CardDescription>
+                Ativa animação de deslizamento vertical nas fotos dos produtos do cardápio
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Foto Flutuante</p>
+                  <p className="text-sm text-muted-foreground">Aplica efeito de movimento suave nas imagens dos produtos</p>
+                </div>
+                <Switch
+                  checked={storeSettings.floatingPhoto}
+                  onCheckedChange={async (value) => {
+                    await updateSetting('floating_photo', value.toString());
+                    toast({
+                      title: value ? 'Foto flutuante ativada' : 'Foto flutuante desativada',
+                      description: value
+                        ? 'As fotos dos produtos terão animação de deslizamento'
+                        : 'As fotos dos produtos ficarão estáticas',
                     });
                   }}
                 />

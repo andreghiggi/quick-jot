@@ -176,12 +176,8 @@ export default function Menu() {
     return map;
   }, [categories]);
 
-  // Build category name -> animated map for MenuV2
-  const categoryAnimatedMap = useMemo(() => {
-    const map: Record<string, boolean> = {};
-    categories.forEach(c => { if (c.animated) map[c.name] = true; });
-    return map;
-  }, [categories]);
+  // Floating photo animation enabled per establishment
+  const floatingPhoto = settings.floatingPhoto;
 
   // Get optional groups applicable to a specific product (with per-product overrides)
   function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
@@ -748,7 +744,7 @@ export default function Menu() {
         allOrderedCategories={allOrderedCategories}
         categoryEmojiMap={categoryEmojiMap}
         categoryImageMap={categoryImageMap}
-        categoryAnimatedMap={categoryAnimatedMap}
+        floatingPhoto={floatingPhoto}
         cartItemsCount={cartItemsCount}
         cartTotal={cartTotal}
         isOpen={isOpen}
@@ -984,7 +980,7 @@ export default function Menu() {
                   <img
                     src={selectedProduct.imageUrl}
                     alt={selectedProduct.name}
-                    className={cn("w-full h-full object-cover", categoryAnimatedMap?.[selectedProduct.category] && "kenburns-animate")}
+                    className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")}
                   />
                 </div>
               )}
