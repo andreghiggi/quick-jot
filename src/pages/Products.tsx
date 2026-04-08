@@ -51,23 +51,12 @@ export default function Products() {
   const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [storePhone, setStorePhone] = useState('');
-  const [storeName, setStoreName] = useState('');
-  const [bannerUrl, setBannerUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [isBannerUploading, setIsBannerUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
-  const bannerFileInputRef = useRef<HTMLInputElement>(null);
   const [isBulkTaxOpen, setIsBulkTaxOpen] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   const menuLink = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
-
-  useEffect(() => {
-    setStorePhone(settings.storePhone);
-    setStoreName(settings.storeName);
-    setBannerUrl(settings.bannerUrl);
-  }, [settings]);
 
   // Set default category when categories load
   useEffect(() => {
