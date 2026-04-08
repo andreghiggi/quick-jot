@@ -5,8 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Clock, Save, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Clock, Save, Plus, Trash2, CalendarClock } from 'lucide-react';
 import { useBusinessHours, BusinessHoursConfig, DayConfig } from '@/hooks/useBusinessHours';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 
 interface BusinessHoursSettingsProps {
   companyId?: string;
@@ -14,6 +15,7 @@ interface BusinessHoursSettingsProps {
 
 export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps) {
   const { config, loading, saving, saveBusinessHours, DAY_NAMES, DEFAULT_DAYS } = useBusinessHours({ companyId });
+  const { isModuleEnabled, toggleModule, loading: modulesLoading } = useCompanyModules({ companyId });
   
   const [localConfig, setLocalConfig] = useState<BusinessHoursConfig>({
     alwaysOpen: true,
@@ -229,6 +231,28 @@ export function BusinessHoursSettings({ companyId }: BusinessHoursSettingsProps)
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Order Scheduling Toggle */}
+        {!localConfig.alwaysOpen && (
+          <div className="border rounded-lg p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="w-5 h-5 text-primary" />
+                <div>
+                  <Label className="font-medium">Aceitar agendamento de pedidos</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Permite que clientes façam pedidos fora do horário de funcionamento. Os pedidos entram na fila quando o estabelecimento abrir.
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={isModuleEnabled('agendamento')}
+                onCheckedChange={(checked) => toggleModule('agendamento', checked)}
+                disabled={modulesLoading}
+              />
             </div>
           </div>
         )}
