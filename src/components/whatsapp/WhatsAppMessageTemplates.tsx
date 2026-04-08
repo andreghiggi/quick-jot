@@ -32,7 +32,7 @@ const TEMPLATE_CONFIGS = [
     status: 'Em Preparo',
     settingKey: 'whatsapp_msg_preparing',
     color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
-    defaultMsg: '{{nome}}, seu pedido {{num}} já está sendo preparado com carinho pela equipe do {{loja}}. Tempo estimado: {{tempo}}. Avisaremos quando estiver pronto!',
+    defaultMsg: '{{nome}}, seu pedido {{num}} já está sendo preparado com carinho pela equipe do {{loja}}. *Tempo estimado:* {{tempo}}. Avisaremos quando estiver pronto!',
     hint: 'Enviada quando o pedido entra em preparo.',
   },
   {
