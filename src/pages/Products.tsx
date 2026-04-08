@@ -633,9 +633,7 @@ export default function Products() {
           <DialogHeader>
             <DialogTitle>Configurações</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-
-            <div className="mt-4 space-y-4">
+          <div className="space-y-4 mt-2">
               <div>
                 <Label>Nova Categoria</Label>
                 <div className="flex gap-2 mt-1">
