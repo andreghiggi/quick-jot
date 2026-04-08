@@ -81,7 +81,7 @@ const TEMPLATE_CONFIGS = [
     status: 'Pedido Agendado',
     settingKey: 'whatsapp_msg_scheduled',
     color: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200',
-    defaultMsg: 'Olá, {{nome}}! Seu pedido {{num}} foi agendado com sucesso 😊\n\n⏰ Nosso horário de atendimento hoje é: {{horario}}\n\nQuando iniciarmos, seu pedido será confirmado.\n\nApós a confirmação, ele entrará na fila aguardando o início da produção conforme a ordem de agendamento.\n\nVocê será avisado(a) assim que o preparo começar, e é a partir desse momento que passa a contar o tempo estimado para entrega do pedido.\n\nAté breve! 👋',
+    defaultMsg: 'Olá, *{{nome}}*! Seu pedido {{num}} foi agendado com sucesso 😊\n\n⏰ *Nosso horário de atendimento hoje é: {{horario}}*\n\nQuando iniciarmos, seu pedido será confirmado.\n\n*Após a confirmação, ele entrará na fila aguardando o início da produção conforme a ordem de agendamento.*\n\nVocê será avisado(a) assim que o preparo começar, e é a partir desse momento que passa a contar o tempo estimado para entrega do pedido.\n\nAté breve! 👋',
     hint: 'Enviada automaticamente quando o cliente faz um pedido fora do horário com agendamento ativo.',
   },
 ];
