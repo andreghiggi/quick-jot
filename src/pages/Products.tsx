@@ -28,16 +28,7 @@ export default function Products() {
   const { company } = useAuthContext();
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, duplicateProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
-  const { categories, addCategory, deleteCategory, updateCategory: _updateCategory, sortMode, saveSortMode, moveCategory } = useCategories({ companyId: company?.id });
-  
-  // Wrap updateCategory to also refetch products when a category is renamed
-  const updateCategory = async (id: string, data: Partial<import('@/types/order').Category>) => {
-    const result = await _updateCategory(id, data);
-    if (result && data.name !== undefined) {
-      await refetchProducts();
-    }
-    return result;
-  };
+  const { categories } = useCategories({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
