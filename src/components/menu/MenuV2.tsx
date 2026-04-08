@@ -100,6 +100,7 @@ export function MenuV2({
   onProductSelect,
   onCartOpen,
   onNavigateBack,
+  buttonColorStyle,
 }: MenuV2Props) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
