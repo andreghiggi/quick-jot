@@ -1222,23 +1222,23 @@ export default function Menu() {
                   </div>
                   {company?.slug?.startsWith('lancheria-da-i9') ? (
                     <>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="col-span-2">
-                          <Label>Logradouro (rua, avenida, travessa) *</Label>
+                    <div className="space-y-1">
+                        <Label>Logradouro (rua, avenida, travessa) *</Label>
+                        <div className="grid grid-cols-[1fr_5rem] gap-3">
                           <Input
                             value={deliveryAddress}
                             onChange={(e) => setDeliveryAddress(e.target.value)}
                             placeholder="Ex: Rua das Flores"
                           />
-                        </div>
-                        <div>
-                          <Label>Número *</Label>
-                          <Input
-                            value={deliveryNumber}
-                            onChange={(e) => setDeliveryNumber(e.target.value)}
-                            placeholder="123"
-                            inputMode="numeric"
-                          />
+                          <div>
+                            <Label className="text-xs">Nº *</Label>
+                            <Input
+                              value={deliveryNumber}
+                              onChange={(e) => setDeliveryNumber(e.target.value)}
+                              placeholder="123"
+                              inputMode="numeric"
+                            />
+                          </div>
                         </div>
                       </div>
                       <div>
