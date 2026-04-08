@@ -18,7 +18,7 @@ const TEMPLATE_CONFIGS = [
     status: 'Confirmado',
     settingKey: 'whatsapp_msg_pending',
     color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
-    defaultMsg: '{{nome}}, seu pedido {{num}} foi confirmado pelo {{loja}}! Em breve começaremos a preparar. 😊',
+    defaultMsg: '*{{nome}}, seu pedido {{num}} foi realizado com sucesso!* Em breve vamos começar preparar seu pedido e vamos te atualizando por aqui! 😊',
     hint: 'Enviada quando o pedido é confirmado.',
   },
   {
