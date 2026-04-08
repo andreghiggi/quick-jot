@@ -126,14 +126,27 @@ export default function Settings() {
 
     setLoading(true);
     try {
+      const fullAddress = [
+        formData.address_street,
+        formData.address_number,
+        formData.address_complement,
+        formData.address_neighborhood,
+        formData.address_reference ? `Ref: ${formData.address_reference}` : '',
+      ].filter(Boolean).join(', ');
+
       const { error } = await supabase
         .from('companies')
         .update({
           name: formData.name,
           phone: formData.phone,
-          address: formData.address,
+          address: fullAddress,
+          address_street: formData.address_street,
+          address_number: formData.address_number,
+          address_complement: formData.address_complement,
+          address_neighborhood: formData.address_neighborhood,
+          address_reference: formData.address_reference,
           slug: formData.slug,
-        })
+        } as any)
         .eq('id', company.id);
 
       if (error) throw error;
