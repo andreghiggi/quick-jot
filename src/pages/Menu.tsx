@@ -19,7 +19,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ShoppingCart, Plus, Minus, Trash2, Send, CheckCircle, Search, Clock, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Send, CheckCircle, Search, Clock, AlertCircle, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -311,6 +311,35 @@ export default function Menu() {
       }
       return { ...prev, [groupId]: current };
     });
+  }
+
+  // Smart product select: skip dialog if product has no optionals/groups
+  function handleProductSelect(product: Product) {
+    const groups = getGroupsForProduct(product.id, product.category);
+    const hasOldOptionals = product.optionals && product.optionals.filter(o => o.active).length > 0;
+    const hasGroups = groups.length > 0;
+
+    if (!hasOldOptionals && !hasGroups) {
+      // No optionals - add directly to cart
+      const newItem: CartItem = {
+        product,
+        quantity: 1,
+        selectedOptionals: [],
+        notes: undefined,
+      };
+      setCart((prev) => [...prev, newItem]);
+      setLastAddedItem(newItem);
+      setShowAddedToCart(true);
+      return;
+    }
+
+    setSelectedProduct(product);
+  }
+
+  // Open dialog specifically for notes on a product without optionals
+  function handleOpenNotes(e: React.MouseEvent, product: Product) {
+    e.stopPropagation();
+    setSelectedProduct(product);
   }
 
   function addToCart() {
@@ -705,7 +734,9 @@ export default function Menu() {
         cartTotal={cartTotal}
         isOpen={isOpen}
         formattedHours={formattedHours}
-        onProductSelect={setSelectedProduct}
+        onProductSelect={handleProductSelect}
+        onProductOpenNotes={handleOpenNotes}
+        getGroupsForProduct={getGroupsForProduct}
         onCartOpen={() => setIsCartOpen(true)}
         onNavigateBack={() => navigate(-1)}
       />
@@ -837,7 +868,7 @@ export default function Menu() {
                 <Card
                   key={product.id}
                   className="cursor-pointer hover:border-primary hover:shadow-md transition-all overflow-hidden"
-                  onClick={() => setSelectedProduct(product)}
+                  onClick={() => handleProductSelect(product)}
                 >
                   <CardContent className="p-0">
                     <div className="flex">
@@ -868,9 +899,22 @@ export default function Menu() {
                           <p className="text-primary font-bold">
                             R$ {product.price.toFixed(2)}
                           </p>
-                          <Button size="sm" className="h-8 px-3">
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            {!(product.optionals?.some(o => o.active) || getGroupsForProduct(product.id, product.category).length > 0) && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 text-muted-foreground"
+                                onClick={(e) => handleOpenNotes(e, product)}
+                                title="Adicionar observação"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button size="sm" className="h-8 px-3">
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>

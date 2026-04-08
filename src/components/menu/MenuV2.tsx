@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Plus, Search, ChevronLeft, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, Plus, Search, ChevronLeft, ArrowLeft, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Category fallback images/emojis
@@ -76,6 +76,8 @@ interface MenuV2Props {
   isOpen: boolean;
   formattedHours: string;
   onProductSelect: (product: Product) => void;
+  onProductOpenNotes: (e: React.MouseEvent, product: Product) => void;
+  getGroupsForProduct: (productId: string, productCategory: string) => any[];
   onCartOpen: () => void;
   onNavigateBack: () => void;
 }
@@ -92,6 +94,8 @@ export function MenuV2({
   isOpen,
   formattedHours,
   onProductSelect,
+  onProductOpenNotes,
+  getGroupsForProduct,
   onCartOpen,
   onNavigateBack,
 }: MenuV2Props) {
@@ -201,9 +205,22 @@ export function MenuV2({
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <p className="text-primary font-bold">R$ {product.price.toFixed(2)}</p>
-                      <Button size="sm" className="h-8 px-3">
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        {!(product.optionals?.some(o => o.active) || getGroupsForProduct(product.id, product.category).length > 0) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-muted-foreground"
+                            onClick={(e) => onProductOpenNotes(e, product)}
+                            title="Adicionar observação"
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button size="sm" className="h-8 px-3">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
