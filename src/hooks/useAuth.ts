@@ -141,11 +141,17 @@ export function useAuth() {
     return { error: null };
   }
 
-  async function signUp(email: string, password: string, fullName: string, companyName?: string) {
+  async function signUp(email: string, password: string, fullName: string, companyName?: string, addressData?: {
+    street: string;
+    number: string;
+    complement?: string;
+    neighborhood: string;
+    reference?: string;
+  }) {
     setLoading(true);
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -161,6 +167,40 @@ export function useAuth() {
       toast.error(error.message);
       setLoading(false);
       return { error };
+    }
+
+    // If address data was provided, update the company after creation
+    if (addressData && signUpData.user) {
+      // Wait a moment for the trigger to create the company
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const fullAddress = [
+        addressData.street,
+        addressData.number,
+        addressData.complement,
+        addressData.neighborhood,
+        addressData.reference ? `Ref: ${addressData.reference}` : '',
+      ].filter(Boolean).join(', ');
+
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', signUpData.user.id)
+        .single();
+
+      if (companyUser) {
+        await supabase
+          .from('companies')
+          .update({
+            address: fullAddress,
+            address_street: addressData.street,
+            address_number: addressData.number,
+            address_complement: addressData.complement || null,
+            address_neighborhood: addressData.neighborhood,
+            address_reference: addressData.reference || null,
+          } as any)
+          .eq('id', companyUser.company_id);
+      }
     }
 
     toast.success('Conta criada com sucesso!');
