@@ -51,7 +51,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     enablePickup: true,
     acceptOrderScheduling: false,
     floatingPhoto: false,
-    buttonColor: '',
+    buttonColor: '#ef4444',
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
