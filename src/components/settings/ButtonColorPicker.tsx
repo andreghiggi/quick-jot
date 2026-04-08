@@ -111,17 +111,19 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
         <div className="flex items-center gap-4">
           <div
             className="w-16 h-16 rounded-xl border-2 border-border shadow-sm"
-            style={{ backgroundColor: value || '#e5e7eb' }}
+            style={{ backgroundColor: effectiveValue }}
           />
           <div className="flex-1">
             <p className="text-sm font-medium">
-              {value ? `Cor selecionada: ${value}` : 'Nenhuma cor personalizada'}
+              Cor selecionada: {effectiveValue}
             </p>
             <p className="text-xs text-muted-foreground">
-              {value ? 'Esta cor será aplicada aos botões do cardápio' : 'Os botões usarão a cor padrão do sistema'}
+              {effectiveValue === DEFAULT_BUTTON_COLOR
+                ? 'Cor padrão do sistema (vermelho)'
+                : 'Esta cor será aplicada aos botões e à área de novidades do cardápio'}
             </p>
           </div>
-          {value && (
+          {effectiveValue !== DEFAULT_BUTTON_COLOR && (
             <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground">
               <RotateCcw className="w-4 h-4 mr-1" />
               Resetar
