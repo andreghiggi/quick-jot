@@ -90,7 +90,7 @@ export function generateWhatsAppMessage(params: MessageParams): string | null {
 
     case 'ready':
       if (deliveryType === 'entrega') {
-        return `${name}, seu pedido ${num} está prontinho e já vai sair para entrega${estimatedTime ? ` em aproximadamente ${estimatedTime}` : ''}. Fique de olho! 🛵`;
+        return `*${name}, seu pedido ${num} ficou pronto e está indo até você.* Fique de olho! 🛵`;
       }
       return `${name}, seu pedido ${num} está pronto e disponível para retirada no ${storeName}!${storeAddress ? `\n📍 Endereço: ${storeAddress}` : ''}\nEstamos te esperando! 🏪`;
 
