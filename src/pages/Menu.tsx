@@ -1434,22 +1434,12 @@ export default function Menu() {
                     <Label>Tipo de entrega *</Label>
                     {settings.deliveryMode === 'neighborhood' && getActiveNeighborhoods().length > 0 ? (
                       /* Neighborhood mode */
-                      <div className="mt-2 space-y-2">
+                      <RadioGroup value={deliveryType} onValueChange={(value) => { setDeliveryType(value as 'pickup' | 'neighborhood'); if (value === 'pickup') setSelectedNeighborhood(''); }} className="mt-2 space-y-2">
                         {settings.enablePickup && (
                         <>
                         <div className="flex items-center justify-between p-2 border rounded-lg">
                           <div className="flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              id="pickup-nb"
-                              name="deliveryType"
-                              checked={deliveryType === 'pickup'}
-                              onChange={() => {
-                                setDeliveryType('pickup');
-                                setSelectedNeighborhood('');
-                              }}
-                              className="h-4 w-4"
-                            />
+                            <RadioGroupItem value="pickup" id="pickup-nb" />
                             <Label htmlFor="pickup-nb" className="cursor-pointer">Retirada no local</Label>
                           </div>
                           <span className="text-sm text-muted-foreground">Grátis</span>
@@ -1465,14 +1455,7 @@ export default function Menu() {
                         {settings.enableDelivery && (
                         <div className="p-2 border rounded-lg space-y-2">
                           <div className="flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              id="neighborhood"
-                              name="deliveryType"
-                              checked={deliveryType === 'neighborhood'}
-                              onChange={() => setDeliveryType('neighborhood')}
-                              className="h-4 w-4"
-                            />
+                            <RadioGroupItem value="neighborhood" id="neighborhood" />
                             <Label htmlFor="neighborhood" className="cursor-pointer">Entrega por bairro</Label>
                           </div>
                           {deliveryType === 'neighborhood' && (
@@ -1491,7 +1474,7 @@ export default function Menu() {
                           )}
                         </div>
                         )}
-                      </div>
+                      </RadioGroup>
                     ) : (
                       /* Simple mode - City/Interior */
                       <RadioGroup 
