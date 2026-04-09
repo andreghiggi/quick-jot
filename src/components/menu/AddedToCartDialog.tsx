@@ -84,7 +84,7 @@ export function AddedToCartDialog({
                       <p className="font-semibold text-foreground text-sm line-clamp-2 break-words flex-1">
                         {item.product.name}
                         {isLastAdded && (
-                          <span className="ml-1 text-xs text-primary font-normal">✓ novo</span>
+                          <span className="ml-1 text-xs text-primary font-normal">✓ adicionado</span>
                         )}
                       </p>
                       <button
