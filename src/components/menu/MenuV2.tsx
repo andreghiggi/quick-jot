@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Plus, Search, ChevronLeft, ArrowLeft, MessageSquare } from 'lucide-react';
+import { ShoppingCart, Plus, Search, ChevronLeft, ArrowLeft, MessageSquare, Clock } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 
 // Category fallback images/emojis
@@ -107,6 +107,8 @@ export function MenuV2({
 }: MenuV2Props) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const isLancheriaI9 = company?.slug === 'lancheria-da-i9-263ee29a';
 
   // Filter products
   const filteredProducts = activeProducts.filter((product) => {
@@ -269,13 +271,38 @@ export function MenuV2({
       <div className="sticky top-0 z-20 bg-card border-b border-border shadow-sm">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onNavigateBack}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-lg font-bold text-foreground">
-                {settings.storeName || company?.name || 'Cardápio'}
-              </h1>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0" onClick={onNavigateBack}>
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <h1 className="text-lg font-bold text-foreground truncate">
+                  {settings.storeName || company?.name || 'Cardápio'}
+                </h1>
+                {isLancheriaI9 && (
+                  <div className="flex flex-col items-start gap-0.5 flex-shrink-0">
+                    <span className={cn(
+                      "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+                      isOpen
+                        ? "bg-green-500/20 text-green-600 border border-green-500/40"
+                        : "bg-red-500/20 text-red-600 border border-red-500/40"
+                    )}>
+                      {isOpen ? 'Aberto' : 'Fechado'}
+                    </span>
+                    {!isOpen && schedulingEnabled && (
+                      <span className="text-[10px] text-muted-foreground leading-tight">Agende seu pedido</span>
+                    )}
+                  </div>
+                )}
+              </div>
+              {isLancheriaI9 && settings.estimatedWaitTime && (
+                <div className="flex items-center gap-1 ml-10 mt-1">
+                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-600 border border-green-500/40">
+                    <Clock className="h-3 w-3" />
+                    {settings.estimatedWaitTime}
+                  </span>
+                </div>
+              )}
             </div>
             <Button variant="outline" size="sm" className="relative flex-shrink-0" onClick={onCartOpen}>
               <ShoppingCart className="h-4 w-4" />
