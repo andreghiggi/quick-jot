@@ -1,0 +1,1 @@
+UPDATE store_settings SET value = (SELECT name FROM companies WHERE id = store_settings.company_id) WHERE key = 'store_name' AND value = 'Comanda Tech';
