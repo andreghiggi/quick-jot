@@ -1339,26 +1339,29 @@ export default function Menu() {
                     <Label>Telefone *</Label>
                     <Input
                       value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      onChange={(e) => { setCustomerPhone(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('customerPhone'); return n; }); }}
                       placeholder="(00) 00000-0000"
+                      className={cn('border-primary', fieldErrors.has('customerPhone') && 'border-destructive')}
                     />
                   </div>
                   <div>
                     <Label>Nome Completo *</Label>
                     <Input
                       value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
+                      onChange={(e) => { setCustomerName(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('customerName'); return n; }); }}
                       placeholder="Nome e sobrenome"
+                      className={cn('border-primary', fieldErrors.has('customerName') && 'border-destructive')}
                     />
                   </div>
                   <div>
                     <Label>CPF *</Label>
                     <Input
                       value={customerCpf}
-                      onChange={(e) => handleCpfChange(e.target.value)}
+                      onChange={(e) => { handleCpfChange(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('customerCpf'); return n; }); }}
                       placeholder="000.000.000-00"
                       maxLength={14}
                       inputMode="numeric"
+                      className={cn('border-primary', fieldErrors.has('customerCpf') && 'border-destructive')}
                     />
                   </div>
                   <div>
@@ -1371,10 +1374,12 @@ export default function Menu() {
                         if (digits.length > 4) formatted = `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;
                         else if (digits.length > 2) formatted = `${digits.slice(0,2)}/${digits.slice(2)}`;
                         setCustomerBirthDate(formatted);
+                        setFieldErrors(prev => { const n = new Set(prev); n.delete('customerBirthDate'); return n; });
                       }}
                       placeholder="DD/MM/AAAA"
                       maxLength={10}
                       inputMode="numeric"
+                      className={cn('border-primary', fieldErrors.has('customerBirthDate') && 'border-destructive')}
                     />
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:items-end">
@@ -1382,17 +1387,19 @@ export default function Menu() {
                       <Label className="block leading-snug whitespace-normal break-words">Logradouro (rua, avenida, travessa) *</Label>
                       <Input
                         value={deliveryAddress}
-                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        onChange={(e) => { setDeliveryAddress(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('deliveryAddress'); return n; }); }}
                         placeholder="Ex: Rua das Flores"
+                        className={cn('border-primary', fieldErrors.has('deliveryAddress') && 'border-destructive')}
                       />
                     </div>
                     <div className="min-w-0">
                       <Label className="block leading-snug whitespace-nowrap">Número *</Label>
                       <Input
                         value={deliveryNumber}
-                        onChange={(e) => setDeliveryNumber(e.target.value)}
+                        onChange={(e) => { setDeliveryNumber(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('deliveryNumber'); return n; }); }}
                         placeholder="123"
                         inputMode="numeric"
+                        className={cn('border-primary', fieldErrors.has('deliveryNumber') && 'border-destructive')}
                       />
                     </div>
                   </div>
@@ -1402,22 +1409,25 @@ export default function Menu() {
                       value={deliveryComplement}
                       onChange={(e) => setDeliveryComplement(e.target.value)}
                       placeholder="Apto 01, Sala 02..."
+                      className="border-primary"
                     />
                   </div>
                   <div>
                     <Label>Bairro *</Label>
                     <Input
                       value={deliveryNeighborhood}
-                      onChange={(e) => setDeliveryNeighborhood(e.target.value)}
+                      onChange={(e) => { setDeliveryNeighborhood(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('deliveryNeighborhood'); return n; }); }}
                       placeholder="Nome do bairro"
+                      className={cn('border-primary', fieldErrors.has('deliveryNeighborhood') && 'border-destructive')}
                     />
                   </div>
                   <div>
                     <Label>Ponto de referência *</Label>
                     <Input
                       value={deliveryReference}
-                      onChange={(e) => setDeliveryReference(e.target.value)}
+                      onChange={(e) => { setDeliveryReference(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('deliveryReference'); return n; }); }}
                       placeholder="Próximo ao mercado, em frente à escola..."
+                      className={cn('border-primary', fieldErrors.has('deliveryReference') && 'border-destructive')}
                     />
                   </div>
                   <div>
