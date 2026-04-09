@@ -9,7 +9,14 @@ import { useTables } from '@/hooks/useTables';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
-import { emitirNFCe, consultarNFCe, reprocessarNFCe, NFCeItem, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
+import { emitirNFCe, consultarNFCe, reprocessarNFCe, NFCeItem, NFCeTefData, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
+import { 
+  isMultiplusCardConfigured, 
+  sendPaymentToMultiplusCard, 
+  checkMultiplusCardTransactionStatus,
+  abortMultiplusCardSale,
+  MultiplusCardPaymentResponse 
+} from '@/services/multiplusCardService';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
