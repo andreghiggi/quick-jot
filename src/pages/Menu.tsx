@@ -753,6 +753,7 @@ export default function Menu() {
     setChangeFor('');
     setIsCartOpen(false);
     setIsSubmitting(false);
+    setFieldErrors(new Set());
 
     // Notify user
     toast.success('Pedido enviado com sucesso! Verifique o WhatsApp.');
