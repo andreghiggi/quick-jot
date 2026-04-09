@@ -1336,7 +1336,7 @@ export default function Menu() {
 
                 <div className="border-t pt-4 space-y-3">
                   <div>
-                    <Label>Telefone *</Label>
+                    <Label className="font-bold">Telefone *</Label>
                     <Input
                       value={customerPhone}
                       onChange={(e) => { setCustomerPhone(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('customerPhone'); return n; }); }}
@@ -1345,7 +1345,7 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>Nome Completo *</Label>
+                    <Label className="font-bold">Nome Completo *</Label>
                     <Input
                       value={customerName}
                       onChange={(e) => { setCustomerName(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('customerName'); return n; }); }}
@@ -1354,7 +1354,7 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>CPF *</Label>
+                    <Label className="font-bold">CPF *</Label>
                     <Input
                       value={customerCpf}
                       onChange={(e) => { handleCpfChange(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('customerCpf'); return n; }); }}
@@ -1365,7 +1365,7 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>Data de Nascimento *</Label>
+                    <Label className="font-bold">Data de Nascimento *</Label>
                     <Input
                       value={customerBirthDate}
                       onChange={(e) => {
@@ -1384,7 +1384,7 @@ export default function Menu() {
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:items-end">
                     <div className="min-w-0">
-                      <Label className="block leading-snug whitespace-normal break-words">Logradouro (rua, avenida, travessa) *</Label>
+                      <Label className="block leading-snug whitespace-normal break-words font-bold">Logradouro (rua, avenida, travessa) *</Label>
                       <Input
                         value={deliveryAddress}
                         onChange={(e) => { setDeliveryAddress(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('deliveryAddress'); return n; }); }}
@@ -1393,7 +1393,7 @@ export default function Menu() {
                       />
                     </div>
                     <div className="min-w-0">
-                      <Label className="block leading-snug whitespace-nowrap">Número *</Label>
+                      <Label className="block leading-snug whitespace-nowrap font-bold">Número *</Label>
                       <Input
                         value={deliveryNumber}
                         onChange={(e) => { setDeliveryNumber(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('deliveryNumber'); return n; }); }}
@@ -1404,7 +1404,7 @@ export default function Menu() {
                     </div>
                   </div>
                   <div>
-                    <Label>Complemento</Label>
+                    <Label className="font-bold">Complemento</Label>
                     <Input
                       value={deliveryComplement}
                       onChange={(e) => setDeliveryComplement(e.target.value)}
@@ -1413,7 +1413,7 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>Bairro *</Label>
+                    <Label className="font-bold">Bairro *</Label>
                     <Input
                       value={deliveryNeighborhood}
                       onChange={(e) => { setDeliveryNeighborhood(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('deliveryNeighborhood'); return n; }); }}
@@ -1422,7 +1422,7 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>Ponto de referência *</Label>
+                    <Label className="font-bold">Ponto de referência *</Label>
                     <Input
                       value={deliveryReference}
                       onChange={(e) => { setDeliveryReference(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('deliveryReference'); return n; }); }}
@@ -1431,7 +1431,7 @@ export default function Menu() {
                     />
                   </div>
                   <div>
-                    <Label>Tipo de entrega *</Label>
+                    <Label className="font-bold">Tipo de entrega *</Label>
                     {settings.deliveryMode === 'neighborhood' && getActiveNeighborhoods().length > 0 ? (
                       /* Neighborhood mode */
                       <RadioGroup value={deliveryType} onValueChange={(value) => { setDeliveryType(value as 'pickup' | 'neighborhood'); if (value === 'pickup') setSelectedNeighborhood(''); }} className="mt-2 space-y-2">
@@ -1525,7 +1525,7 @@ export default function Menu() {
                     )}
                   </div>
                   <div>
-                    <Label>Forma de pagamento *</Label>
+                    <Label className="font-bold">Forma de pagamento *</Label>
                     <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2">
                       {activePaymentMethods.length > 0 ? (
                         activePaymentMethods.map((method) => (
