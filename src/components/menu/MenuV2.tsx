@@ -327,7 +327,7 @@ export function MenuV2({
                 {settings.storeName || company?.name || 'Cardápio'}
               </h2>
               <span className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white flex-shrink-0",
+                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold text-white flex-shrink-0",
                 isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
               )}>
                 <span className={cn("text-[8px] leading-none", isOpen ? "text-green-200" : "text-red-200")}>●</span>
@@ -338,7 +338,7 @@ export function MenuV2({
             {/* Row 2: Estimated delivery time */}
             {settings.estimatedWaitTime && (
               <div className="mt-2">
-                <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#22C55E]/20 text-[#16a34a] border border-[#22C55E]/40">
+                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-normal bg-[#22C55E]/15 text-[#16a34a] border border-[#22C55E]">
                   <Clock className="h-3 w-3" />
                   {settings.estimatedWaitTime}
                 </span>
