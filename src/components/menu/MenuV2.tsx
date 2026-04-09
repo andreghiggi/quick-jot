@@ -275,32 +275,34 @@ export function MenuV2({
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className={cn("text-lg font-bold text-foreground truncate", isLancheriaI9 && "uppercase")}>
-                  {settings.storeName || company?.name || 'Cardápio'}
-                </h1>
-                {isLancheriaI9 && (
+              <h1 className={cn("text-lg font-bold text-foreground", isLancheriaI9 ? "uppercase break-words" : "truncate")}>
+                {settings.storeName || company?.name || 'Cardápio'}
+              </h1>
+              {isLancheriaI9 && (
+                <div className="mt-1">
                   <span className={cn(
-                    "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold text-white flex-shrink-0",
+                    "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold text-white",
                     isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
                   )}>
                     <span className="text-[8px] leading-none text-white/70">●</span>
                     {isOpen ? 'Aberto' : (schedulingEnabled ? 'Fechado - Agende seu pedido' : 'Fechado')}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
               {isLancheriaI9 && isOpen && settings.estimatedWaitTime && (
-                <div className="mt-1 ml-0">
+                <div className="mt-1">
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-normal bg-[#22C55E]/15 text-[#16a34a] border border-[#22C55E]">
                     <Clock className="h-3 w-3" />
                     {settings.estimatedWaitTime}
                   </span>
                 </div>
               )}
-              {isLancheriaI9 && !isOpen && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formattedHours === 'Fechado hoje' ? 'Fechado hoje' : `Horário de hoje: ${formattedHours}`}
-                </p>
+              {isLancheriaI9 && !isOpen && formattedHours && (
+                <div className="mt-1">
+                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-normal bg-[hsl(0,84%,60%)]/20 text-[hsl(0,84%,60%)] border border-[hsl(0,84%,60%)]">
+                    🕐 {formattedHours === 'Fechado hoje' ? 'Fechado hoje' : `Horário de hoje: ${formattedHours}`}
+                  </span>
+                </div>
               )}
             </div>
             {!isLancheriaI9 && (
