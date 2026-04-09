@@ -147,8 +147,23 @@ Deno.serve(async (req) => {
               NSU: tef.nsu,
             }
           }
+
+          // Fallback: include NSU in infAdFisco in case the API doesn't accept it in the card group
+          const infParts: string[] = []
+          if (tef.nsu) infParts.push(`NSU:${tef.nsu}`)
+          if (tef.autorizacao) infParts.push(`cAut:${tef.autorizacao}`)
+          if (tef.bandeira) infParts.push(`Bandeira:${tef.bandeira}`)
+          if (tef.adquirente) infParts.push(`Adquirente:${tef.adquirente}`)
+          if (infParts.length > 0) {
+            const tefInfo = infParts.join(';')
+            emitPayload.infAdFisco = emitPayload.infAdFisco
+              ? `${emitPayload.infAdFisco};${tefInfo}`
+              : tefInfo
+          }
+
           delete emitPayload.tef
           console.log('[nfce-proxy] TEF payment data added:', JSON.stringify(emitPayload.pagamento))
+          console.log('[nfce-proxy] infAdFisco fallback:', emitPayload.infAdFisco)
         }
 
         apiResponse = await fetch(NFCE_API_URL, {
