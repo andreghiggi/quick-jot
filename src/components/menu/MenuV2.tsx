@@ -281,7 +281,7 @@ export function MenuV2({
               {isLancheriaI9 && (
                 <div className="mt-1">
                   <span className={cn(
-                    "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold text-white",
+                    "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-base font-bold text-white",
                     isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
                   )}>
                     <span className="text-[8px] leading-none text-white/70">●</span>
