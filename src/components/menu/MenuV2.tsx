@@ -251,8 +251,8 @@ export function MenuV2({
   // Main category view
   return (
     <div className="min-h-screen bg-background pb-24" style={buttonColorStyle}>
-      {/* Closed Store Banner */}
-      {!isOpen && (
+      {/* Closed Store Banner - only for non-Lancheria stores */}
+      {!isOpen && !isLancheriaI9 && (
         <div className="bg-destructive/10 border-b border-destructive/20">
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center gap-2 text-destructive">
@@ -285,7 +285,7 @@ export function MenuV2({
                     isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
                   )}>
                     <span className="text-[8px] leading-none text-white/70">●</span>
-                    {isOpen ? 'Aberto' : 'Fechado'}
+                    {isOpen ? 'Aberto' : (schedulingEnabled ? 'Fechado - Agende seu pedido' : 'Fechado')}
                   </span>
                 )}
               </div>
@@ -297,8 +297,10 @@ export function MenuV2({
                   </span>
                 </div>
               )}
-              {isLancheriaI9 && !isOpen && schedulingEnabled && (
-                <p className="mt-1 text-xs text-muted-foreground italic">Agende seu pedido</p>
+              {isLancheriaI9 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formattedHours === 'Fechado hoje' ? 'Fechado hoje' : `Horário de hoje: ${formattedHours}`}
+                </p>
               )}
             </div>
             {!isLancheriaI9 && (
