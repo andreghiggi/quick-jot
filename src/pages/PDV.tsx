@@ -89,6 +89,18 @@ export default function PDV() {
 
   const mesasEnabled = isModuleEnabled('mesas');
 
+  // TEF Multiplus Card state
+  const [tefEnabled, setTefEnabled] = useState(false);
+  const [tefProcessing, setTefProcessing] = useState(false);
+  const [tefStatus, setTefStatus] = useState<string>('');
+  const [tefResult, setTefResult] = useState<MultiplusCardPaymentResponse | null>(null);
+
+  useEffect(() => {
+    if (company?.id) {
+      isMultiplusCardConfigured(company.id).then(setTefEnabled);
+    }
+  }, [company?.id]);
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
