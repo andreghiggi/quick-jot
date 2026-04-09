@@ -395,7 +395,7 @@ export function MenuV2({
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                    <div className="relative z-10 mt-auto p-4 pt-12">
+                    <div className={cn("relative z-10 mt-auto p-4", company?.slug?.startsWith('lancheria-da-i9') ? 'pt-20' : 'pt-12')}>
                       <p className="font-bold text-sm leading-tight line-clamp-2 bg-white/70 text-foreground px-2 py-1 rounded-md inline-block">{category}</p>
                     </div>
                   </>
