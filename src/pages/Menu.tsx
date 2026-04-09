@@ -506,66 +506,51 @@ export default function Menu() {
       toast.error('Estabelecimento fechado no momento');
       return;
     }
-    if (!customerPhone.trim() || customerPhone.replace(/\D/g, '').length < 10) {
-      toast.error('Informe um número de telefone válido');
-      return;
-    }
+
+    // Collect all field errors at once
+    const errors = new Set<string>();
+    if (!customerPhone.trim() || customerPhone.replace(/\D/g, '').length < 10) errors.add('customerPhone');
     if (!customerName.trim()) {
-      toast.error('Informe seu nome completo');
-      return;
+      errors.add('customerName');
+    } else {
+      const nameParts = customerName.trim().split(/\s+/);
+      if (nameParts.length < 2 || nameParts.some(p => p.length < 2)) errors.add('customerName');
     }
-    // Validate full name (at least first + last name)
-    const nameParts = customerName.trim().split(/\s+/);
-    if (nameParts.length < 2 || nameParts.some(p => p.length < 2)) {
-      toast.error('Informe seu nome completo (nome e sobrenome)');
-      return;
-    }
-    // Validate CPF (required)
     const cleanCpf = customerCpf.replace(/\D/g, '');
-    if (!cleanCpf || cleanCpf.length !== 11 || !isValidCpf(cleanCpf)) {
-      toast.error('Informe um CPF válido');
-      return;
-    }
+    if (!cleanCpf || cleanCpf.length !== 11 || !isValidCpf(cleanCpf)) errors.add('customerCpf');
     const isStructuredAddress = true;
     if (isStructuredAddress) {
-      // Validate birth date for i9
       const bdDigits = customerBirthDate.replace(/\D/g, '');
       if (bdDigits.length !== 8) {
-        toast.error('Informe sua data de nascimento');
-        return;
+        errors.add('customerBirthDate');
+      } else {
+        const bdDay = parseInt(bdDigits.slice(0, 2));
+        const bdMonth = parseInt(bdDigits.slice(2, 4));
+        const bdYear = parseInt(bdDigits.slice(4, 8));
+        if (bdMonth < 1 || bdMonth > 12 || bdDay < 1 || bdDay > 31 || bdYear < 1900 || bdYear > new Date().getFullYear()) {
+          errors.add('customerBirthDate');
+        }
       }
-      const bdDay = parseInt(bdDigits.slice(0, 2));
-      const bdMonth = parseInt(bdDigits.slice(2, 4));
-      const bdYear = parseInt(bdDigits.slice(4, 8));
-      if (bdMonth < 1 || bdMonth > 12 || bdDay < 1 || bdDay > 31 || bdYear < 1900 || bdYear > new Date().getFullYear()) {
-        toast.error('Data de nascimento inválida');
-        return;
-      }
-      if (!deliveryAddress.trim()) { toast.error('Informe o logradouro'); return; }
-      if (!deliveryNumber.trim()) { toast.error('Informe o número'); return; }
-      if (!deliveryNeighborhood.trim()) { toast.error('Informe o bairro'); return; }
-      if (!deliveryReference.trim()) { toast.error('Informe o ponto de referência'); return; }
+      if (!deliveryAddress.trim()) errors.add('deliveryAddress');
+      if (!deliveryNumber.trim()) errors.add('deliveryNumber');
+      if (!deliveryNeighborhood.trim()) errors.add('deliveryNeighborhood');
+      if (!deliveryReference.trim()) errors.add('deliveryReference');
     } else {
-      if (!deliveryAddress.trim()) { toast.error('Informe o endereço'); return; }
-      if (!deliveryCity.trim()) { toast.error('Informe a cidade'); return; }
-      if (!deliveryState) { toast.error('Selecione o estado'); return; }
+      if (!deliveryAddress.trim()) errors.add('deliveryAddress');
+      if (!deliveryCity.trim()) errors.add('deliveryCity');
+      if (!deliveryState) errors.add('deliveryState');
     }
-    if (!deliveryType) {
-      toast.error('Selecione o tipo de entrega');
+    if (!deliveryType) errors.add('deliveryType');
+    if (deliveryType === 'neighborhood' && !selectedNeighborhood) errors.add('selectedNeighborhood');
+    if (!paymentMethod) errors.add('paymentMethod');
+    if (cart.length === 0) errors.add('cart');
+
+    if (errors.size > 0) {
+      setFieldErrors(errors);
+      toast.error('Preencha todos os campos obrigatórios destacados em vermelho');
       return;
     }
-    if (deliveryType === 'neighborhood' && !selectedNeighborhood) {
-      toast.error('Selecione o bairro');
-      return;
-    }
-    if (!paymentMethod) {
-      toast.error('Selecione a forma de pagamento');
-      return;
-    }
-    if (cart.length === 0) {
-      toast.error('Carrinho vazio');
-      return;
-    }
+    setFieldErrors(new Set());
 
     // Use company phone or settings phone
     const phoneToUse = company?.phone || settings.storePhone;
