@@ -99,6 +99,7 @@ export function MenuV2({
   cartTotal,
   isOpen,
   formattedHours,
+  schedulingEnabled = false,
   onProductSelect,
   onCartOpen,
   onNavigateBack,
