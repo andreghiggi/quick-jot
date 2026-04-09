@@ -304,17 +304,17 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       </div>
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
-        <div>
+        <div className="shrink-0">
           <span className="text-sm text-muted-foreground">Total</span>
           <p className="text-lg font-bold text-foreground">
             R$ {order.total.toFixed(2)}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <Button
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+            className="text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
             onClick={handlePrint}
             title="Imprimir pedido"
           >
@@ -323,7 +323,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           <Button
             variant="ghost"
             size="icon"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
             onClick={handleDelete}
           >
             <Trash2 className="w-4 h-4" />
@@ -334,7 +334,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               variant={confirmed ? 'outline' : 'secondary'}
               onClick={handleConfirmOrder}
               disabled={confirming || confirmed}
-              className="gap-1"
+              className="gap-1 shrink-0"
             >
               {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               {confirmed ? 'Confirmado' : 'Confirmar'}
@@ -344,7 +344,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             <Button 
               size="sm" 
               onClick={handleAdvanceStatus}
-              className="gap-1"
+              className="gap-1 shrink-0 px-3 inline-flex items-center"
             >
               {nextStatusLabel[order.status]}
               <ChevronRight className="w-4 h-4" />
