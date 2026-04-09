@@ -269,6 +269,23 @@ export function MenuV2({
 
       {/* Header */}
       <div className="sticky top-0 z-20 bg-card border-b border-border shadow-sm">
+        {/* Lancheria I9: top-right status badge */}
+        {isLancheriaI9 && (
+          <div className="flex justify-end px-4 pt-2 pb-0">
+            <div className="flex flex-col items-end gap-0.5">
+              <span className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white",
+                isOpen ? "bg-[hsl(142,71%,45%)]" : "bg-[hsl(0,84%,60%)]"
+              )}>
+                <span className="text-[8px] leading-none">●</span>
+                {isOpen ? 'Aberto' : 'Fechado'}
+              </span>
+              {!isOpen && schedulingEnabled && (
+                <span className="text-[10px] text-muted-foreground leading-tight">Agende seu pedido</span>
+              )}
+            </div>
+          </div>
+        )}
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -276,28 +293,13 @@ export function MenuV2({
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0" onClick={onNavigateBack}>
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <h1 className="text-lg font-bold text-foreground truncate">
+                <h1 className={cn("text-lg font-bold text-foreground truncate", isLancheriaI9 && "uppercase")}>
                   {settings.storeName || company?.name || 'Cardápio'}
                 </h1>
-                {isLancheriaI9 && (
-                  <div className="flex flex-col items-start gap-0.5 flex-shrink-0">
-                    <span className={cn(
-                      "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
-                      isOpen
-                        ? "bg-green-500/20 text-green-600 border border-green-500/40"
-                        : "bg-red-500/20 text-red-600 border border-red-500/40"
-                    )}>
-                      {isOpen ? 'Aberto' : 'Fechado'}
-                    </span>
-                    {!isOpen && schedulingEnabled && (
-                      <span className="text-[10px] text-muted-foreground leading-tight">Agende seu pedido</span>
-                    )}
-                  </div>
-                )}
               </div>
               {isLancheriaI9 && settings.estimatedWaitTime && (
                 <div className="flex items-center gap-1 ml-10 mt-1">
-                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-600 border border-green-500/40">
+                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-[hsl(142,71%,45%,0.2)] text-[hsl(142,71%,45%)] border border-[hsl(142,71%,45%,0.4)]">
                     <Clock className="h-3 w-3" />
                     {settings.estimatedWaitTime}
                   </span>
