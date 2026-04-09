@@ -140,7 +140,7 @@ export function AddedToCartDialog({
         <div className="px-6 py-4 flex flex-col gap-2 flex-shrink-0">
           <Button
             variant="outline"
-            className="w-full py-5 text-base"
+            className="w-full py-5 text-base border-primary text-primary bg-transparent hover:bg-primary/10"
             onClick={onContinueShopping}
           >
             <ArrowLeft className="h-5 w-5 mr-2" />

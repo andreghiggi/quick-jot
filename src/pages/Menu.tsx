@@ -1448,8 +1448,8 @@ export default function Menu() {
                           <span className="text-sm text-muted-foreground">Grátis</span>
                         </div>
                         {deliveryType === 'pickup' && company?.address && (
-                          <div className="p-3 bg-muted/50 rounded-lg border border-dashed">
-                            <p className="text-sm font-medium text-foreground">📍 Endereço para retirada:</p>
+                           <div className="p-3 bg-muted/50 rounded-lg border border-dashed border-primary">
+                            <p className="text-sm font-bold text-foreground">📍 Endereço para retirada:</p>
                             <p className="text-sm text-muted-foreground mt-1">{company.address}</p>
                           </div>
                         )}
@@ -1466,12 +1466,12 @@ export default function Menu() {
                           </div>
                           {deliveryType === 'neighborhood' && (
                             <Select value={selectedNeighborhood} onValueChange={setSelectedNeighborhood}>
-                              <SelectTrigger className="mt-2">
+                              <SelectTrigger className="mt-2 border-primary focus:ring-primary">
                                 <SelectValue placeholder="Selecione o bairro" />
                               </SelectTrigger>
                               <SelectContent>
                                 {getActiveNeighborhoods().map((n) => (
-                                  <SelectItem key={n.id} value={n.id}>
+                                  <SelectItem key={n.id} value={n.id} className="data-[state=checked]:bg-primary/15 data-[state=checked]:text-primary">
                                     {n.neighborhoodName} - R$ {formatPrice(n.deliveryFee)}
                                   </SelectItem>
                                 ))}
@@ -1501,8 +1501,8 @@ export default function Menu() {
                           <span className="text-sm text-muted-foreground">Grátis</span>
                         </div>
                         {deliveryType === 'pickup' && company?.address && (
-                          <div className="p-3 bg-muted/50 rounded-lg border border-dashed">
-                            <p className="text-sm font-medium text-foreground">📍 Endereço para retirada:</p>
+                          <div className="p-3 bg-muted/50 rounded-lg border border-dashed border-primary">
+                            <p className="text-sm font-bold text-foreground">📍 Endereço para retirada:</p>
                             <p className="text-sm text-muted-foreground mt-1">{company.address}</p>
                           </div>
                         )}
