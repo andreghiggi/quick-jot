@@ -286,7 +286,7 @@ export default function Menu() {
           if (data.state && !deliveryState) setDeliveryState(data.state);
 
           // Parse structured address for i9 format: "Logradouro, Número - Complemento - Bairro | Ref: Referência"
-          if (data.address && company?.slug?.startsWith('lancheria-da-i9')) {
+          if (data.address) {
             const addr = data.address;
             // Split by " | Ref: " to get reference
             const [mainPart, refPart] = addr.split(/\s*\|\s*Ref:\s*/);
@@ -525,7 +525,7 @@ export default function Menu() {
       toast.error('Informe um CPF válido');
       return;
     }
-    const isStructuredAddress = company?.slug?.startsWith('lancheria-da-i9');
+    const isStructuredAddress = true;
     if (isStructuredAddress) {
       // Validate birth date for i9
       const bdDigits = customerBirthDate.replace(/\D/g, '');
@@ -577,7 +577,7 @@ export default function Menu() {
     // Build full address - only for delivery, not pickup
     let fullAddress = '';
     if (deliveryType !== 'pickup') {
-      const isStructuredAddr = company?.slug?.startsWith('lancheria-da-i9');
+      const isStructuredAddr = true;
       if (isStructuredAddr) {
         fullAddress = `${deliveryAddress}, ${deliveryNumber}`;
         if (deliveryComplement.trim()) fullAddress += ` - ${deliveryComplement.trim()}`;
@@ -652,9 +652,7 @@ export default function Menu() {
                   if (bd.length === 8) return `${bd.slice(4,8)}-${bd.slice(2,4)}-${bd.slice(0,2)}`;
                   return null;
                 })(),
-                address: company?.slug?.startsWith('lancheria-da-i9')
-                  ? `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood} | Ref: ${deliveryReference}`
-                  : (deliveryAddress || null),
+                address: `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood} | Ref: ${deliveryReference}`,
                 city: deliveryCity || null,
                 state: deliveryState || null,
               }, { 
@@ -1376,107 +1374,65 @@ export default function Menu() {
                       inputMode="numeric"
                     />
                   </div>
-                  {company?.slug?.startsWith('lancheria-da-i9') && (
-                    <div>
-                      <Label>Data de Nascimento *</Label>
+                  <div>
+                    <Label>Data de Nascimento *</Label>
+                    <Input
+                      value={customerBirthDate}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+                        let formatted = digits;
+                        if (digits.length > 4) formatted = `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;
+                        else if (digits.length > 2) formatted = `${digits.slice(0,2)}/${digits.slice(2)}`;
+                        setCustomerBirthDate(formatted);
+                      }}
+                      placeholder="DD/MM/AAAA"
+                      maxLength={10}
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:items-end">
+                    <div className="min-w-0">
+                      <Label className="block leading-snug whitespace-normal break-words">Logradouro (rua, avenida, travessa) *</Label>
                       <Input
-                        value={customerBirthDate}
-                        onChange={(e) => {
-                          const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
-                          let formatted = digits;
-                          if (digits.length > 4) formatted = `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;
-                          else if (digits.length > 2) formatted = `${digits.slice(0,2)}/${digits.slice(2)}`;
-                          setCustomerBirthDate(formatted);
-                        }}
-                        placeholder="DD/MM/AAAA"
-                        maxLength={10}
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        placeholder="Ex: Rua das Flores"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <Label className="block leading-snug whitespace-nowrap">Número *</Label>
+                      <Input
+                        value={deliveryNumber}
+                        onChange={(e) => setDeliveryNumber(e.target.value)}
+                        placeholder="123"
                         inputMode="numeric"
                       />
                     </div>
-                  )}
-                  {company?.slug?.startsWith('lancheria-da-i9') ? (
-                    <>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:items-end">
-                        <div className="min-w-0">
-                          <Label className="block leading-snug whitespace-normal break-words">Logradouro (rua, avenida, travessa) *</Label>
-                          <Input
-                            value={deliveryAddress}
-                            onChange={(e) => setDeliveryAddress(e.target.value)}
-                            placeholder="Ex: Rua das Flores"
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <Label className="block leading-snug whitespace-nowrap">Número *</Label>
-                          <Input
-                            value={deliveryNumber}
-                            onChange={(e) => setDeliveryNumber(e.target.value)}
-                            placeholder="123"
-                            inputMode="numeric"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Complemento</Label>
-                        <Input
-                          value={deliveryComplement}
-                          onChange={(e) => setDeliveryComplement(e.target.value)}
-                          placeholder="Apto 01, Sala 02..."
-                        />
-                      </div>
-                      <div>
-                        <Label>Bairro *</Label>
-                        <Input
-                          value={deliveryNeighborhood}
-                          onChange={(e) => setDeliveryNeighborhood(e.target.value)}
-                          placeholder="Nome do bairro"
-                        />
-                      </div>
-                      <div>
-                        <Label>Ponto de referência *</Label>
-                        <Input
-                          value={deliveryReference}
-                          onChange={(e) => setDeliveryReference(e.target.value)}
-                          placeholder="Próximo ao mercado, em frente à escola..."
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <Label>Endereço (rua, número, bairro) *</Label>
-                        <Input
-                          value={deliveryAddress}
-                          onChange={(e) => setDeliveryAddress(e.target.value)}
-                          placeholder="Rua, número, bairro"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>Cidade *</Label>
-                          <Input
-                            value={deliveryCity}
-                            onChange={(e) => setDeliveryCity(e.target.value)}
-                            placeholder="Nome da cidade"
-                          />
-                        </div>
-                        <div>
-                          <Label>Estado *</Label>
-                          <Select value={deliveryState} onValueChange={setDeliveryState}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="UF" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {brazilianStates.map((state) => (
-                                <SelectItem key={state} value={state}>
-                                  {state}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  </div>
+                  <div>
+                    <Label>Complemento</Label>
+                    <Input
+                      value={deliveryComplement}
+                      onChange={(e) => setDeliveryComplement(e.target.value)}
+                      placeholder="Apto 01, Sala 02..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Bairro *</Label>
+                    <Input
+                      value={deliveryNeighborhood}
+                      onChange={(e) => setDeliveryNeighborhood(e.target.value)}
+                      placeholder="Nome do bairro"
+                    />
+                  </div>
+                  <div>
+                    <Label>Ponto de referência *</Label>
+                    <Input
+                      value={deliveryReference}
+                      onChange={(e) => setDeliveryReference(e.target.value)}
+                      placeholder="Próximo ao mercado, em frente à escola..."
+                    />
+                  </div>
                   <div>
                     <Label>Tipo de entrega *</Label>
                     {settings.deliveryMode === 'neighborhood' && getActiveNeighborhoods().length > 0 ? (
