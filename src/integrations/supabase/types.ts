@@ -335,6 +335,7 @@ export type Database = {
       customers: {
         Row: {
           address: string | null
+          birth_date: string | null
           city: string | null
           company_id: string | null
           cpf: string | null
@@ -347,6 +348,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          birth_date?: string | null
           city?: string | null
           company_id?: string | null
           cpf?: string | null
@@ -359,6 +361,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          birth_date?: string | null
           city?: string | null
           company_id?: string | null
           cpf?: string | null
