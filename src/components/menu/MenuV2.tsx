@@ -297,7 +297,7 @@ export function MenuV2({
                   </span>
                 </div>
               )}
-              {isLancheriaI9 && (
+              {isLancheriaI9 && !isOpen && (
                 <p className="mt-1 text-xs text-muted-foreground">
                   {formattedHours === 'Fechado hoje' ? 'Fechado hoje' : `Horário de hoje: ${formattedHours}`}
                 </p>
