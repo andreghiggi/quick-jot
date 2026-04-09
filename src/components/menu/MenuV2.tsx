@@ -314,6 +314,23 @@ export function MenuV2({
           </div>
         </div>
       </div>
+      {/* Banner */}
+      {settings.bannerUrl && (
+        <div className="w-full relative overflow-hidden">
+          <img
+            src={settings.bannerUrl}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-60"
+          />
+          <img
+            src={settings.bannerUrl}
+            alt="Banner"
+            className="relative w-full max-h-56 sm:max-h-64 object-contain mx-auto"
+          />
+        </div>
+      )}
+
       {/* NOVIDADES Slideshow */}
       {newProducts.length > 0 && (
         <NovidadesSlideshow products={newProducts} onProductSelect={onProductSelect} />
