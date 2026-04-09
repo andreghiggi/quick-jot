@@ -396,14 +396,14 @@ export function MenuV2({
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                     <div className={cn("relative z-10 mt-auto p-4", company?.slug?.startsWith('lancheria-da-i9') ? 'pt-20' : 'pt-12')}>
-                      <p className="font-bold text-sm leading-tight line-clamp-2 text-white px-2 py-1 inline-block drop-shadow-lg">{category}</p>
+                      <p className="font-bold text-sm leading-tight line-clamp-2 text-white px-2 py-1 inline-block" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)' }}>{category}</p>
                     </div>
                   </>
                 ) : (
                   <>
                     <span className="text-4xl opacity-80">{getCategoryEmoji(category, categoryEmojiMap)}</span>
                     <div className="mt-2">
-                      <p className="font-bold text-sm leading-tight line-clamp-2 text-white px-2 py-1 inline-block drop-shadow-lg">{category}</p>
+                      <p className="font-bold text-sm leading-tight line-clamp-2 text-white px-2 py-1 inline-block" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)' }}>{category}</p>
                     </div>
                     <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-white/10" />
                     <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white/5" />
