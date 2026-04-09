@@ -9,7 +9,14 @@ import { useTables } from '@/hooks/useTables';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
-import { emitirNFCe, consultarNFCe, reprocessarNFCe, NFCeItem, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
+import { emitirNFCe, consultarNFCe, reprocessarNFCe, NFCeItem, NFCeTefData, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
+import { 
+  isMultiplusCardConfigured, 
+  sendPaymentToMultiplusCard, 
+  checkMultiplusCardTransactionStatus,
+  abortMultiplusCardSale,
+  MultiplusCardPaymentResponse 
+} from '@/services/multiplusCardService';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -81,6 +88,18 @@ export default function PDV() {
   } = useCashRegister({ companyId: company?.id });
 
   const mesasEnabled = isModuleEnabled('mesas');
+
+  // TEF Multiplus Card state
+  const [tefEnabled, setTefEnabled] = useState(false);
+  const [tefProcessing, setTefProcessing] = useState(false);
+  const [tefStatus, setTefStatus] = useState<string>('');
+  const [tefResult, setTefResult] = useState<MultiplusCardPaymentResponse | null>(null);
+
+  useEffect(() => {
+    if (company?.id) {
+      isMultiplusCardConfigured(company.id).then(setTefEnabled);
+    }
+  }, [company?.id]);
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -440,6 +459,88 @@ export default function PDV() {
       if (saleId) {
         let nfceEmitted = false;
         let emittedNfceId: string | null = null;
+        let tefData: NFCeTefData | undefined = undefined;
+
+        // TEF: Send payment to PINPDV if configured and payment is card/pix
+        if (tefEnabled && company?.id && !divideByPeople) {
+          const paymentMethodName = activePaymentMethods.find(m => m.id === selectedPaymentMethod)?.name?.toLowerCase() || '';
+          const isTefPayment = paymentMethodName.includes('créd') || paymentMethodName.includes('cred') || 
+                               paymentMethodName.includes('débit') || paymentMethodName.includes('debit') || 
+                               paymentMethodName.includes('cartão') || paymentMethodName.includes('cartao') ||
+                               paymentMethodName.includes('pix');
+          
+          if (isTefPayment) {
+            const tefPaymentType = paymentMethodName.includes('créd') || paymentMethodName.includes('cred') ? 'credit' 
+              : paymentMethodName.includes('débit') || paymentMethodName.includes('debit') ? 'debit' 
+              : 'pix';
+            
+            setTefProcessing(true);
+            setTefStatus('Enviando para maquininha...');
+            
+            try {
+              const tefIdentifier = `pdv-${saleId.substring(0, 8)}-${Date.now()}`;
+              const createResult = await sendPaymentToMultiplusCard(company.id, {
+                amount: finalTotal,
+                paymentType: tefPaymentType,
+                installments: 1,
+                identifier: tefIdentifier,
+                description: customerName ? `Venda - ${customerName}` : 'Venda PDV',
+              });
+
+              if (!createResult.success) {
+                toast.error(`Erro TEF: ${createResult.errorMessage}`);
+                setTefProcessing(false);
+                setTefStatus('');
+                // Continue with sale without TEF
+              } else {
+                // Poll for TEF result (max 120 seconds, every 2 seconds respecting rate limit)
+                setTefStatus('Aguardando pagamento na maquininha...');
+                let tefCompleted = false;
+                for (let i = 0; i < 60 && !tefCompleted; i++) {
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                  
+                  const statusResult = await checkMultiplusCardTransactionStatus(company.id, tefIdentifier);
+                  
+                  if (statusResult.status === 'processing') {
+                    setTefStatus('Processando pagamento...');
+                  } else if (statusResult.status === 'approved' && statusResult.success) {
+                    tefCompleted = true;
+                    setTefResult(statusResult);
+                    setTefStatus('Pagamento aprovado!');
+                    toast.success(`TEF aprovado! NSU: ${statusResult.nsu}`);
+                    
+                    // Build TEF data for NFC-e
+                    tefData = {
+                      nsu: statusResult.nsu || '',
+                      autorizacao: statusResult.authorizationCode || '',
+                      bandeira: statusResult.cardBrand || '',
+                      adquirente: statusResult.acquirer || '',
+                      tipo_pagamento: tefPaymentType,
+                      valor: finalTotal,
+                    };
+                    
+                    saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand}`;
+                  } else if (statusResult.status === 'cancelled' || statusResult.status === 'error') {
+                    tefCompleted = true;
+                    toast.error(`TEF: ${statusResult.errorMessage || 'Pagamento não aprovado'}`);
+                  }
+                }
+                
+                if (!tefCompleted) {
+                  toast.warning('Timeout aguardando resposta da maquininha. Verifique o pagamento manualmente.');
+                }
+                
+                setTefProcessing(false);
+                setTefStatus('');
+              }
+            } catch (tefError: any) {
+              console.error('[PDV] TEF error:', tefError);
+              toast.error(`Erro TEF: ${tefError.message || 'Erro desconhecido'}`);
+              setTefProcessing(false);
+              setTefStatus('');
+            }
+          }
+        }
 
         // Emit NFC-e if checkbox was checked
         if (emitNFCe && company?.id && isModuleEnabled('fiscal')) {
@@ -475,6 +576,7 @@ export default function PDV() {
               valor_desconto: discount || 0,
               valor_frete: 0,
               observacoes: customerName ? `Cliente: ${customerName}` : undefined,
+              tef: tefData,
             });
 
             nfceEmitted = true;
@@ -1344,7 +1446,7 @@ export default function PDV() {
               {isProcessingSale ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processando...
+                  {tefProcessing ? tefStatus || 'Processando TEF...' : 'Processando...'}
                 </>
               ) : (
                 'Confirmar Pagamento'

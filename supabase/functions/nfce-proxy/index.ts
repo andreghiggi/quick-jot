@@ -94,13 +94,55 @@ Deno.serve(async (req) => {
 
       case 'emitir': {
         console.log('[nfce-proxy] Emitir NFC-e, URL:', NFCE_API_URL)
+
+        // If TEF data is present, add payment group to payload
+        const emitPayload = { ...payload }
+        if (payload.tef) {
+          const tef = payload.tef
+          // Map payment type to NFC-e tPag codes
+          const tPagMap: Record<string, string> = {
+            'credit': '03',  // Cartão de Crédito
+            'debit': '04',   // Cartão de Débito
+            'pix': '17',     // PIX
+          }
+          // Map card brand to tBand codes
+          const tBandMap: Record<string, string> = {
+            'VISA': '01',
+            'MASTERCARD': '02',
+            'AMEX': '03',
+            'AMERICAN EXPRESS': '03',
+            'SOROCRED': '04',
+            'DINERS': '05',
+            'ELO': '06',
+            'HIPERCARD': '07',
+            'AURA': '08',
+            'CABAL': '09',
+          }
+          const bandeiraNorm = (tef.bandeira || '').toUpperCase()
+          emitPayload.pagamento = {
+            tPag: tPagMap[tef.tipo_pagamento] || '99',
+            vPag: tef.valor,
+            tpIntegra: 1, // TEF integrado
+            card: {
+              tpIntegra: '1',
+              CNPJ: tef.cnpj_adquirente || null,
+              tBand: tBandMap[bandeiraNorm] || '99',
+              cAut: tef.autorizacao,
+              NSU: tef.nsu,
+            }
+          }
+          // Remove tef from payload sent to API (already mapped to pagamento)
+          delete emitPayload.tef
+          console.log('[nfce-proxy] TEF payment data added:', JSON.stringify(emitPayload.pagamento))
+        }
+
         apiResponse = await fetch(NFCE_API_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-api-key': NFCE_API_KEY,
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(emitPayload),
         })
         result = await safeJson(apiResponse)
 
