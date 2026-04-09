@@ -269,23 +269,6 @@ export function MenuV2({
 
       {/* Header */}
       <div className="sticky top-0 z-20 bg-card border-b border-border shadow-sm">
-        {/* Lancheria I9: top-right status badge */}
-        {isLancheriaI9 && (
-          <div className="flex justify-end px-4 pt-2 pb-0">
-            <div className="flex flex-col items-end gap-0.5">
-              <span className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white",
-                isOpen ? "bg-[hsl(142,71%,45%)]" : "bg-[hsl(0,84%,60%)]"
-              )}>
-                <span className="text-[8px] leading-none">●</span>
-                {isOpen ? 'Aberto' : 'Fechado'}
-              </span>
-              {!isOpen && schedulingEnabled && (
-                <span className="text-[10px] text-muted-foreground leading-tight">Agende seu pedido</span>
-              )}
-            </div>
-          </div>
-        )}
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -293,18 +276,17 @@ export function MenuV2({
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0" onClick={onNavigateBack}>
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <h1 className={cn("text-lg font-bold text-foreground truncate", isLancheriaI9 && "uppercase")}>
-                  {settings.storeName || company?.name || 'Cardápio'}
-                </h1>
+                {!isLancheriaI9 && (
+                  <h1 className="text-lg font-bold text-foreground truncate">
+                    {settings.storeName || company?.name || 'Cardápio'}
+                  </h1>
+                )}
+                {isLancheriaI9 && (
+                  <h1 className="text-lg font-bold text-foreground truncate uppercase">
+                    {settings.storeName || company?.name || 'Cardápio'}
+                  </h1>
+                )}
               </div>
-              {isLancheriaI9 && settings.estimatedWaitTime && (
-                <div className="flex items-center gap-1 ml-10 mt-1">
-                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-[hsl(142,71%,45%,0.2)] text-[hsl(142,71%,45%)] border border-[hsl(142,71%,45%,0.4)]">
-                    <Clock className="h-3 w-3" />
-                    {settings.estimatedWaitTime}
-                  </span>
-                </div>
-              )}
             </div>
             <Button variant="outline" size="sm" className="relative flex-shrink-0" onClick={onCartOpen}>
               <ShoppingCart className="h-4 w-4" />
@@ -321,19 +303,53 @@ export function MenuV2({
       {/* Banner */}
       {settings.bannerUrl && (
         <div className="w-full relative overflow-hidden">
-          {/* Blurred background fill */}
           <img
             src={settings.bannerUrl}
             alt=""
             aria-hidden="true"
             className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-60"
           />
-          {/* Crisp centered banner */}
           <img
             src={settings.bannerUrl}
             alt="Banner"
             className="relative w-full max-h-56 sm:max-h-64 object-contain mx-auto"
           />
+        </div>
+      )}
+
+      {/* Lancheria I9: Store info card after banner */}
+      {isLancheriaI9 && (
+        <div className="container mx-auto px-4 mt-3">
+          <div className="bg-white rounded-lg shadow-md p-4">
+            {/* Row 1: Store name + status badge */}
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-bold text-gray-900 uppercase truncate">
+                {settings.storeName || company?.name || 'Cardápio'}
+              </h2>
+              <span className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white flex-shrink-0",
+                isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
+              )}>
+                <span className={cn("text-[8px] leading-none", isOpen ? "text-green-200" : "text-red-200")}>●</span>
+                {isOpen ? 'Aberto' : 'Fechado'}
+              </span>
+            </div>
+
+            {/* Row 2: Estimated delivery time */}
+            {settings.estimatedWaitTime && (
+              <div className="mt-2">
+                <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#22C55E]/20 text-[#16a34a] border border-[#22C55E]/40">
+                  <Clock className="h-3 w-3" />
+                  {settings.estimatedWaitTime}
+                </span>
+              </div>
+            )}
+
+            {/* Row 3: Scheduling hint when closed */}
+            {!isOpen && schedulingEnabled && (
+              <p className="mt-1.5 text-xs text-gray-500 italic">Agende seu pedido</p>
+            )}
+          </div>
         </div>
       )}
 
