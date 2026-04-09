@@ -114,6 +114,7 @@ export default function Menu() {
   const [searchQuery, setSearchQuery] = useState('');
   const [customerLoaded, setCustomerLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set());
   const [showAddedToCart, setShowAddedToCart] = useState(false);
   const [lastAddedItem, setLastAddedItem] = useState<CartItem | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
