@@ -201,7 +201,7 @@ export default function Auth() {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-company">Nome da Empresa</Label>
+                  <Label htmlFor="signup-company" className="font-bold">Nome da Empresa</Label>
                   <Input
                     id="signup-company"
                     type="text"
