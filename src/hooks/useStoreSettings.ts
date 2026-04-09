@@ -23,6 +23,7 @@ interface StoreSettings {
   acceptOrderScheduling: boolean;
   floatingPhoto: boolean;
   buttonColor: string;
+  estimatedWaitTime: string;
 }
 
 interface UseStoreSettingsOptions {
@@ -52,6 +53,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     acceptOrderScheduling: false,
     floatingPhoto: false,
     buttonColor: '#ef4444',
+    estimatedWaitTime: '',
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
@@ -96,6 +98,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         acceptOrderScheduling: settingsMap['accept_order_scheduling'] === 'true',
         floatingPhoto: settingsMap['floating_photo'] === 'true',
         buttonColor: settingsMap['button_color'] || '#ef4444',
+        estimatedWaitTime: settingsMap['estimated_wait_time'] || '',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);
