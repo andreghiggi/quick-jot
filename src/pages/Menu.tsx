@@ -97,6 +97,7 @@ export default function Menu() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerCpf, setCustomerCpf] = useState('');
+  const [customerBirthDate, setCustomerBirthDate] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryNumber, setDeliveryNumber] = useState('');
   const [deliveryComplement, setDeliveryComplement] = useState('');
@@ -275,6 +276,12 @@ export default function Menu() {
           // Auto-fill customer data
           if (data.name && !customerName) setCustomerName(data.name);
           if (data.cpf && !customerCpf) setCustomerCpf(data.cpf);
+          if ((data as any).birth_date && !customerBirthDate) {
+            const bd = (data as any).birth_date;
+            // Convert from YYYY-MM-DD to DD/MM/YYYY
+            const parts = bd.split('-');
+            if (parts.length === 3) setCustomerBirthDate(`${parts[2]}/${parts[1]}/${parts[0]}`);
+          }
           if (data.city && !deliveryCity) setDeliveryCity(data.city);
           if (data.state && !deliveryState) setDeliveryState(data.state);
 
@@ -520,6 +527,19 @@ export default function Menu() {
     }
     const isStructuredAddress = company?.slug?.startsWith('lancheria-da-i9');
     if (isStructuredAddress) {
+      // Validate birth date for i9
+      const bdDigits = customerBirthDate.replace(/\D/g, '');
+      if (bdDigits.length !== 8) {
+        toast.error('Informe sua data de nascimento');
+        return;
+      }
+      const bdDay = parseInt(bdDigits.slice(0, 2));
+      const bdMonth = parseInt(bdDigits.slice(2, 4));
+      const bdYear = parseInt(bdDigits.slice(4, 8));
+      if (bdMonth < 1 || bdMonth > 12 || bdDay < 1 || bdDay > 31 || bdYear < 1900 || bdYear > new Date().getFullYear()) {
+        toast.error('Data de nascimento inválida');
+        return;
+      }
       if (!deliveryAddress.trim()) { toast.error('Informe o logradouro'); return; }
       if (!deliveryNumber.trim()) { toast.error('Informe o número'); return; }
       if (!deliveryNeighborhood.trim()) { toast.error('Informe o bairro'); return; }
@@ -627,6 +647,11 @@ export default function Menu() {
                 phone: cleanPhone,
                 name: customerName,
                 cpf: customerCpf.replace(/\D/g, '') || null,
+                birth_date: (() => {
+                  const bd = customerBirthDate.replace(/\D/g, '');
+                  if (bd.length === 8) return `${bd.slice(4,8)}-${bd.slice(2,4)}-${bd.slice(0,2)}`;
+                  return null;
+                })(),
                 address: company?.slug?.startsWith('lancheria-da-i9')
                   ? `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood} | Ref: ${deliveryReference}`
                   : (deliveryAddress || null),
@@ -667,6 +692,7 @@ export default function Menu() {
     message += `═══════════════════\n\n`;
     message += `*Cliente:* ${customerName}\n`;
     if (customerCpf) message += `*CPF:* ${formatCpf(customerCpf.replace(/\D/g, ''))}\n`;
+    if (customerBirthDate) message += `*Data de Nascimento:* ${customerBirthDate}\n`;
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
     message += `*Tipo:* ${deliveryTypeLabel}\n`;
     message += `*Pagamento:* ${paymentMethod}\n`;
@@ -729,6 +755,7 @@ export default function Menu() {
     setCustomerName('');
     setCustomerPhone('');
     setCustomerCpf('');
+    setCustomerBirthDate('');
     setDeliveryAddress('');
     setDeliveryNumber('');
     setDeliveryComplement('');
@@ -1349,6 +1376,24 @@ export default function Menu() {
                       inputMode="numeric"
                     />
                   </div>
+                  {company?.slug?.startsWith('lancheria-da-i9') && (
+                    <div>
+                      <Label>Data de Nascimento *</Label>
+                      <Input
+                        value={customerBirthDate}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+                          let formatted = digits;
+                          if (digits.length > 4) formatted = `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;
+                          else if (digits.length > 2) formatted = `${digits.slice(0,2)}/${digits.slice(2)}`;
+                          setCustomerBirthDate(formatted);
+                        }}
+                        placeholder="DD/MM/AAAA"
+                        maxLength={10}
+                        inputMode="numeric"
+                      />
+                    </div>
+                  )}
                   {company?.slug?.startsWith('lancheria-da-i9') ? (
                     <>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:items-end">
