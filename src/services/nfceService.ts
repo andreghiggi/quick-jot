@@ -17,12 +17,22 @@ export interface NFCeItem {
   aliquota_cofins: number;
 }
 
+export interface NFCeTefData {
+  nsu: string;
+  autorizacao: string;
+  bandeira: string;
+  adquirente?: string;
+  tipo_pagamento: 'credit' | 'debit' | 'pix';
+  valor: number;
+}
+
 export interface NFCeEmitRequest {
   external_id: string;
   itens: NFCeItem[];
   valor_desconto?: number;
   valor_frete?: number;
   observacoes?: string;
+  tef?: NFCeTefData;
 }
 
 export interface NFCeRecord {
