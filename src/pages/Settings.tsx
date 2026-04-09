@@ -22,7 +22,7 @@ import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettin
 import { ButtonColorPicker } from '@/components/settings/ButtonColorPicker';
 
 export default function Settings() {
-  const { company, profile, refetchUserData } = useAuthContext();
+  const { company, profile, refetchUserData, isSuperAdmin } = useAuthContext();
   const { toast } = useToast();
   const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
   const [bannerUrl, setBannerUrl] = useState('');
@@ -1199,89 +1199,93 @@ pause
 
         {/* Tab Layout */}
         <TabsContent value="layout" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5" />
-                Layout do Cardápio Online
-              </CardTitle>
-              <CardDescription>
-                Escolha qual layout será exibido no cardápio público para seus clientes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup
-                value={storeSettings.menuLayout}
-                onValueChange={async (value: 'v1' | 'v2') => {
-                  await updateSetting('menu_layout', value);
-                  toast({
-                    title: 'Layout alterado',
-                    description: `Cardápio online agora usa o layout ${value.toUpperCase()}`,
-                  });
-                }}
-                className="space-y-4"
-              >
-                <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                  <RadioGroupItem value="v1" id="layout-v1" className="mt-1" />
-                  <div className="flex-1">
-                    <Label htmlFor="layout-v1" className="font-medium cursor-pointer text-base">V1 — Clássico</Label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Categorias em pills horizontais no topo. Todos os produtos listados na mesma página com separação por seção. Ideal para cardápios menores.
-                    </p>
-                    <div className="mt-2 flex gap-2">
-                      <Badge variant="secondary" className="text-xs">Atual</Badge>
-                      <Badge variant="outline" className="text-xs">Navegação rápida</Badge>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                  <RadioGroupItem value="v2" id="layout-v2" className="mt-1" />
-                  <div className="flex-1">
-                    <Label htmlFor="layout-v2" className="font-medium cursor-pointer text-base">V2 — Categorias</Label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Banner do estabelecimento + categorias em cards coloridos. O cliente seleciona a categoria para ver os produtos. Visual mais moderno e organizado.
-                    </p>
-                    <div className="mt-2 flex gap-2">
-                      <Badge variant="default" className="text-xs">Novo</Badge>
-                      <Badge variant="outline" className="text-xs">Estilo App</Badge>
-                    </div>
-                  </div>
-                </div>
-              </RadioGroup>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5" />
-                Rolagem Lateral de Adicionais
-              </CardTitle>
-              <CardDescription>
-                Quando ativado, os grupos de adicionais são exibidos em etapas laterais (estilo cross-selling), ao invés de todos listados para baixo
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">Rolagem Lateral</p>
-                  <p className="text-sm text-muted-foreground">Adicionais navegam por etapas laterais</p>
-                </div>
-                <Switch
-                  checked={storeSettings.lateralScrollOptionals}
-                  onCheckedChange={async (value) => {
-                    await updateSetting('lateral_scroll_optionals', value.toString());
+          {isSuperAdmin() && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5" />
+                  Layout do Cardápio Online
+                </CardTitle>
+                <CardDescription>
+                  Escolha qual layout será exibido no cardápio público para seus clientes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={storeSettings.menuLayout}
+                  onValueChange={async (value: 'v1' | 'v2') => {
+                    await updateSetting('menu_layout', value);
                     toast({
-                      title: value ? 'Rolagem lateral ativada' : 'Rolagem lateral desativada',
-                      description: value
-                        ? 'Adicionais serão exibidos em etapas laterais no cardápio'
-                        : 'Adicionais voltaram ao modo padrão (vertical)',
+                      title: 'Layout alterado',
+                      description: `Cardápio online agora usa o layout ${value.toUpperCase()}`,
                     });
                   }}
-                />
-              </div>
-            </CardContent>
-          </Card>
+                  className="space-y-4"
+                >
+                  <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="v1" id="layout-v1" className="mt-1" />
+                    <div className="flex-1">
+                      <Label htmlFor="layout-v1" className="font-medium cursor-pointer text-base">V1 — Clássico</Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Categorias em pills horizontais no topo. Todos os produtos listados na mesma página com separação por seção. Ideal para cardápios menores.
+                      </p>
+                      <div className="mt-2 flex gap-2">
+                        <Badge variant="secondary" className="text-xs">Atual</Badge>
+                        <Badge variant="outline" className="text-xs">Navegação rápida</Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="v2" id="layout-v2" className="mt-1" />
+                    <div className="flex-1">
+                      <Label htmlFor="layout-v2" className="font-medium cursor-pointer text-base">V2 — Categorias</Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Banner do estabelecimento + categorias em cards coloridos. O cliente seleciona a categoria para ver os produtos. Visual mais moderno e organizado.
+                      </p>
+                      <div className="mt-2 flex gap-2">
+                        <Badge variant="default" className="text-xs">Novo</Badge>
+                        <Badge variant="outline" className="text-xs">Estilo App</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </CardContent>
+            </Card>
+          )}
+
+          {isSuperAdmin() && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5" />
+                  Rolagem Lateral de Adicionais
+                </CardTitle>
+                <CardDescription>
+                  Quando ativado, os grupos de adicionais são exibidos em etapas laterais (estilo cross-selling), ao invés de todos listados para baixo
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <p className="font-medium">Rolagem Lateral</p>
+                    <p className="text-sm text-muted-foreground">Adicionais navegam por etapas laterais</p>
+                  </div>
+                  <Switch
+                    checked={storeSettings.lateralScrollOptionals}
+                    onCheckedChange={async (value) => {
+                      await updateSetting('lateral_scroll_optionals', value.toString());
+                      toast({
+                        title: value ? 'Rolagem lateral ativada' : 'Rolagem lateral desativada',
+                        description: value
+                          ? 'Adicionais serão exibidos em etapas laterais no cardápio'
+                          : 'Adicionais voltaram ao modo padrão (vertical)',
+                      });
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
