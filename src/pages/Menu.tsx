@@ -88,6 +88,7 @@ export default function Menu() {
   const schedulingEnabled = settings.acceptOrderScheduling;
   const canOrder = isOpen || schedulingEnabled;
   const formattedHours = getFormattedHours();
+  const isLancheriaI9 = company?.slug === 'lancheria-da-i9-263ee29a';
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -861,20 +862,45 @@ export default function Menu() {
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center justify-between gap-2">
               {/* Left side: Back button + Store name */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={() => navigate(-1)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m15 18-6-6 6-6"/>
-                  </svg>
-                </Button>
-                <h1 className="text-lg font-bold text-foreground">
-                  {settings.storeName || company?.name || 'Cardápio'}
-                </h1>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 flex-shrink-0"
+                    onClick={() => navigate(-1)}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m15 18-6-6 6-6"/>
+                    </svg>
+                  </Button>
+                  <h1 className="text-lg font-bold text-foreground truncate">
+                    {settings.storeName || company?.name || 'Cardápio'}
+                  </h1>
+                  {isLancheriaI9 && (
+                    <div className="flex flex-col items-start gap-0.5 flex-shrink-0">
+                      <span className={cn(
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+                        isOpen
+                          ? "bg-green-500/20 text-green-600 border border-green-500/40"
+                          : "bg-red-500/20 text-red-600 border border-red-500/40"
+                      )}>
+                        {isOpen ? 'Aberto' : 'Fechado'}
+                      </span>
+                      {!isOpen && schedulingEnabled && (
+                        <span className="text-[10px] text-muted-foreground leading-tight">Agende seu pedido</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {isLancheriaI9 && settings.estimatedWaitTime && (
+                  <div className="flex items-center gap-1 ml-10 mt-1">
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-600 border border-green-500/40">
+                      <Clock className="h-3 w-3" />
+                      {settings.estimatedWaitTime}
+                    </span>
+                  </div>
+                )}
               </div>
               
               {/* Right side: Cart button */}
