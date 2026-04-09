@@ -1437,7 +1437,10 @@ export default function Menu() {
                       <RadioGroup value={deliveryType} onValueChange={(value) => { setDeliveryType(value as 'pickup' | 'neighborhood'); if (value === 'pickup') setSelectedNeighborhood(''); }} className="mt-2 space-y-2">
                         {settings.enablePickup && (
                         <>
-                        <div className="flex items-center justify-between p-2 border rounded-lg">
+                        <div className={cn(
+                          "flex items-center justify-between p-2 rounded-lg transition-all duration-200 ease-in-out",
+                          deliveryType === 'pickup' ? "bg-primary/15 border-2 border-primary" : "bg-background border border-border"
+                        )}>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="pickup" id="pickup-nb" />
                             <Label htmlFor="pickup-nb" className="cursor-pointer">Retirada no local</Label>
@@ -1453,7 +1456,10 @@ export default function Menu() {
                         </>
                         )}
                         {settings.enableDelivery && (
-                        <div className="p-2 border rounded-lg space-y-2">
+                        <div className={cn(
+                          "p-2 rounded-lg space-y-2 transition-all duration-200 ease-in-out",
+                          deliveryType === 'neighborhood' ? "bg-primary/15 border-2 border-primary" : "bg-background border border-border"
+                        )}>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="neighborhood" id="neighborhood" />
                             <Label htmlFor="neighborhood" className="cursor-pointer">Entrega por bairro</Label>
@@ -1484,7 +1490,10 @@ export default function Menu() {
                       >
                         {settings.enablePickup && (
                         <>
-                        <div className="flex items-center justify-between p-2 border rounded-lg">
+                        <div className={cn(
+                          "flex items-center justify-between p-2 rounded-lg transition-all duration-200 ease-in-out",
+                          deliveryType === 'pickup' ? "bg-primary/15 border-2 border-primary" : "bg-background border border-border"
+                        )}>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="pickup" id="pickup" />
                             <Label htmlFor="pickup" className="cursor-pointer">Retirada no local</Label>
@@ -1501,7 +1510,10 @@ export default function Menu() {
                         )}
                         {settings.enableDelivery && (
                         <>
-                        <div className="flex items-center justify-between p-2 border rounded-lg">
+                        <div className={cn(
+                          "flex items-center justify-between p-2 rounded-lg transition-all duration-200 ease-in-out",
+                          deliveryType === 'city' ? "bg-primary/15 border-2 border-primary" : "bg-background border border-border"
+                        )}>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="city" id="city" />
                             <Label htmlFor="city" className="cursor-pointer">Entrega Cidade</Label>
@@ -1510,7 +1522,10 @@ export default function Menu() {
                             {settings.deliveryFeeCity > 0 ? `R$ ${settings.deliveryFeeCity.toFixed(2)}` : 'Grátis'}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between p-2 border rounded-lg">
+                        <div className={cn(
+                          "flex items-center justify-between p-2 rounded-lg transition-all duration-200 ease-in-out",
+                          deliveryType === 'interior' ? "bg-primary/15 border-2 border-primary" : "bg-background border border-border"
+                        )}>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="interior" id="interior" />
                             <Label htmlFor="interior" className="cursor-pointer">Entrega Interior</Label>
@@ -1553,14 +1568,14 @@ export default function Menu() {
                     </RadioGroup>
                     {/* Show change field when Dinheiro is selected */}
                     {paymentMethod.toLowerCase() === 'dinheiro' && (
-                      <div className="mt-3 p-3 bg-accent/50 border border-border rounded-lg">
-                        <Label htmlFor="changeFor" className="text-sm font-medium">💵 Troco para quanto?</Label>
+                      <div className="mt-3 p-3 bg-primary rounded-lg">
+                        <Label htmlFor="changeFor" className="text-sm font-bold text-primary-foreground">💵 Troco para quanto?</Label>
                         <Input
                           id="changeFor"
                           placeholder="Ex: 50,00 (deixe vazio se não precisa de troco)"
                           value={changeFor}
                           onChange={(e) => setChangeFor(e.target.value)}
-                          className="mt-1"
+                          className="mt-1 bg-background"
                         />
                       </div>
                     )}
