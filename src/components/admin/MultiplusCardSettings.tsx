@@ -197,9 +197,9 @@ export function MultiplusCardSettings({ companyId }: MultiplusCardSettingsProps)
                   <SelectItem key={device.id} value={device.id.toString()}>
                     <div className="flex items-center gap-2">
                       {device.isAtivo ? (
-                        <Wifi className="w-3 h-3 text-green-500" />
+                        <Wifi className="w-3 h-3 text-primary" />
                       ) : (
-                        <WifiOff className="w-3 h-3 text-red-500" />
+                        <WifiOff className="w-3 h-3 text-destructive" />
                       )}
                       {device.nome} ({device.codigo})
                     </div>
