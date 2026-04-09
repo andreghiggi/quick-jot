@@ -66,6 +66,7 @@ interface MenuV2Props {
   settings: {
     storeName: string;
     bannerUrl: string;
+    estimatedWaitTime?: string;
     [key: string]: any;
   };
   activeProducts: Product[];
@@ -78,6 +79,7 @@ interface MenuV2Props {
   cartTotal: number;
   isOpen: boolean;
   formattedHours: string;
+  schedulingEnabled?: boolean;
   onProductSelect: (product: Product) => void;
   onCartOpen: () => void;
   onNavigateBack: () => void;
