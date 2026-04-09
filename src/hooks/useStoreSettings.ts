@@ -34,7 +34,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
   const [settings, setSettings] = useState<StoreSettings>({
     storePhone: '',
     bannerUrl: '',
-    storeName: 'Comanda Tech',
+    storeName: '',
     deliveryFeeCity: 0,
     deliveryFeeInterior: 0,
     deliveryMode: 'simple',
@@ -78,7 +78,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
       setSettings({
         storePhone: settingsMap['store_phone'] || '',
         bannerUrl: settingsMap['banner_url'] || '',
-        storeName: settingsMap['store_name'] || 'Comanda Tech',
+        storeName: settingsMap['store_name'] || '',
         deliveryFeeCity: parseFloat(settingsMap['delivery_fee_city']) || 0,
         deliveryFeeInterior: parseFloat(settingsMap['delivery_fee_interior']) || 0,
         deliveryMode: (settingsMap['delivery_mode'] as 'simple' | 'neighborhood') || 'simple',
