@@ -334,7 +334,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               variant={confirmed ? 'outline' : 'secondary'}
               onClick={handleConfirmOrder}
               disabled={confirming || confirmed}
-              className="gap-1 shrink-0"
+              className="gap-1 shrink-0 bg-green-600 hover:bg-green-700 text-white"
             >
               {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               {confirmed ? 'Confirmado' : 'Confirmar'}
