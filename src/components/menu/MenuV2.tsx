@@ -270,89 +270,50 @@ export function MenuV2({
       {/* Header */}
       <div className="sticky top-0 z-20 bg-card border-b border-border shadow-sm">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0" onClick={onNavigateBack}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0" onClick={onNavigateBack}>
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-                {!isLancheriaI9 && (
-                  <h1 className="text-lg font-bold text-foreground truncate">
-                    {settings.storeName || company?.name || 'Cardápio'}
-                  </h1>
-                )}
+                <h1 className={cn("text-lg font-bold text-foreground truncate", isLancheriaI9 && "uppercase")}>
+                  {settings.storeName || company?.name || 'Cardápio'}
+                </h1>
                 {isLancheriaI9 && (
-                  <h1 className="text-lg font-bold text-foreground truncate uppercase">
-                    {settings.storeName || company?.name || 'Cardápio'}
-                  </h1>
+                  <span className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold text-white flex-shrink-0",
+                    isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
+                  )}>
+                    <span className="text-[8px] leading-none text-white/70">●</span>
+                    {isOpen ? 'Aberto' : 'Fechado'}
+                  </span>
                 )}
               </div>
-            </div>
-            <Button variant="outline" size="sm" className="relative flex-shrink-0" onClick={onCartOpen}>
-              <ShoppingCart className="h-4 w-4" />
-              {cartItemsCount > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                  {cartItemsCount}
-                </Badge>
+              {isLancheriaI9 && isOpen && settings.estimatedWaitTime && (
+                <div className="mt-1 ml-0">
+                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-normal bg-[#22C55E]/15 text-[#16a34a] border border-[#22C55E]">
+                    <Clock className="h-3 w-3" />
+                    {settings.estimatedWaitTime}
+                  </span>
+                </div>
               )}
-            </Button>
+              {isLancheriaI9 && !isOpen && schedulingEnabled && (
+                <p className="mt-1 text-xs text-muted-foreground italic">Agende seu pedido</p>
+              )}
+            </div>
+            {!isLancheriaI9 && (
+              <Button variant="outline" size="sm" className="relative flex-shrink-0" onClick={onCartOpen}>
+                <ShoppingCart className="h-4 w-4" />
+                {cartItemsCount > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                    {cartItemsCount}
+                  </Badge>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>
-
-      {/* Banner */}
-      {settings.bannerUrl && (
-        <div className="w-full relative overflow-hidden">
-          <img
-            src={settings.bannerUrl}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-60"
-          />
-          <img
-            src={settings.bannerUrl}
-            alt="Banner"
-            className="relative w-full max-h-56 sm:max-h-64 object-contain mx-auto"
-          />
-        </div>
-      )}
-
-      {/* Lancheria I9: Store info card after banner */}
-      {isLancheriaI9 && (
-        <div className="container mx-auto px-4 mt-3">
-          <div className="bg-white rounded-lg shadow-md p-4">
-            {/* Row 1: Store name + status badge */}
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-lg font-bold text-gray-900 uppercase truncate">
-                {settings.storeName || company?.name || 'Cardápio'}
-              </h2>
-              <span className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold text-white flex-shrink-0",
-                isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
-              )}>
-                <span className={cn("text-[8px] leading-none", isOpen ? "text-green-200" : "text-red-200")}>●</span>
-                {isOpen ? 'Aberto' : 'Fechado'}
-              </span>
-            </div>
-
-            {/* Row 2: Estimated delivery time */}
-            {settings.estimatedWaitTime && (
-              <div className="mt-2">
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-normal bg-[#22C55E]/15 text-[#16a34a] border border-[#22C55E]">
-                  <Clock className="h-3 w-3" />
-                  {settings.estimatedWaitTime}
-                </span>
-              </div>
-            )}
-
-            {/* Row 3: Scheduling hint when closed */}
-            {!isOpen && schedulingEnabled && (
-              <p className="mt-1.5 text-xs text-gray-500 italic">Agende seu pedido</p>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* NOVIDADES Slideshow */}
       {newProducts.length > 0 && (
         <NovidadesSlideshow products={newProducts} onProductSelect={onProductSelect} />
