@@ -99,13 +99,11 @@ Deno.serve(async (req) => {
         const emitPayload = { ...payload }
         if (payload.tef) {
           const tef = payload.tef
-          // Map payment type to NFC-e tPag codes
           const tPagMap: Record<string, string> = {
-            'credit': '03',  // Cartão de Crédito
-            'debit': '04',   // Cartão de Débito
-            'pix': '17',     // PIX
+            'credit': '03',
+            'debit': '04',
+            'pix': '17',
           }
-          // Map card brand to tBand codes
           const tBandMap: Record<string, string> = {
             'VISA': '01',
             'MASTERCARD': '02',
@@ -118,20 +116,37 @@ Deno.serve(async (req) => {
             'AURA': '08',
             'CABAL': '09',
           }
+          // CNPJ mapping for known acquirers in Brazil
+          const cnpjAdquirenteMap: Record<string, string> = {
+            'GETNET': '10440482000154',
+            'CIELO': '01027058000191',
+            'STONE': '16501555000157',
+            'REDE': '01425787000104',
+            'PAGSEGURO': '08561701000101',
+            'PAGBANK': '08561701000101',
+            'SAFRAPAY': '58160789000128',
+            'MERCADOPAGO': '10573521000191',
+            'SUMUP': '18188384000123',
+            'VERO': '01425787000104',
+            'BANRISUL': '92702067000196',
+            'SICREDI': '01181521000155',
+          }
           const bandeiraNorm = (tef.bandeira || '').toUpperCase()
+          const adquirenteNorm = (tef.adquirente || '').toUpperCase()
+          const cnpjAdquirente = cnpjAdquirenteMap[adquirenteNorm] || tef.cnpj_adquirente || null
+
           emitPayload.pagamento = {
             tPag: tPagMap[tef.tipo_pagamento] || '99',
             vPag: tef.valor,
-            tpIntegra: 1, // TEF integrado
+            tpIntegra: 1,
             card: {
               tpIntegra: '1',
-              CNPJ: tef.cnpj_adquirente || null,
+              CNPJ: cnpjAdquirente,
               tBand: tBandMap[bandeiraNorm] || '99',
               cAut: tef.autorizacao,
               NSU: tef.nsu,
             }
           }
-          // Remove tef from payload sent to API (already mapped to pagamento)
           delete emitPayload.tef
           console.log('[nfce-proxy] TEF payment data added:', JSON.stringify(emitPayload.pagamento))
         }
