@@ -214,7 +214,7 @@ export default function Auth() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-cnpj">CNPJ</Label>
+                  <Label htmlFor="signup-cnpj" className="font-bold">CNPJ</Label>
                   <Input
                     id="signup-cnpj"
                     type="text"
@@ -226,7 +226,7 @@ export default function Auth() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-address-street">Endereço (rua, avenida, travessa...) *</Label>
+                  <Label htmlFor="signup-address-street" className="font-bold">Endereço (rua, avenida, travessa...) *</Label>
                   <Input
                     id="signup-address-street"
                     type="text"
@@ -239,7 +239,7 @@ export default function Auth() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-address-number">Número *</Label>
+                    <Label htmlFor="signup-address-number" className="font-bold">Número *</Label>
                     <Input
                       id="signup-address-number"
                       type="text"
@@ -251,7 +251,7 @@ export default function Auth() {
                     {errors.addressNumber && <p className="text-sm text-destructive">{errors.addressNumber}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-address-complement">Complemento</Label>
+                    <Label htmlFor="signup-address-complement" className="font-bold">Complemento</Label>
                     <Input
                       id="signup-address-complement"
                       type="text"
@@ -263,7 +263,7 @@ export default function Auth() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-address-neighborhood">Bairro *</Label>
+                  <Label htmlFor="signup-address-neighborhood" className="font-bold">Bairro *</Label>
                   <Input
                     id="signup-address-neighborhood"
                     type="text"
@@ -275,7 +275,7 @@ export default function Auth() {
                   {errors.addressNeighborhood && <p className="text-sm text-destructive">{errors.addressNeighborhood}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-address-reference">Ponto de Referência</Label>
+                  <Label htmlFor="signup-address-reference" className="font-bold">Ponto de Referência</Label>
                   <Input
                     id="signup-address-reference"
                     type="text"
@@ -287,7 +287,7 @@ export default function Auth() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Seu Nome Completo</Label>
+                  <Label htmlFor="signup-name" className="font-bold">Seu Nome Completo</Label>
                   <Input
                     id="signup-name"
                     type="text"
@@ -299,7 +299,7 @@ export default function Auth() {
                   {errors.fullName && <p className="text-sm text-destructive">{errors.fullName}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email" className="font-bold">Email</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -311,7 +311,7 @@ export default function Auth() {
                   {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Senha</Label>
+                  <Label htmlFor="signup-password" className="font-bold">Senha</Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -323,7 +323,7 @@ export default function Auth() {
                   {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-confirm-password">Confirmar Senha</Label>
+                  <Label htmlFor="signup-confirm-password" className="font-bold">Confirmar Senha</Label>
                   <Input
                     id="signup-confirm-password"
                     type="password"
