@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { POSControleSettings } from '@/components/admin/POSControleSettings';
+import { MultiplusCardSettings } from '@/components/admin/MultiplusCardSettings';
 import { NFCeSettings } from '@/components/admin/NFCeSettings';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plug } from 'lucide-react';
@@ -12,43 +12,19 @@ export default function IntegrationsPage() {
   const navigate = useNavigate();
   const { user } = useAuthContext();
   const [companyId, setCompanyId] = useState<string | null>(null);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     async function loadUserData() {
       if (!user) return;
 
-      // Check if super admin
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
         .eq('user_id', user.id)
         .single();
 
-      if (roleData?.role === 'super_admin') {
-        setIsSuperAdmin(true);
-        // For super admin, we need to get the company from URL or context
-        // For now, redirect back if no company context
-        const { data: companyUser } = await supabase
-          .from('company_users')
-          .select('company_id')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (companyUser) {
-          setCompanyId(companyUser.company_id);
-        }
-      } else {
-        // Regular company user/admin
-        const { data: companyUser } = await supabase
-          .from('company_users')
-          .select('company_id')
-          .eq('user_id', user.id)
-          .single();
-
-        if (companyUser) {
-          setCompanyId(companyUser.company_id);
-        }
+      if (companyUser) {
+        setCompanyId(companyUser.company_id);
       }
     }
 
@@ -76,7 +52,7 @@ export default function IntegrationsPage() {
         <div className="space-y-6">
           {companyId ? (
             <>
-              <POSControleSettings companyId={companyId} />
+              <MultiplusCardSettings companyId={companyId} />
               <NFCeSettings companyId={companyId} />
             </>
           ) : (
