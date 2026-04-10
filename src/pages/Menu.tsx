@@ -88,7 +88,7 @@ export default function Menu() {
   const schedulingEnabled = settings.acceptOrderScheduling;
   const canOrder = isOpen || schedulingEnabled;
   const formattedHours = getFormattedHours();
-  const isLancheriaI9 = company?.slug === 'lancheria-da-i9-263ee29a';
+  
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -907,23 +907,21 @@ export default function Menu() {
                   <h1 className="text-lg font-bold text-foreground truncate">
                     {settings.storeName || company?.name || 'Cardápio'}
                   </h1>
-                  {isLancheriaI9 && (
-                    <div className="flex flex-col items-start gap-0.5 flex-shrink-0">
-                      <span className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
-                        isOpen
-                          ? "bg-green-500/20 text-green-600 border border-green-500/40"
-                          : "bg-red-500/20 text-red-600 border border-red-500/40"
-                      )}>
-                        {isOpen ? 'Aberto' : 'Fechado'}
-                      </span>
-                      {!isOpen && schedulingEnabled && (
-                        <span className="text-[10px] text-muted-foreground leading-tight">Agende seu pedido</span>
-                      )}
-                    </div>
-                  )}
+                  <div className="flex flex-col items-start gap-0.5 flex-shrink-0">
+                    <span className={cn(
+                      "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+                      isOpen
+                        ? "bg-green-500/20 text-green-600 border border-green-500/40"
+                        : "bg-red-500/20 text-red-600 border border-red-500/40"
+                    )}>
+                      {isOpen ? 'Aberto' : 'Fechado'}
+                    </span>
+                    {!isOpen && schedulingEnabled && (
+                      <span className="text-[10px] text-muted-foreground leading-tight">Agende seu pedido</span>
+                    )}
+                  </div>
                 </div>
-                {isLancheriaI9 && settings.estimatedWaitTime && (
+                {settings.estimatedWaitTime && (
                   <div className="flex items-center gap-1 ml-10 mt-1">
                     <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-600 border border-green-500/40">
                       <Clock className="h-3 w-3" />
