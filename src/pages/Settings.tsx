@@ -50,6 +50,7 @@ export default function Settings() {
   const [newNeighborhoodName, setNewNeighborhoodName] = useState('');
   const [newNeighborhoodFee, setNewNeighborhoodFee] = useState('');
   const [deliveryMode, setDeliveryMode] = useState<'simple' | 'neighborhood'>('simple');
+  const [featuredSectionName, setFeaturedSectionName] = useState(storeSettings.featuredSectionName || 'Novidades');
 
   // Card visibility states
   const [cardVisibility, setCardVisibility] = useState({
