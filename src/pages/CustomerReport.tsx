@@ -333,7 +333,7 @@ export default function CustomerReport() {
                                             onClick={() => setSelectedOrderId(order.id)}
                                           >
                                              <TableCell className="font-mono text-sm">
-                                               #{order.daily_number || order.order_code}
+                                               #{order.order_code}
                                              </TableCell>
                                              <TableCell>
                                                {format(new Date(order.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
