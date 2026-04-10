@@ -208,7 +208,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
 
     const cartKey = `${product.id}_${opts.map(o => o.itemName).sort().join(',')}`;
-    setCart(prev => [...prev, { id: cartKey, name: product.name, price: product.price, quantity: 1, optionals: opts }]);
+    setCart(prev => [...prev, { id: cartKey, name: product.name, price: product.price, quantity: 1, optionals: opts, imageUrl: product.image_url }]);
     setSelectingProduct(null);
     setSelectedOptionals({});
   }
