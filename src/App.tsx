@@ -35,6 +35,7 @@ import Suggestions from "./pages/Suggestions";
 import MenuImport from "./pages/MenuImport";
 import OptionalGroups from "./pages/OptionalGroups";
 import Categories from "./pages/Categories";
+import CustomerReport from "./pages/CustomerReport";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";

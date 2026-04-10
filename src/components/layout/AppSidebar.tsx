@@ -23,6 +23,7 @@ import {
   Upload,
   Layers,
   FolderOpen,
+  BarChart3,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
