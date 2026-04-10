@@ -452,6 +452,14 @@ export default function Menu() {
     // Merge old-style optionals + group optionals
     const allOptionals = [...selectedOptionals, ...groupOptionals];
 
+    // Also include old-style selectedOptionals in groupedOptionalNames
+    if (selectedOptionals.length > 0) {
+      const oldStyleStr = selectedOptionals.map(o => 
+        o.price > 0 ? `${o.name} R$${o.price.toFixed(2)}` : o.name
+      ).join(', ');
+      groupedOptionalNames.push(`Adicionais: ${oldStyleStr}`);
+    }
+
     const newItem: CartItem = {
       product: selectedProduct,
       quantity: 1,
