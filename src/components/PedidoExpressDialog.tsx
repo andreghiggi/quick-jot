@@ -352,11 +352,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     const noteStr = noteParts.join(' | ');
 
     const orderItems: OrderItem[] = cart.map(item => {
-      const optDesc = item.groupedOptionalNames && item.groupedOptionalNames.length > 0
-        ? ` (${item.groupedOptionalNames.join(', ')})`
-        : item.selectedOptionals.length > 0
-          ? ` (${item.selectedOptionals.map(o => o.name).join(', ')})`
-          : '';
+      let optionalsStr = '';
+      if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+        optionalsStr = ` (${item.groupedOptionalNames.join(' | ')})`;
+      } else if (item.selectedOptionals.length > 0) {
+        const optStrs = item.selectedOptionals.map(o => 
+          o.price > 0 ? `${o.name} R$${o.price.toFixed(2)}` : o.name
+        );
+        optionalsStr = ` (Adicionais: ${optStrs.join(', ')})`;
+      }
       const optPrice = item.selectedOptionals.reduce((s, o) => s + o.price, 0);
       return {
         id: crypto.randomUUID(),
