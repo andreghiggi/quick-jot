@@ -12,6 +12,8 @@ import { useCategories } from '@/hooks/useCategories';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { OrderItem } from '@/types/order';
@@ -37,6 +39,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id });
   const { settings } = useStoreSettings({ companyId: company?.id });
+  const { getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
+  const activeNeighborhoods = getActiveNeighborhoods();
 
   const [step, setStep] = useState<Step>(1);
   const [customerPhone, setCustomerPhone] = useState('');
@@ -60,6 +64,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [deliveryComplement, setDeliveryComplement] = useState('');
   const [deliveryNeighborhood, setDeliveryNeighborhood] = useState('');
   const [deliveryReference, setDeliveryReference] = useState('');
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [selectedDeliveryFeeType, setSelectedDeliveryFeeType] = useState<'city' | 'interior' | ''>('');
 
   const [paymentMethod, setPaymentMethod] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -118,7 +124,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     return (item.product.price + optionalsTotal) * item.quantity;
   }
 
-  const total = cart.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+  const subtotal = cart.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+  const total = subtotal + (deliveryType === 'entrega' ? deliveryFee : 0);
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -419,6 +426,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setDeliveryComplement('');
     setDeliveryNeighborhood('');
     setDeliveryReference('');
+    setDeliveryFee(0);
+    setSelectedDeliveryFeeType('');
     setPaymentMethod('');
   }
 
