@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '10/04/2026',
+    version: '1.25.0',
+    type: 'feature',
+    description: 'Pedido Express (Lancheria da I9): novo fluxo de pedido em 5 etapas — telefone com busca automática de cliente, nome, seleção de produtos com adicionais, tipo de entrega (com endereço) e forma de pagamento. Envio automático da chave PIX via WhatsApp quando selecionado.',
+  },
+  {
+    date: '10/04/2026',
     version: '1.24.0',
     type: 'feature',
     description: 'Fluxo Confirmar → Preparar: botão "Preparar" começa desabilitado até clicar em "Confirmar". Após confirmação, "Confirmar" fica cinza e "Preparar" fica ativo em vermelho.',
