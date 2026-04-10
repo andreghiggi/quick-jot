@@ -114,13 +114,33 @@ export default function CustomerReport() {
     enabled: !!company?.id,
   });
 
-  const customers = useMemo(() => {
-    if (!orders) return [];
+  const orders = reportData?.orders || [];
+  const allCustomers = reportData?.allCustomers || [];
 
+  const customers = useMemo(() => {
     const map = new Map<string, CustomerData>();
 
+    // First: add all customers from the customers table
+    for (const c of allCustomers) {
+      const key = (c.phone || c.name).toLowerCase().trim();
+      if (!map.has(key)) {
+        map.set(key, {
+          name: c.name,
+          phone: c.phone || null,
+          address: c.address || null,
+          birthDate: c.birth_date || null,
+          firstDate: c.created_at,
+          lastDate: c.created_at,
+          totalOrders: 0,
+          totalSpent: 0,
+          totalProductRevenue: 0,
+          orders: [],
+        });
+      }
+    }
+
+    // Then: enrich with order data
     for (const o of orders) {
-      // Apply date filter
       const orderDate = new Date(o.created_at);
       if (dateFrom && orderDate < dateFrom) continue;
       if (dateTo) {
@@ -167,7 +187,7 @@ export default function CustomerReport() {
     }
 
     return Array.from(map.values());
-  }, [orders, dateFrom, dateTo]);
+  }, [orders, allCustomers, dateFrom, dateTo]);
 
   const filtered = useMemo(() => {
     let result = customers;
