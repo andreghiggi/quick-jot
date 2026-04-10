@@ -17,6 +17,14 @@ import {
   abortMultiplusCardSale,
   MultiplusCardPaymentResponse 
 } from '@/services/multiplusCardService';
+import {
+  isPinpadConfigured,
+  sendPinpadPayment,
+  pollPinpadStatus,
+  confirmPinpadTransaction,
+  cancelPinpadTransaction,
+  PinpadTransactionResult,
+} from '@/services/pinpadService';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
