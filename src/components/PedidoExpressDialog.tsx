@@ -438,7 +438,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             })}
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-4 pr-2 pb-6">
+          <div className="flex-1 overflow-y-auto space-y-4 px-2 pb-6">
             {/* Step 1: Products — catalog-style browsing */}
             {step === 1 && (
               <div className="space-y-3">
