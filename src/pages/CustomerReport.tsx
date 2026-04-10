@@ -180,6 +180,8 @@ export default function CustomerReport() {
 
   const totalRevenue = filtered.reduce((s, c) => s + c.totalSpent, 0);
   const totalOrders = filtered.reduce((s, c) => s + c.totalOrders, 0);
+  const totalProductRevenue = filtered.reduce((s, c) => s + c.totalProductRevenue, 0);
+  const avgTicket = totalOrders > 0 ? totalProductRevenue / totalOrders : 0;
 
   const clearFilters = () => {
     setDateFrom(undefined);
@@ -198,7 +200,7 @@ export default function CustomerReport() {
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="flex items-center gap-3 p-4">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -230,6 +232,19 @@ export default function CustomerReport() {
                 <p className="text-sm text-muted-foreground">Receita Total</p>
                 <p className="text-2xl font-bold">
                   {totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <TrendingUp className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                <p className="text-2xl font-bold">
+                  {avgTicket.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
               </div>
             </CardContent>
