@@ -66,33 +66,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     if (!isLancheriaI9 || !company?.id) return;
     
     Promise.all([
-      // Product optionals (paid items like Paçoca, Queijo Extra)
-      supabase
-        .from('product_optionals')
-        .select('name, price, product_id, products!inner(name, company_id)')
-        .eq('products.company_id', company.id)
-        .eq('active', true),
-      // Optional group items (free items like Frutas) with group names
-      supabase
-        .from('optional_group_items')
-        .select('name, price, group_id, optional_groups!inner(name, company_id)')
-        .eq('optional_groups.company_id', company.id)
-        .eq('active', true),
-      // Group-product associations to map group items to products
-      supabase
-        .from('optional_group_products')
-        .select('group_id, product_id, products!inner(name, company_id)')
-        .eq('products.company_id', company.id),
-      // Group-category associations
-      supabase
-        .from('optional_group_categories')
-        .select('group_id, category_id'),
-      // Products to map categories
-      supabase
-        .from('products')
-        .select('id, name, category, company_id')
-        .eq('company_id', company.id)
-        .eq('active', true),
+      supabase.from('product_optionals').select('name, price, product_id, products!inner(name, company_id)').eq('products.company_id', company.id).eq('active', true),
+      supabase.from('optional_group_items').select('name, price, group_id, optional_groups!inner(name, company_id)').eq('optional_groups.company_id', company.id).eq('active', true),
+      supabase.from('optional_group_products').select('group_id, product_id, products!inner(name, company_id)').eq('products.company_id', company.id),
+      supabase.from('optional_group_categories').select('group_id, category_id, categories!inner(name, company_id)').eq('categories.company_id', company.id),
+      supabase.from('products').select('id, name, category, company_id').eq('company_id', company.id).eq('active', true),
     ]).then(([prodOptRes, groupItemsRes, groupProdsRes, groupCatsRes, productsRes]) => {
       const catalog: Record<string, Record<string, { price: number; groupName: string }>> = {};
       
@@ -104,7 +82,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
         catalog[productName][row.name] = { price: Number(row.price), groupName: 'Adicionais' };
       });
       
-      // Build group-to-products map from direct associations
+      // Build group-to-products map from direct product associations
       const groupToProducts: Record<string, Set<string>> = {};
       (groupProdsRes.data || []).forEach((row: any) => {
         const productName = row.products?.name;
@@ -114,21 +92,15 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       });
       
       // Build group-to-products map from category associations
-      const productsByCategory: Record<string, string[]> = {};
-      (productsRes.data || []).forEach((p: any) => {
-        if (!productsByCategory[p.category]) productsByCategory[p.category] = [];
-        productsByCategory[p.category].push(p.name);
-      });
       (groupCatsRes.data || []).forEach((row: any) => {
-        const catProducts = Object.values(productsByCategory).flat();
-        // Find products in this category
-        (productsRes.data || []).forEach((p: any) => {
-          // Check if this category matches
-          const catId = row.category_id;
-          // We need to match by category id - products use category name, categories have id
-          // For simplicity, add group items to ALL products of this company
-        });
+        const categoryName = row.categories?.name;
+        if (!categoryName) return;
         if (!groupToProducts[row.group_id]) groupToProducts[row.group_id] = new Set();
+        (productsRes.data || []).forEach((p: any) => {
+          if (p.category === categoryName) {
+            groupToProducts[row.group_id].add(p.name);
+          }
+        });
       });
       
       // Add optional_group_items with their group names
@@ -137,12 +109,12 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
         if (!groupName) return;
         const productNames = groupToProducts[row.group_id];
         if (productNames) {
-          productNames.forEach(productName => {
+          productNames.forEach((productName: string) => {
             if (!catalog[productName]) catalog[productName] = {};
             catalog[productName][row.name] = { price: Number(row.price), groupName };
           });
         }
-        // Also add to a wildcard entry for products we can't map
+        // Wildcard entry for unmapped products
         if (!catalog['__groups__']) catalog['__groups__'] = {};
         catalog['__groups__'][row.name] = { price: Number(row.price), groupName };
       });
