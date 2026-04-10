@@ -148,7 +148,7 @@ const Index = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">Pedidos</h2>
           </div>
-          <OrderTabs filteredOrders={filteredOrders} />
+          <OrderTabs filteredOrders={filteredOrders} hideAllTab />
         </section>
       </div>
 
