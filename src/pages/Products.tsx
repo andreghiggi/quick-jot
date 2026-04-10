@@ -472,7 +472,7 @@ export default function Products() {
                           >
                             <Star className={cn("h-4 w-4", product.isNew && "fill-current")} />
                           </Button>
-                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">{product.isNew ? `Remover da seção: ${storeSettings.featuredSectionName}` : `Adicionar à seção: ${storeSettings.featuredSectionName}`}</span>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Destacar produto</span>
                         </div>
                         <div className="relative group">
                           <Button
