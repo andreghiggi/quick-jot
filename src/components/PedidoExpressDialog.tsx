@@ -41,6 +41,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { settings } = useStoreSettings({ companyId: company?.id });
   const { getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
   const activeNeighborhoods = getActiveNeighborhoods();
+  const useNeighborhoodDeliveryMode = settings.deliveryMode === 'neighborhood' && activeNeighborhoods.length > 0;
 
   const [step, setStep] = useState<Step>(1);
   const [customerPhone, setCustomerPhone] = useState('');
@@ -330,7 +331,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         if (!deliveryType) return false;
         if (deliveryType === 'entrega') {
           const hasAddress = !!(deliveryAddress.trim() && deliveryNumber.trim() && deliveryNeighborhood.trim() && deliveryReference.trim());
-          const hasFee = settings.deliveryMode === 'neighborhood'
+          const hasFee = useNeighborhoodDeliveryMode
             ? !!deliveryNeighborhood.trim()
             : !!selectedDeliveryFeeType;
           return hasAddress && hasFee;
@@ -702,7 +703,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                       <Label className="font-bold">Complemento</Label>
                       <Input value={deliveryComplement} onChange={(e) => setDeliveryComplement(e.target.value)} placeholder="Apto 01, Sala 02..." className="focus-visible:ring-primary" />
                     </div>
-                    {settings.deliveryMode !== 'neighborhood' && (
+                    {(!useNeighborhoodDeliveryMode) && (
                       <div>
                         <Label className="font-bold">Bairro *</Label>
                         <Input value={deliveryNeighborhood} onChange={(e) => setDeliveryNeighborhood(e.target.value)} placeholder="Nome do bairro" className="focus-visible:ring-primary" />
@@ -715,7 +716,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
                     {/* Delivery fee selection below address */}
                     <div className="border-t border-border pt-3 mt-1">
-                      {settings.deliveryMode === 'neighborhood' ? (
+                      {useNeighborhoodDeliveryMode ? (
                         <div>
                           <Label className="font-bold">Bairro / Taxa de entrega *</Label>
                           <Select
