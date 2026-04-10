@@ -27,6 +27,7 @@ import {
   X,
   ArrowUp,
   ArrowDown,
+  TrendingUp,
 } from 'lucide-react';
 
 interface OrderRow {
@@ -46,6 +47,7 @@ interface CustomerData {
   lastDate: string;
   totalOrders: number;
   totalSpent: number;
+  totalProductRevenue: number;
   orders: OrderRow[];
 }
 
@@ -77,13 +79,24 @@ export default function CustomerReport() {
     queryKey: ['customer-report-orders', company?.id],
     queryFn: async () => {
       if (!company?.id) return [];
-      const { data, error } = await supabase
-        .from('orders')
-        .select('id, order_code, customer_name, customer_phone, delivery_address, created_at, status, total, daily_number')
-        .eq('company_id', company.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      const [ordersRes, itemsRes] = await Promise.all([
+        supabase
+          .from('orders')
+          .select('id, order_code, customer_name, customer_phone, delivery_address, created_at, status, total, daily_number')
+          .eq('company_id', company.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('order_items')
+          .select('order_id, price, quantity')
+          .eq('company_id', company.id),
+      ]);
+      if (ordersRes.error) throw ordersRes.error;
+      // Build map of order_id -> product subtotal
+      const subtotalMap = new Map<string, number>();
+      for (const item of (itemsRes.data || [])) {
+        subtotalMap.set(item.order_id, (subtotalMap.get(item.order_id) || 0) + Number(item.price) * item.quantity);
+      }
+      return (ordersRes.data || []).map(o => ({ ...o, productSubtotal: subtotalMap.get(o.id) ?? Number(o.total) }));
     },
     enabled: !!company?.id,
   });
@@ -118,6 +131,7 @@ export default function CustomerReport() {
       if (existing) {
         existing.totalOrders += 1;
         existing.totalSpent += Number(o.total);
+        existing.totalProductRevenue += o.productSubtotal;
         existing.orders.push(orderRow);
         if (o.created_at < existing.firstDate) existing.firstDate = o.created_at;
         if (o.created_at > existing.lastDate) existing.lastDate = o.created_at;
@@ -131,6 +145,7 @@ export default function CustomerReport() {
           lastDate: o.created_at,
           totalOrders: 1,
           totalSpent: Number(o.total),
+          totalProductRevenue: o.productSubtotal,
           orders: [orderRow],
         });
       }
@@ -165,6 +180,8 @@ export default function CustomerReport() {
 
   const totalRevenue = filtered.reduce((s, c) => s + c.totalSpent, 0);
   const totalOrders = filtered.reduce((s, c) => s + c.totalOrders, 0);
+  const totalProductRevenue = filtered.reduce((s, c) => s + c.totalProductRevenue, 0);
+  const avgTicket = totalOrders > 0 ? totalProductRevenue / totalOrders : 0;
 
   const clearFilters = () => {
     setDateFrom(undefined);
@@ -183,7 +200,7 @@ export default function CustomerReport() {
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="flex items-center gap-3 p-4">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -215,6 +232,19 @@ export default function CustomerReport() {
                 <p className="text-sm text-muted-foreground">Receita Total</p>
                 <p className="text-2xl font-bold">
                   {totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <TrendingUp className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                <p className="text-2xl font-bold">
+                  {avgTicket.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
               </div>
             </CardContent>
