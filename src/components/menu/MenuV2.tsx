@@ -281,7 +281,7 @@ export function MenuV2({
                      <h1 className="text-lg font-bold text-foreground uppercase" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
                        {settings.storeName || company?.name || 'Cardápio'}
                      </h1>
-                     <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                     <div>
                        <span className={cn(
                          "inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold text-white",
                          isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
