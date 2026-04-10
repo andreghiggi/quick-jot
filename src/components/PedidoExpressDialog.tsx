@@ -12,6 +12,8 @@ import { useCategories } from '@/hooks/useCategories';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { OrderItem } from '@/types/order';
@@ -37,6 +39,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id });
   const { settings } = useStoreSettings({ companyId: company?.id });
+  const { getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
+  const activeNeighborhoods = getActiveNeighborhoods();
 
   const [step, setStep] = useState<Step>(1);
   const [customerPhone, setCustomerPhone] = useState('');
@@ -60,6 +64,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [deliveryComplement, setDeliveryComplement] = useState('');
   const [deliveryNeighborhood, setDeliveryNeighborhood] = useState('');
   const [deliveryReference, setDeliveryReference] = useState('');
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [selectedDeliveryFeeType, setSelectedDeliveryFeeType] = useState<'city' | 'interior' | ''>('');
 
   const [paymentMethod, setPaymentMethod] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -118,7 +124,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     return (item.product.price + optionalsTotal) * item.quantity;
   }
 
-  const total = cart.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+  const subtotal = cart.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+  const total = subtotal + (deliveryType === 'entrega' ? deliveryFee : 0);
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -321,7 +328,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       case 3: return customerName.trim().length >= 2;
       case 4:
         if (!deliveryType) return false;
-        if (deliveryType === 'entrega') return !!(deliveryAddress.trim() && deliveryNumber.trim() && deliveryNeighborhood.trim() && deliveryReference.trim());
+        if (deliveryType === 'entrega') {
+          const hasAddress = !!(deliveryAddress.trim() && deliveryNumber.trim() && deliveryNeighborhood.trim() && deliveryReference.trim());
+          const hasFee = settings.deliveryMode === 'neighborhood'
+            ? !!deliveryNeighborhood.trim()
+            : !!selectedDeliveryFeeType;
+          return hasAddress && hasFee;
+        }
         return true;
       case 5: return !!paymentMethod;
       default: return false;
@@ -419,6 +432,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setDeliveryComplement('');
     setDeliveryNeighborhood('');
     setDeliveryReference('');
+    setDeliveryFee(0);
+    setSelectedDeliveryFeeType('');
     setPaymentMethod('');
   }
 
@@ -647,7 +662,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             {step === 4 && (
               <div className="space-y-4">
                 <Label className="font-bold">Tipo de entrega *</Label>
-                <RadioGroup value={deliveryType} onValueChange={(v) => setDeliveryType(v as 'entrega' | 'retirada')}>
+                <RadioGroup value={deliveryType} onValueChange={(v) => {
+                  setDeliveryType(v as 'entrega' | 'retirada');
+                  if (v === 'retirada') {
+                    setDeliveryFee(0);
+                    setSelectedDeliveryFeeType('');
+                  }
+                }}>
                   <div className="grid grid-cols-2 gap-3">
                     {(['entrega', 'retirada'] as const).map(type => (
                       <label
@@ -666,6 +687,74 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
                 {deliveryType === 'entrega' && (
                   <div className="space-y-3 mt-4">
+                    {/* Delivery fee selection */}
+                    {settings.deliveryMode === 'neighborhood' ? (
+                      <div>
+                        <Label className="font-bold">Bairro / Taxa de entrega *</Label>
+                        <Select
+                          value={deliveryNeighborhood}
+                          onValueChange={(val) => {
+                            const found = activeNeighborhoods.find(n => n.neighborhoodName === val);
+                            setDeliveryNeighborhood(val);
+                            setDeliveryFee(found ? found.deliveryFee : 0);
+                          }}
+                        >
+                          <SelectTrigger className="focus:ring-primary">
+                            <SelectValue placeholder="Selecione o bairro" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {activeNeighborhoods.map(n => (
+                              <SelectItem key={n.id} value={n.neighborhoodName}>
+                                {n.neighborhoodName} — R$ {n.deliveryFee.toFixed(2)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div>
+                        <Label className="font-bold">Região de entrega *</Label>
+                        <RadioGroup
+                          value={selectedDeliveryFeeType}
+                          onValueChange={(v) => {
+                            const feeType = v as 'city' | 'interior';
+                            setSelectedDeliveryFeeType(feeType);
+                            setDeliveryFee(feeType === 'city' ? settings.deliveryFeeCity : settings.deliveryFeeInterior);
+                          }}
+                        >
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className={cn(
+                              "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
+                              selectedDeliveryFeeType === 'city' ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                            )}>
+                              <RadioGroupItem value="city" />
+                              <div>
+                                <span className="font-medium">Cidade</span>
+                                <p className="text-xs text-muted-foreground">R$ {settings.deliveryFeeCity.toFixed(2)}</p>
+                              </div>
+                            </label>
+                            <label className={cn(
+                              "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
+                              selectedDeliveryFeeType === 'interior' ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                            )}>
+                              <RadioGroupItem value="interior" />
+                              <div>
+                                <span className="font-medium">Interior</span>
+                                <p className="text-xs text-muted-foreground">R$ {settings.deliveryFeeInterior.toFixed(2)}</p>
+                              </div>
+                            </label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    )}
+
+                    {deliveryFee > 0 && (
+                      <div className="bg-primary/5 rounded-lg p-3 flex justify-between items-center">
+                        <span className="text-sm font-medium">Taxa de entrega:</span>
+                        <span className="text-sm font-bold text-primary">R$ {deliveryFee.toFixed(2)}</span>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:items-end">
                       <div className="min-w-0">
                         <Label className="block leading-snug whitespace-normal break-words font-bold">Logradouro (rua, avenida, travessa) *</Label>
@@ -680,10 +769,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                       <Label className="font-bold">Complemento</Label>
                       <Input value={deliveryComplement} onChange={(e) => setDeliveryComplement(e.target.value)} placeholder="Apto 01, Sala 02..." className="focus-visible:ring-primary" />
                     </div>
-                    <div>
-                      <Label className="font-bold">Bairro *</Label>
-                      <Input value={deliveryNeighborhood} onChange={(e) => setDeliveryNeighborhood(e.target.value)} placeholder="Nome do bairro" className="focus-visible:ring-primary" />
-                    </div>
+                    {settings.deliveryMode !== 'neighborhood' && (
+                      <div>
+                        <Label className="font-bold">Bairro *</Label>
+                        <Input value={deliveryNeighborhood} onChange={(e) => setDeliveryNeighborhood(e.target.value)} placeholder="Nome do bairro" className="focus-visible:ring-primary" />
+                      </div>
+                    )}
                     <div>
                       <Label className="font-bold">Ponto de referência *</Label>
                       <Input value={deliveryReference} onChange={(e) => setDeliveryReference(e.target.value)} placeholder="Próximo ao mercado, em frente à escola..." className="focus-visible:ring-primary" />
@@ -785,9 +876,21 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                       })()}
                     </div>
 
-                    <div className="border-t border-border pt-2 mt-2 flex justify-between font-bold text-lg">
-                      <span>Total</span>
-                      <span className="text-primary">R$ {total.toFixed(2)}</span>
+                    <div className="border-t border-border pt-2 mt-2 space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>Subtotal</span>
+                        <span>R$ {subtotal.toFixed(2)}</span>
+                      </div>
+                      {deliveryType === 'entrega' && deliveryFee > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>Taxa de entrega</span>
+                          <span>R$ {deliveryFee.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-lg pt-1">
+                        <span>Total</span>
+                        <span className="text-primary">R$ {total.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
                 )}
