@@ -53,7 +53,8 @@ const nextStatusLabel: Record<OrderStatus, string> = {
 
 export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech' }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
-  const config = statusConfig[order.status];
+  const { company } = useAuthContext();
+  const isLancheriaI9 = company?.name?.toLowerCase().includes('lancheria da i9');
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   // Converter para fuso horário de São Paulo
