@@ -8,9 +8,10 @@ interface StatsCardProps {
   trend?: string;
   color?: 'primary' | 'warning' | 'success' | 'muted';
   className?: string;
+  action?: ReactNode;
 }
 
-export function StatsCard({ title, value, icon, trend, color = 'primary', className }: StatsCardProps) {
+export function StatsCard({ title, value, icon, trend, color = 'primary', className, action }: StatsCardProps) {
   const colorClasses = {
     primary: 'bg-primary/10 text-primary',
     warning: 'bg-yellow-500/10 text-yellow-600',
@@ -24,14 +25,17 @@ export function StatsCard({ title, value, icon, trend, color = 'primary', classN
       className
     )}>
       <div className="flex items-start justify-between">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-sm text-muted-foreground mb-1">{title}</p>
-          <p className="text-2xl font-bold text-foreground">{value}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-2xl font-bold text-foreground truncate">{value}</p>
+            {action}
+          </div>
           {trend && (
             <p className="text-xs text-success mt-1">{trend}</p>
           )}
         </div>
-        <div className={cn("p-2.5 rounded-lg", colorClasses[color])}>
+        <div className={cn("p-2.5 rounded-lg shrink-0", colorClasses[color])}>
           {icon}
         </div>
       </div>

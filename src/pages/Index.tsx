@@ -6,9 +6,8 @@ import { NewOrderDialog } from '@/components/NewOrderDialog';
 import { OrderDateFilter } from '@/components/OrderDateFilter';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Plus, ShoppingBag, Clock, DollarSign, TrendingUp, Loader2, RefreshCw, Zap } from 'lucide-react';
+import { Plus, Clock, CheckCircle, Truck, ShoppingBag, TrendingUp, DollarSign, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 
 const Index = () => {
@@ -17,15 +16,12 @@ const Index = () => {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [activePeriod, setActivePeriod] = useState<'today' | '7d' | '15d' | '30d' | 'all'>('today');
+  const [showRevenue, setShowRevenue] = useState(false);
   const { orders, loading } = useOrderContext();
   const { company } = useAuthContext();
-  const { settings } = useStoreSettings({ companyId: company?.id });
-  
-  
 
-  // Helper: get date string in São Paulo timezone (YYYY-MM-DD)
   const toSPDateString = (date: Date) => {
-    return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }); // en-CA gives YYYY-MM-DD
+    return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
   };
 
   const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
@@ -50,15 +46,11 @@ const Index = () => {
 
   const pendingCount = filteredOrders.filter(o => o.status === 'pending').length;
   const preparingCount = filteredOrders.filter(o => o.status === 'preparing').length;
+  const readyCount = filteredOrders.filter(o => o.status === 'ready').length;
+  const deliveredCount = filteredOrders.filter(o => o.status === 'delivered').length;
   const revenue = filteredOrders
     .filter(o => o.status === 'delivered')
     .reduce((sum, o) => sum + o.total, 0);
-
-  const showPedidosHoje = settings.showCardPedidosHoje;
-  const showAguardando = settings.showCardAguardando;
-  const showFaturamento = settings.showCardFaturamento;
-  const showTotalPedidos = settings.showCardTotalPedidos;
-  const hasVisibleCards = showPedidosHoje || showAguardando || showFaturamento || showTotalPedidos;
 
   if (loading) {
     return (
@@ -90,7 +82,6 @@ const Index = () => {
       }
     >
       <div className="space-y-6">
-        {/* Date Filter */}
         <OrderDateFilter
           startDate={startDate}
           endDate={endDate}
@@ -101,41 +92,53 @@ const Index = () => {
           onPeriodChange={setActivePeriod}
         />
 
-        {/* Stats */}
-        {hasVisibleCards && (
-          <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {showPedidosHoje && (
-              <StatsCard
-                title="Pedidos no Período"
-                value={filteredOrders.length}
-                icon={<ShoppingBag className="w-5 h-5" />}
-              />
-            )}
-            {showAguardando && (
-              <StatsCard
-                title="Aguardando"
-                value={pendingCount + preparingCount}
-                icon={<Clock className="w-5 h-5" />}
-              />
-            )}
-            {showFaturamento && (
-              <StatsCard
-                title="Faturamento no Período"
-                value={`R$ ${revenue.toFixed(2)}`}
-                icon={<DollarSign className="w-5 h-5" />}
-              />
-            )}
-            {showTotalPedidos && (
-              <StatsCard
-                title="Total de Pedidos"
-                value={filteredOrders.length}
-                icon={<TrendingUp className="w-5 h-5" />}
-              />
-            )}
-          </section>
-        )}
+        <section className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <StatsCard
+            title="Pendentes"
+            value={pendingCount}
+            icon={<Clock className="w-5 h-5" />}
+            color="warning"
+          />
+          <StatsCard
+            title="Preparando"
+            value={preparingCount}
+            icon={<ShoppingBag className="w-5 h-5" />}
+            color="primary"
+          />
+          <StatsCard
+            title="Prontos"
+            value={readyCount}
+            icon={<CheckCircle className="w-5 h-5" />}
+            color="success"
+          />
+          <StatsCard
+            title="Entregues"
+            value={deliveredCount}
+            icon={<Truck className="w-5 h-5" />}
+            color="success"
+          />
+          <StatsCard
+            title="Total de Pedidos"
+            value={filteredOrders.length}
+            icon={<TrendingUp className="w-5 h-5" />}
+          />
+          <StatsCard
+            title="Faturamento no Período"
+            value={showRevenue ? `R$ ${revenue.toFixed(2)}` : 'R$ ••••••'}
+            icon={<DollarSign className="w-5 h-5" />}
+            color="muted"
+            action={
+              <button
+                onClick={() => setShowRevenue(prev => !prev)}
+                className="p-1 rounded-md hover:bg-muted transition-colors"
+                title={showRevenue ? 'Ocultar valor' : 'Mostrar valor'}
+              >
+                {showRevenue ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
+              </button>
+            }
+          />
+        </section>
 
-        {/* Orders Section */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">Pedidos</h2>
