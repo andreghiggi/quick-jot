@@ -80,7 +80,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
       }));
 
       // Only update state if data actually changed to prevent unnecessary re-renders
-      const ordersJson = JSON.stringify(mappedOrders.map(o => ({ id: o.id, status: o.status, total: o.total, items: o.items.length })));
+      const ordersJson = JSON.stringify(mappedOrders.map(o => ({ id: o.id, status: o.status, total: o.total, items: o.items.length, confirmedAt: o.confirmedAt?.toISOString() })));
       if (ordersJson !== prevOrdersJsonRef.current) {
         prevOrdersJsonRef.current = ordersJson;
         setOrders(mappedOrders);
