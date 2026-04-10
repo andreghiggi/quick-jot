@@ -25,6 +25,8 @@ import {
   ShoppingCart,
   Loader2,
   X,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 
 interface OrderRow {
