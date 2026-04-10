@@ -456,6 +456,7 @@ export default function Menu() {
       product: selectedProduct,
       quantity: 1,
       selectedOptionals: allOptionals,
+      groupedOptionalNames: groupedOptionalNames.length > 0 ? groupedOptionalNames : undefined,
       notes: itemNotes || undefined,
     };
 
