@@ -8,10 +8,12 @@ import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Plus, ShoppingBag, Clock, DollarSign, TrendingUp, Loader2, RefreshCw } from 'lucide-react';
+import { Plus, ShoppingBag, Clock, DollarSign, TrendingUp, Loader2, RefreshCw, Zap } from 'lucide-react';
+import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 
 const Index = () => {
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
+  const [isPedidoExpressOpen, setIsPedidoExpressOpen] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const { orders, loading } = useOrderContext();
