@@ -382,10 +382,6 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       status: 'pending',
     });
 
-    if (success) {
-      if (selectedPM?.name?.toLowerCase().includes('pix') && selectedPM.pix_key && phoneDigits) {
-        await sendPixKeyViaWhatsApp(phoneDigits, selectedPM.pix_key);
-      }
       toast.success('Pedido Express criado com sucesso!');
       resetForm();
       onOpenChange(false);
