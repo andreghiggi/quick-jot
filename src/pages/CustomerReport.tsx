@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { OrderDetailDialog } from '@/components/OrderDetailDialog';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -66,6 +67,7 @@ export default function CustomerReport() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['customer-report-orders', company?.id],
@@ -325,22 +327,26 @@ export default function CustomerReport() {
                                       {customer.orders
                                         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                                         .map((order) => (
-                                          <TableRow key={order.id}>
-                                            <TableCell className="font-mono text-sm">
-                                              #{order.daily_number || order.order_code}
-                                            </TableCell>
-                                            <TableCell>
-                                              {format(new Date(order.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                                            </TableCell>
-                                            <TableCell>
-                                              <Badge variant="secondary" className={cn('text-xs', statusColors[order.status])}>
-                                                {statusLabels[order.status] || order.status}
-                                              </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right font-medium">
-                                              {order.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                                            </TableCell>
-                                          </TableRow>
+                                          <TableRow 
+                                            key={order.id} 
+                                            className="cursor-pointer hover:bg-muted/50"
+                                            onClick={() => setSelectedOrderId(order.id)}
+                                          >
+                                             <TableCell className="font-mono text-sm">
+                                               #{order.daily_number || order.order_code}
+                                             </TableCell>
+                                             <TableCell>
+                                               {format(new Date(order.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                             </TableCell>
+                                             <TableCell>
+                                               <Badge variant="secondary" className={cn('text-xs', statusColors[order.status])}>
+                                                 {statusLabels[order.status] || order.status}
+                                               </Badge>
+                                             </TableCell>
+                                             <TableCell className="text-right font-medium">
+                                               {order.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                             </TableCell>
+                                           </TableRow>
                                         ))}
                                     </TableBody>
                                   </Table>
@@ -358,6 +364,12 @@ export default function CustomerReport() {
           </CardContent>
         </Card>
       </div>
+
+      <OrderDetailDialog
+        orderId={selectedOrderId}
+        open={!!selectedOrderId}
+        onOpenChange={(open) => { if (!open) setSelectedOrderId(null); }}
+      />
     </AppLayout>
   );
 }
