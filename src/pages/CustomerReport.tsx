@@ -76,10 +76,10 @@ export default function CustomerReport() {
   const [sortField, setSortField] = useState<'name' | 'totalOrders' | 'totalSpent' | 'lastDate'>('lastDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const { data: orders, isLoading } = useQuery({
+  const { data: reportData, isLoading } = useQuery({
     queryKey: ['customer-report-orders', company?.id],
     queryFn: async () => {
-      if (!company?.id) return [];
+      if (!company?.id) return { orders: [], allCustomers: [] };
       const [ordersRes, itemsRes, customersRes] = await Promise.all([
         supabase
           .from('orders')
@@ -92,7 +92,7 @@ export default function CustomerReport() {
           .eq('company_id', company.id),
         supabase
           .from('customers')
-          .select('phone, birth_date')
+          .select('name, phone, address, birth_date, created_at')
           .eq('company_id', company.id),
       ]);
       if (ordersRes.error) throw ordersRes.error;
@@ -104,11 +104,12 @@ export default function CustomerReport() {
       for (const c of (customersRes.data || [])) {
         if (c.phone) birthDateMap.set(c.phone, c.birth_date);
       }
-      return (ordersRes.data || []).map(o => ({
+      const enrichedOrders = (ordersRes.data || []).map(o => ({
         ...o,
         productSubtotal: subtotalMap.get(o.id) ?? Number(o.total),
         birthDate: o.customer_phone ? (birthDateMap.get(o.customer_phone) || null) : null,
       }));
+      return { orders: enrichedOrders, allCustomers: customersRes.data || [] };
     },
     enabled: !!company?.id,
   });
