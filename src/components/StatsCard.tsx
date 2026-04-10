@@ -20,7 +20,7 @@ export function StatsCard({ title, value, icon, trend, color = 'primary', classN
   };
   return (
     <div className={cn(
-      "bg-card rounded-xl p-4 shadow-card border border-border",
+      "bg-card rounded-xl p-3 shadow-card border border-border",
       "hover:shadow-lg transition-shadow duration-200",
       className
     )}>
