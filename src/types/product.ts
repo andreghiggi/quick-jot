@@ -27,5 +27,6 @@ export interface CartItem {
   product: Product;
   quantity: number;
   selectedOptionals: ProductOptional[];
+  groupedOptionalNames?: string[];
   notes?: string;
 }
