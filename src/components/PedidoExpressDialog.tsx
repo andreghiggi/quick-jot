@@ -717,7 +717,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   <div className="bg-muted rounded-lg p-4 space-y-3 mt-4 max-h-[50vh] overflow-y-auto">
                     <div className="flex items-center gap-2 mb-2">
                       <ShoppingBag className="w-4 h-4 text-primary" />
-                      <span className="font-semibold text-base">Resumo Final</span>
+                      <span className="font-semibold text-base">Resumo do Pedido</span>
                     </div>
 
                     <div className="space-y-1">
