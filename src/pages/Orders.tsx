@@ -7,7 +7,7 @@ import { StatsCard } from '@/components/StatsCard';
 import { NewOrderDialog } from '@/components/NewOrderDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { OrderDateFilter } from '@/components/OrderDateFilter';
-import { ShoppingBag, Clock, CheckCircle, Truck, Plus, Zap } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle, Truck, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Order } from '@/types/order';
 
@@ -58,7 +58,7 @@ function OrdersContent() {
       actions={
         isLancheriaI9 ? (
           <Button onClick={() => setIsPedidoExpressOpen(true)} className="gap-2">
-            <Zap className="w-4 h-4" />
+            <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Pedido Express</span>
           </Button>
         ) : (
