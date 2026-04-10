@@ -127,6 +127,7 @@ const Index = () => {
             value={showRevenue ? `R$ ${revenue.toFixed(2)}` : 'R$ ••••••'}
             icon={<DollarSign className="w-5 h-5" />}
             color="muted"
+            className="col-span-2 min-w-[200px]"
             action={
               <button
                 onClick={() => setShowRevenue(prev => !prev)}
