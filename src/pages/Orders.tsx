@@ -19,7 +19,7 @@ function OrdersContent() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
-  const isLancheriaI9 = company?.name?.toLowerCase().includes('lancheria da i9');
+  
 
   const filteredOrders = useMemo(() => {
     if (!startDate && !endDate) return orders;
@@ -56,17 +56,10 @@ function OrdersContent() {
       title="Pedidos" 
       subtitle="Gerencie os pedidos da sua empresa"
       actions={
-        isLancheriaI9 ? (
-          <Button onClick={() => setIsPedidoExpressOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Pedido Express</span>
-          </Button>
-        ) : (
-          <Button onClick={() => setIsNewOrderOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Novo Pedido</span>
-          </Button>
-        )
+        <Button onClick={() => setIsPedidoExpressOpen(true)} className="gap-2">
+          <Plus className="w-4 h-4" />
+          <span className="hidden sm:inline">Pedido Express</span>
+        </Button>
       }
     >
       <div className="space-y-6">
@@ -112,7 +105,7 @@ function OrdersContent() {
       </div>
 
       <NewOrderDialog open={isNewOrderOpen} onOpenChange={setIsNewOrderOpen} />
-      {isLancheriaI9 && <PedidoExpressDialog open={isPedidoExpressOpen} onOpenChange={setIsPedidoExpressOpen} />}
+      <PedidoExpressDialog open={isPedidoExpressOpen} onOpenChange={setIsPedidoExpressOpen} />
     </AppLayout>
   );
 }
