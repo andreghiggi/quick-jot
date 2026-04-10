@@ -97,15 +97,29 @@ export default function PDV() {
 
   const mesasEnabled = isModuleEnabled('mesas');
 
-  // TEF Multiplus Card state
+  // TEF Multiplus Card (SmartPOS) state
   const [tefEnabled, setTefEnabled] = useState(false);
   const [tefProcessing, setTefProcessing] = useState(false);
   const [tefStatus, setTefStatus] = useState<string>('');
   const [tefResult, setTefResult] = useState<MultiplusCardPaymentResponse | null>(null);
 
+  // TEF PinPad state
+  const [pinpadEnabled, setPinpadEnabled] = useState(false);
+  const [pinpadResult, setPinpadResult] = useState<PinpadTransactionResult | null>(null);
+
+  // TEF mode: 'smartpos' or 'pinpad' — auto-selected based on what's configured
+  const [tefMode, setTefMode] = useState<'smartpos' | 'pinpad'>('smartpos');
+
   useEffect(() => {
     if (company?.id) {
-      isMultiplusCardConfigured(company.id).then(setTefEnabled);
+      isMultiplusCardConfigured(company.id).then(enabled => {
+        setTefEnabled(enabled);
+        if (enabled) setTefMode('smartpos');
+      });
+      isPinpadConfigured(company.id).then(enabled => {
+        setPinpadEnabled(enabled);
+        if (enabled && !tefEnabled) setTefMode('pinpad');
+      });
     }
   }, [company?.id]);
 
