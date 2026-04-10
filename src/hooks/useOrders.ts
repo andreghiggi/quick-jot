@@ -66,6 +66,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         companyId: order.company_id || undefined,
         printed: (order as any).printed || false,
         printedAt: (order as any).printed_at ? new Date((order as any).printed_at) : undefined,
+        confirmedAt: (order as any).confirmed_at ? new Date((order as any).confirmed_at) : undefined,
         items: itemsData
           .filter((item) => item.order_id === order.id)
           .map((item) => ({

@@ -24,6 +24,7 @@ export interface Order {
   companyId?: string;
   printed?: boolean;
   printedAt?: Date;
+  confirmedAt?: Date;
 }
 
 export interface Product {
