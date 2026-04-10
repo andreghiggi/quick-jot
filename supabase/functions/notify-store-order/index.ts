@@ -176,6 +176,45 @@ serve(async (req) => {
       status: res.ok ? 'sent' : 'failed',
     });
 
+    // ─── CUSTOMER CONFIRMATION: send "aguardando confirmação" to customer ───
+    let customerConfirmSent = false;
+    if (order.customer_phone) {
+      try {
+        const firstName = order.customer_name.split(' ')[0];
+        const confirmMsg = `${firstName}, seu pedido foi enviado e está aguardando confirmação do estabelecimento.\n\nAssim que seu pedido for confirmado, você será notificado por aqui. 😊`;
+        const custPhone = order.customer_phone.replace(/\D/g, '');
+        const custFullPhone = custPhone.startsWith('55') ? custPhone : `55${custPhone}`;
+
+        const custRes = await fetch(`${baseUrl}/message/sendText/${instanceData.instance_name}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': EVOLUTION_API_KEY,
+          },
+          body: JSON.stringify({
+            number: custFullPhone,
+            text: confirmMsg,
+            linkPreview: false,
+          }),
+        });
+
+        const custData = await custRes.json();
+        console.log('Customer confirmation sent:', custRes.ok, JSON.stringify(custData).slice(0, 200));
+
+        await supabase.from('whatsapp_messages').insert({
+          company_id: companyId,
+          order_id: orderId,
+          phone: custFullPhone,
+          message: confirmMsg,
+          status: custRes.ok ? 'sent' : 'failed',
+        });
+
+        customerConfirmSent = custRes.ok;
+      } catch (custError) {
+        console.error('Customer confirmation error:', custError);
+      }
+    }
+
     // ─── SCHEDULED ORDER: send confirmation to customer if outside business hours ───
     let scheduledSent = false;
     if (order.customer_phone) {
@@ -304,7 +343,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent: res.ok, scheduledSent }),
+      JSON.stringify({ ok: true, sent: res.ok, customerConfirmSent, scheduledSent }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
