@@ -326,7 +326,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                 </div>
                 {isLancheriaI9 && extras.length > 0 && (
                   <div className="ml-4 mt-0.5">
-                    <p className="text-xs text-muted-foreground font-medium">Extras:</p>
+                    <p className="text-xs text-muted-foreground font-bold">Extras:</p>
                     {extras.map((extra, i) => (
                       <p key={i} className="text-xs text-muted-foreground ml-2">+ {extra}</p>
                     ))}
@@ -334,7 +334,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                 )}
                 {isLancheriaI9 && opcionais.length > 0 && (
                   <div className="ml-4 mt-0.5">
-                    <p className="text-xs text-muted-foreground font-medium">Opcionais:</p>
+                    <p className="text-xs text-muted-foreground font-bold">Opcionais:</p>
                     {opcionais.map((opc, i) => (
                       <p key={i} className="text-xs text-muted-foreground ml-2">+ {opc}</p>
                     ))}
@@ -342,7 +342,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                 )}
                 {item.notes && (
                   <p className="text-xs text-muted-foreground italic ml-4">
-                    ↳ Observação: {item.notes}
+                    ↳ <span className="font-bold not-italic">Observação:</span> {item.notes}
                   </p>
                 )}
               </div>
