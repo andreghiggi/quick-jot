@@ -372,7 +372,7 @@ export function MenuV2({
       ) : (
         /* Category Grid */
         <main className="container mx-auto px-4 py-6">
-          <h2 className="text-base font-semibold text-foreground mb-4">Categorias</h2>
+          
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {allOrderedCategories.map((category, index) => (
               <button
