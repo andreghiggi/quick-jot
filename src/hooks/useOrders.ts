@@ -304,6 +304,12 @@ export function useOrders(options: UseOrdersOptions = {}) {
         return false;
       }
 
+      // Guard: if already confirmed, skip sending
+      if (order.confirmedAt) {
+        toast.info('Este pedido já foi confirmado anteriormente.');
+        return false;
+      }
+
       const { data: moduleData } = await supabase
         .from('company_modules')
         .select('enabled')
