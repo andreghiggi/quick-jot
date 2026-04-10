@@ -456,12 +456,18 @@ export default function OptionalGroups() {
                               />
                               <ImageIcon className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
                             </label>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingItem({ id: item.id, name: item.name, price: item.price.toFixed(2), active: item.active })}>
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteItem(item.id)}>
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
+                            <div className="relative group">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingItem({ id: item.id, name: item.name, price: item.price.toFixed(2), active: item.active })}>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Editar opcional</span>
+                            </div>
+                            <div className="relative group">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteItem(item.id)}>
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Excluir opcional</span>
+                            </div>
                           </div>
                         </div>
                       ))}
