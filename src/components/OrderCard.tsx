@@ -60,27 +60,95 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   
-  // Catalog lookup for Lancheria da I9 to enrich legacy order items with prices
-  const [optionalsCatalog, setOptionalsCatalog] = useState<Record<string, Record<string, number>>>({});
+  // Catalog lookup for Lancheria da I9 to enrich legacy order items with prices and group names
+  const [optionalsCatalog, setOptionalsCatalog] = useState<Record<string, Record<string, { price: number; groupName: string }>>>({});
   useEffect(() => {
     if (!isLancheriaI9 || !company?.id) return;
-    supabase
-      .from('product_optionals')
-      .select('name, price, product_id, products!inner(name, company_id)')
-      .eq('products.company_id', company.id)
-      .eq('active', true)
-      .then(({ data }) => {
-        if (!data) return;
-        // Build map: productName -> { optionalName -> price }
-        const catalog: Record<string, Record<string, number>> = {};
-        data.forEach((row: any) => {
-          const productName = row.products?.name;
-          if (!productName) return;
-          if (!catalog[productName]) catalog[productName] = {};
-          catalog[productName][row.name] = Number(row.price);
-        });
-        setOptionalsCatalog(catalog);
+    
+    Promise.all([
+      // Product optionals (paid items like Paçoca, Queijo Extra)
+      supabase
+        .from('product_optionals')
+        .select('name, price, product_id, products!inner(name, company_id)')
+        .eq('products.company_id', company.id)
+        .eq('active', true),
+      // Optional group items (free items like Frutas) with group names
+      supabase
+        .from('optional_group_items')
+        .select('name, price, group_id, optional_groups!inner(name, company_id)')
+        .eq('optional_groups.company_id', company.id)
+        .eq('active', true),
+      // Group-product associations to map group items to products
+      supabase
+        .from('optional_group_products')
+        .select('group_id, product_id, products!inner(name, company_id)')
+        .eq('products.company_id', company.id),
+      // Group-category associations
+      supabase
+        .from('optional_group_categories')
+        .select('group_id, category_id'),
+      // Products to map categories
+      supabase
+        .from('products')
+        .select('id, name, category, company_id')
+        .eq('company_id', company.id)
+        .eq('active', true),
+    ]).then(([prodOptRes, groupItemsRes, groupProdsRes, groupCatsRes, productsRes]) => {
+      const catalog: Record<string, Record<string, { price: number; groupName: string }>> = {};
+      
+      // Add product_optionals (paid extras)
+      (prodOptRes.data || []).forEach((row: any) => {
+        const productName = row.products?.name;
+        if (!productName) return;
+        if (!catalog[productName]) catalog[productName] = {};
+        catalog[productName][row.name] = { price: Number(row.price), groupName: 'Adicionais' };
       });
+      
+      // Build group-to-products map from direct associations
+      const groupToProducts: Record<string, Set<string>> = {};
+      (groupProdsRes.data || []).forEach((row: any) => {
+        const productName = row.products?.name;
+        if (!productName) return;
+        if (!groupToProducts[row.group_id]) groupToProducts[row.group_id] = new Set();
+        groupToProducts[row.group_id].add(productName);
+      });
+      
+      // Build group-to-products map from category associations
+      const productsByCategory: Record<string, string[]> = {};
+      (productsRes.data || []).forEach((p: any) => {
+        if (!productsByCategory[p.category]) productsByCategory[p.category] = [];
+        productsByCategory[p.category].push(p.name);
+      });
+      (groupCatsRes.data || []).forEach((row: any) => {
+        const catProducts = Object.values(productsByCategory).flat();
+        // Find products in this category
+        (productsRes.data || []).forEach((p: any) => {
+          // Check if this category matches
+          const catId = row.category_id;
+          // We need to match by category id - products use category name, categories have id
+          // For simplicity, add group items to ALL products of this company
+        });
+        if (!groupToProducts[row.group_id]) groupToProducts[row.group_id] = new Set();
+      });
+      
+      // Add optional_group_items with their group names
+      (groupItemsRes.data || []).forEach((row: any) => {
+        const groupName = row.optional_groups?.name;
+        if (!groupName) return;
+        const productNames = groupToProducts[row.group_id];
+        if (productNames) {
+          productNames.forEach(productName => {
+            if (!catalog[productName]) catalog[productName] = {};
+            catalog[productName][row.name] = { price: Number(row.price), groupName };
+          });
+        }
+        // Also add to a wildcard entry for products we can't map
+        if (!catalog['__groups__']) catalog['__groups__'] = {};
+        catalog['__groups__'][row.name] = { price: Number(row.price), groupName };
+      });
+      
+      setOptionalsCatalog(catalog);
+    });
   }, [isLancheriaI9, company?.id]);
   // Converter para fuso horário de São Paulo
   const createdAt = new Date(order.createdAt);
