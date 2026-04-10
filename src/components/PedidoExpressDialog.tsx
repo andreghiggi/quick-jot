@@ -627,11 +627,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   type="button"
                   variant="outline"
                   className="w-full"
-                   onClick={() => {
+                  onClick={() => {
                     setCustomerPhone('(99) 99999-9999');
                     setCustomerName('Cliente Loja');
                     setCustomerFound(true);
                     setDeliveryType('retirada');
+                    setStep(5);
                   }}
                 >
                   🏪 Sem telefone — usar "Cliente Loja"
