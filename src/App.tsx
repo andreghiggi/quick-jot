@@ -185,6 +185,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
+      <Route path="/relatorios/clientes" element={
+        <ProtectedRoute requireCompany>
+          <CustomerReport />
+        </ProtectedRoute>
+      } />
+      
       <Route path="/garcom" element={
         <ProtectedRoute requireCompany>
           <Waiter />
