@@ -5,6 +5,7 @@ import { cn, formatPrice } from '@/lib/utils';
 interface NovidadesSlideshowProps {
   products: Product[];
   onProductSelect: (product: Product) => void;
+  sectionTitle?: string;
 }
 
 function ProductCard({ product, onClick }: { product: Product; onClick: () => void }) {
@@ -33,7 +34,7 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
   );
 }
 
-export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlideshowProps) {
+export function NovidadesSlideshow({ products, onProductSelect, sectionTitle = 'Novidades' }: NovidadesSlideshowProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [offset, setOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -146,7 +147,7 @@ export function NovidadesSlideshow({ products, onProductSelect }: NovidadesSlide
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-bold text-primary bg-white rounded-full px-3 py-1 flex items-center gap-1.5">
-            ⭐ NOVIDADES
+            ⭐ {sectionTitle.toUpperCase()}
           </h2>
           {totalProducts > 1 && (
             <div className="flex gap-1.5">
