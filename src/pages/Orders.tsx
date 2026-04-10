@@ -7,7 +7,7 @@ import { StatsCard } from '@/components/StatsCard';
 import { NewOrderDialog } from '@/components/NewOrderDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { OrderDateFilter } from '@/components/OrderDateFilter';
-import { ShoppingBag, Clock, CheckCircle, Truck, Plus, Zap } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle, Truck, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Order } from '@/types/order';
 
