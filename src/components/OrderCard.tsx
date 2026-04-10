@@ -291,16 +291,37 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       <div className="border-t border-border pt-3 mb-3">
         <div className="space-y-1.5">
           {order.items.map((item) => (
-            <div key={item.id} className="flex justify-between text-sm">
-              <span className="text-foreground">
-                {item.quantity}x {item.name}
-              </span>
-              <span className="text-muted-foreground">
-                R$ {(item.price * item.quantity).toFixed(2)}
-              </span>
+            <div key={item.id}>
+              <div className="flex justify-between text-sm">
+                <span className="text-foreground">
+                  {item.quantity}x {item.name}
+                </span>
+                <span className="text-muted-foreground">
+                  R$ {(item.price * item.quantity).toFixed(2)}
+                </span>
+              </div>
+              {item.notes && (
+                <p className="text-xs text-muted-foreground italic ml-4">
+                  ↳ {item.notes}
+                </p>
+              )}
             </div>
           ))}
         </div>
+
+        {/* Payment method & delivery type extracted from notes */}
+        {order.notes && (() => {
+          const paymentMatch = order.notes?.match(/Pagamento:\s*([^|()\n]+)/i);
+          const isDelivery = !!order.deliveryAddress;
+          return (
+            <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+              {paymentMatch && (
+                <p>💳 Pagamento: {paymentMatch[1].trim()}</p>
+              )}
+              <p>{isDelivery ? '🛵 Entrega' : '🤲 Retirada'}</p>
+            </div>
+          );
+        })()}
       </div>
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
