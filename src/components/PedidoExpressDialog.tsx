@@ -35,6 +35,7 @@ interface CartItem {
   price: number;
   quantity: number;
   optionals: CartItemOptional[];
+  imageUrl?: string | null;
 }
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -56,7 +57,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectingProduct, setSelectingProduct] = useState<{ id: string; name: string; price: number; category: string } | null>(null);
+  const [selectingProduct, setSelectingProduct] = useState<{ id: string; name: string; price: number; category: string; imageUrl?: string | null } | null>(null);
   const [selectedOptionals, setSelectedOptionals] = useState<Record<string, Set<string>>>({});
 
   const [deliveryType, setDeliveryType] = useState<'entrega' | 'retirada' | ''>('');
@@ -159,7 +160,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
   }, [phoneDigits, searchCustomer]);
 
-  function handleProductClick(product: { id: string; name: string; price: number; category: string }) {
+  function handleProductClick(product: { id: string; name: string; price: number; category: string; imageUrl?: string | null }) {
     const applicableGroups = getGroupsForProduct(product.id, product.category);
     if (applicableGroups.length > 0) {
       setSelectingProduct(product);
@@ -169,7 +170,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
   }
 
-  function addToCartSimple(product: { id: string; name: string; price: number }) {
+  function addToCartSimple(product: { id: string; name: string; price: number; imageUrl?: string | null }) {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id && item.optionals.length === 0);
       if (existing) {
@@ -177,7 +178,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           item.id === product.id && item.optionals.length === 0 ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: 1, optionals: [] }];
+      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: 1, optionals: [], imageUrl: product.imageUrl }];
     });
   }
 
@@ -207,7 +208,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
 
     const cartKey = `${product.id}_${opts.map(o => o.itemName).sort().join(',')}`;
-    setCart(prev => [...prev, { id: cartKey, name: product.name, price: product.price, quantity: 1, optionals: opts }]);
+    setCart(prev => [...prev, { id: cartKey, name: product.name, price: product.price, quantity: 1, optionals: opts, imageUrl: product.imageUrl }]);
     setSelectingProduct(null);
     setSelectedOptionals({});
   }
@@ -441,35 +442,38 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
                     {filteredProducts.map((product) => {
                       const quantity = getCartQuantity(product.id);
                       return (
                         <div
                           key={product.id}
                           className={cn(
-                            "p-3 rounded-lg border border-border bg-card hover:border-green-400/50 transition-colors",
+                            "rounded-lg border border-border bg-card hover:border-green-400/50 transition-colors overflow-hidden",
                             quantity > 0 && "border-green-500 bg-green-50 dark:bg-green-950/30"
                           )}
                         >
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex-1">
-                              <p className="font-medium text-sm text-foreground">{product.name}</p>
-                              <p className="text-green-600 dark:text-green-400 font-semibold">R$ {product.price.toFixed(2)}</p>
+                          {product.imageUrl && (
+                            <div className="w-full h-24 overflow-hidden">
+                              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                             </div>
-                          </div>
-                          <div className="flex items-center justify-end gap-2">
-                            {quantity > 0 && (
-                              <>
-                                <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => removeFromCart(product.id)}>
-                                  <Minus className="w-3 h-3" />
-                                </Button>
-                                <span className="w-6 text-center font-semibold">{quantity}</span>
-                              </>
-                            )}
-                            <Button size="icon" variant={quantity > 0 ? 'default' : 'outline'} className="h-7 w-7" onClick={() => handleProductClick(product)}>
-                              <Plus className="w-3 h-3" />
-                            </Button>
+                          )}
+                          <div className="p-2">
+                            <p className="font-medium text-sm text-foreground line-clamp-2">{product.name}</p>
+                            <p className="text-green-600 dark:text-green-400 font-semibold text-sm">R$ {product.price.toFixed(2)}</p>
+                            <div className="flex items-center justify-end gap-2 mt-1">
+                              {quantity > 0 && (
+                                <>
+                                  <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => removeFromCart(product.id)}>
+                                    <Minus className="w-3 h-3" />
+                                  </Button>
+                                  <span className="w-6 text-center font-semibold">{quantity}</span>
+                                </>
+                              )}
+                              <Button size="icon" variant={quantity > 0 ? 'default' : 'outline'} className="h-7 w-7" onClick={() => handleProductClick(product)}>
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -707,19 +711,83 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 </RadioGroup>
               )}
 
-              {/* Order summary */}
+              {/* Order summary - Resumo Final */}
               {cart.length > 0 && (
-                <div className="bg-muted rounded-lg p-4 space-y-2 mt-4">
+                <div className="bg-muted rounded-lg p-4 space-y-3 mt-4 max-h-[50vh] overflow-y-auto">
                   <div className="flex items-center gap-2 mb-2">
                     <ShoppingBag className="w-4 h-4 text-primary" />
-                    <span className="font-semibold">Resumo Final</span>
+                    <span className="font-semibold text-base">Resumo Final</span>
                   </div>
-                  <p className="text-sm"><strong>Cliente:</strong> {customerName}</p>
-                  <p className="text-sm"><strong>Telefone:</strong> {customerPhone}</p>
-                  <p className="text-sm"><strong>Tipo:</strong> {deliveryType === 'entrega' ? 'Entrega' : 'Retirada'}</p>
-                  {deliveryType === 'entrega' && (
-                    <p className="text-sm"><strong>Endereço:</strong> {deliveryAddress}, {deliveryNumber}{deliveryComplement ? ` - ${deliveryComplement}` : ''} - {deliveryNeighborhood}{deliveryReference ? ` (Ref: ${deliveryReference})` : ''}</p>
-                  )}
+
+                  {/* Customer info */}
+                  <div className="space-y-1">
+                    <p className="text-sm"><strong>Cliente:</strong> {customerName}</p>
+                    <p className="text-sm"><strong>Telefone:</strong> {customerPhone}</p>
+                    <p className="text-sm"><strong>Tipo:</strong> {deliveryType === 'entrega' ? 'Entrega' : 'Retirada'}</p>
+                    {deliveryType === 'entrega' && (
+                      <p className="text-sm"><strong>Endereço:</strong> {deliveryAddress}, {deliveryNumber}{deliveryComplement ? ` - ${deliveryComplement}` : ''} - {deliveryNeighborhood}{deliveryReference ? ` (Ref: ${deliveryReference})` : ''}</p>
+                    )}
+                  </div>
+
+                  {/* Products list */}
+                  <div className="border-t border-border pt-3 space-y-3">
+                    <p className="text-sm font-semibold">Produtos:</p>
+                    {cart.map((item) => {
+                      const optTotal = item.optionals.reduce((s, o) => s + o.price, 0);
+                      const itemTotal = (item.price + optTotal) * item.quantity;
+                      // Group optionals by groupName
+                      const groupedOpts: Record<string, { items: string[]; totalPrice: number }> = {};
+                      item.optionals.forEach(o => {
+                        if (!groupedOpts[o.groupName]) groupedOpts[o.groupName] = { items: [], totalPrice: 0 };
+                        groupedOpts[o.groupName].items.push(o.itemName);
+                        groupedOpts[o.groupName].totalPrice += o.price;
+                      });
+
+                      return (
+                        <div key={item.id} className="flex gap-3 bg-background rounded-lg p-2 border border-border">
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt={item.name} className="w-14 h-14 rounded-md object-cover flex-shrink-0" />
+                          ) : (
+                            <div className="w-14 h-14 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                              <Package className="w-6 h-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start">
+                              <p className="text-sm font-medium">{item.quantity}x {item.name}</p>
+                              <p className="text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap ml-2">R$ {itemTotal.toFixed(2)}</p>
+                            </div>
+                            {Object.keys(groupedOpts).length > 0 && (
+                              <div className="mt-1 space-y-0.5">
+                                {Object.entries(groupedOpts).map(([groupName, data]) => (
+                                  <p key={groupName} className="text-xs text-muted-foreground">
+                                    {groupName}: {data.items.join(', ')}{data.totalPrice > 0 ? ` R$${data.totalPrice.toFixed(2)}` : ''}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Payment info */}
+                  <div className="border-t border-border pt-3 space-y-1">
+                    {(() => {
+                      const selectedPM = activePaymentMethods.find(m => m.id === paymentMethod);
+                      return (
+                        <>
+                          <p className="text-sm"><strong>Pagamento:</strong> {selectedPM?.name || '—'}</p>
+                          {selectedPM?.name?.toLowerCase().includes('pix') && selectedPM.pix_key && (
+                            <p className="text-xs text-muted-foreground">Chave PIX: {selectedPM.pix_key}</p>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Total */}
                   <div className="border-t border-border pt-2 mt-2 flex justify-between font-bold text-lg">
                     <span>Total</span>
                     <span className="text-primary">R$ {total.toFixed(2)}</span>
