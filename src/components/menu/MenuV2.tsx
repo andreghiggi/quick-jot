@@ -291,9 +291,8 @@ export function MenuV2({
                   </div>
                   {isOpen && settings.estimatedWaitTime && (
                     <div className="mt-1">
-                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-normal bg-[#22C55E]/15 text-[#16a34a] border border-[#22C55E]">
-                        <Clock className="h-3 w-3" />
-                        {settings.estimatedWaitTime}
+                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-normal bg-[#22C55E]/15 text-[#16a34a] border border-[#22C55E]">
+                        🛵 Entrega · 🤲 Retirada: {settings.estimatedWaitTime}
                       </span>
                     </div>
                   )}
