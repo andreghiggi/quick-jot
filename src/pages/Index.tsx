@@ -19,6 +19,8 @@ const Index = () => {
   const { orders, loading } = useOrderContext();
   const { company } = useAuthContext();
   const { settings } = useStoreSettings({ companyId: company?.id });
+  
+  const isLancheriaI9 = company?.name?.toLowerCase().includes('lancheria da i9');
 
   const filteredOrders = useMemo(() => {
     let base = orders;
@@ -90,10 +92,17 @@ const Index = () => {
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
-          <Button onClick={() => setIsNewOrderOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Novo Pedido</span>
-          </Button>
+          {isLancheriaI9 ? (
+            <Button onClick={() => setIsPedidoExpressOpen(true)} className="gap-2">
+              <Zap className="w-4 h-4" />
+              <span className="hidden sm:inline">Pedido Express</span>
+            </Button>
+          ) : (
+            <Button onClick={() => setIsNewOrderOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Novo Pedido</span>
+            </Button>
+          )}
         </div>
       }
     >
@@ -151,6 +160,7 @@ const Index = () => {
       </div>
 
       <NewOrderDialog open={isNewOrderOpen} onOpenChange={setIsNewOrderOpen} />
+      {isLancheriaI9 && <PedidoExpressDialog open={isPedidoExpressOpen} onOpenChange={setIsPedidoExpressOpen} />}
     </AppLayout>
   );
 };
