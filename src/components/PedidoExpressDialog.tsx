@@ -382,6 +382,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       status: 'pending',
     });
 
+    if (success) {
       toast.success('Pedido Express criado com sucesso!');
       resetForm();
       onOpenChange(false);
