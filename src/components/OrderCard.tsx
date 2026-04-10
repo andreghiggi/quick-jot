@@ -135,9 +135,8 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
 
   async function handleConfirmOrder() {
     setConfirming(true);
-    const success = await sendConfirmationWhatsApp(order.id);
+    await sendConfirmationWhatsApp(order.id);
     setConfirming(false);
-    if (success) setConfirmed(true);
   }
 
   async function handleAdvanceStatus() {
