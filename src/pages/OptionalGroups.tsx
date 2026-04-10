@@ -378,12 +378,18 @@ export default function OptionalGroups() {
             <AccordionItem key={group.id} value={group.id} className="border rounded-lg px-4">
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-1 mr-2" onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveGroup(group.id, 'up')} disabled={groups.indexOf(group) === 0}>
-                    <ChevronUp className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveGroup(group.id, 'down')} disabled={groups.indexOf(group) === groups.length - 1}>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
+                  <div className="relative group">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveGroup(group.id, 'up')} disabled={groups.indexOf(group) === 0}>
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Mover para cima</span>
+                  </div>
+                  <div className="relative group">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveGroup(group.id, 'down')} disabled={groups.indexOf(group) === groups.length - 1}>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Mover para baixo</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3 flex-1 text-left">
                   <span className="font-semibold">{group.name}</span>
