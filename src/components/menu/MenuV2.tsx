@@ -277,18 +277,20 @@ export function MenuV2({
             <div className="flex-1 min-w-0">
               {isLancheriaI9 ? (
                 <>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h1 className="text-lg font-bold text-foreground uppercase whitespace-nowrap flex-shrink-0">
-                      {settings.storeName || company?.name || 'Cardápio'}
-                    </h1>
-                    <span className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold text-white ml-auto",
-                      isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
-                    )}>
-                      <span className="text-[8px] leading-none text-white/70">●</span>
-                      {isOpen ? 'Aberto' : (schedulingEnabled ? 'Fechado - Agende seu pedido' : 'Fechado')}
-                    </span>
-                  </div>
+                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', width: '100%', gap: '0.5rem' }}>
+                     <h1 className="text-lg font-bold text-foreground uppercase" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
+                       {settings.storeName || company?.name || 'Cardápio'}
+                     </h1>
+                     <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                       <span className={cn(
+                         "inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold text-white",
+                         isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
+                       )}>
+                         <span className="text-[8px] leading-none text-white/70">●</span>
+                         {isOpen ? 'Aberto' : (schedulingEnabled ? 'Fechado - Agende seu pedido' : 'Fechado')}
+                       </span>
+                     </div>
+                   </div>
                   {isOpen && settings.estimatedWaitTime && (
                     <div className="mt-1">
                       <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-normal bg-[#22C55E]/15 text-[#16a34a] border border-[#22C55E]">
