@@ -277,12 +277,12 @@ export function MenuV2({
             <div className="flex-1 min-w-0">
               {isLancheriaI9 ? (
                 <>
-                  <div className="flex items-start justify-between gap-2">
-                    <h1 className="text-lg font-bold text-foreground uppercase break-words min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h1 className="text-lg font-bold text-foreground uppercase whitespace-nowrap flex-shrink-0">
                       {settings.storeName || company?.name || 'Cardápio'}
                     </h1>
                     <span className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold text-white flex-shrink-0 mt-0.5",
+                      "inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold text-white ml-auto",
                       isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
                     )}>
                       <span className="text-[8px] leading-none text-white/70">●</span>
