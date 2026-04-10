@@ -80,7 +80,7 @@ export default function CustomerReport() {
     queryKey: ['customer-report-orders', company?.id],
     queryFn: async () => {
       if (!company?.id) return [];
-      const [ordersRes, itemsRes] = await Promise.all([
+      const [ordersRes, itemsRes, customersRes] = await Promise.all([
         supabase
           .from('orders')
           .select('id, order_code, customer_name, customer_phone, delivery_address, created_at, status, total, daily_number')
@@ -90,14 +90,25 @@ export default function CustomerReport() {
           .from('order_items')
           .select('order_id, price, quantity')
           .eq('company_id', company.id),
+        supabase
+          .from('customers')
+          .select('phone, birth_date')
+          .eq('company_id', company.id),
       ]);
       if (ordersRes.error) throw ordersRes.error;
-      // Build map of order_id -> product subtotal
       const subtotalMap = new Map<string, number>();
       for (const item of (itemsRes.data || [])) {
         subtotalMap.set(item.order_id, (subtotalMap.get(item.order_id) || 0) + Number(item.price) * item.quantity);
       }
-      return (ordersRes.data || []).map(o => ({ ...o, productSubtotal: subtotalMap.get(o.id) ?? Number(o.total) }));
+      const birthDateMap = new Map<string, string | null>();
+      for (const c of (customersRes.data || [])) {
+        if (c.phone) birthDateMap.set(c.phone, c.birth_date);
+      }
+      return (ordersRes.data || []).map(o => ({
+        ...o,
+        productSubtotal: subtotalMap.get(o.id) ?? Number(o.total),
+        birthDate: o.customer_phone ? (birthDateMap.get(o.customer_phone) || null) : null,
+      }));
     },
     enabled: !!company?.id,
   });
@@ -137,11 +148,13 @@ export default function CustomerReport() {
         if (o.created_at < existing.firstDate) existing.firstDate = o.created_at;
         if (o.created_at > existing.lastDate) existing.lastDate = o.created_at;
         if (!existing.address && o.delivery_address) existing.address = o.delivery_address;
+        if (!existing.birthDate && o.birthDate) existing.birthDate = o.birthDate;
       } else {
         map.set(key, {
           name: o.customer_name,
           phone: o.customer_phone,
           address: o.delivery_address || null,
+          birthDate: o.birthDate || null,
           firstDate: o.created_at,
           lastDate: o.created_at,
           totalOrders: 1,
