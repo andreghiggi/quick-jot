@@ -328,12 +328,23 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
   }
 
+  const isClienteLoja = customerName === 'Cliente Loja';
+
   function goNext() {
     if (!canGoNext()) return;
+    if (step === 3 && isClienteLoja) {
+      // Cliente Loja = retirada, skip delivery step
+      setStep(5);
+      return;
+    }
     if (step < 5) setStep((step + 1) as Step);
   }
 
   function goBack() {
+    if (step === 5 && isClienteLoja) {
+      setStep(3);
+      return;
+    }
     if (step > 1) setStep((step - 1) as Step);
   }
 
@@ -600,10 +611,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   type="button"
                   variant="outline"
                   className="w-full"
-                  onClick={() => {
+                   onClick={() => {
                     setCustomerPhone('(99) 99999-9999');
                     setCustomerName('Cliente Loja');
                     setCustomerFound(true);
+                    setDeliveryType('retirada');
                   }}
                 >
                   🏪 Sem telefone — usar "Cliente Loja"
