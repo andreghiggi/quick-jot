@@ -23,6 +23,7 @@ import {
   Upload,
   Layers,
   FolderOpen,
+  BarChart3,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -378,6 +379,25 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Relatórios</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/relatorios/clientes'}
+                >
+                  <Link to="/relatorios/clientes">
+                    <BarChart3 className="w-4 h-4" />
+                    <span>Relatório de Clientes</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
         {isSuperAdmin() && (
           <SidebarGroup>
