@@ -33,14 +33,14 @@ export function formatOrderItemWhatsApp(item: {
           const groupName = groupStr.substring(0, colonIdx).trim();
           const itemsStr = groupStr.substring(colonIdx + 1).trim();
           // Replace . decimal with , for Brazilian format
-          lines.push(`*${groupName}:* ${itemsStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
+          lines.push(`  - _${groupName}:_ ${itemsStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
         } else {
-          lines.push(groupStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2'));
+          lines.push(`  - ${groupStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
         }
       }
     } else {
       // Legacy format: just items separated by commas
-      lines.push(`*Adicionais:* ${content.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
+      lines.push(`  - _Adicionais:_ ${content.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
     }
   }
 
@@ -53,7 +53,7 @@ export function formatOrderItemWhatsApp(item: {
     result += '\n' + lines.join('\n');
   }
   if (item.notes) {
-    result += `\nObservação: ${item.notes}`;
+    result += `\n  - _Observação:_ ${item.notes}`;
   }
 
   return result;

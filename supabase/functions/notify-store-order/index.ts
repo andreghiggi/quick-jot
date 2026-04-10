@@ -119,19 +119,19 @@ serve(async (req) => {
                 if (colonIdx > -1) {
                   const groupName = groupStr.substring(0, colonIdx).trim();
                   const itemsStr = groupStr.substring(colonIdx + 1).trim();
-                  lines.push(`*${groupName}:* ${itemsStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
+                  lines.push(`  - _${groupName}:_ ${itemsStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
                 } else {
-                  lines.push(groupStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2'));
+                  lines.push(`  - ${groupStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
                 }
               }
             } else {
-              lines.push(`*Adicionais:* ${content.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
+              lines.push(`  - _Adicionais:_ ${content.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
             }
           }
           const totalPrice = (Number(item.price) * item.quantity).toFixed(2).replace('.', ',');
           let result = `*${item.quantity}x ${displayName}* - R$ ${totalPrice}`;
           if (lines.length > 0) result += '\n' + lines.join('\n');
-          if (item.notes) result += `\nObservação: ${item.notes}`;
+          if (item.notes) result += `\n  - _Observação:_ ${item.notes}`;
           return result;
         })
         .join('\n\n');
