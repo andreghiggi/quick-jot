@@ -66,6 +66,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         companyId: order.company_id || undefined,
         printed: (order as any).printed || false,
         printedAt: (order as any).printed_at ? new Date((order as any).printed_at) : undefined,
+        confirmedAt: (order as any).confirmed_at ? new Date((order as any).confirmed_at) : undefined,
         items: itemsData
           .filter((item) => item.order_id === order.id)
           .map((item) => ({
@@ -79,7 +80,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
       }));
 
       // Only update state if data actually changed to prevent unnecessary re-renders
-      const ordersJson = JSON.stringify(mappedOrders.map(o => ({ id: o.id, status: o.status, total: o.total, items: o.items.length })));
+      const ordersJson = JSON.stringify(mappedOrders.map(o => ({ id: o.id, status: o.status, total: o.total, items: o.items.length, confirmedAt: o.confirmedAt?.toISOString() })));
       if (ordersJson !== prevOrdersJsonRef.current) {
         prevOrdersJsonRef.current = ordersJson;
         setOrders(mappedOrders);
@@ -303,6 +304,12 @@ export function useOrders(options: UseOrdersOptions = {}) {
         return false;
       }
 
+      // Guard: if already confirmed, skip sending
+      if (order.confirmedAt) {
+        toast.info('Este pedido já foi confirmado anteriormente.');
+        return false;
+      }
+
       const { data: moduleData } = await supabase
         .from('company_modules')
         .select('enabled')
@@ -444,6 +451,16 @@ export function useOrders(options: UseOrdersOptions = {}) {
             orderId,
           },
         });
+
+        // Persist confirmed_at to prevent duplicate sends on refresh
+        await supabase
+          .from('orders')
+          .update({ confirmed_at: new Date().toISOString() } as any)
+          .eq('id', orderId);
+
+        // Update local state
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, confirmedAt: new Date() } : o));
+
         toast.success('Confirmação enviada via WhatsApp!');
         return true;
       }
