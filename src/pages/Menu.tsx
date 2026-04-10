@@ -617,10 +617,14 @@ export default function Menu() {
       const orderItems = cart.map((item) => {
         // Build name with grouped optional names if available
         let optionalsStr = '';
-        if ((item as any).groupedOptionalNames && (item as any).groupedOptionalNames.length > 0) {
-          optionalsStr = ` (${(item as any).groupedOptionalNames.join(' | ')})`;
+        if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+          optionalsStr = ` (${item.groupedOptionalNames.join(' | ')})`;
         } else if (item.selectedOptionals.length > 0) {
-          optionalsStr = ` (${item.selectedOptionals.map(o => o.name).join(', ')})`;
+          // Old-style optionals: include price in name for each optional
+          const optStrs = item.selectedOptionals.map(o => 
+            o.price > 0 ? `${o.name} R$${o.price.toFixed(2)}` : o.name
+          );
+          optionalsStr = ` (Adicionais: ${optStrs.join(', ')})`;
         }
         return {
           order_id: newOrder.id,
