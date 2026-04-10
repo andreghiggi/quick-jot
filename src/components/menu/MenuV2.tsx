@@ -277,7 +277,7 @@ export function MenuV2({
             <div className="flex-1 min-w-0">
               {isLancheriaI9 ? (
                 <>
-                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', width: '100%', gap: '0.5rem' }}>
+                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
                      <h1 className="text-lg font-bold text-foreground uppercase" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
                        {settings.storeName || company?.name || 'Cardápio'}
                      </h1>
