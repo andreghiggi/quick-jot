@@ -25,6 +25,8 @@ import {
   ShoppingCart,
   Loader2,
   X,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 
 interface OrderRow {
@@ -68,6 +70,8 @@ export default function CustomerReport() {
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<'name' | 'totalOrders' | 'totalSpent' | 'lastDate'>('lastDate');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['customer-report-orders', company?.id],
@@ -132,18 +136,32 @@ export default function CustomerReport() {
       }
     }
 
-    return Array.from(map.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+    return Array.from(map.values());
   }, [orders, dateFrom, dateTo]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return customers;
-    const q = search.toLowerCase();
-    return customers.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        (c.phone && c.phone.includes(q))
-    );
-  }, [customers, search]);
+    let result = customers;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.phone && c.phone.includes(q))
+      );
+    }
+    // Sort
+    result = [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'name': cmp = a.name.localeCompare(b.name, 'pt-BR'); break;
+        case 'totalOrders': cmp = a.totalOrders - b.totalOrders; break;
+        case 'totalSpent': cmp = a.totalSpent - b.totalSpent; break;
+        case 'lastDate': cmp = new Date(a.lastDate).getTime() - new Date(b.lastDate).getTime(); break;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return result;
+  }, [customers, search, sortField, sortDir]);
 
   const totalRevenue = filtered.reduce((s, c) => s + c.totalSpent, 0);
   const totalOrders = filtered.reduce((s, c) => s + c.totalOrders, 0);
@@ -271,15 +289,35 @@ export default function CustomerReport() {
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-8"></TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Telefone</TableHead>
-                    <TableHead className="hidden md:table-cell">Endereço</TableHead>
-                    <TableHead className="text-center">Pedidos</TableHead>
-                    <TableHead className="text-right">Total Gasto</TableHead>
-                    <TableHead className="hidden lg:table-cell">Primeiro Pedido</TableHead>
-                    <TableHead className="hidden lg:table-cell">Último Pedido</TableHead>
+                  <TableRow className="bg-primary hover:bg-primary">
+                    <TableHead className="w-8 text-primary-foreground"></TableHead>
+                    <TableHead
+                      className="text-primary-foreground font-bold cursor-pointer select-none"
+                      onClick={() => { if (sortField === 'name') setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortField('name'); setSortDir('asc'); } }}
+                    >
+                      <span className="flex items-center gap-1">Cliente {sortField === 'name' && (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}</span>
+                    </TableHead>
+                    <TableHead className="text-primary-foreground font-bold">Telefone</TableHead>
+                    <TableHead className="hidden md:table-cell text-primary-foreground font-bold">Endereço</TableHead>
+                    <TableHead
+                      className="text-center text-primary-foreground font-bold cursor-pointer select-none"
+                      onClick={() => { if (sortField === 'totalOrders') setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortField('totalOrders'); setSortDir('desc'); } }}
+                    >
+                      <span className="flex items-center justify-center gap-1">Pedidos {sortField === 'totalOrders' && (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}</span>
+                    </TableHead>
+                    <TableHead
+                      className="text-right text-primary-foreground font-bold cursor-pointer select-none"
+                      onClick={() => { if (sortField === 'totalSpent') setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortField('totalSpent'); setSortDir('desc'); } }}
+                    >
+                      <span className="flex items-center justify-end gap-1">Total Gasto {sortField === 'totalSpent' && (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}</span>
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell text-primary-foreground font-bold">Primeiro Pedido</TableHead>
+                    <TableHead
+                      className="hidden lg:table-cell text-primary-foreground font-bold cursor-pointer select-none"
+                      onClick={() => { if (sortField === 'lastDate') setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortField('lastDate'); setSortDir('desc'); } }}
+                    >
+                      <span className="flex items-center gap-1">Último Pedido {sortField === 'lastDate' && (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
