@@ -60,27 +60,67 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   
-  // Catalog lookup for Lancheria da I9 to enrich legacy order items with prices
-  const [optionalsCatalog, setOptionalsCatalog] = useState<Record<string, Record<string, number>>>({});
+  // Catalog lookup for Lancheria da I9 to enrich legacy order items with prices and group names
+  const [optionalsCatalog, setOptionalsCatalog] = useState<Record<string, Record<string, { price: number; groupName: string }>>>({});
   useEffect(() => {
     if (!isLancheriaI9 || !company?.id) return;
-    supabase
-      .from('product_optionals')
-      .select('name, price, product_id, products!inner(name, company_id)')
-      .eq('products.company_id', company.id)
-      .eq('active', true)
-      .then(({ data }) => {
-        if (!data) return;
-        // Build map: productName -> { optionalName -> price }
-        const catalog: Record<string, Record<string, number>> = {};
-        data.forEach((row: any) => {
-          const productName = row.products?.name;
-          if (!productName) return;
-          if (!catalog[productName]) catalog[productName] = {};
-          catalog[productName][row.name] = Number(row.price);
-        });
-        setOptionalsCatalog(catalog);
+    
+    Promise.all([
+      supabase.from('product_optionals').select('name, price, product_id, products!inner(name, company_id)').eq('products.company_id', company.id).eq('active', true),
+      supabase.from('optional_group_items').select('name, price, group_id, optional_groups!inner(name, company_id)').eq('optional_groups.company_id', company.id).eq('active', true),
+      supabase.from('optional_group_products').select('group_id, product_id, products!inner(name, company_id)').eq('products.company_id', company.id),
+      supabase.from('optional_group_categories').select('group_id, category_id, categories!inner(name, company_id)').eq('categories.company_id', company.id),
+      supabase.from('products').select('id, name, category, company_id').eq('company_id', company.id).eq('active', true),
+    ]).then(([prodOptRes, groupItemsRes, groupProdsRes, groupCatsRes, productsRes]) => {
+      const catalog: Record<string, Record<string, { price: number; groupName: string }>> = {};
+      
+      // Add product_optionals (paid extras)
+      (prodOptRes.data || []).forEach((row: any) => {
+        const productName = row.products?.name;
+        if (!productName) return;
+        if (!catalog[productName]) catalog[productName] = {};
+        catalog[productName][row.name] = { price: Number(row.price), groupName: 'Adicionais' };
       });
+      
+      // Build group-to-products map from direct product associations
+      const groupToProducts: Record<string, Set<string>> = {};
+      (groupProdsRes.data || []).forEach((row: any) => {
+        const productName = row.products?.name;
+        if (!productName) return;
+        if (!groupToProducts[row.group_id]) groupToProducts[row.group_id] = new Set();
+        groupToProducts[row.group_id].add(productName);
+      });
+      
+      // Build group-to-products map from category associations
+      (groupCatsRes.data || []).forEach((row: any) => {
+        const categoryName = row.categories?.name;
+        if (!categoryName) return;
+        if (!groupToProducts[row.group_id]) groupToProducts[row.group_id] = new Set();
+        (productsRes.data || []).forEach((p: any) => {
+          if (p.category === categoryName) {
+            groupToProducts[row.group_id].add(p.name);
+          }
+        });
+      });
+      
+      // Add optional_group_items with their group names
+      (groupItemsRes.data || []).forEach((row: any) => {
+        const groupName = row.optional_groups?.name;
+        if (!groupName) return;
+        const productNames = groupToProducts[row.group_id];
+        if (productNames) {
+          productNames.forEach((productName: string) => {
+            if (!catalog[productName]) catalog[productName] = {};
+            catalog[productName][row.name] = { price: Number(row.price), groupName };
+          });
+        }
+        // Wildcard entry for unmapped products
+        if (!catalog['__groups__']) catalog['__groups__'] = {};
+        catalog['__groups__'][row.name] = { price: Number(row.price), groupName };
+      });
+      
+      setOptionalsCatalog(catalog);
+    });
   }, [isLancheriaI9, company?.id]);
   // Converter para fuso horário de São Paulo
   const createdAt = new Date(order.createdAt);
@@ -343,17 +383,23 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                   }
                 });
               } else {
-                // Legacy format: "item1, item2, item3" - enrich with catalog prices
+                // Legacy format: "item1, item2, item3" - enrich with catalog prices and group names
                 const optNames = parenthesesContent.split(',').map(n => n.trim()).filter(Boolean);
                 const productCatalog = optionalsCatalog[displayName] || {};
-                const enrichedItems = optNames.map(name => {
-                  const price = productCatalog[name];
-                  if (price && price > 0) {
-                    return `${name} R$${price.toFixed(2).replace('.', ',')}`;
-                  }
-                  return name;
+                const wildcardCatalog = optionalsCatalog['__groups__'] || {};
+                // Group items by their group name from the catalog
+                const groupMap: Record<string, string[]> = {};
+                optNames.forEach(name => {
+                  const catalogEntry = productCatalog[name] || wildcardCatalog[name];
+                  const groupName = catalogEntry?.groupName || 'Adicionais';
+                  const price = catalogEntry?.price ?? 0;
+                  const displayStr = price > 0 ? `${name} R$${price.toFixed(2).replace('.', ',')}` : name;
+                  if (!groupMap[groupName]) groupMap[groupName] = [];
+                  groupMap[groupName].push(displayStr);
                 });
-                groupedOptionals.push({ groupName: 'Adicionais', items: enrichedItems.join(', ') });
+                Object.entries(groupMap).forEach(([groupName, items]) => {
+                  groupedOptionals.push({ groupName, items: items.join(', ') });
+                });
               }
             }
 
