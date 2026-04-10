@@ -118,7 +118,7 @@ const Index = () => {
             color="success"
           />
           <StatsCard
-            title="Total de Pedidos"
+            title="Todos"
             value={filteredOrders.length}
             icon={<TrendingUp className="w-5 h-5" />}
           />
