@@ -160,7 +160,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
   }, [phoneDigits, searchCustomer]);
 
-  function handleProductClick(product: { id: string; name: string; price: number; category: string }) {
+  function handleProductClick(product: { id: string; name: string; price: number; category: string; image_url?: string | null }) {
     const applicableGroups = getGroupsForProduct(product.id, product.category);
     if (applicableGroups.length > 0) {
       setSelectingProduct(product);
@@ -170,7 +170,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
   }
 
-  function addToCartSimple(product: { id: string; name: string; price: number }) {
+  function addToCartSimple(product: { id: string; name: string; price: number; image_url?: string | null }) {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id && item.optionals.length === 0);
       if (existing) {
