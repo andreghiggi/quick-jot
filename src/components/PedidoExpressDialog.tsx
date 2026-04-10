@@ -386,7 +386,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col pb-0">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Pedido Express</DialogTitle>
         </DialogHeader>
