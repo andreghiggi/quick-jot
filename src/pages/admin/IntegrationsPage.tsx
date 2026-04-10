@@ -54,6 +54,7 @@ export default function IntegrationsPage() {
           {companyId ? (
             <>
               <MultiplusCardSettings companyId={companyId} />
+              <PinpadSettings companyId={companyId} />
               <NFCeSettings companyId={companyId} />
             </>
           ) : (
