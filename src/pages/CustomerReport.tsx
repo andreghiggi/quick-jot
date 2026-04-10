@@ -70,6 +70,8 @@ export default function CustomerReport() {
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<'name' | 'totalOrders' | 'totalSpent' | 'lastDate'>('lastDate');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['customer-report-orders', company?.id],
