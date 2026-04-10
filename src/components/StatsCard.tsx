@@ -26,9 +26,9 @@ export function StatsCard({ title, value, icon, trend, color = 'primary', classN
     )}>
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-muted-foreground mb-1">{title}</p>
-          <div className="flex items-center gap-2">
-            <p className="text-xl sm:text-2xl font-bold text-foreground whitespace-nowrap leading-tight">{value}</p>
+          <p className="text-xs text-muted-foreground mb-1 truncate">{title}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-lg sm:text-xl font-bold text-foreground whitespace-nowrap leading-tight">{value}</p>
             {action}
           </div>
           {trend && (

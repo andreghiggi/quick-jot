@@ -96,31 +96,36 @@ const Index = () => {
           <StatsCard
             title="Pendentes"
             value={pendingCount}
-            icon={<Clock className="w-5 h-5" />}
+            icon={<Clock className="w-4 h-4" />}
             color="warning"
+            className="flex-1 min-w-0"
           />
           <StatsCard
             title="Preparando"
             value={preparingCount}
-            icon={<ShoppingBag className="w-5 h-5" />}
+            icon={<ShoppingBag className="w-4 h-4" />}
             color="primary"
+            className="flex-1 min-w-0"
           />
           <StatsCard
             title="Prontos"
             value={readyCount}
-            icon={<CheckCircle className="w-5 h-5" />}
+            icon={<CheckCircle className="w-4 h-4" />}
             color="success"
+            className="flex-1 min-w-0"
           />
           <StatsCard
             title="Entregues"
             value={deliveredCount}
-            icon={<Truck className="w-5 h-5" />}
+            icon={<Truck className="w-4 h-4" />}
             color="success"
+            className="flex-1 min-w-0"
           />
           <StatsCard
             title="Todos"
             value={filteredOrders.length}
-            icon={<TrendingUp className="w-5 h-5" />}
+            icon={<TrendingUp className="w-4 h-4" />}
+            className="flex-1 min-w-0"
           />
           <StatsCard
             title="Faturamento no Período"
