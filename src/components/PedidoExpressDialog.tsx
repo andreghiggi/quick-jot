@@ -57,7 +57,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectingProduct, setSelectingProduct] = useState<{ id: string; name: string; price: number; category: string; image_url?: string | null } | null>(null);
+  const [selectingProduct, setSelectingProduct] = useState<{ id: string; name: string; price: number; category: string; imageUrl?: string | null } | null>(null);
   const [selectedOptionals, setSelectedOptionals] = useState<Record<string, Set<string>>>({});
 
   const [deliveryType, setDeliveryType] = useState<'entrega' | 'retirada' | ''>('');
@@ -160,7 +160,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
   }, [phoneDigits, searchCustomer]);
 
-  function handleProductClick(product: { id: string; name: string; price: number; category: string; image_url?: string | null }) {
+  function handleProductClick(product: { id: string; name: string; price: number; category: string; imageUrl?: string | null }) {
     const applicableGroups = getGroupsForProduct(product.id, product.category);
     if (applicableGroups.length > 0) {
       setSelectingProduct(product);
@@ -170,7 +170,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
   }
 
-  function addToCartSimple(product: { id: string; name: string; price: number; image_url?: string | null }) {
+  function addToCartSimple(product: { id: string; name: string; price: number; imageUrl?: string | null }) {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id && item.optionals.length === 0);
       if (existing) {
@@ -178,7 +178,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           item.id === product.id && item.optionals.length === 0 ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: 1, optionals: [], imageUrl: product.image_url }];
+      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: 1, optionals: [], imageUrl: product.imageUrl }];
     });
   }
 
@@ -208,7 +208,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
 
     const cartKey = `${product.id}_${opts.map(o => o.itemName).sort().join(',')}`;
-    setCart(prev => [...prev, { id: cartKey, name: product.name, price: product.price, quantity: 1, optionals: opts, imageUrl: product.image_url }]);
+    setCart(prev => [...prev, { id: cartKey, name: product.name, price: product.price, quantity: 1, optionals: opts, imageUrl: product.imageUrl }]);
     setSelectingProduct(null);
     setSelectedOptionals({});
   }
@@ -453,9 +453,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                             quantity > 0 && "border-green-500 bg-green-50 dark:bg-green-950/30"
                           )}
                         >
-                          {product.image_url && (
+                          {product.imageUrl && (
                             <div className="w-full h-24 overflow-hidden">
-                              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                             </div>
                           )}
                           <div className="p-2">
