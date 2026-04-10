@@ -683,6 +683,36 @@ export default function Menu() {
 
       console.log('Order saved to database:', newOrder.id);
 
+      // Send automatic confirmation message to customer via WhatsApp (fire-and-forget)
+      if (company?.id && customerPhone) {
+        (async () => {
+          try {
+            const { data: inst } = await supabase
+              .from('whatsapp_instances')
+              .select('instance_name, status')
+              .eq('company_id', company.id)
+              .maybeSingle();
+            if (inst?.status === 'connected') {
+              const firstName = customerName.split(' ')[0];
+              const confirmMsg = `${firstName}, seu pedido foi enviado e está aguardando confirmação do estabelecimento.\n\nAssim que seu pedido for confirmado, você será notificado por aqui. 😊`;
+              const custPhone = customerPhone.replace(/\D/g, '');
+              const custFullPhone = custPhone.startsWith('55') ? custPhone : `55${custPhone}`;
+              await supabase.functions.invoke('whatsapp-evolution', {
+                body: {
+                  action: 'send_message',
+                  instanceName: inst.instance_name,
+                  phone: custFullPhone,
+                  message: confirmMsg,
+                  companyId: company.id,
+                },
+              });
+            }
+          } catch (err) {
+            console.error('Customer confirmation msg failed:', err);
+          }
+        })();
+      }
+
       // Notify store via WhatsApp (fire-and-forget, don't block the user)
       if (company?.id) {
         supabase.functions.invoke('notify-store-order', {
