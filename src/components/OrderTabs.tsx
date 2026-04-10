@@ -7,7 +7,7 @@ import { ClipboardList, ChefHat, PackageCheck, Truck } from 'lucide-react';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useAuthContext } from '@/contexts/AuthContext';
 
-const tabs: { value: OrderStatus | 'all'; label: string; icon: React.ElementType }[] = [
+const allTabs: { value: OrderStatus | 'all'; label: string; icon: React.ElementType }[] = [
   { value: 'all', label: 'Todos', icon: ClipboardList },
   { value: 'pending', label: 'Pendentes', icon: ClipboardList },
   { value: 'preparing', label: 'Preparando', icon: ChefHat },
