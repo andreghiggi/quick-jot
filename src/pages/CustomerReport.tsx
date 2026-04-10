@@ -43,6 +43,7 @@ interface CustomerData {
   name: string;
   phone: string | null;
   address: string | null;
+  birthDate: string | null;
   firstDate: string;
   lastDate: string;
   totalOrders: number;
