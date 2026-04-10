@@ -442,35 +442,38 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
                     {filteredProducts.map((product) => {
                       const quantity = getCartQuantity(product.id);
                       return (
                         <div
                           key={product.id}
                           className={cn(
-                            "p-3 rounded-lg border border-border bg-card hover:border-green-400/50 transition-colors",
+                            "rounded-lg border border-border bg-card hover:border-green-400/50 transition-colors overflow-hidden",
                             quantity > 0 && "border-green-500 bg-green-50 dark:bg-green-950/30"
                           )}
                         >
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex-1">
-                              <p className="font-medium text-sm text-foreground">{product.name}</p>
-                              <p className="text-green-600 dark:text-green-400 font-semibold">R$ {product.price.toFixed(2)}</p>
+                          {product.image_url && (
+                            <div className="w-full h-24 overflow-hidden">
+                              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                             </div>
-                          </div>
-                          <div className="flex items-center justify-end gap-2">
-                            {quantity > 0 && (
-                              <>
-                                <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => removeFromCart(product.id)}>
-                                  <Minus className="w-3 h-3" />
-                                </Button>
-                                <span className="w-6 text-center font-semibold">{quantity}</span>
-                              </>
-                            )}
-                            <Button size="icon" variant={quantity > 0 ? 'default' : 'outline'} className="h-7 w-7" onClick={() => handleProductClick(product)}>
-                              <Plus className="w-3 h-3" />
-                            </Button>
+                          )}
+                          <div className="p-2">
+                            <p className="font-medium text-sm text-foreground line-clamp-2">{product.name}</p>
+                            <p className="text-green-600 dark:text-green-400 font-semibold text-sm">R$ {product.price.toFixed(2)}</p>
+                            <div className="flex items-center justify-end gap-2 mt-1">
+                              {quantity > 0 && (
+                                <>
+                                  <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => removeFromCart(product.id)}>
+                                    <Minus className="w-3 h-3" />
+                                  </Button>
+                                  <span className="w-6 text-center font-semibold">{quantity}</span>
+                                </>
+                              )}
+                              <Button size="icon" variant={quantity > 0 ? 'default' : 'outline'} className="h-7 w-7" onClick={() => handleProductClick(product)}>
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       );
