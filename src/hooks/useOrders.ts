@@ -336,7 +336,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         .from('store_settings')
         .select('key, value')
         .eq('company_id', companyId)
-        .in('key', ['whatsapp_msg_pending', 'whatsapp_msg_pix']);
+        .in('key', ['whatsapp_msg_pending']);
 
       const customTemplates: Record<string, string> = {};
       settings?.forEach(s => {
@@ -354,11 +354,11 @@ export function useOrders(options: UseOrdersOptions = {}) {
         resumo += `\n\n💰 *Total: R$ ${order.total.toFixed(2).replace('.', ',')}*`;
       }
 
-      // Add payment method info to resumo (skip PIX since the dedicated PIX block handles it)
+      // Add payment method info to resumo
       if (order.notes) {
         const paymentMatch = order.notes.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i);
         const paymentName = paymentMatch?.[1]?.trim();
-        if (paymentMatch && !(paymentName && paymentName.toLowerCase().includes('pix'))) {
+        if (paymentMatch && paymentName) {
           resumo += `\n💳 *Pagamento:* ${paymentName}`;
         }
         const trocoMatch = order.notes.match(/Troco para R\$\s*([^\)]+)/i);
@@ -393,44 +393,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         message += '\n\n📋 *Resumo do pedido:*' + resumo;
       }
 
-      // Append PIX key block if payment method is PIX
-      if (message && order.notes) {
-        const paymentMatch = order.notes.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i);
-        const paymentName = paymentMatch?.[1]?.trim();
-        if (paymentName && paymentName.toLowerCase().includes('pix')) {
-          const { data: pixMethod } = await supabase
-            .from('payment_methods')
-            .select('pix_key')
-            .eq('company_id', companyId)
-            .ilike('name', '%pix%')
-            .not('pix_key', 'is', null)
-            .maybeSingle();
-
-          if (pixMethod?.pix_key) {
-            const pixTemplate = customTemplates['whatsapp_msg_pix'];
-            const name = order.customerName.split(' ')[0];
-            const num = order.orderCode ? `#${order.orderCode}` : `#${String(order.dailyNumber).padStart(3, '0')}`;
-            
-            if (pixTemplate) {
-              let pixMsg = pixTemplate;
-              const pixVars: Record<string, string> = {
-                '{{nome}}': name,
-                '{{num}}': num,
-                '{{loja}}': companyData?.name || 'Estabelecimento',
-                '{{chave_pix}}': pixMethod.pix_key,
-                '{{tempo}}': '',
-                '{{endereco}}': companyData?.address || '',
-              };
-              for (const [key, value] of Object.entries(pixVars)) {
-                pixMsg = pixMsg.split(key).join(value);
-              }
-              message += '\n\n' + pixMsg;
-            } else {
-              message += `\n\n💳 *Pagamento via PIX* (Enviar comprovante no WhatsApp)\n\n${name}, para finalizar seu pedido ${num}, faça o pagamento via PIX:\n\n🔑 *Chave PIX para copiar:*\n${pixMethod.pix_key}\n\n⚠️ Copie a chave acima e cole no seu app de pagamento, após envie o comprovante de pagamento aqui. Obrigado! 😊`;
-            }
-          }
-        }
-      }
+      // PIX key block removed — no longer sent automatically
 
       if (message) {
         await supabase.functions.invoke('whatsapp-evolution', {
