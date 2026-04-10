@@ -326,19 +326,35 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               const idx = item.name.indexOf('(');
               displayName = item.name.substring(0, idx).trim();
               const parenthesesContent = item.name.substring(idx + 1, item.name.length - 1).trim();
-              // Split by | to get groups
-              const groups = parenthesesContent.split('|').map(g => g.trim()).filter(Boolean);
-              groups.forEach(groupStr => {
-                const colonIdx = groupStr.indexOf(':');
-                if (colonIdx > -1) {
-                  const groupName = groupStr.substring(0, colonIdx).trim();
-                  const itemsStr = groupStr.substring(colonIdx + 1).trim();
-                  groupedOptionals.push({ groupName, items: itemsStr });
-                } else {
-                  // No group name (legacy format) - show as "Adicionais"
-                  groupedOptionals.push({ groupName: 'Adicionais', items: groupStr });
-                }
-              });
+              // Check if new format with | separators and : group names
+              const hasGroupFormat = parenthesesContent.includes(':');
+              
+              if (hasGroupFormat) {
+                // New format: "GroupName: item1, item2 R$X.00 | GroupName2: item3"
+                const groups = parenthesesContent.split('|').map(g => g.trim()).filter(Boolean);
+                groups.forEach(groupStr => {
+                  const colonIdx = groupStr.indexOf(':');
+                  if (colonIdx > -1) {
+                    const groupName = groupStr.substring(0, colonIdx).trim();
+                    const itemsStr = groupStr.substring(colonIdx + 1).trim();
+                    groupedOptionals.push({ groupName, items: itemsStr });
+                  } else {
+                    groupedOptionals.push({ groupName: 'Adicionais', items: groupStr });
+                  }
+                });
+              } else {
+                // Legacy format: "item1, item2, item3" - enrich with catalog prices
+                const optNames = parenthesesContent.split(',').map(n => n.trim()).filter(Boolean);
+                const productCatalog = optionalsCatalog[displayName] || {};
+                const enrichedItems = optNames.map(name => {
+                  const price = productCatalog[name];
+                  if (price && price > 0) {
+                    return `${name} R$${price.toFixed(2).replace('.', ',')}`;
+                  }
+                  return name;
+                });
+                groupedOptionals.push({ groupName: 'Adicionais', items: enrichedItems.join(', ') });
+              }
             }
 
             return (
