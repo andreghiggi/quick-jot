@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Plus, Search, ChevronLeft, ArrowLeft, MessageSquare, Clock } from 'lucide-react';
+import { ShoppingCart, Plus, Search, ArrowLeft } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 
 // Category fallback images/emojis
