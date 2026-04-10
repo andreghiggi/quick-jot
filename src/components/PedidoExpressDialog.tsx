@@ -662,7 +662,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             {step === 4 && (
               <div className="space-y-4">
                 <Label className="font-bold">Tipo de entrega *</Label>
-                <RadioGroup value={deliveryType} onValueChange={(v) => setDeliveryType(v as 'entrega' | 'retirada')}>
+                <RadioGroup value={deliveryType} onValueChange={(v) => {
+                  setDeliveryType(v as 'entrega' | 'retirada');
+                  if (v === 'retirada') {
+                    setDeliveryFee(0);
+                    setSelectedDeliveryFeeType('');
+                  }
+                }}>
                   <div className="grid grid-cols-2 gap-3">
                     {(['entrega', 'retirada'] as const).map(type => (
                       <label
