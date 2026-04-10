@@ -108,6 +108,8 @@ const Index = () => {
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
           onClear={() => { setStartDate(undefined); setEndDate(undefined); }}
+          activePeriod={activePeriod}
+          onPeriodChange={setActivePeriod}
         />
 
         {/* Stats */}
