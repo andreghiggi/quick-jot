@@ -59,6 +59,29 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const config = statusConfig[order.status];
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  
+  // Catalog lookup for Lancheria da I9 to enrich legacy order items with prices
+  const [optionalsCatalog, setOptionalsCatalog] = useState<Record<string, Record<string, number>>>({});
+  useEffect(() => {
+    if (!isLancheriaI9 || !company?.id) return;
+    supabase
+      .from('product_optionals')
+      .select('name, price, product_id, products!inner(name, company_id)')
+      .eq('products.company_id', company.id)
+      .eq('active', true)
+      .then(({ data }) => {
+        if (!data) return;
+        // Build map: productName -> { optionalName -> price }
+        const catalog: Record<string, Record<string, number>> = {};
+        data.forEach((row: any) => {
+          const productName = row.products?.name;
+          if (!productName) return;
+          if (!catalog[productName]) catalog[productName] = {};
+          catalog[productName][row.name] = Number(row.price);
+        });
+        setOptionalsCatalog(catalog);
+      });
+  }, [isLancheriaI9, company?.id]);
   // Converter para fuso horário de São Paulo
   const createdAt = new Date(order.createdAt);
   const timeAgo = formatTimeAgo(createdAt);
