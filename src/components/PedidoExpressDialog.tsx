@@ -368,6 +368,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         name: item.product.name + optionalsStr,
         quantity: item.quantity,
         price: item.product.price + optPrice,
+        notes: item.notes || undefined,
       };
     });
 
