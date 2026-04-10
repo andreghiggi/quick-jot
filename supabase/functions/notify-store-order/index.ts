@@ -343,7 +343,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent: res.ok, scheduledSent }),
+      JSON.stringify({ ok: true, sent: res.ok, customerConfirmSent, scheduledSent }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
