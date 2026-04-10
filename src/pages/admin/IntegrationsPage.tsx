@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MultiplusCardSettings } from '@/components/admin/MultiplusCardSettings';
+import { PinpadSettings } from '@/components/admin/PinpadSettings';
 import { NFCeSettings } from '@/components/admin/NFCeSettings';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plug } from 'lucide-react';
@@ -53,6 +54,7 @@ export default function IntegrationsPage() {
           {companyId ? (
             <>
               <MultiplusCardSettings companyId={companyId} />
+              <PinpadSettings companyId={companyId} />
               <NFCeSettings companyId={companyId} />
             </>
           ) : (
