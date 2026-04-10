@@ -14,6 +14,18 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '10/04/2026',
+    version: '1.26.0',
+    type: 'feature',
+    description: 'Pedido Express, badges de Aberto/Fechado, tempo estimado e mensagem automática de confirmação agora disponíveis para todas as lojas (antes exclusivo da Lancheria da I9).',
+  },
+  {
+    date: '10/04/2026',
+    version: '1.25.1',
+    type: 'fix',
+    description: 'Persistência do estado de confirmação de pedidos no banco de dados — o botão "Confirmar" não reseta mais ao recarregar a página, evitando envio duplicado de mensagens WhatsApp.',
+  },
+  {
+    date: '10/04/2026',
     version: '1.25.0',
     type: 'feature',
     description: 'Pedido Express (Lancheria da I9): novo fluxo de pedido em 5 etapas — telefone com busca automática de cliente, nome, seleção de produtos com adicionais, tipo de entrega (com endereço) e forma de pagamento. Envio automático da chave PIX via WhatsApp quando selecionado.',
