@@ -26,6 +26,8 @@ export function OrderTabs({ filteredOrders, hideAllTab = false }: OrderTabsProps
   const { settings } = useStoreSettings({ companyId: company?.id });
 
   const displayOrders = filteredOrders ?? orders;
+  const tabs = hideAllTab ? allTabs.filter(t => t.value !== 'all') : allTabs;
+  const defaultTab = hideAllTab ? 'pending' : 'all';
 
   function getOrders(filter: OrderStatus | 'all') {
     if (filter === 'all') return displayOrders;
@@ -37,7 +39,7 @@ export function OrderTabs({ filteredOrders, hideAllTab = false }: OrderTabsProps
   }
 
   return (
-    <Tabs defaultValue="all" className="w-full">
+    <Tabs defaultValue={defaultTab} className="w-full">
       <TabsList className="w-full justify-start gap-1 bg-transparent p-0 h-auto flex-wrap">
         {tabs.map((tab) => {
           const count = getCount(tab.value);
