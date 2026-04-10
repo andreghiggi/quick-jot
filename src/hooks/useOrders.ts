@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem, OrderStatus } from '@/types/order';
 import { toast } from 'sonner';
 import { generateWhatsAppMessage } from '@/utils/whatsappMessages';
+import { formatOrderItemWhatsApp } from '@/utils/formatOrderItemWhatsApp';
 import { useOrderNotificationSound } from '@/hooks/useOrderNotificationSound';
 
 interface UseOrdersOptions {
@@ -348,11 +349,9 @@ export function useOrders(options: UseOrdersOptions = {}) {
       // Build resumo string with items, payment, and delivery info
       let resumo = '';
       if (order.items.length > 0) {
-        order.items.forEach(item => {
-          resumo += `\n• ${item.quantity}x ${item.name} - R$ ${(item.price * item.quantity).toFixed(2)}`;
-          if (item.notes) resumo += ` _(${item.notes})_`;
-        });
-        resumo += `\n\n💰 *Total: R$ ${order.total.toFixed(2)}*`;
+        const formattedItems = order.items.map(item => formatOrderItemWhatsApp(item));
+        resumo += '\n' + formattedItems.join('\n\n');
+        resumo += `\n\n💰 *Total: R$ ${order.total.toFixed(2).replace('.', ',')}*`;
       }
 
       // Add payment method info to resumo (skip PIX since the dedicated PIX block handles it)
