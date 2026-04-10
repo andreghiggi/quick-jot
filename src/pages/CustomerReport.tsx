@@ -342,6 +342,7 @@ export default function CustomerReport() {
                       <span className="flex items-center gap-1">Cliente {sortField === 'name' && (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}</span>
                     </TableHead>
                     <TableHead className="text-primary-foreground font-bold">Telefone</TableHead>
+                    <TableHead className="hidden md:table-cell text-primary-foreground font-bold">Nascimento</TableHead>
                     <TableHead className="hidden md:table-cell text-primary-foreground font-bold">Endereço</TableHead>
                     <TableHead
                       className="text-center text-primary-foreground font-bold cursor-pointer select-none"
@@ -378,6 +379,13 @@ export default function CustomerReport() {
                               </TableCell>
                               <TableCell className="font-medium">{customer.name}</TableCell>
                               <TableCell>{customer.phone || '—'}</TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {customer.birthDate ? (
+                                  format(new Date(customer.birthDate + 'T12:00:00'), 'dd/MM/yyyy')
+                                ) : (
+                                  <span className="italic text-muted-foreground">Não informado</span>
+                                )}
+                              </TableCell>
                               <TableCell className="hidden md:table-cell max-w-[200px] truncate">{customer.address || '—'}</TableCell>
                               <TableCell className="text-center">{customer.totalOrders}</TableCell>
                               <TableCell className="text-right font-medium">
@@ -393,7 +401,7 @@ export default function CustomerReport() {
                           </CollapsibleTrigger>
                           <CollapsibleContent asChild>
                             <tr>
-                              <td colSpan={8} className="p-0">
+                              <td colSpan={9} className="p-0">
                                 <div className="bg-muted/30 p-4 border-t">
                                   <p className="text-sm font-semibold mb-2 text-muted-foreground">Histórico de Pedidos</p>
                                   <Table>
