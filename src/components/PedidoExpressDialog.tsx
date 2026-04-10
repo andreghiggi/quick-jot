@@ -365,7 +365,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       return {
         id: crypto.randomUUID(),
         productId: item.product.id,
-        name: item.product.name + optDesc,
+        name: item.product.name + optionalsStr,
         quantity: item.quantity,
         price: item.product.price + optPrice,
       };
