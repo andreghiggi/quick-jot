@@ -16,6 +16,7 @@ const Index = () => {
   const [isPedidoExpressOpen, setIsPedidoExpressOpen] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [activePeriod, setActivePeriod] = useState<'today' | '7d' | '15d' | '30d' | 'all'>('today');
   const { orders, loading } = useOrderContext();
   const { company } = useAuthContext();
   const { settings } = useStoreSettings({ companyId: company?.id });
