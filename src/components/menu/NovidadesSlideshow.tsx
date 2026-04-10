@@ -24,7 +24,7 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
         </div>
       )}
       <div className="py-2 pr-3 min-w-0">
-        <p className="text-sm font-medium text-foreground line-clamp-2 break-words">{product.name}</p>
+        <p className="text-sm font-bold text-foreground line-clamp-2 break-words">{product.name}</p>
         {product.description && (
           <p className="text-xs text-muted-foreground mt-0.5 break-words whitespace-normal">{product.description}</p>
         )}
