@@ -47,6 +47,7 @@ interface CustomerData {
   lastDate: string;
   totalOrders: number;
   totalSpent: number;
+  totalProductRevenue: number;
   orders: OrderRow[];
 }
 
@@ -130,6 +131,7 @@ export default function CustomerReport() {
       if (existing) {
         existing.totalOrders += 1;
         existing.totalSpent += Number(o.total);
+        existing.totalProductRevenue += o.productSubtotal;
         existing.orders.push(orderRow);
         if (o.created_at < existing.firstDate) existing.firstDate = o.created_at;
         if (o.created_at > existing.lastDate) existing.lastDate = o.created_at;
@@ -143,6 +145,7 @@ export default function CustomerReport() {
           lastDate: o.created_at,
           totalOrders: 1,
           totalSpent: Number(o.total),
+          totalProductRevenue: o.productSubtotal,
           orders: [orderRow],
         });
       }
