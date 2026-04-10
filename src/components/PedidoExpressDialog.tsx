@@ -57,7 +57,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectingProduct, setSelectingProduct] = useState<{ id: string; name: string; price: number; category: string } | null>(null);
+  const [selectingProduct, setSelectingProduct] = useState<{ id: string; name: string; price: number; category: string; image_url?: string | null } | null>(null);
   const [selectedOptionals, setSelectedOptionals] = useState<Record<string, Set<string>>>({});
 
   const [deliveryType, setDeliveryType] = useState<'entrega' | 'retirada' | ''>('');
@@ -178,7 +178,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           item.id === product.id && item.optionals.length === 0 ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: 1, optionals: [] }];
+      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: 1, optionals: [], imageUrl: product.image_url }];
     });
   }
 
