@@ -47,6 +47,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id });
 
+  // New step order: 1=Products, 2=Phone, 3=Name, 4=Delivery, 5=Payment
   const [step, setStep] = useState<Step>(1);
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -59,10 +60,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [selectedOptionals, setSelectedOptionals] = useState<Record<string, Set<string>>>({});
 
   const [deliveryType, setDeliveryType] = useState<'entrega' | 'retirada' | ''>('');
-  const [street, setStreet] = useState('');
-  const [number, setNumber] = useState('');
-  const [neighborhood, setNeighborhood] = useState('');
-  const [reference, setReference] = useState('');
+  // Address fields matching checkout exactly
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryNumber, setDeliveryNumber] = useState('');
+  const [deliveryComplement, setDeliveryComplement] = useState('');
+  const [deliveryNeighborhood, setDeliveryNeighborhood] = useState('');
+  const [deliveryReference, setDeliveryReference] = useState('');
 
   const [paymentMethod, setPaymentMethod] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -247,14 +250,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     return productData ? getGroupsForProduct(selectingProduct.id, productData.category) : [];
   }, [selectingProduct, activeProducts, optionalGroups, categoryIdByName]);
 
+  // Step order: 1=Products, 2=Phone, 3=Name, 4=Delivery, 5=Payment
   function canGoNext(): boolean {
     switch (step) {
-      case 1: return phoneDigits.length >= 10;
-      case 2: return customerName.trim().length >= 2;
-      case 3: return cart.length > 0;
+      case 1: return cart.length > 0;
+      case 2: return phoneDigits.length >= 10;
+      case 3: return customerName.trim().length >= 2;
       case 4:
         if (!deliveryType) return false;
-        if (deliveryType === 'entrega') return !!(street.trim() && number.trim() && neighborhood.trim());
+        if (deliveryType === 'entrega') return !!(deliveryAddress.trim() && deliveryNumber.trim() && deliveryNeighborhood.trim() && deliveryReference.trim());
         return true;
       case 5: return !!paymentMethod;
       default: return false;
@@ -279,7 +283,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     const paymentName = selectedPM?.name || '';
     const deliveryTypeLabel = deliveryType === 'entrega' ? 'Entrega' : 'Retirada';
     const fullAddress = deliveryType === 'entrega'
-      ? `${street}, ${number} - ${neighborhood}${reference ? ` (${reference})` : ''}`
+      ? `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood}${deliveryReference ? ` | Ref: ${deliveryReference}` : ''}`
       : '';
 
     const noteParts = [`Pagamento: ${paymentName}`, deliveryTypeLabel];
@@ -326,7 +330,6 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   async function sendPixKeyViaWhatsApp(phone: string, pixKey: string) {
     if (!company?.id) return;
     try {
-      // Check WhatsApp instance
       const { data: instanceData } = await supabase
         .from('whatsapp_instances')
         .select('instance_name, status')
@@ -363,17 +366,19 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setSelectingProduct(null);
     setSelectedOptionals({});
     setDeliveryType('');
-    setStreet('');
-    setNumber('');
-    setNeighborhood('');
-    setReference('');
+    setDeliveryAddress('');
+    setDeliveryNumber('');
+    setDeliveryComplement('');
+    setDeliveryNeighborhood('');
+    setDeliveryReference('');
     setPaymentMethod('');
   }
 
+  // Updated step labels: Products → Phone → Name → Delivery → Payment
   const stepLabels = [
+    { icon: Package, label: 'Produtos' },
     { icon: Phone, label: 'Telefone' },
     { icon: User, label: 'Nome' },
-    { icon: Package, label: 'Produtos' },
     { icon: MapPin, label: 'Entrega' },
     { icon: CreditCard, label: 'Pagamento' },
   ];
@@ -409,56 +414,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-          {/* Step 1: Phone */}
+          {/* Step 1: Products */}
           {step === 1 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="font-bold">Telefone do Cliente *</Label>
-                <Input
-                  id="phone"
-                  placeholder="(00) 00000-0000"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(formatPhone(e.target.value))}
-                  className="h-14 text-lg"
-                  autoFocus
-                />
-                {searchingCustomer && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <Loader2 className="w-3 h-3 animate-spin" /> Buscando cliente...
-                  </p>
-                )}
-                {customerFound && (
-                  <p className="text-sm text-green-600 font-medium">✓ Cliente encontrado: {customerName}</p>
-                )}
-                {phoneDigits.length >= 10 && !searchingCustomer && !customerFound && (
-                  <p className="text-sm text-muted-foreground">Cliente não encontrado. Preencha o nome no próximo passo.</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Name */}
-          {step === 2 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="font-bold">Nome Completo *</Label>
-                <Input
-                  id="name"
-                  placeholder="Nome do cliente"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="h-14 text-lg"
-                  autoFocus
-                />
-                {customerFound && (
-                  <p className="text-xs text-muted-foreground">Nome preenchido automaticamente da base de clientes.</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Products */}
-          {step === 3 && (
             <div className="space-y-3">
               {productsLoading || groupsLoading ? (
                 <div className="flex items-center justify-center py-8">
@@ -491,14 +448,14 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                         <div
                           key={product.id}
                           className={cn(
-                            "p-3 rounded-lg border border-border bg-card hover:border-primary/50 transition-colors",
-                            quantity > 0 && "border-primary bg-accent"
+                            "p-3 rounded-lg border border-border bg-card hover:border-green-400/50 transition-colors",
+                            quantity > 0 && "border-green-500 bg-green-50 dark:bg-green-950/30"
                           )}
                         >
                           <div className="flex justify-between items-start mb-2">
                             <div className="flex-1">
                               <p className="font-medium text-sm text-foreground">{product.name}</p>
-                              <p className="text-primary font-semibold">R$ {product.price.toFixed(2)}</p>
+                              <p className="text-green-600 dark:text-green-400 font-semibold">R$ {product.price.toFixed(2)}</p>
                             </div>
                           </div>
                           <div className="flex items-center justify-end gap-2">
@@ -599,6 +556,54 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             </div>
           )}
 
+          {/* Step 2: Phone */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="font-bold">Telefone do Cliente *</Label>
+                <Input
+                  id="phone"
+                  placeholder="(00) 00000-0000"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(formatPhone(e.target.value))}
+                  className="h-14 text-lg"
+                  autoFocus
+                />
+                {searchingCustomer && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Buscando cliente...
+                  </p>
+                )}
+                {customerFound && (
+                  <p className="text-sm text-green-600 font-medium">✓ Cliente encontrado: {customerName}</p>
+                )}
+                {phoneDigits.length >= 10 && !searchingCustomer && !customerFound && (
+                  <p className="text-sm text-muted-foreground">Cliente não encontrado. Preencha o nome no próximo passo.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Name */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="font-bold">Nome Completo *</Label>
+                <Input
+                  id="name"
+                  placeholder="Nome do cliente"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="h-14 text-lg"
+                  autoFocus
+                />
+                {customerFound && (
+                  <p className="text-xs text-muted-foreground">Nome preenchido automaticamente da base de clientes.</p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Step 4: Delivery Type */}
           {step === 4 && (
             <div className="space-y-4">
@@ -622,23 +627,53 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
               {deliveryType === 'entrega' && (
                 <div className="space-y-3 mt-4">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="col-span-2 space-y-2">
-                      <Label htmlFor="street" className="font-bold">Rua *</Label>
-                      <Input id="street" placeholder="Nome da rua" value={street} onChange={(e) => setStreet(e.target.value)} />
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:items-end">
+                    <div className="min-w-0">
+                      <Label className="block leading-snug whitespace-normal break-words font-bold">Logradouro (rua, avenida, travessa) *</Label>
+                      <Input
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        placeholder="Ex: Rua das Flores"
+                        className="border-primary"
+                      />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="number" className="font-bold">Nº *</Label>
-                      <Input id="number" placeholder="Nº" value={number} onChange={(e) => setNumber(e.target.value)} />
+                    <div className="min-w-0">
+                      <Label className="block leading-snug whitespace-nowrap font-bold">Número *</Label>
+                      <Input
+                        value={deliveryNumber}
+                        onChange={(e) => setDeliveryNumber(e.target.value)}
+                        placeholder="123"
+                        inputMode="numeric"
+                        className="border-primary"
+                      />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="neighborhood" className="font-bold">Bairro *</Label>
-                    <Input id="neighborhood" placeholder="Bairro" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} />
+                  <div>
+                    <Label className="font-bold">Complemento</Label>
+                    <Input
+                      value={deliveryComplement}
+                      onChange={(e) => setDeliveryComplement(e.target.value)}
+                      placeholder="Apto 01, Sala 02..."
+                      className="border-primary"
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="reference">Ponto de Referência</Label>
-                    <Input id="reference" placeholder="Ponto de referência (opcional)" value={reference} onChange={(e) => setReference(e.target.value)} />
+                  <div>
+                    <Label className="font-bold">Bairro *</Label>
+                    <Input
+                      value={deliveryNeighborhood}
+                      onChange={(e) => setDeliveryNeighborhood(e.target.value)}
+                      placeholder="Nome do bairro"
+                      className="border-primary"
+                    />
+                  </div>
+                  <div>
+                    <Label className="font-bold">Ponto de referência *</Label>
+                    <Input
+                      value={deliveryReference}
+                      onChange={(e) => setDeliveryReference(e.target.value)}
+                      placeholder="Próximo ao mercado, em frente à escola..."
+                      className="border-primary"
+                    />
                   </div>
                 </div>
               )}
@@ -683,7 +718,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   <p className="text-sm"><strong>Telefone:</strong> {customerPhone}</p>
                   <p className="text-sm"><strong>Tipo:</strong> {deliveryType === 'entrega' ? 'Entrega' : 'Retirada'}</p>
                   {deliveryType === 'entrega' && (
-                    <p className="text-sm"><strong>Endereço:</strong> {street}, {number} - {neighborhood}{reference ? ` (${reference})` : ''}</p>
+                    <p className="text-sm"><strong>Endereço:</strong> {deliveryAddress}, {deliveryNumber}{deliveryComplement ? ` - ${deliveryComplement}` : ''} - {deliveryNeighborhood}{deliveryReference ? ` (Ref: ${deliveryReference})` : ''}</p>
                   )}
                   <div className="border-t border-border pt-2 mt-2 flex justify-between font-bold text-lg">
                     <span>Total</span>
