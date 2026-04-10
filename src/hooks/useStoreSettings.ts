@@ -24,6 +24,7 @@ interface StoreSettings {
   floatingPhoto: boolean;
   buttonColor: string;
   estimatedWaitTime: string;
+  featuredSectionName: string;
 }
 
 interface UseStoreSettingsOptions {
@@ -54,6 +55,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     floatingPhoto: false,
     buttonColor: '#ef4444',
     estimatedWaitTime: '',
+    featuredSectionName: 'Novidades',
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
@@ -99,6 +101,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         floatingPhoto: settingsMap['floating_photo'] === 'true',
         buttonColor: settingsMap['button_color'] || '#ef4444',
         estimatedWaitTime: settingsMap['estimated_wait_time'] || '',
+        featuredSectionName: settingsMap['featured_section_name'] || 'Novidades',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);

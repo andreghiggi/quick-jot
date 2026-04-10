@@ -956,9 +956,9 @@ export default function Menu() {
         </div>
       </div>
 
-      {/* NOVIDADES Slideshow */}
+      {/* Featured Section Slideshow */}
       {newProducts.length > 0 && (
-        <NovidadesSlideshow products={newProducts} onProductSelect={setSelectedProduct} />
+        <NovidadesSlideshow products={newProducts} onProductSelect={setSelectedProduct} sectionTitle={settings.featuredSectionName} />
       )}
 
       {settings.bannerUrl && (

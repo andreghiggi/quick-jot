@@ -309,9 +309,9 @@ export function MenuV2({
         </div>
       )}
 
-      {/* NOVIDADES Slideshow */}
+      {/* Featured Section Slideshow */}
       {newProducts.length > 0 && (
-        <NovidadesSlideshow products={newProducts} onProductSelect={onProductSelect} />
+        <NovidadesSlideshow products={newProducts} onProductSelect={onProductSelect} sectionTitle={settings.featuredSectionName} />
       )}
 
       {/* Search */}

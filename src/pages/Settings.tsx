@@ -1328,6 +1328,38 @@ pause
               });
             }}
           />
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                Seção em destaque
+              </CardTitle>
+              <CardDescription>
+                Este nome aparece no cardápio na seção de produtos marcados com ⭐. Marque um produto com a estrela para ele aparecer aqui.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="featured_section_name">Nome da seção em destaque</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="featured_section_name"
+                    defaultValue={storeSettings.featuredSectionName}
+                    placeholder="Ex: Novidades, Destaque, Mais pedidos, Em alta"
+                    onBlur={async (e) => {
+                      const value = e.target.value.trim() || 'Novidades';
+                      await updateSetting('featured_section_name', value);
+                      toast({
+                        title: 'Nome da seção salvo',
+                        description: `A seção em destaque agora se chama "${value}"`,
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Tab Dashboard */}

@@ -253,7 +253,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         .eq('id', productId);
       if (error) throw error;
       await fetchProducts();
-      toast.success(isNew ? 'Produto marcado como novidade!' : 'Produto removido das novidades');
+      toast.success(isNew ? 'Produto adicionado à seção em destaque!' : 'Produto removido da seção em destaque');
       return true;
     } catch (error) {
       console.error('Error toggling new product:', error);
