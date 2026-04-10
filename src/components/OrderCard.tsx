@@ -484,7 +484,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               disabled={confirming || confirmed}
               className={cn(
                 "gap-1 shrink-0",
-                isLancheriaI9 && confirmed
+                confirmed
                   ? "bg-gray-400 text-white cursor-not-allowed opacity-50"
                   : "bg-green-600 hover:bg-green-700 text-white"
               )}
