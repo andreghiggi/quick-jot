@@ -442,37 +442,51 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                  <div className="space-y-3">
                     {filteredProducts.map((product) => {
                       const quantity = getCartQuantity(product.id);
                       return (
                         <div
                           key={product.id}
                           className={cn(
-                            "rounded-lg border border-border bg-card hover:border-green-400/50 transition-colors overflow-hidden",
+                            "rounded-lg border border-border bg-card hover:border-green-400/50 transition-all overflow-hidden cursor-pointer",
                             quantity > 0 && "border-green-500 bg-green-50 dark:bg-green-950/30"
                           )}
+                          onClick={() => handleProductClick(product)}
                         >
-                          {product.imageUrl && (
-                            <div className="w-full h-24 overflow-hidden">
-                              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-                            </div>
-                          )}
-                          <div className="p-2">
-                            <p className="font-medium text-sm text-foreground line-clamp-2">{product.name}</p>
-                            <p className="text-green-600 dark:text-green-400 font-semibold text-sm">R$ {product.price.toFixed(2)}</p>
-                            <div className="flex items-center justify-end gap-2 mt-1">
-                              {quantity > 0 && (
-                                <>
-                                  <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => removeFromCart(product.id)}>
-                                    <Minus className="w-3 h-3" />
+                          <div className="flex h-full">
+                            {product.imageUrl ? (
+                              <div className="w-28 min-h-[7rem] flex-shrink-0 overflow-hidden">
+                                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="w-28 min-h-[7rem] flex-shrink-0 bg-muted flex items-center justify-center">
+                                <span className="text-3xl">🍽️</span>
+                              </div>
+                            )}
+                            <div className="flex-1 p-3 flex flex-col justify-between">
+                              <div>
+                                <h3 className="font-semibold text-foreground line-clamp-2 break-words">{product.name}</h3>
+                                {product.description && (
+                                  <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{product.description}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between mt-2">
+                                <p className="text-green-600 dark:text-green-400 font-bold">R$ {product.price.toFixed(2)}</p>
+                                <div className="flex items-center gap-2">
+                                  {quantity > 0 && (
+                                    <>
+                                      <Button size="icon" variant="outline" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); removeFromCart(product.id); }}>
+                                        <Minus className="w-3 h-3" />
+                                      </Button>
+                                      <span className="w-6 text-center font-semibold">{quantity}</span>
+                                    </>
+                                  )}
+                                  <Button size="icon" variant={quantity > 0 ? 'default' : 'outline'} className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleProductClick(product); }}>
+                                    <Plus className="w-3 h-3" />
                                   </Button>
-                                  <span className="w-6 text-center font-semibold">{quantity}</span>
-                                </>
-                              )}
-                              <Button size="icon" variant={quantity > 0 ? 'default' : 'outline'} className="h-7 w-7" onClick={() => handleProductClick(product)}>
-                                <Plus className="w-3 h-3" />
-                              </Button>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -482,39 +496,113 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 </>
               )}
 
-              {/* Optional Groups Selection */}
+              {/* Optional Groups Selection - mirrors catalog exactly */}
               {selectingProduct && (
                 <div className="bg-muted rounded-lg p-4 space-y-4 border-2 border-primary">
                   <div className="flex items-center justify-between">
-                    <p className="font-semibold">Adicionais para: {selectingProduct.name}</p>
+                    <div>
+                      <p className="font-semibold">{selectingProduct.name}</p>
+                      <p className="text-green-600 dark:text-green-400 font-bold">R$ {selectingProduct.price.toFixed(2)}</p>
+                    </div>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectingProduct(null); setSelectedOptionals({}); }}>
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
                   {selectingGroups.map(group => (
                     <div key={group.id} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{group.name}</p>
-                        {(group.minSelect > 0 || group.maxSelect > 0) && (
-                          <Badge variant="outline" className="text-xs">
-                            {group.minSelect > 0 ? `mín ${group.minSelect}` : ''}
-                            {group.minSelect > 0 && group.maxSelect > 0 ? ' / ' : ''}
-                            {group.maxSelect > 0 ? `máx ${group.maxSelect}` : ''}
-                          </Badge>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Label className="text-base font-semibold">{group.name}</Label>
+                        <Badge variant="outline" className="text-xs">
+                          {group.minSelect > 0 ? `mín ${group.minSelect} / ` : ''}
+                          máx {group.maxSelect > 0 ? group.maxSelect : 1}
+                        </Badge>
+                        {group.minSelect > 0 && (
+                          <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
                         )}
                       </div>
-                      <div className="space-y-1">
-                        {group.items.filter(i => i.active).map(item => {
-                          const isSelected = selectedOptionals[group.id]?.has(item.id) || false;
-                          return (
-                            <label key={item.id} className="flex items-center gap-2 cursor-pointer py-1 px-2 rounded hover:bg-background/50">
-                              <Checkbox checked={isSelected} onCheckedChange={() => toggleOptionalItem(group.id, item.id, group.maxSelect)} />
-                              <span className="text-sm flex-1">{item.name}</span>
-                              {item.price > 0 && <span className="text-xs text-muted-foreground">+R$ {item.price.toFixed(2)}</span>}
-                            </label>
-                          );
-                        })}
-                      </div>
+
+                      {group.layout === 'horizontal' ? (
+                        <div className="grid grid-cols-3 gap-2">
+                          {group.items.filter(i => i.active).map(item => {
+                            const isSelected = selectedOptionals[group.id]?.has(item.id) || false;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                className={cn(
+                                  "relative rounded-xl border-2 overflow-hidden transition-all text-left",
+                                  isSelected
+                                    ? "border-primary ring-2 ring-primary/30 shadow-md"
+                                    : "border-border hover:border-primary/50"
+                                )}
+                                onClick={() => toggleOptionalItem(group.id, item.id, group.maxSelect)}
+                              >
+                                {item.imageUrl ? (
+                                  <div className="w-full aspect-square overflow-hidden">
+                                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                                  </div>
+                                ) : (
+                                  <div className="w-full aspect-square bg-muted flex items-center justify-center">
+                                    <span className="text-3xl">🍽️</span>
+                                  </div>
+                                )}
+                                <div className="p-1.5 space-y-0.5">
+                                  <p className={cn(
+                                    "text-[11px] font-semibold line-clamp-2 leading-tight text-center",
+                                    isSelected ? "text-primary" : "text-foreground"
+                                  )}>
+                                    {item.name}
+                                  </p>
+                                  {item.price > 0 && (
+                                    <p className="text-[10px] text-green-600 font-medium text-center">
+                                      +R$ {item.price.toFixed(2)}
+                                    </p>
+                                  )}
+                                </div>
+                                {isSelected && (
+                                  <div className="absolute top-1 right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                                    <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          {group.items.filter(i => i.active).map(item => {
+                            const isSelected = selectedOptionals[group.id]?.has(item.id) || false;
+                            return (
+                              <div
+                                key={item.id}
+                                className={cn(
+                                  "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors",
+                                  isSelected ? "border-primary bg-primary/5" : "hover:border-primary/50"
+                                )}
+                                onClick={() => toggleOptionalItem(group.id, item.id, group.maxSelect)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleOptionalItem(group.id, item.id, group.maxSelect)}
+                                  />
+                                  {item.imageUrl && (
+                                    <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                                  )}
+                                  <span className="font-medium">{item.name}</span>
+                                </div>
+                                {item.price > 0 && (
+                                  <span className="text-green-600 font-semibold">
+                                    +R$ {item.price.toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   ))}
                   <Button onClick={confirmOptionals} className="w-full" size="sm">Confirmar Adicionais</Button>
