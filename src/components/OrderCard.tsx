@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2 } from 'lucide-react';
 import { useOrderContext } from '@/contexts/OrderContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -52,6 +53,8 @@ const nextStatusLabel: Record<OrderStatus, string> = {
 
 export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech' }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
+  const { company } = useAuthContext();
+  const isLancheriaI9 = company?.name?.toLowerCase().includes('lancheria da i9');
   const config = statusConfig[order.status];
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -290,33 +293,75 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
 
       <div className="border-t border-border pt-3 mb-3">
         <div className="space-y-1.5">
-          {order.items.map((item) => (
-            <div key={item.id}>
-              <div className="flex justify-between text-sm">
-                <span className="text-foreground">
-                  {item.quantity}x {item.name}
-                </span>
-                <span className="text-muted-foreground">
-                  R$ {(item.price * item.quantity).toFixed(2)}
-                </span>
+          {order.items.map((item) => {
+            // For Lancheria da I9: parse extras/optionals from item name
+            let displayName = item.name;
+            let extras: string[] = [];
+            let opcionais: string[] = [];
+
+            if (isLancheriaI9 && item.name.includes('(') && item.name.endsWith(')')) {
+              const idx = item.name.indexOf('(');
+              displayName = item.name.substring(0, idx).trim();
+              const parenthesesContent = item.name.substring(idx + 1, item.name.length - 1).trim();
+              // Split by comma and categorize
+              const parts = parenthesesContent.split(',').map(p => p.trim()).filter(Boolean);
+              parts.forEach(part => {
+                if (part.toLowerCase().startsWith('opcional:')) {
+                  opcionais.push(part.replace(/^opcional:\s*/i, ''));
+                } else {
+                  extras.push(part);
+                }
+              });
+            }
+
+            return (
+              <div key={item.id}>
+                <div className="flex justify-between text-sm">
+                  <span className="text-foreground">
+                    {item.quantity}x {displayName}
+                  </span>
+                  <span className="text-muted-foreground">
+                    R$ {(item.price * item.quantity).toFixed(2)}
+                  </span>
+                </div>
+                {isLancheriaI9 && extras.length > 0 && (
+                  <div className="ml-4 mt-0.5">
+                    <p className="text-xs text-muted-foreground font-medium">Extras:</p>
+                    {extras.map((extra, i) => (
+                      <p key={i} className="text-xs text-muted-foreground ml-2">+ {extra}</p>
+                    ))}
+                  </div>
+                )}
+                {isLancheriaI9 && opcionais.length > 0 && (
+                  <div className="ml-4 mt-0.5">
+                    <p className="text-xs text-muted-foreground font-medium">Opcionais:</p>
+                    {opcionais.map((opc, i) => (
+                      <p key={i} className="text-xs text-muted-foreground ml-2">+ {opc}</p>
+                    ))}
+                  </div>
+                )}
+                {item.notes && (
+                  <p className="text-xs text-muted-foreground italic ml-4">
+                    ↳ Observação: {item.notes}
+                  </p>
+                )}
               </div>
-              {item.notes && (
-                <p className="text-xs text-muted-foreground italic ml-4">
-                  ↳ Observação: {item.notes}
-                </p>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* Payment method & delivery type extracted from notes */}
+        {/* Payment method, delivery type & troco extracted from notes */}
         {order.notes && (() => {
           const paymentMatch = order.notes?.match(/Pagamento:\s*([^|()\n]+)/i);
+          const trocoMatch = isLancheriaI9 ? order.notes?.match(/Troco para R\$\s*([^)|\n]+)/i) : null;
           const isDelivery = !!order.deliveryAddress;
           return (
             <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
               {paymentMatch && (
                 <p>💳 Pagamento: {paymentMatch[1].trim()}</p>
+              )}
+              {isLancheriaI9 && trocoMatch && (
+                <p>💵 Troco para: R$ {trocoMatch[1].trim()}</p>
               )}
               <p>{isDelivery ? '🛵 Entrega' : '🤲 Retirada'}</p>
             </div>
