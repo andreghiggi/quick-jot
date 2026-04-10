@@ -425,9 +425,11 @@ export default function Menu() {
 
     // Collect selected group items as ProductOptional-like objects
     const groupOptionals: ProductOptional[] = [];
+    const groupedOptionalNames: string[] = [];
     for (const group of selectedProductGroups) {
       const selected = selectedGroupItems[group.id];
       if (!selected) continue;
+      const selectedItems: { name: string; price: number }[] = [];
       for (const item of group.items) {
         if (selected.has(item.id)) {
           groupOptionals.push({
@@ -438,7 +440,12 @@ export default function Menu() {
             type: 'extra',
             active: true,
           });
+          selectedItems.push({ name: item.name, price: item.price });
         }
+      }
+      if (selectedItems.length > 0) {
+        const itemsStr = selectedItems.map(i => i.price > 0 ? `${i.name} R$${i.price.toFixed(2)}` : i.name).join(', ');
+        groupedOptionalNames.push(`${group.name}: ${itemsStr}`);
       }
     }
 
@@ -449,6 +456,7 @@ export default function Menu() {
       product: selectedProduct,
       quantity: 1,
       selectedOptionals: allOptionals,
+      groupedOptionalNames: groupedOptionalNames.length > 0 ? groupedOptionalNames : undefined,
       notes: itemNotes || undefined,
     };
 
@@ -606,15 +614,24 @@ export default function Menu() {
       if (orderError) throw orderError;
 
       // Save order items
-      const orderItems = cart.map((item) => ({
-        order_id: newOrder.id,
-        product_id: item.product.id,
-        name: item.product.name + (item.selectedOptionals.length > 0 ? ` (${item.selectedOptionals.map(o => o.name).join(', ')})` : ''),
-        quantity: item.quantity,
-        price: item.product.price + item.selectedOptionals.reduce((sum, opt) => sum + opt.price, 0),
-        notes: item.notes || null,
-        company_id: company?.id || null,
-      }));
+      const orderItems = cart.map((item) => {
+        // Build name with grouped optional names if available
+        let optionalsStr = '';
+        if ((item as any).groupedOptionalNames && (item as any).groupedOptionalNames.length > 0) {
+          optionalsStr = ` (${(item as any).groupedOptionalNames.join(' | ')})`;
+        } else if (item.selectedOptionals.length > 0) {
+          optionalsStr = ` (${item.selectedOptionals.map(o => o.name).join(', ')})`;
+        }
+        return {
+          order_id: newOrder.id,
+          product_id: item.product.id,
+          name: item.product.name + optionalsStr,
+          quantity: item.quantity,
+          price: item.product.price + item.selectedOptionals.reduce((sum, opt) => sum + opt.price, 0),
+          notes: item.notes || null,
+          company_id: company?.id || null,
+        };
+      });
 
       const { error: itemsError } = await supabase
         .from('order_items')

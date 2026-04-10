@@ -294,22 +294,25 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       <div className="border-t border-border pt-3 mb-3">
         <div className="space-y-1.5">
           {order.items.map((item) => {
-            // For Lancheria da I9: parse extras/optionals from item name
+            // For Lancheria da I9: parse grouped optionals from item name
             let displayName = item.name;
-            let extras: string[] = [];
-            let opcionais: string[] = [];
+            let groupedOptionals: { groupName: string; items: string }[] = [];
 
             if (isLancheriaI9 && item.name.includes('(') && item.name.endsWith(')')) {
               const idx = item.name.indexOf('(');
               displayName = item.name.substring(0, idx).trim();
               const parenthesesContent = item.name.substring(idx + 1, item.name.length - 1).trim();
-              // Split by comma and categorize
-              const parts = parenthesesContent.split(',').map(p => p.trim()).filter(Boolean);
-              parts.forEach(part => {
-                if (part.toLowerCase().startsWith('opcional:')) {
-                  opcionais.push(part.replace(/^opcional:\s*/i, ''));
+              // Split by | to get groups
+              const groups = parenthesesContent.split('|').map(g => g.trim()).filter(Boolean);
+              groups.forEach(groupStr => {
+                const colonIdx = groupStr.indexOf(':');
+                if (colonIdx > -1) {
+                  const groupName = groupStr.substring(0, colonIdx).trim();
+                  const itemsStr = groupStr.substring(colonIdx + 1).trim();
+                  groupedOptionals.push({ groupName, items: itemsStr });
                 } else {
-                  extras.push(part);
+                  // No group name (legacy format) - show as "Adicionais"
+                  groupedOptionals.push({ groupName: 'Adicionais', items: groupStr });
                 }
               });
             }
@@ -324,19 +327,12 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                     R$ {(item.price * item.quantity).toFixed(2)}
                   </span>
                 </div>
-                {isLancheriaI9 && extras.length > 0 && (
-                  <div className="ml-4 mt-0.5">
-                    <p className="text-xs text-muted-foreground font-bold">Extras:</p>
-                    {extras.map((extra, i) => (
-                      <p key={i} className="text-xs text-muted-foreground ml-2">+ {extra}</p>
-                    ))}
-                  </div>
-                )}
-                {isLancheriaI9 && opcionais.length > 0 && (
-                  <div className="ml-4 mt-0.5">
-                    <p className="text-xs text-muted-foreground font-bold">Opcionais:</p>
-                    {opcionais.map((opc, i) => (
-                      <p key={i} className="text-xs text-muted-foreground ml-2">+ {opc}</p>
+                {isLancheriaI9 && groupedOptionals.length > 0 && (
+                  <div className="ml-4 mt-0.5 space-y-0.5">
+                    {groupedOptionals.map((group, i) => (
+                      <p key={i} className="text-xs text-muted-foreground">
+                        <span className="font-bold">{group.groupName}:</span> {group.items}
+                      </p>
                     ))}
                   </div>
                 )}
