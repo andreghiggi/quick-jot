@@ -1344,10 +1344,8 @@ pause
               <div className="space-y-3">
                 <Label>Nome da seção em destaque</Label>
                 <RadioGroup
-                  defaultValue={storeSettings.featuredSectionName || 'Novidades'}
-                  onValueChange={(value) => {
-                    (document.getElementById('__featured_section_value') as HTMLInputElement).value = value;
-                  }}
+                  value={featuredSectionName}
+                  onValueChange={setFeaturedSectionName}
                   className="flex flex-wrap gap-4"
                 >
                   {['Novidades', 'Destaques', 'Mais pedidos', 'Em alta'].map((option) => (
@@ -1357,15 +1355,13 @@ pause
                     </div>
                   ))}
                 </RadioGroup>
-                <input type="hidden" id="__featured_section_value" defaultValue={storeSettings.featuredSectionName || 'Novidades'} />
                 <Button
                   size="sm"
                   onClick={async () => {
-                    const value = (document.getElementById('__featured_section_value') as HTMLInputElement).value || 'Novidades';
-                    await updateSetting('featured_section_name', value);
+                    await updateSetting('featured_section_name', featuredSectionName);
                     toast({
                       title: 'Nome da seção salvo',
-                      description: `A seção em destaque agora se chama "${value}"`,
+                      description: `A seção em destaque agora se chama "${featuredSectionName}"`,
                     });
                   }}
                 >
