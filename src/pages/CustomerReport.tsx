@@ -27,6 +27,7 @@ import {
   X,
   ArrowUp,
   ArrowDown,
+  TrendingUp,
 } from 'lucide-react';
 
 interface OrderRow {
@@ -77,13 +78,24 @@ export default function CustomerReport() {
     queryKey: ['customer-report-orders', company?.id],
     queryFn: async () => {
       if (!company?.id) return [];
-      const { data, error } = await supabase
-        .from('orders')
-        .select('id, order_code, customer_name, customer_phone, delivery_address, created_at, status, total, daily_number')
-        .eq('company_id', company.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      const [ordersRes, itemsRes] = await Promise.all([
+        supabase
+          .from('orders')
+          .select('id, order_code, customer_name, customer_phone, delivery_address, created_at, status, total, daily_number')
+          .eq('company_id', company.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('order_items')
+          .select('order_id, price, quantity')
+          .eq('company_id', company.id),
+      ]);
+      if (ordersRes.error) throw ordersRes.error;
+      // Build map of order_id -> product subtotal
+      const subtotalMap = new Map<string, number>();
+      for (const item of (itemsRes.data || [])) {
+        subtotalMap.set(item.order_id, (subtotalMap.get(item.order_id) || 0) + Number(item.price) * item.quantity);
+      }
+      return (ordersRes.data || []).map(o => ({ ...o, productSubtotal: subtotalMap.get(o.id) ?? Number(o.total) }));
     },
     enabled: !!company?.id,
   });
