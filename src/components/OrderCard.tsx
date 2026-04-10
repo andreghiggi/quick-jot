@@ -484,7 +484,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               disabled={confirming || confirmed}
               className={cn(
                 "gap-1 shrink-0",
-                isLancheriaI9 && confirmed
+                confirmed
                   ? "bg-gray-400 text-white cursor-not-allowed opacity-50"
                   : "bg-green-600 hover:bg-green-700 text-white"
               )}
@@ -497,12 +497,12 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             <Button 
               size="sm" 
               onClick={handleAdvanceStatus}
-              disabled={isLancheriaI9 && order.status === 'pending' && !confirmed}
+              disabled={order.status === 'pending' && !confirmed}
               className={cn(
                 "gap-1 shrink-0 px-3 inline-flex items-center",
-                isLancheriaI9 && order.status === 'pending' && !confirmed
+                order.status === 'pending' && !confirmed
                   ? "opacity-50 cursor-not-allowed bg-gray-400 text-white hover:bg-gray-400"
-                  : isLancheriaI9 && order.status === 'pending' && confirmed
+                  : order.status === 'pending' && confirmed
                     ? "bg-red-600 hover:bg-red-700 text-white"
                     : ""
               )}
