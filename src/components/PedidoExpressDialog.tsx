@@ -390,24 +390,6 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setIsSubmitting(false);
   }
 
-  async function sendPixKeyViaWhatsApp(phone: string, pixKey: string) {
-    if (!company?.id) return;
-    try {
-      const { data: instanceData } = await supabase
-        .from('whatsapp_instances')
-        .select('instance_name, status')
-        .eq('company_id', company.id)
-        .maybeSingle();
-      if (!instanceData || instanceData.status !== 'connected') return;
-      const message = `💳 *Pagamento via PIX*\n\nChave PIX: *${pixKey}*\n\nValor: *R$ ${total.toFixed(2)}*\n\nApós o pagamento, seu pedido será preparado! 😊`;
-      await supabase.functions.invoke('whatsapp-evolution', {
-        body: { action: 'send_message', instanceName: instanceData.instance_name, phone, message, companyId: company.id },
-      });
-      toast.success('Chave PIX enviada via WhatsApp!');
-    } catch (err) {
-      console.error('Failed to send PIX key via WhatsApp:', err);
-    }
-  }
 
   function resetForm() {
     setStep(1);
