@@ -28,7 +28,7 @@ export function StatsCard({ title, value, icon, trend, color = 'primary', classN
         <div className="min-w-0 flex-1">
           <p className="text-sm text-muted-foreground mb-1">{title}</p>
           <div className="flex items-center gap-2">
-            <p className="text-2xl font-bold text-foreground truncate">{value}</p>
+            <p className="text-xl sm:text-2xl font-bold text-foreground break-all leading-tight">{value}</p>
             {action}
           </div>
           {trend && (
