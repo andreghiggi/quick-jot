@@ -55,15 +55,15 @@ const nextStatusLabel: Record<OrderStatus, string> = {
 export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech' }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
   const { company } = useAuthContext();
-  const isLancheriaI9 = company?.name?.toLowerCase().includes('lancheria da i9');
+  
   const config = statusConfig[order.status];
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   
-  // Catalog lookup for Lancheria da I9 to enrich legacy order items with prices and group names
+  // Catalog lookup to enrich legacy order items with prices and group names
   const [optionalsCatalog, setOptionalsCatalog] = useState<Record<string, Record<string, { price: number; groupName: string }>>>({});
   useEffect(() => {
-    if (!isLancheriaI9 || !company?.id) return;
+    if (!company?.id) return;
     
     Promise.all([
       supabase.from('product_optionals').select('name, price, product_id, products!inner(name, company_id)').eq('products.company_id', company.id).eq('active', true),
@@ -121,7 +121,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       
       setOptionalsCatalog(catalog);
     });
-  }, [isLancheriaI9, company?.id]);
+  }, [company?.id]);
   // Converter para fuso horário de São Paulo
   const createdAt = new Date(order.createdAt);
   const timeAgo = formatTimeAgo(createdAt);
@@ -358,11 +358,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       <div className="border-t border-border pt-3 mb-3">
         <div className="space-y-1.5">
           {order.items.map((item) => {
-            // For Lancheria da I9: parse grouped optionals from item name
+            // Parse grouped optionals from item name
             let displayName = item.name;
             let groupedOptionals: { groupName: string; items: string }[] = [];
 
-            if (isLancheriaI9 && item.name.includes('(') && item.name.endsWith(')')) {
+            if (item.name.includes('(') && item.name.endsWith(')')) {
               const idx = item.name.indexOf('(');
               displayName = item.name.substring(0, idx).trim();
               const parenthesesContent = item.name.substring(idx + 1, item.name.length - 1).trim();
@@ -413,7 +413,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                     R$ {(item.price * item.quantity).toFixed(2)}
                   </span>
                 </div>
-                {isLancheriaI9 && groupedOptionals.length > 0 && (
+                {groupedOptionals.length > 0 && (
                   <div className="ml-4 mt-0.5 space-y-0.5">
                     {groupedOptionals.map((group, i) => (
                       <p key={i} className="text-xs text-muted-foreground">
@@ -435,14 +435,14 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
         {/* Payment method, delivery type & troco extracted from notes */}
         {order.notes && (() => {
           const paymentMatch = order.notes?.match(/Pagamento:\s*([^|()\n]+)/i);
-          const trocoMatch = isLancheriaI9 ? order.notes?.match(/Troco para R\$\s*([^)|\n]+)/i) : null;
+          const trocoMatch = order.notes?.match(/Troco para R\$\s*([^)|\n]+)/i) || null;
           const isDelivery = !!order.deliveryAddress;
           return (
             <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
               {paymentMatch && (
                 <p>💳 Pagamento: {paymentMatch[1].trim()}</p>
               )}
-              {isLancheriaI9 && trocoMatch && (
+              {trocoMatch && (
                 <p>💵 Troco para: R$ {trocoMatch[1].trim()}</p>
               )}
               <p>{isDelivery ? '🛵 Entrega' : '🤲 Retirada'}</p>
