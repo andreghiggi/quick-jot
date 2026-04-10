@@ -451,6 +451,16 @@ export function useOrders(options: UseOrdersOptions = {}) {
             orderId,
           },
         });
+
+        // Persist confirmed_at to prevent duplicate sends on refresh
+        await supabase
+          .from('orders')
+          .update({ confirmed_at: new Date().toISOString() } as any)
+          .eq('id', orderId);
+
+        // Update local state
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, confirmedAt: new Date() } : o));
+
         toast.success('Confirmação enviada via WhatsApp!');
         return true;
       }
