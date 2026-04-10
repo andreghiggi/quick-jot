@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Plus, Search, ChevronLeft, ArrowLeft, MessageSquare, Clock } from 'lucide-react';
+import { ShoppingCart, Plus, Search, ArrowLeft } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 
 // Category fallback images/emojis
@@ -108,7 +108,7 @@ export function MenuV2({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
-  const isLancheriaI9 = company?.slug === 'lancheria-da-i9-263ee29a';
+  
 
   // Filter products
   const filteredProducts = activeProducts.filter((product) => {
@@ -251,21 +251,6 @@ export function MenuV2({
   // Main category view
   return (
     <div className="min-h-screen bg-background pb-24" style={buttonColorStyle}>
-      {/* Closed Store Banner - only for non-Lancheria stores */}
-      {!isOpen && !isLancheriaI9 && (
-        <div className="bg-destructive/10 border-b border-destructive/20">
-          <div className="container mx-auto px-4 py-3">
-            <div className="flex items-center gap-2 text-destructive">
-              <div className="flex-1">
-                <p className="font-medium text-sm">⚠️ Estabelecimento fechado</p>
-                <p className="text-xs opacity-80">
-                  {formattedHours === 'Fechado hoje' ? 'Não abrimos hoje' : `Horário de hoje: ${formattedHours}`}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div className="sticky top-0 z-20 bg-card border-b border-border shadow-sm">
@@ -275,53 +260,35 @@ export function MenuV2({
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1 min-w-0">
-              {isLancheriaI9 ? (
-                <>
-                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
-                     <h1 className="text-lg font-bold text-foreground uppercase" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
-                       {settings.storeName || company?.name || 'Cardápio'}
-                     </h1>
-                     <div>
-                       <span className={cn(
-                         "inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold text-white",
-                         isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
-                       )}>
-                         <span className="text-[8px] leading-none text-white/70">●</span>
-                         {isOpen ? 'Aberto' : (schedulingEnabled ? 'Fechado - Agende seu pedido' : 'Fechado')}
-                       </span>
-                     </div>
-                   </div>
-                  {isOpen && settings.estimatedWaitTime && (
-                    <div className="mt-1">
-                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-normal bg-[#22C55E]/15 text-[#16a34a] border border-[#22C55E]">
-                        🛵 Entrega · 🤲 Retirada: {settings.estimatedWaitTime}
-                      </span>
-                    </div>
-                  )}
-                  {!isOpen && formattedHours && (
-                    <div className="mt-1">
-                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-normal bg-[hsl(0,84%,60%)]/20 text-[hsl(0,84%,60%)] border border-[hsl(0,84%,60%)]">
-                        🕐 {formattedHours === 'Fechado hoje' ? 'Fechado hoje' : `Horário de hoje: ${formattedHours}`}
-                      </span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <h1 className="text-lg font-bold text-foreground truncate">
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
+                <h1 className="text-lg font-bold text-foreground uppercase" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
                   {settings.storeName || company?.name || 'Cardápio'}
                 </h1>
+                <div>
+                  <span className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold text-white",
+                    isOpen ? "bg-[#22C55E]" : "bg-[hsl(0,84%,60%)]"
+                  )}>
+                    <span className="text-[8px] leading-none text-white/70">●</span>
+                    {isOpen ? 'Aberto' : (schedulingEnabled ? 'Fechado - Agende seu pedido' : 'Fechado')}
+                  </span>
+                </div>
+              </div>
+              {isOpen && settings.estimatedWaitTime && (
+                <div className="mt-1">
+                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-normal bg-[#22C55E]/15 text-[#16a34a] border border-[#22C55E]">
+                    🛵 Entrega · 🤲 Retirada: {settings.estimatedWaitTime}
+                  </span>
+                </div>
+              )}
+              {!isOpen && formattedHours && (
+                <div className="mt-1">
+                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-normal bg-[hsl(0,84%,60%)]/20 text-[hsl(0,84%,60%)] border border-[hsl(0,84%,60%)]">
+                    🕐 {formattedHours === 'Fechado hoje' ? 'Fechado hoje' : `Horário de hoje: ${formattedHours}`}
+                  </span>
+                </div>
               )}
             </div>
-            {!isLancheriaI9 && (
-              <Button variant="outline" size="sm" className="relative flex-shrink-0" onClick={onCartOpen}>
-                <ShoppingCart className="h-4 w-4" />
-                {cartItemsCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                    {cartItemsCount}
-                  </Badge>
-                )}
-              </Button>
-            )}
           </div>
         </div>
       </div>
@@ -432,7 +399,7 @@ export function MenuV2({
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                    <div className={cn("relative z-10 mt-auto p-4", company?.slug?.startsWith('lancheria-da-i9') ? 'pt-20' : 'pt-12')}>
+                    <div className="relative z-10 mt-auto p-4 pt-20">
                       <p className="font-bold text-sm leading-tight line-clamp-2 text-white px-2 py-1 inline-block" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)' }}>{category}</p>
                     </div>
                   </>
