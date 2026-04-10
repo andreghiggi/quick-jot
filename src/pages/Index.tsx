@@ -47,12 +47,9 @@ const Index = () => {
   // When no filter, show today's orders; when filtered, show all filtered
   const statsOrders = useMemo(() => {
     if (isDateFiltered) return filteredOrders;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayStr = toSPDateString(new Date());
     return orders.filter((order) => {
-      const d = new Date(order.createdAt);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime() === today.getTime();
+      return toSPDateString(new Date(order.createdAt)) === todayStr;
     });
   }, [filteredOrders, orders, isDateFiltered]);
 
