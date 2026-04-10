@@ -411,17 +411,23 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                   }
                 });
               } else {
-                // Legacy format: "item1, item2, item3" - enrich with catalog prices
+                // Legacy format: "item1, item2, item3" - enrich with catalog prices and group names
                 const optNames = parenthesesContent.split(',').map(n => n.trim()).filter(Boolean);
                 const productCatalog = optionalsCatalog[displayName] || {};
-                const enrichedItems = optNames.map(name => {
-                  const price = productCatalog[name];
-                  if (price && price > 0) {
-                    return `${name} R$${price.toFixed(2).replace('.', ',')}`;
-                  }
-                  return name;
+                const wildcardCatalog = optionalsCatalog['__groups__'] || {};
+                // Group items by their group name from the catalog
+                const groupMap: Record<string, string[]> = {};
+                optNames.forEach(name => {
+                  const catalogEntry = productCatalog[name] || wildcardCatalog[name];
+                  const groupName = catalogEntry?.groupName || 'Adicionais';
+                  const price = catalogEntry?.price ?? 0;
+                  const displayStr = price > 0 ? `${name} R$${price.toFixed(2).replace('.', ',')}` : name;
+                  if (!groupMap[groupName]) groupMap[groupName] = [];
+                  groupMap[groupName].push(displayStr);
                 });
-                groupedOptionals.push({ groupName: 'Adicionais', items: enrichedItems.join(', ') });
+                Object.entries(groupMap).forEach(([groupName, items]) => {
+                  groupedOptionals.push({ groupName, items: items.join(', ') });
+                });
               }
             }
 
