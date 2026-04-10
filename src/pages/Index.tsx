@@ -92,42 +92,47 @@ const Index = () => {
           onPeriodChange={setActivePeriod}
         />
 
-        <section className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <section className="flex flex-nowrap gap-3 overflow-x-auto">
           <StatsCard
             title="Pendentes"
             value={pendingCount}
-            icon={<Clock className="w-5 h-5" />}
+            icon={<Clock className="w-4 h-4" />}
             color="warning"
+            className="flex-1 min-w-0"
           />
           <StatsCard
             title="Preparando"
             value={preparingCount}
-            icon={<ShoppingBag className="w-5 h-5" />}
+            icon={<ShoppingBag className="w-4 h-4" />}
             color="primary"
+            className="flex-1 min-w-0"
           />
           <StatsCard
             title="Prontos"
             value={readyCount}
-            icon={<CheckCircle className="w-5 h-5" />}
+            icon={<CheckCircle className="w-4 h-4" />}
             color="success"
+            className="flex-1 min-w-0"
           />
           <StatsCard
             title="Entregues"
             value={deliveredCount}
-            icon={<Truck className="w-5 h-5" />}
+            icon={<Truck className="w-4 h-4" />}
             color="success"
+            className="flex-1 min-w-0"
           />
           <StatsCard
             title="Todos"
             value={filteredOrders.length}
-            icon={<TrendingUp className="w-5 h-5" />}
+            icon={<TrendingUp className="w-4 h-4" />}
+            className="flex-1 min-w-0"
           />
           <StatsCard
             title="Faturamento no Período"
             value={showRevenue ? `R$ ${revenue.toFixed(2)}` : 'R$ ••••••'}
             icon={<DollarSign className="w-5 h-5" />}
             color="muted"
-            className="col-span-2 min-w-[200px]"
+            className="min-w-[220px] flex-[2]"
             action={
               <button
                 onClick={() => setShowRevenue(prev => !prev)}
