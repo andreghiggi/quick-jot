@@ -414,7 +414,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           })}
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+        <div className="flex-1 overflow-y-auto space-y-4 pr-2 pb-4">
           {/* Step 1: Products */}
           {step === 1 && (
             <div className="space-y-3">
