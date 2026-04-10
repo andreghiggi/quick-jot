@@ -384,7 +384,7 @@ export default function Products() {
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium">{product.name}</h3>
                           {!product.active && <Badge variant="secondary">Inativo</Badge>}
-                          {product.isNew && <Badge variant="default" className="bg-amber-500 text-white text-xs">⭐ Novidade</Badge>}
+                          {product.isNew && <Badge variant="default" className="bg-amber-500 text-white text-xs">⭐ {storeSettings.featuredSectionName}</Badge>}
                         </div>
                         {product.description && (
                           <p className="text-sm text-muted-foreground">{product.description}</p>
@@ -418,6 +418,7 @@ export default function Products() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
+                          title="Mover para cima"
                           disabled={categoryProducts.indexOf(product) === 0}
                           onClick={() => moveProduct(product.id, 'up', categoryProducts)}
                         >
@@ -427,6 +428,7 @@ export default function Products() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
+                          title="Mover para baixo"
                           disabled={categoryProducts.indexOf(product) === categoryProducts.length - 1}
                           onClick={() => moveProduct(product.id, 'down', categoryProducts)}
                         >
@@ -436,6 +438,7 @@ export default function Products() {
                           variant="outline"
                           size="icon"
                           className="h-7 w-7"
+                          title="Editar produto"
                           onClick={() => openEditDialog(product)}
                         >
                           <Pencil className="h-4 w-4" />
@@ -444,6 +447,7 @@ export default function Products() {
                           variant="outline"
                           size="icon"
                           className="h-7 w-7"
+                          title="Adicionar opcional"
                           onClick={() => {
                             setSelectedProduct(product);
                             setIsOptionalDialogOpen(true);
@@ -455,7 +459,7 @@ export default function Products() {
                           variant="ghost"
                           size="icon"
                           className={cn("h-7 w-7", product.isNew ? "text-amber-500" : "text-muted-foreground")}
-                          title={product.isNew ? "Remover novidade" : "Marcar como novidade"}
+                          title={product.isNew ? `Remover da seção: ${storeSettings.featuredSectionName}` : `Adicionar à seção: ${storeSettings.featuredSectionName}`}
                           onClick={() => toggleNewProduct(product.id, !product.isNew)}
                         >
                           <Star className={cn("h-4 w-4", product.isNew && "fill-current")} />
@@ -473,6 +477,7 @@ export default function Products() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-destructive"
+                          title="Excluir produto"
                           onClick={() => deleteProduct(product.id)}
                         >
                           <Trash2 className="h-4 w-4" />
