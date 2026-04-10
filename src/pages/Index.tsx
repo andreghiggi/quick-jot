@@ -48,20 +48,9 @@ const Index = () => {
     return base;
   }, [orders, startDate, endDate, todayStr]);
 
-  // Derive stats from filtered orders
-  const isDateFiltered = !!(startDate || endDate);
-  // When no filter, show today's orders; when filtered, show all filtered
-  const statsOrders = useMemo(() => {
-    if (isDateFiltered) return filteredOrders;
-    const todayStr = toSPDateString(new Date());
-    return orders.filter((order) => {
-      return toSPDateString(new Date(order.createdAt)) === todayStr;
-    });
-  }, [filteredOrders, orders, isDateFiltered]);
-
   const pendingCount = filteredOrders.filter(o => o.status === 'pending').length;
   const preparingCount = filteredOrders.filter(o => o.status === 'preparing').length;
-  const revenue = statsOrders
+  const revenue = filteredOrders
     .filter(o => o.status === 'delivered')
     .reduce((sum, o) => sum + o.total, 0);
 
@@ -117,8 +106,8 @@ const Index = () => {
           <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {showPedidosHoje && (
               <StatsCard
-                title={isDateFiltered ? "Pedidos no Período" : "Pedidos Hoje"}
-                value={statsOrders.length}
+                title="Pedidos no Período"
+                value={filteredOrders.length}
                 icon={<ShoppingBag className="w-5 h-5" />}
               />
             )}
@@ -131,7 +120,7 @@ const Index = () => {
             )}
             {showFaturamento && (
               <StatsCard
-                title={isDateFiltered ? "Faturamento no Período" : "Faturamento Hoje"}
+                title="Faturamento no Período"
                 value={`R$ ${revenue.toFixed(2)}`}
                 icon={<DollarSign className="w-5 h-5" />}
               />
