@@ -342,7 +342,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                 )}
                 {item.notes && (
                   <p className="text-xs text-muted-foreground italic ml-4">
-                    ↳ Observação: {item.notes}
+                    ↳ <span className="font-bold not-italic">Observação:</span> {item.notes}
                   </p>
                 )}
               </div>
