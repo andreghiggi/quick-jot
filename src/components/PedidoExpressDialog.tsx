@@ -566,7 +566,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   placeholder="(00) 00000-0000"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(formatPhone(e.target.value))}
-                  className="h-14 text-lg"
+                  className="h-14 text-lg focus-visible:ring-primary"
                   autoFocus
                 />
                 {searchingCustomer && (
@@ -594,7 +594,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   placeholder="Nome do cliente"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="h-14 text-lg"
+                  className="h-14 text-lg focus-visible:ring-primary"
                   autoFocus
                 />
                 {customerFound && (
@@ -634,7 +634,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                         value={deliveryAddress}
                         onChange={(e) => setDeliveryAddress(e.target.value)}
                         placeholder="Ex: Rua das Flores"
-                        className="border-primary"
+                        className="focus-visible:ring-primary"
                       />
                     </div>
                     <div className="min-w-0">
@@ -644,7 +644,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                         onChange={(e) => setDeliveryNumber(e.target.value)}
                         placeholder="123"
                         inputMode="numeric"
-                        className="border-primary"
+                        className="focus-visible:ring-primary"
                       />
                     </div>
                   </div>
@@ -654,7 +654,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                       value={deliveryComplement}
                       onChange={(e) => setDeliveryComplement(e.target.value)}
                       placeholder="Apto 01, Sala 02..."
-                      className="border-primary"
+                      className="focus-visible:ring-primary"
                     />
                   </div>
                   <div>
@@ -663,7 +663,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                       value={deliveryNeighborhood}
                       onChange={(e) => setDeliveryNeighborhood(e.target.value)}
                       placeholder="Nome do bairro"
-                      className="border-primary"
+                      className="focus-visible:ring-primary"
                     />
                   </div>
                   <div>
@@ -672,7 +672,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                       value={deliveryReference}
                       onChange={(e) => setDeliveryReference(e.target.value)}
                       placeholder="Próximo ao mercado, em frente à escola..."
-                      className="border-primary"
+                      className="focus-visible:ring-primary"
                     />
                   </div>
                 </div>
