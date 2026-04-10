@@ -7,7 +7,7 @@ import { ClipboardList, ChefHat, PackageCheck, Truck } from 'lucide-react';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useAuthContext } from '@/contexts/AuthContext';
 
-const tabs: { value: OrderStatus | 'all'; label: string; icon: React.ElementType }[] = [
+const allTabs: { value: OrderStatus | 'all'; label: string; icon: React.ElementType }[] = [
   { value: 'all', label: 'Todos', icon: ClipboardList },
   { value: 'pending', label: 'Pendentes', icon: ClipboardList },
   { value: 'preparing', label: 'Preparando', icon: ChefHat },
@@ -17,14 +17,17 @@ const tabs: { value: OrderStatus | 'all'; label: string; icon: React.ElementType
 
 interface OrderTabsProps {
   filteredOrders?: Order[];
+  hideAllTab?: boolean;
 }
 
-export function OrderTabs({ filteredOrders }: OrderTabsProps) {
+export function OrderTabs({ filteredOrders, hideAllTab = false }: OrderTabsProps) {
   const { orders } = useOrderContext();
   const { company } = useAuthContext();
   const { settings } = useStoreSettings({ companyId: company?.id });
 
   const displayOrders = filteredOrders ?? orders;
+  const tabs = hideAllTab ? allTabs.filter(t => t.value !== 'all') : allTabs;
+  const defaultTab = hideAllTab ? 'pending' : 'all';
 
   function getOrders(filter: OrderStatus | 'all') {
     if (filter === 'all') return displayOrders;
@@ -36,7 +39,7 @@ export function OrderTabs({ filteredOrders }: OrderTabsProps) {
   }
 
   return (
-    <Tabs defaultValue="all" className="w-full">
+    <Tabs defaultValue={defaultTab} className="w-full">
       <TabsList className="w-full justify-start gap-1 bg-transparent p-0 h-auto flex-wrap">
         {tabs.map((tab) => {
           const count = getCount(tab.value);

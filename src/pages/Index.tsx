@@ -27,8 +27,13 @@ const Index = () => {
     return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }); // en-CA gives YYYY-MM-DD
   };
 
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+
   const filteredOrders = useMemo(() => {
-    let base = orders;
+    let base = orders.filter((order) => {
+      const orderStr = toSPDateString(new Date(order.createdAt));
+      return orderStr === todayStr;
+    });
     if (startDate || endDate) {
       const startStr = startDate ? toSPDateString(startDate) : null;
       const endStr = endDate ? toSPDateString(endDate) : null;
@@ -40,7 +45,7 @@ const Index = () => {
       });
     }
     return base;
-  }, [orders, startDate, endDate]);
+  }, [orders, startDate, endDate, todayStr]);
 
   // Derive stats from filtered orders
   const isDateFiltered = !!(startDate || endDate);
@@ -143,7 +148,7 @@ const Index = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">Pedidos</h2>
           </div>
-          <OrderTabs filteredOrders={filteredOrders} />
+          <OrderTabs filteredOrders={filteredOrders} hideAllTab />
         </section>
       </div>
 
