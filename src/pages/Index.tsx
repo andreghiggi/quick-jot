@@ -22,22 +22,20 @@ const Index = () => {
   
   
 
+  // Helper: get date string in São Paulo timezone (YYYY-MM-DD)
+  const toSPDateString = (date: Date) => {
+    return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }); // en-CA gives YYYY-MM-DD
+  };
+
   const filteredOrders = useMemo(() => {
     let base = orders;
     if (startDate || endDate) {
+      const startStr = startDate ? toSPDateString(startDate) : null;
+      const endStr = endDate ? toSPDateString(endDate) : null;
       base = orders.filter((order) => {
-        const orderDate = new Date(order.createdAt);
-        orderDate.setHours(0, 0, 0, 0);
-        if (startDate) {
-          const s = new Date(startDate);
-          s.setHours(0, 0, 0, 0);
-          if (orderDate < s) return false;
-        }
-        if (endDate) {
-          const e = new Date(endDate);
-          e.setHours(23, 59, 59, 999);
-          if (orderDate > e) return false;
-        }
+        const orderStr = toSPDateString(new Date(order.createdAt));
+        if (startStr && orderStr < startStr) return false;
+        if (endStr && orderStr > endStr) return false;
         return true;
       });
     }
@@ -49,12 +47,9 @@ const Index = () => {
   // When no filter, show today's orders; when filtered, show all filtered
   const statsOrders = useMemo(() => {
     if (isDateFiltered) return filteredOrders;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayStr = toSPDateString(new Date());
     return orders.filter((order) => {
-      const d = new Date(order.createdAt);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime() === today.getTime();
+      return toSPDateString(new Date(order.createdAt)) === todayStr;
     });
   }, [filteredOrders, orders, isDateFiltered]);
 

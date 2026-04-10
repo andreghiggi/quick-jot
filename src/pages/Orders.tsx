@@ -21,21 +21,18 @@ function OrdersContent() {
 
   
 
+  const toSPDateString = (date: Date) => {
+    return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  };
+
   const filteredOrders = useMemo(() => {
     if (!startDate && !endDate) return orders;
+    const startStr = startDate ? toSPDateString(startDate) : null;
+    const endStr = endDate ? toSPDateString(endDate) : null;
     return orders.filter((order) => {
-      const orderDate = new Date(order.createdAt);
-      orderDate.setHours(0, 0, 0, 0);
-      if (startDate) {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        if (orderDate < start) return false;
-      }
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        if (orderDate > end) return false;
-      }
+      const orderStr = toSPDateString(new Date(order.createdAt));
+      if (startStr && orderStr < startStr) return false;
+      if (endStr && orderStr > endStr) return false;
       return true;
     });
   }, [orders, startDate, endDate]);
