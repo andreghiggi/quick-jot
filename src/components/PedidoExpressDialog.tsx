@@ -596,6 +596,18 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                     <p className="text-sm text-muted-foreground">Cliente não encontrado. Preencha o nome no próximo passo.</p>
                   )}
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setCustomerPhone('(99) 99999-9999');
+                    setCustomerName('Cliente Loja');
+                    setCustomerFound(true);
+                  }}
+                >
+                  🏪 Sem telefone — usar "Cliente Loja"
+                </Button>
               </div>
             )}
 
