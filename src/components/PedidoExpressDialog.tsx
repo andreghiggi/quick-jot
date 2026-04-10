@@ -328,7 +328,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       case 3: return customerName.trim().length >= 2;
       case 4:
         if (!deliveryType) return false;
-        if (deliveryType === 'entrega') return !!(deliveryAddress.trim() && deliveryNumber.trim() && deliveryNeighborhood.trim() && deliveryReference.trim());
+        if (deliveryType === 'entrega') {
+          const hasAddress = !!(deliveryAddress.trim() && deliveryNumber.trim() && deliveryNeighborhood.trim() && deliveryReference.trim());
+          const hasFee = settings.deliveryMode === 'neighborhood'
+            ? !!deliveryNeighborhood.trim()
+            : !!selectedDeliveryFeeType;
+          return hasAddress && hasFee;
+        }
         return true;
       case 5: return !!paymentMethod;
       default: return false;
@@ -864,9 +870,21 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                       })()}
                     </div>
 
-                    <div className="border-t border-border pt-2 mt-2 flex justify-between font-bold text-lg">
-                      <span>Total</span>
-                      <span className="text-primary">R$ {total.toFixed(2)}</span>
+                    <div className="border-t border-border pt-2 mt-2 space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>Subtotal</span>
+                        <span>R$ {subtotal.toFixed(2)}</span>
+                      </div>
+                      {deliveryType === 'entrega' && deliveryFee > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>Taxa de entrega</span>
+                          <span>R$ {deliveryFee.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-lg pt-1">
+                        <span>Total</span>
+                        <span className="text-primary">R$ {total.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
                 )}
