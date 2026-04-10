@@ -334,7 +334,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                 )}
                 {isLancheriaI9 && opcionais.length > 0 && (
                   <div className="ml-4 mt-0.5">
-                    <p className="text-xs text-muted-foreground font-medium">Opcionais:</p>
+                    <p className="text-xs text-muted-foreground font-bold">Opcionais:</p>
                     {opcionais.map((opc, i) => (
                       <p key={i} className="text-xs text-muted-foreground ml-2">+ {opc}</p>
                     ))}
