@@ -9,8 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen, Pencil, Check, X, Film } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
+import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen, Pencil, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -227,15 +226,6 @@ export default function Categories() {
                     )}
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <div className="relative group flex items-center gap-1 mr-1">
-                      <Film className={cn("h-3.5 w-3.5", cat.animated ? "text-primary" : "text-muted-foreground")} />
-                      <Switch
-                        checked={cat.animated || false}
-                        onCheckedChange={(checked) => updateCategory(cat.id, { animated: checked })}
-                        className="scale-75"
-                      />
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">{cat.animated ? 'Desativar imagem em movimento' : 'Ativar imagem em movimento'}</span>
-                    </div>
                     <div className="relative group">
                       <Button
                         variant="ghost"
