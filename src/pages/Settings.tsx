@@ -50,6 +50,7 @@ export default function Settings() {
   const [newNeighborhoodName, setNewNeighborhoodName] = useState('');
   const [newNeighborhoodFee, setNewNeighborhoodFee] = useState('');
   const [deliveryMode, setDeliveryMode] = useState<'simple' | 'neighborhood'>('simple');
+  const [featuredSectionName, setFeaturedSectionName] = useState(storeSettings.featuredSectionName || 'Novidades');
 
   // Card visibility states
   const [cardVisibility, setCardVisibility] = useState({
@@ -90,6 +91,12 @@ export default function Settings() {
       });
     }
   }, [company]);
+
+  useEffect(() => {
+    if (storeSettings.featuredSectionName) {
+      setFeaturedSectionName(storeSettings.featuredSectionName);
+    }
+  }, [storeSettings.featuredSectionName]);
 
   async function uploadBanner(file: File): Promise<string | null> {
     setIsBannerUploading(true);
@@ -1339,24 +1346,34 @@ pause
                 Este nome aparece no cardápio na seção de produtos marcados com ⭐. Marque um produto com a estrela para ele aparecer aqui.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="featured_section_name">Nome da seção em destaque</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="featured_section_name"
-                    defaultValue={storeSettings.featuredSectionName}
-                    placeholder="Ex: Novidades, Destaque, Mais pedidos, Em alta"
-                    onBlur={async (e) => {
-                      const value = e.target.value.trim() || 'Novidades';
-                      await updateSetting('featured_section_name', value);
-                      toast({
-                        title: 'Nome da seção salvo',
-                        description: `A seção em destaque agora se chama "${value}"`,
-                      });
-                    }}
-                  />
-                </div>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <Label>Nome da seção em destaque</Label>
+                <RadioGroup
+                  value={featuredSectionName}
+                  onValueChange={setFeaturedSectionName}
+                  className="flex flex-wrap gap-4"
+                >
+                  {['Novidades', 'Destaques', 'Mais pedidos', 'Em alta'].map((option) => (
+                    <div key={option} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option} id={`featured_${option}`} />
+                      <Label htmlFor={`featured_${option}`} className="cursor-pointer font-normal">{option}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    await updateSetting('featured_section_name', featuredSectionName);
+                    toast({
+                      title: 'Nome da seção salvo',
+                      description: `A seção em destaque agora se chama "${featuredSectionName}"`,
+                    });
+                  }}
+                >
+                  <Save className="h-4 w-4 mr-1" />
+                  Salvar
+                </Button>
               </div>
             </CardContent>
           </Card>

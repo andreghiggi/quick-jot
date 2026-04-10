@@ -414,74 +414,88 @@ export default function Products() {
                       </div>
 
                       <div className="flex flex-col gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          title="Mover para cima"
-                          disabled={categoryProducts.indexOf(product) === 0}
-                          onClick={() => moveProduct(product.id, 'up', categoryProducts)}
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          title="Mover para baixo"
-                          disabled={categoryProducts.indexOf(product) === categoryProducts.length - 1}
-                          onClick={() => moveProduct(product.id, 'down', categoryProducts)}
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          title="Editar produto"
-                          onClick={() => openEditDialog(product)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          title="Adicionar opcional"
-                          onClick={() => {
-                            setSelectedProduct(product);
-                            setIsOptionalDialogOpen(true);
-                          }}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn("h-7 w-7", product.isNew ? "text-amber-500" : "text-muted-foreground")}
-                          title={product.isNew ? `Remover da seção: ${storeSettings.featuredSectionName}` : `Adicionar à seção: ${storeSettings.featuredSectionName}`}
-                          onClick={() => toggleNewProduct(product.id, !product.isNew)}
-                        >
-                          <Star className={cn("h-4 w-4", product.isNew && "fill-current")} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          title="Duplicar produto"
-                          onClick={() => duplicateProduct(product.id)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive"
-                          title="Excluir produto"
-                          onClick={() => deleteProduct(product.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="relative group">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={categoryProducts.indexOf(product) === 0}
+                            onClick={() => moveProduct(product.id, 'up', categoryProducts)}
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Mover para cima</span>
+                        </div>
+                        <div className="relative group">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={categoryProducts.indexOf(product) === categoryProducts.length - 1}
+                            onClick={() => moveProduct(product.id, 'down', categoryProducts)}
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Mover para baixo</span>
+                        </div>
+                        <div className="relative group">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => openEditDialog(product)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Editar produto</span>
+                        </div>
+                        <div className="relative group">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => {
+                              setSelectedProduct(product);
+                              setIsOptionalDialogOpen(true);
+                            }}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Adicionar opcional</span>
+                        </div>
+                        <div className="relative group">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn("h-7 w-7", product.isNew ? "text-amber-500" : "text-muted-foreground")}
+                            onClick={() => toggleNewProduct(product.id, !product.isNew)}
+                          >
+                            <Star className={cn("h-4 w-4", product.isNew && "fill-current")} />
+                          </Button>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">{product.isNew ? `Remover da seção: ${storeSettings.featuredSectionName}` : `Adicionar à seção: ${storeSettings.featuredSectionName}`}</span>
+                        </div>
+                        <div className="relative group">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => duplicateProduct(product.id)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Duplicar produto</span>
+                        </div>
+                        <div className="relative group">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive"
+                            onClick={() => deleteProduct(product.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Excluir produto</span>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
