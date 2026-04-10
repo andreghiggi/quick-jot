@@ -17,9 +17,10 @@ const allTabs: { value: OrderStatus | 'all'; label: string; icon: React.ElementT
 
 interface OrderTabsProps {
   filteredOrders?: Order[];
+  hideAllTab?: boolean;
 }
 
-export function OrderTabs({ filteredOrders }: OrderTabsProps) {
+export function OrderTabs({ filteredOrders, hideAllTab = false }: OrderTabsProps) {
   const { orders } = useOrderContext();
   const { company } = useAuthContext();
   const { settings } = useStoreSettings({ companyId: company?.id });
