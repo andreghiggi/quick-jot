@@ -135,13 +135,48 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     try {
       const { data } = await supabase
         .from('customers')
-        .select('name')
+        .select('name, address')
         .eq('company_id', company.id)
         .eq('phone', phone)
         .maybeSingle();
       if (data?.name) {
         setCustomerName(data.name);
         setCustomerFound(true);
+        // Auto-fill address fields from saved customer address
+        if (data.address) {
+          try {
+            // Try parsing structured address: "Rua, Número - Complemento - Bairro | Ref: Referência"
+            const addr = data.address;
+            const refMatch = addr.match(/\|\s*Ref:\s*(.+)$/i);
+            const ref = refMatch ? refMatch[1].trim() : '';
+            const withoutRef = refMatch ? addr.slice(0, refMatch.index).trim() : addr;
+            
+            const parts = withoutRef.split(' - ').map((s: string) => s.trim());
+            if (parts.length >= 2) {
+              // First part: "Rua, Número"
+              const streetAndNum = parts[0];
+              const commaIdx = streetAndNum.lastIndexOf(',');
+              if (commaIdx > 0) {
+                setDeliveryAddress(streetAndNum.slice(0, commaIdx).trim());
+                setDeliveryNumber(streetAndNum.slice(commaIdx + 1).trim());
+              } else {
+                setDeliveryAddress(streetAndNum);
+              }
+              if (parts.length === 3) {
+                setDeliveryComplement(parts[1]);
+                setDeliveryNeighborhood(parts[2]);
+              } else {
+                setDeliveryNeighborhood(parts[1]);
+              }
+              setDeliveryReference(ref);
+            } else {
+              // Fallback: put entire address in street field
+              setDeliveryAddress(addr);
+            }
+          } catch {
+            setDeliveryAddress(data.address);
+          }
+        }
       } else {
         setCustomerFound(false);
       }
