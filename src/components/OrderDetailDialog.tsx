@@ -136,7 +136,7 @@ export function OrderDetailDialog({ orderId, open, onOpenChange }: OrderDetailDi
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3">
-                <span className="text-xl">Pedido #{order.daily_number || order.order_code}</span>
+                <span className="text-xl font-mono">#{order.order_code}</span>
                 <Badge variant="secondary" className={cn('text-xs', statusColors[order.status])}>
                   {statusLabels[order.status] || order.status}
                 </Badge>
