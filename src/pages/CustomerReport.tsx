@@ -136,18 +136,32 @@ export default function CustomerReport() {
       }
     }
 
-    return Array.from(map.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+    return Array.from(map.values());
   }, [orders, dateFrom, dateTo]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return customers;
-    const q = search.toLowerCase();
-    return customers.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        (c.phone && c.phone.includes(q))
-    );
-  }, [customers, search]);
+    let result = customers;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.phone && c.phone.includes(q))
+      );
+    }
+    // Sort
+    result = [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'name': cmp = a.name.localeCompare(b.name, 'pt-BR'); break;
+        case 'totalOrders': cmp = a.totalOrders - b.totalOrders; break;
+        case 'totalSpent': cmp = a.totalSpent - b.totalSpent; break;
+        case 'lastDate': cmp = new Date(a.lastDate).getTime() - new Date(b.lastDate).getTime(); break;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return result;
+  }, [customers, search, sortField, sortDir]);
 
   const totalRevenue = filtered.reduce((s, c) => s + c.totalSpent, 0);
   const totalOrders = filtered.reduce((s, c) => s + c.totalOrders, 0);
