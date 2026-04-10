@@ -616,7 +616,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                     setCustomerName('Cliente Loja');
                     setCustomerFound(true);
                     setDeliveryType('retirada');
-                  }
+                  }}
                 >
                   🏪 Sem telefone — usar "Cliente Loja"
                 </Button>
