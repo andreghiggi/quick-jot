@@ -92,6 +92,12 @@ export default function Settings() {
     }
   }, [company]);
 
+  useEffect(() => {
+    if (storeSettings.featuredSectionName) {
+      setFeaturedSectionName(storeSettings.featuredSectionName);
+    }
+  }, [storeSettings.featuredSectionName]);
+
   async function uploadBanner(file: File): Promise<string | null> {
     setIsBannerUploading(true);
     try {
