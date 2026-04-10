@@ -106,8 +106,8 @@ const Index = () => {
           <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {showPedidosHoje && (
               <StatsCard
-                title={isDateFiltered ? "Pedidos no Período" : "Pedidos Hoje"}
-                value={statsOrders.length}
+                title="Pedidos no Período"
+                value={filteredOrders.length}
                 icon={<ShoppingBag className="w-5 h-5" />}
               />
             )}
@@ -120,7 +120,7 @@ const Index = () => {
             )}
             {showFaturamento && (
               <StatsCard
-                title={isDateFiltered ? "Faturamento no Período" : "Faturamento Hoje"}
+                title="Faturamento no Período"
                 value={`R$ ${revenue.toFixed(2)}`}
                 icon={<DollarSign className="w-5 h-5" />}
               />
