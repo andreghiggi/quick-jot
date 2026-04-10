@@ -1,19 +1,25 @@
 import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { OrderProvider, useOrderContext } from '@/contexts/OrderContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { OrderTabs } from '@/components/OrderTabs';
 import { StatsCard } from '@/components/StatsCard';
 import { NewOrderDialog } from '@/components/NewOrderDialog';
+import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { OrderDateFilter } from '@/components/OrderDateFilter';
-import { ShoppingBag, Clock, CheckCircle, Truck, Plus } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle, Truck, Plus, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Order } from '@/types/order';
 
 function OrdersContent() {
   const { orders, getOrdersByStatus } = useOrderContext();
+  const { company } = useAuthContext();
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
+  const [isPedidoExpressOpen, setIsPedidoExpressOpen] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+
+  const isLancheriaI9 = company?.name?.toLowerCase().includes('lancheria da i9');
 
   const filteredOrders = useMemo(() => {
     if (!startDate && !endDate) return orders;
