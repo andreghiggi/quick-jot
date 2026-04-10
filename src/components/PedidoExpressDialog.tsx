@@ -35,6 +35,7 @@ interface CartItem {
   price: number;
   quantity: number;
   optionals: CartItemOptional[];
+  imageUrl?: string | null;
 }
 
 type Step = 1 | 2 | 3 | 4 | 5;
