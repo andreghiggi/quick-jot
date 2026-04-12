@@ -326,7 +326,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     switch (step) {
       case 1: return cart.length > 0;
       case 2: return phoneDigits.length >= 10;
-      case 3: return customerName.trim().length >= 2;
+      case 3: {
+        if (isClienteLoja) return true;
+        const nameParts = customerName.trim().split(/\s+/);
+        return nameParts.length >= 2 && nameParts.every(p => p.length >= 2);
+      }
       case 4:
         if (!deliveryType) return false;
         if (deliveryType === 'entrega') {
