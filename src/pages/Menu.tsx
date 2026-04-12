@@ -1407,6 +1407,9 @@ export default function Menu() {
                       placeholder="Nome e sobrenome"
                       className={cn('border-primary', fieldErrors.has('customerName') && 'border-destructive')}
                     />
+                    {fieldErrors.has('customerName') && (
+                      <p className="text-xs text-destructive mt-1">Por favor, informe o nome e sobrenome</p>
+                    )}
                   </div>
                   <div>
                     <Label className="font-bold">CPF *</Label>
