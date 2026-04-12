@@ -652,6 +652,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                     onChange={(e) => setCustomerName(e.target.value)}
                     className="h-14 text-lg focus-visible:ring-primary"
                     autoFocus
+                    disabled={isClienteLoja}
+                    readOnly={isClienteLoja}
                   />
                   {customerFound && (
                     <p className="text-xs text-muted-foreground">Nome preenchido automaticamente da base de clientes.</p>
