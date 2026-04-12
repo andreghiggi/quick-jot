@@ -327,7 +327,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       case 1: return cart.length > 0;
       case 2: return phoneDigits.length >= 10;
       case 3: {
-        if (isClienteLoja) return true;
+        if (customerName === 'Cliente Loja') return true;
         const nameParts = customerName.trim().split(/\s+/);
         return nameParts.length >= 2 && nameParts.every(p => p.length >= 2);
       }
