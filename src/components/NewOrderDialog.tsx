@@ -194,9 +194,8 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
       toast.error('Informe o nome completo do cliente');
       return;
     }
-    const nameParts = customerName.trim().split(/\s+/);
-    if (nameParts.length < 2 || nameParts.some(p => p.length < 2)) {
-      toast.error('Informe nome e sobrenome do cliente');
+    if (customerName.trim().length < 2) {
+      toast.error('Informe o nome do cliente');
       return;
     }
     if (cart.length === 0) {

@@ -529,9 +529,8 @@ export default function Menu() {
     if (!customerPhone.trim() || customerPhone.replace(/\D/g, '').length < 10) errors.add('customerPhone');
     if (!customerName.trim()) {
       errors.add('customerName');
-    } else {
-      const nameParts = customerName.trim().split(/\s+/);
-      if (nameParts.length < 2 || nameParts.some(p => p.length < 2)) errors.add('customerName');
+    } else if (customerName.trim().length < 2) {
+      errors.add('customerName');
     }
     const cleanCpf = customerCpf.replace(/\D/g, '');
     if (!cleanCpf || cleanCpf.length !== 11 || !isValidCpf(cleanCpf)) errors.add('customerCpf');
