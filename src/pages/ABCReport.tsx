@@ -165,29 +165,48 @@ export default function ABCReport() {
     return name.replace(/\s*\(.*?\)/g, '').trim();
   }
 
-  // Helper: extract individual additionals from parentheses content
-  // e.g. "Açaí 440ml (Acompanhamentos: Creme de leite, Leite condensado)" 
-  // → ["Creme de leite", "Leite condensado"]
-  function extractAdditionalsFromName(name: string): { name: string; group: string }[] {
-    const results: { name: string; group: string }[] = [];
+  // Helper: extract individual additionals from parentheses content,
+  // preserving group and the actual recorded price from the order item name.
+  function extractAdditionalsFromName(name: string): { name: string; group: string; price: number }[] {
+    const results: { name: string; group: string; price: number }[] = [];
     const parenMatches = name.match(/\(([^)]+)\)/g);
     if (!parenMatches) return results;
+
     for (const match of parenMatches) {
-      const inner = match.slice(1, -1); // remove ( )
-      // Split by pipe first (separates groups), then by comma (separates items within group)
+      const inner = match.slice(1, -1);
       const groups = inner.split('|');
+
       for (const groupStr of groups) {
         const trimmedGroup = groupStr.trim();
+        if (!trimmedGroup) continue;
+
         const colonIdx = trimmedGroup.indexOf(':');
         const groupLabel = colonIdx >= 0 ? trimmedGroup.slice(0, colonIdx).trim() : 'Sem grupo';
         const itemsPart = colonIdx >= 0 ? trimmedGroup.slice(colonIdx + 1) : trimmedGroup;
-        const items = itemsPart.split(',').map(s => {
-          const cleaned = s.replace(/\s*R\$\s*\d+[.,]\d{2}/g, '').trim();
-          return cleaned;
-        }).filter(Boolean);
-        items.forEach(item => results.push({ name: item, group: groupLabel }));
+
+        itemsPart
+          .split(',')
+          .map((rawItem) => rawItem.trim())
+          .filter(Boolean)
+          .forEach((rawItem) => {
+            const priceMatch = rawItem.match(/R\$\s*(\d+(?:[.,]\d{1,2})?)/i);
+            const parsedPrice = priceMatch ? Number(priceMatch[1].replace(',', '.')) : 0;
+            const cleanedName = rawItem
+              .replace(/^[^:]+:\s*/, '')
+              .replace(/\s*R\$\s*\d+(?:[.,]\d{1,2})?/gi, '')
+              .trim();
+
+            if (!cleanedName) return;
+
+            results.push({
+              name: cleanedName,
+              group: groupLabel || 'Sem grupo',
+              price: Number.isFinite(parsedPrice) ? parsedPrice : 0,
+            });
+          });
       }
     }
+
     return results;
   }
 
@@ -234,17 +253,20 @@ export default function ABCReport() {
     return classifyABC(Object.values(map));
   }, [productRanking]);
 
-  // Build optionals ranking - extract individual additionals from parentheses in order item names
+  // Build optionals ranking using the actual recorded additional price from each order item
   const extractedOptionals = useMemo(() => {
-    const map: Record<string, { name: string; group: string; quantity: number }> = {};
+    const map: Record<string, { name: string; group: string; quantity: number; revenue: number }> = {};
 
     orderItems.forEach(item => {
       if (!item.name) return;
       const additionals = extractAdditionalsFromName(item.name);
       additionals.forEach(add => {
         const key = `${add.group.toLowerCase()}::${add.name.toLowerCase()}`;
-        if (!map[key]) map[key] = { name: add.name, group: add.group, quantity: 0 };
+        if (!map[key]) map[key] = { name: add.name, group: add.group, quantity: 0, revenue: 0 };
         map[key].quantity += item.quantity;
+        if (add.price > 0) {
+          map[key].revenue += add.price * item.quantity;
+        }
       });
     });
 
@@ -253,61 +275,20 @@ export default function ABCReport() {
       const additionals = extractAdditionalsFromName(item.product_name);
       additionals.forEach(add => {
         const key = `${add.group.toLowerCase()}::${add.name.toLowerCase()}`;
-        if (!map[key]) map[key] = { name: add.name, group: add.group, quantity: 0 };
+        if (!map[key]) map[key] = { name: add.name, group: add.group, quantity: 0, revenue: 0 };
         map[key].quantity += item.quantity;
+        if (add.price > 0) {
+          map[key].revenue += add.price * item.quantity;
+        }
       });
     });
 
     return map;
   }, [orderItems, pdvItems]);
 
-  // Fetch actual optional data from optional_group_items for naming
-  const { data: optionalGroupItems = [] } = useQuery({
-    queryKey: ['abc-optional-groups', company?.id],
-    queryFn: async () => {
-      if (!company?.id) return [];
-      const { data, error } = await supabase
-        .from('optional_group_items')
-        .select('id, name, price, group_id')
-        .eq('company_id', company.id);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!company?.id,
-  });
-
-  const { data: optionalGroups = [] } = useQuery({
-    queryKey: ['abc-optional-group-names', company?.id],
-    queryFn: async () => {
-      if (!company?.id) return [];
-      const { data, error } = await supabase
-        .from('optional_groups')
-        .select('id, name')
-        .eq('company_id', company.id);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!company?.id,
-  });
-
-  // Build final optionals ranking with group info and price from catalog
   const optionalRankingFinal = useMemo(() => {
-    const optItemMap: Record<string, number> = {};
-    optionalGroupItems.forEach(oi => { optItemMap[oi.name.toLowerCase()] = oi.price; });
-
-    const items = Object.entries(extractedOptionals).map(([_key, val]) => {
-      const catalogPrice = optItemMap[val.name.toLowerCase()];
-      const price = (catalogPrice != null && catalogPrice > 0) ? catalogPrice : 0;
-      return {
-        name: val.name,
-        group: val.group,
-        quantity: val.quantity,
-        revenue: price > 0 ? price * val.quantity : 0,
-      };
-    });
-
-    return classifyABC(items);
-  }, [extractedOptionals, optionalGroupItems]);
+    return classifyABC(Object.values(extractedOptionals));
+  }, [extractedOptionals]);
 
   // Summary cards
   const topProduct = productRanking[0];
