@@ -168,25 +168,24 @@ export default function ABCReport() {
   // Helper: extract individual additionals from parentheses content
   // e.g. "Açaí 440ml (Acompanhamentos: Creme de leite, Leite condensado)" 
   // → ["Creme de leite", "Leite condensado"]
-  function extractAdditionalsFromName(name: string): string[] {
-    const results: string[] = [];
+  function extractAdditionalsFromName(name: string): { name: string; group: string }[] {
+    const results: { name: string; group: string }[] = [];
     const parenMatches = name.match(/\(([^)]+)\)/g);
     if (!parenMatches) return results;
     for (const match of parenMatches) {
       const inner = match.slice(1, -1); // remove ( )
-      // Split by pipe first (separates groups), then by comma (separates items within groups)
+      // Split by pipe first (separates groups), then by comma (separates items within group)
       const groups = inner.split('|');
-      for (const group of groups) {
-        const trimmedGroup = group.trim();
-        // Remove group label prefix (e.g. "Acompanhamentos:")
+      for (const groupStr of groups) {
+        const trimmedGroup = groupStr.trim();
         const colonIdx = trimmedGroup.indexOf(':');
+        const groupLabel = colonIdx >= 0 ? trimmedGroup.slice(0, colonIdx).trim() : 'Sem grupo';
         const itemsPart = colonIdx >= 0 ? trimmedGroup.slice(colonIdx + 1) : trimmedGroup;
         const items = itemsPart.split(',').map(s => {
-          // Remove price suffixes like "R$3.00" or "R$3,00"
           const cleaned = s.replace(/\s*R\$\s*\d+[.,]\d{2}/g, '').trim();
           return cleaned;
         }).filter(Boolean);
-        results.push(...items);
+        items.forEach(item => results.push({ name: item, group: groupLabel }));
       }
     }
     return results;
@@ -237,14 +236,14 @@ export default function ABCReport() {
 
   // Build optionals ranking - extract individual additionals from parentheses in order item names
   const extractedOptionals = useMemo(() => {
-    const map: Record<string, { name: string; quantity: number }> = {};
+    const map: Record<string, { name: string; group: string; quantity: number }> = {};
 
     orderItems.forEach(item => {
       if (!item.name) return;
       const additionals = extractAdditionalsFromName(item.name);
-      additionals.forEach(addName => {
-        const key = addName.toLowerCase();
-        if (!map[key]) map[key] = { name: addName, quantity: 0 };
+      additionals.forEach(add => {
+        const key = `${add.group.toLowerCase()}::${add.name.toLowerCase()}`;
+        if (!map[key]) map[key] = { name: add.name, group: add.group, quantity: 0 };
         map[key].quantity += item.quantity;
       });
     });
@@ -252,9 +251,9 @@ export default function ABCReport() {
     pdvItems.forEach(item => {
       if (!item.product_name) return;
       const additionals = extractAdditionalsFromName(item.product_name);
-      additionals.forEach(addName => {
-        const key = addName.toLowerCase();
-        if (!map[key]) map[key] = { name: addName, quantity: 0 };
+      additionals.forEach(add => {
+        const key = `${add.group.toLowerCase()}::${add.name.toLowerCase()}`;
+        if (!map[key]) map[key] = { name: add.name, group: add.group, quantity: 0 };
         map[key].quantity += item.quantity;
       });
     });
@@ -293,25 +292,21 @@ export default function ABCReport() {
 
   // Build final optionals ranking with group info and price from catalog
   const optionalRankingFinal = useMemo(() => {
-    const groupMap: Record<string, string> = {};
-    optionalGroups.forEach(g => { groupMap[g.id] = g.name; });
+    const optItemMap: Record<string, number> = {};
+    optionalGroupItems.forEach(oi => { optItemMap[oi.name.toLowerCase()] = oi.price; });
 
-    const optItemMap: Record<string, { groupId: string; price: number }> = {};
-    optionalGroupItems.forEach(oi => { optItemMap[oi.name.toLowerCase()] = { groupId: oi.group_id, price: oi.price }; });
-
-    const items = Object.entries(extractedOptionals).map(([key, val]) => {
-      const optInfo = optItemMap[key];
-      const price = optInfo?.price || 0;
+    const items = Object.entries(extractedOptionals).map(([_key, val]) => {
+      const price = optItemMap[val.name.toLowerCase()] || 0;
       return {
         name: val.name,
-        group: optInfo ? (groupMap[optInfo.groupId] || 'Sem grupo') : 'Sem grupo',
+        group: val.group,
         quantity: val.quantity,
         revenue: price * val.quantity,
       };
     });
 
     return classifyABC(items);
-  }, [extractedOptionals, optionalGroupItems, optionalGroups]);
+  }, [extractedOptionals, optionalGroupItems]);
 
   // Summary cards
   const topProduct = productRanking[0];
