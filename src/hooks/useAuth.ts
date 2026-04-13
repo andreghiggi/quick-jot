@@ -236,6 +236,10 @@ export function useAuth() {
     return hasRole('waiter');
   }
 
+  function isReseller(): boolean {
+    return hasRole('reseller');
+  }
+
   // Impersonation functions for super admin
   const impersonateCompany = useCallback(async (companyId: string) => {
     if (!hasRole('super_admin')) {
@@ -288,6 +292,7 @@ export function useAuth() {
     isSuperAdmin,
     isCompanyAdmin,
     isWaiter,
+    isReseller,
     refetchUserData: () => user && fetchUserData(user.id),
     // Impersonation
     isImpersonating,

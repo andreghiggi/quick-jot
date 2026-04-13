@@ -1189,6 +1189,7 @@ export type Database = {
           phone: string | null
           status: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -1199,6 +1200,7 @@ export type Database = {
           phone?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1209,6 +1211,7 @@ export type Database = {
           phone?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1689,6 +1692,7 @@ export type Database = {
     }
     Functions: {
       get_next_daily_order_number: { Args: never; Returns: number }
+      get_reseller_id: { Args: { _user_id: string }; Returns: string }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {

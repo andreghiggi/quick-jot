@@ -29,7 +29,7 @@ export function ProtectedRoute({ children, requiredRole, requireCompany = false 
     return <Navigate to="/" replace />;
   }
 
-  if (requireCompany && !company && !hasRole('super_admin')) {
+  if (requireCompany && !company && !hasRole('super_admin') && !hasRole('reseller')) {
     return <Navigate to="/sem-empresa" replace />;
   }
 

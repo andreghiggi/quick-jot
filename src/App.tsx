@@ -44,11 +44,15 @@ import IntegrationsPage from "./pages/admin/IntegrationsPage";
 import CompanyModulesPage from "./pages/admin/CompanyModulesPage";
 import SuggestionsAdmin from "./pages/admin/SuggestionsAdmin";
 import ResellersPage from "./pages/admin/ResellersPage";
+import ResellerHome from "./pages/reseller/ResellerHome";
+import ResellerLojas from "./pages/reseller/ResellerLojas";
+import ResellerFinanceiro from "./pages/reseller/ResellerFinanceiro";
+import ResellerConfiguracoes from "./pages/reseller/ResellerConfiguracoes";
 
 const queryClient = new QueryClient();
 
 function AppRoutes() {
-  const { user, loading, isSuperAdmin, isWaiter } = useAuthContext();
+  const { user, loading, isSuperAdmin, isWaiter, isReseller } = useAuthContext();
 
   // Redirect logic for root path
   function RootRedirect() {
@@ -60,6 +64,10 @@ function AppRoutes() {
     
     if (isSuperAdmin()) {
       return <Navigate to="/admin" replace />;
+    }
+
+    if (isReseller()) {
+      return <Navigate to="/revendedor/home" replace />;
     }
 
     if (isWaiter()) {
@@ -234,6 +242,28 @@ function AppRoutes() {
       <Route path="/admin/sugestoes" element={
         <ProtectedRoute requiredRole="super_admin">
           <SuggestionsAdmin />
+        </ProtectedRoute>
+      } />
+      
+      {/* Reseller Routes */}
+      <Route path="/revendedor/home" element={
+        <ProtectedRoute requiredRole="reseller">
+          <ResellerHome />
+        </ProtectedRoute>
+      } />
+      <Route path="/revendedor/lojas" element={
+        <ProtectedRoute requiredRole="reseller">
+          <ResellerLojas />
+        </ProtectedRoute>
+      } />
+      <Route path="/revendedor/financeiro" element={
+        <ProtectedRoute requiredRole="reseller">
+          <ResellerFinanceiro />
+        </ProtectedRoute>
+      } />
+      <Route path="/revendedor/configuracoes" element={
+        <ProtectedRoute requiredRole="reseller">
+          <ResellerConfiguracoes />
         </ProtectedRoute>
       } />
       

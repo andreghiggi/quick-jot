@@ -17,6 +17,7 @@ interface AuthContextType {
   isSuperAdmin: () => boolean;
   isCompanyAdmin: () => boolean;
   isWaiter: () => boolean;
+  isReseller: () => boolean;
   refetchUserData: () => void;
   // Impersonation
   isImpersonating: boolean;
