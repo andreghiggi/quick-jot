@@ -45,6 +45,24 @@ function classifyABC(items: { name: string; category?: string; group?: string; q
   });
 }
 
+function classifyABCByQuantity(items: { name: string; category?: string; group?: string; quantity: number; revenue: number }[]): ABCItem[] {
+  const sorted = [...items].sort((a, b) => b.quantity - a.quantity);
+  const total = sorted.length;
+  if (total === 0) return [];
+
+  const aLimit = Math.max(1, Math.ceil(total * 0.2));
+  const bLimit = aLimit + Math.max(1, Math.ceil(total * 0.3));
+  const totalQty = sorted.reduce((s, i) => s + i.quantity, 0);
+
+  return sorted.map((item, i) => {
+    const pct = totalQty > 0 ? (item.quantity / totalQty) * 100 : 0;
+    let cls: ABCClass = 'C';
+    if (i < aLimit) cls = 'A';
+    else if (i < bLimit) cls = 'B';
+    return { ...item, position: i + 1, percentage: pct, classification: cls };
+  });
+}
+
 const abcColors: Record<ABCClass, string> = {
   A: 'bg-green-50 dark:bg-green-950/30',
   B: 'bg-yellow-50 dark:bg-yellow-950/30',
