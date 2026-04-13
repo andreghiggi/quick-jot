@@ -141,8 +141,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   }
 
   async function handleAdvanceStatus() {
-    if (config.next) {
-      await updateOrderStatus(order.id, config.next);
+    if (config.next && !advancing) {
+      setAdvancing(true);
+      try {
+        await updateOrderStatus(order.id, config.next);
+      } finally {
+        setAdvancing(false);
+      }
     }
   }
 
