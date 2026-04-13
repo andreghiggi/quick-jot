@@ -137,7 +137,7 @@ const Index = () => {
           )}
         </section>
 
-        <OrderTabs filteredOrders={activeOrders} hideAllTab={true} />
+        <OrderTabs filteredOrders={activeOrders} />
       </div>
 
       <PedidoExpressDialog open={isPedidoExpressOpen} onOpenChange={setIsPedidoExpressOpen} />
