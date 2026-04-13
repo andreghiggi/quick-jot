@@ -217,7 +217,8 @@ export default function Settings() {
 
   const handleCardVisibilityChange = async (key: string, value: boolean) => {
     setCardVisibility(prev => ({ ...prev, [key]: value }));
-    await saveCardVisibility(key.replace(/([A-Z])/g, '_$1').toLowerCase(), value);
+    const dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+    await saveCardVisibility(dbKey, value);
     toast({
       title: 'Configuração salva',
       description: 'Visibilidade do card atualizada.',
@@ -1398,45 +1399,67 @@ pause
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
-                  <p className="font-medium">Pedidos Hoje</p>
-                  <p className="text-sm text-muted-foreground">Mostra quantidade de pedidos do dia</p>
+                  <p className="font-medium">Pendentes</p>
+                  <p className="text-sm text-muted-foreground">Mostra pedidos pendentes</p>
                 </div>
                 <Switch
-                  checked={cardVisibility.showCardPedidosHoje}
-                  onCheckedChange={(value) => handleCardVisibilityChange('showCardPedidosHoje', value)}
+                  checked={cardVisibility.showCardPendentes}
+                  onCheckedChange={(value) => handleCardVisibilityChange('showCardPendentes', value)}
                 />
               </div>
 
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
-                  <p className="font-medium">Aguardando</p>
-                  <p className="text-sm text-muted-foreground">Mostra pedidos pendentes e em preparo</p>
+                  <p className="font-medium">Preparando</p>
+                  <p className="text-sm text-muted-foreground">Mostra pedidos em preparo</p>
                 </div>
                 <Switch
-                  checked={cardVisibility.showCardAguardando}
-                  onCheckedChange={(value) => handleCardVisibilityChange('showCardAguardando', value)}
+                  checked={cardVisibility.showCardPreparando}
+                  onCheckedChange={(value) => handleCardVisibilityChange('showCardPreparando', value)}
                 />
               </div>
 
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
-                  <p className="font-medium">Faturamento Hoje</p>
-                  <p className="text-sm text-muted-foreground">Mostra o valor faturado no dia</p>
+                  <p className="font-medium">Prontos</p>
+                  <p className="text-sm text-muted-foreground">Mostra pedidos prontos para entrega</p>
+                </div>
+                <Switch
+                  checked={cardVisibility.showCardProntos}
+                  onCheckedChange={(value) => handleCardVisibilityChange('showCardProntos', value)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Entregues</p>
+                  <p className="text-sm text-muted-foreground">Mostra pedidos entregues</p>
+                </div>
+                <Switch
+                  checked={cardVisibility.showCardEntregues}
+                  onCheckedChange={(value) => handleCardVisibilityChange('showCardEntregues', value)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Todos</p>
+                  <p className="text-sm text-muted-foreground">Mostra total de pedidos no período</p>
+                </div>
+                <Switch
+                  checked={cardVisibility.showCardTodos}
+                  onCheckedChange={(value) => handleCardVisibilityChange('showCardTodos', value)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Faturamento no Período</p>
+                  <p className="text-sm text-muted-foreground">Mostra o valor faturado no período</p>
                 </div>
                 <Switch
                   checked={cardVisibility.showCardFaturamento}
                   onCheckedChange={(value) => handleCardVisibilityChange('showCardFaturamento', value)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">Total de Pedidos</p>
-                  <p className="text-sm text-muted-foreground">Mostra o total geral de pedidos</p>
-                </div>
-                <Switch
-                  checked={cardVisibility.showCardTotalPedidos}
-                  onCheckedChange={(value) => handleCardVisibilityChange('showCardTotalPedidos', value)}
                 />
               </div>
             </CardContent>
