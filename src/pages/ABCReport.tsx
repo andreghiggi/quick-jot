@@ -168,25 +168,24 @@ export default function ABCReport() {
   // Helper: extract individual additionals from parentheses content
   // e.g. "Açaí 440ml (Acompanhamentos: Creme de leite, Leite condensado)" 
   // → ["Creme de leite", "Leite condensado"]
-  function extractAdditionalsFromName(name: string): string[] {
-    const results: string[] = [];
+  function extractAdditionalsFromName(name: string): { name: string; group: string }[] {
+    const results: { name: string; group: string }[] = [];
     const parenMatches = name.match(/\(([^)]+)\)/g);
     if (!parenMatches) return results;
     for (const match of parenMatches) {
       const inner = match.slice(1, -1); // remove ( )
-      // Split by pipe first (separates groups), then by comma (separates items within groups)
+      // Split by pipe first (separates groups), then by comma (separates items within group)
       const groups = inner.split('|');
-      for (const group of groups) {
-        const trimmedGroup = group.trim();
-        // Remove group label prefix (e.g. "Acompanhamentos:")
+      for (const groupStr of groups) {
+        const trimmedGroup = groupStr.trim();
         const colonIdx = trimmedGroup.indexOf(':');
+        const groupLabel = colonIdx >= 0 ? trimmedGroup.slice(0, colonIdx).trim() : 'Sem grupo';
         const itemsPart = colonIdx >= 0 ? trimmedGroup.slice(colonIdx + 1) : trimmedGroup;
         const items = itemsPart.split(',').map(s => {
-          // Remove price suffixes like "R$3.00" or "R$3,00"
           const cleaned = s.replace(/\s*R\$\s*\d+[.,]\d{2}/g, '').trim();
           return cleaned;
         }).filter(Boolean);
-        results.push(...items);
+        items.forEach(item => results.push({ name: item, group: groupLabel }));
       }
     }
     return results;
