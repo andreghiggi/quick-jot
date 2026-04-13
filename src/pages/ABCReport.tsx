@@ -292,25 +292,21 @@ export default function ABCReport() {
 
   // Build final optionals ranking with group info and price from catalog
   const optionalRankingFinal = useMemo(() => {
-    const groupMap: Record<string, string> = {};
-    optionalGroups.forEach(g => { groupMap[g.id] = g.name; });
+    const optItemMap: Record<string, number> = {};
+    optionalGroupItems.forEach(oi => { optItemMap[oi.name.toLowerCase()] = oi.price; });
 
-    const optItemMap: Record<string, { groupId: string; price: number }> = {};
-    optionalGroupItems.forEach(oi => { optItemMap[oi.name.toLowerCase()] = { groupId: oi.group_id, price: oi.price }; });
-
-    const items = Object.entries(extractedOptionals).map(([key, val]) => {
-      const optInfo = optItemMap[key];
-      const price = optInfo?.price || 0;
+    const items = Object.entries(extractedOptionals).map(([_key, val]) => {
+      const price = optItemMap[val.name.toLowerCase()] || 0;
       return {
         name: val.name,
-        group: optInfo ? (groupMap[optInfo.groupId] || 'Sem grupo') : 'Sem grupo',
+        group: val.group,
         quantity: val.quantity,
         revenue: price * val.quantity,
       };
     });
 
     return classifyABC(items);
-  }, [extractedOptionals, optionalGroupItems, optionalGroups]);
+  }, [extractedOptionals, optionalGroupItems]);
 
   // Summary cards
   const topProduct = productRanking[0];
