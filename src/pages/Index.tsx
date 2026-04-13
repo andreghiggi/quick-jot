@@ -9,6 +9,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Plus, Clock, CheckCircle, Truck, ShoppingBag, TrendingUp, DollarSign, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 
 const Index = () => {
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
@@ -19,6 +20,7 @@ const Index = () => {
   const [showRevenue, setShowRevenue] = useState(false);
   const { orders, loading } = useOrderContext();
   const { company } = useAuthContext();
+  const { settings } = useStoreSettings({ companyId: company?.id });
 
   const toSPDateString = (date: Date) => {
     return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
@@ -93,56 +95,68 @@ const Index = () => {
         />
 
         <section className="flex flex-nowrap gap-3 overflow-x-auto">
-          <StatsCard
-            title="Pendentes"
-            value={pendingCount}
-            icon={<Clock className="w-4 h-4" />}
-            color="warning"
-            className="flex-1 min-w-0"
-          />
-          <StatsCard
-            title="Preparando"
-            value={preparingCount}
-            icon={<ShoppingBag className="w-4 h-4" />}
-            color="primary"
-            className="flex-1 min-w-0"
-          />
-          <StatsCard
-            title="Prontos"
-            value={readyCount}
-            icon={<CheckCircle className="w-4 h-4" />}
-            color="success"
-            className="flex-1 min-w-0"
-          />
-          <StatsCard
-            title="Entregues"
-            value={deliveredCount}
-            icon={<Truck className="w-4 h-4" />}
-            color="success"
-            className="flex-1 min-w-0"
-          />
-          <StatsCard
-            title="Todos"
-            value={filteredOrders.length}
-            icon={<TrendingUp className="w-4 h-4" />}
-            className="flex-1 min-w-0"
-          />
-          <StatsCard
-            title="Faturamento no Período"
-            value={showRevenue ? `R$ ${revenue.toFixed(2)}` : 'R$ ••••••'}
-            icon={<DollarSign className="w-5 h-5" />}
-            color="muted"
-            className="min-w-[220px] flex-[2]"
-            action={
-              <button
-                onClick={() => setShowRevenue(prev => !prev)}
-                className="p-1 rounded-md hover:bg-muted transition-colors"
-                title={showRevenue ? 'Ocultar valor' : 'Mostrar valor'}
-              >
-                {showRevenue ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
-              </button>
-            }
-          />
+          {settings.showCardPendentes && (
+            <StatsCard
+              title="Pendentes"
+              value={pendingCount}
+              icon={<Clock className="w-4 h-4" />}
+              color="warning"
+              className="flex-1 min-w-0"
+            />
+          )}
+          {settings.showCardPreparando && (
+            <StatsCard
+              title="Preparando"
+              value={preparingCount}
+              icon={<ShoppingBag className="w-4 h-4" />}
+              color="primary"
+              className="flex-1 min-w-0"
+            />
+          )}
+          {settings.showCardProntos && (
+            <StatsCard
+              title="Prontos"
+              value={readyCount}
+              icon={<CheckCircle className="w-4 h-4" />}
+              color="success"
+              className="flex-1 min-w-0"
+            />
+          )}
+          {settings.showCardEntregues && (
+            <StatsCard
+              title="Entregues"
+              value={deliveredCount}
+              icon={<Truck className="w-4 h-4" />}
+              color="success"
+              className="flex-1 min-w-0"
+            />
+          )}
+          {settings.showCardTodos && (
+            <StatsCard
+              title="Todos"
+              value={filteredOrders.length}
+              icon={<TrendingUp className="w-4 h-4" />}
+              className="flex-1 min-w-0"
+            />
+          )}
+          {settings.showCardFaturamento && (
+            <StatsCard
+              title="Faturamento no Período"
+              value={showRevenue ? `R$ ${revenue.toFixed(2)}` : 'R$ ••••••'}
+              icon={<DollarSign className="w-5 h-5" />}
+              color="muted"
+              className="min-w-[220px] flex-[2]"
+              action={
+                <button
+                  onClick={() => setShowRevenue(prev => !prev)}
+                  className="p-1 rounded-md hover:bg-muted transition-colors"
+                  title={showRevenue ? 'Ocultar valor' : 'Mostrar valor'}
+                >
+                  {showRevenue ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
+                </button>
+              }
+            />
+          )}
         </section>
 
         <section>

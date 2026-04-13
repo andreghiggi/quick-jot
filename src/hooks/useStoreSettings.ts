@@ -10,10 +10,12 @@ interface StoreSettings {
   deliveryFeeInterior: number;
   deliveryMode: 'simple' | 'neighborhood';
   printerPaperSize: '58mm' | '80mm';
-  showCardPedidosHoje: boolean;
-  showCardAguardando: boolean;
+  showCardPendentes: boolean;
+  showCardPreparando: boolean;
+  showCardProntos: boolean;
+  showCardEntregues: boolean;
+  showCardTodos: boolean;
   showCardFaturamento: boolean;
-  showCardTotalPedidos: boolean;
   autoPrintSales: boolean;
   autoPrintNfce: boolean;
   menuLayout: 'v1' | 'v2';
@@ -41,10 +43,12 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     deliveryFeeInterior: 0,
     deliveryMode: 'simple',
     printerPaperSize: '58mm',
-    showCardPedidosHoje: true,
-    showCardAguardando: true,
+    showCardPendentes: true,
+    showCardPreparando: true,
+    showCardProntos: true,
+    showCardEntregues: true,
+    showCardTodos: true,
     showCardFaturamento: true,
-    showCardTotalPedidos: true,
     autoPrintSales: false,
     autoPrintNfce: false,
     menuLayout: 'v1',
@@ -87,10 +91,12 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         deliveryFeeInterior: parseFloat(settingsMap['delivery_fee_interior']) || 0,
         deliveryMode: (settingsMap['delivery_mode'] as 'simple' | 'neighborhood') || 'simple',
         printerPaperSize: (settingsMap['printer_paper_size'] as '58mm' | '80mm') || '58mm',
-        showCardPedidosHoje: settingsMap['show_card_pedidos_hoje'] !== 'false',
-        showCardAguardando: settingsMap['show_card_aguardando'] !== 'false',
+        showCardPendentes: settingsMap['show_card_pendentes'] !== 'false',
+        showCardPreparando: settingsMap['show_card_preparando'] !== 'false',
+        showCardProntos: settingsMap['show_card_prontos'] !== 'false',
+        showCardEntregues: settingsMap['show_card_entregues'] !== 'false',
+        showCardTodos: settingsMap['show_card_todos'] !== 'false',
         showCardFaturamento: settingsMap['show_card_faturamento'] !== 'false',
-        showCardTotalPedidos: settingsMap['show_card_total_pedidos'] !== 'false',
         autoPrintSales: settingsMap['auto_print_sales'] === 'true',
         autoPrintNfce: settingsMap['auto_print_nfce'] === 'true',
         menuLayout: (settingsMap['menu_layout'] as 'v1' | 'v2') || 'v1',
