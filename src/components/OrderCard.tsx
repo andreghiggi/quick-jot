@@ -58,6 +58,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   
   const config = statusConfig[order.status];
   const [confirming, setConfirming] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
   const confirmed = !!order.confirmedAt;
   
   // Catalog lookup to enrich legacy order items with prices and group names
@@ -140,8 +141,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   }
 
   async function handleAdvanceStatus() {
-    if (config.next) {
-      await updateOrderStatus(order.id, config.next);
+    if (config.next && !advancing) {
+      setAdvancing(true);
+      try {
+        await updateOrderStatus(order.id, config.next);
+      } finally {
+        setAdvancing(false);
+      }
     }
   }
 
@@ -496,7 +502,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             <Button 
               size="sm" 
               onClick={handleAdvanceStatus}
-              disabled={order.status === 'pending' && !confirmed}
+              disabled={advancing || (order.status === 'pending' && !confirmed)}
               className={cn(
                 "gap-1 shrink-0 px-3 inline-flex items-center",
                 order.status === 'pending' && !confirmed
@@ -506,8 +512,9 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                     : ""
               )}
             >
+              {advancing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {nextStatusLabel[order.status]}
-              <ChevronRight className="w-4 h-4" />
+              {!advancing && <ChevronRight className="w-4 h-4" />}
             </Button>
           )}
         </div>
