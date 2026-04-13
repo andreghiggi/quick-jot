@@ -7,6 +7,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Plus, Clock, CheckCircle, ShoppingBag, TrendingUp, DollarSign, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { OrderTabs } from '@/components/OrderTabs';
 
 const Index = () => {
   const [isPedidoExpressOpen, setIsPedidoExpressOpen] = useState(false);
@@ -135,6 +136,8 @@ const Index = () => {
             />
           )}
         </section>
+
+        <OrderTabs filteredOrders={activeOrders} hideAllTab={true} />
       </div>
 
       <PedidoExpressDialog open={isPedidoExpressOpen} onOpenChange={setIsPedidoExpressOpen} />
