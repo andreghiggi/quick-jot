@@ -54,20 +54,24 @@ export default function Settings() {
 
   // Card visibility states
   const [cardVisibility, setCardVisibility] = useState({
-    showCardPedidosHoje: true,
-    showCardAguardando: true,
+    showCardPendentes: true,
+    showCardPreparando: true,
+    showCardProntos: true,
+    showCardEntregues: true,
+    showCardTodos: true,
     showCardFaturamento: true,
-    showCardTotalPedidos: true,
   });
 
   useEffect(() => {
     setDeliveryFeeCity(storeSettings.deliveryFeeCity.toString());
     setDeliveryFeeInterior(storeSettings.deliveryFeeInterior.toString());
     setCardVisibility({
-      showCardPedidosHoje: storeSettings.showCardPedidosHoje,
-      showCardAguardando: storeSettings.showCardAguardando,
+      showCardPendentes: storeSettings.showCardPendentes,
+      showCardPreparando: storeSettings.showCardPreparando,
+      showCardProntos: storeSettings.showCardProntos,
+      showCardEntregues: storeSettings.showCardEntregues,
+      showCardTodos: storeSettings.showCardTodos,
       showCardFaturamento: storeSettings.showCardFaturamento,
-      showCardTotalPedidos: storeSettings.showCardTotalPedidos,
     });
     // Check if there are neighborhoods to determine delivery mode
     if (neighborhoods.length > 0) {
