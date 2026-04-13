@@ -174,11 +174,20 @@ export default function ABCReport() {
     if (!parenMatches) return results;
     for (const match of parenMatches) {
       const inner = match.slice(1, -1); // remove ( )
-      // Remove group label before colon if present, e.g. "Acompanhamentos: item1, item2"
-      const colonIdx = inner.indexOf(':');
-      const itemsPart = colonIdx >= 0 ? inner.slice(colonIdx + 1) : inner;
-      const items = itemsPart.split(',').map(s => s.trim()).filter(Boolean);
-      results.push(...items);
+      // Split by pipe first (separates groups), then by comma (separates items within groups)
+      const groups = inner.split('|');
+      for (const group of groups) {
+        const trimmedGroup = group.trim();
+        // Remove group label prefix (e.g. "Acompanhamentos:")
+        const colonIdx = trimmedGroup.indexOf(':');
+        const itemsPart = colonIdx >= 0 ? trimmedGroup.slice(colonIdx + 1) : trimmedGroup;
+        const items = itemsPart.split(',').map(s => {
+          // Remove price suffixes like "R$3.00" or "R$3,00"
+          const cleaned = s.replace(/\s*R\$\s*\d+[.,]\d{2}/g, '').trim();
+          return cleaned;
+        }).filter(Boolean);
+        results.push(...items);
+      }
     }
     return results;
   }
