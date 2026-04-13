@@ -1,22 +1,15 @@
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { StatsCard } from '@/components/StatsCard';
-import { OrderTabs } from '@/components/OrderTabs';
-import { NewOrderDialog } from '@/components/NewOrderDialog';
-import { OrderDateFilter } from '@/components/OrderDateFilter';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Plus, Clock, CheckCircle, Truck, ShoppingBag, TrendingUp, DollarSign, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Plus, Clock, CheckCircle, ShoppingBag, TrendingUp, DollarSign, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 
 const Index = () => {
-  const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
   const [isPedidoExpressOpen, setIsPedidoExpressOpen] = useState(false);
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [activePeriod, setActivePeriod] = useState<'today' | '7d' | '15d' | '30d' | 'all'>('today');
   const [showRevenue, setShowRevenue] = useState(false);
   const { orders, loading } = useOrderContext();
   const { company } = useAuthContext();
@@ -28,29 +21,23 @@ const Index = () => {
 
   const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 
-  const filteredOrders = useMemo(() => {
-    let base = orders.filter((order) => {
+  // Dashboard shows only today's non-delivered orders
+  const todayOrders = useMemo(() => {
+    return orders.filter((order) => {
       const orderStr = toSPDateString(new Date(order.createdAt));
       return orderStr === todayStr;
     });
-    if (startDate || endDate) {
-      const startStr = startDate ? toSPDateString(startDate) : null;
-      const endStr = endDate ? toSPDateString(endDate) : null;
-      base = orders.filter((order) => {
-        const orderStr = toSPDateString(new Date(order.createdAt));
-        if (startStr && orderStr < startStr) return false;
-        if (endStr && orderStr > endStr) return false;
-        return true;
-      });
-    }
-    return base;
-  }, [orders, startDate, endDate, todayStr]);
+  }, [orders, todayStr]);
 
-  const pendingCount = filteredOrders.filter(o => o.status === 'pending').length;
-  const preparingCount = filteredOrders.filter(o => o.status === 'preparing').length;
-  const readyCount = filteredOrders.filter(o => o.status === 'ready').length;
-  const deliveredCount = filteredOrders.filter(o => o.status === 'delivered').length;
-  const revenue = filteredOrders
+  const activeOrders = useMemo(() => {
+    return todayOrders.filter(o => o.status !== 'delivered');
+  }, [todayOrders]);
+
+  const pendingCount = activeOrders.filter(o => o.status === 'pending').length;
+  const preparingCount = activeOrders.filter(o => o.status === 'preparing').length;
+  const readyCount = activeOrders.filter(o => o.status === 'ready').length;
+  const deliveredCount = todayOrders.filter(o => o.status === 'delivered').length;
+  const revenue = todayOrders
     .filter(o => o.status === 'delivered')
     .reduce((sum, o) => sum + o.total, 0);
 
@@ -84,16 +71,6 @@ const Index = () => {
       }
     >
       <div className="space-y-6">
-        <OrderDateFilter
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={setStartDate}
-          onEndDateChange={setEndDate}
-          onClear={() => { setStartDate(undefined); setEndDate(undefined); }}
-          activePeriod={activePeriod}
-          onPeriodChange={setActivePeriod}
-        />
-
         <section className="flex flex-nowrap gap-3 overflow-x-auto">
           {settings.showCardPendentes && (
             <StatsCard
@@ -126,7 +103,7 @@ const Index = () => {
             <StatsCard
               title="Entregues"
               value={deliveredCount}
-              icon={<Truck className="w-4 h-4" />}
+              icon={<CheckCircle className="w-4 h-4" />}
               color="success"
               className="flex-1 min-w-0"
             />
@@ -134,14 +111,14 @@ const Index = () => {
           {settings.showCardTodos && (
             <StatsCard
               title="Todos"
-              value={filteredOrders.length}
+              value={todayOrders.length}
               icon={<TrendingUp className="w-4 h-4" />}
               className="flex-1 min-w-0"
             />
           )}
           {settings.showCardFaturamento && (
             <StatsCard
-              title="Faturamento no Período"
+              title="Faturamento do Dia"
               value={showRevenue ? `R$ ${revenue.toFixed(2)}` : 'R$ ••••••'}
               icon={<DollarSign className="w-5 h-5" />}
               color="muted"
@@ -158,16 +135,8 @@ const Index = () => {
             />
           )}
         </section>
-
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Pedidos</h2>
-          </div>
-          <OrderTabs filteredOrders={filteredOrders} />
-        </section>
       </div>
 
-      <NewOrderDialog open={isNewOrderOpen} onOpenChange={setIsNewOrderOpen} />
       <PedidoExpressDialog open={isPedidoExpressOpen} onOpenChange={setIsPedidoExpressOpen} />
     </AppLayout>
   );

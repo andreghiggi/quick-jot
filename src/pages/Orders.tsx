@@ -3,30 +3,35 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { OrderProvider, useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { OrderTabs } from '@/components/OrderTabs';
-import { StatsCard } from '@/components/StatsCard';
 import { NewOrderDialog } from '@/components/NewOrderDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { OrderDateFilter } from '@/components/OrderDateFilter';
-import { ShoppingBag, Clock, CheckCircle, Truck, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Order } from '@/types/order';
 
 function OrdersContent() {
-  const { orders, getOrdersByStatus } = useOrderContext();
+  const { orders } = useOrderContext();
   const { company } = useAuthContext();
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
   const [isPedidoExpressOpen, setIsPedidoExpressOpen] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-
-  
+  const [activePeriod, setActivePeriod] = useState<'today' | '7d' | '15d' | '30d' | 'all'>('today');
 
   const toSPDateString = (date: Date) => {
     return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
   };
 
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+
   const filteredOrders = useMemo(() => {
-    if (!startDate && !endDate) return orders;
+    // Default (today): show today's orders
+    if (!startDate && !endDate) {
+      return orders.filter((order) => {
+        const orderStr = toSPDateString(new Date(order.createdAt));
+        return orderStr === todayStr;
+      });
+    }
     const startStr = startDate ? toSPDateString(startDate) : null;
     const endStr = endDate ? toSPDateString(endDate) : null;
     return orders.filter((order) => {
@@ -35,18 +40,7 @@ function OrdersContent() {
       if (endStr && orderStr > endStr) return false;
       return true;
     });
-  }, [orders, startDate, endDate]);
-
-  const stats = {
-    pending: filteredOrders.filter(o => o.status === 'pending').length,
-    preparing: filteredOrders.filter(o => o.status === 'preparing').length,
-    ready: filteredOrders.filter(o => o.status === 'ready').length,
-    delivered: filteredOrders.filter(o => o.status === 'delivered').length,
-  };
-
-  const revenue = filteredOrders
-    .filter(o => o.status === 'delivered')
-    .reduce((sum, o) => sum + o.total, 0);
+  }, [orders, startDate, endDate, todayStr]);
 
   return (
     <AppLayout 
@@ -60,44 +54,16 @@ function OrdersContent() {
       }
     >
       <div className="space-y-6">
-        {/* Date Filter */}
         <OrderDateFilter
           startDate={startDate}
           endDate={endDate}
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
           onClear={() => { setStartDate(undefined); setEndDate(undefined); }}
+          activePeriod={activePeriod}
+          onPeriodChange={setActivePeriod}
         />
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatsCard
-            title="Pendentes"
-            value={stats.pending}
-            icon={<Clock className="w-5 h-5" />}
-            color="warning"
-          />
-          <StatsCard
-            title="Preparando"
-            value={stats.preparing}
-            icon={<ShoppingBag className="w-5 h-5" />}
-            color="primary"
-          />
-          <StatsCard
-            title="Prontos"
-            value={stats.ready}
-            icon={<CheckCircle className="w-5 h-5" />}
-            color="success"
-          />
-          <StatsCard
-            title="Faturamento"
-            value={`R$ ${revenue.toFixed(2)}`}
-            icon={<Truck className="w-5 h-5" />}
-            color="muted"
-          />
-        </div>
-
-        {/* Orders */}
         <OrderTabs filteredOrders={filteredOrders} />
       </div>
 
