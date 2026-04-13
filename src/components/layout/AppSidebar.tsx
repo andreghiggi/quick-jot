@@ -116,11 +116,6 @@ export function AppSidebar() {
       icon: CircleDollarSign,
       href: '/financeiro/caixa',
     },
-    {
-      title: 'Relatório de Vendas',
-      icon: Wallet,
-      href: '/financeiro/relatorios',
-    },
   ] : [];
 
   // Formas de pagamento disponível para todas as empresas
@@ -384,6 +379,19 @@ export function AppSidebar() {
           <SidebarGroupLabel>Relatórios</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              {isModuleEnabled('pdv') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/relatorios/vendas'}
+                  >
+                    <Link to="/relatorios/vendas">
+                      <Wallet className="w-4 h-4" />
+                      <span>Relatório de Vendas</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
