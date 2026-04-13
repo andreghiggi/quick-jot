@@ -551,7 +551,20 @@ export default function ABCReport() {
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold flex items-center gap-2"><Layers className="w-5 h-5" /> Adicionais</h2>
-              <ABCFilterButtons value={optionalFilter} onChange={setOptionalFilter} />
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={optionalGroupFilter} onValueChange={setOptionalGroupFilter}>
+                  <SelectTrigger className="w-[200px] h-8 text-xs">
+                    <SelectValue placeholder="Todos os grupos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os grupos</SelectItem>
+                    {availableGroups.map(g => (
+                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <ABCFilterButtons value={optionalFilter} onChange={setOptionalFilter} />
+              </div>
             </div>
             <div className="rounded-lg border overflow-auto max-h-[500px]">
               <Table>
