@@ -296,12 +296,13 @@ export default function ABCReport() {
     optionalGroupItems.forEach(oi => { optItemMap[oi.name.toLowerCase()] = oi.price; });
 
     const items = Object.entries(extractedOptionals).map(([_key, val]) => {
-      const price = optItemMap[val.name.toLowerCase()] || 0;
+      const catalogPrice = optItemMap[val.name.toLowerCase()];
+      const price = (catalogPrice != null && catalogPrice > 0) ? catalogPrice : 0;
       return {
         name: val.name,
         group: val.group,
         quantity: val.quantity,
-        revenue: price * val.quantity,
+        revenue: price > 0 ? price * val.quantity : 0,
       };
     });
 
