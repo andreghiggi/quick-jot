@@ -91,6 +91,7 @@ export default function ABCReport() {
   const [productSort, setProductSort] = useState<{ field: SortField; dir: SortDir }>({ field: 'revenue', dir: 'desc' });
   const [categorySort, setCategorySort] = useState<{ field: SortField; dir: SortDir }>({ field: 'revenue', dir: 'desc' });
   const [optionalSort, setOptionalSort] = useState<{ field: SortField; dir: SortDir }>({ field: 'revenue', dir: 'desc' });
+  const [optionalGroupFilter, setOptionalGroupFilter] = useState<string>('all');
 
   // Compute effective date range
   const effectiveStart = useMemo(() => {
