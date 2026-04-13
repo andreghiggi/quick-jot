@@ -26,16 +26,10 @@ export function ProtectedRoute({ children, requiredRole, requireCompany = false 
   }
 
   if (requiredRole && !hasRole(requiredRole) && !hasRole('super_admin')) {
-    // Super admins can access reseller routes too
-    if (requiredRole === 'reseller' && hasRole('super_admin')) {
-      // allow
-    } else {
-      return <Navigate to="/" replace />;
-    }
-  }
+    return <Navigate to="/" replace />;
   }
 
-  if (requireCompany && !company && !hasRole('super_admin')) {
+  if (requireCompany && !company && !hasRole('super_admin') && !hasRole('reseller')) {
     return <Navigate to="/sem-empresa" replace />;
   }
 
