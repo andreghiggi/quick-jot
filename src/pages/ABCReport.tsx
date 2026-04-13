@@ -201,7 +201,7 @@ export default function ABCReport() {
         if (!trimmedGroup) continue;
 
         const colonIdx = trimmedGroup.indexOf(':');
-        const groupLabel = colonIdx >= 0 ? trimmedGroup.slice(0, colonIdx).trim() : 'Sem grupo';
+        let currentGroup = colonIdx >= 0 ? trimmedGroup.slice(0, colonIdx).trim() : 'Sem grupo';
         const itemsPart = colonIdx >= 0 ? trimmedGroup.slice(colonIdx + 1) : trimmedGroup;
 
         itemsPart
@@ -209,10 +209,21 @@ export default function ABCReport() {
           .map((rawItem) => rawItem.trim())
           .filter(Boolean)
           .forEach((rawItem) => {
-            const priceMatch = rawItem.match(/R\$\s*(\d+(?:[.,]\d{1,2})?)/i);
+            // Check if this comma-separated segment starts a new group (contains "GroupName: item")
+            const newGroupMatch = rawItem.match(/^(.+?):\s*(.+)$/);
+            let itemText = rawItem;
+            if (newGroupMatch) {
+              // Only treat as new group if prefix doesn't look like a price (R$...)
+              const prefix = newGroupMatch[1].trim();
+              if (!prefix.match(/^R\$/i)) {
+                currentGroup = prefix;
+                itemText = newGroupMatch[2];
+              }
+            }
+
+            const priceMatch = itemText.match(/R\$\s*(\d+(?:[.,]\d{1,2})?)/i);
             const parsedPrice = priceMatch ? Number(priceMatch[1].replace(',', '.')) : 0;
-            const cleanedName = rawItem
-              .replace(/^[^:]+:\s*/, '')
+            const cleanedName = itemText
               .replace(/\s*R\$\s*\d+(?:[.,]\d{1,2})?/gi, '')
               .trim();
 
@@ -220,7 +231,7 @@ export default function ABCReport() {
 
             results.push({
               name: cleanedName,
-              group: groupLabel || 'Sem grupo',
+              group: currentGroup || 'Sem grupo',
               price: Number.isFinite(parsedPrice) ? parsedPrice : 0,
             });
           });
