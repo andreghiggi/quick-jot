@@ -245,6 +245,28 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
+      {/* Reseller Routes */}
+      <Route path="/revendedor/home" element={
+        <ProtectedRoute requiredRole="reseller">
+          <ResellerHome />
+        </ProtectedRoute>
+      } />
+      <Route path="/revendedor/lojas" element={
+        <ProtectedRoute requiredRole="reseller">
+          <ResellerLojas />
+        </ProtectedRoute>
+      } />
+      <Route path="/revendedor/financeiro" element={
+        <ProtectedRoute requiredRole="reseller">
+          <ResellerFinanceiro />
+        </ProtectedRoute>
+      } />
+      <Route path="/revendedor/configuracoes" element={
+        <ProtectedRoute requiredRole="reseller">
+          <ResellerConfiguracoes />
+        </ProtectedRoute>
+      } />
+      
       {/* No Company Page */}
       <Route path="/sem-empresa" element={<NoCompany />} />
       
