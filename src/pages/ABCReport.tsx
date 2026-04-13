@@ -236,14 +236,14 @@ export default function ABCReport() {
 
   // Build optionals ranking - extract individual additionals from parentheses in order item names
   const extractedOptionals = useMemo(() => {
-    const map: Record<string, { name: string; quantity: number }> = {};
+    const map: Record<string, { name: string; group: string; quantity: number }> = {};
 
     orderItems.forEach(item => {
       if (!item.name) return;
       const additionals = extractAdditionalsFromName(item.name);
-      additionals.forEach(addName => {
-        const key = addName.toLowerCase();
-        if (!map[key]) map[key] = { name: addName, quantity: 0 };
+      additionals.forEach(add => {
+        const key = `${add.group.toLowerCase()}::${add.name.toLowerCase()}`;
+        if (!map[key]) map[key] = { name: add.name, group: add.group, quantity: 0 };
         map[key].quantity += item.quantity;
       });
     });
@@ -251,9 +251,9 @@ export default function ABCReport() {
     pdvItems.forEach(item => {
       if (!item.product_name) return;
       const additionals = extractAdditionalsFromName(item.product_name);
-      additionals.forEach(addName => {
-        const key = addName.toLowerCase();
-        if (!map[key]) map[key] = { name: addName, quantity: 0 };
+      additionals.forEach(add => {
+        const key = `${add.group.toLowerCase()}::${add.name.toLowerCase()}`;
+        if (!map[key]) map[key] = { name: add.name, group: add.group, quantity: 0 };
         map[key].quantity += item.quantity;
       });
     });
