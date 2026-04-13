@@ -1,13 +1,76 @@
+import { useState, useEffect } from 'react';
 import { ResellerLayout } from '@/components/reseller/ResellerLayout';
 import { useResellerPortal } from '@/hooks/useResellerPortal';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Loader2, DollarSign, Clock, AlertCircle } from 'lucide-react';
+import { Loader2, DollarSign, Clock, AlertCircle, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { getMonthLabel } from '@/services/resellerBilling';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface Invoice {
+  id: string;
+  reseller_id: string;
+  month: string;
+  due_date: string;
+  total_value: number;
+  status: string;
+  paid_at: string | null;
+  payment_method: string | null;
+  created_at: string;
+}
+
+interface InvoiceItem {
+  id: string;
+  invoice_id: string;
+  company_id: string | null;
+  company_name: string;
+  type: string;
+  value: number;
+  days_counted: number | null;
+}
 
 export default function ResellerFinanceiro() {
-  const { companies, settings, stats, loading } = useResellerPortal();
+  const { reseller, settings, stats, loading } = useResellerPortal();
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoiceItems, setInvoiceItems] = useState<Record<string, InvoiceItem[]>>({});
+  const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null);
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
+
+  useEffect(() => {
+    if (!reseller) return;
+    fetchInvoices();
+  }, [reseller]);
+
+  async function fetchInvoices() {
+    if (!reseller) return;
+    setLoadingInvoices(true);
+    const { data } = await supabase
+      .from('reseller_invoices')
+      .select('*')
+      .eq('reseller_id', reseller.id)
+      .order('month', { ascending: false });
+
+    setInvoices((data as any[]) || []);
+    setLoadingInvoices(false);
+  }
+
+  async function fetchItems(invoiceId: string) {
+    if (invoiceItems[invoiceId]) {
+      setExpandedInvoice(expandedInvoice === invoiceId ? null : invoiceId);
+      return;
+    }
+    const { data } = await supabase
+      .from('reseller_invoice_items')
+      .select('*')
+      .eq('invoice_id', invoiceId);
+
+    setInvoiceItems(prev => ({ ...prev, [invoiceId]: (data as any[]) || [] }));
+    setExpandedInvoice(invoiceId);
+  }
 
   if (loading) {
     return (
@@ -22,15 +85,41 @@ export default function ResellerFinanceiro() {
   const nextInvoiceValue = activeCount * monthlyFee;
   const dueDay = settings?.invoice_due_day || 10;
 
-  // Calculate next due date
   const now = new Date();
   let nextDueDate = new Date(now.getFullYear(), now.getMonth(), dueDay);
   if (nextDueDate <= now) {
     nextDueDate = new Date(now.getFullYear(), now.getMonth() + 1, dueDay);
   }
 
-  // Mock invoices placeholder (would come from Asaas integration)
+  const totalPaid = invoices
+    .filter(i => i.status === 'paid')
+    .reduce((sum, i) => sum + Number(i.total_value), 0);
+
+  const totalPending = invoices
+    .filter(i => i.status === 'pending' || i.status === 'overdue')
+    .reduce((sum, i) => sum + Number(i.total_value), 0);
+
   const hasIntegration = !!settings?.asaas_api_key;
+
+  function getStatusBadge(status: string) {
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Pago</Badge>;
+      case 'overdue':
+        return <Badge variant="destructive">Vencido</Badge>;
+      default:
+        return <Badge variant="outline" className="text-yellow-700 border-yellow-400">Pendente</Badge>;
+    }
+  }
+
+  function getTypeLabel(type: string) {
+    switch (type) {
+      case 'activation': return 'Taxa de Ativação';
+      case 'monthly': return 'Mensalidade';
+      case 'prorated': return 'Proporcional';
+      default: return type;
+    }
+  }
 
   return (
     <ResellerLayout title="Financeiro">
@@ -58,10 +147,10 @@ export default function ResellerFinanceiro() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {hasIntegration ? 'R$ 0,00' : '--'}
+                R$ {totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                {hasIntegration ? 'Nenhum pagamento registrado' : 'Integração pendente'}
+                {invoices.filter(i => i.status === 'paid').length} fatura(s) paga(s)
               </p>
             </CardContent>
           </Card>
@@ -72,10 +161,10 @@ export default function ResellerFinanceiro() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-600">
-                {hasIntegration ? 'R$ 0,00' : '--'}
+                R$ {totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                {hasIntegration ? 'Nenhuma pendência' : 'Integração pendente'}
+                {invoices.filter(i => i.status !== 'paid').length} fatura(s) pendente(s)
               </p>
             </CardContent>
           </Card>
@@ -88,19 +177,24 @@ export default function ResellerFinanceiro() {
             <CardDescription>Histórico de cobranças e pagamentos</CardDescription>
           </CardHeader>
           <CardContent>
-            {!hasIntegration ? (
+            {loadingInvoices ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : invoices.length === 0 ? (
               <div className="text-center py-12 space-y-4">
-                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto" />
+                <FileText className="w-12 h-12 text-muted-foreground mx-auto" />
                 <div>
-                  <h3 className="text-lg font-semibold">Integração Pendente</h3>
+                  <h3 className="text-lg font-semibold">Nenhuma fatura</h3>
                   <p className="text-sm text-muted-foreground max-w-md mx-auto mt-2">
-                    O sistema de faturamento será habilitado em breve. Quando ativo, você poderá visualizar
-                    boletos, pagar via PIX e acompanhar o histórico de pagamentos aqui.
+                    As faturas serão geradas automaticamente no início de cada mês com base nas lojas ativas.
                   </p>
                 </div>
-                <Badge variant="outline" className="text-sm">
-                  API Asaas • Em breve
-                </Badge>
+                {!hasIntegration && (
+                  <Badge variant="outline" className="text-sm">
+                    Integração Asaas • Em breve
+                  </Badge>
+                )}
               </div>
             ) : (
               <div className="rounded-md border">
@@ -112,15 +206,69 @@ export default function ResellerFinanceiro() {
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
                       <TableHead>Pagamento</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
+                      <TableHead className="text-right">Detalhes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        Nenhuma fatura encontrada
-                      </TableCell>
-                    </TableRow>
+                    {invoices.map(invoice => (
+                      <>
+                        <TableRow key={invoice.id}>
+                          <TableCell className="font-medium">
+                            {getMonthLabel(invoice.month)}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(invoice.due_date + 'T12:00:00'), 'dd/MM/yyyy')}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            R$ {Number(invoice.total_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell>
+                            {invoice.paid_at
+                              ? format(new Date(invoice.paid_at), "dd/MM/yyyy", { locale: ptBR })
+                              : hasIntegration
+                                ? <Button size="sm" variant="outline" disabled>Pagar via PIX</Button>
+                                : <span className="text-xs text-muted-foreground">—</span>
+                            }
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => fetchItems(invoice.id)}
+                            >
+                              {expandedInvoice === invoice.id ? (
+                                <ChevronUp className="w-4 h-4" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                        {expandedInvoice === invoice.id && invoiceItems[invoice.id] && (
+                          <TableRow key={`${invoice.id}-items`}>
+                            <TableCell colSpan={6} className="bg-muted/50 p-0">
+                              <div className="px-6 py-3">
+                                <p className="text-xs font-semibold text-muted-foreground mb-2">Itens da fatura</p>
+                                <div className="space-y-1">
+                                  {invoiceItems[invoice.id].map(item => (
+                                    <div key={item.id} className="flex justify-between text-sm">
+                                      <span>
+                                        {item.company_name} — {getTypeLabel(item.type)}
+                                        {item.days_counted ? ` (${item.days_counted} dias)` : ''}
+                                      </span>
+                                      <span className="font-medium">
+                                        R$ {Number(item.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
