@@ -306,9 +306,20 @@ export default function ABCReport() {
     return map;
   }, [orderItems, pdvItems]);
 
-  const optionalRankingFinal = useMemo(() => {
-    return classifyABC(Object.values(extractedOptionals));
+  // Available groups for filter dropdown
+  const availableGroups = useMemo(() => {
+    const groups = new Set<string>();
+    Object.values(extractedOptionals).forEach(v => groups.add(v.group));
+    return Array.from(groups).sort();
   }, [extractedOptionals]);
+
+  const optionalRankingFinal = useMemo(() => {
+    let items = Object.values(extractedOptionals);
+    if (optionalGroupFilter !== 'all') {
+      items = items.filter(i => i.group === optionalGroupFilter);
+    }
+    return classifyABCByQuantity(items);
+  }, [extractedOptionals, optionalGroupFilter]);
 
   // Summary cards
   const topProduct = productRanking[0];
