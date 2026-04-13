@@ -119,11 +119,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      <Route path="/financeiro/relatorios" element={
+      <Route path="/relatorios/vendas" element={
         <ProtectedRoute requireCompany>
           <SalesReport />
         </ProtectedRoute>
       } />
+      <Route path="/financeiro/relatorios" element={<Navigate to="/relatorios/vendas" replace />} />
       
       <Route path="/configuracoes/mesas" element={
         <ProtectedRoute requireCompany>
