@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Badge } from '@/components/ui/badge';
 import { Package, FolderOpen, Layers, ArrowUpDown, ArrowUp, ArrowDown, Trophy, Crown, Star } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { subDays } from 'date-fns';
 
 type QuickPeriod = 'today' | '7d' | '15d' | '30d' | 'all';
@@ -44,6 +45,24 @@ function classifyABC(items: { name: string; category?: string; group?: string; q
   });
 }
 
+function classifyABCByQuantity(items: { name: string; category?: string; group?: string; quantity: number; revenue: number }[]): ABCItem[] {
+  const sorted = [...items].sort((a, b) => b.quantity - a.quantity);
+  const total = sorted.length;
+  if (total === 0) return [];
+
+  const aLimit = Math.max(1, Math.ceil(total * 0.2));
+  const bLimit = aLimit + Math.max(1, Math.ceil(total * 0.3));
+  const totalQty = sorted.reduce((s, i) => s + i.quantity, 0);
+
+  return sorted.map((item, i) => {
+    const pct = totalQty > 0 ? (item.quantity / totalQty) * 100 : 0;
+    let cls: ABCClass = 'C';
+    if (i < aLimit) cls = 'A';
+    else if (i < bLimit) cls = 'B';
+    return { ...item, position: i + 1, percentage: pct, classification: cls };
+  });
+}
+
 const abcColors: Record<ABCClass, string> = {
   A: 'bg-green-50 dark:bg-green-950/30',
   B: 'bg-yellow-50 dark:bg-yellow-950/30',
@@ -72,6 +91,7 @@ export default function ABCReport() {
   const [productSort, setProductSort] = useState<{ field: SortField; dir: SortDir }>({ field: 'revenue', dir: 'desc' });
   const [categorySort, setCategorySort] = useState<{ field: SortField; dir: SortDir }>({ field: 'revenue', dir: 'desc' });
   const [optionalSort, setOptionalSort] = useState<{ field: SortField; dir: SortDir }>({ field: 'revenue', dir: 'desc' });
+  const [optionalGroupFilter, setOptionalGroupFilter] = useState<string>('all');
 
   // Compute effective date range
   const effectiveStart = useMemo(() => {
@@ -286,9 +306,20 @@ export default function ABCReport() {
     return map;
   }, [orderItems, pdvItems]);
 
-  const optionalRankingFinal = useMemo(() => {
-    return classifyABC(Object.values(extractedOptionals));
+  // Available groups for filter dropdown
+  const availableGroups = useMemo(() => {
+    const groups = new Set<string>();
+    Object.values(extractedOptionals).forEach(v => groups.add(v.group));
+    return Array.from(groups).sort();
   }, [extractedOptionals]);
+
+  const optionalRankingFinal = useMemo(() => {
+    let items = Object.values(extractedOptionals);
+    if (optionalGroupFilter !== 'all') {
+      items = items.filter(i => i.group === optionalGroupFilter);
+    }
+    return classifyABCByQuantity(items);
+  }, [extractedOptionals, optionalGroupFilter]);
 
   // Summary cards
   const topProduct = productRanking[0];
@@ -520,7 +551,20 @@ export default function ABCReport() {
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold flex items-center gap-2"><Layers className="w-5 h-5" /> Adicionais</h2>
-              <ABCFilterButtons value={optionalFilter} onChange={setOptionalFilter} />
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={optionalGroupFilter} onValueChange={setOptionalGroupFilter}>
+                  <SelectTrigger className="w-[200px] h-8 text-xs">
+                    <SelectValue placeholder="Todos os grupos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os grupos</SelectItem>
+                    {availableGroups.map(g => (
+                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <ABCFilterButtons value={optionalFilter} onChange={setOptionalFilter} />
+              </div>
             </div>
             <div className="rounded-lg border overflow-auto max-h-[500px]">
               <Table>
