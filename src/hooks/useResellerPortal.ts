@@ -176,7 +176,7 @@ export function useResellerPortal() {
   }
 
   async function activateTrial(companyId: string): Promise<boolean> {
-    if (!user) return false;
+    if (!user || !reseller) return false;
     try {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 14);
@@ -192,6 +192,25 @@ export function useResellerPortal() {
         .eq('company_id', companyId);
 
       if (error) throw error;
+
+      // Create prorated billing item for this activation
+      const company = companies.find(c => c.id === companyId);
+      if (company) {
+        try {
+          await supabase.functions.invoke('reseller-billing', {
+            body: {
+              action: 'create_prorated_item',
+              reseller_id: reseller.id,
+              company_id: companyId,
+              company_name: company.name,
+              activation_fee: settings?.activation_fee ?? 180,
+            },
+          });
+        } catch (billingErr) {
+          console.error('Billing prorated item error (non-blocking):', billingErr);
+        }
+      }
+
       toast.success('Trial de 14 dias ativado!');
       fetchResellerData();
       return true;

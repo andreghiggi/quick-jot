@@ -1138,6 +1138,101 @@ export type Database = {
           },
         ]
       }
+      reseller_invoice_items: {
+        Row: {
+          company_id: string | null
+          company_name: string
+          created_at: string
+          days_counted: number | null
+          id: string
+          invoice_id: string
+          type: string
+          value: number
+        }
+        Insert: {
+          company_id?: string | null
+          company_name: string
+          created_at?: string
+          days_counted?: number | null
+          id?: string
+          invoice_id: string
+          type: string
+          value?: number
+        }
+        Update: {
+          company_id?: string | null
+          company_name?: string
+          created_at?: string
+          days_counted?: number | null
+          id?: string
+          invoice_id?: string
+          type?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_invoice_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "reseller_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reseller_invoices: {
+        Row: {
+          created_at: string
+          due_date: string
+          id: string
+          month: string
+          paid_at: string | null
+          payment_method: string | null
+          reseller_id: string
+          status: string
+          total_value: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          due_date: string
+          id?: string
+          month: string
+          paid_at?: string | null
+          payment_method?: string | null
+          reseller_id: string
+          status?: string
+          total_value?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          due_date?: string
+          id?: string
+          month?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          reseller_id?: string
+          status?: string
+          total_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_invoices_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reseller_settings: {
         Row: {
           activation_fee: number
