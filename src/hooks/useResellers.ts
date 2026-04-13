@@ -7,6 +7,16 @@ export interface Reseller {
   name: string;
   email: string;
   phone: string | null;
+  cnpj: string | null;
+  address_street: string | null;
+  address_number: string | null;
+  address_neighborhood: string | null;
+  address_city: string | null;
+  address_state: string | null;
+  address_cep: string | null;
+  responsible_name: string | null;
+  responsible_email: string | null;
+  responsible_phone: string | null;
   status: string;
   created_by: string;
   created_at: string;
@@ -28,6 +38,28 @@ export interface ResellerWithStats extends Reseller {
   mrr: number;
 }
 
+export interface ResellerFormData {
+  // Company info
+  name: string;
+  cnpj: string;
+  email: string;
+  phone: string;
+  address_street: string;
+  address_number: string;
+  address_neighborhood: string;
+  address_city: string;
+  address_state: string;
+  address_cep: string;
+  // Responsible person
+  responsible_name: string;
+  responsible_email: string;
+  responsible_phone: string;
+  // Commercial settings
+  activation_fee: number;
+  monthly_fee: number;
+  invoice_due_day: number;
+}
+
 export function useResellers() {
   const [resellers, setResellers] = useState<ResellerWithStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,12 +73,10 @@ export function useResellers() {
 
       if (error) throw error;
 
-      // Fetch settings for all resellers
       const { data: settingsData } = await supabase
         .from('reseller_settings')
         .select('*');
 
-      // Fetch company counts per reseller
       const { data: companiesData } = await supabase
         .from('reseller_companies')
         .select('reseller_id, company_id');
@@ -81,14 +111,7 @@ export function useResellers() {
     fetchResellers();
   }, [fetchResellers]);
 
-  async function createReseller(data: {
-    name: string;
-    email: string;
-    phone?: string;
-    activation_fee: number;
-    monthly_fee: number;
-    invoice_due_day: number;
-  }, createdBy: string): Promise<boolean> {
+  async function createReseller(data: ResellerFormData, createdBy: string): Promise<boolean> {
     try {
       const { data: newReseller, error } = await supabase
         .from('resellers')
@@ -96,6 +119,16 @@ export function useResellers() {
           name: data.name,
           email: data.email,
           phone: data.phone || null,
+          cnpj: data.cnpj || null,
+          address_street: data.address_street || null,
+          address_number: data.address_number || null,
+          address_neighborhood: data.address_neighborhood || null,
+          address_city: data.address_city || null,
+          address_state: data.address_state || null,
+          address_cep: data.address_cep || null,
+          responsible_name: data.responsible_name || null,
+          responsible_email: data.responsible_email || null,
+          responsible_phone: data.responsible_phone || null,
           created_by: createdBy,
         })
         .select()
@@ -103,7 +136,6 @@ export function useResellers() {
 
       if (error) throw error;
 
-      // Create settings
       const { error: settingsError } = await supabase
         .from('reseller_settings')
         .insert({
@@ -125,40 +157,34 @@ export function useResellers() {
     }
   }
 
-  async function updateReseller(id: string, data: {
-    name?: string;
-    email?: string;
-    phone?: string | null;
-    activation_fee?: number;
-    monthly_fee?: number;
-    invoice_due_day?: number;
-  }): Promise<boolean> {
+  async function updateReseller(id: string, data: Partial<ResellerFormData>): Promise<boolean> {
     try {
-      const { name, email, phone, activation_fee, monthly_fee, invoice_due_day } = data;
+      const resellerFields: Record<string, any> = {};
+      const settingsFields: Record<string, any> = {};
 
-      if (name !== undefined || email !== undefined || phone !== undefined) {
-        const updateData: any = {};
-        if (name !== undefined) updateData.name = name;
-        if (email !== undefined) updateData.email = email;
-        if (phone !== undefined) updateData.phone = phone;
+      // Reseller table fields
+      const resellerKeys = [
+        'name', 'email', 'phone', 'cnpj',
+        'address_street', 'address_number', 'address_neighborhood',
+        'address_city', 'address_state', 'address_cep',
+        'responsible_name', 'responsible_email', 'responsible_phone',
+      ] as const;
+      for (const key of resellerKeys) {
+        if (data[key] !== undefined) resellerFields[key] = data[key] || null;
+      }
 
-        const { error } = await supabase
-          .from('resellers')
-          .update(updateData)
-          .eq('id', id);
+      // Settings fields
+      if (data.activation_fee !== undefined) settingsFields.activation_fee = data.activation_fee;
+      if (data.monthly_fee !== undefined) settingsFields.monthly_fee = data.monthly_fee;
+      if (data.invoice_due_day !== undefined) settingsFields.invoice_due_day = data.invoice_due_day;
+
+      if (Object.keys(resellerFields).length > 0) {
+        const { error } = await supabase.from('resellers').update(resellerFields).eq('id', id);
         if (error) throw error;
       }
 
-      if (activation_fee !== undefined || monthly_fee !== undefined || invoice_due_day !== undefined) {
-        const settingsUpdate: any = {};
-        if (activation_fee !== undefined) settingsUpdate.activation_fee = activation_fee;
-        if (monthly_fee !== undefined) settingsUpdate.monthly_fee = monthly_fee;
-        if (invoice_due_day !== undefined) settingsUpdate.invoice_due_day = invoice_due_day;
-
-        const { error } = await supabase
-          .from('reseller_settings')
-          .update(settingsUpdate)
-          .eq('reseller_id', id);
+      if (Object.keys(settingsFields).length > 0) {
+        const { error } = await supabase.from('reseller_settings').update(settingsFields).eq('reseller_id', id);
         if (error) throw error;
       }
 
@@ -175,13 +201,8 @@ export function useResellers() {
   async function toggleResellerStatus(id: string, currentStatus: string): Promise<boolean> {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     try {
-      const { error } = await supabase
-        .from('resellers')
-        .update({ status: newStatus })
-        .eq('id', id);
-
+      const { error } = await supabase.from('resellers').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
-
       toast.success(newStatus === 'active' ? 'Revendedor ativado!' : 'Revendedor pausado!');
       fetchResellers();
       return true;
