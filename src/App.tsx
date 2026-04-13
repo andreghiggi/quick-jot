@@ -43,6 +43,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import IntegrationsPage from "./pages/admin/IntegrationsPage";
 import CompanyModulesPage from "./pages/admin/CompanyModulesPage";
 import SuggestionsAdmin from "./pages/admin/SuggestionsAdmin";
+import ResellersPage from "./pages/admin/ResellersPage";
 
 const queryClient = new QueryClient();
 
@@ -221,6 +222,12 @@ function AppRoutes() {
       <Route path="/configuracoes/integracoes" element={
         <ProtectedRoute requireCompany>
           <IntegrationsPage />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/admin/revendedores" element={
+        <ProtectedRoute requiredRole="super_admin">
+          <ResellersPage />
         </ProtectedRoute>
       } />
       
