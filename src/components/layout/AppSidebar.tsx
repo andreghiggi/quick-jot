@@ -24,6 +24,7 @@ import {
   Layers,
   FolderOpen,
   BarChart3,
+  UserCheck,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -166,6 +167,11 @@ export function AppSidebar() {
       title: 'Empresas',
       icon: Building2,
       href: '/admin',
+    },
+    {
+      title: 'Revendedores',
+      icon: UserCheck,
+      href: '/admin/revendedores',
     },
     {
       title: 'Sugestões',

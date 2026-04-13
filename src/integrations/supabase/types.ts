@@ -179,6 +179,7 @@ export type Database = {
           logo_url: string | null
           name: string
           phone: string | null
+          reseller_id: string | null
           slug: string
           updated_at: string | null
         }
@@ -196,6 +197,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           phone?: string | null
+          reseller_id?: string | null
           slug: string
           updated_at?: string | null
         }
@@ -213,10 +215,19 @@ export type Database = {
           logo_url?: string | null
           name?: string
           phone?: string | null
+          reseller_id?: string | null
           slug?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "companies_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_modules: {
         Row: {
@@ -1091,6 +1102,116 @@ export type Database = {
         }
         Relationships: []
       }
+      reseller_companies: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          reseller_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          reseller_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          reseller_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_companies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_companies_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reseller_settings: {
+        Row: {
+          activation_fee: number
+          asaas_api_key: string | null
+          created_at: string
+          id: string
+          invoice_due_day: number
+          monthly_fee: number
+          reseller_id: string
+          updated_at: string
+        }
+        Insert: {
+          activation_fee?: number
+          asaas_api_key?: string | null
+          created_at?: string
+          id?: string
+          invoice_due_day?: number
+          monthly_fee?: number
+          reseller_id: string
+          updated_at?: string
+        }
+        Update: {
+          activation_fee?: number
+          asaas_api_key?: string | null
+          created_at?: string
+          id?: string
+          invoice_due_day?: number
+          monthly_fee?: number
+          reseller_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_settings_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: true
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resellers: {
+        Row: {
+          created_at: string
+          created_by: string
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          email: string
+          id?: string
+          name: string
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       store_settings: {
         Row: {
           company_id: string | null
@@ -1582,7 +1703,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "super_admin" | "company_admin" | "company_user" | "waiter"
+      app_role:
+        | "super_admin"
+        | "reseller"
+        | "company_admin"
+        | "company_user"
+        | "waiter"
       order_status: "pending" | "preparing" | "ready" | "delivered"
       table_status: "available" | "occupied" | "reserved"
     }
@@ -1712,7 +1838,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "company_admin", "company_user", "waiter"],
+      app_role: [
+        "super_admin",
+        "reseller",
+        "company_admin",
+        "company_user",
+        "waiter",
+      ],
       order_status: ["pending", "preparing", "ready", "delivered"],
       table_status: ["available", "occupied", "reserved"],
     },
