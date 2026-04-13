@@ -36,6 +36,7 @@ import MenuImport from "./pages/MenuImport";
 import OptionalGroups from "./pages/OptionalGroups";
 import Categories from "./pages/Categories";
 import CustomerReport from "./pages/CustomerReport";
+import ABCReport from "./pages/ABCReport";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -189,6 +190,12 @@ function AppRoutes() {
       <Route path="/relatorios/clientes" element={
         <ProtectedRoute requireCompany>
           <CustomerReport />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/relatorios/curva-abc" element={
+        <ProtectedRoute requireCompany>
+          <ABCReport />
         </ProtectedRoute>
       } />
       

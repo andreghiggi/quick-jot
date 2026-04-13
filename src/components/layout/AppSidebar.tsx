@@ -393,13 +393,24 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               )}
               <SidebarMenuItem>
-                <SidebarMenuButton
+              <SidebarMenuButton
                   asChild
                   isActive={location.pathname === '/relatorios/clientes'}
                 >
                   <Link to="/relatorios/clientes">
                     <BarChart3 className="w-4 h-4" />
                     <span>Relatório de Clientes</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/relatorios/curva-abc'}
+                >
+                  <Link to="/relatorios/curva-abc">
+                    <BarChart3 className="w-4 h-4" />
+                    <span>Curva ABC</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
