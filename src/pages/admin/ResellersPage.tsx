@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { useResellers } from '@/hooks/useResellers';
+import { useResellers, ResellerFormData } from '@/hooks/useResellers';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,18 +10,71 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import {
-  Plus,
-  Loader2,
-  Search,
-  Play,
-  Pause,
-  Pencil,
-  Eye,
-  Users,
-  DollarSign,
-  UserCheck,
+  Plus, Loader2, Search, Play, Pause, Pencil, Eye,
+  Users, DollarSign, UserCheck,
 } from 'lucide-react';
+
+// ── Masks ──
+
+function maskCNPJ(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 14);
+  return digits
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2');
+}
+
+function maskPhone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 10) {
+    return digits
+      .replace(/^(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  }
+  return digits
+    .replace(/^(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{5})(\d)/, '$1-$2');
+}
+
+function maskCEP(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  return digits.replace(/^(\d{5})(\d)/, '$1-$2');
+}
+
+function validateCNPJ(cnpj: string): boolean {
+  const digits = cnpj.replace(/\D/g, '');
+  if (digits.length !== 14) return false;
+  if (/^(\d)\1{13}$/.test(digits)) return false;
+  // Validate check digits
+  let sum = 0;
+  let weight = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  for (let i = 0; i < 12; i++) sum += parseInt(digits[i]) * weight[i];
+  let remainder = sum % 11;
+  const d1 = remainder < 2 ? 0 : 11 - remainder;
+  if (parseInt(digits[12]) !== d1) return false;
+  sum = 0;
+  weight = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  for (let i = 0; i < 13; i++) sum += parseInt(digits[i]) * weight[i];
+  remainder = sum % 11;
+  const d2 = remainder < 2 ? 0 : 11 - remainder;
+  return parseInt(digits[13]) === d2;
+}
+
+function validateFullName(name: string): boolean {
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2 && parts.every(p => p.length >= 2);
+}
+
+const UF_OPTIONS = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG',
+  'PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
+];
+
+// ── Component ──
 
 export default function ResellersPage() {
   const { user } = useAuthContext();
@@ -32,83 +85,124 @@ export default function ResellersPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingReseller, setEditingReseller] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Form state
-  const [formName, setFormName] = useState('');
-  const [formEmail, setFormEmail] = useState('');
-  const [formPhone, setFormPhone] = useState('');
-  const [formDueDay, setFormDueDay] = useState('10');
-  const [formActivationFee, setFormActivationFee] = useState('180.00');
-  const [formMonthlyFee, setFormMonthlyFee] = useState('29.90');
+  const [form, setForm] = useState({
+    name: '', cnpj: '', email: '', phone: '',
+    address_street: '', address_number: '', address_neighborhood: '',
+    address_city: '', address_state: '', address_cep: '',
+    responsible_name: '', responsible_email: '', responsible_phone: '',
+    due_day: '10', activation_fee: '180.00', monthly_fee: '29.90',
+  });
+
+  function setField(key: string, value: string) {
+    setForm(prev => ({ ...prev, [key]: value }));
+    setErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
+  }
 
   function resetForm() {
-    setFormName('');
-    setFormEmail('');
-    setFormPhone('');
-    setFormDueDay('10');
-    setFormActivationFee('180.00');
-    setFormMonthlyFee('29.90');
+    setForm({
+      name: '', cnpj: '', email: '', phone: '',
+      address_street: '', address_number: '', address_neighborhood: '',
+      address_city: '', address_state: '', address_cep: '',
+      responsible_name: '', responsible_email: '', responsible_phone: '',
+      due_day: '10', activation_fee: '180.00', monthly_fee: '29.90',
+    });
+    setErrors({});
   }
 
   function openEdit(resellerId: string) {
     const r = resellers.find(x => x.id === resellerId);
     if (!r) return;
-    setFormName(r.name);
-    setFormEmail(r.email);
-    setFormPhone(r.phone || '');
-    setFormDueDay(String(r.settings?.invoice_due_day || 10));
-    setFormActivationFee(String(r.settings?.activation_fee || 180));
-    setFormMonthlyFee(String(r.settings?.monthly_fee || 29.90));
+    setForm({
+      name: r.name || '',
+      cnpj: r.cnpj ? maskCNPJ(r.cnpj) : '',
+      email: r.email || '',
+      phone: r.phone ? maskPhone(r.phone) : '',
+      address_street: r.address_street || '',
+      address_number: r.address_number || '',
+      address_neighborhood: r.address_neighborhood || '',
+      address_city: r.address_city || '',
+      address_state: r.address_state || '',
+      address_cep: r.address_cep ? maskCEP(r.address_cep) : '',
+      responsible_name: r.responsible_name || '',
+      responsible_email: r.responsible_email || '',
+      responsible_phone: r.responsible_phone ? maskPhone(r.responsible_phone) : '',
+      due_day: String(r.settings?.invoice_due_day || 10),
+      activation_fee: String(r.settings?.activation_fee || 180),
+      monthly_fee: String(r.settings?.monthly_fee || 29.90),
+    });
     setEditingReseller(resellerId);
+    setErrors({});
     setIsEditOpen(true);
+  }
+
+  function validate(): boolean {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = 'Razão Social é obrigatória';
+    const cnpjDigits = form.cnpj.replace(/\D/g, '');
+    if (!cnpjDigits) e.cnpj = 'CNPJ é obrigatório';
+    else if (!validateCNPJ(cnpjDigits)) e.cnpj = 'CNPJ inválido';
+    if (!form.email.trim()) e.email = 'E-mail é obrigatório';
+    if (!form.phone.replace(/\D/g, '')) e.phone = 'Telefone é obrigatório';
+    if (!form.address_street.trim()) e.address_street = 'Rua é obrigatória';
+    if (!form.address_number.trim()) e.address_number = 'Número é obrigatório';
+    if (!form.address_neighborhood.trim()) e.address_neighborhood = 'Bairro é obrigatório';
+    if (!form.address_city.trim()) e.address_city = 'Cidade é obrigatória';
+    if (!form.address_state) e.address_state = 'Estado é obrigatório';
+    if (form.address_cep.replace(/\D/g, '').length < 8) e.address_cep = 'CEP inválido';
+    if (!form.responsible_name.trim()) e.responsible_name = 'Nome do responsável é obrigatório';
+    else if (!validateFullName(form.responsible_name)) e.responsible_name = 'Informe nome e sobrenome';
+    if (!form.responsible_email.trim()) e.responsible_email = 'E-mail do responsável é obrigatório';
+    if (!form.responsible_phone.replace(/\D/g, '')) e.responsible_phone = 'Telefone do responsável é obrigatório';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function buildData(): ResellerFormData {
+    return {
+      name: form.name.trim(),
+      cnpj: form.cnpj.replace(/\D/g, ''),
+      email: form.email.trim(),
+      phone: form.phone.replace(/\D/g, ''),
+      address_street: form.address_street.trim(),
+      address_number: form.address_number.trim(),
+      address_neighborhood: form.address_neighborhood.trim(),
+      address_city: form.address_city.trim(),
+      address_state: form.address_state,
+      address_cep: form.address_cep.replace(/\D/g, ''),
+      responsible_name: form.responsible_name.trim(),
+      responsible_email: form.responsible_email.trim(),
+      responsible_phone: form.responsible_phone.replace(/\D/g, ''),
+      activation_fee: parseFloat(form.activation_fee) || 180,
+      monthly_fee: parseFloat(form.monthly_fee) || 29.90,
+      invoice_due_day: parseInt(form.due_day) || 10,
+    };
   }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!formName.trim() || !formEmail.trim() || !user) return;
-
+    if (!validate() || !user) return;
     setIsSaving(true);
-    const success = await createReseller({
-      name: formName.trim(),
-      email: formEmail.trim(),
-      phone: formPhone.trim() || undefined,
-      activation_fee: parseFloat(formActivationFee) || 180,
-      monthly_fee: parseFloat(formMonthlyFee) || 29.90,
-      invoice_due_day: parseInt(formDueDay) || 10,
-    }, user.id);
-
-    if (success) {
-      setIsCreateOpen(false);
-      resetForm();
-    }
+    const success = await createReseller(buildData(), user.id);
+    if (success) { setIsCreateOpen(false); resetForm(); }
     setIsSaving(false);
   }
 
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault();
-    if (!editingReseller) return;
-
+    if (!validate() || !editingReseller) return;
     setIsSaving(true);
-    const success = await updateReseller(editingReseller, {
-      name: formName.trim(),
-      email: formEmail.trim(),
-      phone: formPhone.trim() || null,
-      activation_fee: parseFloat(formActivationFee) || 180,
-      monthly_fee: parseFloat(formMonthlyFee) || 29.90,
-      invoice_due_day: parseInt(formDueDay) || 10,
-    });
-
-    if (success) {
-      setIsEditOpen(false);
-      setEditingReseller(null);
-      resetForm();
-    }
+    const success = await updateReseller(editingReseller, buildData());
+    if (success) { setIsEditOpen(false); setEditingReseller(null); resetForm(); }
     setIsSaving(false);
   }
 
   const filteredResellers = resellers.filter(r =>
     r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.email.toLowerCase().includes(searchTerm.toLowerCase())
+    r.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.cnpj || '').includes(searchTerm.replace(/\D/g, ''))
   );
 
   const totalMRR = resellers.reduce((sum, r) => sum + r.mrr, 0);
@@ -123,44 +217,151 @@ export default function ResellersPage() {
     );
   }
 
+  function ErrorMsg({ field }: { field: string }) {
+    return errors[field] ? <p className="text-sm text-destructive">{errors[field]}</p> : null;
+  }
+
   const formFields = (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>Nome *</Label>
-        <Input value={formName} onChange={e => setFormName(e.target.value)} placeholder="Nome do revendedor" disabled={isSaving} />
-      </div>
-      <div className="space-y-2">
-        <Label>E-mail *</Label>
-        <Input type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="email@exemplo.com" disabled={isSaving} />
-      </div>
-      <div className="space-y-2">
-        <Label>WhatsApp</Label>
-        <Input value={formPhone} onChange={e => setFormPhone(e.target.value)} placeholder="5511999999999" disabled={isSaving} />
-      </div>
-      <div className="space-y-2">
-        <Label>Dia de vencimento da fatura</Label>
-        <Select value={formDueDay} onValueChange={setFormDueDay} disabled={isSaving}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="5">Dia 5</SelectItem>
-            <SelectItem value="10">Dia 10</SelectItem>
-            <SelectItem value="15">Dia 15</SelectItem>
-            <SelectItem value="20">Dia 20</SelectItem>
-            <SelectItem value="25">Dia 25</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Taxa de ativação (R$)</Label>
-          <Input type="number" step="0.01" value={formActivationFee} onChange={e => setFormActivationFee(e.target.value)} disabled={isSaving} />
+    <ScrollArea className="max-h-[65vh] pr-4">
+      <div className="space-y-6 pb-2">
+        {/* Company info */}
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">Dados da Empresa</h3>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Razão Social *</Label>
+              <Input value={form.name} onChange={e => setField('name', e.target.value)} placeholder="Razão Social da empresa" disabled={isSaving} />
+              <ErrorMsg field="name" />
+            </div>
+            <div className="space-y-1">
+              <Label>CNPJ *</Label>
+              <Input value={form.cnpj} onChange={e => setField('cnpj', maskCNPJ(e.target.value))} placeholder="XX.XXX.XXX/XXXX-XX" disabled={isSaving} maxLength={18} />
+              <ErrorMsg field="cnpj" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>E-mail da empresa *</Label>
+                <Input type="email" value={form.email} onChange={e => setField('email', e.target.value)} placeholder="empresa@exemplo.com" disabled={isSaving} />
+                <ErrorMsg field="email" />
+              </div>
+              <div className="space-y-1">
+                <Label>Telefone da empresa *</Label>
+                <Input value={form.phone} onChange={e => setField('phone', maskPhone(e.target.value))} placeholder="(11) 99999-9999" disabled={isSaving} maxLength={15} />
+                <ErrorMsg field="phone" />
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label>Mensalidade (R$)</Label>
-          <Input type="number" step="0.01" value={formMonthlyFee} onChange={e => setFormMonthlyFee(e.target.value)} disabled={isSaving} />
+
+        <Separator />
+
+        {/* Address */}
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">Endereço</h3>
+          <div className="space-y-3">
+            <div className="grid grid-cols-[1fr_100px] gap-3">
+              <div className="space-y-1">
+                <Label>Rua *</Label>
+                <Input value={form.address_street} onChange={e => setField('address_street', e.target.value)} placeholder="Rua / Avenida" disabled={isSaving} />
+                <ErrorMsg field="address_street" />
+              </div>
+              <div className="space-y-1">
+                <Label>Número *</Label>
+                <Input value={form.address_number} onChange={e => setField('address_number', e.target.value)} placeholder="Nº" disabled={isSaving} />
+                <ErrorMsg field="address_number" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Bairro *</Label>
+                <Input value={form.address_neighborhood} onChange={e => setField('address_neighborhood', e.target.value)} placeholder="Bairro" disabled={isSaving} />
+                <ErrorMsg field="address_neighborhood" />
+              </div>
+              <div className="space-y-1">
+                <Label>CEP *</Label>
+                <Input value={form.address_cep} onChange={e => setField('address_cep', maskCEP(e.target.value))} placeholder="00000-000" disabled={isSaving} maxLength={9} />
+                <ErrorMsg field="address_cep" />
+              </div>
+            </div>
+            <div className="grid grid-cols-[1fr_100px] gap-3">
+              <div className="space-y-1">
+                <Label>Cidade *</Label>
+                <Input value={form.address_city} onChange={e => setField('address_city', e.target.value)} placeholder="Cidade" disabled={isSaving} />
+                <ErrorMsg field="address_city" />
+              </div>
+              <div className="space-y-1">
+                <Label>Estado *</Label>
+                <Select value={form.address_state} onValueChange={v => setField('address_state', v)} disabled={isSaving}>
+                  <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+                  <SelectContent>
+                    {UF_OPTIONS.map(uf => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <ErrorMsg field="address_state" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Responsible person */}
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">Responsável</h3>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Nome completo *</Label>
+              <Input value={form.responsible_name} onChange={e => setField('responsible_name', e.target.value)} placeholder="Nome e sobrenome" disabled={isSaving} />
+              <ErrorMsg field="responsible_name" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>E-mail *</Label>
+                <Input type="email" value={form.responsible_email} onChange={e => setField('responsible_email', e.target.value)} placeholder="responsavel@email.com" disabled={isSaving} />
+                <ErrorMsg field="responsible_email" />
+              </div>
+              <div className="space-y-1">
+                <Label>WhatsApp *</Label>
+                <Input value={form.responsible_phone} onChange={e => setField('responsible_phone', maskPhone(e.target.value))} placeholder="(11) 99999-9999" disabled={isSaving} maxLength={15} />
+                <ErrorMsg field="responsible_phone" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Commercial settings */}
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">Configurações Comerciais</h3>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Dia de vencimento da fatura</Label>
+              <Select value={form.due_day} onValueChange={v => setField('due_day', v)} disabled={isSaving}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">Dia 5</SelectItem>
+                  <SelectItem value="10">Dia 10</SelectItem>
+                  <SelectItem value="15">Dia 15</SelectItem>
+                  <SelectItem value="20">Dia 20</SelectItem>
+                  <SelectItem value="25">Dia 25</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Taxa de ativação (R$)</Label>
+                <Input type="number" step="0.01" value={form.activation_fee} onChange={e => setField('activation_fee', e.target.value)} disabled={isSaving} />
+              </div>
+              <div className="space-y-1">
+                <Label>Mensalidade (R$)</Label>
+                <Input type="number" step="0.01" value={form.monthly_fee} onChange={e => setField('monthly_fee', e.target.value)} disabled={isSaving} />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </ScrollArea>
   );
 
   const headerActions = (
@@ -171,7 +372,7 @@ export default function ResellersPage() {
           <span className="hidden sm:inline">Novo Revendedor</span>
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Criar Novo Revendedor</DialogTitle>
         </DialogHeader>
@@ -246,10 +447,10 @@ export default function ResellersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead>WhatsApp</TableHead>
-                    <TableHead className="text-center">Empresas Ativas</TableHead>
+                    <TableHead>Razão Social</TableHead>
+                    <TableHead>CNPJ</TableHead>
+                    <TableHead>Responsável</TableHead>
+                    <TableHead className="text-center">Empresas</TableHead>
                     <TableHead className="text-right">MRR</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -265,9 +466,23 @@ export default function ResellersPage() {
                   ) : (
                     filteredResellers.map(r => (
                       <TableRow key={r.id}>
-                        <TableCell className="font-medium">{r.name}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{r.email}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{r.phone || '-'}</TableCell>
+                        <TableCell>
+                          <div>
+                            <span className="font-medium">{r.name}</span>
+                            <p className="text-xs text-muted-foreground">{r.email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {r.cnpj ? maskCNPJ(r.cnpj) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <span className="text-sm">{r.responsible_name || '-'}</span>
+                            {r.responsible_phone && (
+                              <p className="text-xs text-muted-foreground">{maskPhone(r.responsible_phone)}</p>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-center">{r.total_companies}</TableCell>
                         <TableCell className="text-right font-medium">
                           R$ {r.mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -279,27 +494,19 @@ export default function ResellersPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2 flex-wrap">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1"
-                              onClick={() => openEdit(r.id)}
-                            >
-                              <Pencil className="w-3 h-3" />
-                              Editar
+                            <Button variant="outline" size="sm" className="gap-1" onClick={() => openEdit(r.id)}>
+                              <Pencil className="w-3 h-3" /> Editar
                             </Button>
                             <Button
                               variant={r.status === 'active' ? 'outline' : 'default'}
-                              size="sm"
-                              className="gap-1"
+                              size="sm" className="gap-1"
                               onClick={() => toggleResellerStatus(r.id, r.status)}
                             >
                               {r.status === 'active' ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                               {r.status === 'active' ? 'Pausar' : 'Ativar'}
                             </Button>
                             <Button variant="secondary" size="sm" className="gap-1" disabled>
-                              <Eye className="w-3 h-3" />
-                              Acessar painel
+                              <Eye className="w-3 h-3" /> Acessar painel
                             </Button>
                           </div>
                         </TableCell>
@@ -315,7 +522,7 @@ export default function ResellersPage() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={(o) => { setIsEditOpen(o); if (!o) { setEditingReseller(null); resetForm(); } }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Editar Revendedor</DialogTitle>
           </DialogHeader>
