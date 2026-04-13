@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Badge } from '@/components/ui/badge';
 import { Package, FolderOpen, Layers, ArrowUpDown, ArrowUp, ArrowDown, Trophy, Crown, Star } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { subDays } from 'date-fns';
 
 type QuickPeriod = 'today' | '7d' | '15d' | '30d' | 'all';
