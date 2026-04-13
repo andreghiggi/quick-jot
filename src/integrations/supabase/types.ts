@@ -1276,34 +1276,64 @@ export type Database = {
       }
       resellers: {
         Row: {
+          address_cep: string | null
+          address_city: string | null
+          address_neighborhood: string | null
+          address_number: string | null
+          address_state: string | null
+          address_street: string | null
+          cnpj: string | null
           created_at: string
           created_by: string
           email: string
           id: string
           name: string
           phone: string | null
+          responsible_email: string | null
+          responsible_name: string | null
+          responsible_phone: string | null
           status: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          address_cep?: string | null
+          address_city?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          cnpj?: string | null
           created_at?: string
           created_by: string
           email: string
           id?: string
           name: string
           phone?: string | null
+          responsible_email?: string | null
+          responsible_name?: string | null
+          responsible_phone?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          address_cep?: string | null
+          address_city?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          cnpj?: string | null
           created_at?: string
           created_by?: string
           email?: string
           id?: string
           name?: string
           phone?: string | null
+          responsible_email?: string | null
+          responsible_name?: string | null
+          responsible_phone?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
