@@ -25,7 +25,8 @@ import {
   Calendar,
   Eye,
   Copy,
-  EyeOff
+  EyeOff,
+  Pencil
 } from 'lucide-react';
 
 interface Company {
@@ -61,6 +62,12 @@ export default function AdminDashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  
+  // Edit credentials state
+  const [editCredentialsCompanyId, setEditCredentialsCompanyId] = useState<string | null>(null);
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   
   // New company form
   const [newCompanyName, setNewCompanyName] = useState('');
@@ -198,6 +205,35 @@ export default function AdminDashboard() {
       }
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  async function handleSaveCredentials() {
+    if (!editCredentialsCompanyId) return;
+    if (!editEmail.trim()) {
+      toast.error('E-mail é obrigatório');
+      return;
+    }
+    setIsSavingCredentials(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          login_email: editEmail.trim(),
+          initial_password: editPassword.trim() || null,
+        })
+        .eq('id', editCredentialsCompanyId);
+      if (error) throw error;
+      toast.success('Credenciais salvas!');
+      setEditCredentialsCompanyId(null);
+      setEditEmail('');
+      setEditPassword('');
+      fetchCompanies();
+    } catch (error) {
+      console.error('Error saving credentials:', error);
+      toast.error('Erro ao salvar credenciais');
+    } finally {
+      setIsSavingCredentials(false);
     }
   }
 
@@ -415,7 +451,19 @@ export default function AdminDashboard() {
                                 )}
                               </div>
                             ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1 text-xs"
+                                onClick={() => {
+                                  setEditCredentialsCompanyId(comp.id);
+                                  setEditEmail(comp.login_email || '');
+                                  setEditPassword(comp.initial_password || '');
+                                }}
+                              >
+                                <Pencil className="w-3 h-3" />
+                                Editar credenciais
+                              </Button>
                             )}
                           </TableCell>
                           <TableCell>
@@ -498,6 +546,42 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Credentials Dialog */}
+      <Dialog open={!!editCredentialsCompanyId} onOpenChange={(open) => { if (!open) setEditCredentialsCompanyId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Credenciais</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Login (E-mail) *</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                placeholder="loja@email.com"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                disabled={isSavingCredentials}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-password">Senha Inicial</Label>
+              <Input
+                id="edit-password"
+                placeholder="Senha inicial da loja"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                disabled={isSavingCredentials}
+              />
+            </div>
+            <Button onClick={handleSaveCredentials} className="w-full" disabled={isSavingCredentials}>
+              {isSavingCredentials ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Salvar Credenciais
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
