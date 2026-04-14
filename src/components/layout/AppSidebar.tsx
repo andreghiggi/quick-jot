@@ -86,7 +86,7 @@ export function AppSidebar() {
     },
     {
       title: 'Subcategorias',
-      icon: Layers,
+      icon: LayoutList,
       href: '/subcategorias',
     },
     {
