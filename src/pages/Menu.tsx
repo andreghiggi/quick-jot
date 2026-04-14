@@ -1294,7 +1294,10 @@ export default function Menu() {
               </div>
             </div>
             )
-          )}
+           )}
+           </div>
+           </>
+           )}
           </div>
           {/* Fixed bottom button - only for non-wizard flow */}
           {selectedProduct && !(settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) && (
