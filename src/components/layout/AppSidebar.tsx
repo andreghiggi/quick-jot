@@ -22,6 +22,7 @@ import {
   Lightbulb,
   Upload,
   Layers,
+  LayoutList,
   FolderOpen,
   BarChart3,
   UserCheck,
