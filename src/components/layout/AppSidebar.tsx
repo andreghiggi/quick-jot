@@ -80,14 +80,14 @@ export function AppSidebar() {
       href: '/categorias',
     },
     {
-      title: 'Produtos',
-      icon: Package,
-      href: '/produtos',
-    },
-    {
       title: 'Subcategorias',
       icon: LayoutList,
       href: '/subcategorias',
+    },
+    {
+      title: 'Produtos',
+      icon: Package,
+      href: '/produtos',
     },
     {
       title: 'Adicionais',
