@@ -287,7 +287,7 @@ export default function Menu() {
       if (!raw) return null;
       return JSON.parse(raw) as { items: { productName: string; productId: string; quantity: number; optionalNames: string[]; }[]; total: number };
     } catch { return null; }
-  }, [isI9, lastOrderKey]);
+  }, [lastOrderKey]);
 
   useEffect(() => {
     if (!customerPhone || customerPhone.length < 10 || !company?.id || customerLoaded) return;
