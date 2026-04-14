@@ -3,6 +3,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useCategories } from '@/hooks/useCategories';
+import { useSubcategories } from '@/hooks/useSubcategories';
 
 import { Product, ProductOptional } from '@/types/product';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
