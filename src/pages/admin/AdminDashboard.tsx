@@ -63,6 +63,12 @@ export default function AdminDashboard() {
   const [isCreating, setIsCreating] = useState(false);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   
+  // Edit credentials state
+  const [editCredentialsCompanyId, setEditCredentialsCompanyId] = useState<string | null>(null);
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [isSavingCredentials, setIsSavingCredentials] = useState(false);
+  
   // New company form
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newCompanySlug, setNewCompanySlug] = useState('');
