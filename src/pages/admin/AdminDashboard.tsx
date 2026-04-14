@@ -175,6 +175,8 @@ export default function AdminDashboard() {
           name: newCompanyName.trim(),
           slug,
           phone: newCompanyPhone.trim() || null,
+          login_email: newCompanyEmail.trim() || null,
+          initial_password: newCompanyPassword.trim() || null,
         });
 
       if (error) throw error;
@@ -184,6 +186,8 @@ export default function AdminDashboard() {
       setNewCompanyName('');
       setNewCompanySlug('');
       setNewCompanyPhone('');
+      setNewCompanyEmail('');
+      setNewCompanyPassword('');
       fetchCompanies();
     } catch (error: any) {
       console.error('Error creating company:', error);
