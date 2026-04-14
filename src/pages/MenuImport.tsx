@@ -361,7 +361,7 @@ export default function MenuImport() {
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
                             {product.isNewCategory && (
-                              <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs">
+                              <Badge variant="secondary" className="bg-accent text-accent-foreground text-xs">
                                 <Sparkles className="w-3 h-3 mr-1" />
                                 Nova categoria
                               </Badge>
@@ -468,7 +468,7 @@ export default function MenuImport() {
                 <div className="text-sm text-muted-foreground">
                   {extractedProducts.length} produto(s)
                   {newCategoryNames.length > 0 && (
-                    <span className="ml-2 text-amber-600">
+                    <span className="ml-2 text-accent-foreground">
                       • {newCategoryNames.length} nova(s) categoria(s)
                     </span>
                   )}
