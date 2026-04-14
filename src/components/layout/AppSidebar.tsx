@@ -189,6 +189,11 @@ export function AppSidebar() {
       icon: Users,
       href: '/admin/usuarios',
     },
+    {
+      title: 'Dados da Empresa',
+      icon: FileText,
+      href: '/admin/dados-empresa',
+    },
   ];
 
   const getInitials = (name: string | null | undefined) => {

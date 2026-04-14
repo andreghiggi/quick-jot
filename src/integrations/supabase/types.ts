@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_settings: {
+        Row: {
+          cnpj: string | null
+          created_at: string
+          email_comercial: string | null
+          endereco_bairro: string | null
+          endereco_cep: string | null
+          endereco_cidade: string | null
+          endereco_estado: string | null
+          endereco_numero: string | null
+          endereco_rua: string | null
+          id: string
+          razao_social: string | null
+          responsavel_cpf: string | null
+          responsavel_email: string | null
+          responsavel_nome: string | null
+          responsavel_rg: string | null
+          responsavel_telefone: string | null
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          cnpj?: string | null
+          created_at?: string
+          email_comercial?: string | null
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_estado?: string | null
+          endereco_numero?: string | null
+          endereco_rua?: string | null
+          id?: string
+          razao_social?: string | null
+          responsavel_cpf?: string | null
+          responsavel_email?: string | null
+          responsavel_nome?: string | null
+          responsavel_rg?: string | null
+          responsavel_telefone?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string | null
+          created_at?: string
+          email_comercial?: string | null
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_estado?: string | null
+          endereco_numero?: string | null
+          endereco_rua?: string | null
+          id?: string
+          razao_social?: string | null
+          responsavel_cpf?: string | null
+          responsavel_email?: string | null
+          responsavel_nome?: string | null
+          responsavel_rg?: string | null
+          responsavel_telefone?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       business_hours: {
         Row: {
           always_open: boolean
