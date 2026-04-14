@@ -116,14 +116,20 @@ export function MenuV2({
   
   
 
+  // Get subcategories for selected category
+  const categorySubcategories = selectedCategory && categoryIdMap?.[selectedCategory]
+    ? subcategories.filter(s => s.categoryId === categoryIdMap[selectedCategory] && s.active)
+    : [];
+
   // Filter products
   const filteredProducts = activeProducts.filter((product) => {
     const matchesCategory = !selectedCategory || product.category === selectedCategory;
+    const matchesSubcategory = !selectedSubcategoryId || product.subcategoryId === selectedSubcategoryId;
     const matchesSearch =
       !searchQuery ||
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    return matchesCategory && matchesSubcategory && matchesSearch;
   });
 
   // Count products per category
