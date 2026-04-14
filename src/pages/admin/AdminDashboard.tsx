@@ -25,7 +25,8 @@ import {
   Calendar,
   Eye,
   Copy,
-  EyeOff
+  EyeOff,
+  Pencil
 } from 'lucide-react';
 
 interface Company {
