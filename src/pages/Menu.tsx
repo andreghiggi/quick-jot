@@ -1116,9 +1116,8 @@ export default function Menu() {
                       key={selectedProduct.id}
                       src={selectedProduct.imageUrl}
                       alt={selectedProduct.name}
-                      className={cn("w-full object-cover", floatingPhoto && "kenburns-animate")}
+                      className={cn("w-full object-cover", floatingPhoto && "kenburns-animate-modal")}
                       loading="eager"
-                      style={floatingPhoto ? { height: '140%', animationPlayState: 'running' } : { height: '100%' }}
                     />
                   </div>
                 )}

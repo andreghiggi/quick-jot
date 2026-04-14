@@ -7,8 +7,24 @@
     transform: translateY(0%);
   }
   100% {
+    transform: translateY(-10%);
+  }
+}
+
+@keyframes kenburns-modal {
+  0% {
+    transform: translateY(0%);
+  }
+  100% {
     transform: translateY(-25%);
   }
+}
+
+.kenburns-animate-modal {
+  animation: kenburns-modal 6s ease-in-out infinite alternate;
+  animation-delay: -3s;
+  will-change: transform;
+  height: 140%;
 }
 
 .kenburns-animate {
