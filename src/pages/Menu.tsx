@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Progress } from '@/components/ui/progress';
 import { NovidadesSlideshow } from '@/components/menu/NovidadesSlideshow';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
@@ -89,6 +90,7 @@ export default function Menu() {
   const isOpen = isCurrentlyOpen();
   const schedulingEnabled = settings.acceptOrderScheduling;
   const canOrder = isOpen || schedulingEnabled;
+  const isI9 = slug === 'lancheria-da-i9';
   const formattedHours = getFormattedHours();
   
   
@@ -121,6 +123,7 @@ export default function Menu() {
   const [showAddedToCart, setShowAddedToCart] = useState(false);
   const [lastAddedItem, setLastAddedItem] = useState<CartItem | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [reorderDismissed, setReorderDismissed] = useState(false);
   
   // Optional group selections state
   const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Set<string>>>({});
