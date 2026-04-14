@@ -186,6 +186,13 @@ export default function Products() {
       toast.error('Preencha nome e preço');
       return;
     }
+    // Validate subcategory is selected when category has subcategories
+    const selectedCat = categories.find(c => c.name === editingProduct.category);
+    const subs = selectedCat ? getSubcategoriesByCategoryId(selectedCat.id) : [];
+    if (subs.length > 0 && !editingProduct.subcategoryId) {
+      toast.error('Selecione uma subcategoria');
+      return;
+    }
     await updateProduct(editingProduct.id, {
       name: editingProduct.name,
       price: editingProduct.price,
