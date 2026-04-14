@@ -436,7 +436,7 @@ export default function AdminDashboard() {
                                     <Copy className="w-3 h-3" />
                                   </button>
                                 </div>
-                                {comp.initial_password && (
+                                {comp.initial_password ? (
                                   <div className="flex items-center gap-1">
                                     <span className="text-xs font-mono">
                                       {visiblePasswords[comp.id] ? comp.initial_password : '••••••••'}
@@ -448,6 +448,21 @@ export default function AdminDashboard() {
                                       <Copy className="w-3 h-3" />
                                     </button>
                                   </div>
+                                ) : (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-muted-foreground italic">Senha definida pelo usuário</span>
+                                    <button
+                                      onClick={() => {
+                                        setEditCredentialsCompanyId(comp.id);
+                                        setEditEmail(comp.login_email || '');
+                                        setEditPassword('');
+                                      }}
+                                      className="text-muted-foreground hover:text-foreground"
+                                      title="Anotar senha"
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             ) : (
@@ -457,8 +472,8 @@ export default function AdminDashboard() {
                                 className="gap-1 text-xs"
                                 onClick={() => {
                                   setEditCredentialsCompanyId(comp.id);
-                                  setEditEmail(comp.login_email || '');
-                                  setEditPassword(comp.initial_password || '');
+                                  setEditEmail('');
+                                  setEditPassword('');
                                 }}
                               >
                                 <Pencil className="w-3 h-3" />
@@ -551,33 +566,44 @@ export default function AdminDashboard() {
       <Dialog open={!!editCredentialsCompanyId} onOpenChange={(open) => { if (!open) setEditCredentialsCompanyId(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Credenciais</DialogTitle>
+            <DialogTitle>{editEmail ? 'Anotar Senha' : 'Editar Credenciais'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {!editEmail ? (
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Login (E-mail) *</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  placeholder="loja@email.com"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  disabled={isSavingCredentials}
+                />
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Label>Login (E-mail)</Label>
+                <p className="text-sm font-mono bg-muted px-3 py-2 rounded-md">{editEmail}</p>
+                <p className="text-xs text-muted-foreground">Email obtido automaticamente do cadastro do usuário</p>
+              </div>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Login (E-mail) *</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                placeholder="loja@email.com"
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-                disabled={isSavingCredentials}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-password">Senha Inicial</Label>
+              <Label htmlFor="edit-password">Senha Inicial (anotação)</Label>
               <Input
                 id="edit-password"
-                placeholder="Senha inicial da loja"
+                placeholder="Anotar a senha inicial da loja"
                 value={editPassword}
                 onChange={(e) => setEditPassword(e.target.value)}
                 disabled={isSavingCredentials}
               />
+              <p className="text-xs text-muted-foreground">
+                Senha definida pelo usuário no cadastro — este campo é apenas para anotação do admin
+              </p>
             </div>
             <Button onClick={handleSaveCredentials} className="w-full" disabled={isSavingCredentials}>
               {isSavingCredentials ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Salvar Credenciais
+              Salvar
             </Button>
           </div>
         </DialogContent>
