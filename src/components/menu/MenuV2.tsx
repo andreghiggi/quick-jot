@@ -138,8 +138,80 @@ export function MenuV2({
     return acc;
   }, {} as Record<string, number>);
 
+  // If a category is selected and has subcategories but none selected yet, show subcategory cards
+  if (selectedCategory && categorySubcategories.length > 0 && !selectedSubcategoryId) {
+    return (
+      <div className="min-h-screen bg-background pb-24" style={buttonColorStyle}>
+        <div className="sticky top-0 z-20 bg-card border-b border-border shadow-sm">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-start gap-2 min-w-0 flex-1">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0 mt-0.5" onClick={() => setSelectedCategory(null)}>
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-lg font-bold text-foreground leading-tight break-words">{selectedCategory}</h1>
+                  <Badge variant="secondary" className="text-xs mt-1">Escolha uma subcategoria</Badge>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="relative flex-shrink-0" onClick={onCartOpen}>
+                <ShoppingCart className="h-4 w-4" />
+                {cartItemsCount > 0 && <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">{cartItemsCount}</Badge>}
+              </Button>
+            </div>
+          </div>
+        </div>
+        <main className="container mx-auto px-4 py-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {categorySubcategories.map((sub, index) => (
+              <button
+                key={sub.id}
+                onClick={() => setSelectedSubcategoryId(sub.id)}
+                className={cn(
+                  'relative overflow-hidden rounded-xl text-left transition-all',
+                  'hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]',
+                  'shadow-md min-h-[120px] flex flex-col justify-between',
+                  sub.imageUrl ? 'text-white' : cn('bg-gradient-to-br text-white p-4', categoryGradients[index % categoryGradients.length])
+                )}
+              >
+                {sub.imageUrl ? (
+                  <>
+                    <img src={sub.imageUrl} alt={sub.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                    <div className="relative z-10 mt-auto p-4 pt-20">
+                      <p className="font-bold text-sm leading-tight line-clamp-2 text-white" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>{sub.name}</p>
+                    </div>
+                  </>
+                ) : (
+                  <p className="font-bold text-sm leading-tight line-clamp-2 text-white mt-auto" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>{sub.name}</p>
+                )}
+              </button>
+            ))}
+          </div>
+        </main>
+        {cartItemsCount > 0 && (
+          <div className="fixed bottom-4 left-4 right-4 z-30">
+            <Button className="w-full py-6 shadow-lg" size="lg" onClick={onCartOpen}>
+              <ShoppingCart className="h-5 w-5 mr-2" />
+              Ver carrinho ({cartItemsCount} itens) - R$ {formatPrice(cartTotal)}
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // If a category is selected, show products in that category
   if (selectedCategory) {
+    const handleBack = () => {
+      if (selectedSubcategoryId && categorySubcategories.length > 0) {
+        setSelectedSubcategoryId(null);
+      } else {
+        setSelectedCategory(null);
+        setSelectedSubcategoryId(null);
+      }
+    };
+
     return (
       <div className="min-h-screen bg-background pb-24" style={buttonColorStyle}>
         {/* Category Header */}
@@ -151,7 +223,7 @@ export function MenuV2({
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0 flex-shrink-0 mt-0.5"
-                  onClick={() => setSelectedCategory(null)}
+                  onClick={handleBack}
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
