@@ -187,6 +187,7 @@ export default function Products() {
       imageUrl: editingProduct.imageUrl,
       active: editingProduct.active,
       pdvItem: editingProduct.pdvItem,
+      subcategoryId: editingProduct.subcategoryId,
     });
     setEditingProduct(null);
   }
