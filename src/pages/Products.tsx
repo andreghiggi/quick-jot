@@ -843,6 +843,98 @@ export default function Products() {
           return success;
         }}
       />
+
+      {/* AI Import Dialog */}
+      <Dialog open={importStep !== 'idle'} onOpenChange={(open) => { if (!open) resetImport(); }}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {importStep === 'preview' ? 'Confirmar arquivo' : 'Produtos encontrados'}
+            </DialogTitle>
+          </DialogHeader>
+
+          {importStep === 'preview' && (
+            <div className="space-y-4">
+              {importPreviewUrl && (
+                <img src={importPreviewUrl} alt="Preview" className="w-full max-h-64 object-contain rounded-md border" />
+              )}
+              {importFile && !importPreviewUrl && (
+                <div className="p-6 text-center border rounded-md">
+                  <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm font-medium">{importFile.name}</p>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={resetImport}>Cancelar</Button>
+                <Button className="flex-1" onClick={handleImportExtract} disabled={isExtracting}>
+                  {isExtracting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Extrair produtos
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {importStep === 'review' && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {extractedProducts.filter(p => p.selected).length} de {extractedProducts.length} selecionados
+              </p>
+              <ScrollArea className="max-h-[50vh]">
+                <div className="space-y-3 pr-2">
+                  {extractedProducts.map((product, idx) => (
+                    <div key={idx} className={cn("border rounded-lg p-3 space-y-2", !product.selected && "opacity-50")}>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={product.selected}
+                          onCheckedChange={() => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, selected: !p.selected } : p))}
+                        />
+                        <Input
+                          value={product.name}
+                          onChange={(e) => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, name: e.target.value } : p))}
+                          className="flex-1 h-8 text-sm"
+                          placeholder="Nome"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={product.price}
+                          onChange={(e) => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, price: parseFloat(e.target.value) || 0 } : p))}
+                          className="w-24 h-8 text-sm"
+                          placeholder="Preço"
+                        />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setExtractedProducts(prev => prev.filter((_, i) => i !== idx))}>
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      <div className="flex gap-2 pl-8">
+                        <Input
+                          value={product.category}
+                          onChange={(e) => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, category: e.target.value } : p))}
+                          className="h-7 text-xs flex-1"
+                          placeholder="Categoria"
+                        />
+                        <Input
+                          value={product.description || ''}
+                          onChange={(e) => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, description: e.target.value } : p))}
+                          className="h-7 text-xs flex-1"
+                          placeholder="Descrição (opcional)"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={resetImport}>Cancelar</Button>
+                <Button className="flex-1" onClick={handleImportSave} disabled={isImportSaving}>
+                  {isImportSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                  Importar ({extractedProducts.filter(p => p.selected).length})
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
