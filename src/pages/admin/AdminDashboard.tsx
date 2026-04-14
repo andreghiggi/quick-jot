@@ -23,7 +23,9 @@ import {
   Play,
   Pause,
   Calendar,
-  Eye
+  Eye,
+  Copy,
+  EyeOff
 } from 'lucide-react';
 
 interface Company {
