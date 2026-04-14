@@ -21,6 +21,7 @@ export interface Product {
   displayOrder?: number;
   pdvItem?: boolean;
   isNew?: boolean;
+  subcategoryId?: string | null;
 }
 
 export interface CartItem {

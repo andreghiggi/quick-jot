@@ -61,6 +61,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         displayOrder: product.display_order ?? 0,
         pdvItem: product.pdv_item ?? true,
         isNew: (product as any).is_new ?? false,
+        subcategoryId: (product as any).subcategory_id || null,
         optionals: optionalsData
           .filter((opt) => opt.product_id === product.id)
           .map((opt) => ({
