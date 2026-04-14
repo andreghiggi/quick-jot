@@ -265,6 +265,27 @@ export default function AdminDashboard() {
               disabled={isCreating}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="company-email">Login (E-mail)</Label>
+            <Input
+              id="company-email"
+              type="email"
+              placeholder="loja@email.com"
+              value={newCompanyEmail}
+              onChange={(e) => setNewCompanyEmail(e.target.value)}
+              disabled={isCreating}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="company-password">Senha Inicial</Label>
+            <Input
+              id="company-password"
+              placeholder="Senha inicial da loja"
+              value={newCompanyPassword}
+              onChange={(e) => setNewCompanyPassword(e.target.value)}
+              disabled={isCreating}
+            />
+          </div>
           <Button type="submit" className="w-full" disabled={isCreating}>
             {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
             Criar Empresa
