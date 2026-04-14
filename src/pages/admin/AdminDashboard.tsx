@@ -380,8 +380,44 @@ export default function AdminDashboard() {
                       const plan = companyPlans[comp.id];
                       return (
                         <TableRow key={comp.id}>
-                          <TableCell className="font-medium">{comp.name}</TableCell>
-                          <TableCell className="text-muted-foreground text-xs">{comp.slug}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{comp.name}</span>
+                              <span className="text-xs text-muted-foreground">{comp.slug}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(comp.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {comp.login_email ? (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs font-mono">{comp.login_email}</span>
+                                  <button onClick={() => { navigator.clipboard.writeText(comp.login_email!); toast.success('Email copiado!'); }} className="text-muted-foreground hover:text-foreground">
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                {comp.initial_password && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs font-mono">
+                                      {visiblePasswords[comp.id] ? comp.initial_password : '••••••••'}
+                                    </span>
+                                    <button onClick={() => setVisiblePasswords(prev => ({ ...prev, [comp.id]: !prev[comp.id] }))} className="text-muted-foreground hover:text-foreground">
+                                      {visiblePasswords[comp.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                    </button>
+                                    <button onClick={() => { navigator.clipboard.writeText(comp.initial_password!); toast.success('Senha copiada!'); }} className="text-muted-foreground hover:text-foreground">
+                                      <Copy className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-1">
                               <Badge variant={planStatus.variant}>
