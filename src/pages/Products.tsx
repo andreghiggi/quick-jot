@@ -14,21 +14,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star } from 'lucide-react';
+import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star, Camera, Check, X } from 'lucide-react';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { uploadCompressedImage } from '@/utils/imageUtils';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+
+interface ExtractedProduct {
+  name: string;
+  price: number;
+  category: string;
+  description?: string;
+  selected: boolean;
+}
 
 export default function Products() {
   const { company } = useAuthContext();
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, duplicateProduct, toggleNewProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
-  const { categories } = useCategories({ companyId: company?.id });
+  const { categories, addCategory } = useCategories({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
@@ -45,6 +55,16 @@ export default function Products() {
   const [isBulkTaxOpen, setIsBulkTaxOpen] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   const menuLink = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
+
+  // AI import state
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const importCameraRef = useRef<HTMLInputElement>(null);
+  const [importStep, setImportStep] = useState<'idle' | 'preview' | 'review'>('idle');
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreviewUrl, setImportPreviewUrl] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [isImportSaving, setIsImportSaving] = useState(false);
+  const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
 
   // Set default category when categories load
   useEffect(() => {
@@ -173,6 +193,99 @@ export default function Products() {
     toast.success('Link copiado!');
   }
 
+  // --- AI Import handlers ---
+  function handleImportFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setImportFile(f);
+    if (f.type.startsWith('image/')) {
+      setImportPreviewUrl(URL.createObjectURL(f));
+    } else {
+      setImportPreviewUrl(null);
+    }
+    setImportStep('preview');
+  }
+
+  async function handleImportExtract() {
+    if (!importFile || !company?.id) return;
+    setIsExtracting(true);
+    try {
+      const fileExt = importFile.name.split('.').pop();
+      const fileName = `menu-import/${company.id}/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, importFile);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+
+      const { data, error } = await supabase.functions.invoke('extract-menu', {
+        body: { imageUrl: publicUrl, fileType: importFile.type }
+      });
+      if (error) throw error;
+
+      if (data?.products && Array.isArray(data.products)) {
+        setExtractedProducts(data.products.map((p: any) => ({
+          name: p.name || '',
+          price: parseFloat(p.price) || 0,
+          category: p.category || 'Geral',
+          description: p.description || '',
+          selected: true,
+        })));
+        setImportStep('review');
+        toast.success(`${data.products.length} produtos encontrados!`);
+      } else {
+        toast.error('Não foi possível extrair produtos');
+      }
+    } catch (error: any) {
+      console.error('Error extracting menu:', error);
+      toast.error(error.message || 'Erro ao processar');
+    } finally {
+      setIsExtracting(false);
+    }
+  }
+
+  async function handleImportSave() {
+    const selected = extractedProducts.filter(p => p.selected);
+    if (selected.length === 0) {
+      toast.error('Selecione pelo menos um produto');
+      return;
+    }
+    setIsImportSaving(true);
+    let successCount = 0;
+    try {
+      const existingCatNames = categories.map(c => c.name);
+      const newCats = [...new Set(selected.map(p => p.category))].filter(c => !existingCatNames.includes(c));
+      for (const catName of newCats) {
+        await addCategory(catName);
+      }
+      for (const product of selected) {
+        try {
+          await addProduct({
+            name: product.name,
+            price: product.price,
+            category: product.category,
+            description: product.description || undefined,
+            active: true,
+          });
+          successCount++;
+        } catch (err) {
+          console.error('Error adding product:', product.name, err);
+        }
+      }
+      toast.success(`${successCount} produtos importados!`);
+      resetImport();
+    } catch {
+      toast.error('Erro ao importar produtos');
+    } finally {
+      setIsImportSaving(false);
+    }
+  }
+
+  function resetImport() {
+    setImportFile(null);
+    setImportPreviewUrl(null);
+    setExtractedProducts([]);
+    setImportStep('idle');
+  }
+
 
   // Group products by category, maintaining category order
   const groupedProducts = useMemo(() => {
@@ -213,11 +326,20 @@ export default function Products() {
 
   const headerActions = (
     <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" onClick={() => importCameraRef.current?.click()}>
+        <Camera className="h-4 w-4 mr-2" />
+        <span className="hidden sm:inline">Foto</span>
+      </Button>
+      <input type="file" accept="image/*" capture="environment" ref={importCameraRef} onChange={handleImportFileSelect} className="hidden" />
+      <Button variant="outline" size="sm" onClick={() => importFileRef.current?.click()}>
+        <Upload className="h-4 w-4 mr-2" />
+        <span className="hidden sm:inline">Arquivo</span>
+      </Button>
+      <input type="file" accept="image/*,.pdf,.jpg,.jpeg,.png,.webp" ref={importFileRef} onChange={handleImportFileSelect} className="hidden" />
       {taxRules.length > 0 && (
         <Button variant="outline" size="sm" onClick={() => setIsBulkTaxOpen(true)}>
           <FileText className="h-4 w-4 mr-2" />
           <span className="hidden sm:inline">Tributação em massa</span>
-
         </Button>
       )}
       <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
@@ -721,6 +843,98 @@ export default function Products() {
           return success;
         }}
       />
+
+      {/* AI Import Dialog */}
+      <Dialog open={importStep !== 'idle'} onOpenChange={(open) => { if (!open) resetImport(); }}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {importStep === 'preview' ? 'Confirmar arquivo' : 'Produtos encontrados'}
+            </DialogTitle>
+          </DialogHeader>
+
+          {importStep === 'preview' && (
+            <div className="space-y-4">
+              {importPreviewUrl && (
+                <img src={importPreviewUrl} alt="Preview" className="w-full max-h-64 object-contain rounded-md border" />
+              )}
+              {importFile && !importPreviewUrl && (
+                <div className="p-6 text-center border rounded-md">
+                  <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm font-medium">{importFile.name}</p>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={resetImport}>Cancelar</Button>
+                <Button className="flex-1" onClick={handleImportExtract} disabled={isExtracting}>
+                  {isExtracting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Extrair produtos
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {importStep === 'review' && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {extractedProducts.filter(p => p.selected).length} de {extractedProducts.length} selecionados
+              </p>
+              <ScrollArea className="max-h-[50vh]">
+                <div className="space-y-3 pr-2">
+                  {extractedProducts.map((product, idx) => (
+                    <div key={idx} className={cn("border rounded-lg p-3 space-y-2", !product.selected && "opacity-50")}>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={product.selected}
+                          onCheckedChange={() => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, selected: !p.selected } : p))}
+                        />
+                        <Input
+                          value={product.name}
+                          onChange={(e) => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, name: e.target.value } : p))}
+                          className="flex-1 h-8 text-sm"
+                          placeholder="Nome"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={product.price}
+                          onChange={(e) => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, price: parseFloat(e.target.value) || 0 } : p))}
+                          className="w-24 h-8 text-sm"
+                          placeholder="Preço"
+                        />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setExtractedProducts(prev => prev.filter((_, i) => i !== idx))}>
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      <div className="flex gap-2 pl-8">
+                        <Input
+                          value={product.category}
+                          onChange={(e) => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, category: e.target.value } : p))}
+                          className="h-7 text-xs flex-1"
+                          placeholder="Categoria"
+                        />
+                        <Input
+                          value={product.description || ''}
+                          onChange={(e) => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, description: e.target.value } : p))}
+                          className="h-7 text-xs flex-1"
+                          placeholder="Descrição (opcional)"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={resetImport}>Cancelar</Button>
+                <Button className="flex-1" onClick={handleImportSave} disabled={isImportSaving}>
+                  {isImportSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                  Importar ({extractedProducts.filter(p => p.selected).length})
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
