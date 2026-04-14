@@ -1029,6 +1029,7 @@ export type Database = {
           name: string
           pdv_item: boolean
           price: number
+          subcategory_id: string | null
           tax_rule_id: string | null
           updated_at: string
         }
@@ -1045,6 +1046,7 @@ export type Database = {
           name: string
           pdv_item?: boolean
           price: number
+          subcategory_id?: string | null
           tax_rule_id?: string | null
           updated_at?: string
         }
@@ -1061,6 +1063,7 @@ export type Database = {
           name?: string
           pdv_item?: boolean
           price?: number
+          subcategory_id?: string | null
           tax_rule_id?: string | null
           updated_at?: string
         }
@@ -1070,6 +1073,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
             referencedColumns: ["id"]
           },
           {
@@ -1374,6 +1384,54 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "store_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subcategories: {
+        Row: {
+          active: boolean
+          category_id: string
+          company_id: string
+          created_at: string
+          display_order: number | null
+          id: string
+          image_url: string | null
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          category_id: string
+          company_id: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          name: string
+        }
+        Update: {
+          active?: boolean
+          category_id?: string
+          company_id?: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subcategories_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
