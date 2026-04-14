@@ -60,11 +60,14 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   
   // New company form
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newCompanySlug, setNewCompanySlug] = useState('');
   const [newCompanyPhone, setNewCompanyPhone] = useState('');
+  const [newCompanyEmail, setNewCompanyEmail] = useState('');
+  const [newCompanyPassword, setNewCompanyPassword] = useState('');
 
   useEffect(() => {
     fetchCompanies();
