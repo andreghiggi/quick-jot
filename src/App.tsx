@@ -12,6 +12,7 @@ import { useCompanyModules } from "@/hooks/useCompanyModules";
 
 // Pages
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import Orders from "./pages/Orders";
@@ -81,6 +82,7 @@ function AppRoutes() {
     <Routes>
       {/* Public Routes */}
       <Route path="/auth" element={<Auth />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/cardapio/:slug" element={<Menu />} />
       
       {/* Root with redirect logic */}
