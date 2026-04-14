@@ -254,6 +254,20 @@ export default function PaymentMethods() {
                 <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
               </div>
             )}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1"><Plug className="w-3 h-3" /> Integração</Label>
+              <Select value={newMethodIntegration} onValueChange={setNewMethodIntegration}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  <SelectItem value="tef_pinpad">TEF PinPad (WebService)</SelectItem>
+                  <SelectItem value="tef_smartpos">TEF SmartPOS (PINPDV)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Ao selecionar esta forma no PDV, o TEF será acionado automaticamente</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialog(false)}>Cancelar</Button>
@@ -292,6 +306,20 @@ export default function PaymentMethods() {
                 <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
               </div>
             )}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1"><Plug className="w-3 h-3" /> Integração</Label>
+              <Select value={editingMethod?.integration_type || 'none'} onValueChange={(v) => setEditingMethod(prev => prev ? { ...prev, integration_type: v } : null)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  <SelectItem value="tef_pinpad">TEF PinPad (WebService)</SelectItem>
+                  <SelectItem value="tef_smartpos">TEF SmartPOS (PINPDV)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Ao selecionar esta forma no PDV, o TEF será acionado automaticamente</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialog(false)}>Cancelar</Button>
