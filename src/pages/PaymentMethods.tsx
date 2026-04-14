@@ -163,6 +163,12 @@ export default function PaymentMethods() {
                         {method.pix_key && (
                           <p className="text-xs text-muted-foreground truncate">Chave: {method.pix_key}</p>
                         )}
+                        {method.integration_type && (
+                          <p className="text-xs text-primary font-medium flex items-center gap-1">
+                            <Plug className="w-3 h-3" />
+                            {method.integration_type === 'tef_pinpad' ? 'TEF PinPad' : method.integration_type === 'tef_smartpos' ? 'TEF SmartPOS' : method.integration_type}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
