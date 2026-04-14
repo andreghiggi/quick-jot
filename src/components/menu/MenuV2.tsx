@@ -97,6 +97,8 @@ export function MenuV2({
   allOrderedCategories,
   categoryEmojiMap,
   categoryImageMap,
+  categoryIdMap,
+  subcategories = [],
   floatingPhoto,
   cartItemsCount,
   cartTotal,
@@ -109,6 +111,7 @@ export function MenuV2({
   buttonColorStyle,
 }: MenuV2Props) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
   
