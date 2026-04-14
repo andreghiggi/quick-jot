@@ -12,6 +12,7 @@ import { useCompanyModules } from "@/hooks/useCompanyModules";
 
 // Pages
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import Orders from "./pages/Orders";
