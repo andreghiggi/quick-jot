@@ -216,6 +216,13 @@ export default function Auth() {
                     disabled={isLoading}
                   />
                   {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+                  <button
+                    type="button"
+                    onClick={() => setForgotPasswordOpen(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Esqueci minha senha
+                  </button>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
