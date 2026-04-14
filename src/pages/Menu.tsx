@@ -1040,6 +1040,7 @@ export default function Menu() {
                             alt={product.name}
                             loading={floatingPhoto ? "eager" : "lazy"}
                             className={cn("w-full h-full object-cover", floatingPhoto && "kenburns-animate")}
+                            style={floatingPhoto ? { animationDelay: '-999s' } : undefined}
                           />
                         </div>
                       ) : (
@@ -1115,8 +1116,8 @@ export default function Menu() {
                       key={selectedProduct.id}
                       src={selectedProduct.imageUrl}
                       alt={selectedProduct.name}
-                      className={cn("w-full object-cover", floatingPhoto && "kenburns-animate")}
-                      style={{ height: '110%', animationPlayState: 'running' }}
+                      className={cn("w-full object-cover", floatingPhoto && "kenburns-animate-modal")}
+                      loading="eager"
                     />
                   </div>
                 )}
