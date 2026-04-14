@@ -1107,197 +1107,190 @@ export default function Menu() {
             <DialogTitle className="pr-6">{selectedProduct?.name}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto">
-          {selectedProduct && (
-            <>
-            {selectedProduct.imageUrl && (
-              <div className="w-full h-48 overflow-hidden">
-                <img
-                  key={selectedProduct.id}
-                  src={selectedProduct.imageUrl}
-                  alt={selectedProduct.name}
-                  className={cn("w-full object-cover", floatingPhoto && "kenburns-animate")}
-                  style={{ height: '110%', animationPlayState: 'running' }}
-                />
-              </div>
-            )}
-            <div className="px-6 py-4">
-            {settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0)) ? (
-              <LateralOptionalsWizard
-                product={selectedProduct}
-                groups={selectedProductGroups}
-                oldStyleOptionals={selectedProduct.optionals?.filter(o => o.active) || []}
-                selectedOptionals={selectedOptionals}
-                selectedGroupItems={selectedGroupItems}
-                itemNotes={itemNotes}
-                onToggleOptional={toggleOptional}
-                onToggleGroupItem={toggleGroupItem}
-                onNotesChange={setItemNotes}
-                onAddToCart={addToCart}
-              />
-            ) : (
-            <div className="space-y-4">
-              {selectedProduct.description && (
-                <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>
-              )}
-              <p className="text-2xl font-bold text-green-600">
-                R$ {formatPrice(selectedProduct.price)}
-              </p>
+            {selectedProduct && (
+              <>
+                {selectedProduct.imageUrl && (
+                  <div className="w-full h-48 overflow-hidden">
+                    <img
+                      key={selectedProduct.id}
+                      src={selectedProduct.imageUrl}
+                      alt={selectedProduct.name}
+                      className={cn("w-full object-cover", floatingPhoto && "kenburns-animate")}
+                      style={{ height: '110%', animationPlayState: 'running' }}
+                    />
+                  </div>
+                )}
+                <div className="px-6 py-4">
+                  {settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0)) ? (
+                    <LateralOptionalsWizard
+                      product={selectedProduct}
+                      groups={selectedProductGroups}
+                      oldStyleOptionals={selectedProduct.optionals?.filter(o => o.active) || []}
+                      selectedOptionals={selectedOptionals}
+                      selectedGroupItems={selectedGroupItems}
+                      itemNotes={itemNotes}
+                      onToggleOptional={toggleOptional}
+                      onToggleGroupItem={toggleGroupItem}
+                      onNotesChange={setItemNotes}
+                      onAddToCart={addToCart}
+                    />
+                  ) : (
+                    <div className="space-y-4">
+                      {selectedProduct.description && (
+                        <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>
+                      )}
+                      <p className="text-2xl font-bold text-green-600">
+                        R$ {formatPrice(selectedProduct.price)}
+                      </p>
 
-              {selectedProduct.optionals && selectedProduct.optionals.length > 0 && (
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold">Adicionais</Label>
-                  {selectedProduct.optionals
-                    .filter((o) => o.active)
-                    .map((optional) => (
-                      <div
-                        key={optional.id}
-                        className={cn(
-                          "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors",
-                          selectedOptionals.some((o) => o.id === optional.id) 
-                            ? "border-primary bg-primary/5" 
-                            : "hover:border-primary/50"
-                        )}
-                        onClick={() => toggleOptional(optional)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            checked={selectedOptionals.some((o) => o.id === optional.id)}
-                            onCheckedChange={() => toggleOptional(optional)}
-                          />
-                          <span className="font-medium">{optional.name}</span>
-                        </div>
-                        {optional.price > 0 && (
-                          <span className="text-green-600 font-semibold">
-                            +R$ {formatPrice(optional.price)}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              )}
-
-              {/* Optional Groups (associated by category or product) */}
-              {selectedProductGroups.length > 0 && (
-                <div className="space-y-4">
-                  {selectedProductGroups.map(group => (
-                    <div key={group.id} className="space-y-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Label className="text-base font-semibold">{group.name}</Label>
-                        <Badge variant="outline" className="text-xs">
-                          {group.minSelect > 0 ? `mín ${group.minSelect} / ` : ''}
-                          máx {group.maxSelect > 0 ? group.maxSelect : 1}
-                        </Badge>
-                        {group.minSelect > 0 && (
-                          <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
-                        )}
-                      </div>
-
-                      {group.layout === 'horizontal' ? (
-                        /* Visual grid card layout - 3 columns on mobile */
-                        <div className="grid grid-cols-3 gap-2">
-                          {group.items.filter(i => i.active).map(item => {
-                            const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
-                            return (
-                              <button
-                                key={item.id}
-                                type="button"
+                      {selectedProduct.optionals && selectedProduct.optionals.length > 0 && (
+                        <div className="space-y-3">
+                          <Label className="text-base font-semibold">Adicionais</Label>
+                          {selectedProduct.optionals
+                            .filter((o) => o.active)
+                            .map((optional) => (
+                              <div
+                                key={optional.id}
                                 className={cn(
-                                  "relative rounded-xl border-2 overflow-hidden transition-all text-left",
-                                  isSelected
-                                    ? "border-primary ring-2 ring-primary/30 shadow-md"
-                                    : "border-border hover:border-primary/50"
+                                  "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors",
+                                  selectedOptionals.some((o) => o.id === optional.id) 
+                                    ? "border-primary bg-primary/5" 
+                                    : "hover:border-primary/50"
                                 )}
-                                onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                                onClick={() => toggleOptional(optional)}
                               >
-                                {item.imageUrl ? (
-                                  <div className="w-full aspect-square overflow-hidden">
-                                    <img
-                                      src={item.imageUrl}
-                                      alt={item.name}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="w-full aspect-square bg-muted flex items-center justify-center">
-                                    <span className="text-3xl">🍽️</span>
-                                  </div>
-                                )}
-                                <div className="p-1.5 space-y-0.5">
-                                  <p className={cn(
-                                    "text-[11px] font-semibold line-clamp-2 leading-tight text-center",
-                                    isSelected ? "text-primary" : "text-foreground"
-                                  )}>
-                                    {item.name}
-                                  </p>
-                                  {item.price > 0 && (
-                                    <p className="text-[10px] text-green-600 font-medium text-center">
-                                      +R$ {formatPrice(item.price)}
-                                    </p>
-                                  )}
+                                <div className="flex items-center gap-3">
+                                  <Checkbox
+                                    checked={selectedOptionals.some((o) => o.id === optional.id)}
+                                    onCheckedChange={() => toggleOptional(optional)}
+                                  />
+                                  <span className="font-medium">{optional.name}</span>
                                 </div>
-                                {isSelected && (
-                                  <div className="absolute top-1 right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                                    <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  </div>
+                                {optional.price > 0 && (
+                                  <span className="text-green-600 font-semibold">
+                                    +R$ {formatPrice(optional.price)}
+                                  </span>
                                 )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        /* Default vertical list layout */
-                        group.items.filter(i => i.active).map(item => {
-                          const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
-                          return (
-                            <div
-                              key={item.id}
-                              className={cn(
-                                "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors",
-                                isSelected ? "border-primary bg-primary/5" : "hover:border-primary/50"
-                              )}
-                              onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
-                                />
-                                {item.imageUrl && (
-                                  <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
-                                )}
-                                <span className="font-medium">{item.name}</span>
                               </div>
-                              {item.price > 0 && (
-                                <span className="text-green-600 font-semibold">
-                                  +R$ {formatPrice(item.price)}
-                                </span>
+                            ))}
+                        </div>
+                      )}
+
+                      {/* Optional Groups (associated by category or product) */}
+                      {selectedProductGroups.length > 0 && (
+                        <div className="space-y-4">
+                          {selectedProductGroups.map(group => (
+                            <div key={group.id} className="space-y-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Label className="text-base font-semibold">{group.name}</Label>
+                                <Badge variant="outline" className="text-xs">
+                                  {group.minSelect > 0 ? `mín ${group.minSelect} / ` : ''}
+                                  máx {group.maxSelect > 0 ? group.maxSelect : 1}
+                                </Badge>
+                                {group.minSelect > 0 && (
+                                  <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
+                                )}
+                              </div>
+
+                              {group.layout === 'horizontal' ? (
+                                <div className="grid grid-cols-3 gap-2">
+                                  {group.items.filter(i => i.active).map(item => {
+                                    const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
+                                    return (
+                                      <button
+                                        key={item.id}
+                                        type="button"
+                                        className={cn(
+                                          "relative rounded-xl border-2 overflow-hidden transition-all text-left",
+                                          isSelected
+                                            ? "border-primary ring-2 ring-primary/30 shadow-md"
+                                            : "border-border hover:border-primary/50"
+                                        )}
+                                        onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                                      >
+                                        {item.imageUrl ? (
+                                          <div className="w-full aspect-square overflow-hidden">
+                                            <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                                          </div>
+                                        ) : (
+                                          <div className="w-full aspect-square bg-muted flex items-center justify-center">
+                                            <span className="text-3xl">🍽️</span>
+                                          </div>
+                                        )}
+                                        <div className="p-1.5 space-y-0.5">
+                                          <p className={cn(
+                                            "text-[11px] font-semibold line-clamp-2 leading-tight text-center",
+                                            isSelected ? "text-primary" : "text-foreground"
+                                          )}>
+                                            {item.name}
+                                          </p>
+                                          {item.price > 0 && (
+                                            <p className="text-[10px] text-green-600 font-medium text-center">
+                                              +R$ {formatPrice(item.price)}
+                                            </p>
+                                          )}
+                                        </div>
+                                        {isSelected && (
+                                          <div className="absolute top-1 right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                                            <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                          </div>
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                group.items.filter(i => i.active).map(item => {
+                                  const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      className={cn(
+                                        "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors",
+                                        isSelected ? "border-primary bg-primary/5" : "hover:border-primary/50"
+                                      )}
+                                      onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <Checkbox
+                                          checked={isSelected}
+                                          onCheckedChange={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                                        />
+                                        {item.imageUrl && (
+                                          <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                                        )}
+                                        <span className="font-medium">{item.name}</span>
+                                      </div>
+                                      {item.price > 0 && (
+                                        <span className="text-green-600 font-semibold">
+                                          +R$ {formatPrice(item.price)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })
                               )}
                             </div>
-                          );
-                        })
+                          ))}
+                        </div>
                       )}
-                    </div>
-                  ))}
-                </div>
-              )}
 
-              <div>
-                <Label>Observações (opcional)</Label>
-                <Input
-                  value={itemNotes}
-                  onChange={(e) => setItemNotes(e.target.value)}
-                  placeholder="Ex: Sem cebola, bem passado..."
-                  className="mt-2"
-                />
-              </div>
-            </div>
+                      <div>
+                        <Label>Observações (opcional)</Label>
+                        <Input
+                          value={itemNotes}
+                          onChange={(e) => setItemNotes(e.target.value)}
+                          placeholder="Ex: Sem cebola, bem passado..."
+                          className="mt-2"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
-            </div>
-           </div>
-           </>
-           )}
           </div>
           {/* Fixed bottom button - only for non-wizard flow */}
           {selectedProduct && !(settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) && (
