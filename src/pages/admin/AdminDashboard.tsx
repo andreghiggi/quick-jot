@@ -370,6 +370,7 @@ export default function AdminDashboard() {
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
+                          </TableCell>
                           <TableCell>
                             <Badge variant={comp.active ? 'default' : 'secondary'}>
                               {comp.active ? 'Ativa' : 'Inativa'}
