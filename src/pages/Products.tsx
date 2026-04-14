@@ -3,6 +3,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useCategories } from '@/hooks/useCategories';
+import { useSubcategories } from '@/hooks/useSubcategories';
 
 import { Product, ProductOptional } from '@/types/product';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
@@ -39,6 +40,7 @@ export default function Products() {
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { categories, addCategory } = useCategories({ companyId: company?.id });
+  const { getSubcategoriesByCategoryId } = useSubcategories({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
@@ -46,7 +48,7 @@ export default function Products() {
   
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true });
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true, subcategoryId: '' });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
   
   const [isUploading, setIsUploading] = useState(false);
@@ -134,8 +136,9 @@ export default function Products() {
       description: newProduct.description || undefined,
       imageUrl: newProduct.imageUrl || undefined,
       active: newProduct.active,
-    });
-    setNewProduct({ name: '', price: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true });
+      subcategoryId: newProduct.subcategoryId || null,
+    } as any);
+    setNewProduct({ name: '', price: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true, subcategoryId: '' });
     setIsProductDialogOpen(false);
   }
 
@@ -184,6 +187,7 @@ export default function Products() {
       imageUrl: editingProduct.imageUrl,
       active: editingProduct.active,
       pdvItem: editingProduct.pdvItem,
+      subcategoryId: editingProduct.subcategoryId,
     });
     setEditingProduct(null);
   }
@@ -374,7 +378,7 @@ export default function Products() {
             </div>
             <div>
               <Label>Categoria</Label>
-              <Select value={newProduct.category} onValueChange={(v) => setNewProduct({ ...newProduct, category: v })}>
+              <Select value={newProduct.category} onValueChange={(v) => setNewProduct({ ...newProduct, category: v, subcategoryId: '' })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
@@ -385,6 +389,27 @@ export default function Products() {
                 </SelectContent>
               </Select>
             </div>
+            {(() => {
+              const selectedCat = categories.find(c => c.name === newProduct.category);
+              const subs = selectedCat ? getSubcategoriesByCategoryId(selectedCat.id) : [];
+              if (subs.length === 0) return null;
+              return (
+                <div>
+                  <Label>Subcategoria (opcional)</Label>
+                  <Select value={newProduct.subcategoryId} onValueChange={(v) => setNewProduct({ ...newProduct, subcategoryId: v === '_none' ? '' : v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma subcategoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">Nenhuma</SelectItem>
+                      {subs.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })()}
             <div>
               <Label>Descrição (opcional)</Label>
               <Input
@@ -745,7 +770,7 @@ export default function Products() {
               </div>
               <div>
                 <Label>Categoria</Label>
-                <Select value={editingProduct.category} onValueChange={(v) => setEditingProduct({ ...editingProduct, category: v })}>
+                <Select value={editingProduct.category} onValueChange={(v) => setEditingProduct({ ...editingProduct, category: v, subcategoryId: null })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -756,6 +781,27 @@ export default function Products() {
                   </SelectContent>
                 </Select>
               </div>
+              {(() => {
+                const selectedCat = categories.find(c => c.name === editingProduct.category);
+                const subs = selectedCat ? getSubcategoriesByCategoryId(selectedCat.id) : [];
+                if (subs.length === 0) return null;
+                return (
+                  <div>
+                    <Label>Subcategoria (opcional)</Label>
+                    <Select value={editingProduct.subcategoryId || '_none'} onValueChange={(v) => setEditingProduct({ ...editingProduct, subcategoryId: v === '_none' ? null : v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma subcategoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">Nenhuma</SelectItem>
+                        {subs.map((sub) => (
+                          <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })()}
               <div>
                 <Label>Descrição (opcional)</Label>
                 <Input

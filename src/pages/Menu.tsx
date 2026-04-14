@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCategories } from '@/hooks/useCategories';
+import { useSubcategories } from '@/hooks/useSubcategories';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { useBusinessHours } from '@/hooks/useBusinessHours';
@@ -80,6 +81,7 @@ export default function Menu() {
   const { products, loading: productsLoading, getActiveProducts, getNewProducts } = useProducts({ companyId: company?.id });
   const { settings, loading: settingsLoading } = useStoreSettings({ companyId: company?.id });
   const { categories, loading: categoriesLoading } = useCategories({ companyId: company?.id });
+  const { subcategories } = useSubcategories({ companyId: company?.id });
   const { neighborhoods, loading: neighborhoodsLoading, getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
   const { loading: hoursLoading, isCurrentlyOpen, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
@@ -199,6 +201,13 @@ export default function Menu() {
   const categoryImageMap = useMemo(() => {
     const map: Record<string, string> = {};
     categories.forEach(c => { if (c.imageUrl) map[c.name] = c.imageUrl; });
+    return map;
+  }, [categories]);
+
+  // Build category name -> id map for subcategory lookup in MenuV2
+  const categoryIdMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach(c => { map[c.name] = c.id; });
     return map;
   }, [categories]);
 
@@ -853,7 +862,8 @@ export default function Menu() {
         allOrderedCategories={allOrderedCategories}
         categoryEmojiMap={categoryEmojiMap}
         categoryImageMap={categoryImageMap}
-        floatingPhoto={floatingPhoto}
+        categoryIdMap={categoryIdMap}
+        subcategories={subcategories}
         cartItemsCount={cartItemsCount}
         cartTotal={cartTotal}
         isOpen={isOpen}
