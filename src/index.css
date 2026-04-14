@@ -7,7 +7,7 @@
     transform: translateY(0%);
   }
   100% {
-    transform: translateY(-10%);
+    transform: translateY(-25%);
   }
 }
 
