@@ -129,6 +129,13 @@ export default function Products() {
       toast.error('Selecione uma categoria');
       return;
     }
+    // Validate subcategory is selected when category has subcategories
+    const selectedCat = categories.find(c => c.name === newProduct.category);
+    const subs = selectedCat ? getSubcategoriesByCategoryId(selectedCat.id) : [];
+    if (subs.length > 0 && !newProduct.subcategoryId) {
+      toast.error('Selecione uma subcategoria');
+      return;
+    }
     await addProduct({
       name: newProduct.name,
       price: parseFloat(newProduct.price),
