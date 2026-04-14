@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCategories } from '@/hooks/useCategories';
+import { useSubcategories } from '@/hooks/useSubcategories';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { useBusinessHours } from '@/hooks/useBusinessHours';
