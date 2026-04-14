@@ -378,7 +378,35 @@ export default function Menu() {
 
   const activeProducts = getActiveProducts();
   const newProducts = getNewProducts();
-  
+
+  const validReorder = useMemo(() => {
+    if (!savedLastOrder || reorderDismissed) return null;
+    const validItems = savedLastOrder.items.filter(item =>
+      activeProducts.some(p => p.id === item.productId)
+    );
+    if (validItems.length === 0) return null;
+    return { ...savedLastOrder, items: validItems };
+  }, [savedLastOrder, activeProducts, reorderDismissed]);
+
+  function handleReorder() {
+    if (!validReorder) return;
+    const newCart: CartItem[] = [];
+    for (const item of validReorder.items) {
+      const product = activeProducts.find(p => p.id === item.productId);
+      if (!product) continue;
+      newCart.push({ product, quantity: item.quantity, selectedOptionals: [], notes: undefined });
+    }
+    setCart(prev => [...prev, ...newCart]);
+    setReorderDismissed(true);
+    localStorage.removeItem(lastOrderKey);
+    toast.success('Itens adicionados ao carrinho!');
+  }
+
+  function dismissReorder() {
+    setReorderDismissed(true);
+    localStorage.removeItem(lastOrderKey);
+  }
+
   // Get categories in the order defined by the store owner
   // Use the sorted categories from useCategories hook, fallback to product categories
   const orderedCategoryNames = categories.map(c => c.name);
