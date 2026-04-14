@@ -100,6 +100,26 @@ export default function Auth() {
     // Redirect is handled by useEffect
   }
 
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      toast.error('Digite seu e-mail');
+      return;
+    }
+    setForgotLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setForgotLoading(false);
+    if (error) {
+      toast.error('Erro ao enviar e-mail. Tente novamente.');
+      return;
+    }
+    toast.success('Se este e-mail estiver cadastrado, você receberá um link para redefinir sua senha em instantes.');
+    setForgotPasswordOpen(false);
+    setForgotEmail('');
+  }
+
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setErrors({});
