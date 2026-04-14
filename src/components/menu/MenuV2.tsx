@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Plus, Search, ArrowLeft } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
+import { Subcategory } from '@/hooks/useSubcategories';
 
 // Category fallback images/emojis
 const categoryEmojis: Record<string, string> = {
@@ -74,6 +75,8 @@ interface MenuV2Props {
   allOrderedCategories: string[];
   categoryEmojiMap?: Record<string, string>;
   categoryImageMap?: Record<string, string>;
+  categoryIdMap?: Record<string, string>;
+  subcategories?: Subcategory[];
   floatingPhoto?: boolean;
   cartItemsCount: number;
   cartTotal: number;
