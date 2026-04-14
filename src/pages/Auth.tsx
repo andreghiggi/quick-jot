@@ -41,6 +41,9 @@ export default function Auth() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
   
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
