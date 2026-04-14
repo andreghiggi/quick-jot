@@ -90,7 +90,7 @@ export default function Menu() {
   const isOpen = isCurrentlyOpen();
   const schedulingEnabled = settings.acceptOrderScheduling;
   const canOrder = isOpen || schedulingEnabled;
-  const isI9 = slug === 'lancheria-da-i9';
+  const isI9 = true; // applies to all stores
   const formattedHours = getFormattedHours();
 
 
@@ -282,7 +282,7 @@ export default function Menu() {
   // Reorder from localStorage (I9 only)
   const lastOrderKey = `lastOrder_${slug}`;
   const savedLastOrder = useMemo(() => {
-    if (!isI9) return null;
+    
     try {
       const raw = localStorage.getItem(lastOrderKey);
       if (!raw) return null;
@@ -825,7 +825,7 @@ export default function Menu() {
     window.open(generatedWhatsappUrl, '_blank');
 
     // Save last order to localStorage (I9 only)
-    if (isI9) {
+    if (true) {
       try {
         const orderData = {
           items: cart.map(item => ({
@@ -1061,7 +1061,7 @@ export default function Menu() {
       </div>
 
       {/* Reorder Banner - I9 only */}
-      {isI9 && validReorder && (
+      {validReorder && (
         <div className="container mx-auto px-4 pt-3">
           <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
             <div className="flex-1 min-w-0">
@@ -1195,7 +1195,7 @@ export default function Menu() {
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle className="pr-6">{selectedProduct?.name}</DialogTitle>
             {/* Progress bar for mandatory groups - I9 only */}
-            {isI9 && selectedProduct && mandatoryGroups.length > 0 && (
+            {selectedProduct && mandatoryGroups.length > 0 && (
               <div className="mt-3 space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">
@@ -1398,7 +1398,7 @@ export default function Menu() {
           {/* Fixed bottom button - only for non-wizard flow */}
           {selectedProduct && !(settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) && (
             <div className="px-6 py-4 border-t flex-shrink-0 bg-background">
-              <Button onClick={addToCart} className="w-full" size="lg" disabled={isI9 && !allMandatoryComplete}>
+              <Button onClick={addToCart} className="w-full" size="lg" disabled={!allMandatoryComplete}>
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar ao carrinho
               </Button>
