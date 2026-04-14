@@ -35,6 +35,8 @@ interface Company {
   phone: string | null;
   active: boolean;
   created_at: string;
+  login_email: string | null;
+  initial_password: string | null;
 }
 
 interface CompanyPlan {
