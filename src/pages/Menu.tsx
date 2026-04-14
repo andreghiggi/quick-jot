@@ -1106,9 +1106,22 @@ export default function Menu() {
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle className="pr-6">{selectedProduct?.name}</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="flex-1 overflow-y-auto">
           {selectedProduct && (
-            settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0)) ? (
+            <>
+            {selectedProduct.imageUrl && (
+              <div className="w-full h-48 overflow-hidden">
+                <img
+                  key={selectedProduct.id}
+                  src={selectedProduct.imageUrl}
+                  alt={selectedProduct.name}
+                  className={cn("w-full object-cover", floatingPhoto && "kenburns-animate")}
+                  style={{ height: '110%', animationPlayState: 'running' }}
+                />
+              </div>
+            )}
+            <div className="px-6 py-4">
+            {settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0)) ? (
               <LateralOptionalsWizard
                 product={selectedProduct}
                 groups={selectedProductGroups}
