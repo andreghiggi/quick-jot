@@ -193,6 +193,99 @@ export default function Products() {
     toast.success('Link copiado!');
   }
 
+  // --- AI Import handlers ---
+  function handleImportFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setImportFile(f);
+    if (f.type.startsWith('image/')) {
+      setImportPreviewUrl(URL.createObjectURL(f));
+    } else {
+      setImportPreviewUrl(null);
+    }
+    setImportStep('preview');
+  }
+
+  async function handleImportExtract() {
+    if (!importFile || !company?.id) return;
+    setIsExtracting(true);
+    try {
+      const fileExt = importFile.name.split('.').pop();
+      const fileName = `menu-import/${company.id}/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, importFile);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+
+      const { data, error } = await supabase.functions.invoke('extract-menu', {
+        body: { imageUrl: publicUrl, fileType: importFile.type }
+      });
+      if (error) throw error;
+
+      if (data?.products && Array.isArray(data.products)) {
+        setExtractedProducts(data.products.map((p: any) => ({
+          name: p.name || '',
+          price: parseFloat(p.price) || 0,
+          category: p.category || 'Geral',
+          description: p.description || '',
+          selected: true,
+        })));
+        setImportStep('review');
+        toast.success(`${data.products.length} produtos encontrados!`);
+      } else {
+        toast.error('Não foi possível extrair produtos');
+      }
+    } catch (error: any) {
+      console.error('Error extracting menu:', error);
+      toast.error(error.message || 'Erro ao processar');
+    } finally {
+      setIsExtracting(false);
+    }
+  }
+
+  async function handleImportSave() {
+    const selected = extractedProducts.filter(p => p.selected);
+    if (selected.length === 0) {
+      toast.error('Selecione pelo menos um produto');
+      return;
+    }
+    setIsImportSaving(true);
+    let successCount = 0;
+    try {
+      const existingCatNames = categories.map(c => c.name);
+      const newCats = [...new Set(selected.map(p => p.category))].filter(c => !existingCatNames.includes(c));
+      for (const catName of newCats) {
+        await addCategory(catName);
+      }
+      for (const product of selected) {
+        try {
+          await addProduct({
+            name: product.name,
+            price: product.price,
+            category: product.category,
+            description: product.description || undefined,
+            active: true,
+          });
+          successCount++;
+        } catch (err) {
+          console.error('Error adding product:', product.name, err);
+        }
+      }
+      toast.success(`${successCount} produtos importados!`);
+      resetImport();
+    } catch {
+      toast.error('Erro ao importar produtos');
+    } finally {
+      setIsImportSaving(false);
+    }
+  }
+
+  function resetImport() {
+    setImportFile(null);
+    setImportPreviewUrl(null);
+    setExtractedProducts([]);
+    setImportStep('idle');
+  }
+
 
   // Group products by category, maintaining category order
   const groupedProducts = useMemo(() => {
