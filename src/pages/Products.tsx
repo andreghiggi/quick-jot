@@ -326,11 +326,20 @@ export default function Products() {
 
   const headerActions = (
     <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" onClick={() => importCameraRef.current?.click()}>
+        <Camera className="h-4 w-4 mr-2" />
+        <span className="hidden sm:inline">Foto</span>
+      </Button>
+      <input type="file" accept="image/*" capture="environment" ref={importCameraRef} onChange={handleImportFileSelect} className="hidden" />
+      <Button variant="outline" size="sm" onClick={() => importFileRef.current?.click()}>
+        <Upload className="h-4 w-4 mr-2" />
+        <span className="hidden sm:inline">Arquivo</span>
+      </Button>
+      <input type="file" accept="image/*,.pdf,.jpg,.jpeg,.png,.webp" ref={importFileRef} onChange={handleImportFileSelect} className="hidden" />
       {taxRules.length > 0 && (
         <Button variant="outline" size="sm" onClick={() => setIsBulkTaxOpen(true)}>
           <FileText className="h-4 w-4 mr-2" />
           <span className="hidden sm:inline">Tributação em massa</span>
-
         </Button>
       )}
       <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
