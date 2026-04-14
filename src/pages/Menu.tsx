@@ -827,6 +827,22 @@ export default function Menu() {
     // Open WhatsApp first
     window.open(generatedWhatsappUrl, '_blank');
 
+    // Save last order to localStorage (I9 only)
+    if (isI9) {
+      try {
+        const orderData = {
+          items: cart.map(item => ({
+            productName: item.product.name,
+            productId: item.product.id,
+            quantity: item.quantity,
+            optionalNames: item.selectedOptionals.map(o => o.name),
+          })),
+          total: orderTotal,
+        };
+        localStorage.setItem(lastOrderKey, JSON.stringify(orderData));
+      } catch {}
+    }
+
     // Clear cart and reset form
     setCart([]);
     setCustomerName('');
