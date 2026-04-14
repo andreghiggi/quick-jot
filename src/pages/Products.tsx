@@ -56,6 +56,16 @@ export default function Products() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   const menuLink = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
 
+  // AI import state
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const importCameraRef = useRef<HTMLInputElement>(null);
+  const [importStep, setImportStep] = useState<'idle' | 'preview' | 'review'>('idle');
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreviewUrl, setImportPreviewUrl] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [isImportSaving, setIsImportSaving] = useState(false);
+  const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
+
   // Set default category when categories load
   useEffect(() => {
     if (categories.length > 0 && !newProduct.category) {
