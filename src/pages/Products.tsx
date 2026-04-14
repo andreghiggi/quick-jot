@@ -377,7 +377,7 @@ export default function Products() {
             </div>
             <div>
               <Label>Categoria</Label>
-              <Select value={newProduct.category} onValueChange={(v) => setNewProduct({ ...newProduct, category: v })}>
+              <Select value={newProduct.category} onValueChange={(v) => setNewProduct({ ...newProduct, category: v, subcategoryId: '' })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
@@ -388,6 +388,27 @@ export default function Products() {
                 </SelectContent>
               </Select>
             </div>
+            {(() => {
+              const selectedCat = categories.find(c => c.name === newProduct.category);
+              const subs = selectedCat ? getSubcategoriesByCategoryId(selectedCat.id) : [];
+              if (subs.length === 0) return null;
+              return (
+                <div>
+                  <Label>Subcategoria (opcional)</Label>
+                  <Select value={newProduct.subcategoryId} onValueChange={(v) => setNewProduct({ ...newProduct, subcategoryId: v === '_none' ? '' : v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma subcategoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">Nenhuma</SelectItem>
+                      {subs.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })()}
             <div>
               <Label>Descrição (opcional)</Label>
               <Input
