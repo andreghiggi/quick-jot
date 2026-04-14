@@ -359,7 +359,8 @@ export default function AdminDashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Empresa</TableHead>
-                    <TableHead>Slug</TableHead>
+                    <TableHead>Criação</TableHead>
+                    <TableHead>Login / Senha</TableHead>
                     <TableHead>Plano</TableHead>
                     <TableHead>Ativação</TableHead>
                     <TableHead>Status</TableHead>
