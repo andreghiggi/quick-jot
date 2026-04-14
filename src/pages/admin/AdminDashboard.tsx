@@ -436,7 +436,7 @@ export default function AdminDashboard() {
                                     <Copy className="w-3 h-3" />
                                   </button>
                                 </div>
-                                {comp.initial_password && (
+                                {comp.initial_password ? (
                                   <div className="flex items-center gap-1">
                                     <span className="text-xs font-mono">
                                       {visiblePasswords[comp.id] ? comp.initial_password : '••••••••'}
@@ -448,6 +448,21 @@ export default function AdminDashboard() {
                                       <Copy className="w-3 h-3" />
                                     </button>
                                   </div>
+                                ) : (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-muted-foreground italic">Senha definida pelo usuário</span>
+                                    <button
+                                      onClick={() => {
+                                        setEditCredentialsCompanyId(comp.id);
+                                        setEditEmail(comp.login_email || '');
+                                        setEditPassword('');
+                                      }}
+                                      className="text-muted-foreground hover:text-foreground"
+                                      title="Anotar senha"
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             ) : (
@@ -457,8 +472,8 @@ export default function AdminDashboard() {
                                 className="gap-1 text-xs"
                                 onClick={() => {
                                   setEditCredentialsCompanyId(comp.id);
-                                  setEditEmail(comp.login_email || '');
-                                  setEditPassword(comp.initial_password || '');
+                                  setEditEmail('');
+                                  setEditPassword('');
                                 }}
                               >
                                 <Pencil className="w-3 h-3" />
