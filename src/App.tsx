@@ -81,6 +81,7 @@ function AppRoutes() {
     <Routes>
       {/* Public Routes */}
       <Route path="/auth" element={<Auth />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/cardapio/:slug" element={<Menu />} />
       
       {/* Root with redirect logic */}
