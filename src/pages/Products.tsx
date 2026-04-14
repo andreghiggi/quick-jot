@@ -136,7 +136,8 @@ export default function Products() {
       description: newProduct.description || undefined,
       imageUrl: newProduct.imageUrl || undefined,
       active: newProduct.active,
-    });
+      subcategoryId: newProduct.subcategoryId || null,
+    } as any);
     setNewProduct({ name: '', price: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true, subcategoryId: '' });
     setIsProductDialogOpen(false);
   }
