@@ -23,7 +23,9 @@ import {
   Play,
   Pause,
   Calendar,
-  Eye
+  Eye,
+  Copy,
+  EyeOff
 } from 'lucide-react';
 
 interface Company {
@@ -33,6 +35,8 @@ interface Company {
   phone: string | null;
   active: boolean;
   created_at: string;
+  login_email: string | null;
+  initial_password: string | null;
 }
 
 interface CompanyPlan {
@@ -56,11 +60,14 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   
   // New company form
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newCompanySlug, setNewCompanySlug] = useState('');
   const [newCompanyPhone, setNewCompanyPhone] = useState('');
+  const [newCompanyEmail, setNewCompanyEmail] = useState('');
+  const [newCompanyPassword, setNewCompanyPassword] = useState('');
 
   useEffect(() => {
     fetchCompanies();
@@ -168,6 +175,8 @@ export default function AdminDashboard() {
           name: newCompanyName.trim(),
           slug,
           phone: newCompanyPhone.trim() || null,
+          login_email: newCompanyEmail.trim() || null,
+          initial_password: newCompanyPassword.trim() || null,
         });
 
       if (error) throw error;
@@ -177,6 +186,8 @@ export default function AdminDashboard() {
       setNewCompanyName('');
       setNewCompanySlug('');
       setNewCompanyPhone('');
+      setNewCompanyEmail('');
+      setNewCompanyPassword('');
       fetchCompanies();
     } catch (error: any) {
       console.error('Error creating company:', error);
@@ -254,6 +265,27 @@ export default function AdminDashboard() {
               disabled={isCreating}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="company-email">Login (E-mail)</Label>
+            <Input
+              id="company-email"
+              type="email"
+              placeholder="loja@email.com"
+              value={newCompanyEmail}
+              onChange={(e) => setNewCompanyEmail(e.target.value)}
+              disabled={isCreating}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="company-password">Senha Inicial</Label>
+            <Input
+              id="company-password"
+              placeholder="Senha inicial da loja"
+              value={newCompanyPassword}
+              onChange={(e) => setNewCompanyPassword(e.target.value)}
+              disabled={isCreating}
+            />
+          </div>
           <Button type="submit" className="w-full" disabled={isCreating}>
             {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
             Criar Empresa
@@ -327,7 +359,8 @@ export default function AdminDashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Empresa</TableHead>
-                    <TableHead>Slug</TableHead>
+                    <TableHead>Criação</TableHead>
+                    <TableHead>Login / Senha</TableHead>
                     <TableHead>Plano</TableHead>
                     <TableHead>Ativação</TableHead>
                     <TableHead>Status</TableHead>
@@ -337,7 +370,7 @@ export default function AdminDashboard() {
                 <TableBody>
                   {filteredCompanies.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         Nenhuma empresa encontrada
                       </TableCell>
                     </TableRow>
@@ -347,8 +380,44 @@ export default function AdminDashboard() {
                       const plan = companyPlans[comp.id];
                       return (
                         <TableRow key={comp.id}>
-                          <TableCell className="font-medium">{comp.name}</TableCell>
-                          <TableCell className="text-muted-foreground text-xs">{comp.slug}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{comp.name}</span>
+                              <span className="text-xs text-muted-foreground">{comp.slug}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(comp.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {comp.login_email ? (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs font-mono">{comp.login_email}</span>
+                                  <button onClick={() => { navigator.clipboard.writeText(comp.login_email!); toast.success('Email copiado!'); }} className="text-muted-foreground hover:text-foreground">
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                {comp.initial_password && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs font-mono">
+                                      {visiblePasswords[comp.id] ? comp.initial_password : '••••••••'}
+                                    </span>
+                                    <button onClick={() => setVisiblePasswords(prev => ({ ...prev, [comp.id]: !prev[comp.id] }))} className="text-muted-foreground hover:text-foreground">
+                                      {visiblePasswords[comp.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                    </button>
+                                    <button onClick={() => { navigator.clipboard.writeText(comp.initial_password!); toast.success('Senha copiada!'); }} className="text-muted-foreground hover:text-foreground">
+                                      <Copy className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-1">
                               <Badge variant={planStatus.variant}>
