@@ -292,6 +292,27 @@ export default function Menu() {
 
 
 
+      {/* Reorder Banner - I9 only */}
+      {isI9 && validReorder && (
+        <div className="container mx-auto px-4 pt-3">
+          <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                Seu último pedido: {validReorder.items.map(i => i.productName).join(', ')}
+              </p>
+              <p className="text-xs text-muted-foreground">Pedir novamente?</p>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={dismissReorder}>
+                Dispensar
+              </Button>
+              <Button size="sm" className="h-8 text-xs" onClick={handleReorder}>
+                Pedir Novamente
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
   useEffect(() => {
     if (!customerPhone || customerPhone.length < 10 || !company?.id || customerLoaded) return;
