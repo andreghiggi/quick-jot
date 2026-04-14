@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Progress } from '@/components/ui/progress';
 import { NovidadesSlideshow } from '@/components/menu/NovidadesSlideshow';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
@@ -89,9 +90,10 @@ export default function Menu() {
   const isOpen = isCurrentlyOpen();
   const schedulingEnabled = settings.acceptOrderScheduling;
   const canOrder = isOpen || schedulingEnabled;
+  const isI9 = slug === 'lancheria-da-i9';
   const formattedHours = getFormattedHours();
-  
-  
+
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedOptionals, setSelectedOptionals] = useState<ProductOptional[]>([]);
@@ -121,6 +123,7 @@ export default function Menu() {
   const [showAddedToCart, setShowAddedToCart] = useState(false);
   const [lastAddedItem, setLastAddedItem] = useState<CartItem | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [reorderDismissed, setReorderDismissed] = useState(false);
   
   // Optional group selections state
   const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Set<string>>>({});
@@ -267,7 +270,26 @@ export default function Menu() {
       .sort((a, b) => a.displayOrder - b.displayOrder);
   }, [selectedProduct, optionalGroups, categoryIdByName]);
 
-  // Load customer data when phone changes (with debounce)
+  // Progress bar: mandatory groups completion (I9 only)
+  const mandatoryGroups = selectedProductGroups.filter(g => g.minSelect > 0);
+  const completedMandatory = mandatoryGroups.filter(g => {
+    const sel = selectedGroupItems[g.id];
+    return sel && sel.size >= g.minSelect;
+  });
+  const mandatoryProgress = mandatoryGroups.length > 0 ? Math.round((completedMandatory.length / mandatoryGroups.length) * 100) : 100;
+  const allMandatoryComplete = completedMandatory.length === mandatoryGroups.length;
+
+  // Reorder from localStorage (I9 only)
+  const lastOrderKey = `lastOrder_${slug}`;
+  const savedLastOrder = useMemo(() => {
+    if (!isI9) return null;
+    try {
+      const raw = localStorage.getItem(lastOrderKey);
+      if (!raw) return null;
+      return JSON.parse(raw) as { items: { productName: string; productId: string; quantity: number; optionalNames: string[]; }[]; total: number };
+    } catch { return null; }
+  }, [isI9, lastOrderKey]);
+
   useEffect(() => {
     if (!customerPhone || customerPhone.length < 10 || !company?.id || customerLoaded) return;
     
@@ -353,7 +375,35 @@ export default function Menu() {
 
   const activeProducts = getActiveProducts();
   const newProducts = getNewProducts();
-  
+
+  const validReorder = useMemo(() => {
+    if (!savedLastOrder || reorderDismissed) return null;
+    const validItems = savedLastOrder.items.filter(item =>
+      activeProducts.some(p => p.id === item.productId)
+    );
+    if (validItems.length === 0) return null;
+    return { ...savedLastOrder, items: validItems };
+  }, [savedLastOrder, activeProducts, reorderDismissed]);
+
+  function handleReorder() {
+    if (!validReorder) return;
+    const newCart: CartItem[] = [];
+    for (const item of validReorder.items) {
+      const product = activeProducts.find(p => p.id === item.productId);
+      if (!product) continue;
+      newCart.push({ product, quantity: item.quantity, selectedOptionals: [], notes: undefined });
+    }
+    setCart(prev => [...prev, ...newCart]);
+    setReorderDismissed(true);
+    localStorage.removeItem(lastOrderKey);
+    toast.success('Itens adicionados ao carrinho!');
+  }
+
+  function dismissReorder() {
+    setReorderDismissed(true);
+    localStorage.removeItem(lastOrderKey);
+  }
+
   // Get categories in the order defined by the store owner
   // Use the sorted categories from useCategories hook, fallback to product categories
   const orderedCategoryNames = categories.map(c => c.name);
@@ -774,6 +824,22 @@ export default function Menu() {
     // Open WhatsApp first
     window.open(generatedWhatsappUrl, '_blank');
 
+    // Save last order to localStorage (I9 only)
+    if (isI9) {
+      try {
+        const orderData = {
+          items: cart.map(item => ({
+            productName: item.product.name,
+            productId: item.product.id,
+            quantity: item.quantity,
+            optionalNames: item.selectedOptionals.map(o => o.name),
+          })),
+          total: orderTotal,
+        };
+        localStorage.setItem(lastOrderKey, JSON.stringify(orderData));
+      } catch {}
+    }
+
     // Clear cart and reset form
     setCart([]);
     setCustomerName('');
@@ -994,6 +1060,28 @@ export default function Menu() {
         </div>
       </div>
 
+      {/* Reorder Banner - I9 only */}
+      {isI9 && validReorder && (
+        <div className="container mx-auto px-4 pt-3">
+          <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                Seu último pedido: {validReorder.items.map(i => i.productName).join(', ')}
+              </p>
+              <p className="text-xs text-muted-foreground">Pedir novamente?</p>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={dismissReorder}>
+                Dispensar
+              </Button>
+              <Button size="sm" className="h-8 text-xs" onClick={handleReorder}>
+                Pedir Novamente
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Featured Section Slideshow */}
       {newProducts.length > 0 && (
         <NovidadesSlideshow products={newProducts} onProductSelect={setSelectedProduct} sectionTitle={settings.featuredSectionName} />
@@ -1106,6 +1194,20 @@ export default function Menu() {
         <DialogContent style={buttonColorStyle} className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle className="pr-6">{selectedProduct?.name}</DialogTitle>
+            {/* Progress bar for mandatory groups - I9 only */}
+            {isI9 && selectedProduct && mandatoryGroups.length > 0 && (
+              <div className="mt-3 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {completedMandatory.length} de {mandatoryGroups.length} etapa{mandatoryGroups.length > 1 ? 's' : ''} concluída{completedMandatory.length > 1 ? 's' : ''}
+                  </span>
+                  {allMandatoryComplete && (
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                  )}
+                </div>
+                <Progress value={mandatoryProgress} className="h-2" />
+              </div>
+            )}
           </DialogHeader>
           <div className="flex-1 overflow-y-auto">
             {selectedProduct && (
@@ -1296,7 +1398,7 @@ export default function Menu() {
           {/* Fixed bottom button - only for non-wizard flow */}
           {selectedProduct && !(settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) && (
             <div className="px-6 py-4 border-t flex-shrink-0 bg-background">
-              <Button onClick={addToCart} className="w-full" size="lg">
+              <Button onClick={addToCart} className="w-full" size="lg" disabled={isI9 && !allMandatoryComplete}>
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar ao carrinho
               </Button>
