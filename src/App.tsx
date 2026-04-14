@@ -46,6 +46,7 @@ import IntegrationsPage from "./pages/admin/IntegrationsPage";
 import CompanyModulesPage from "./pages/admin/CompanyModulesPage";
 import SuggestionsAdmin from "./pages/admin/SuggestionsAdmin";
 import ResellersPage from "./pages/admin/ResellersPage";
+import AdminSettings from "./pages/admin/AdminSettings";
 import ResellerHome from "./pages/reseller/ResellerHome";
 import ResellerLojas from "./pages/reseller/ResellerLojas";
 import ResellerFinanceiro from "./pages/reseller/ResellerFinanceiro";
@@ -251,6 +252,12 @@ function AppRoutes() {
       <Route path="/admin/sugestoes" element={
         <ProtectedRoute requiredRole="super_admin">
           <SuggestionsAdmin />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/admin/dados-empresa" element={
+        <ProtectedRoute requiredRole="super_admin">
+          <AdminSettings />
         </ProtectedRoute>
       } />
       
