@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCategories } from '@/hooks/useCategories';
+import { useSubcategories } from '@/hooks/useSubcategories';
 import { useProducts } from '@/hooks/useProducts';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -10,21 +11,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Upload, Loader2, Eye, Check, X, FileImage, Trash2 } from 'lucide-react';
+import { Upload, Loader2, Eye, Check, FileImage, Trash2, Plus, Sparkles } from 'lucide-react';
 
 interface ExtractedProduct {
   name: string;
   price: number;
   category: string;
-  description?: string;
-  selected: boolean;
+  categoryId: string | null;
+  subcategoryId: string | null;
+  description: string;
+  isNewCategory: boolean;
 }
 
 export default function MenuImport() {
   const { company } = useAuthContext();
-  const { categories, addCategory } = useCategories({ companyId: company?.id });
+  const { categories, addCategory, refetch: refetchCategories } = useCategories({ companyId: company?.id });
+  const { subcategories, getSubcategoriesByCategoryId, refetch: refetchSubcategories } = useSubcategories({ companyId: company?.id });
   const { addProduct } = useProducts({ companyId: company?.id });
   
   const [file, setFile] = useState<File | null>(null);
@@ -33,18 +37,15 @@ export default function MenuImport() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview' | 'review'>('upload');
+  // Track new category names suggested by AI (not yet in DB)
+  const [newCategoryNames, setNewCategoryNames] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
     setFile(f);
-    
-    if (f.type.startsWith('image/')) {
-      setPreviewUrl(URL.createObjectURL(f));
-    } else {
-      setPreviewUrl(null);
-    }
+    setPreviewUrl(f.type.startsWith('image/') ? URL.createObjectURL(f) : null);
     setStep('preview');
   }
 
@@ -53,7 +54,6 @@ export default function MenuImport() {
     setIsExtracting(true);
 
     try {
-      // Upload the file to storage for AI to process
       const fileExt = file.name.split('.').pop();
       const fileName = `menu-import/${company.id}/${Date.now()}.${fileExt}`;
       
@@ -67,23 +67,38 @@ export default function MenuImport() {
         .from('product-images')
         .getPublicUrl(fileName);
 
-      // Use AI to extract products
       const { data, error } = await supabase.functions.invoke('extract-menu', {
-        body: { imageUrl: publicUrl, fileType: file.type }
+        body: {
+          imageUrl: publicUrl,
+          fileType: file.type,
+          existingCategories: categories.map(c => ({ id: c.id, name: c.name })),
+          existingSubcategories: subcategories.map(s => ({ id: s.id, name: s.name, categoryId: s.categoryId })),
+        }
       });
 
       if (error) throw error;
       
       if (data?.products && Array.isArray(data.products)) {
-        setExtractedProducts(data.products.map((p: any) => ({
-          name: p.name || '',
-          price: parseFloat(p.price) || 0,
-          category: p.category || 'Geral',
-          description: p.description || '',
-          selected: true,
-        })));
+        const newCats: string[] = [];
+        const mapped: ExtractedProduct[] = data.products.map((p: any) => {
+          const isNew = p.is_new_category === true && !categories.find(c => c.name === p.category);
+          if (isNew && p.category && !newCats.includes(p.category)) {
+            newCats.push(p.category);
+          }
+          return {
+            name: p.name || '',
+            price: parseFloat(p.price) || 0,
+            category: p.category || 'Geral',
+            categoryId: p.category_id || null,
+            subcategoryId: p.subcategory_id || null,
+            description: p.description || '',
+            isNewCategory: isNew,
+          };
+        });
+        setNewCategoryNames(newCats);
+        setExtractedProducts(mapped);
         setStep('review');
-        toast.success(`${data.products.length} produtos encontrados!`);
+        toast.success(`${mapped.length} produtos encontrados!`);
       } else {
         toast.error('Não foi possível extrair produtos do arquivo');
       }
@@ -95,26 +110,80 @@ export default function MenuImport() {
     }
   }
 
-  function toggleProduct(index: number) {
-    setExtractedProducts(prev => prev.map((p, i) => 
-      i === index ? { ...p, selected: !p.selected } : p
-    ));
-  }
-
   function removeProduct(index: number) {
     setExtractedProducts(prev => prev.filter((_, i) => i !== index));
   }
 
-  function updateProduct(index: number, field: keyof ExtractedProduct, value: string | number) {
-    setExtractedProducts(prev => prev.map((p, i) => 
-      i === index ? { ...p, [field]: value } : p
-    ));
+  function updateProduct(index: number, field: keyof ExtractedProduct, value: string | number | boolean | null) {
+    setExtractedProducts(prev => prev.map((p, i) => {
+      if (i !== index) return p;
+      const updated = { ...p, [field]: value };
+      // When category changes, reset subcategory
+      if (field === 'categoryId') {
+        updated.subcategoryId = null;
+        const cat = categories.find(c => c.id === value);
+        if (cat) {
+          updated.category = cat.name;
+          updated.isNewCategory = false;
+        }
+      }
+      if (field === 'category') {
+        // Check if it matches an existing category
+        const cat = categories.find(c => c.name === value);
+        if (cat) {
+          updated.categoryId = cat.id;
+          updated.isNewCategory = false;
+        } else {
+          updated.categoryId = null;
+          updated.isNewCategory = true;
+          if (typeof value === 'string' && value && !newCategoryNames.includes(value)) {
+            setNewCategoryNames(prev => [...prev, value]);
+          }
+        }
+        updated.subcategoryId = null;
+      }
+      return updated;
+    }));
+  }
+
+  function addEmptyProduct() {
+    setExtractedProducts(prev => [...prev, {
+      name: '',
+      price: 0,
+      category: categories[0]?.name || 'Geral',
+      categoryId: categories[0]?.id || null,
+      subcategoryId: null,
+      description: '',
+      isNewCategory: false,
+    }]);
+  }
+
+  // Build category options: existing + new ones from AI
+  function getCategoryOptions() {
+    const options = categories.map(c => ({ id: c.id, name: c.name, isNew: false }));
+    for (const name of newCategoryNames) {
+      if (!options.find(o => o.name === name)) {
+        options.push({ id: `new-${name}`, name, isNew: true });
+      }
+    }
+    return options;
+  }
+
+  function getSubcategoryOptions(categoryId: string | null) {
+    if (!categoryId || categoryId.startsWith('new-')) return [];
+    return getSubcategoriesByCategoryId(categoryId);
   }
 
   async function handleImport() {
-    const selected = extractedProducts.filter(p => p.selected);
-    if (selected.length === 0) {
-      toast.error('Selecione pelo menos um produto');
+    if (extractedProducts.length === 0) {
+      toast.error('Adicione pelo menos um produto');
+      return;
+    }
+
+    // Validate all products have names and categories
+    const invalid = extractedProducts.find(p => !p.name.trim() || !p.category.trim());
+    if (invalid) {
+      toast.error('Todos os produtos precisam ter nome e categoria');
       return;
     }
 
@@ -122,24 +191,47 @@ export default function MenuImport() {
     let successCount = 0;
 
     try {
-      // Create missing categories first
-      const existingCatNames = categories.map(c => c.name);
-      const newCategories = [...new Set(selected.map(p => p.category))].filter(c => !existingCatNames.includes(c));
-      
-      for (const catName of newCategories) {
-        await addCategory(catName);
+      // Create new categories first and map their IDs
+      const categoryMap = new Map<string, string>(); // name -> id
+      categories.forEach(c => categoryMap.set(c.name, c.id));
+
+      for (const product of extractedProducts) {
+        if (product.isNewCategory && product.category && !categoryMap.has(product.category)) {
+          const success = await addCategory(product.category);
+          if (success) {
+            // Refetch to get the new ID
+            await refetchCategories();
+          }
+        }
       }
 
-      // Add products
-      for (const product of selected) {
+      // Refetch categories to get all new IDs
+      await refetchCategories();
+      
+      // Wait a moment for state to update, then get fresh categories
+      const { data: freshCats } = await supabase
+        .from('categories')
+        .select('id, name')
+        .eq('company_id', company!.id)
+        .eq('active', true);
+      
+      const freshCatMap = new Map<string, string>();
+      (freshCats || []).forEach(c => freshCatMap.set(c.name, c.id));
+
+      for (const product of extractedProducts) {
         try {
+          const catId = product.categoryId && !product.categoryId.startsWith('new-') 
+            ? product.categoryId 
+            : freshCatMap.get(product.category) || null;
+          
           await addProduct({
             name: product.name,
             price: product.price,
             category: product.category,
             description: product.description || undefined,
             active: true,
-          });
+            subcategoryId: product.subcategoryId,
+          } as any);
           successCount++;
         } catch (err) {
           console.error('Error adding product:', product.name, err);
@@ -147,10 +239,7 @@ export default function MenuImport() {
       }
 
       toast.success(`${successCount} produtos importados com sucesso!`);
-      setStep('upload');
-      setFile(null);
-      setPreviewUrl(null);
-      setExtractedProducts([]);
+      reset();
     } catch {
       toast.error('Erro ao importar produtos');
     } finally {
@@ -162,14 +251,15 @@ export default function MenuImport() {
     setFile(null);
     setPreviewUrl(null);
     setExtractedProducts([]);
+    setNewCategoryNames([]);
     setStep('upload');
   }
 
-  const selectedCount = extractedProducts.filter(p => p.selected).length;
+  const categoryOptions = getCategoryOptions();
 
   return (
     <AppLayout title="Importar Cardápio">
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Step: Upload */}
         {step === 'upload' && (
           <Card>
@@ -180,7 +270,6 @@ export default function MenuImport() {
               </CardTitle>
               <CardDescription>
                 Envie uma foto ou arquivo do seu cardápio e nosso sistema irá extrair os produtos automaticamente.
-                Você poderá revisar antes de confirmar a inclusão.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -218,12 +307,11 @@ export default function MenuImport() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {previewUrl && (
+              {previewUrl ? (
                 <div className="max-h-96 overflow-auto rounded border">
                   <img src={previewUrl} alt="Preview" className="w-full" />
                 </div>
-              )}
-              {!previewUrl && (
+              ) : (
                 <div className="bg-muted p-6 rounded-lg text-center">
                   <FileImage className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
                   <p className="font-medium">{file.name}</p>
@@ -240,7 +328,7 @@ export default function MenuImport() {
                     </>
                   ) : (
                     <>
-                      <Eye className="w-4 h-4" />
+                      <Sparkles className="w-4 h-4" />
                       Extrair Produtos
                     </>
                   )}
@@ -259,82 +347,137 @@ export default function MenuImport() {
                 Revisar Produtos Extraídos
               </CardTitle>
               <CardDescription>
-                {extractedProducts.length} produtos encontrados. Revise, edite e selecione quais deseja importar.
+                {extractedProducts.length} produtos encontrados. Revise, edite e confirme antes de salvar.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <ScrollArea className="h-[60vh]">
-                <div className="space-y-3">
-                  {extractedProducts.map((product, index) => (
-                    <div 
-                      key={index} 
-                      className={`border rounded-lg p-4 space-y-3 transition-opacity ${!product.selected ? 'opacity-50' : ''}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Checkbox 
-                            checked={product.selected} 
-                            onCheckedChange={() => toggleProduct(index)}
-                          />
-                          <Badge variant="outline">{product.category}</Badge>
+                <div className="space-y-3 pr-4">
+                  {extractedProducts.map((product, index) => {
+                    const subcatOptions = getSubcategoryOptions(product.categoryId);
+                    return (
+                      <div key={index} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
+                            {product.isNewCategory && (
+                              <Badge variant="secondary" className="bg-accent text-accent-foreground text-xs">
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                Nova categoria
+                              </Badge>
+                            )}
+                          </div>
+                          <Button variant="ghost" size="icon" onClick={() => removeProduct(index)}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => removeProduct(index)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="sm:col-span-2">
-                          <Label className="text-xs">Nome</Label>
-                          <Input
-                            value={product.name}
-                            onChange={(e) => updateProduct(index, 'name', e.target.value)}
-                            className="h-9"
-                          />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="sm:col-span-2">
+                            <Label className="text-xs">Nome</Label>
+                            <Input
+                              value={product.name}
+                              onChange={(e) => updateProduct(index, 'name', e.target.value)}
+                              className="h-9"
+                              placeholder="Nome do produto"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Preço (R$)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={product.price}
+                              onChange={(e) => updateProduct(index, 'price', parseFloat(e.target.value) || 0)}
+                              className="h-9"
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <Label className="text-xs">Preço (R$)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={product.price}
-                            onChange={(e) => updateProduct(index, 'price', parseFloat(e.target.value) || 0)}
-                            className="h-9"
-                          />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs">Categoria</Label>
+                            <Select
+                              value={product.categoryId || `new-${product.category}`}
+                              onValueChange={(val) => {
+                                if (val.startsWith('new-')) {
+                                  const catName = val.replace('new-', '');
+                                  updateProduct(index, 'category', catName);
+                                } else {
+                                  updateProduct(index, 'categoryId', val);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Selecione a categoria" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categoryOptions.map(opt => (
+                                  <SelectItem key={opt.id} value={opt.id}>
+                                    {opt.name} {opt.isNew && '✨ nova'}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="text-xs">Subcategoria</Label>
+                            {subcatOptions.length > 0 ? (
+                              <Select
+                                value={product.subcategoryId || 'none'}
+                                onValueChange={(val) => updateProduct(index, 'subcategoryId', val === 'none' ? null : val)}
+                              >
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Nenhuma</SelectItem>
+                                  {subcatOptions.map(s => (
+                                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input className="h-9" disabled placeholder="Sem subcategorias" />
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-xs">Categoria</Label>
-                          <Input
-                            value={product.category}
-                            onChange={(e) => updateProduct(index, 'category', e.target.value)}
-                            className="h-9"
-                          />
-                        </div>
+
                         <div>
                           <Label className="text-xs">Descrição</Label>
                           <Input
-                            value={product.description || ''}
+                            value={product.description}
                             onChange={(e) => updateProduct(index, 'description', e.target.value)}
                             className="h-9"
                             placeholder="Opcional"
                           />
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ScrollArea>
 
+              <Button variant="outline" onClick={addEmptyProduct} className="w-full gap-2">
+                <Plus className="w-4 h-4" />
+                Adicionar produto manualmente
+              </Button>
+
               <div className="flex items-center justify-between pt-4 border-t">
                 <div className="text-sm text-muted-foreground">
-                  {selectedCount} de {extractedProducts.length} selecionados
+                  {extractedProducts.length} produto(s)
+                  {newCategoryNames.length > 0 && (
+                    <span className="ml-2 text-accent-foreground">
+                      • {newCategoryNames.length} nova(s) categoria(s)
+                    </span>
+                  )}
                 </div>
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={reset}>Cancelar</Button>
                   <Button 
                     onClick={handleImport} 
-                    disabled={isImporting || selectedCount === 0}
+                    disabled={isImporting || extractedProducts.length === 0}
                     className="gap-2"
                   >
                     {isImporting ? (
@@ -345,7 +488,7 @@ export default function MenuImport() {
                     ) : (
                       <>
                         <Check className="w-4 h-4" />
-                        Importar {selectedCount} Produtos
+                        Confirmar e Criar Produtos
                       </>
                     )}
                   </Button>

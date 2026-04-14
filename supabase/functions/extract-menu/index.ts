@@ -19,7 +19,7 @@ serve(async (req) => {
   }
 
   try {
-    const { imageUrl, fileType } = await req.json();
+    const { imageUrl, fileType, existingCategories, existingSubcategories } = await req.json();
 
     if (!imageUrl) {
       return new Response(
@@ -28,19 +28,41 @@ serve(async (req) => {
       );
     }
 
+    // Build category/subcategory context for smart matching
+    let categoryContext = '';
+    if (existingCategories && existingCategories.length > 0) {
+      categoryContext = `\n\nCATEGORIAS EXISTENTES DA EMPRESA (use estas sempre que possível, fazendo match semântico/fuzzy):
+${existingCategories.map((c: any) => {
+  const subs = (existingSubcategories || []).filter((s: any) => s.categoryId === c.id);
+  const subsText = subs.length > 0 ? ` → Subcategorias: [${subs.map((s: any) => `"${s.name}" (id: ${s.id})`).join(', ')}]` : '';
+  return `- "${c.name}" (id: ${c.id})${subsText}`;
+}).join('\n')}
+
+REGRAS DE MATCHING:
+- Se o produto é um refrigerante e existe uma categoria "Bebidas" com subcategoria "Refrigerantes", use category_id da "Bebidas" e subcategory_id de "Refrigerantes"
+- Se o produto é um lanche e existe "Lanches", use essa categoria
+- Faça matching semântico: "X-Burguer" → "Lanches", "Coca-Cola" → "Bebidas"/"Refrigerantes"
+- Se não encontrar match, sugira um nome de categoria nova no campo "category" (texto) e deixe category_id e subcategory_id como null
+- NUNCA deixe a categoria vazia`;
+    }
+
     const systemPrompt = `Você é um assistente especializado em extrair informações de cardápios de restaurantes.
 Analise a imagem do cardápio e extraia todos os produtos visíveis.
 Para cada produto, retorne:
 - name: nome do produto
 - price: preço numérico (apenas o número, ex: 25.90)
-- category: categoria do produto (ex: "Lanches", "Bebidas", "Sobremesas", "Porções")
+- category: nome da categoria (texto)
+- category_id: id da categoria existente se houver match (ou null)
+- subcategory_id: id da subcategoria existente se houver match (ou null)
 - description: descrição breve se visível
+- is_new_category: true se a categoria é nova (não existe na lista), false se é existente
+${categoryContext}
 
 Retorne APENAS um JSON válido no formato:
-{"products": [{"name": "...", "price": 0.00, "category": "...", "description": "..."}]}
+{"products": [{"name": "...", "price": 0.00, "category": "...", "category_id": "..." ou null, "subcategory_id": "..." ou null, "description": "...", "is_new_category": true/false}]}
 
 Se não conseguir identificar o preço, use 0.
-Se não conseguir identificar a categoria, use "Geral".
+Se não conseguir identificar a categoria, crie uma nova com nome apropriado baseado no tipo de produto.
 Não invente produtos que não estão na imagem.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -74,7 +96,6 @@ Não invente produtos que não estão na imagem.`;
     const aiResult = await response.json();
     const content = aiResult.choices?.[0]?.message?.content || '';
     
-    // Extract JSON from response
     let products = [];
     try {
       const jsonMatch = content.match(/\{[\s\S]*"products"[\s\S]*\}/);
