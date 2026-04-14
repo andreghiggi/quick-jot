@@ -204,6 +204,13 @@ export default function Menu() {
     return map;
   }, [categories]);
 
+  // Build category name -> id map for subcategory lookup in MenuV2
+  const categoryIdMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach(c => { map[c.name] = c.id; });
+    return map;
+  }, [categories]);
+
   // Floating photo animation enabled per establishment
   const floatingPhoto = settings.floatingPhoto;
 
