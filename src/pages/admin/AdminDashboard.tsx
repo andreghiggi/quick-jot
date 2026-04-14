@@ -208,6 +208,35 @@ export default function AdminDashboard() {
     }
   }
 
+  async function handleSaveCredentials() {
+    if (!editCredentialsCompanyId) return;
+    if (!editEmail.trim()) {
+      toast.error('E-mail é obrigatório');
+      return;
+    }
+    setIsSavingCredentials(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          login_email: editEmail.trim(),
+          initial_password: editPassword.trim() || null,
+        })
+        .eq('id', editCredentialsCompanyId);
+      if (error) throw error;
+      toast.success('Credenciais salvas!');
+      setEditCredentialsCompanyId(null);
+      setEditEmail('');
+      setEditPassword('');
+      fetchCompanies();
+    } catch (error) {
+      console.error('Error saving credentials:', error);
+      toast.error('Erro ao salvar credenciais');
+    } finally {
+      setIsSavingCredentials(false);
+    }
+  }
+
   const filteredCompanies = companies.filter(company =>
     company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     company.slug.toLowerCase().includes(searchTerm.toLowerCase())
