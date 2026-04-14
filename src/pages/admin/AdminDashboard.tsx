@@ -546,6 +546,42 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Credentials Dialog */}
+      <Dialog open={!!editCredentialsCompanyId} onOpenChange={(open) => { if (!open) setEditCredentialsCompanyId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Credenciais</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Login (E-mail) *</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                placeholder="loja@email.com"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                disabled={isSavingCredentials}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-password">Senha Inicial</Label>
+              <Input
+                id="edit-password"
+                placeholder="Senha inicial da loja"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                disabled={isSavingCredentials}
+              />
+            </div>
+            <Button onClick={handleSaveCredentials} className="w-full" disabled={isSavingCredentials}>
+              {isSavingCredentials ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Salvar Credenciais
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
