@@ -1060,6 +1060,28 @@ export default function Menu() {
         </div>
       </div>
 
+      {/* Reorder Banner - I9 only */}
+      {isI9 && validReorder && (
+        <div className="container mx-auto px-4 pt-3">
+          <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                Seu último pedido: {validReorder.items.map(i => i.productName).join(', ')}
+              </p>
+              <p className="text-xs text-muted-foreground">Pedir novamente?</p>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={dismissReorder}>
+                Dispensar
+              </Button>
+              <Button size="sm" className="h-8 text-xs" onClick={handleReorder}>
+                Pedir Novamente
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Featured Section Slideshow */}
       {newProducts.length > 0 && (
         <NovidadesSlideshow products={newProducts} onProductSelect={setSelectedProduct} sectionTitle={settings.featuredSectionName} />
@@ -1172,6 +1194,20 @@ export default function Menu() {
         <DialogContent style={buttonColorStyle} className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle className="pr-6">{selectedProduct?.name}</DialogTitle>
+            {/* Progress bar for mandatory groups - I9 only */}
+            {isI9 && selectedProduct && mandatoryGroups.length > 0 && (
+              <div className="mt-3 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {completedMandatory.length} de {mandatoryGroups.length} etapa{mandatoryGroups.length > 1 ? 's' : ''} concluída{completedMandatory.length > 1 ? 's' : ''}
+                  </span>
+                  {allMandatoryComplete && (
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                  )}
+                </div>
+                <Progress value={mandatoryProgress} className="h-2" />
+              </div>
+            )}
           </DialogHeader>
           <div className="flex-1 overflow-y-auto">
             {selectedProduct && (
