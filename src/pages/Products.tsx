@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star, Camera, Check, X } from 'lucide-react';
+import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star, Camera, Check, X, Sparkles } from 'lucide-react';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,15 +23,17 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 interface ExtractedProduct {
   name: string;
   price: number;
   category: string;
+  categoryId: string | null;
+  subcategoryId: string | null;
   description?: string;
   selected: boolean;
+  isNewCategory: boolean;
 }
 
 export default function Products() {
@@ -39,8 +41,8 @@ export default function Products() {
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, duplicateProduct, toggleNewProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
-  const { categories, addCategory } = useCategories({ companyId: company?.id });
-  const { getSubcategoriesByCategoryId } = useSubcategories({ companyId: company?.id });
+  const { categories, addCategory, refetch: refetchCategories } = useCategories({ companyId: company?.id });
+  const { subcategories, getSubcategoriesByCategoryId } = useSubcategories({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
@@ -67,6 +69,7 @@ export default function Products() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [isImportSaving, setIsImportSaving] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
+  const [newCategoryNames, setNewCategoryNames] = useState<string[]>([]);
 
   // Set default category when categories load
   useEffect(() => {
@@ -235,20 +238,48 @@ export default function Products() {
       const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
 
       const { data, error } = await supabase.functions.invoke('extract-menu', {
-        body: { imageUrl: publicUrl, fileType: importFile.type }
+        body: {
+          imageUrl: publicUrl,
+          fileType: importFile.type,
+          existingCategories: categories.map((category) => ({ id: category.id, name: category.name })),
+          existingSubcategories: subcategories.map((subcategory) => ({
+            id: subcategory.id,
+            name: subcategory.name,
+            categoryId: subcategory.categoryId,
+          })),
+        }
       });
       if (error) throw error;
 
       if (data?.products && Array.isArray(data.products)) {
-        setExtractedProducts(data.products.map((p: any) => ({
-          name: p.name || '',
-          price: parseFloat(p.price) || 0,
-          category: p.category || 'Geral',
-          description: p.description || '',
-          selected: true,
-        })));
+        const suggestedCategories = new Set<string>();
+        const mappedProducts: ExtractedProduct[] = data.products.map((p: any) => {
+          const normalizedCategoryName = (p.category || 'Geral').trim();
+          const matchedCategory = categories.find(
+            (category) => category.id === p.category_id || category.name.toLowerCase() === normalizedCategoryName.toLowerCase()
+          );
+          const isNewCategory = !matchedCategory && Boolean(normalizedCategoryName);
+
+          if (isNewCategory) {
+            suggestedCategories.add(normalizedCategoryName);
+          }
+
+          return {
+            name: p.name || '',
+            price: parseFloat(p.price) || 0,
+            category: matchedCategory?.name || normalizedCategoryName,
+            categoryId: matchedCategory?.id || (normalizedCategoryName ? `new:${normalizedCategoryName}` : null),
+            subcategoryId: matchedCategory?.id ? (p.subcategory_id || null) : null,
+            description: p.description || '',
+            selected: true,
+            isNewCategory,
+          };
+        });
+
+        setNewCategoryNames(Array.from(suggestedCategories));
+        setExtractedProducts(mappedProducts);
         setImportStep('review');
-        toast.success(`${data.products.length} produtos encontrados!`);
+        toast.success(`${mappedProducts.length} produtos encontrados!`);
       } else {
         toast.error('Não foi possível extrair produtos');
       }
@@ -260,37 +291,151 @@ export default function Products() {
     }
   }
 
+  function getImportCategoryOptions() {
+    const existingOptions = categories.map((category) => ({
+      value: category.id,
+      label: category.name,
+      isNew: false,
+    }));
+
+    const suggestedOptions = newCategoryNames
+      .filter((name) => !categories.some((category) => category.name.toLowerCase() === name.toLowerCase()))
+      .map((name) => ({
+        value: `new:${name}`,
+        label: name,
+        isNew: true,
+      }));
+
+    return [...existingOptions, ...suggestedOptions];
+  }
+
+  function getImportSubcategories(categoryId: string | null) {
+    if (!categoryId || categoryId.startsWith('new:')) return [];
+    return getSubcategoriesByCategoryId(categoryId);
+  }
+
+  function updateExtractedProduct(index: number, updates: Partial<ExtractedProduct>) {
+    setExtractedProducts((prev) => prev.map((product, currentIndex) => {
+      if (currentIndex !== index) return product;
+      return { ...product, ...updates };
+    }));
+  }
+
+  function handleImportCategoryChange(index: number, value: string) {
+    if (value.startsWith('new:')) {
+      const categoryName = value.replace(/^new:/, '');
+      updateExtractedProduct(index, {
+        category: categoryName,
+        categoryId: value,
+        subcategoryId: null,
+        isNewCategory: true,
+      });
+      return;
+    }
+
+    const matchedCategory = categories.find((category) => category.id === value);
+    updateExtractedProduct(index, {
+      category: matchedCategory?.name || '',
+      categoryId: matchedCategory?.id || null,
+      subcategoryId: null,
+      isNewCategory: false,
+    });
+  }
+
+  function addManualImportedProduct() {
+    const firstExistingCategory = categories[0];
+    const firstSuggestedCategory = newCategoryNames[0];
+
+    setExtractedProducts((prev) => [
+      ...prev,
+      {
+        name: '',
+        price: 0,
+        category: firstExistingCategory?.name || firstSuggestedCategory || '',
+        categoryId: firstExistingCategory?.id || (firstSuggestedCategory ? `new:${firstSuggestedCategory}` : null),
+        subcategoryId: null,
+        description: '',
+        selected: true,
+        isNewCategory: !firstExistingCategory && Boolean(firstSuggestedCategory),
+      },
+    ]);
+  }
+
   async function handleImportSave() {
-    const selected = extractedProducts.filter(p => p.selected);
+    const selected = extractedProducts.filter((product) => product.selected);
     if (selected.length === 0) {
       toast.error('Selecione pelo menos um produto');
       return;
     }
+
+    const invalidProduct = selected.find((product) => !product.name.trim() || !product.category.trim());
+    if (invalidProduct) {
+      toast.error('Todos os produtos precisam ter nome e categoria');
+      return;
+    }
+
+    const missingRequiredSubcategory = selected.find((product) => {
+      if (!product.categoryId || product.categoryId.startsWith('new:')) return false;
+      const availableSubcategories = getImportSubcategories(product.categoryId);
+      return availableSubcategories.length > 0 && !product.subcategoryId;
+    });
+
+    if (missingRequiredSubcategory) {
+      toast.error('Selecione a subcategoria dos produtos que pertencem a categorias com subcategorias');
+      return;
+    }
+
     setIsImportSaving(true);
     let successCount = 0;
+
     try {
-      const existingCatNames = categories.map(c => c.name);
-      const newCats = [...new Set(selected.map(p => p.category))].filter(c => !existingCatNames.includes(c));
-      for (const catName of newCats) {
-        await addCategory(catName);
+      const suggestedToCreate = Array.from(new Set(
+        selected
+          .filter((product) => product.isNewCategory)
+          .map((product) => product.category.trim())
+          .filter(Boolean)
+      ));
+
+      for (const categoryName of suggestedToCreate) {
+        if (!categories.some((category) => category.name.toLowerCase() === categoryName.toLowerCase())) {
+          await addCategory(categoryName);
+        }
       }
+
+      await refetchCategories();
+
+      const { data: freshCategories, error: categoriesError } = await supabase
+        .from('categories')
+        .select('id, name')
+        .eq('company_id', company.id)
+        .eq('active', true);
+
+      if (categoriesError) throw categoriesError;
+
       for (const product of selected) {
         try {
+          const resolvedCategory = (freshCategories || []).find((category) =>
+            category.id === product.categoryId || category.name.toLowerCase() === product.category.toLowerCase()
+          );
+
           await addProduct({
-            name: product.name,
+            name: product.name.trim(),
             price: product.price,
-            category: product.category,
-            description: product.description || undefined,
+            category: resolvedCategory?.name || product.category.trim(),
+            description: product.description?.trim() || undefined,
             active: true,
-          });
+            subcategoryId: resolvedCategory?.id ? product.subcategoryId : null,
+          } as any);
           successCount++;
         } catch (err) {
           console.error('Error adding product:', product.name, err);
         }
       }
+
       toast.success(`${successCount} produtos importados!`);
       resetImport();
-    } catch {
+    } catch (error) {
+      console.error('Error saving imported products:', error);
       toast.error('Erro ao importar produtos');
     } finally {
       setIsImportSaving(false);
@@ -301,6 +446,7 @@ export default function Products() {
     setImportFile(null);
     setImportPreviewUrl(null);
     setExtractedProducts([]);
+    setNewCategoryNames([]);
     setImportStep('idle');
   }
 
@@ -904,7 +1050,7 @@ export default function Products() {
 
       {/* AI Import Dialog */}
       <Dialog open={importStep !== 'idle'} onOpenChange={(open) => { if (!open) resetImport(); }}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>
               {importStep === 'preview' ? 'Confirmar arquivo' : 'Produtos encontrados'}
@@ -912,7 +1058,7 @@ export default function Products() {
           </DialogHeader>
 
           {importStep === 'preview' && (
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto">
               {importPreviewUrl && (
                 <img src={importPreviewUrl} alt="Preview" className="w-full max-h-64 object-contain rounded-md border" />
               )}
@@ -933,60 +1079,116 @@ export default function Products() {
           )}
 
           {importStep === 'review' && (
-            <div className="space-y-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-4">
               <p className="text-sm text-muted-foreground">
-                {extractedProducts.filter(p => p.selected).length} de {extractedProducts.length} selecionados
+                {extractedProducts.filter((product) => product.selected).length} de {extractedProducts.length} selecionados
               </p>
-              <ScrollArea className="max-h-[50vh]">
-                <div className="space-y-3 pr-2">
-                  {extractedProducts.map((product, idx) => (
-                    <div key={idx} className={cn("border rounded-lg p-3 space-y-2", !product.selected && "opacity-50")}>
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          checked={product.selected}
-                          onCheckedChange={() => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, selected: !p.selected } : p))}
-                        />
-                        <Input
-                          value={product.name}
-                          onChange={(e) => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, name: e.target.value } : p))}
-                          className="flex-1 h-8 text-sm"
-                          placeholder="Nome"
-                        />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={product.price}
-                          onChange={(e) => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, price: parseFloat(e.target.value) || 0 } : p))}
-                          className="w-24 h-8 text-sm"
-                          placeholder="Preço"
-                        />
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setExtractedProducts(prev => prev.filter((_, i) => i !== idx))}>
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                      <div className="flex gap-2 pl-8">
-                        <Input
-                          value={product.category}
-                          onChange={(e) => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, category: e.target.value } : p))}
-                          className="h-7 text-xs flex-1"
-                          placeholder="Categoria"
-                        />
+
+              <div className="flex-1 min-h-0 overflow-y-auto pr-2">
+                <div className="space-y-3">
+                  {extractedProducts.map((product, idx) => {
+                    const subcategoryOptions = getImportSubcategories(product.categoryId);
+                    const categorySelectValue = product.categoryId || undefined;
+
+                    return (
+                      <div key={idx} className={cn("border rounded-lg p-3 space-y-3", !product.selected && "opacity-50")}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={product.selected}
+                              onCheckedChange={() => updateExtractedProduct(idx, { selected: !product.selected })}
+                            />
+                            {product.isNewCategory && (
+                              <Badge variant="secondary" className="text-xs">
+                                <Sparkles className="mr-1 h-3 w-3" />
+                                Nova categoria
+                              </Badge>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => setExtractedProducts((prev) => prev.filter((_, currentIndex) => currentIndex !== idx))}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
+                          <Input
+                            value={product.name}
+                            onChange={(e) => updateExtractedProduct(idx, { name: e.target.value })}
+                            className="h-9"
+                            placeholder="Nome"
+                          />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={product.price}
+                            onChange={(e) => updateExtractedProduct(idx, { price: parseFloat(e.target.value) || 0 })}
+                            className="h-9"
+                            placeholder="Preço"
+                          />
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <Select value={categorySelectValue} onValueChange={(value) => handleImportCategoryChange(idx, value)}>
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Selecione a categoria" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getImportCategoryOptions().map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}{option.isNew ? ' ✨' : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          {subcategoryOptions.length > 0 ? (
+                            <Select
+                              value={product.subcategoryId || undefined}
+                              onValueChange={(value) => updateExtractedProduct(idx, { subcategoryId: value })}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Selecione a subcategoria" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {subcategoryOptions.map((subcategory) => (
+                                  <SelectItem key={subcategory.id} value={subcategory.id}>
+                                    {subcategory.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input className="h-9" value="Sem subcategorias" disabled />
+                          )}
+                        </div>
+
                         <Input
                           value={product.description || ''}
-                          onChange={(e) => setExtractedProducts(prev => prev.map((p, i) => i === idx ? { ...p, description: e.target.value } : p))}
-                          className="h-7 text-xs flex-1"
+                          onChange={(e) => updateExtractedProduct(idx, { description: e.target.value })}
+                          className="h-9"
                           placeholder="Descrição (opcional)"
                         />
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              </ScrollArea>
-              <div className="flex gap-2">
+              </div>
+
+              <Button variant="outline" onClick={addManualImportedProduct}>
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar produto
+              </Button>
+
+              <div className="flex gap-2 border-t pt-2">
                 <Button variant="outline" className="flex-1" onClick={resetImport}>Cancelar</Button>
                 <Button className="flex-1" onClick={handleImportSave} disabled={isImportSaving}>
                   {isImportSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-                  Importar ({extractedProducts.filter(p => p.selected).length})
+                  Confirmar e Criar Produtos
                 </Button>
               </div>
             </div>
