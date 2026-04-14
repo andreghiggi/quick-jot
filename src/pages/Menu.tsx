@@ -862,7 +862,8 @@ export default function Menu() {
         allOrderedCategories={allOrderedCategories}
         categoryEmojiMap={categoryEmojiMap}
         categoryImageMap={categoryImageMap}
-        floatingPhoto={floatingPhoto}
+        categoryIdMap={categoryIdMap}
+        subcategories={subcategories}
         cartItemsCount={cartItemsCount}
         cartTotal={cartTotal}
         isOpen={isOpen}
