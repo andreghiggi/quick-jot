@@ -270,7 +270,55 @@ export default function Menu() {
       .sort((a, b) => a.displayOrder - b.displayOrder);
   }, [selectedProduct, optionalGroups, categoryIdByName]);
 
-  // Load customer data when phone changes (with debounce)
+  // Progress bar: mandatory groups completion (I9 only)
+  const mandatoryGroups = selectedProductGroups.filter(g => g.minSelect > 0);
+  const completedMandatory = mandatoryGroups.filter(g => {
+    const sel = selectedGroupItems[g.id];
+    return sel && sel.size >= g.minSelect;
+  });
+  const mandatoryProgress = mandatoryGroups.length > 0 ? Math.round((completedMandatory.length / mandatoryGroups.length) * 100) : 100;
+  const allMandatoryComplete = completedMandatory.length === mandatoryGroups.length;
+
+  // Reorder from localStorage (I9 only)
+  const lastOrderKey = `lastOrder_${slug}`;
+  const savedLastOrder = useMemo(() => {
+    if (!isI9) return null;
+    try {
+      const raw = localStorage.getItem(lastOrderKey);
+      if (!raw) return null;
+      return JSON.parse(raw) as { items: { productName: string; productId: string; quantity: number; optionalNames: string[]; }[]; total: number };
+    } catch { return null; }
+  }, [isI9, lastOrderKey]);
+
+  const validReorder = useMemo(() => {
+    if (!savedLastOrder || reorderDismissed) return null;
+    const validItems = savedLastOrder.items.filter(item =>
+      activeProducts.some(p => p.id === item.productId)
+    );
+    if (validItems.length === 0) return null;
+    return { ...savedLastOrder, items: validItems };
+  }, [savedLastOrder, activeProducts, reorderDismissed]);
+
+  function handleReorder() {
+    if (!validReorder) return;
+    const newCart: CartItem[] = [];
+    for (const item of validReorder.items) {
+      const product = activeProducts.find(p => p.id === item.productId);
+      if (!product) continue;
+      newCart.push({ product, quantity: item.quantity, selectedOptionals: [], notes: undefined });
+    }
+    setCart(prev => [...prev, ...newCart]);
+    setReorderDismissed(true);
+    localStorage.removeItem(lastOrderKey);
+    toast.success('Itens adicionados ao carrinho!');
+  }
+
+  function dismissReorder() {
+    setReorderDismissed(true);
+    localStorage.removeItem(lastOrderKey);
+  }
+
+
   useEffect(() => {
     if (!customerPhone || customerPhone.length < 10 || !company?.id || customerLoaded) return;
     
