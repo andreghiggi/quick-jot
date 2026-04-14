@@ -90,7 +90,6 @@ export default function Menu() {
   const isOpen = isCurrentlyOpen();
   const schedulingEnabled = settings.acceptOrderScheduling;
   const canOrder = isOpen || schedulingEnabled;
-  const isI9 = true; // applies to all stores
   const formattedHours = getFormattedHours();
 
 
