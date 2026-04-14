@@ -84,6 +84,11 @@ export function AppSidebar() {
       href: '/produtos',
     },
     {
+      title: 'Subcategorias',
+      icon: Layers,
+      href: '/subcategorias',
+    },
+    {
       title: 'Adicionais',
       icon: Layers,
       href: '/adicionais',
