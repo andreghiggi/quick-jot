@@ -99,7 +99,8 @@ export function useProducts(options: UseProductsOptions = {}) {
           image_url: productData.imageUrl || null,
           active: productData.active,
           company_id: productData.companyId || companyId || null,
-        })
+          subcategory_id: (productData as any).subcategoryId || null,
+        } as any)
         .select()
         .single();
 
@@ -125,6 +126,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       if (productData.imageUrl !== undefined) updateData.image_url = productData.imageUrl;
       if (productData.active !== undefined) updateData.active = productData.active;
       if (productData.pdvItem !== undefined) updateData.pdv_item = productData.pdvItem;
+      if (productData.subcategoryId !== undefined) updateData.subcategory_id = productData.subcategoryId || null;
 
       const { error } = await supabase
         .from('products')
