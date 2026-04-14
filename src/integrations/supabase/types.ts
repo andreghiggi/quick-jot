@@ -884,6 +884,7 @@ export type Database = {
           created_at: string | null
           display_order: number | null
           id: string
+          integration_type: string | null
           name: string
           pix_key: string | null
           updated_at: string | null
@@ -894,6 +895,7 @@ export type Database = {
           created_at?: string | null
           display_order?: number | null
           id?: string
+          integration_type?: string | null
           name: string
           pix_key?: string | null
           updated_at?: string | null
@@ -904,6 +906,7 @@ export type Database = {
           created_at?: string | null
           display_order?: number | null
           id?: string
+          integration_type?: string | null
           name?: string
           pix_key?: string | null
           updated_at?: string | null
