@@ -1136,17 +1136,6 @@ export default function Menu() {
               />
             ) : (
             <div className="space-y-4">
-              {selectedProduct.imageUrl && (
-                <div className="w-full h-48 rounded-lg overflow-hidden">
-                  <img
-                    key={selectedProduct.id}
-                    src={selectedProduct.imageUrl}
-                    alt={selectedProduct.name}
-                    className={cn("w-full object-cover", floatingPhoto && "kenburns-animate")}
-                    style={{ height: '110%', animationPlayState: 'running' }}
-                  />
-                </div>
-              )}
               {selectedProduct.description && (
                 <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>
               )}
