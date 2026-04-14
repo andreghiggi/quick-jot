@@ -14,8 +14,10 @@ import {
   Trash2, 
   CreditCard,
   Loader2,
-  GripVertical
+  GripVertical,
+  Plug
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 export default function PaymentMethods() {
@@ -29,7 +31,8 @@ export default function PaymentMethods() {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [newMethodName, setNewMethodName] = useState('');
   const [newMethodPixKey, setNewMethodPixKey] = useState('');
-  const [editingMethod, setEditingMethod] = useState<{ id: string; name: string; pix_key: string } | null>(null);
+  const [newMethodIntegration, setNewMethodIntegration] = useState<string>('none');
+  const [editingMethod, setEditingMethod] = useState<{ id: string; name: string; pix_key: string; integration_type: string } | null>(null);
   const [deletingMethodId, setDeletingMethodId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -42,13 +45,16 @@ export default function PaymentMethods() {
     }
 
     setIsSubmitting(true);
-    const success = await addPaymentMethod(newMethodName.trim(), isPixName(newMethodName) ? newMethodPixKey.trim() || undefined : undefined);
+    const pixKey = isPixName(newMethodName) ? newMethodPixKey.trim() || undefined : undefined;
+    const integType = newMethodIntegration !== 'none' ? newMethodIntegration : undefined;
+    const success = await addPaymentMethod(newMethodName.trim(), pixKey, integType);
     setIsSubmitting(false);
 
     if (success) {
       setAddDialog(false);
       setNewMethodName('');
       setNewMethodPixKey('');
+      setNewMethodIntegration('none');
     }
   }
 
@@ -65,6 +71,7 @@ export default function PaymentMethods() {
     } else {
       updateData.pix_key = null;
     }
+    updateData.integration_type = editingMethod.integration_type !== 'none' ? editingMethod.integration_type : null;
     const success = await updatePaymentMethod(editingMethod.id, updateData);
     setIsSubmitting(false);
 
@@ -91,8 +98,8 @@ export default function PaymentMethods() {
     await updatePaymentMethod(id, { active });
   }
 
-  function openEditDialog(method: { id: string; name: string; pix_key?: string | null }) {
-    setEditingMethod({ id: method.id, name: method.name, pix_key: method.pix_key || '' });
+  function openEditDialog(method: { id: string; name: string; pix_key?: string | null; integration_type?: string | null }) {
+    setEditingMethod({ id: method.id, name: method.name, pix_key: method.pix_key || '', integration_type: method.integration_type || 'none' });
     setEditDialog(true);
   }
 

@@ -9,6 +9,7 @@ export interface PaymentMethod {
   active: boolean;
   display_order: number;
   pix_key: string | null;
+  integration_type: string | null;
   created_at: string;
   updated_at: string;
 }
