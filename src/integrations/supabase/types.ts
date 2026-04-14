@@ -176,6 +176,8 @@ export type Database = {
           cnpj: string | null
           created_at: string | null
           id: string
+          initial_password: string | null
+          login_email: string | null
           logo_url: string | null
           name: string
           phone: string | null
@@ -194,6 +196,8 @@ export type Database = {
           cnpj?: string | null
           created_at?: string | null
           id?: string
+          initial_password?: string | null
+          login_email?: string | null
           logo_url?: string | null
           name: string
           phone?: string | null
@@ -212,6 +216,8 @@ export type Database = {
           cnpj?: string | null
           created_at?: string | null
           id?: string
+          initial_password?: string | null
+          login_email?: string | null
           logo_url?: string | null
           name?: string
           phone?: string | null
