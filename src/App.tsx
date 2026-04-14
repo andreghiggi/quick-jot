@@ -36,6 +36,7 @@ import Suggestions from "./pages/Suggestions";
 import MenuImport from "./pages/MenuImport";
 import OptionalGroups from "./pages/OptionalGroups";
 import Categories from "./pages/Categories";
+import Subcategories from "./pages/Subcategories";
 import CustomerReport from "./pages/CustomerReport";
 import ABCReport from "./pages/ABCReport";
 
@@ -195,6 +196,12 @@ function AppRoutes() {
       <Route path="/categorias" element={
         <ProtectedRoute requireCompany>
           <Categories />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/subcategorias" element={
+        <ProtectedRoute requireCompany>
+          <Subcategories />
         </ProtectedRoute>
       } />
       

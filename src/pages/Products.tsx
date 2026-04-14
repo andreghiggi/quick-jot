@@ -129,6 +129,13 @@ export default function Products() {
       toast.error('Selecione uma categoria');
       return;
     }
+    // Validate subcategory is selected when category has subcategories
+    const selectedCat = categories.find(c => c.name === newProduct.category);
+    const subs = selectedCat ? getSubcategoriesByCategoryId(selectedCat.id) : [];
+    if (subs.length > 0 && !newProduct.subcategoryId) {
+      toast.error('Selecione uma subcategoria');
+      return;
+    }
     await addProduct({
       name: newProduct.name,
       price: parseFloat(newProduct.price),
@@ -177,6 +184,13 @@ export default function Products() {
     if (!editingProduct) return;
     if (!editingProduct.name || !editingProduct.price) {
       toast.error('Preencha nome e preço');
+      return;
+    }
+    // Validate subcategory is selected when category has subcategories
+    const selectedCat = categories.find(c => c.name === editingProduct.category);
+    const subs = selectedCat ? getSubcategoriesByCategoryId(selectedCat.id) : [];
+    if (subs.length > 0 && !editingProduct.subcategoryId) {
+      toast.error('Selecione uma subcategoria');
       return;
     }
     await updateProduct(editingProduct.id, {
@@ -395,13 +409,12 @@ export default function Products() {
               if (subs.length === 0) return null;
               return (
                 <div>
-                  <Label>Subcategoria (opcional)</Label>
-                  <Select value={newProduct.subcategoryId} onValueChange={(v) => setNewProduct({ ...newProduct, subcategoryId: v === '_none' ? '' : v })}>
+                  <Label>Subcategoria *</Label>
+                  <Select value={newProduct.subcategoryId} onValueChange={(v) => setNewProduct({ ...newProduct, subcategoryId: v })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma subcategoria" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="_none">Nenhuma</SelectItem>
                       {subs.map((sub) => (
                         <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
                       ))}
@@ -787,13 +800,12 @@ export default function Products() {
                 if (subs.length === 0) return null;
                 return (
                   <div>
-                    <Label>Subcategoria (opcional)</Label>
-                    <Select value={editingProduct.subcategoryId || '_none'} onValueChange={(v) => setEditingProduct({ ...editingProduct, subcategoryId: v === '_none' ? null : v })}>
+                    <Label>Subcategoria *</Label>
+                    <Select value={editingProduct.subcategoryId || ''} onValueChange={(v) => setEditingProduct({ ...editingProduct, subcategoryId: v })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione uma subcategoria" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="_none">Nenhuma</SelectItem>
                         {subs.map((sub) => (
                           <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
                         ))}

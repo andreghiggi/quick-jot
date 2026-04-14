@@ -22,6 +22,7 @@ import {
   Lightbulb,
   Upload,
   Layers,
+  LayoutList,
   FolderOpen,
   BarChart3,
   UserCheck,
@@ -82,6 +83,11 @@ export function AppSidebar() {
       title: 'Produtos',
       icon: Package,
       href: '/produtos',
+    },
+    {
+      title: 'Subcategorias',
+      icon: LayoutList,
+      href: '/subcategorias',
     },
     {
       title: 'Adicionais',
