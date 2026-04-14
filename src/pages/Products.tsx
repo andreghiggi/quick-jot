@@ -395,13 +395,12 @@ export default function Products() {
               if (subs.length === 0) return null;
               return (
                 <div>
-                  <Label>Subcategoria (opcional)</Label>
-                  <Select value={newProduct.subcategoryId} onValueChange={(v) => setNewProduct({ ...newProduct, subcategoryId: v === '_none' ? '' : v })}>
+                  <Label>Subcategoria *</Label>
+                  <Select value={newProduct.subcategoryId} onValueChange={(v) => setNewProduct({ ...newProduct, subcategoryId: v })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma subcategoria" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="_none">Nenhuma</SelectItem>
                       {subs.map((sub) => (
                         <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
                       ))}
@@ -787,13 +786,12 @@ export default function Products() {
                 if (subs.length === 0) return null;
                 return (
                   <div>
-                    <Label>Subcategoria (opcional)</Label>
-                    <Select value={editingProduct.subcategoryId || '_none'} onValueChange={(v) => setEditingProduct({ ...editingProduct, subcategoryId: v === '_none' ? null : v })}>
+                    <Label>Subcategoria *</Label>
+                    <Select value={editingProduct.subcategoryId || ''} onValueChange={(v) => setEditingProduct({ ...editingProduct, subcategoryId: v })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione uma subcategoria" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="_none">Nenhuma</SelectItem>
                         {subs.map((sub) => (
                           <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
                         ))}
