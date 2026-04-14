@@ -363,6 +363,14 @@ export default function AdminDashboard() {
                             </div>
                           </TableCell>
                           <TableCell>
+                            {plan?.activated_at ? (
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(plan.activated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          <TableCell>
                             <Badge variant={comp.active ? 'default' : 'secondary'}>
                               {comp.active ? 'Ativa' : 'Inativa'}
                             </Badge>
