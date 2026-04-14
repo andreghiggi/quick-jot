@@ -451,7 +451,19 @@ export default function AdminDashboard() {
                                 )}
                               </div>
                             ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1 text-xs"
+                                onClick={() => {
+                                  setEditCredentialsCompanyId(comp.id);
+                                  setEditEmail(comp.login_email || '');
+                                  setEditPassword(comp.initial_password || '');
+                                }}
+                              >
+                                <Pencil className="w-3 h-3" />
+                                Editar credenciais
+                              </Button>
                             )}
                           </TableCell>
                           <TableCell>
