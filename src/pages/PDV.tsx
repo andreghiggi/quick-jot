@@ -509,6 +509,8 @@ export default function PDV() {
               return; // ABORT — sale NOT created
             }
 
+            tefHashRef.current = createResult.hash;
+
             // Poll for result (max 120s)
             setTefStatus('Aguardando pagamento no PinPad...');
             let tefCompleted = false;
