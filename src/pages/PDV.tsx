@@ -143,7 +143,7 @@ export default function PDV() {
   // TEF payment options
   const [tefCardType, setTefCardType] = useState<'credit' | 'debit' | 'pix'>('credit');
   const [tefInstallmentMode, setTefInstallmentMode] = useState<'avista' | 'parcelado'>('avista');
-  const [tefInstallmentType, setTefInstallmentType] = useState<'loja' | 'adm'>('loja');
+  const [tefInstallmentType] = useState<'loja' | 'adm'>('adm');
   const [tefInstallments, setTefInstallments] = useState('2');
 
   const [documentMode, setDocumentMode] = useState<'sale_only' | 'sale_with_nfce'>(() => {
@@ -1717,32 +1717,6 @@ export default function PDV() {
                     </div>
                     {tefInstallmentMode === 'parcelado' && (
                       <div className="space-y-2">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Tipo de Parcelamento</Label>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant={tefInstallmentType === 'loja' ? 'default' : 'outline'}
-                              onClick={() => setTefInstallmentType('loja')}
-                              className="flex-1"
-                            >
-                              Loja
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={tefInstallmentType === 'adm' ? 'default' : 'outline'}
-                              onClick={() => setTefInstallmentType('adm')}
-                              className="flex-1"
-                            >
-                              ADM
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {tefInstallmentType === 'loja' 
-                              ? 'Loja: juros por conta do lojista' 
-                              : 'ADM: juros por conta do cliente'}
-                          </p>
-                        </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Parcelas</Label>
                           <Input
