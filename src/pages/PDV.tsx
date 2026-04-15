@@ -178,6 +178,9 @@ export default function PDV() {
 
   // PIX QR Code state
   const [pixQrDialog, setPixQrDialog] = useState(false);
+  // PDV Optionals state
+  const [optionalsDialogProduct, setOptionalsDialogProduct] = useState<typeof products[0] | null>(null);
+  const [optionalsDialogGroups, setOptionalsDialogGroups] = useState<OptionalGroup[]>([]);
   // Dialog states
   const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
   const [closeRegisterDialog, setCloseRegisterDialog] = useState(false);
