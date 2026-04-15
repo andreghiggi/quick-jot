@@ -27,6 +27,9 @@ interface StoreSettings {
   buttonColor: string;
   estimatedWaitTime: string;
   featuredSectionName: string;
+  pixKey: string;
+  pixName: string;
+  pixCity: string;
 }
 
 interface UseStoreSettingsOptions {
