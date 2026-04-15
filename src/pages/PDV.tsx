@@ -1049,6 +1049,7 @@ export default function PDV() {
               if (status.status === 'approved') {
                 completed = true;
                 toast.success(`Estorno aprovado! NSU: ${status.nsu}`);
+                await markSaleAsCancelled(sale.id, sale.notes);
               } else if (status.status === 'declined' || status.status === 'error' || status.status === 'cancelled') {
                 completed = true;
                 toast.error(`Estorno recusado: ${status.errorMessage || status.operatorMessage || 'Não aprovado'}`);
@@ -1059,6 +1060,7 @@ export default function PDV() {
             }
           } else {
             toast.success('Estorno enviado com sucesso!');
+            await markSaleAsCancelled(sale.id, sale.notes);
           }
         } else {
           toast.error(`Erro no estorno: ${result.errorMessage}`);
