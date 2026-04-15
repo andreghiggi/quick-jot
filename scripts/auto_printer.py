@@ -79,25 +79,47 @@ def log(msg, tipo="INFO"):
         pass
 
 def imprimir_via_windows_html(arquivo_html):
-    """Tenta impressão silenciosa nativa do Windows para HTML sem abrir navegador."""
+    """Impressão silenciosa nativa do Windows para HTML sem abrir navegador."""
     if os.name != 'nt':
         return False
 
-    comandos = [
-        ['rundll32.exe', 'mshtml.dll,PrintHTML', arquivo_html],
-        ['rundll32.exe', 'mshtml.dll,PrintHTML', arquivo_html, '', '', ''],
-    ]
+    try:
+        subprocess.run(
+            ['rundll32.exe', 'mshtml.dll,PrintHTML', arquivo_html],
+            timeout=30, capture_output=True
+        )
+        log("HTML enviado para impressora via mshtml.dll", "PRINT")
+        time.sleep(5)
+        return True
+    except Exception as e:
+        log(f"PrintHTML falhou: {e}", "AVISO")
+        return False
 
-    for comando in comandos:
-        try:
-            subprocess.run(comando, timeout=20, capture_output=True)
-            log("HTML enviado para impressora via mshtml.dll", "PRINT")
+def imprimir_pdf_silencioso(pdf_path):
+    """Imprime PDF silenciosamente sem abrir visualizador."""
+    if os.name != 'nt':
+        return False
+
+    # Tenta PowerShell silent print (não abre janela)
+    try:
+        ps_cmd = f'Start-Process -FilePath "{pdf_path}" -Verb Print -WindowStyle Hidden'
+        proc = subprocess.run(
+            ['powershell', '-WindowStyle', 'Hidden', '-Command', ps_cmd],
+            timeout=20, capture_output=True
+        )
+        if proc.returncode == 0:
+            log("PDF impresso via PowerShell silencioso", "PRINT")
             time.sleep(5)
             return True
-        except Exception as e:
-            log(f"PrintHTML falhou: {e}", "AVISO")
+    except Exception as e:
+        log(f"PowerShell print falhou: {e}", "AVISO")
 
     return False
+
+def limpar_scripts_html(html):
+    """Remove tags <script> do HTML para evitar que o browser abra diálogos."""
+    import re
+    return re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
 
 def buscar_empresa_por_slug(slug):
     """Busca empresa pelo slug e retorna id, nome e endereço"""
