@@ -2496,6 +2496,21 @@ export default function PDV() {
           </Card>
         </div>
       )}
+      {/* PDV Optionals Dialog */}
+      {optionalsDialogProduct && (
+        <PDVOptionalsDialog
+          open={!!optionalsDialogProduct}
+          onOpenChange={(open) => {
+            if (!open) {
+              setOptionalsDialogProduct(null);
+              setOptionalsDialogGroups([]);
+            }
+          }}
+          product={optionalsDialogProduct}
+          groups={optionalsDialogGroups}
+          onAddToCart={(items) => addItemsToCart(items)}
+        />
+      )}
     </AppLayout>
   );
 }
