@@ -59,6 +59,7 @@ export default function Waiter() {
   } = useTabs({ companyId: company?.id });
   const { products, loading: loadingProducts } = useProducts({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
+  const { groups: optionalGroups } = useOptionalGroups({ companyId: company?.id });
 
   const [activeView, setActiveView] = useState<'tables' | 'tabs'>('tables');
   const [selectedTab, setSelectedTab] = useState<Tab | null>(null);
