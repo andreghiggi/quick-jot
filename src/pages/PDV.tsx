@@ -32,6 +32,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -43,6 +44,7 @@ import {
   DollarSign, 
   ShoppingCart, 
   X,
+  Ban,
   Printer,
   CircleDollarSign,
   Lock,
@@ -1119,6 +1121,31 @@ export default function PDV() {
     }
   }
 
+  // Cancel sale in system only (no TEF reversal — for when customer is not present)
+  async function handleCancelSaleOnly(sale: typeof sales[0]) {
+    if (sale.notes?.includes('[CANCELADA]')) {
+      toast.error('Esta venda já foi cancelada');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Cancelar esta venda APENAS NO SISTEMA (sem estorno no cartão)?\n\nValor: ${formatCurrency(sale.final_total)}\n\n⚠️ O estorno financeiro deverá ser feito manualmente pelo portal da adquirente.`
+    );
+    if (!confirmed) return;
+
+    setTefEstornoLoading(sale.id);
+    try {
+      await markSaleAsCancelled(sale.id, sale.notes);
+      toast.success('Venda cancelada no sistema. Faça o estorno manualmente no portal da adquirente.');
+      refetchSales();
+    } catch (error) {
+      console.error('[PDV] Cancel sale error:', error);
+      toast.error('Erro ao cancelar venda');
+    } finally {
+      setTefEstornoLoading(null);
+    }
+  }
+
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -2120,17 +2147,32 @@ export default function PDV() {
                             </Button>
                           );
                         })()}
-                        {parseTefDataFromNotes(sale.notes) && !isCancelled && (
-                          <Button 
-                            size="icon" 
-                            variant="ghost"
-                            onClick={() => handleTefEstorno(sale)}
-                            disabled={tefEstornoLoading === sale.id}
-                            title="Estornar TEF"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            {tefEstornoLoading === sale.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                          </Button>
+                        {!isCancelled && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                size="icon" 
+                                variant="ghost"
+                                disabled={tefEstornoLoading === sale.id}
+                                title="Cancelar venda"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                {tefEstornoLoading === sale.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {parseTefDataFromNotes(sale.notes) && (
+                                <DropdownMenuItem onClick={() => handleTefEstorno(sale)} className="text-destructive">
+                                  <CreditCard className="w-4 h-4 mr-2" />
+                                  Estornar via TEF (com cartão)
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem onClick={() => handleCancelSaleOnly(sale)} className="text-destructive">
+                                <X className="w-4 h-4 mr-2" />
+                                Cancelar apenas no sistema
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                         <Button 
                           size="icon" 
