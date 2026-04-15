@@ -24,8 +24,10 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 CHECK_INTERVAL = 5  # segundos entre verificações
 STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
+COMPANY_SLUG = ""
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v5.2"
+SCRIPT_VERSION = "v5.3"
+PILOT_PRINT_SLUGS = {"lancheria-da-i9-263ee29a"}
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -603,6 +605,7 @@ if __name__ == "__main__":
     
     log(f"Buscando empresa: {slug}...", "INFO")
     company_id, company_name, company_address = buscar_empresa_por_slug(slug)
+    COMPANY_SLUG = slug
     
     if not company_id:
         print(f"Empresa '{slug}' não encontrada ou inativa. Verifique o slug.")
@@ -616,6 +619,7 @@ if __name__ == "__main__":
     log(f"Empresa encontrada: {company_name}", "OK")
     log(f"Company ID: {company_id}", "OK")
     log(f"Papel: {PAPER_SIZE}", "OK")
+    log(f"Modo de impressão: {'piloto i9' if COMPANY_SLUG in PILOT_PRINT_SLUGS else 'legado'}", "CONFIG")
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
     print("  Pressione Ctrl+C para parar")
