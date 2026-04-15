@@ -163,6 +163,9 @@ export default function PDV() {
 
   // NFC-e status tracking for sales list
   const [salesNfceStatus, setSalesNfceStatus] = useState<Record<string, { status: string; loading: boolean }>>({});
+  
+  // TEF estorno state
+  const [tefEstornoLoading, setTefEstornoLoading] = useState<string | null>(null);
 
   // Dialog states
   const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
