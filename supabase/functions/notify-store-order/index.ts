@@ -357,7 +357,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent: res.ok, customerConfirmSent, scheduledSent }),
+      JSON.stringify({ ok: true, storeNotifySent, customerConfirmSent, scheduledSent }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
