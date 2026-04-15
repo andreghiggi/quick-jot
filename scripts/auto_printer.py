@@ -26,8 +26,10 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v5.7"
+SCRIPT_VERSION = "v5.8"
 PILOT_PRINT_SLUGS = {"lancheria-da-i9-263ee29a"}
+SHOW_DEBUG_IN_CONSOLE = False
+SHOW_HEARTBEAT_DOTS = False
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 VERSION_FILE = Path(__file__).with_name("auto_printer.version.txt")
 
@@ -69,12 +71,34 @@ def log(msg, tipo="INFO"):
     """Log com timestamp em tela e arquivo"""
     agora = datetime.now(timezone(timedelta(hours=-3))).strftime("%H:%M:%S")
     linha = f"[{agora}] [{tipo}] {msg}"
-    print(linha)
+    if tipo != "DEBUG" or SHOW_DEBUG_IN_CONSOLE:
+        print(linha)
     try:
         with LOG_FILE.open("a", encoding="utf-8") as f:
             f.write(linha + "\n")
     except Exception:
         pass
+
+def imprimir_via_windows_html(arquivo_html):
+    """Tenta impressão silenciosa nativa do Windows para HTML sem abrir navegador."""
+    if os.name != 'nt':
+        return False
+
+    comandos = [
+        ['rundll32.exe', 'mshtml.dll,PrintHTML', arquivo_html],
+        ['rundll32.exe', 'mshtml.dll,PrintHTML', arquivo_html, '', '', ''],
+    ]
+
+    for comando in comandos:
+        try:
+            subprocess.run(comando, timeout=20, capture_output=True)
+            log("HTML enviado para impressora via mshtml.dll", "PRINT")
+            time.sleep(5)
+            return True
+        except Exception as e:
+            log(f"PrintHTML falhou: {e}", "AVISO")
+
+    return False
 
 def buscar_empresa_por_slug(slug):
     """Busca empresa pelo slug e retorna id, nome e endereço"""
@@ -458,10 +482,14 @@ def imprimir_html(html, order_number):
 
         if usar_modo_piloto:
             log(f"Modo piloto ativo para {COMPANY_SLUG}", "PRINT")
-            # 1) Tenta impressão silenciosa: HTML → PDF headless → print PDF
-            browser_path = encontrar_browser_headless()
             sucesso = False
-            if browser_path:
+
+            # 1) Tenta impressão silenciosa nativa do Windows para HTML
+            sucesso = imprimir_via_windows_html(arquivo)
+
+            # 2) Fallback silencioso: HTML → PDF headless → print PDF
+            browser_path = encontrar_browser_headless()
+            if not sucesso and browser_path:
                 pdf_path = arquivo.replace('.html', '.pdf')
                 try:
                     log(f"Gerando PDF via {os.path.basename(browser_path)} headless...", "PRINT")
@@ -501,11 +529,11 @@ def imprimir_html(html, order_number):
                         if proc.stderr:
                             log(f"stderr: {proc.stderr.decode('utf-8', errors='replace')[:200]}", "DEBUG")
                 except subprocess.TimeoutExpired:
-                    log("Headless timeout - tentando fallback", "AVISO")
+                    log("Headless timeout na geração do PDF", "AVISO")
                 except Exception as e:
                     log(f"Headless falhou: {e}", "AVISO")
 
-            # 2) Sem fallback visual no piloto: nunca abre navegador no PC
+            # 3) Sem fallback visual no piloto: nunca abre navegador no PC
             if not sucesso:
                 log("Impressão silenciosa falhou no piloto; navegador bloqueado nesta loja.", "ERRO")
 
@@ -747,7 +775,7 @@ if __name__ == "__main__":
                 if contador >= 12:
                     mostrar_status(company_id)
                     contador = 0
-                else:
+                elif SHOW_HEARTBEAT_DOTS:
                     print(".", end="", flush=True)
             
             time.sleep(CHECK_INTERVAL)
