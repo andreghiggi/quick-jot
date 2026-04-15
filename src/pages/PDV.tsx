@@ -1003,6 +1003,13 @@ export default function PDV() {
   // Handle TEF estorno (cancel/reverse completed transaction)
   async function handleTefEstorno(sale: typeof sales[0]) {
     if (!company?.id) return;
+    
+    // Check if already cancelled
+    if (sale.notes?.includes('[CANCELADA]')) {
+      toast.error('Esta venda já foi estornada/cancelada');
+      return;
+    }
+    
     const tefInfo = parseTefDataFromNotes(sale.notes);
     if (!tefInfo) {
       toast.error('Dados TEF não encontrados nesta venda');
