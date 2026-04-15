@@ -570,7 +570,7 @@ export default function PDV() {
                 };
                 
                 const installTypeLabel = tefInstallmentType === 'adm' ? ' ADM' : ' Loja';
-                const installLabel = installmentCount > 1 ? ` | ${installmentCount}x ${tefCardType === 'credit' ? 'Crédito' : 'Débito'}${installTypeLabel}` : ` | ${tefCardType === 'credit' ? 'Crédito à Vista' : tefCardType === 'debit' ? 'Débito' : 'PIX'}`;
+                const installLabel = installmentCount > 1 ? ` | ${installmentCount}x Cartão${installTypeLabel}` : ' | Cartão à Vista';
                 const receiptData = statusResult.receiptLines && statusResult.receiptLines.length > 0 ? ` | [COMPROVANTE]${statusResult.receiptLines.join('\\n')}[/COMPROVANTE]` : '';
                 saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}${receiptData}`;
               } else if (statusResult.status === 'declined' || statusResult.status === 'cancelled' || statusResult.status === 'error') {
