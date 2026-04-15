@@ -257,3 +257,36 @@ export async function cancelPinpadTransaction(
     return false;
   }
 }
+
+// CNC - Cancel/reverse a completed transaction (estorno)
+export async function reversePinpadTransaction(
+  companyId: string,
+  options: {
+    amount: number;
+    nsu: string;
+    rede: string;
+    dataTransacao: string;
+    horaTransacao: string;
+  }
+): Promise<{ success: boolean; hash?: string; errorMessage?: string }> {
+  const config = await getPinpadConfig(companyId);
+  if (!config) return { success: false, errorMessage: 'PinPad não configurado' };
+
+  try {
+    const result = await callTefWebService({
+      action: 'cnc',
+      token: config.token,
+      cnpj: config.cnpj,
+      pdv: config.pdv,
+      identificacao: String(Date.now()),
+      rede: options.rede,
+      nsu: options.nsu,
+      dataTransacao: options.dataTransacao,
+      horaTransacao: options.horaTransacao,
+      amount: options.amount,
+    });
+    return result;
+  } catch (error) {
+    return { success: false, errorMessage: error instanceof Error ? error.message : 'Erro desconhecido' };
+  }
+}
