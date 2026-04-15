@@ -29,6 +29,7 @@ PAPER_SIZE = "58mm"  # Será carregado das configurações
 SCRIPT_VERSION = "v5.3"
 PILOT_PRINT_SLUGS = {"lancheria-da-i9-263ee29a"}
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
+VERSION_FILE = Path(__file__).with_name("auto_printer.version.txt")
 
 # ============================================
 # HEADERS para API
@@ -42,6 +43,27 @@ HEADERS = {
 
 # Histórico de pedidos impressos nesta sessão
 pedidos_impressos_sessao = []
+
+def registrar_versao_local():
+    """Cria arquivos locais para confirmar rapidamente a versão em uso."""
+    agora = datetime.now(timezone(timedelta(hours=-3))).strftime("%d/%m/%Y %H:%M:%S")
+    conteudo = (
+        "Comanda Tech - Auto Printer\n"
+        f"Versao: {SCRIPT_VERSION}\n"
+        f"Arquivo: {Path(__file__).resolve()}\n"
+        f"Atualizado em execucao: {agora}\n"
+    )
+
+    try:
+        VERSION_FILE.write_text(conteudo, encoding="utf-8")
+    except Exception:
+        pass
+
+    try:
+        if not LOG_FILE.exists():
+            LOG_FILE.write_text("", encoding="utf-8")
+    except Exception:
+        pass
 
 def log(msg, tipo="INFO"):
     """Log com timestamp em tela e arquivo"""
@@ -598,6 +620,9 @@ def processar_fila(company_id):
 # LOOP PRINCIPAL
 # ============================================
 if __name__ == "__main__":
+    registrar_versao_local()
+    log(f"Boot do script {SCRIPT_VERSION}", "BOOT")
+
     print()
     print("=" * 50)
     print(f"  {STORE_NAME} - Impressão Automática {SCRIPT_VERSION}")
@@ -633,6 +658,7 @@ if __name__ == "__main__":
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
     print("  Pressione Ctrl+C para parar")
     print(f"  Log: {LOG_FILE}")
+    print(f"  Versão: {VERSION_FILE}")
     print("=" * 50)
     print()
     
