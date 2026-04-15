@@ -400,17 +400,17 @@ def imprimir_html(html, order_number):
                     f"--user-data-dir={perfil_temp}",
                     "--no-first-run",
                     "--no-default-browser-check",
-                    "--allow-file-access-from-files",
-                    "--kiosk-printing",
-                    "--disable-print-preview",
                     "--disable-extensions",
                     "--disable-background-networking",
+                    "--kiosk-printing",
+                    "--disable-print-preview",
+                    "--allow-file-access-from-files",
                     "--window-position=-9999,-9999",
                     "--window-size=1,1",
                     "--app=" + file_url,
                 ], shell=False)
                 log("Aguardando impressão...", "PRINT")
-                time.sleep(15)
+                time.sleep(25)
                 try:
                     processo.kill()
                 except Exception:
