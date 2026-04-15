@@ -253,7 +253,6 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     total_str = f"{total:.2f}".replace('.', ',')
     
     # Extract payment info from notes
-    import re
     payment_html = ''
     if notes:
         pagamento_match = re.search(r'Pagamento:\s*([^(|]+)', notes, re.IGNORECASE)
