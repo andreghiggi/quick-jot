@@ -143,6 +143,7 @@ export default function PDV() {
   // TEF payment options
   const [tefCardType, setTefCardType] = useState<'credit' | 'debit' | 'pix'>('credit');
   const [tefInstallmentMode, setTefInstallmentMode] = useState<'avista' | 'parcelado'>('avista');
+  const [tefInstallmentType, setTefInstallmentType] = useState<'loja' | 'adm'>('loja');
   const [tefInstallments, setTefInstallments] = useState('2');
 
   const [documentMode, setDocumentMode] = useState<'sale_only' | 'sale_with_nfce'>(() => {
