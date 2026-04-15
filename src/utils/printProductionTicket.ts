@@ -162,21 +162,49 @@ export function generateProductionTicketHTML(data: PrintTicketData): string {
 
 export function printProductionTicket(data: PrintTicketData): void {
   const html = generateProductionTicketHTML(data);
-  
-  const printWindow = window.open('', '_blank', 'width=320,height=600');
-  if (!printWindow) {
-    alert('Popup bloqueado! Permita popups para imprimir.');
+
+  // Use hidden iframe to avoid popup blockers on mobile
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.top = '-10000px';
+  iframe.style.left = '-10000px';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = 'none';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) {
+    document.body.removeChild(iframe);
     return;
   }
-  
-  printWindow.document.write(html);
-  printWindow.document.close();
-  
-  // Wait for content to load then print
-  printWindow.onload = () => {
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  const triggerPrint = () => {
+    try {
+      iframe.contentWindow?.print();
+    } catch {
+      // fallback: open in new tab
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.write(html);
+        w.document.close();
+        w.onload = () => { w.print(); w.close(); };
+      }
+    }
     setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+      document.body.removeChild(iframe);
+    }, 1000);
   };
+
+  if (iframe.contentWindow) {
+    iframe.contentWindow.onafterprint = () => {
+      document.body.removeChild(iframe);
+    };
+  }
+
+  setTimeout(triggerPrint, 300);
 }
