@@ -434,6 +434,34 @@ def imprimir_html(html, order_number):
         log(f"Falha na impressão: {e}", "ERRO")
         return False
 
+def diagnosticar_impressora():
+    """Verifica se a impressora padrão está configurada e acessível"""
+    log("=== DIAGNÓSTICO DE IMPRESSÃO ===", "DIAG")
+    try:
+        resultado = subprocess.run(
+            ['wmic', 'printer', 'where', 'default=true', 'get', 'name'],
+            capture_output=True, text=True, timeout=5
+        )
+        log(f"Impressora padrão: {resultado.stdout.strip()}", "DIAG")
+    except Exception as e:
+        log(f"Erro ao verificar impressora: {e}", "DIAG")
+    
+    browser = encontrar_chrome()
+    if browser:
+        log(f"Navegador encontrado: {browser}", "DIAG")
+    else:
+        log("ATENÇÃO: Chrome/Edge não encontrado! Impressão automática não funcionará.", "ERRO")
+    
+    try:
+        resultado = subprocess.run(
+            ['wmic', 'printer', 'get', 'name,portname'],
+            capture_output=True, text=True, timeout=5
+        )
+        log(f"Impressoras disponíveis:\n{resultado.stdout.strip()}", "DIAG")
+    except Exception as e:
+        log(f"Erro ao listar impressoras: {e}", "DIAG")
+    log("=== FIM DO DIAGNÓSTICO ===", "DIAG")
+
 def processar_pedido(pedido, store_name="Comanda Tech"):
     """Processa um pedido: busca itens, formata e imprime"""
     order_id = pedido.get("id")
