@@ -512,6 +512,7 @@ export default function PDV() {
               amount: finalTotal,
               paymentType: tefPaymentType,
               installments: installmentCount,
+              installmentType: tefInstallmentType,
             });
 
             if (!createResult.success || !createResult.hash) {
