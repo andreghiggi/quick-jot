@@ -392,21 +392,23 @@ def imprimir_html(html, order_number):
                     "--new-window",
                     "--no-first-run",
                     "--no-default-browser-check",
+                    "--allow-file-access-from-files",
                     "--kiosk-printing",
                     "--disable-print-preview",
-                    "--app=" + file_url,
+                    "--kiosk",
                     "--window-position=-32000,-32000",
                     "--window-size=200,200",
+                    file_url,
                 ], shell=False)
                 log("Enviado para impressora padrão com impressão automática!", "PRINT")
 
-                # Dá tempo para a página carregar, disparar window.print() e encerrar.
-                time.sleep(12)
+                # Dá tempo para a página carregar, disparar window.print() e enviar ao spooler.
+                time.sleep(18)
 
                 try:
                     processo.poll()
                     if processo.returncode is None:
-                        processo.terminate()
+                        processo.kill()
                 except Exception:
                     pass
 
