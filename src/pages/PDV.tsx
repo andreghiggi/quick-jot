@@ -911,6 +911,23 @@ export default function PDV() {
       minute: '2-digit'
     });
 
+    // Build payment condition line from TEF notes
+    const saleNotesStr = sale.notes || '';
+    let paymentConditionHtml = '';
+    const installMatch = saleNotesStr.match(/(\d+)x (Crédito|Débito)/);
+    if (installMatch) {
+      const parcelas = parseInt(installMatch[1]);
+      const valorParcela = (sale.final_total / parcelas).toFixed(2);
+      paymentConditionHtml = '<p><strong>Condição:</strong> ' + installMatch[1] + 'x ' + installMatch[2] + ' de R$ ' + valorParcela + '</p>';
+    } else {
+      const avistaMatch = saleNotesStr.match(/(Crédito à Vista|Débito|PIX)/);
+      if (avistaMatch) {
+        paymentConditionHtml = '<p><strong>Condição:</strong> ' + avistaMatch[1] + '</p>';
+      }
+    }
+    const isCancelled = saleNotesStr.includes('[CANCELADA]');
+    const cancelledBanner = isCancelled ? '<p style="color:red;font-weight:bold;text-align:center;font-size:14px;margin:2mm 0">*** VENDA CANCELADA ***</p>' : '';
+
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -945,6 +962,7 @@ export default function PDV() {
         </style>
       </head>
       <body>
+        ${cancelledBanner}
         <div class="header">
           <h1>${company?.name || 'PDV'}</h1>
           <h2>CUPOM DE VENDA</h2>
@@ -972,24 +990,9 @@ export default function PDV() {
         <div class="divider"></div>
         <div class="section">
           <p><strong>Pagamento:</strong> ${sale.payment_method?.name || 'N/A'}</p>
-          ${(() => {
-            const n = sale.notes || '';
-            // Extract installment info from TEF notes
-            const installMatch = n.match(/(\d+)x (Crédito|Débito)/);
-            if (installMatch) {
-              const parcelas = parseInt(installMatch[1]);
-              const valorParcela = (sale.final_total / parcelas).toFixed(2);
-              return '<p><strong>Condição:</strong> ' + installMatch[1] + 'x ' + installMatch[2] + ' de R$ ' + valorParcela + '</p>';
-            }
-            const avistaMatch = n.match(/(Crédito à Vista|Débito|PIX)/);
-            if (avistaMatch) {
-              return '<p><strong>Condição:</strong> ' + avistaMatch[1] + '</p>';
-            }
-            return '';
-          })()}
-          ${n.includes('[CANCELADA]') ? '<p style="color: red; font-weight: bold;">*** VENDA CANCELADA ***</p>' : ''}
+          ${paymentConditionHtml}
         </div>
-        ${sale.notes ? \`<div class="divider"></div><p class="notes"><strong>Obs:</strong> ${sale.notes}</p>\` : ''}
+        ${saleNotesStr ? `<div class="divider"></div><p class="notes"><strong>Obs:</strong> ${saleNotesStr}</p>` : ''}
         <div class="divider"></div>
         <p class="footer">Obrigado pela preferência!</p>
         <script>window.onload = function() { window.print(); window.close(); }</script>
