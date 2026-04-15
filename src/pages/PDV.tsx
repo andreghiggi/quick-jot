@@ -2120,7 +2120,7 @@ export default function PDV() {
                             </Button>
                           );
                         })()}
-                        {parseTefDataFromNotes(sale.notes) && !sale.notes?.includes('[CANCELADA]') && (
+                        {parseTefDataFromNotes(sale.notes) && !isCancelled && (
                           <Button 
                             size="icon" 
                             variant="ghost"
