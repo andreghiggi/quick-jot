@@ -737,7 +737,7 @@ export default function Waiter() {
             id: optionalsDialogProduct.id,
             name: optionalsDialogProduct.name,
             price: optionalsDialogProduct.price,
-            imageUrl: optionalsDialogProduct.image_url,
+            imageUrl: optionalsDialogProduct.imageUrl,
             category: optionalsDialogProduct.category,
           }}
           groups={optionalsDialogGroups}
