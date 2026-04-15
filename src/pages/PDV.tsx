@@ -2260,6 +2260,16 @@ export default function PDV() {
                         >
                           <Printer className="w-4 h-4" />
                         </Button>
+                        {sale.notes?.includes('[COMPROVANTE]') && (
+                          <Button 
+                            size="icon" 
+                            variant="ghost"
+                            onClick={() => printTefReceipt(sale)}
+                            title="Reimprimir comprovante TEF"
+                          >
+                            <Receipt className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
