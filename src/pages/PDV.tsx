@@ -461,6 +461,7 @@ export default function PDV() {
     try {
       // Build notes based on payment type
       let saleNotes = notes || '';
+      let tefData: NFCeTefData | undefined = undefined;
       
       if (divideByPeople) {
         const peopleDetails = peoplePaying.map(p => {
@@ -474,7 +475,172 @@ export default function PDV() {
         saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}Pagamento dividido: ${formatCurrency(parseFloat(firstPaymentAmount) || 0)} (${method1}) + ${formatCurrency(secondPaymentAmount)} (${method2})`;
       }
 
-      // Use primary payment method (for reporting purposes)
+      // ===== TEF: Run BEFORE creating the sale =====
+      const integType = selectedMethodIntegration;
+      const isTefPayment = (integType === 'tef_pinpad' || integType === 'tef_smartpos') && !divideByPeople;
+
+      if (isTefPayment && company?.id) {
+        const tefPaymentType = tefCardType;
+        const installmentCount = tefInstallmentMode === 'parcelado' ? parseInt(tefInstallments) || 2 : 1;
+
+        setTefProcessing(true);
+        const usePinpad = integType === 'tef_pinpad';
+
+        if (usePinpad) {
+          // ===== PinPad TEF WebService Flow =====
+          setTefStatus('Enviando para PinPad...');
+          try {
+            const createResult = await sendPinpadPayment(company!.id, {
+              amount: finalTotal,
+              paymentType: tefPaymentType,
+              installments: installmentCount,
+            });
+
+            if (!createResult.success || !createResult.hash) {
+              toast.error(`Erro TEF PinPad: ${createResult.errorMessage}`);
+              setTefProcessing(false);
+              setTefStatus('');
+              setIsProcessingSale(false);
+              return; // ABORT — sale NOT created
+            }
+
+            // Poll for result (max 120s)
+            setTefStatus('Aguardando pagamento no PinPad...');
+            let tefCompleted = false;
+
+            for (let i = 0; i < 120 && !tefCompleted; i++) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              const statusResult = await pollPinpadStatus(company!.id, createResult.hash!);
+              
+              if (statusResult.status === 'processing') {
+                setTefStatus('Processando pagamento no PinPad...');
+              } else if (statusResult.status === 'approved' && statusResult.success) {
+                tefCompleted = true;
+                setPinpadResult(statusResult);
+                setTefStatus('Pagamento aprovado!');
+                toast.success(`TEF PinPad aprovado! NSU: ${statusResult.nsu}`);
+                
+                await confirmPinpadTransaction(company!.id, {
+                  identificacao: String(Date.now()),
+                  rede: statusResult.acquirer,
+                  nsu: statusResult.nsu,
+                  finalizacao: statusResult.finalizacao,
+                });
+                
+                tefData = {
+                  nsu: statusResult.nsu || '',
+                  autorizacao: statusResult.authorizationCode || '',
+                  bandeira: statusResult.cardBrand || '',
+                  adquirente: statusResult.acquirer || '',
+                  tipo_pagamento: tefPaymentType,
+                  valor: finalTotal,
+                };
+                
+                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}`;
+              } else if (statusResult.status === 'declined' || statusResult.status === 'cancelled' || statusResult.status === 'error') {
+                tefCompleted = true;
+                toast.error(`TEF PinPad: ${statusResult.errorMessage || statusResult.operatorMessage || 'Pagamento não aprovado'}`);
+                setTefProcessing(false);
+                setTefStatus('');
+                setIsProcessingSale(false);
+                return; // ABORT — sale NOT created
+              }
+            }
+            
+            if (!tefCompleted) {
+              toast.warning('Timeout aguardando resposta do PinPad.');
+              setTefProcessing(false);
+              setTefStatus('');
+              setIsProcessingSale(false);
+              return; // ABORT
+            }
+          } catch (tefError: any) {
+            console.error('[PDV] TEF PinPad error:', tefError);
+            toast.error(`Erro TEF PinPad: ${tefError.message || 'Erro desconhecido'}`);
+            setTefProcessing(false);
+            setTefStatus('');
+            setIsProcessingSale(false);
+            return; // ABORT
+          }
+        } else {
+          // ===== SmartPOS (PINPDV) Flow =====
+          setTefStatus('Enviando para maquininha...');
+          try {
+            const tefIdentifier = `pdv-${Date.now()}`;
+            const createResult = await sendPaymentToMultiplusCard(company!.id, {
+              amount: finalTotal,
+              paymentType: tefPaymentType,
+              installments: installmentCount,
+              identifier: tefIdentifier,
+              description: customerName ? `Venda - ${customerName}` : 'Venda PDV',
+            });
+
+            if (!createResult.success) {
+              toast.error(`Erro TEF: ${createResult.errorMessage}`);
+              setTefProcessing(false);
+              setTefStatus('');
+              setIsProcessingSale(false);
+              return; // ABORT
+            }
+
+            setTefStatus('Aguardando pagamento na maquininha...');
+            let tefCompleted = false;
+            for (let i = 0; i < 60 && !tefCompleted; i++) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              const statusResult = await checkMultiplusCardTransactionStatus(company!.id, tefIdentifier);
+              
+              if (statusResult.status === 'processing') {
+                setTefStatus('Processando pagamento...');
+              } else if (statusResult.status === 'approved' && statusResult.success) {
+                tefCompleted = true;
+                setTefResult(statusResult);
+                setTefStatus('Pagamento aprovado!');
+                toast.success(`TEF aprovado! NSU: ${statusResult.nsu}`);
+                
+                tefData = {
+                  nsu: statusResult.nsu || '',
+                  autorizacao: statusResult.authorizationCode || '',
+                  bandeira: statusResult.cardBrand || '',
+                  adquirente: statusResult.acquirer || '',
+                  tipo_pagamento: tefPaymentType,
+                  valor: finalTotal,
+                };
+                
+                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand}`;
+              } else if (statusResult.status === 'cancelled' || statusResult.status === 'error') {
+                tefCompleted = true;
+                toast.error(`TEF: ${statusResult.errorMessage || 'Pagamento não aprovado'}`);
+                setTefProcessing(false);
+                setTefStatus('');
+                setIsProcessingSale(false);
+                return; // ABORT
+              }
+            }
+            
+            if (!tefCompleted) {
+              toast.warning('Timeout aguardando resposta da maquininha.');
+              setTefProcessing(false);
+              setTefStatus('');
+              setIsProcessingSale(false);
+              return; // ABORT
+            }
+          } catch (tefError: any) {
+            console.error('[PDV] TEF error:', tefError);
+            toast.error(`Erro TEF: ${tefError.message || 'Erro desconhecido'}`);
+            setTefProcessing(false);
+            setTefStatus('');
+            setIsProcessingSale(false);
+            return; // ABORT
+          }
+        }
+
+        setTefProcessing(false);
+        setTefStatus('');
+      }
+
+      // ===== TEF approved (or not TEF) — now create the sale =====
       const primaryPaymentMethod = divideByPeople 
         ? peoplePaying[0]?.paymentMethodId || activePaymentMethods[0]?.id
         : selectedPaymentMethod;
@@ -491,160 +657,6 @@ export default function PDV() {
       if (saleId) {
         let nfceEmitted = false;
         let emittedNfceId: string | null = null;
-        let tefData: NFCeTefData | undefined = undefined;
-
-        // TEF: Send payment if configured and payment is card/pix
-        const selectedMethod = activePaymentMethods.find(m => m.id === selectedPaymentMethod);
-        const integType = (selectedMethod as any)?.integration_type;
-        const isTefPayment = integType === 'tef_pinpad' || integType === 'tef_smartpos';
-        
-        if (isTefPayment && company?.id && !divideByPeople) {
-            const paymentMethodName = selectedMethod?.name?.toLowerCase() || '';
-            const tefPaymentType: 'credit' | 'debit' | 'pix' = paymentMethodName.includes('créd') || paymentMethodName.includes('cred') ? 'credit' 
-              : paymentMethodName.includes('débit') || paymentMethodName.includes('debit') ? 'debit' 
-              : paymentMethodName.includes('pix') ? 'pix'
-              : 'credit'; // default to credit
-            
-            setTefProcessing(true);
-
-            const usePinpad = integType === 'tef_pinpad';
-
-            if (usePinpad) {
-              // ===== PinPad TEF WebService Flow =====
-              setTefStatus('Enviando para PinPad...');
-              try {
-                const createResult = await sendPinpadPayment(company!.id, {
-                  amount: finalTotal,
-                  paymentType: tefPaymentType,
-                  installments: 1,
-                });
-
-                if (!createResult.success || !createResult.hash) {
-                  toast.error(`Erro TEF PinPad: ${createResult.errorMessage}`);
-                  setTefProcessing(false);
-                  setTefStatus('');
-                } else {
-                  // Poll for result (max 120s, every 1s respecting 500ms minimum)
-                  setTefStatus('Aguardando pagamento no PinPad...');
-                  let tefCompleted = false;
-                  let lastResult: PinpadTransactionResult | null = null;
-
-                  for (let i = 0; i < 120 && !tefCompleted; i++) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
-                    const statusResult = await pollPinpadStatus(company!.id, createResult.hash!);
-                    lastResult = statusResult;
-                    
-                    if (statusResult.status === 'processing') {
-                      setTefStatus('Processando pagamento no PinPad...');
-                    } else if (statusResult.status === 'approved' && statusResult.success) {
-                      tefCompleted = true;
-                      setPinpadResult(statusResult);
-                      setTefStatus('Pagamento aprovado!');
-                      toast.success(`TEF PinPad aprovado! NSU: ${statusResult.nsu}`);
-                      
-                      // Confirm transaction (CNF)
-                      await confirmPinpadTransaction(company!.id, {
-                        identificacao: String(Date.now()),
-                        rede: statusResult.acquirer,
-                        nsu: statusResult.nsu,
-                        finalizacao: statusResult.finalizacao,
-                      });
-                      
-                      // Build TEF data for NFC-e
-                      tefData = {
-                        nsu: statusResult.nsu || '',
-                        autorizacao: statusResult.authorizationCode || '',
-                        bandeira: statusResult.cardBrand || '',
-                        adquirente: statusResult.acquirer || '',
-                        tipo_pagamento: tefPaymentType,
-                        valor: finalTotal,
-                      };
-                      
-                      saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}`;
-                    } else if (statusResult.status === 'declined' || statusResult.status === 'cancelled' || statusResult.status === 'error') {
-                      tefCompleted = true;
-                      toast.error(`TEF PinPad: ${statusResult.errorMessage || statusResult.operatorMessage || 'Pagamento não aprovado'}`);
-                    }
-                  }
-                  
-                  if (!tefCompleted) {
-                    toast.warning('Timeout aguardando resposta do PinPad. Verifique o pagamento manualmente.');
-                  }
-                  
-                  setTefProcessing(false);
-                  setTefStatus('');
-                }
-              } catch (tefError: any) {
-                console.error('[PDV] TEF PinPad error:', tefError);
-                toast.error(`Erro TEF PinPad: ${tefError.message || 'Erro desconhecido'}`);
-                setTefProcessing(false);
-                setTefStatus('');
-              }
-            } else {
-              // ===== SmartPOS (PINPDV) Flow (existing) =====
-              setTefStatus('Enviando para maquininha...');
-              try {
-                const tefIdentifier = `pdv-${saleId.substring(0, 8)}-${Date.now()}`;
-                const createResult = await sendPaymentToMultiplusCard(company!.id, {
-                  amount: finalTotal,
-                  paymentType: tefPaymentType,
-                  installments: 1,
-                  identifier: tefIdentifier,
-                  description: customerName ? `Venda - ${customerName}` : 'Venda PDV',
-                });
-
-                if (!createResult.success) {
-                  toast.error(`Erro TEF: ${createResult.errorMessage}`);
-                  setTefProcessing(false);
-                  setTefStatus('');
-                } else {
-                  setTefStatus('Aguardando pagamento na maquininha...');
-                  let tefCompleted = false;
-                  for (let i = 0; i < 60 && !tefCompleted; i++) {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    
-                    const statusResult = await checkMultiplusCardTransactionStatus(company!.id, tefIdentifier);
-                    
-                    if (statusResult.status === 'processing') {
-                      setTefStatus('Processando pagamento...');
-                    } else if (statusResult.status === 'approved' && statusResult.success) {
-                      tefCompleted = true;
-                      setTefResult(statusResult);
-                      setTefStatus('Pagamento aprovado!');
-                      toast.success(`TEF aprovado! NSU: ${statusResult.nsu}`);
-                      
-                      tefData = {
-                        nsu: statusResult.nsu || '',
-                        autorizacao: statusResult.authorizationCode || '',
-                        bandeira: statusResult.cardBrand || '',
-                        adquirente: statusResult.acquirer || '',
-                        tipo_pagamento: tefPaymentType,
-                        valor: finalTotal,
-                      };
-                      
-                      saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand}`;
-                    } else if (statusResult.status === 'cancelled' || statusResult.status === 'error') {
-                      tefCompleted = true;
-                      toast.error(`TEF: ${statusResult.errorMessage || 'Pagamento não aprovado'}`);
-                    }
-                  }
-                  
-                  if (!tefCompleted) {
-                    toast.warning('Timeout aguardando resposta da maquininha. Verifique o pagamento manualmente.');
-                  }
-                  
-                  setTefProcessing(false);
-                  setTefStatus('');
-                }
-              } catch (tefError: any) {
-                console.error('[PDV] TEF error:', tefError);
-                toast.error(`Erro TEF: ${tefError.message || 'Erro desconhecido'}`);
-                setTefProcessing(false);
-                setTefStatus('');
-              }
-            }
-        }
 
         // Emit NFC-e if checkbox was checked
         if (emitNFCe && company?.id && isModuleEnabled('fiscal')) {
