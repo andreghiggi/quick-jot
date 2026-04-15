@@ -94,7 +94,8 @@ export default function PDV() {
     closeRegister, 
     reopenRegister,
     addSale,
-    deleteSale
+    deleteSale,
+    refetch: refetchSales
   } = useCashRegister({ companyId: company?.id });
 
   const mesasEnabled = isModuleEnabled('mesas');
@@ -559,7 +560,8 @@ export default function PDV() {
                   valor: finalTotal,
                 };
                 
-                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}`;
+                const installLabel = installmentCount > 1 ? ` | ${installmentCount}x ${tefCardType === 'credit' ? 'Crédito' : 'Débito'}` : ` | ${tefCardType === 'credit' ? 'Crédito à Vista' : tefCardType === 'debit' ? 'Débito' : 'PIX'}`;
+                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}`;
               } else if (statusResult.status === 'declined' || statusResult.status === 'cancelled' || statusResult.status === 'error') {
                 tefCompleted = true;
                 toast.error(`TEF PinPad: ${statusResult.errorMessage || statusResult.operatorMessage || 'Pagamento não aprovado'}`);
@@ -640,7 +642,8 @@ export default function PDV() {
                   valor: finalTotal,
                 };
                 
-                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand}`;
+                const installLabelSmart = installmentCount > 1 ? ` | ${installmentCount}x ${tefCardType === 'credit' ? 'Crédito' : 'Débito'}` : ` | ${tefCardType === 'credit' ? 'Crédito à Vista' : tefCardType === 'debit' ? 'Débito' : 'PIX'}`;
+                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand}${installLabelSmart}`;
               } else if (statusResult.status === 'cancelled' || statusResult.status === 'error') {
                 tefCompleted = true;
                 toast.error(`TEF: ${statusResult.errorMessage || 'Pagamento não aprovado'}`);
@@ -908,6 +911,23 @@ export default function PDV() {
       minute: '2-digit'
     });
 
+    // Build payment condition line from TEF notes
+    const saleNotesStr = sale.notes || '';
+    let paymentConditionHtml = '';
+    const installMatch = saleNotesStr.match(/(\d+)x (Crédito|Débito)/);
+    if (installMatch) {
+      const parcelas = parseInt(installMatch[1]);
+      const valorParcela = (sale.final_total / parcelas).toFixed(2);
+      paymentConditionHtml = '<p><strong>Condição:</strong> ' + installMatch[1] + 'x ' + installMatch[2] + ' de R$ ' + valorParcela + '</p>';
+    } else {
+      const avistaMatch = saleNotesStr.match(/(Crédito à Vista|Débito|PIX)/);
+      if (avistaMatch) {
+        paymentConditionHtml = '<p><strong>Condição:</strong> ' + avistaMatch[1] + '</p>';
+      }
+    }
+    const isCancelled = saleNotesStr.includes('[CANCELADA]');
+    const cancelledBanner = isCancelled ? '<p style="color:red;font-weight:bold;text-align:center;font-size:14px;margin:2mm 0">*** VENDA CANCELADA ***</p>' : '';
+
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -942,6 +962,7 @@ export default function PDV() {
         </style>
       </head>
       <body>
+        ${cancelledBanner}
         <div class="header">
           <h1>${company?.name || 'PDV'}</h1>
           <h2>CUPOM DE VENDA</h2>
@@ -969,8 +990,9 @@ export default function PDV() {
         <div class="divider"></div>
         <div class="section">
           <p><strong>Pagamento:</strong> ${sale.payment_method?.name || 'N/A'}</p>
+          ${paymentConditionHtml}
         </div>
-        ${sale.notes ? `<div class="divider"></div><p class="notes"><strong>Obs:</strong> ${sale.notes}</p>` : ''}
+        ${saleNotesStr ? `<div class="divider"></div><p class="notes"><strong>Obs:</strong> ${saleNotesStr}</p>` : ''}
         <div class="divider"></div>
         <p class="footer">Obrigado pela preferência!</p>
         <script>window.onload = function() { window.print(); window.close(); }</script>
@@ -998,9 +1020,27 @@ export default function PDV() {
     return null;
   }
 
+  // Mark a sale as cancelled in the database
+  async function markSaleAsCancelled(saleId: string, currentNotes: string | null) {
+    const cancelledNotes = `[CANCELADA] ${currentNotes || ''}`.trim();
+    await supabase
+      .from('pdv_sales')
+      .update({ notes: cancelledNotes })
+      .eq('id', saleId);
+    // Refresh sales list via hook
+    await refetchSales();
+  }
+
   // Handle TEF estorno (cancel/reverse completed transaction)
   async function handleTefEstorno(sale: typeof sales[0]) {
     if (!company?.id) return;
+    
+    // Check if already cancelled
+    if (sale.notes?.includes('[CANCELADA]')) {
+      toast.error('Esta venda já foi estornada/cancelada');
+      return;
+    }
+    
     const tefInfo = parseTefDataFromNotes(sale.notes);
     if (!tefInfo) {
       toast.error('Dados TEF não encontrados nesta venda');
@@ -1040,6 +1080,7 @@ export default function PDV() {
               if (status.status === 'approved') {
                 completed = true;
                 toast.success(`Estorno aprovado! NSU: ${status.nsu}`);
+                await markSaleAsCancelled(sale.id, sale.notes);
               } else if (status.status === 'declined' || status.status === 'error' || status.status === 'cancelled') {
                 completed = true;
                 toast.error(`Estorno recusado: ${status.errorMessage || status.operatorMessage || 'Não aprovado'}`);
@@ -1050,6 +1091,7 @@ export default function PDV() {
             }
           } else {
             toast.success('Estorno enviado com sucesso!');
+            await markSaleAsCancelled(sale.id, sale.notes);
           }
         } else {
           toast.error(`Erro no estorno: ${result.errorMessage}`);
@@ -1059,6 +1101,7 @@ export default function PDV() {
         const success = await abortMultiplusCardSale(company.id, tefInfo.nsu, true);
         if (success) {
           toast.success('Estorno enviado para a maquininha!');
+          await markSaleAsCancelled(sale.id, sale.notes);
         } else {
           toast.error('Erro ao enviar estorno para a maquininha');
         }
@@ -1924,8 +1967,8 @@ export default function PDV() {
                           <p className="font-medium">
                             {format(new Date(sale.created_at), "HH:mm", { locale: ptBR })}
                           </p>
-                          <Badge variant="outline">
-                            {sale.payment_method?.name || 'N/A'}
+                          <Badge variant={sale.notes?.includes('[CANCELADA]') ? 'destructive' : 'outline'}>
+                            {sale.notes?.includes('[CANCELADA]') ? 'CANCELADA' : (sale.payment_method?.name || 'N/A')}
                           </Badge>
                         </div>
                         {sale.customer_name && (
@@ -1937,7 +1980,7 @@ export default function PDV() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-right">
-                          <p className="font-bold text-primary">{formatCurrency(sale.final_total)}</p>
+                          <p className={`font-bold ${sale.notes?.includes('[CANCELADA]') ? 'line-through text-muted-foreground' : 'text-primary'}`}>{formatCurrency(sale.final_total)}</p>
                           {sale.discount > 0 && (
                             <p className="text-xs text-muted-foreground">Desc: {formatCurrency(sale.discount)}</p>
                           )}
@@ -2042,7 +2085,7 @@ export default function PDV() {
                             </Button>
                           );
                         })()}
-                        {parseTefDataFromNotes(sale.notes) && (
+                        {parseTefDataFromNotes(sale.notes) && !sale.notes?.includes('[CANCELADA]') && (
                           <Button 
                             size="icon" 
                             variant="ghost"
