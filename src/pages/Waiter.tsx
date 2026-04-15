@@ -478,13 +478,6 @@ export default function Waiter() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold">R$ {item.total_price.toFixed(2)}</span>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => removeItemFromTab(item.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
                       </div>
                     </div>
                   ))}
