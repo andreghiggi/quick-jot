@@ -381,8 +381,7 @@ def encontrar_chrome():
     return None
 
 def imprimir_html(html, order_number):
-    """Salva HTML e envia direto para a impressora padrão.
-    Usa Chrome/Edge em modo --headless para impressão silenciosa sem abrir janela."""
+    """Salva HTML como arquivo temporário e imprime silenciosamente via Chrome kiosk sem tela cheia"""
     try:
         arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.html")
         with open(arquivo, 'w', encoding='utf-8') as f:
@@ -390,38 +389,32 @@ def imprimir_html(html, order_number):
         
         file_url = f'file:///{arquivo.replace(os.sep, "/")}'
         log(f"HTML salvo: {arquivo}", "PRINT")
-        
+
         browser_exe = encontrar_chrome()
         if browser_exe:
             perfil_temp = tempfile.mkdtemp(prefix="comanda_printer_")
-            log("Imprimindo via --headless (sem janela visível)...", "PRINT")
+            log("Imprimindo via Chrome kiosk-printing oculto...", "PRINT")
             try:
                 processo = subprocess.Popen([
                     browser_exe,
                     f"--user-data-dir={perfil_temp}",
-                    "--headless=new",
-                    "--disable-gpu",
                     "--no-first-run",
                     "--no-default-browser-check",
                     "--allow-file-access-from-files",
-                    "--run-all-compositor-stages-before-draw",
-                    "--virtual-time-budget=5000",
                     "--kiosk-printing",
                     "--disable-print-preview",
-                    file_url,
+                    "--disable-extensions",
+                    "--disable-background-networking",
+                    "--window-position=-9999,-9999",
+                    "--window-size=1,1",
+                    "--app=" + file_url,
                 ], shell=False)
-                log("Enviado para impressora padrão (headless)!", "PRINT")
-
-                # Aguarda renderização headless e envio ao spooler
-                time.sleep(10)
-
+                log("Aguardando impressão...", "PRINT")
+                time.sleep(15)
                 try:
-                    processo.poll()
-                    if processo.returncode is None:
-                        processo.kill()
+                    processo.kill()
                 except Exception:
                     pass
-
                 try:
                     os.unlink(arquivo)
                 except Exception:
@@ -433,13 +426,9 @@ def imprimir_html(html, order_number):
                     pass
                 return True
             except Exception as e:
-                log(f"Falha no headless printing: {e}", "ERRO")
+                log(f"Falha no kiosk-printing: {e}", "ERRO")
 
-        log("Nenhum Chrome/Edge compatível encontrado para impressão automática.", "ERRO")
-        try:
-            os.unlink(arquivo)
-        except Exception:
-            pass
+        log("Nenhum Chrome/Edge encontrado.", "ERRO")
         return False
     except Exception as e:
         log(f"Falha na impressão: {e}", "ERRO")
