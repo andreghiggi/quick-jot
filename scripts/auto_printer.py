@@ -602,6 +602,9 @@ if __name__ == "__main__":
     # Busca configuração de papel
     buscar_paper_size(company_id)
     
+    # Diagnóstico de impressora e navegador
+    diagnosticar_impressora()
+    
     print()
     print("=" * 50)
     log(f"Empresa encontrada: {company_name}", "OK")
