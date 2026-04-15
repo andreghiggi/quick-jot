@@ -1824,7 +1824,14 @@ export default function PDV() {
                   Cancelar
                 </Button>
                 <Button 
-                  onClick={handleFinalizeSale} 
+                  onClick={() => {
+                    // If PIX payment with QR configured, show QR dialog first
+                    if (isPixPayment && pixConfigured && !divideByPeople) {
+                      setPixQrDialog(true);
+                    } else {
+                      handleFinalizeSale();
+                    }
+                  }} 
                   disabled={
                     isProcessingSale || 
                     (divideByPeople 
@@ -1838,6 +1845,8 @@ export default function PDV() {
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Processando...
                     </>
+                  ) : isPixPayment && pixConfigured ? (
+                    'Gerar QR Code PIX'
                   ) : (
                     'Confirmar Pagamento'
                   )}
