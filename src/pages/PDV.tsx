@@ -497,7 +497,7 @@ export default function PDV() {
       const isTefPayment = (integType === 'tef_pinpad' || integType === 'tef_smartpos') && !divideByPeople;
 
       if (isTefPayment && company?.id) {
-        const tefPaymentType = tefCardType;
+        const tefPaymentType = 'credit' as const; // TEF handles card type detection
         const installmentCount = tefInstallmentMode === 'parcelado' ? parseInt(tefInstallments) || 2 : 1;
 
         setTefProcessing(true);
