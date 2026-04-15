@@ -574,8 +574,10 @@ def processar_fila(company_id):
         log(f"Imprimindo: {label}...", "FILA")
         html = job.get('html_content', '')
         if html and imprimir_html(html, label.replace('#', '').replace(' ', '_')):
-            marcar_fila_impressa(job['id'])
-            log(f"Job '{label}' impresso!", "OK")
+            if marcar_fila_impressa(job['id']):
+                log(f"Job '{label}' impresso e marcado na fila!", "OK")
+            else:
+                log(f"Job '{label}' disparado, mas não foi marcado como impresso.", "AVISO")
         else:
             log(f"Falha ao imprimir job '{label}'", "ERRO")
     
@@ -587,7 +589,7 @@ def processar_fila(company_id):
 if __name__ == "__main__":
     print()
     print("=" * 50)
-    print(f"  {STORE_NAME} - Impressão Automática v5.0")
+    print(f"  {STORE_NAME} - Impressão Automática {SCRIPT_VERSION}")
     print("=" * 50)
     print(f"  URL: {SUPABASE_URL}")
     print("=" * 50)
