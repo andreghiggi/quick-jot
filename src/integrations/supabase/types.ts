@@ -1043,6 +1043,44 @@ export type Database = {
           },
         ]
       }
+      print_queue: {
+        Row: {
+          company_id: string
+          created_at: string
+          html_content: string
+          id: string
+          label: string | null
+          printed: boolean
+          printed_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          html_content: string
+          id?: string
+          label?: string | null
+          printed?: boolean
+          printed_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          html_content?: string
+          id?: string
+          label?: string | null
+          printed?: boolean
+          printed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_queue_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_optionals: {
         Row: {
           active: boolean
