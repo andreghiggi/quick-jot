@@ -11,6 +11,7 @@ import requests
 import time
 import tempfile
 import subprocess
+import re
 import os
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -25,7 +26,7 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v8.1"
+SCRIPT_VERSION = "v8.2"
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -40,6 +41,8 @@ HEADERS = {
 
 # Histórico de pedidos impressos nesta sessão
 pedidos_impressos_sessao = []
+# IDs que falharam na impressão — evita loop infinito
+ids_com_falha = set()
 
 def log(msg, tipo="INFO"):
     """Log com timestamp em tela e arquivo"""
@@ -370,66 +373,106 @@ def encontrar_chrome():
             return caminho
     return None
 
+def html_para_texto(html):
+    """Converte HTML para texto plano mantendo estrutura do recibo"""
+    text = html
+    # Preserva quebras de linha
+    text = re.sub(r'<br\s*/?>', '\n', text)
+    text = re.sub(r'<hr[^>]*>', '\n' + '-' * 32 + '\n', text)
+    text = re.sub(r'</(p|div|tr|h[1-6]|li)>', '\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'</(td|th)>', '  ', text, flags=re.IGNORECASE)
+    # Remove todas as tags
+    text = re.sub(r'<[^>]+>', '', text)
+    # Decodifica entidades HTML
+    text = text.replace('&nbsp;', ' ').replace('&amp;', '&')
+    text = text.replace('&lt;', '<').replace('&gt;', '>')
+    text = text.replace('&quot;', '"').replace('&#39;', "'")
+    # Limpa espaços extras
+    text = re.sub(r'[ \t]+', ' ', text)
+    text = re.sub(r' *\n *', '\n', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
 def imprimir_html(html, order_number):
-    """Imprime HTML silenciosamente direto na impressora padrão (sem abrir janela)"""
+    """Imprime direto na impressora padrão via GDI (win32ui) — 100% silencioso, sem navegador"""
     try:
-        # 1. Salva HTML em arquivo temporário
-        html_file = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.html")
-        
-        with open(html_file, 'w', encoding='utf-8') as f:
-            f.write(html)
-        log(f"HTML salvo: {html_file}", "PRINT")
-        
-        # 2. Imprime via COM (Internet Explorer invisível) — 100% silencioso
-        try:
-            import win32com.client
-            
-            log("Abrindo impressão via COM (silencioso)...", "PRINT")
-            ie = win32com.client.Dispatch("InternetExplorer.Application")
-            ie.Visible = False
-            ie.Navigate(f"file:///{html_file.replace(os.sep, '/')}")
-            
-            # Aguarda carregar
-            tentativas = 0
-            while ie.Busy or ie.ReadyState != 4:
-                time.sleep(0.3)
-                tentativas += 1
-                if tentativas > 40:  # ~12s timeout
-                    log("Timeout aguardando HTML carregar", "ERRO")
-                    ie.Quit()
-                    return False
-            
-            time.sleep(1)  # garante renderização completa
-            
-            # OLECMDID_PRINT = 6, OLECMDEXECOPT_DONTPROMPTUSER = 2
-            ie.ExecWB(6, 2)
-            log("Enviado para impressora padrão!", "PRINT")
-            
-            time.sleep(5)  # aguarda spooler processar
-            ie.Quit()
-            
-        except ImportError:
-            log("pywin32 (win32com) não instalado! Rode: pip install pywin32", "ERRO")
-            return False
-        except Exception as e:
-            log(f"Erro COM: {e}", "ERRO")
-            try:
-                ie.Quit()
-            except:
-                pass
-            return False
-        
-        # 3. Limpeza
-        try:
-            os.unlink(html_file)
-            log("Arquivo temporário removido", "PRINT")
-        except:
-            pass
-        
+        import win32print
+        import win32ui
+        import win32con
+
+        # Converte HTML para texto plano
+        texto = html_para_texto(html)
+        linhas = texto.split('\n')
+
+        printer_name = win32print.GetDefaultPrinter()
+        log(f"Impressora padrão: {printer_name}", "PRINT")
+
+        # Cria Device Context para a impressora
+        hDC = win32ui.CreateDC()
+        hDC.CreatePrinterDC(printer_name)
+
+        # Dimensões da página em pixels
+        page_w = hDC.GetDeviceCaps(win32con.HORZRES)
+        page_h = hDC.GetDeviceCaps(win32con.VERTRES)
+        dpi_x = hDC.GetDeviceCaps(win32con.LOGPIXELSX)
+        dpi_y = hDC.GetDeviceCaps(win32con.LOGPIXELSY)
+
+        # Fonte monospace proporcional ao papel
+        # 58mm ≈ 32 colunas, 80mm ≈ 48 colunas
+        is_80mm = PAPER_SIZE == '80mm'
+        colunas = 48 if is_80mm else 32
+        font_height = int(page_w / colunas * 1.6)
+        margin_x = int(dpi_x * 0.08)  # ~2mm
+        margin_y = int(dpi_y * 0.08)
+
+        font = win32ui.CreateFont({
+            'name': 'Courier New',
+            'height': font_height,
+            'weight': 700,  # bold
+        })
+        hDC.SelectObject(font)
+
+        # Calcula altura da linha
+        tm = hDC.GetTextMetrics()
+        line_h = tm['tmHeight'] + tm['tmExternalLeading'] + int(tm['tmHeight'] * 0.1)
+        usable_h = page_h - margin_y * 2
+        lines_per_page = max(1, usable_h // line_h)
+
+        hDC.StartDoc(f"Pedido {order_number}")
+        hDC.StartPage()
+
+        y = margin_y
+        line_count = 0
+
+        for linha in linhas:
+            # Se exceder a página, nova página
+            if line_count >= lines_per_page:
+                hDC.EndPage()
+                hDC.StartPage()
+                y = margin_y
+                line_count = 0
+
+            # Centraliza linhas de divisória ou cabeçalho curto
+            if set(linha.strip()) <= {'-', '=', '_'} and len(linha.strip()) > 3:
+                hDC.TextOut(margin_x, y, '-' * colunas)
+            else:
+                hDC.TextOut(margin_x, y, linha[:colunas * 2])  # trunca se muito longa
+
+            y += line_h
+            line_count += 1
+
+        hDC.EndPage()
+        hDC.EndDoc()
+        hDC.DeleteDC()
+
+        log("Enviado direto para impressora via GDI!", "PRINT")
         return True
-        
+
+    except ImportError as ie:
+        log(f"pywin32 não instalado! Rode: pip install pywin32  ({ie})", "ERRO")
+        return False
     except Exception as e:
-        log(f"Falha na impressão: {e}", "ERRO")
+        log(f"Falha na impressão GDI: {e}", "ERRO")
         return False
 
 def diagnosticar_impressora():
