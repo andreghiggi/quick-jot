@@ -12,7 +12,7 @@ import time
 import tempfile
 import subprocess
 import os
-import webbrowser
+
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -26,8 +26,7 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v5.8"
-PILOT_PRINT_SLUGS = {"lancheria-da-i9-263ee29a"}
+SCRIPT_VERSION = "v5.9"
 SHOW_DEBUG_IN_CONSOLE = False
 SHOW_HEARTBEAT_DOTS = False
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
@@ -478,85 +477,67 @@ def imprimir_html(html, order_number):
 
         log(f"HTML salvo: {arquivo}", "PRINT")
         file_url = f'file:///{arquivo.replace(os.sep, "/")}'
-        usar_modo_piloto = COMPANY_SLUG in PILOT_PRINT_SLUGS
+        sucesso = False
 
-        if usar_modo_piloto:
-            log(f"Modo piloto ativo para {COMPANY_SLUG}", "PRINT")
-            sucesso = False
+        # 1) Tenta impressão silenciosa nativa do Windows para HTML
+        sucesso = imprimir_via_windows_html(arquivo)
 
-            # 1) Tenta impressão silenciosa nativa do Windows para HTML
-            sucesso = imprimir_via_windows_html(arquivo)
-
-            # 2) Fallback silencioso: HTML → PDF headless → print PDF
-            browser_path = encontrar_browser_headless()
-            if not sucesso and browser_path:
-                pdf_path = arquivo.replace('.html', '.pdf')
-                try:
-                    log(f"Gerando PDF via {os.path.basename(browser_path)} headless...", "PRINT")
-                    proc = subprocess.run(
-                        [browser_path, '--headless', '--disable-gpu',
-                         '--no-pdf-header-footer',
-                         f'--print-to-pdf={pdf_path}', file_url],
-                        timeout=15, capture_output=True
-                    )
-                    log(f"Headless PDF retornou código {proc.returncode}", "PRINT")
-                    if proc.returncode == 0 and os.path.isfile(pdf_path):
-                        log(f"PDF gerado: {pdf_path}", "PRINT")
-                        # Imprime o PDF silenciosamente via associação do Windows
+        # 2) Fallback silencioso: HTML → PDF headless → print PDF
+        browser_path = encontrar_browser_headless()
+        if not sucesso and browser_path:
+            pdf_path = arquivo.replace('.html', '.pdf')
+            try:
+                log(f"Gerando PDF via {os.path.basename(browser_path)} headless...", "PRINT")
+                proc = subprocess.run(
+                    [browser_path, '--headless', '--disable-gpu',
+                     '--no-pdf-header-footer',
+                     f'--print-to-pdf={pdf_path}', file_url],
+                    timeout=15, capture_output=True
+                )
+                log(f"Headless PDF retornou código {proc.returncode}", "PRINT")
+                if proc.returncode == 0 and os.path.isfile(pdf_path):
+                    log(f"PDF gerado: {pdf_path}", "PRINT")
+                    try:
+                        os.startfile(pdf_path, 'print')
+                        log("PDF enviado para impressora via startfile('print')", "PRINT")
+                        time.sleep(5)
+                        sucesso = True
+                    except Exception as e:
+                        log(f"startfile PDF falhou: {e}, tentando ShellExecute...", "AVISO")
                         try:
-                            os.startfile(pdf_path, 'print')
-                            log("PDF enviado para impressora via startfile('print')", "PRINT")
+                            subprocess.run(
+                                ['rundll32.exe', 'mshtml.dll,PrintHTML', pdf_path],
+                                timeout=15, capture_output=True
+                            )
                             time.sleep(5)
                             sucesso = True
-                        except Exception as e:
-                            log(f"startfile PDF falhou: {e}, tentando ShellExecute...", "AVISO")
-                            try:
-                                subprocess.run(
-                                    ['rundll32.exe', 'mshtml.dll,PrintHTML', pdf_path],
-                                    timeout=15, capture_output=True
-                                )
-                                time.sleep(5)
-                                sucesso = True
-                            except Exception as e2:
-                                log(f"ShellExecute PDF falhou: {e2}", "AVISO")
-                        # Limpa PDF
-                        try:
-                            os.unlink(pdf_path)
-                        except Exception:
-                            pass
-                    else:
-                        log(f"PDF não foi gerado (código {proc.returncode})", "AVISO")
-                        if proc.stderr:
-                            log(f"stderr: {proc.stderr.decode('utf-8', errors='replace')[:200]}", "DEBUG")
-                except subprocess.TimeoutExpired:
-                    log("Headless timeout na geração do PDF", "AVISO")
-                except Exception as e:
-                    log(f"Headless falhou: {e}", "AVISO")
+                        except Exception as e2:
+                            log(f"ShellExecute PDF falhou: {e2}", "AVISO")
+                    try:
+                        os.unlink(pdf_path)
+                    except Exception:
+                        pass
+                else:
+                    log(f"PDF não foi gerado (código {proc.returncode})", "AVISO")
+                    if proc.stderr:
+                        log(f"stderr: {proc.stderr.decode('utf-8', errors='replace')[:200]}", "DEBUG")
+            except subprocess.TimeoutExpired:
+                log("Headless timeout na geração do PDF", "AVISO")
+            except Exception as e:
+                log(f"Headless falhou: {e}", "AVISO")
 
-            # 3) Sem fallback visual no piloto: nunca abre navegador no PC
-            if not sucesso:
-                log("Impressão silenciosa falhou no piloto; navegador bloqueado nesta loja.", "ERRO")
+        # Nunca abre navegador no PC
+        if not sucesso:
+            log("Impressão silenciosa falhou; navegador bloqueado.", "ERRO")
 
-            # Limpeza
-            time.sleep(2)
-            try:
-                os.unlink(arquivo)
-                log("Arquivo temporário removido", "PRINT")
-            except Exception:
-                pass
-            return sucesso
-        else:
-            log(f"Modo legado preservado para {COMPANY_SLUG or 'loja sem slug'}", "PRINT")
-            webbrowser.open(file_url)
-            log("Enviado para o navegador no modo legado.", "PRINT")
-            time.sleep(5)
-
-            try:
-                os.unlink(arquivo)
-                log("Arquivo temporário removido", "PRINT")
-            except Exception:
-                pass
-            return True
+        # Limpeza
+        time.sleep(2)
+        try:
+            os.unlink(arquivo)
+            log("Arquivo temporário removido", "PRINT")
+        except Exception:
+            pass
+        return sucesso
     except Exception as e:
         log(f"Falha na impressão: {e}", "ERRO")
         return False
@@ -738,7 +719,7 @@ if __name__ == "__main__":
     log(f"Empresa encontrada: {company_name}", "OK")
     log(f"Company ID: {company_id}", "OK")
     log(f"Papel: {PAPER_SIZE}", "OK")
-    log(f"Modo de impressão: {'piloto i9' if COMPANY_SLUG in PILOT_PRINT_SLUGS else 'legado'}", "CONFIG")
+    log(f"Modo de impressão: silencioso (sem navegador)", "CONFIG")
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
     print("  Pressione Ctrl+C para parar")

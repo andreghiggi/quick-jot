@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '15/04/2026',
+    version: '1.26.3',
+    type: 'improvement',
+    description: 'Impressão automática v5.9: modo silencioso (sem abrir navegador no PC) aplicado para todas as lojas da base, não apenas piloto. Impressão de mesas e cardápio mantida sem alterações.',
+  },
+  {
+    date: '15/04/2026',
     version: '1.26.2',
     type: 'fix',
     description: 'Impressão local (piloto Lancheria da i9): nova tentativa silenciosa nativa do Windows para HTML antes do modo headless, além de remover logs DEBUG e pontinhos do terminal preto.',
