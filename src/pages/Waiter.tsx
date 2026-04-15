@@ -625,11 +625,12 @@ export default function Waiter() {
                             R$ {(item.quantity * item.unitPrice).toFixed(2)}
                           </span>
                         </div>
-                        <Input
-                          placeholder="Observação..."
+                        <Textarea
+                          placeholder="Observação do item..."
                           value={item.notes}
                           onChange={(e) => handleUpdateCartNotes(item.productId, e.target.value)}
-                          className="h-7 text-xs"
+                          className="min-h-[48px] text-xs resize-none"
+                          rows={2}
                         />
                       </div>
                     ))
