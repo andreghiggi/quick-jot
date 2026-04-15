@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { MultiplusCardSettings } from '@/components/admin/MultiplusCardSettings';
 import { PinpadSettings } from '@/components/admin/PinpadSettings';
 import { NFCeSettings } from '@/components/admin/NFCeSettings';
+import { PixSettings } from '@/components/admin/PixSettings';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plug } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -56,6 +57,7 @@ export default function IntegrationsPage() {
               <MultiplusCardSettings companyId={companyId} />
               <PinpadSettings companyId={companyId} />
               <NFCeSettings companyId={companyId} />
+              <PixSettings companyId={companyId} />
             </>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
