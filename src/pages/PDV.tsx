@@ -488,6 +488,7 @@ export default function PDV() {
         const installmentCount = tefInstallmentMode === 'parcelado' ? parseInt(tefInstallments) || 2 : 1;
 
         setTefProcessing(true);
+        tefCancelRef.current = false;
         const usePinpad = integType === 'tef_pinpad';
 
         if (usePinpad) {
