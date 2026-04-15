@@ -26,7 +26,7 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v8.2"
+SCRIPT_VERSION = "v8.3"
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -393,86 +393,96 @@ def html_para_texto(html):
     return text.strip()
 
 def imprimir_html(html, order_number):
-    """Imprime direto na impressora padrão via GDI (win32ui) — 100% silencioso, sem navegador"""
+    """Imprime via Chrome headless (PDF invisível) + envio silencioso à impressora padrão"""
+    chrome = encontrar_chrome()
+    if not chrome:
+        log("Chrome/Edge não encontrado! Instale o Google Chrome.", "ERRO")
+        return False
+
+    tmp = tempfile.gettempdir()
+    html_path = os.path.join(tmp, f"ct_{order_number}.html")
+    pdf_path = os.path.join(tmp, f"ct_{order_number}.pdf")
+
+    # Salva HTML temporário
     try:
-        import win32print
-        import win32ui
-        import win32con
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html)
+    except Exception as e:
+        log(f"Erro ao salvar HTML: {e}", "ERRO")
+        return False
 
-        # Converte HTML para texto plano
-        texto = html_para_texto(html)
-        linhas = texto.split('\n')
+    # 1. Chrome headless → PDF (100% invisível, sem janela)
+    try:
+        file_url = 'file:///' + html_path.replace('\\', '/')
+        cmd = [
+            chrome,
+            '--headless=new',
+            '--disable-gpu',
+            '--disable-software-rasterizer',
+            '--no-pdf-header-footer',
+            '--disable-extensions',
+            '--disable-popup-blocking',
+            f'--print-to-pdf={pdf_path}',
+            file_url
+        ]
+        log(f"Gerando PDF silencioso...", "PRINT")
+        subprocess.run(cmd, timeout=20, capture_output=True,
+                       creationflags=0x08000000)  # CREATE_NO_WINDOW
 
-        printer_name = win32print.GetDefaultPrinter()
-        log(f"Impressora padrão: {printer_name}", "PRINT")
+        if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) < 100:
+            log("PDF não foi gerado pelo Chrome headless", "ERRO")
+            _limpar_temp(html_path, pdf_path)
+            return False
 
-        # Cria Device Context para a impressora
-        hDC = win32ui.CreateDC()
-        hDC.CreatePrinterDC(printer_name)
-
-        # Dimensões da página em pixels
-        page_w = hDC.GetDeviceCaps(win32con.HORZRES)
-        page_h = hDC.GetDeviceCaps(win32con.VERTRES)
-        dpi_x = hDC.GetDeviceCaps(win32con.LOGPIXELSX)
-        dpi_y = hDC.GetDeviceCaps(win32con.LOGPIXELSY)
-
-        # Fonte monospace proporcional ao papel
-        # 58mm ≈ 32 colunas, 80mm ≈ 48 colunas
-        is_80mm = PAPER_SIZE == '80mm'
-        colunas = 48 if is_80mm else 32
-        font_height = int(page_w / colunas * 1.6)
-        margin_x = int(dpi_x * 0.08)  # ~2mm
-        margin_y = int(dpi_y * 0.08)
-
-        font = win32ui.CreateFont({
-            'name': 'Courier New',
-            'height': font_height,
-            'weight': 700,  # bold
-        })
-        hDC.SelectObject(font)
-
-        # Calcula altura da linha
-        tm = hDC.GetTextMetrics()
-        line_h = tm['tmHeight'] + tm['tmExternalLeading'] + int(tm['tmHeight'] * 0.1)
-        usable_h = page_h - margin_y * 2
-        lines_per_page = max(1, usable_h // line_h)
-
-        hDC.StartDoc(f"Pedido {order_number}")
-        hDC.StartPage()
-
-        y = margin_y
-        line_count = 0
-
-        for linha in linhas:
-            # Se exceder a página, nova página
-            if line_count >= lines_per_page:
-                hDC.EndPage()
-                hDC.StartPage()
-                y = margin_y
-                line_count = 0
-
-            # Centraliza linhas de divisória ou cabeçalho curto
-            if set(linha.strip()) <= {'-', '=', '_'} and len(linha.strip()) > 3:
-                hDC.TextOut(margin_x, y, '-' * colunas)
-            else:
-                hDC.TextOut(margin_x, y, linha[:colunas * 2])  # trunca se muito longa
-
-            y += line_h
-            line_count += 1
-
-        hDC.EndPage()
-        hDC.EndDoc()
-        hDC.DeleteDC()
-
-        log("Enviado direto para impressora via GDI!", "PRINT")
-        return True
-
-    except ImportError as ie:
-        log(f"pywin32 não instalado! Rode: pip install pywin32  ({ie})", "ERRO")
+        log(f"PDF gerado ({os.path.getsize(pdf_path)} bytes)", "PRINT")
+    except subprocess.TimeoutExpired:
+        log("Timeout ao gerar PDF (20s)", "ERRO")
+        _limpar_temp(html_path, pdf_path)
         return False
     except Exception as e:
-        log(f"Falha na impressão GDI: {e}", "ERRO")
+        log(f"Erro Chrome headless: {e}", "ERRO")
+        _limpar_temp(html_path, pdf_path)
         return False
+
+    # 2. Enviar PDF direto para impressora padrão (silencioso)
+    impresso = False
+    try:
+        import win32print
+        import win32api
+        printer = win32print.GetDefaultPrinter()
+        log(f"Enviando para: {printer}", "PRINT")
+        # printto envia direto para a impressora especificada
+        win32api.ShellExecute(0, "printto", pdf_path, f'"{printer}"', ".", 0)
+        impresso = True
+        log("Enviado para impressora via ShellExecute!", "PRINT")
+        time.sleep(5)  # espera o spooler processar
+    except Exception as e:
+        log(f"ShellExecute falhou ({e}), tentando PowerShell...", "AVISO")
+
+    if not impresso:
+        try:
+            subprocess.run([
+                'powershell', '-NoProfile', '-WindowStyle', 'Hidden', '-Command',
+                f'Start-Process -FilePath "{pdf_path}" -Verb Print -WindowStyle Hidden'
+            ], creationflags=0x08000000, timeout=15)
+            impresso = True
+            log("Enviado via PowerShell!", "PRINT")
+            time.sleep(5)
+        except Exception as e:
+            log(f"Falha PowerShell: {e}", "ERRO")
+
+    _limpar_temp(html_path, pdf_path)
+    return impresso
+
+
+def _limpar_temp(*files):
+    """Remove arquivos temporários ignorando erros"""
+    for f in files:
+        try:
+            if f and os.path.exists(f):
+                os.remove(f)
+        except Exception:
+            pass
 
 def diagnosticar_impressora():
     """Verifica se a impressora padrão está configurada e acessível"""
