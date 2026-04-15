@@ -370,7 +370,7 @@ def encontrar_chrome():
 
 def imprimir_html(html, order_number):
     """Salva HTML e envia direto para a impressora padrão.
-    Usa Chrome/Edge --kiosk-printing para impressão silenciosa (sem diálogo)."""
+    Usa Chrome/Edge em instância isolada com --kiosk-printing para impressão silenciosa."""
     try:
         arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.html")
         with open(arquivo, 'w', encoding='utf-8') as f:
@@ -379,38 +379,56 @@ def imprimir_html(html, order_number):
         file_url = f'file:///{arquivo.replace(os.sep, "/")}'
         log(f"HTML salvo: {arquivo}", "PRINT")
         
-        # Método 1: Chrome/Edge com --kiosk-printing (envia direto, sem diálogo)
+        # Método único: Chrome/Edge em perfil temporário para garantir que os flags
+        # sejam aplicados mesmo com o navegador já aberto no Windows.
         browser_exe = encontrar_chrome()
         if browser_exe:
-            log(f"Imprimindo via --kiosk-printing (silencioso)...", "PRINT")
+            perfil_temp = tempfile.mkdtemp(prefix="comanda_printer_")
+            log("Imprimindo via instância isolada --kiosk-printing...", "PRINT")
             try:
-                subprocess.Popen([
+                processo = subprocess.Popen([
                     browser_exe,
+                    f"--user-data-dir={perfil_temp}",
+                    "--new-window",
+                    "--no-first-run",
+                    "--no-default-browser-check",
                     "--kiosk-printing",
                     "--disable-print-preview",
-                    file_url
+                    "--app=" + file_url,
+                    "--window-position=-32000,-32000",
+                    "--window-size=200,200",
                 ], shell=False)
-                log(f"Enviado para impressora via kiosk-printing!", "PRINT")
-                time.sleep(5)
-                # Remove arquivo temporário
+                log("Enviado para impressora padrão com impressão automática!", "PRINT")
+
+                # Dá tempo para a página carregar, disparar window.print() e encerrar.
+                time.sleep(12)
+
+                try:
+                    processo.poll()
+                    if processo.returncode is None:
+                        processo.terminate()
+                except Exception:
+                    pass
+
                 try:
                     os.unlink(arquivo)
-                except:
+                except Exception:
+                    pass
+                try:
+                    import shutil
+                    shutil.rmtree(perfil_temp, ignore_errors=True)
+                except Exception:
                     pass
                 return True
             except Exception as e:
                 log(f"Falha no kiosk-printing: {e}", "ERRO")
-        
-        # Método 2: Fallback - webbrowser.open (abre diálogo, mas funciona)
-        log(f"Fallback: abrindo navegador padrão...", "PRINT")
-        webbrowser.open(file_url)
-        time.sleep(5)
+
+        log("Nenhum Chrome/Edge compatível encontrado para impressão automática.", "ERRO")
         try:
             os.unlink(arquivo)
-        except:
+        except Exception:
             pass
-        
-        return True
+        return False
     except Exception as e:
         log(f"Falha na impressão: {e}", "ERRO")
         return False
