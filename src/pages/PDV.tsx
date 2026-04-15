@@ -982,6 +982,95 @@ export default function PDV() {
     printWindow.document.close();
   }
 
+  // Parse TEF data from sale notes
+  function parseTefDataFromNotes(notes: string | null): { nsu: string; authCode: string; acquirer: string; cardBrand: string; type: 'pinpad' | 'smartpos' } | null {
+    if (!notes) return null;
+    // Match "TEF PinPad: NSU 123456 | Aut 789012 | VISA | Stone"
+    const pinpadMatch = notes.match(/TEF PinPad: NSU (\S+) \| Aut (\S+) \| ([^|]+) \| (.+)/);
+    if (pinpadMatch) {
+      return { nsu: pinpadMatch[1], authCode: pinpadMatch[2], cardBrand: pinpadMatch[3].trim(), acquirer: pinpadMatch[4].trim(), type: 'pinpad' };
+    }
+    // Match "TEF: NSU 123456 | Aut 789012 | VISA"
+    const smartposMatch = notes.match(/TEF: NSU (\S+) \| Aut (\S+) \| (.+)/);
+    if (smartposMatch) {
+      return { nsu: smartposMatch[1], authCode: smartposMatch[2], cardBrand: smartposMatch[3].trim(), acquirer: '', type: 'smartpos' };
+    }
+    return null;
+  }
+
+  // Handle TEF estorno (cancel/reverse completed transaction)
+  async function handleTefEstorno(sale: typeof sales[0]) {
+    if (!company?.id) return;
+    const tefInfo = parseTefDataFromNotes(sale.notes);
+    if (!tefInfo) {
+      toast.error('Dados TEF não encontrados nesta venda');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Tem certeza que deseja estornar esta transação TEF?\n\nValor: ${formatCurrency(sale.final_total)}\nNSU: ${tefInfo.nsu}\nBandeira: ${tefInfo.cardBrand}`
+    );
+    if (!confirmed) return;
+
+    setTefEstornoLoading(sale.id);
+
+    try {
+      if (tefInfo.type === 'pinpad') {
+        // PinPad CNC flow
+        const saleDate = new Date(sale.created_at);
+        const dataTransacao = format(saleDate, 'ddMMyyyy');
+        const horaTransacao = format(saleDate, 'HHmmss');
+
+        const result = await reversePinpadTransaction(company.id, {
+          amount: sale.final_total,
+          nsu: tefInfo.nsu,
+          rede: tefInfo.acquirer,
+          dataTransacao,
+          horaTransacao,
+        });
+
+        if (result.success) {
+          // Poll for CNC result
+          if (result.hash) {
+            toast.info('Estorno enviado ao PinPad. Aguardando confirmação...');
+            let completed = false;
+            for (let i = 0; i < 60 && !completed; i++) {
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              const status = await pollPinpadStatus(company.id, result.hash);
+              if (status.status === 'approved') {
+                completed = true;
+                toast.success(`Estorno aprovado! NSU: ${status.nsu}`);
+              } else if (status.status === 'declined' || status.status === 'error' || status.status === 'cancelled') {
+                completed = true;
+                toast.error(`Estorno recusado: ${status.errorMessage || status.operatorMessage || 'Não aprovado'}`);
+              }
+            }
+            if (!completed) {
+              toast.warning('Timeout aguardando resposta do estorno.');
+            }
+          } else {
+            toast.success('Estorno enviado com sucesso!');
+          }
+        } else {
+          toast.error(`Erro no estorno: ${result.errorMessage}`);
+        }
+      } else {
+        // SmartPOS — abort/cancel via Multiplus Card
+        const success = await abortMultiplusCardSale(company.id, tefInfo.nsu, true);
+        if (success) {
+          toast.success('Estorno enviado para a maquininha!');
+        } else {
+          toast.error('Erro ao enviar estorno para a maquininha');
+        }
+      }
+    } catch (error) {
+      console.error('[PDV] TEF estorno error:', error);
+      toast.error('Erro ao processar estorno TEF');
+    } finally {
+      setTefEstornoLoading(null);
+    }
+  }
+
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
