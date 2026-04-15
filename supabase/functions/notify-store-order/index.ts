@@ -231,7 +231,7 @@ serve(async (req) => {
 
     // ─── SCHEDULED ORDER: send confirmation to customer if outside business hours ───
     let scheduledSent = false;
-    if (order.customer_phone) {
+    if (order?.customer_phone) {
       try {
         // Check if scheduling module is enabled
         const { data: schedulingModule } = await supabase
