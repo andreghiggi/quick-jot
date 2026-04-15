@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '15/04/2026',
+    version: '1.26.4',
+    type: 'fix',
+    description: 'Impressão automática v6.0: corrigida ordem dos métodos — headless PDF agora é o principal, rundll32 apenas como fallback. Resolve problema de impressões que não saíam.',
+  },
+  {
+    date: '15/04/2026',
     version: '1.26.3',
     type: 'improvement',
     description: 'Impressão automática v5.9: modo silencioso (sem abrir navegador no PC) aplicado para todas as lojas da base, não apenas piloto. Impressão de mesas e cardápio mantida sem alterações.',
