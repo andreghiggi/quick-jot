@@ -2147,17 +2147,32 @@ export default function PDV() {
                             </Button>
                           );
                         })()}
-                        {parseTefDataFromNotes(sale.notes) && !isCancelled && (
-                          <Button 
-                            size="icon" 
-                            variant="ghost"
-                            onClick={() => handleTefEstorno(sale)}
-                            disabled={tefEstornoLoading === sale.id}
-                            title="Estornar TEF"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            {tefEstornoLoading === sale.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                          </Button>
+                        {!isCancelled && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                size="icon" 
+                                variant="ghost"
+                                disabled={tefEstornoLoading === sale.id}
+                                title="Cancelar venda"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                {tefEstornoLoading === sale.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {parseTefDataFromNotes(sale.notes) && (
+                                <DropdownMenuItem onClick={() => handleTefEstorno(sale)} className="text-destructive">
+                                  <CreditCard className="w-4 h-4 mr-2" />
+                                  Estornar via TEF (com cartão)
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem onClick={() => handleCancelSaleOnly(sale)} className="text-destructive">
+                                <X className="w-4 h-4 mr-2" />
+                                Cancelar apenas no sistema
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                         <Button 
                           size="icon" 
