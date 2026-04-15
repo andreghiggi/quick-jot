@@ -203,6 +203,16 @@ export function useOrders(options: UseOrdersOptions = {}) {
         throw error;
       }
 
+      // Auto-register to cash register when order is delivered
+      if (status === 'delivered' && companyId) {
+        try {
+          await registerOrderToCashRegister(orderId);
+        } catch (cashError) {
+          console.error('Error auto-registering order to cash register:', cashError);
+          // Don't fail the status update - just log the error
+        }
+      }
+
       // Send WhatsApp notification via Evolution API if module is enabled
       const order = orders.find((o) => o.id === orderId);
       if (order?.customerPhone && companyId) {
@@ -294,6 +304,110 @@ export function useOrders(options: UseOrdersOptions = {}) {
       toast.error('Erro ao atualizar status');
       return false;
     }
+  }
+
+  async function registerOrderToCashRegister(orderId: string): Promise<void> {
+    if (!companyId) return;
+
+    // Check if already registered
+    const { data: existing } = await supabase
+      .from('pdv_sales')
+      .select('id')
+      .eq('order_id', orderId)
+      .maybeSingle();
+
+    if (existing) return; // Already registered
+
+    // Get the open cash register
+    const { data: openRegister } = await supabase
+      .from('cash_registers')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('status', 'open')
+      .order('opened_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!openRegister) {
+      console.warn('[Orders] No open cash register found - order not auto-registered to cash register');
+      return;
+    }
+
+    // Get the order with items
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    // Try to find a payment method from order notes
+    let paymentMethodId: string | null = null;
+    if (order.notes) {
+      const paymentMatch = order.notes.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i);
+      const paymentName = paymentMatch?.[1]?.trim();
+      if (paymentName) {
+        const { data: methods } = await supabase
+          .from('payment_methods')
+          .select('id, name')
+          .eq('company_id', companyId)
+          .eq('active', true);
+
+        const matched = methods?.find(m => 
+          m.name.toLowerCase().includes(paymentName.toLowerCase()) ||
+          paymentName.toLowerCase().includes(m.name.toLowerCase())
+        );
+        if (matched) paymentMethodId = matched.id;
+      }
+    }
+
+    // If no match found, use first active payment method
+    if (!paymentMethodId) {
+      const { data: defaultMethod } = await supabase
+        .from('payment_methods')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('active', true)
+        .limit(1)
+        .maybeSingle();
+      paymentMethodId = defaultMethod?.id || null;
+    }
+
+    if (!paymentMethodId) return;
+
+    // Get current user
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) return;
+
+    // Create the pdv_sale
+    const { data: sale, error: saleError } = await supabase
+      .from('pdv_sales')
+      .insert({
+        company_id: companyId,
+        cash_register_id: openRegister.id,
+        payment_method_id: paymentMethodId,
+        total: order.total,
+        discount: 0,
+        final_total: order.total,
+        customer_name: order.customerName,
+        notes: `Pedido Online #${order.orderCode || order.dailyNumber}`,
+        created_by: currentUser.id,
+        order_id: orderId,
+      } as any)
+      .select()
+      .single();
+
+    if (saleError) throw saleError;
+
+    // Create sale items
+    const saleItems = order.items.map(item => ({
+      sale_id: sale.id,
+      product_id: item.productId || null,
+      product_name: item.name,
+      quantity: item.quantity,
+      unit_price: item.price,
+      total_price: item.price * item.quantity,
+    }));
+
+    await supabase.from('pdv_sale_items').insert(saleItems);
+    
+    console.log(`[Orders] Order ${orderId} auto-registered to cash register`);
   }
 
   async function sendConfirmationWhatsApp(orderId: string): Promise<boolean> {

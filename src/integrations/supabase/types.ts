@@ -980,6 +980,7 @@ export type Database = {
           final_total: number
           id: string
           notes: string | null
+          order_id: string | null
           payment_method_id: string | null
           total: number
         }
@@ -993,6 +994,7 @@ export type Database = {
           final_total?: number
           id?: string
           notes?: string | null
+          order_id?: string | null
           payment_method_id?: string | null
           total?: number
         }
@@ -1006,6 +1008,7 @@ export type Database = {
           final_total?: number
           id?: string
           notes?: string | null
+          order_id?: string | null
           payment_method_id?: string | null
           total?: number
         }
@@ -1022,6 +1025,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_sales_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {

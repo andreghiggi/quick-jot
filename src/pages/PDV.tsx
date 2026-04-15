@@ -9,6 +9,8 @@ import { useTables } from '@/hooks/useTables';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
+import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { emitirNFCe, consultarNFCe, reprocessarNFCe, NFCeItem, NFCeTefData, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
 import { 
   isMultiplusCardConfigured, 
@@ -87,6 +89,7 @@ export default function PDV() {
   const { settings: storeSettings, updateSetting } = useStoreSettings({ companyId: company?.id });
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId: company?.id });
   const { tables } = useTables({ companyId: company?.id });
+  const { groups: optionalGroups } = useOptionalGroups({ companyId: company?.id });
   const { 
     currentRegister, 
     registers,
@@ -175,6 +178,9 @@ export default function PDV() {
 
   // PIX QR Code state
   const [pixQrDialog, setPixQrDialog] = useState(false);
+  // PDV Optionals state
+  const [optionalsDialogProduct, setOptionalsDialogProduct] = useState<typeof products[0] | null>(null);
+  const [optionalsDialogGroups, setOptionalsDialogGroups] = useState<OptionalGroup[]>([]);
   // Dialog states
   const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
   const [closeRegisterDialog, setCloseRegisterDialog] = useState(false);
@@ -349,6 +355,28 @@ export default function PDV() {
         quantity: 1,
         unit_price: product.price
       }]);
+    }
+  }
+
+  function addItemsToCart(items: Array<{ product_id: string | null; product_name: string; quantity: number; unit_price: number }>) {
+    setCart(prev => [...prev, ...items]);
+  }
+
+  function handleProductClick(product: typeof products[0]) {
+    // Check if this product has optional groups linked
+    const productGroups = optionalGroups.filter(group => {
+      // Check if the group is linked to this product directly
+      if (group.productIds.includes(product.id)) return true;
+      // Check if the group is linked to the product's category
+      // We need to find category ID from the categories list
+      return false;
+    });
+
+    if (productGroups.length > 0) {
+      setOptionalsDialogProduct(product);
+      setOptionalsDialogGroups(productGroups);
+    } else {
+      addToCart(product);
     }
   }
 
@@ -1396,7 +1424,7 @@ export default function PDV() {
                 <Card 
                   key={product.id} 
                   className="cursor-pointer hover:border-primary transition-colors"
-                  onClick={() => addToCart(product)}
+                  onClick={() => handleProductClick(product)}
                 >
                   <CardContent className="p-3">
                     {product.imageUrl ? (
@@ -2467,6 +2495,21 @@ export default function PDV() {
             </div>
           </Card>
         </div>
+      )}
+      {/* PDV Optionals Dialog */}
+      {optionalsDialogProduct && (
+        <PDVOptionalsDialog
+          open={!!optionalsDialogProduct}
+          onOpenChange={(open) => {
+            if (!open) {
+              setOptionalsDialogProduct(null);
+              setOptionalsDialogGroups([]);
+            }
+          }}
+          product={optionalsDialogProduct}
+          groups={optionalsDialogGroups}
+          onAddToCart={(items) => addItemsToCart(items)}
+        />
       )}
     </AppLayout>
   );
