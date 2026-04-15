@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '15/04/2026',
+    version: '1.26.1',
+    type: 'fix',
+    description: 'Impressão local (piloto Lancheria da i9): removido o fallback que abria o navegador no PC quando a impressão silenciosa falhava; agora o script tenta somente o fluxo silencioso e registra erro no log.',
+  },
+  {
     date: '10/04/2026',
     version: '1.26.0',
     type: 'feature',
