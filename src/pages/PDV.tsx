@@ -1007,18 +1007,8 @@ export default function PDV() {
       .from('pdv_sales')
       .update({ notes: cancelledNotes })
       .eq('id', saleId);
-    // Refresh sales list
-    if (currentRegister) {
-      const { data } = await supabase
-        .from('pdv_sales')
-        .select('*, payment_method:payment_methods(name), items:pdv_sale_items(*)')
-        .eq('cash_register_id', currentRegister.id)
-        .order('created_at', { ascending: false });
-      if (data) {
-        // Force re-render by triggering refetch
-        window.location.reload();
-      }
-    }
+    // Refresh sales list via hook
+    await refetch();
   }
 
   // Handle TEF estorno (cancel/reverse completed transaction)
