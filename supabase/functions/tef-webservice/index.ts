@@ -252,12 +252,16 @@ serve(async (req) => {
         );
       }
 
+      const getHeaders: Record<string, string> = {
+        'HASH': hash,
+        'TOKEN': token,
+      };
+      if (cnpj) getHeaders['CNPJ'] = cnpj;
+      if (pdv) getHeaders['PDV'] = pdv;
+
       const response = await fetch(`${TEF_API_URL}/GetVendasTef`, {
         method: 'GET',
-        headers: {
-          'HASH': hash,
-          'TOKEN': token,
-        },
+        headers: getHeaders,
       });
 
       const text = await response.text();

@@ -184,6 +184,8 @@ export async function pollPinpadStatus(
     const result = await callTefWebService({
       action: 'get-status',
       token: config.token,
+      cnpj: config.cnpj,
+      pdv: config.pdv,
       hash,
     });
 
