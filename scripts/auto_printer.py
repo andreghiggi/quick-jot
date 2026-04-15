@@ -26,7 +26,7 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v5.4"
+SCRIPT_VERSION = "v5.5"
 PILOT_PRINT_SLUGS = {"lancheria-da-i9-263ee29a"}
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 VERSION_FILE = Path(__file__).with_name("auto_printer.version.txt")
@@ -413,6 +413,25 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     
     return html
 
+def encontrar_browser_headless():
+    """Encontra o caminho do Edge ou Chrome para impressão silenciosa."""
+    import shutil
+    caminhos = []
+    if os.name == 'nt':
+        for prog in [os.environ.get('PROGRAMFILES', ''), os.environ.get('PROGRAMFILES(X86)', ''), os.environ.get('LOCALAPPDATA', '')]:
+            if prog:
+                caminhos.append(os.path.join(prog, 'Microsoft', 'Edge', 'Application', 'msedge.exe'))
+                caminhos.append(os.path.join(prog, 'Google', 'Chrome', 'Application', 'chrome.exe'))
+        for c in caminhos:
+            if os.path.isfile(c):
+                return c
+    # fallback: tenta no PATH
+    for nome in ['msedge', 'google-chrome', 'chromium-browser']:
+        caminho = shutil.which(nome)
+        if caminho:
+            return caminho
+    return None
+
 def imprimir_html(html, order_number):
     """Salva HTML e imprime com modo piloto isolado por loja."""
     try:
@@ -439,43 +458,56 @@ def imprimir_html(html, order_number):
 
         if usar_modo_piloto:
             log(f"Modo piloto ativo para {COMPANY_SLUG}", "PRINT")
-            tentativas = []
-            if os.name == 'nt':
-                tentativas = [
-                    ('startfile_print', lambda: os.startfile(arquivo, 'print')),
-                    ('browser_open', lambda: webbrowser.open(file_url)),
-                    ('rundll32_open', lambda: subprocess.Popen(['rundll32.exe', 'url.dll,FileProtocolHandler', arquivo], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)),
-                ]
-            else:
-                tentativas = [
-                    ('browser_open', lambda: webbrowser.open(file_url)),
-                ]
-
+            # 1) Tenta impressão silenciosa via Edge/Chrome headless
+            browser_path = encontrar_browser_headless()
             sucesso = False
-            for nome, acao in tentativas:
+            if browser_path:
                 try:
-                    log(f"Tentando imprimir via {nome}...", "PRINT")
-                    acao()
-                    time.sleep(4)
-                    log(f"Tentativa {nome} disparada.", "PRINT")
-                    sucesso = True
-                    break
+                    log(f"Impressão silenciosa via {os.path.basename(browser_path)}...", "PRINT")
+                    proc = subprocess.run(
+                        [browser_path, '--headless', '--disable-gpu',
+                         '--no-pdf-header-footer',
+                         '--print-to-default-printer', file_url],
+                        timeout=15, capture_output=True
+                    )
+                    log(f"Headless retornou código {proc.returncode}", "PRINT")
+                    if proc.returncode == 0:
+                        sucesso = True
+                except subprocess.TimeoutExpired:
+                    log("Headless timeout - tentando fallback", "AVISO")
                 except Exception as e:
-                    log(f"Tentativa {nome} falhou: {e}", "ERRO")
+                    log(f"Headless falhou: {e}", "AVISO")
+
+            # 2) Fallback: browser_open (abre janela)
+            if not sucesso:
+                log("Usando fallback browser_open...", "PRINT")
+                try:
+                    webbrowser.open(file_url)
+                    time.sleep(4)
+                    sucesso = True
+                except Exception as e:
+                    log(f"browser_open falhou: {e}", "ERRO")
+
+            # Limpeza
+            time.sleep(2)
+            try:
+                os.unlink(arquivo)
+                log("Arquivo temporário removido", "PRINT")
+            except Exception:
+                pass
+            return sucesso
         else:
             log(f"Modo legado preservado para {COMPANY_SLUG or 'loja sem slug'}", "PRINT")
             webbrowser.open(file_url)
             log("Enviado para o navegador no modo legado.", "PRINT")
             time.sleep(5)
-            sucesso = True
 
-        try:
-            os.unlink(arquivo)
-            log("Arquivo temporário removido", "PRINT")
-        except Exception:
-            pass
-
-        return sucesso
+            try:
+                os.unlink(arquivo)
+                log("Arquivo temporário removido", "PRINT")
+            except Exception:
+                pass
+            return True
     except Exception as e:
         log(f"Falha na impressão: {e}", "ERRO")
         return False
