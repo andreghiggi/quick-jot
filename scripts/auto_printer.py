@@ -108,18 +108,19 @@ def buscar_todos_pedidos_hoje(company_id):
         return []
 
 def buscar_pedidos_nao_impressos(company_id):
-    """Busca pedidos pendentes que ainda não foram impressos"""
+    """Busca pedidos não impressos de qualquer status imprimível"""
+    STATUS_IMPRIMIVEIS = {"pending", "confirmed", "express", "waiter"}
     try:
         url = f"{SUPABASE_URL}/rest/v1/orders"
         params = {
             "company_id": f"eq.{company_id}",
-            "status": "eq.pending",
             "printed": "eq.false",
             "order": "created_at.asc"
         }
         r = requests.get(url, headers=HEADERS, params=params)
         if r.ok:
-            return r.json()
+            todos = r.json()
+            return [p for p in todos if p.get("status", "") in STATUS_IMPRIMIVEIS]
         else:
             log(f"Erro HTTP: {r.status_code} - {r.text}", "ERRO")
             return []
@@ -165,6 +166,15 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     """Gera HTML idêntico ao layout do OrderCard (impressão manual do painel)"""
     paper_size = PAPER_SIZE
     font_size = '11pt' if paper_size == '80mm' else '10pt'
+    
+    # Origem do pedido
+    source = pedido.get('source', '')
+    if source == 'express':
+        origem_label = '⚡ PEDIDO EXPRESS'
+    elif source == 'waiter':
+        origem_label = '🍽️ PEDIDO GARÇOM'
+    else:
+        origem_label = '📱 CARDÁPIO ONLINE'
     
     # Número do pedido
     order_num = pedido.get('order_code') or pedido.get('daily_number', '?')
@@ -286,6 +296,7 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         .header {{ text-align: center; margin-bottom: 2mm; }}
         .store-name {{ font-size: 12pt; font-weight: bold; }}
         .order-num {{ font-size: 16pt; font-weight: bold; margin: 1mm 0; }}
+        .origem {{ font-size: 9pt; font-weight: bold; margin: 0.5mm 0; }}
         .date {{ font-size: 8pt; }}
         .divider {{ border: none; border-top: 1px dashed #000; margin: 2mm 0; }}
         .label {{ font-size: 9pt; font-weight: bold; }}
@@ -314,6 +325,7 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     <div class="header">
         <div class="store-name">{store_name.upper()}</div>
         <div class="order-num">PEDIDO #{order_num}</div>
+        <div class="origem">{origem_label}</div>
         <div class="date">{formatted_date}</div>
     </div>
     <hr class="divider">
@@ -370,7 +382,7 @@ def encontrar_chrome():
 
 def imprimir_html(html, order_number):
     """Salva HTML e envia direto para a impressora padrão.
-    Usa Chrome/Edge em instância isolada com --kiosk-printing para impressão silenciosa."""
+    Usa Chrome/Edge em modo --headless para impressão silenciosa sem abrir janela."""
     try:
         arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.html")
         with open(arquivo, 'w', encoding='utf-8') as f:
@@ -379,31 +391,29 @@ def imprimir_html(html, order_number):
         file_url = f'file:///{arquivo.replace(os.sep, "/")}'
         log(f"HTML salvo: {arquivo}", "PRINT")
         
-        # Método único: Chrome/Edge em perfil temporário para garantir que os flags
-        # sejam aplicados mesmo com o navegador já aberto no Windows.
         browser_exe = encontrar_chrome()
         if browser_exe:
             perfil_temp = tempfile.mkdtemp(prefix="comanda_printer_")
-            log("Imprimindo via instância isolada --kiosk-printing...", "PRINT")
+            log("Imprimindo via --headless (sem janela visível)...", "PRINT")
             try:
                 processo = subprocess.Popen([
                     browser_exe,
                     f"--user-data-dir={perfil_temp}",
-                    "--new-window",
+                    "--headless=new",
+                    "--disable-gpu",
                     "--no-first-run",
                     "--no-default-browser-check",
                     "--allow-file-access-from-files",
+                    "--run-all-compositor-stages-before-draw",
+                    "--virtual-time-budget=5000",
                     "--kiosk-printing",
                     "--disable-print-preview",
-                    "--kiosk",
-                    "--window-position=-32000,-32000",
-                    "--window-size=200,200",
                     file_url,
                 ], shell=False)
-                log("Enviado para impressora padrão com impressão automática!", "PRINT")
+                log("Enviado para impressora padrão (headless)!", "PRINT")
 
-                # Dá tempo para a página carregar, disparar window.print() e enviar ao spooler.
-                time.sleep(18)
+                # Aguarda renderização headless e envio ao spooler
+                time.sleep(10)
 
                 try:
                     processo.poll()
@@ -423,7 +433,7 @@ def imprimir_html(html, order_number):
                     pass
                 return True
             except Exception as e:
-                log(f"Falha no kiosk-printing: {e}", "ERRO")
+                log(f"Falha no headless printing: {e}", "ERRO")
 
         log("Nenhum Chrome/Edge compatível encontrado para impressão automática.", "ERRO")
         try:
