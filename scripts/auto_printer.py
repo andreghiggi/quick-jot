@@ -619,6 +619,7 @@ if __name__ == "__main__":
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
     print("  Pressione Ctrl+C para parar")
+    print(f"  Log: {LOG_FILE}")
     print("=" * 50)
     print()
     
