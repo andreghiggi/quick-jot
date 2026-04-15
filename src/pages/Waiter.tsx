@@ -78,6 +78,8 @@ export default function Waiter() {
     notes: string;
   }>>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [optionalsDialogProduct, setOptionalsDialogProduct] = useState<typeof products[0] | null>(null);
+  const [optionalsDialogGroups, setOptionalsDialogGroups] = useState<OptionalGroup[]>([]);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
@@ -148,22 +150,56 @@ export default function Waiter() {
   };
 
   const handleAddToCart = (product: typeof products[0]) => {
-    const existing = cart.find(item => item.productId === product.id);
+    // Check if product has optional groups
+    const productGroups = optionalGroups.filter(g => 
+      g.active && (g.productIds.includes(product.id) || g.categoryIds.includes(product.category))
+    );
+    
+    if (productGroups.length > 0) {
+      setOptionalsDialogProduct(product);
+      setOptionalsDialogGroups(productGroups);
+      return;
+    }
+
+    addSimpleToCart(product.id, product.name, product.price);
+  };
+
+  const addSimpleToCart = (productId: string, productName: string, unitPrice: number) => {
+    const existing = cart.find(item => item.productId === productId && item.productName === productName);
     if (existing) {
       setCart(cart.map(item => 
-        item.productId === product.id 
+        item.productId === productId && item.productName === productName
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
       setCart([...cart, {
-        productId: product.id,
-        productName: product.name,
+        productId,
+        productName,
         quantity: 1,
-        unitPrice: product.price,
+        unitPrice,
         notes: ''
       }]);
     }
+  };
+
+  const handleOptionalsAddToCart = (items: Array<{
+    product_id: string | null;
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+  }>) => {
+    for (const item of items) {
+      setCart(prev => [...prev, {
+        productId: item.product_id || '',
+        productName: item.product_name,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        notes: ''
+      }]);
+    }
+    setOptionalsDialogProduct(null);
+    setOptionalsDialogGroups([]);
   };
 
   const handleUpdateCartQuantity = (productId: string, delta: number) => {
