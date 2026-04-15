@@ -249,7 +249,8 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
     userId: string,
     discount: number = 0,
     customerName?: string,
-    notes?: string
+    notes?: string,
+    orderId?: string
   ): Promise<string | null> {
     if (!currentRegister || !companyId) {
       toast.error('Nenhum caixa aberto!');
