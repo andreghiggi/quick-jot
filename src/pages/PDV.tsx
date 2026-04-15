@@ -634,7 +634,6 @@ export default function PDV() {
                 setTefStatus('');
               }
             }
-          }
         }
 
         // Emit NFC-e if checkbox was checked
