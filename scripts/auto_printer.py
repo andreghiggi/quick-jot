@@ -394,15 +394,13 @@ def imprimir_html(html, order_number):
     try:
         arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}_{int(time.time())}.html")
         
-        # Adiciona script de auto-print e auto-close ao HTML
         html_com_print = html
         if '<script>' not in html.lower():
             html_com_print = html.replace('</body>', '''
     <script>
         window.onload = function() {
             setTimeout(function() {
-                window.print();
-                setTimeout(function() { window.close(); }, 1000);
+                try { window.print(); } catch (e) {}
             }, 300);
         };
     </script>
@@ -412,22 +410,39 @@ def imprimir_html(html, order_number):
             f.write(html_com_print)
         
         log(f"HTML salvo: {arquivo}", "PRINT")
-        log(f"Abrindo no navegador para impressão...", "PRINT")
+        file_url = f'file:///{arquivo.replace(os.sep, "/")}'
+
+        tentativas = []
+        if os.name == 'nt':
+            tentativas = [
+                ('startfile_print', lambda: os.startfile(arquivo, 'print')),
+                ('browser_open', lambda: webbrowser.open(file_url)),
+                ('rundll32_open', lambda: subprocess.Popen(['rundll32.exe', 'url.dll,FileProtocolHandler', arquivo], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)),
+            ]
+        else:
+            tentativas = [
+                ('browser_open', lambda: webbrowser.open(file_url)),
+            ]
+
+        sucesso = False
+        for nome, acao in tentativas:
+            try:
+                log(f"Tentando imprimir via {nome}...", "PRINT")
+                acao()
+                time.sleep(4)
+                log(f"Tentativa {nome} disparada.", "PRINT")
+                sucesso = True
+                break
+            except Exception as e:
+                log(f"Tentativa {nome} falhou: {e}", "ERRO")
         
-        # Abre no navegador padrão - o JS auto-print cuida do resto
-        webbrowser.open(f'file:///{arquivo}')
-        
-        log(f"Enviado para o navegador!", "PRINT")
-        time.sleep(5)  # Aguarda impressão
-        
-        # Remove arquivo temporário
         try:
             os.unlink(arquivo)
-            log(f"Arquivo temporário removido", "PRINT")
-        except:
+            log("Arquivo temporário removido", "PRINT")
+        except Exception:
             pass
         
-        return True
+        return sucesso
     except Exception as e:
         log(f"Falha na impressão: {e}", "ERRO")
         return False
