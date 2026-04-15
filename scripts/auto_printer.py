@@ -480,72 +480,73 @@ def imprimir_html(html, order_number):
             f.write(html_limpo)
 
         log(f"HTML salvo: {arquivo}", "PRINT")
+        file_url = f'file:///{arquivo.replace(os.sep, "/")}'
         sucesso = False
 
         # ──────────────────────────────────────────────
-        # 1) MÉTODO PRINCIPAL: rundll32 PrintHTML
-        #    Envia HTML direto para impressora padrão.
-        #    A impressora térmica respeita @page { size }.
-        #    Não abre janela nem navegador.
+        # 1) MÉTODO PRINCIPAL: Chrome/Edge headless → PDF → PowerShell silent
+        #    Gera PDF com tamanho correto e imprime sem abrir janela.
         # ──────────────────────────────────────────────
-        log("Método 1: rundll32 PrintHTML...", "PRINT")
-        sucesso = imprimir_via_windows_html(arquivo)
+        browser_path = encontrar_browser_headless()
+        if browser_path:
+            pdf_path = arquivo.replace('.html', '.pdf')
+            try:
+                log(f"Método 1: Headless PDF via {os.path.basename(browser_path)}...", "PRINT")
+                proc = subprocess.run(
+                    [browser_path,
+                     '--headless', '--disable-gpu', '--no-sandbox',
+                     '--no-pdf-header-footer',
+                     '--run-all-compositor-stages-before-draw',
+                     f'--print-to-pdf={pdf_path}',
+                     file_url],
+                    timeout=15, capture_output=True
+                )
 
-        # ──────────────────────────────────────────────
-        # 2) FALLBACK: Chrome/Edge headless → PDF → PowerShell silent print
-        #    Só roda se rundll32 falhar.
-        #    Usa tamanho de papel correto (58mm ou 80mm).
-        # ──────────────────────────────────────────────
-        if not sucesso:
-            browser_path = encontrar_browser_headless()
-            if browser_path:
-                pdf_path = arquivo.replace('.html', '.pdf')
-                file_url = f'file:///{arquivo.replace(os.sep, "/")}'
+                if proc.returncode == 0 and os.path.isfile(pdf_path):
+                    pdf_size = os.path.getsize(pdf_path)
+                    log(f"PDF gerado ({pdf_size} bytes): {pdf_path}", "PRINT")
 
-                # Converter mm para inches para o Chrome
-                paper_w_in = 3.15 if PAPER_SIZE == '80mm' else 2.28  # 80mm or 58mm
-                paper_h_in = 11.69  # altura alta, impressora corta automaticamente
+                    # Tenta PowerShell silencioso primeiro
+                    sucesso = imprimir_pdf_silencioso(pdf_path)
 
-                try:
-                    log(f"Método 2: Headless PDF via {os.path.basename(browser_path)}...", "PRINT")
-                    proc = subprocess.run(
-                        [browser_path,
-                         '--headless', '--disable-gpu', '--no-sandbox',
-                         '--no-pdf-header-footer',
-                         '--run-all-compositor-stages-before-draw',
-                         f'--print-to-pdf={pdf_path}',
-                         f'--print-to-pdf-no-header',
-                         file_url],
-                        timeout=15, capture_output=True
-                    )
+                    # Se PowerShell falhar, tenta SumatraPDF (se instalado)
+                    if not sucesso:
+                        sucesso = imprimir_pdf_sumatra(pdf_path)
 
-                    if proc.returncode == 0 and os.path.isfile(pdf_path):
-                        log(f"PDF gerado: {pdf_path}", "PRINT")
-                        # Imprime PDF silenciosamente (sem abrir visualizador)
-                        sucesso = imprimir_pdf_silencioso(pdf_path)
-                        if not sucesso:
-                            # Último recurso: startfile (pode abrir viewer)
-                            try:
-                                os.startfile(pdf_path, 'print')
-                                log("PDF via startfile (último recurso)", "AVISO")
-                                time.sleep(5)
-                                sucesso = True
-                            except Exception:
-                                pass
+                    # Último recurso: os.startfile (pode abrir viewer brevemente)
+                    if not sucesso:
                         try:
-                            time.sleep(2)
-                            os.unlink(pdf_path)
-                        except Exception:
-                            pass
-                    else:
-                        log(f"PDF não gerado (código {proc.returncode})", "AVISO")
-                except subprocess.TimeoutExpired:
-                    log("Headless timeout", "AVISO")
-                except Exception as e:
-                    log(f"Headless falhou: {e}", "AVISO")
+                            os.startfile(pdf_path, 'print')
+                            log("PDF via os.startfile (último recurso)", "AVISO")
+                            time.sleep(5)
+                            sucesso = True
+                        except Exception as e:
+                            log(f"os.startfile falhou: {e}", "AVISO")
+
+                    # Limpeza do PDF
+                    time.sleep(2)
+                    try:
+                        os.unlink(pdf_path)
+                    except Exception:
+                        pass
+                else:
+                    log(f"PDF não gerado (código {proc.returncode})", "AVISO")
+                    if proc.stderr:
+                        log(f"stderr: {proc.stderr.decode('utf-8', errors='replace')[:200]}", "DEBUG")
+            except subprocess.TimeoutExpired:
+                log("Headless timeout", "AVISO")
+            except Exception as e:
+                log(f"Headless falhou: {e}", "AVISO")
+
+        # ──────────────────────────────────────────────
+        # 2) FALLBACK: rundll32 PrintHTML (não confiável, pode não imprimir)
+        # ──────────────────────────────────────────────
+        if not sucesso:
+            log("Método 2 (fallback): rundll32 PrintHTML...", "PRINT")
+            sucesso = imprimir_via_windows_html(arquivo)
 
         if not sucesso:
-            log("Todas as tentativas de impressão falharam.", "ERRO")
+            log("TODAS as tentativas falharam!", "ERRO")
 
         # Limpeza do HTML temporário
         time.sleep(2)
@@ -556,6 +557,31 @@ def imprimir_html(html, order_number):
         return sucesso
     except Exception as e:
         log(f"Falha na impressão: {e}", "ERRO")
+        return False
+
+def imprimir_pdf_sumatra(pdf_path):
+    """Tenta imprimir via SumatraPDF (se instalado). 100% silencioso."""
+    if os.name != 'nt':
+        return False
+    import shutil
+    # Procura SumatraPDF
+    sumatra = shutil.which('SumatraPDF')
+    if not sumatra:
+        for prog in [os.environ.get('PROGRAMFILES', ''), os.environ.get('PROGRAMFILES(X86)', ''), os.environ.get('LOCALAPPDATA', '')]:
+            if prog:
+                candidate = os.path.join(prog, 'SumatraPDF', 'SumatraPDF.exe')
+                if os.path.isfile(candidate):
+                    sumatra = candidate
+                    break
+    if not sumatra:
+        return False
+    try:
+        subprocess.run([sumatra, '-print-to-default', '-silent', pdf_path], timeout=15, capture_output=True)
+        log("PDF impresso via SumatraPDF silencioso!", "PRINT")
+        time.sleep(3)
+        return True
+    except Exception as e:
+        log(f"SumatraPDF falhou: {e}", "AVISO")
         return False
 
 def processar_pedido(pedido, store_name="Comanda Tech"):
