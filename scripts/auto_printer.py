@@ -490,12 +490,65 @@ def mostrar_status(company_id):
     print()
 
 # ============================================
+# FILA DE IMPRESSÃO (GARÇOM / PDV)
+# ============================================
+def buscar_fila_impressao(company_id):
+    """Busca jobs pendentes na fila de impressão"""
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/print_queue"
+        params = {
+            "company_id": f"eq.{company_id}",
+            "printed": "eq.false",
+            "order": "created_at.asc"
+        }
+        r = requests.get(url, headers=HEADERS, params=params)
+        if r.ok:
+            return r.json()
+        return []
+    except Exception as e:
+        log(f"Erro ao buscar fila: {e}", "ERRO")
+        return []
+
+def marcar_fila_impressa(job_id):
+    """Marca job da fila como impresso"""
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/print_queue?id=eq.{job_id}"
+        data = {
+            "printed": True,
+            "printed_at": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        }
+        r = requests.patch(url, headers=HEADERS, json=data)
+        return r.ok
+    except Exception as e:
+        log(f"Erro ao marcar fila: {e}", "ERRO")
+        return False
+
+def processar_fila(company_id):
+    """Processa jobs pendentes da fila de impressão"""
+    jobs = buscar_fila_impressao(company_id)
+    if not jobs:
+        return 0
+    
+    log(f"Encontrados {len(jobs)} job(s) na fila de impressão!", "FILA")
+    for job in jobs:
+        label = job.get('label', 'Impressão')
+        log(f"Imprimindo: {label}...", "FILA")
+        html = job.get('html_content', '')
+        if html and imprimir_html(html, label.replace('#', '').replace(' ', '_')):
+            marcar_fila_impressa(job['id'])
+            log(f"Job '{label}' impresso!", "OK")
+        else:
+            log(f"Falha ao imprimir job '{label}'", "ERRO")
+    
+    return len(jobs)
+
+# ============================================
 # LOOP PRINCIPAL
 # ============================================
 if __name__ == "__main__":
     print()
     print("=" * 50)
-    print(f"  {STORE_NAME} - Impressão Automática v4.0")
+    print(f"  {STORE_NAME} - Impressão Automática v5.0")
     print("=" * 50)
     print(f"  URL: {SUPABASE_URL}")
     print("=" * 50)
@@ -538,6 +591,7 @@ if __name__ == "__main__":
     contador = 0
     try:
         while True:
+            # 1. Pedidos do cardápio online
             pedidos = buscar_pedidos_nao_impressos(company_id)
             
             if pedidos:
@@ -545,7 +599,11 @@ if __name__ == "__main__":
                 for pedido in pedidos:
                     processar_pedido(pedido, STORE_NAME)
                 mostrar_status(company_id)
-            else:
+            
+            # 2. Fila de impressão (garçom / PDV)
+            fila_count = processar_fila(company_id)
+            
+            if not pedidos and fila_count == 0:
                 # A cada 12 verificações (1 minuto), mostra status
                 contador += 1
                 if contador >= 12:
