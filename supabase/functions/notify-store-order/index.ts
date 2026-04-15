@@ -182,9 +182,17 @@ serve(async (req) => {
       console.log('Store notification skipped: notify_store_whatsapp not enabled for company', companyId);
     }
 
+    // Fetch order for customer messages (if not already fetched above)
+    const baseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
+    const { data: order } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+
     // ─── CUSTOMER CONFIRMATION: send "aguardando confirmação" to customer ───
     let customerConfirmSent = false;
-    if (order.customer_phone) {
+    if (order?.customer_phone) {
       try {
         const firstName = order.customer_name.split(' ')[0];
         const confirmMsg = `${firstName}, seu pedido foi enviado e está aguardando confirmação do estabelecimento.\n\nAssim que seu pedido for confirmado, você será notificado por aqui. 😊`;
