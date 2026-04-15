@@ -107,6 +107,9 @@ export default function PDV() {
   // TEF PinPad state
   const [pinpadEnabled, setPinpadEnabled] = useState(false);
   const [pinpadResult, setPinpadResult] = useState<PinpadTransactionResult | null>(null);
+  const tefCancelRef = useRef(false);
+  const tefIdentifierRef = useRef<string>('');
+  const tefHashRef = useRef<string>('');
 
   // TEF mode: 'smartpos' or 'pinpad' — auto-selected based on what's configured
   const [tefMode, setTefMode] = useState<'smartpos' | 'pinpad'>('smartpos');
