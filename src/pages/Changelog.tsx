@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '15/04/2026',
+    version: '1.26.6',
+    type: 'fix',
+    description: 'Impressão automática v6.2: headless PDF volta como método principal (rundll32 retornava sucesso falso). Cadeia de impressão: PDF→PowerShell silencioso→SumatraPDF→os.startfile. Scripts removidos do HTML.',
+  },
+  {
+    date: '15/04/2026',
     version: '1.26.5',
     type: 'fix',
     description: 'Impressão automática v6.1: corrigido problema que abria o navegador e imprimia papel gigante. Agora usa rundll32 silencioso como principal, fallback com PDF + PowerShell oculto. Scripts de impressão removidos do HTML. Tamanho 58mm/80mm respeitado.',
