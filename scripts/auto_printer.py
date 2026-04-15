@@ -12,7 +12,7 @@ import time
 import tempfile
 import subprocess
 import os
-
+import webbrowser
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -24,13 +24,10 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 CHECK_INTERVAL = 5  # segundos entre verificações
 STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
-COMPANY_SLUG = ""
+COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v6.2"
-SHOW_DEBUG_IN_CONSOLE = False
-SHOW_HEARTBEAT_DOTS = False
+SCRIPT_VERSION = "v7.0"
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
-VERSION_FILE = Path(__file__).with_name("auto_printer.version.txt")
 
 # ============================================
 # HEADERS para API
@@ -45,81 +42,16 @@ HEADERS = {
 # Histórico de pedidos impressos nesta sessão
 pedidos_impressos_sessao = []
 
-def registrar_versao_local():
-    """Cria arquivos locais para confirmar rapidamente a versão em uso."""
-    agora = datetime.now(timezone(timedelta(hours=-3))).strftime("%d/%m/%Y %H:%M:%S")
-    conteudo = (
-        "Comanda Tech - Auto Printer\n"
-        f"Versao: {SCRIPT_VERSION}\n"
-        f"Arquivo: {Path(__file__).resolve()}\n"
-        f"Atualizado em execucao: {agora}\n"
-    )
-
-    try:
-        VERSION_FILE.write_text(conteudo, encoding="utf-8")
-    except Exception:
-        pass
-
-    try:
-        if not LOG_FILE.exists():
-            LOG_FILE.write_text("", encoding="utf-8")
-    except Exception:
-        pass
-
 def log(msg, tipo="INFO"):
     """Log com timestamp em tela e arquivo"""
     agora = datetime.now(timezone(timedelta(hours=-3))).strftime("%H:%M:%S")
     linha = f"[{agora}] [{tipo}] {msg}"
-    if tipo != "DEBUG" or SHOW_DEBUG_IN_CONSOLE:
-        print(linha)
+    print(linha)
     try:
         with LOG_FILE.open("a", encoding="utf-8") as f:
             f.write(linha + "\n")
     except Exception:
         pass
-
-def imprimir_via_windows_html(arquivo_html):
-    """Impressão silenciosa nativa do Windows para HTML sem abrir navegador."""
-    if os.name != 'nt':
-        return False
-
-    try:
-        subprocess.run(
-            ['rundll32.exe', 'mshtml.dll,PrintHTML', arquivo_html],
-            timeout=30, capture_output=True
-        )
-        log("HTML enviado para impressora via mshtml.dll", "PRINT")
-        time.sleep(5)
-        return True
-    except Exception as e:
-        log(f"PrintHTML falhou: {e}", "AVISO")
-        return False
-
-def imprimir_pdf_silencioso(pdf_path):
-    """Imprime PDF silenciosamente sem abrir visualizador."""
-    if os.name != 'nt':
-        return False
-
-    # Tenta PowerShell silent print (não abre janela)
-    try:
-        ps_cmd = f'Start-Process -FilePath "{pdf_path}" -Verb Print -WindowStyle Hidden'
-        proc = subprocess.run(
-            ['powershell', '-WindowStyle', 'Hidden', '-Command', ps_cmd],
-            timeout=20, capture_output=True
-        )
-        if proc.returncode == 0:
-            log("PDF impresso via PowerShell silencioso", "PRINT")
-            time.sleep(5)
-            return True
-    except Exception as e:
-        log(f"PowerShell print falhou: {e}", "AVISO")
-
-    return False
-
-def limpar_scripts_html(html):
-    """Remove tags <script> do HTML para evitar que o browser abra diálogos."""
-    import re
-    return re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
 
 def buscar_empresa_por_slug(slug):
     """Busca empresa pelo slug e retorna id, nome e endereço"""
@@ -185,12 +117,9 @@ def buscar_pedidos_nao_impressos(company_id):
             "printed": "eq.false",
             "order": "created_at.asc"
         }
-        log(f"Buscando: company_id={company_id}, status=pending, printed=false", "DEBUG")
         r = requests.get(url, headers=HEADERS, params=params)
         if r.ok:
-            pedidos = r.json()
-            log(f"API retornou {len(pedidos)} pedido(s)", "DEBUG")
-            return pedidos
+            return r.json()
         else:
             log(f"Erro HTTP: {r.status_code} - {r.text}", "ERRO")
             return []
@@ -261,41 +190,7 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         subtotal += float(item.get('price', 0)) * int(item.get('quantity', 1))
     delivery_fee = total - subtotal if total > subtotal else 0
     
-    # Gerar HTML dos itens
-    items_html = ""
-    for item in itens:
-        qtd = int(item.get('quantity', 1))
-        nome_completo = item.get('name', 'Item')
-        preco_unit = float(item.get('price', 0))
-        preco_total = preco_unit * qtd
-        
-        # Separar nome e adicionais
-        main_name = nome_completo
-        extras = ''
-        if '(' in nome_completo and nome_completo.endswith(')'):
-            idx = nome_completo.index('(')
-            main_name = nome_completo[:idx].strip()
-            extras = nome_completo[idx+1:-1].strip()
-        
-        item_notes = item.get('notes', '')
-        
-        items_html += f'''
-            <div class="item">
-                <div class="item-name">{qtd}x {main_name}</div>
-                {'<div class="item-detail">+ ' + extras + '</div>' if extras else ''}
-                {'<div class="item-notes">Obs: ' + item_notes + '</div>' if item_notes else ''}
-                <div class="item-detail">R$ {preco_total:.2f}</div>
-            </div>
-        '''.replace('.', ',', 1) if preco_total else f'''
-            <div class="item">
-                <div class="item-name">{qtd}x {main_name}</div>
-                {'<div class="item-detail">+ ' + extras + '</div>' if extras else ''}
-                {'<div class="item-notes">Obs: ' + item_notes + '</div>' if item_notes else ''}
-                <div class="item-detail">R$ 0,00</div>
-            </div>
-        '''
-    
-    # Fix: proper price formatting
+    # Gerar HTML dos itens (com formatação correta de preço)
     items_html = ""
     for item in itens:
         qtd = int(item.get('quantity', 1))
@@ -445,143 +340,47 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     {notes_html}
     <hr class="divider">
     <p class="footer">Obrigado pela preferencia!</p>
+    <script>
+        window.onload = function() {{
+            setTimeout(function() {{
+                window.print();
+                setTimeout(function() {{ window.close(); }}, 1000);
+            }}, 300);
+        }};
+    </script>
 </body>
 </html>'''
     
     return html
 
-def encontrar_browser_headless():
-    """Encontra o caminho do Edge ou Chrome para impressão silenciosa."""
-    import shutil
-    caminhos = []
-    if os.name == 'nt':
-        for prog in [os.environ.get('PROGRAMFILES', ''), os.environ.get('PROGRAMFILES(X86)', ''), os.environ.get('LOCALAPPDATA', '')]:
-            if prog:
-                caminhos.append(os.path.join(prog, 'Microsoft', 'Edge', 'Application', 'msedge.exe'))
-                caminhos.append(os.path.join(prog, 'Google', 'Chrome', 'Application', 'chrome.exe'))
-        for c in caminhos:
-            if os.path.isfile(c):
-                return c
-    # fallback: tenta no PATH
-    for nome in ['msedge', 'google-chrome', 'chromium-browser']:
-        caminho = shutil.which(nome)
-        if caminho:
-            return caminho
-    return None
-
 def imprimir_html(html, order_number):
-    """Salva HTML e imprime silenciosamente. NUNCA abre navegador."""
+    """Salva HTML e abre no navegador para impressão automática.
+    Método idêntico ao que funcionava no domingo (v4.0).
+    O navegador abre, o JS dispara window.print(), a impressora térmica imprime."""
     try:
-        # Limpa scripts do HTML para evitar dialogs
-        html_limpo = limpar_scripts_html(html)
-
-        arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}_{int(time.time())}.html")
+        arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.html")
         with open(arquivo, 'w', encoding='utf-8') as f:
-            f.write(html_limpo)
-
+            f.write(html)
+        
         log(f"HTML salvo: {arquivo}", "PRINT")
-        file_url = f'file:///{arquivo.replace(os.sep, "/")}'
-        sucesso = False
-
-        # ──────────────────────────────────────────────
-        # 1) MÉTODO PRINCIPAL: Chrome/Edge headless → PDF → PowerShell silent
-        #    Gera PDF com tamanho correto e imprime sem abrir janela.
-        # ──────────────────────────────────────────────
-        browser_path = encontrar_browser_headless()
-        if browser_path:
-            pdf_path = arquivo.replace('.html', '.pdf')
-            try:
-                log(f"Método 1: Headless PDF via {os.path.basename(browser_path)}...", "PRINT")
-                proc = subprocess.run(
-                    [browser_path,
-                     '--headless', '--disable-gpu', '--no-sandbox',
-                     '--no-pdf-header-footer',
-                     '--run-all-compositor-stages-before-draw',
-                     f'--print-to-pdf={pdf_path}',
-                     file_url],
-                    timeout=15, capture_output=True
-                )
-
-                if proc.returncode == 0 and os.path.isfile(pdf_path):
-                    pdf_size = os.path.getsize(pdf_path)
-                    log(f"PDF gerado ({pdf_size} bytes): {pdf_path}", "PRINT")
-
-                    # Tenta PowerShell silencioso primeiro
-                    sucesso = imprimir_pdf_silencioso(pdf_path)
-
-                    # Se PowerShell falhar, tenta SumatraPDF (se instalado)
-                    if not sucesso:
-                        sucesso = imprimir_pdf_sumatra(pdf_path)
-
-                    # Último recurso: os.startfile (pode abrir viewer brevemente)
-                    if not sucesso:
-                        try:
-                            os.startfile(pdf_path, 'print')
-                            log("PDF via os.startfile (último recurso)", "AVISO")
-                            time.sleep(5)
-                            sucesso = True
-                        except Exception as e:
-                            log(f"os.startfile falhou: {e}", "AVISO")
-
-                    # Limpeza do PDF
-                    time.sleep(2)
-                    try:
-                        os.unlink(pdf_path)
-                    except Exception:
-                        pass
-                else:
-                    log(f"PDF não gerado (código {proc.returncode})", "AVISO")
-                    if proc.stderr:
-                        log(f"stderr: {proc.stderr.decode('utf-8', errors='replace')[:200]}", "DEBUG")
-            except subprocess.TimeoutExpired:
-                log("Headless timeout", "AVISO")
-            except Exception as e:
-                log(f"Headless falhou: {e}", "AVISO")
-
-        # ──────────────────────────────────────────────
-        # 2) FALLBACK: rundll32 PrintHTML (não confiável, pode não imprimir)
-        # ──────────────────────────────────────────────
-        if not sucesso:
-            log("Método 2 (fallback): rundll32 PrintHTML...", "PRINT")
-            sucesso = imprimir_via_windows_html(arquivo)
-
-        if not sucesso:
-            log("TODAS as tentativas falharam!", "ERRO")
-
-        # Limpeza do HTML temporário
-        time.sleep(2)
+        log(f"Abrindo no navegador para impressão...", "PRINT")
+        
+        # Abre no navegador padrão - o JS auto-print cuida do resto
+        webbrowser.open(f'file:///{arquivo}')
+        
+        log(f"Enviado para o navegador!", "PRINT")
+        time.sleep(5)  # Aguarda impressão
+        
+        # Remove arquivo temporário
         try:
             os.unlink(arquivo)
-        except Exception:
+            log(f"Arquivo temporário removido", "PRINT")
+        except:
             pass
-        return sucesso
-    except Exception as e:
-        log(f"Falha na impressão: {e}", "ERRO")
-        return False
-
-def imprimir_pdf_sumatra(pdf_path):
-    """Tenta imprimir via SumatraPDF (se instalado). 100% silencioso."""
-    if os.name != 'nt':
-        return False
-    import shutil
-    # Procura SumatraPDF
-    sumatra = shutil.which('SumatraPDF')
-    if not sumatra:
-        for prog in [os.environ.get('PROGRAMFILES', ''), os.environ.get('PROGRAMFILES(X86)', ''), os.environ.get('LOCALAPPDATA', '')]:
-            if prog:
-                candidate = os.path.join(prog, 'SumatraPDF', 'SumatraPDF.exe')
-                if os.path.isfile(candidate):
-                    sumatra = candidate
-                    break
-    if not sumatra:
-        return False
-    try:
-        subprocess.run([sumatra, '-print-to-default', '-silent', pdf_path], timeout=15, capture_output=True)
-        log("PDF impresso via SumatraPDF silencioso!", "PRINT")
-        time.sleep(3)
+        
         return True
     except Exception as e:
-        log(f"SumatraPDF falhou: {e}", "AVISO")
+        log(f"Falha na impressão: {e}", "ERRO")
         return False
 
 def processar_pedido(pedido, store_name="Comanda Tech"):
@@ -666,7 +465,7 @@ def mostrar_status(company_id):
     print()
 
 # ============================================
-# FILA DE IMPRESSÃO (GARÇOM / PDV)
+# FILA DE IMPRESSÃO (GARÇOM / MESA)
 # ============================================
 def buscar_fila_impressao(company_id):
     """Busca jobs pendentes na fila de impressão"""
@@ -700,7 +499,7 @@ def marcar_fila_impressa(job_id):
         return False
 
 def processar_fila(company_id):
-    """Processa jobs pendentes da fila de impressão"""
+    """Processa jobs pendentes da fila de impressão (mesa/garçom)"""
     jobs = buscar_fila_impressao(company_id)
     if not jobs:
         return 0
@@ -724,9 +523,6 @@ def processar_fila(company_id):
 # LOOP PRINCIPAL
 # ============================================
 if __name__ == "__main__":
-    registrar_versao_local()
-    log(f"Boot do script {SCRIPT_VERSION}", "BOOT")
-
     print()
     print("=" * 50)
     print(f"  {STORE_NAME} - Impressão Automática {SCRIPT_VERSION}")
@@ -747,7 +543,6 @@ if __name__ == "__main__":
     
     log(f"Buscando empresa: {slug}...", "INFO")
     company_id, company_name, company_address = buscar_empresa_por_slug(slug)
-    COMPANY_SLUG = slug
     
     if not company_id:
         print(f"Empresa '{slug}' não encontrada ou inativa. Verifique o slug.")
@@ -761,12 +556,10 @@ if __name__ == "__main__":
     log(f"Empresa encontrada: {company_name}", "OK")
     log(f"Company ID: {company_id}", "OK")
     log(f"Papel: {PAPER_SIZE}", "OK")
-    log(f"Modo de impressão: silencioso (sem navegador)", "CONFIG")
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
     print("  Pressione Ctrl+C para parar")
     print(f"  Log: {LOG_FILE}")
-    print(f"  Versão: {VERSION_FILE}")
     print("=" * 50)
     print()
     
@@ -789,7 +582,7 @@ if __name__ == "__main__":
                     processar_pedido(pedido, STORE_NAME)
                 mostrar_status(company_id)
             
-            # 2. Fila de impressão (garçom / PDV)
+            # 2. Fila de impressão (garçom / mesa)
             fila_count = processar_fila(company_id)
             
             if not pedidos and fila_count == 0:
@@ -798,7 +591,7 @@ if __name__ == "__main__":
                 if contador >= 12:
                     mostrar_status(company_id)
                     contador = 0
-                elif SHOW_HEARTBEAT_DOTS:
+                else:
                     print(".", end="", flush=True)
             
             time.sleep(CHECK_INTERVAL)
