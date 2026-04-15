@@ -14,6 +14,7 @@ import subprocess
 import os
 import webbrowser
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
 # ============================================
 # CONFIGURAÇÃO
@@ -24,6 +25,8 @@ CHECK_INTERVAL = 5  # segundos entre verificações
 STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 PAPER_SIZE = "58mm"  # Será carregado das configurações
+SCRIPT_VERSION = "v5.2"
+LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
 # HEADERS para API
@@ -39,9 +42,15 @@ HEADERS = {
 pedidos_impressos_sessao = []
 
 def log(msg, tipo="INFO"):
-    """Log com timestamp"""
+    """Log com timestamp em tela e arquivo"""
     agora = datetime.now(timezone(timedelta(hours=-3))).strftime("%H:%M:%S")
-    print(f"[{agora}] [{tipo}] {msg}")
+    linha = f"[{agora}] [{tipo}] {msg}"
+    print(linha)
+    try:
+        with LOG_FILE.open("a", encoding="utf-8") as f:
+            f.write(linha + "\n")
+    except Exception:
+        pass
 
 def buscar_empresa_por_slug(slug):
     """Busca empresa pelo slug e retorna id, nome e endereço"""
