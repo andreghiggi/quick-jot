@@ -1009,7 +1009,7 @@ export default function PDV() {
       .update({ notes: cancelledNotes })
       .eq('id', saleId);
     // Refresh sales list via hook
-    await refetch();
+    await refetchSales();
   }
 
   // Handle TEF estorno (cancel/reverse completed transaction)
