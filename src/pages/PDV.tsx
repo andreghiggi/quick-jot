@@ -89,6 +89,7 @@ export default function PDV() {
   const { settings: storeSettings, updateSetting } = useStoreSettings({ companyId: company?.id });
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId: company?.id });
   const { tables } = useTables({ companyId: company?.id });
+  const { groups: optionalGroups } = useOptionalGroups({ companyId: company?.id });
   const { 
     currentRegister, 
     registers,
