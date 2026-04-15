@@ -325,6 +325,8 @@ export default function PDV() {
   // Detect if selected payment method has TEF integration
   const selectedMethodObj = activePaymentMethods.find(m => m.id === selectedPaymentMethod);
   const selectedMethodIntegration = (selectedMethodObj as any)?.integration_type as string | null | undefined;
+  const isPixPayment = selectedMethodObj?.name?.toLowerCase().includes('pix') && !selectedMethodIntegration;
+  const pixConfigured = !!(storeSettings.pixKey && storeSettings.pixName && storeSettings.pixCity);
 
   function addToCart(product: typeof products[0]) {
     const existing = cart.find(item => item.product_id === product.id);
