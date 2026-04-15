@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
@@ -107,6 +107,9 @@ export default function PDV() {
   // TEF PinPad state
   const [pinpadEnabled, setPinpadEnabled] = useState(false);
   const [pinpadResult, setPinpadResult] = useState<PinpadTransactionResult | null>(null);
+  const tefCancelRef = useRef(false);
+  const tefIdentifierRef = useRef<string>('');
+  const tefHashRef = useRef<string>('');
 
   // TEF mode: 'smartpos' or 'pinpad' — auto-selected based on what's configured
   const [tefMode, setTefMode] = useState<'smartpos' | 'pinpad'>('smartpos');
@@ -485,6 +488,7 @@ export default function PDV() {
         const installmentCount = tefInstallmentMode === 'parcelado' ? parseInt(tefInstallments) || 2 : 1;
 
         setTefProcessing(true);
+        tefCancelRef.current = false;
         const usePinpad = integType === 'tef_pinpad';
 
         if (usePinpad) {
@@ -505,11 +509,24 @@ export default function PDV() {
               return; // ABORT — sale NOT created
             }
 
+            tefHashRef.current = createResult.hash;
+
             // Poll for result (max 120s)
             setTefStatus('Aguardando pagamento no PinPad...');
             let tefCompleted = false;
 
             for (let i = 0; i < 120 && !tefCompleted; i++) {
+              if (tefCancelRef.current) {
+                toast.info('Operação TEF cancelada pelo operador.');
+                await cancelPinpadTransaction(company!.id, {
+                  identificacao: String(Date.now()),
+                });
+                setTefProcessing(false);
+                setTefStatus('');
+                setIsProcessingSale(false);
+                tefHashRef.current = '';
+                return;
+              }
               await new Promise(resolve => setTimeout(resolve, 1000));
               
               const statusResult = await pollPinpadStatus(company!.id, createResult.hash!);
@@ -569,6 +586,7 @@ export default function PDV() {
           setTefStatus('Enviando para maquininha...');
           try {
             const tefIdentifier = `pdv-${Date.now()}`;
+            tefIdentifierRef.current = tefIdentifier;
             const createResult = await sendPaymentToMultiplusCard(company!.id, {
               amount: finalTotal,
               paymentType: tefPaymentType,
@@ -588,6 +606,15 @@ export default function PDV() {
             setTefStatus('Aguardando pagamento na maquininha...');
             let tefCompleted = false;
             for (let i = 0; i < 60 && !tefCompleted; i++) {
+              if (tefCancelRef.current) {
+                toast.info('Operação TEF cancelada pelo operador.');
+                await abortMultiplusCardSale(company!.id, tefIdentifier, true);
+                setTefProcessing(false);
+                setTefStatus('');
+                setIsProcessingSale(false);
+                tefIdentifierRef.current = '';
+                return;
+              }
               await new Promise(resolve => setTimeout(resolve, 2000));
               
               const statusResult = await checkMultiplusCardTransactionStatus(company!.id, tefIdentifier);
@@ -1626,30 +1653,56 @@ export default function PDV() {
                 <span className="text-primary">{formatCurrency(finalTotal)}</span>
               </div>
             </div>
+
+            {tefProcessing && (
+              <div className="flex items-center gap-3 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                <Loader2 className="w-5 h-5 animate-spin text-primary flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">{tefStatus || 'Processando TEF...'}</p>
+                  <p className="text-xs text-muted-foreground">Use o botão abaixo para cancelar a operação</p>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPaymentDialog(false)} disabled={isProcessingSale}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleFinalizeSale} 
-              disabled={
-                isProcessingSale || 
-                (divideByPeople 
-                  ? (peoplePaying.length === 0 || Math.abs(remainingAmount) > 0.01)
-                  : (!selectedPaymentMethod || (useSplitPayment && (!secondPaymentMethod || !firstPaymentAmount)))
-                )
-              }
-            >
-              {isProcessingSale ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {tefProcessing ? tefStatus || 'Processando TEF...' : 'Processando...'}
-                </>
-              ) : (
-                'Confirmar Pagamento'
-              )}
-            </Button>
+            {tefProcessing ? (
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  tefCancelRef.current = true;
+                  setTefStatus('Cancelando operação...');
+                }}
+                className="w-full h-14 text-lg"
+              >
+                <X className="w-5 h-5 mr-2" />
+                Cancelar Operação TEF
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setPaymentDialog(false)} disabled={isProcessingSale}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleFinalizeSale} 
+                  disabled={
+                    isProcessingSale || 
+                    (divideByPeople 
+                      ? (peoplePaying.length === 0 || Math.abs(remainingAmount) > 0.01)
+                      : (!selectedPaymentMethod || (useSplitPayment && (!secondPaymentMethod || !firstPaymentAmount)))
+                    )
+                  }
+                >
+                  {isProcessingSale ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    'Confirmar Pagamento'
+                  )}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
