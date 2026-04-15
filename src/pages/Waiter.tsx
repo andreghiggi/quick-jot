@@ -722,6 +722,28 @@ export default function Waiter() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Optionals Dialog */}
+      {optionalsDialogProduct && (
+        <PDVOptionalsDialog
+          open={!!optionalsDialogProduct}
+          onOpenChange={(open) => {
+            if (!open) {
+              setOptionalsDialogProduct(null);
+              setOptionalsDialogGroups([]);
+            }
+          }}
+          product={{
+            id: optionalsDialogProduct.id,
+            name: optionalsDialogProduct.name,
+            price: optionalsDialogProduct.price,
+            imageUrl: optionalsDialogProduct.image_url,
+            category: optionalsDialogProduct.category,
+          }}
+          groups={optionalsDialogGroups}
+          onAddToCart={handleOptionalsAddToCart}
+        />
+      )}
     </AppLayout>
   );
 }
