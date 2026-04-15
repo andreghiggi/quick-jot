@@ -26,7 +26,7 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v8.4"
+SCRIPT_VERSION = "v8.5"
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -429,17 +429,17 @@ def imprimir_html(html, order_number):
         dpi_x = hDC.GetDeviceCaps(win32con.LOGPIXELSX)
         dpi_y = hDC.GetDeviceCaps(win32con.LOGPIXELSY)
 
-        # Fonte proporcional ao papel
+        # Fonte GRANDE — máximo possível para 80mm (24 colunas) ou 58mm (20 colunas)
         is_80mm = PAPER_SIZE == '80mm'
-        colunas = 48 if is_80mm else 32
-        font_height = int(page_w / colunas * 1.6)
-        margin_x = int(dpi_x * 0.08)  # ~2mm
-        margin_y = int(dpi_y * 0.08)
+        colunas = 24 if is_80mm else 20
+        font_height = int(page_w / colunas * 2.0)
+        margin_x = int(dpi_x * 0.04)  # ~1mm margem mínima
+        margin_y = int(dpi_y * 0.04)
 
         font = win32ui.CreateFont({
             'name': 'Courier New',
             'height': font_height,
-            'weight': 700,
+            'weight': 900,  # extra bold
         })
         hDC.SelectObject(font)
 
