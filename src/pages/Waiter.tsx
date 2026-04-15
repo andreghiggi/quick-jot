@@ -45,7 +45,7 @@ import {
   Printer
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { printProductionTicket } from '@/utils/printProductionTicket';
+import { toast } from 'sonner';
 
 export default function Waiter() {
   const { company, user } = useAuthContext();
