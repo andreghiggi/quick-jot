@@ -27,6 +27,9 @@ interface StoreSettings {
   buttonColor: string;
   estimatedWaitTime: string;
   featuredSectionName: string;
+  pixKey: string;
+  pixName: string;
+  pixCity: string;
 }
 
 interface UseStoreSettingsOptions {
@@ -60,6 +63,9 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     buttonColor: '#ef4444',
     estimatedWaitTime: '',
     featuredSectionName: 'Novidades',
+    pixKey: '',
+    pixName: '',
+    pixCity: '',
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
@@ -108,6 +114,9 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         buttonColor: settingsMap['button_color'] || '#ef4444',
         estimatedWaitTime: settingsMap['estimated_wait_time'] || '',
         featuredSectionName: settingsMap['featured_section_name'] || 'Novidades',
+        pixKey: settingsMap['pix_key'] || '',
+        pixName: settingsMap['pix_name'] || '',
+        pixCity: settingsMap['pix_city'] || '',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);

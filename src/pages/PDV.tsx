@@ -66,6 +66,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { PixQRCodeDialog } from '@/components/pos/PixQRCodeDialog';
 
 interface CartItem {
   product_id: string | null;
@@ -168,6 +169,8 @@ export default function PDV() {
   // TEF estorno state
   const [tefEstornoLoading, setTefEstornoLoading] = useState<string | null>(null);
 
+  // PIX QR Code state
+  const [pixQrDialog, setPixQrDialog] = useState(false);
   // Dialog states
   const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
   const [closeRegisterDialog, setCloseRegisterDialog] = useState(false);
@@ -322,6 +325,8 @@ export default function PDV() {
   // Detect if selected payment method has TEF integration
   const selectedMethodObj = activePaymentMethods.find(m => m.id === selectedPaymentMethod);
   const selectedMethodIntegration = (selectedMethodObj as any)?.integration_type as string | null | undefined;
+  const isPixPayment = selectedMethodObj?.name?.toLowerCase().includes('pix') && !selectedMethodIntegration;
+  const pixConfigured = !!(storeSettings.pixKey && storeSettings.pixName && storeSettings.pixCity);
 
   function addToCart(product: typeof products[0]) {
     const existing = cart.find(item => item.product_id === product.id);
@@ -1819,7 +1824,14 @@ export default function PDV() {
                   Cancelar
                 </Button>
                 <Button 
-                  onClick={handleFinalizeSale} 
+                  onClick={() => {
+                    // If PIX payment with QR configured, show QR dialog first
+                    if (isPixPayment && pixConfigured && !divideByPeople) {
+                      setPixQrDialog(true);
+                    } else {
+                      handleFinalizeSale();
+                    }
+                  }} 
                   disabled={
                     isProcessingSale || 
                     (divideByPeople 
@@ -1833,6 +1845,8 @@ export default function PDV() {
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Processando...
                     </>
+                  ) : isPixPayment && pixConfigured ? (
+                    'Gerar QR Code PIX'
                   ) : (
                     'Confirmar Pagamento'
                   )}
@@ -1842,6 +1856,20 @@ export default function PDV() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* PIX QR Code Dialog */}
+      <PixQRCodeDialog
+        open={pixQrDialog}
+        onOpenChange={setPixQrDialog}
+        amount={finalTotal}
+        pixKey={storeSettings.pixKey}
+        merchantName={storeSettings.pixName}
+        merchantCity={storeSettings.pixCity}
+        onConfirmPayment={() => {
+          setPixQrDialog(false);
+          handleFinalizeSale();
+        }}
+      />
 
       {/* Close Register Dialog */}
       <Dialog open={closeRegisterDialog} onOpenChange={setCloseRegisterDialog}>
