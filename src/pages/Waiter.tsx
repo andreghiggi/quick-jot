@@ -5,6 +5,10 @@ import { useTables, TableStatus } from '@/hooks/useTables';
 import { useTabs, Tab } from '@/hooks/useTabs';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
+import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
+import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +45,6 @@ import {
   Printer
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { printProductionTicket } from '@/utils/printProductionTicket';
 
 export default function Waiter() {
   const { company, user } = useAuthContext();
@@ -56,6 +59,7 @@ export default function Waiter() {
   } = useTabs({ companyId: company?.id });
   const { products, loading: loadingProducts } = useProducts({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
+  const { groups: optionalGroups } = useOptionalGroups({ companyId: company?.id });
 
   const [activeView, setActiveView] = useState<'tables' | 'tabs'>('tables');
   const [selectedTab, setSelectedTab] = useState<Tab | null>(null);
@@ -75,6 +79,8 @@ export default function Waiter() {
     notes: string;
   }>>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [optionalsDialogProduct, setOptionalsDialogProduct] = useState<typeof products[0] | null>(null);
+  const [optionalsDialogGroups, setOptionalsDialogGroups] = useState<OptionalGroup[]>([]);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
@@ -145,22 +151,56 @@ export default function Waiter() {
   };
 
   const handleAddToCart = (product: typeof products[0]) => {
-    const existing = cart.find(item => item.productId === product.id);
+    // Check if product has optional groups
+    const productGroups = optionalGroups.filter(g => 
+      g.active && (g.productIds.includes(product.id) || g.categoryIds.includes(product.category))
+    );
+    
+    if (productGroups.length > 0) {
+      setOptionalsDialogProduct(product);
+      setOptionalsDialogGroups(productGroups);
+      return;
+    }
+
+    addSimpleToCart(product.id, product.name, product.price);
+  };
+
+  const addSimpleToCart = (productId: string, productName: string, unitPrice: number) => {
+    const existing = cart.find(item => item.productId === productId && item.productName === productName);
     if (existing) {
       setCart(cart.map(item => 
-        item.productId === product.id 
+        item.productId === productId && item.productName === productName
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
       setCart([...cart, {
-        productId: product.id,
-        productName: product.name,
+        productId,
+        productName,
         quantity: 1,
-        unitPrice: product.price,
+        unitPrice,
         notes: ''
       }]);
     }
+  };
+
+  const handleOptionalsAddToCart = (items: Array<{
+    product_id: string | null;
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+  }>) => {
+    for (const item of items) {
+      setCart(prev => [...prev, {
+        productId: item.product_id || '',
+        productName: item.product_name,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        notes: ''
+      }]);
+    }
+    setOptionalsDialogProduct(null);
+    setOptionalsDialogGroups([]);
   };
 
   const handleUpdateCartQuantity = (productId: string, delta: number) => {
@@ -202,9 +242,9 @@ export default function Waiter() {
 
       await addMultipleItemsToTab(selectedTab.id, itemsToAdd);
 
-      if (shouldPrint) {
-        // Print production ticket
-        printProductionTicket({
+      if (shouldPrint && company?.id) {
+        // Send to print queue for auto_printer.py on computer
+        const html = generateProductionTicketHTML({
           tabNumber: selectedTab.tab_number,
           tableNumber: selectedTab.table?.number,
           customerName: selectedTab.customer_name,
@@ -215,7 +255,21 @@ export default function Waiter() {
           })),
           createdAt: new Date()
         });
-        toast.success(`Pedido enviado para impressão!`);
+        
+        const { error: printError } = await supabase
+          .from('print_queue')
+          .insert({
+            company_id: company.id,
+            html_content: html,
+            label: `Comanda #${selectedTab.tab_number}`,
+          });
+        
+        if (printError) {
+          console.error('Print queue error:', printError);
+          toast.error('Erro ao enviar para impressão');
+        } else {
+          toast.success(`Pedido enviado para impressão!`);
+        }
       } else {
         toast.success(`Itens adicionados à Comanda #${selectedTab.tab_number}!`);
       }
@@ -668,6 +722,28 @@ export default function Waiter() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Optionals Dialog */}
+      {optionalsDialogProduct && (
+        <PDVOptionalsDialog
+          open={!!optionalsDialogProduct}
+          onOpenChange={(open) => {
+            if (!open) {
+              setOptionalsDialogProduct(null);
+              setOptionalsDialogGroups([]);
+            }
+          }}
+          product={{
+            id: optionalsDialogProduct.id,
+            name: optionalsDialogProduct.name,
+            price: optionalsDialogProduct.price,
+            imageUrl: optionalsDialogProduct.imageUrl,
+            category: optionalsDialogProduct.category,
+          }}
+          groups={optionalsDialogGroups}
+          onAddToCart={handleOptionalsAddToCart}
+        />
+      )}
     </AppLayout>
   );
 }
