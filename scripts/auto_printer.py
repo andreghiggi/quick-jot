@@ -14,6 +14,7 @@ import subprocess
 import os
 import webbrowser
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
 # ============================================
 # CONFIGURAÇÃO
@@ -24,6 +25,8 @@ CHECK_INTERVAL = 5  # segundos entre verificações
 STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 PAPER_SIZE = "58mm"  # Será carregado das configurações
+SCRIPT_VERSION = "v5.2"
+LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
 # HEADERS para API
@@ -39,9 +42,15 @@ HEADERS = {
 pedidos_impressos_sessao = []
 
 def log(msg, tipo="INFO"):
-    """Log com timestamp"""
+    """Log com timestamp em tela e arquivo"""
     agora = datetime.now(timezone(timedelta(hours=-3))).strftime("%H:%M:%S")
-    print(f"[{agora}] [{tipo}] {msg}")
+    linha = f"[{agora}] [{tipo}] {msg}"
+    print(linha)
+    try:
+        with LOG_FILE.open("a", encoding="utf-8") as f:
+            f.write(linha + "\n")
+    except Exception:
+        pass
 
 def buscar_empresa_por_slug(slug):
     """Busca empresa pelo slug e retorna id, nome e endereço"""
@@ -385,15 +394,13 @@ def imprimir_html(html, order_number):
     try:
         arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}_{int(time.time())}.html")
         
-        # Adiciona script de auto-print e auto-close ao HTML
         html_com_print = html
         if '<script>' not in html.lower():
             html_com_print = html.replace('</body>', '''
     <script>
         window.onload = function() {
             setTimeout(function() {
-                window.print();
-                setTimeout(function() { window.close(); }, 1000);
+                try { window.print(); } catch (e) {}
             }, 300);
         };
     </script>
@@ -403,22 +410,39 @@ def imprimir_html(html, order_number):
             f.write(html_com_print)
         
         log(f"HTML salvo: {arquivo}", "PRINT")
-        log(f"Abrindo no navegador para impressão...", "PRINT")
+        file_url = f'file:///{arquivo.replace(os.sep, "/")}'
+
+        tentativas = []
+        if os.name == 'nt':
+            tentativas = [
+                ('startfile_print', lambda: os.startfile(arquivo, 'print')),
+                ('browser_open', lambda: webbrowser.open(file_url)),
+                ('rundll32_open', lambda: subprocess.Popen(['rundll32.exe', 'url.dll,FileProtocolHandler', arquivo], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)),
+            ]
+        else:
+            tentativas = [
+                ('browser_open', lambda: webbrowser.open(file_url)),
+            ]
+
+        sucesso = False
+        for nome, acao in tentativas:
+            try:
+                log(f"Tentando imprimir via {nome}...", "PRINT")
+                acao()
+                time.sleep(4)
+                log(f"Tentativa {nome} disparada.", "PRINT")
+                sucesso = True
+                break
+            except Exception as e:
+                log(f"Tentativa {nome} falhou: {e}", "ERRO")
         
-        # Abre no navegador padrão - o JS auto-print cuida do resto
-        webbrowser.open(f'file:///{arquivo}')
-        
-        log(f"Enviado para o navegador!", "PRINT")
-        time.sleep(5)  # Aguarda impressão
-        
-        # Remove arquivo temporário
         try:
             os.unlink(arquivo)
-            log(f"Arquivo temporário removido", "PRINT")
-        except:
+            log("Arquivo temporário removido", "PRINT")
+        except Exception:
             pass
         
-        return True
+        return sucesso
     except Exception as e:
         log(f"Falha na impressão: {e}", "ERRO")
         return False
@@ -550,8 +574,10 @@ def processar_fila(company_id):
         log(f"Imprimindo: {label}...", "FILA")
         html = job.get('html_content', '')
         if html and imprimir_html(html, label.replace('#', '').replace(' ', '_')):
-            marcar_fila_impressa(job['id'])
-            log(f"Job '{label}' impresso!", "OK")
+            if marcar_fila_impressa(job['id']):
+                log(f"Job '{label}' impresso e marcado na fila!", "OK")
+            else:
+                log(f"Job '{label}' disparado, mas não foi marcado como impresso.", "AVISO")
         else:
             log(f"Falha ao imprimir job '{label}'", "ERRO")
     
@@ -563,7 +589,7 @@ def processar_fila(company_id):
 if __name__ == "__main__":
     print()
     print("=" * 50)
-    print(f"  {STORE_NAME} - Impressão Automática v5.0")
+    print(f"  {STORE_NAME} - Impressão Automática {SCRIPT_VERSION}")
     print("=" * 50)
     print(f"  URL: {SUPABASE_URL}")
     print("=" * 50)
@@ -593,6 +619,7 @@ if __name__ == "__main__":
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
     print("  Pressione Ctrl+C para parar")
+    print(f"  Log: {LOG_FILE}")
     print("=" * 50)
     print()
     
