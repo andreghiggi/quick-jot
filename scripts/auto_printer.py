@@ -26,7 +26,7 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v5.6"
+SCRIPT_VERSION = "v5.7"
 PILOT_PRINT_SLUGS = {"lancheria-da-i9-263ee29a"}
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 VERSION_FILE = Path(__file__).with_name("auto_printer.version.txt")
@@ -505,15 +505,9 @@ def imprimir_html(html, order_number):
                 except Exception as e:
                     log(f"Headless falhou: {e}", "AVISO")
 
-            # 2) Fallback: browser_open (abre janela)
+            # 2) Sem fallback visual no piloto: nunca abre navegador no PC
             if not sucesso:
-                log("Usando fallback browser_open...", "PRINT")
-                try:
-                    webbrowser.open(file_url)
-                    time.sleep(4)
-                    sucesso = True
-                except Exception as e:
-                    log(f"browser_open falhou: {e}", "ERRO")
+                log("Impressão silenciosa falhou no piloto; navegador bloqueado nesta loja.", "ERRO")
 
             # Limpeza
             time.sleep(2)
