@@ -909,7 +909,52 @@ export default function PDV() {
     printWindow.document.close();
   }
 
-  function printSaleReceipt(sale: typeof sales[0]) {
+  // Print TEF receipt (comprovante) from saved receipt lines
+  function printTefReceipt(sale: typeof sales[0]) {
+    const notesStr = sale.notes || '';
+    const receiptMatch = notesStr.match(/\[COMPROVANTE\]([\s\S]*?)\[\/COMPROVANTE\]/);
+    if (!receiptMatch) {
+      toast.error('Comprovante TEF não disponível para esta venda');
+      return;
+    }
+
+    const receiptLines = receiptMatch[1].split('\\n').filter(Boolean);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const receiptHtml = receiptLines.map(line => `<p>${line}</p>`).join('');
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Comprovante TEF</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Courier New', monospace;
+            width: ${storeSettings.printerPaperSize === '58mm' ? '58mm' : '80mm'};
+            padding: 2mm;
+            font-size: ${storeSettings.printerPaperSize === '58mm' ? '10px' : '12px'};
+          }
+          p { line-height: 1.4; white-space: pre-wrap; }
+          .header { text-align: center; font-weight: bold; margin-bottom: 3mm; font-size: 14px; }
+          .separator { border-top: 1px dashed #000; margin: 2mm 0; }
+        </style>
+      </head>
+      <body>
+        <p class="header">COMPROVANTE TEF</p>
+        <div class="separator"></div>
+        ${receiptHtml}
+        <div class="separator"></div>
+        <script>window.onload = function() { window.print(); window.close(); }</script>
+      </body>
+      </html>
+    `;
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  }
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
