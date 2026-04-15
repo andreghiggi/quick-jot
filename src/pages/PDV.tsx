@@ -1424,7 +1424,7 @@ export default function PDV() {
                 <Card 
                   key={product.id} 
                   className="cursor-pointer hover:border-primary transition-colors"
-                  onClick={() => addToCart(product)}
+                  onClick={() => handleProductClick(product)}
                 >
                   <CardContent className="p-3">
                     {product.imageUrl ? (
