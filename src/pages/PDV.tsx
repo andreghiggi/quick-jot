@@ -2160,17 +2160,17 @@ export default function PDV() {
                                 {tefEstornoLoading === sale.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" className="min-w-[240px]">
+                              <DropdownMenuItem onClick={() => handleCancelSaleOnly(sale)}>
+                                <Ban className="w-4 h-4 mr-2" />
+                                Cancelar no sistema (sem cartão)
+                              </DropdownMenuItem>
                               {parseTefDataFromNotes(sale.notes) && (
-                                <DropdownMenuItem onClick={() => handleTefEstorno(sale)} className="text-destructive">
+                                <DropdownMenuItem onClick={() => handleTefEstorno(sale)} className="text-muted-foreground">
                                   <CreditCard className="w-4 h-4 mr-2" />
                                   Estornar via TEF (com cartão)
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem onClick={() => handleCancelSaleOnly(sale)} className="text-destructive">
-                                <X className="w-4 h-4 mr-2" />
-                                Cancelar apenas no sistema
-                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
