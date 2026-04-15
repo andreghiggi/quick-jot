@@ -242,9 +242,9 @@ export default function Waiter() {
 
       await addMultipleItemsToTab(selectedTab.id, itemsToAdd);
 
-      if (shouldPrint) {
-        // Print production ticket
-        printProductionTicket({
+      if (shouldPrint && company?.id) {
+        // Send to print queue for auto_printer.py on computer
+        const html = generateProductionTicketHTML({
           tabNumber: selectedTab.tab_number,
           tableNumber: selectedTab.table?.number,
           customerName: selectedTab.customer_name,
@@ -255,7 +255,21 @@ export default function Waiter() {
           })),
           createdAt: new Date()
         });
-        toast.success(`Pedido enviado para impressão!`);
+        
+        const { error: printError } = await supabase
+          .from('print_queue')
+          .insert({
+            company_id: company.id,
+            html_content: html,
+            label: `Comanda #${selectedTab.tab_number}`,
+          });
+        
+        if (printError) {
+          console.error('Print queue error:', printError);
+          toast.error('Erro ao enviar para impressão');
+        } else {
+          toast.success(`Pedido enviado para impressão!`);
+        }
       } else {
         toast.success(`Itens adicionados à Comanda #${selectedTab.tab_number}!`);
       }
