@@ -310,6 +310,10 @@ export default function PDV() {
   const cartTotal = cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
   const finalTotal = cartTotal - discount;
 
+  // Detect if selected payment method has TEF integration
+  const selectedMethodObj = activePaymentMethods.find(m => m.id === selectedPaymentMethod);
+  const selectedMethodIntegration = (selectedMethodObj as any)?.integration_type as string | null | undefined;
+
   function addToCart(product: typeof products[0]) {
     const existing = cart.find(item => item.product_id === product.id);
     if (existing) {
