@@ -586,6 +586,7 @@ export default function PDV() {
           setTefStatus('Enviando para maquininha...');
           try {
             const tefIdentifier = `pdv-${Date.now()}`;
+            tefIdentifierRef.current = tefIdentifier;
             const createResult = await sendPaymentToMultiplusCard(company!.id, {
               amount: finalTotal,
               paymentType: tefPaymentType,
@@ -605,6 +606,15 @@ export default function PDV() {
             setTefStatus('Aguardando pagamento na maquininha...');
             let tefCompleted = false;
             for (let i = 0; i < 60 && !tefCompleted; i++) {
+              if (tefCancelRef.current) {
+                toast.info('Operação TEF cancelada pelo operador.');
+                await abortMultiplusCardSale(company!.id, tefIdentifier, true);
+                setTefProcessing(false);
+                setTefStatus('');
+                setIsProcessingSale(false);
+                tefIdentifierRef.current = '';
+                return;
+              }
               await new Promise(resolve => setTimeout(resolve, 2000));
               
               const statusResult = await checkMultiplusCardTransactionStatus(company!.id, tefIdentifier);
