@@ -1970,7 +1970,7 @@ export default function PDV() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-right">
-                          <p className="font-bold text-primary">{formatCurrency(sale.final_total)}</p>
+                          <p className={`font-bold ${sale.notes?.includes('[CANCELADA]') ? 'line-through text-muted-foreground' : 'text-primary'}`}>{formatCurrency(sale.final_total)}</p>
                           {sale.discount > 0 && (
                             <p className="text-xs text-muted-foreground">Desc: {formatCurrency(sale.discount)}</p>
                           )}
