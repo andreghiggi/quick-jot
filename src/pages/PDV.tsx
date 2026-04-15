@@ -2061,7 +2061,9 @@ export default function PDV() {
                           <p className="text-sm text-muted-foreground">Cliente: {sale.customer_name}</p>
                         )}
                         {sale.notes && !isCancelled && (
-                          <p className="text-xs text-muted-foreground mt-1">{sale.notes}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {sale.notes.replace(/\s*\|\s*\[COMPROVANTE\][\s\S]*?\[\/COMPROVANTE\]/, '').trim()}
+                          </p>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
