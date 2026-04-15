@@ -169,6 +169,8 @@ export default function PDV() {
   // TEF estorno state
   const [tefEstornoLoading, setTefEstornoLoading] = useState<string | null>(null);
 
+  // PIX QR Code state
+  const [pixQrDialog, setPixQrDialog] = useState(false);
   // Dialog states
   const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
   const [closeRegisterDialog, setCloseRegisterDialog] = useState(false);
