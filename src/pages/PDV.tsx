@@ -1121,6 +1121,31 @@ export default function PDV() {
     }
   }
 
+  // Cancel sale in system only (no TEF reversal — for when customer is not present)
+  async function handleCancelSaleOnly(sale: typeof sales[0]) {
+    if (sale.notes?.includes('[CANCELADA]')) {
+      toast.error('Esta venda já foi cancelada');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Cancelar esta venda APENAS NO SISTEMA (sem estorno no cartão)?\n\nValor: ${formatCurrency(sale.final_total)}\n\n⚠️ O estorno financeiro deverá ser feito manualmente pelo portal da adquirente.`
+    );
+    if (!confirmed) return;
+
+    setTefEstornoLoading(sale.id);
+    try {
+      await markSaleAsCancelled(sale.id, sale.notes);
+      toast.success('Venda cancelada no sistema. Faça o estorno manualmente no portal da adquirente.');
+      refetchSales();
+    } catch (error) {
+      console.error('[PDV] Cancel sale error:', error);
+      toast.error('Erro ao cancelar venda');
+    } finally {
+      setTefEstornoLoading(null);
+    }
+  }
+
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
