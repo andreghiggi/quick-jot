@@ -14,8 +14,10 @@ import {
   Trash2, 
   CreditCard,
   Loader2,
-  GripVertical
+  GripVertical,
+  Plug
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 export default function PaymentMethods() {
@@ -29,7 +31,8 @@ export default function PaymentMethods() {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [newMethodName, setNewMethodName] = useState('');
   const [newMethodPixKey, setNewMethodPixKey] = useState('');
-  const [editingMethod, setEditingMethod] = useState<{ id: string; name: string; pix_key: string } | null>(null);
+  const [newMethodIntegration, setNewMethodIntegration] = useState<string>('none');
+  const [editingMethod, setEditingMethod] = useState<{ id: string; name: string; pix_key: string; integration_type: string } | null>(null);
   const [deletingMethodId, setDeletingMethodId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -42,13 +45,16 @@ export default function PaymentMethods() {
     }
 
     setIsSubmitting(true);
-    const success = await addPaymentMethod(newMethodName.trim(), isPixName(newMethodName) ? newMethodPixKey.trim() || undefined : undefined);
+    const pixKey = isPixName(newMethodName) ? newMethodPixKey.trim() || undefined : undefined;
+    const integType = newMethodIntegration !== 'none' ? newMethodIntegration : undefined;
+    const success = await addPaymentMethod(newMethodName.trim(), pixKey, integType);
     setIsSubmitting(false);
 
     if (success) {
       setAddDialog(false);
       setNewMethodName('');
       setNewMethodPixKey('');
+      setNewMethodIntegration('none');
     }
   }
 
@@ -65,6 +71,7 @@ export default function PaymentMethods() {
     } else {
       updateData.pix_key = null;
     }
+    updateData.integration_type = editingMethod.integration_type !== 'none' ? editingMethod.integration_type : null;
     const success = await updatePaymentMethod(editingMethod.id, updateData);
     setIsSubmitting(false);
 
@@ -91,8 +98,8 @@ export default function PaymentMethods() {
     await updatePaymentMethod(id, { active });
   }
 
-  function openEditDialog(method: { id: string; name: string; pix_key?: string | null }) {
-    setEditingMethod({ id: method.id, name: method.name, pix_key: method.pix_key || '' });
+  function openEditDialog(method: { id: string; name: string; pix_key?: string | null; integration_type?: string | null }) {
+    setEditingMethod({ id: method.id, name: method.name, pix_key: method.pix_key || '', integration_type: method.integration_type || 'none' });
     setEditDialog(true);
   }
 
@@ -155,6 +162,12 @@ export default function PaymentMethods() {
                         <span className="font-medium">{method.name}</span>
                         {method.pix_key && (
                           <p className="text-xs text-muted-foreground truncate">Chave: {method.pix_key}</p>
+                        )}
+                        {method.integration_type && (
+                          <p className="text-xs text-primary font-medium flex items-center gap-1">
+                            <Plug className="w-3 h-3" />
+                            {method.integration_type === 'tef_pinpad' ? 'TEF PinPad' : method.integration_type === 'tef_smartpos' ? 'TEF SmartPOS' : method.integration_type}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -241,6 +254,20 @@ export default function PaymentMethods() {
                 <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
               </div>
             )}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1"><Plug className="w-3 h-3" /> Integração</Label>
+              <Select value={newMethodIntegration} onValueChange={setNewMethodIntegration}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  <SelectItem value="tef_pinpad">TEF PinPad (WebService)</SelectItem>
+                  <SelectItem value="tef_smartpos">TEF SmartPOS (PINPDV)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Ao selecionar esta forma no PDV, o TEF será acionado automaticamente</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialog(false)}>Cancelar</Button>
@@ -279,6 +306,20 @@ export default function PaymentMethods() {
                 <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
               </div>
             )}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1"><Plug className="w-3 h-3" /> Integração</Label>
+              <Select value={editingMethod?.integration_type || 'none'} onValueChange={(v) => setEditingMethod(prev => prev ? { ...prev, integration_type: v } : null)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  <SelectItem value="tef_pinpad">TEF PinPad (WebService)</SelectItem>
+                  <SelectItem value="tef_smartpos">TEF SmartPOS (PINPDV)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Ao selecionar esta forma no PDV, o TEF será acionado automaticamente</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialog(false)}>Cancelar</Button>

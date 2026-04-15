@@ -484,23 +484,20 @@ export default function PDV() {
         let tefData: NFCeTefData | undefined = undefined;
 
         // TEF: Send payment if configured and payment is card/pix
-        const anyTefEnabled = (tefEnabled || pinpadEnabled) && company?.id && !divideByPeople;
-        if (anyTefEnabled) {
-          const paymentMethodName = activePaymentMethods.find(m => m.id === selectedPaymentMethod)?.name?.toLowerCase() || '';
-          const isTefPayment = paymentMethodName.includes('créd') || paymentMethodName.includes('cred') || 
-                               paymentMethodName.includes('débit') || paymentMethodName.includes('debit') || 
-                               paymentMethodName.includes('cartão') || paymentMethodName.includes('cartao') ||
-                               paymentMethodName.includes('pix');
-          
-          if (isTefPayment) {
+        const selectedMethod = activePaymentMethods.find(m => m.id === selectedPaymentMethod);
+        const integType = (selectedMethod as any)?.integration_type;
+        const isTefPayment = integType === 'tef_pinpad' || integType === 'tef_smartpos';
+        
+        if (isTefPayment && company?.id && !divideByPeople) {
+            const paymentMethodName = selectedMethod?.name?.toLowerCase() || '';
             const tefPaymentType: 'credit' | 'debit' | 'pix' = paymentMethodName.includes('créd') || paymentMethodName.includes('cred') ? 'credit' 
               : paymentMethodName.includes('débit') || paymentMethodName.includes('debit') ? 'debit' 
-              : 'pix';
+              : paymentMethodName.includes('pix') ? 'pix'
+              : 'credit'; // default to credit
             
             setTefProcessing(true);
 
-            // Determine which TEF mode to use
-            const usePinpad = tefMode === 'pinpad' && pinpadEnabled;
+            const usePinpad = integType === 'tef_pinpad';
 
             if (usePinpad) {
               // ===== PinPad TEF WebService Flow =====
@@ -637,7 +634,6 @@ export default function PDV() {
                 setTefStatus('');
               }
             }
-          }
         }
 
         // Emit NFC-e if checkbox was checked
