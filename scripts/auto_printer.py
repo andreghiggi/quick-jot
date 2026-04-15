@@ -381,58 +381,72 @@ def encontrar_chrome():
     return None
 
 def imprimir_html(html, order_number):
-    """Salva HTML como arquivo temporário e imprime silenciosamente via Chrome kiosk sem tela cheia"""
+    """Serve o HTML via servidor HTTP local e imprime via Chrome kiosk-printing"""
+    import threading
+    import http.server
+    import socketserver
+    
+    porta = 9876
+    html_bytes = html.encode('utf-8')
+    
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(html_bytes)
+        def log_message(self, format, *args):
+            pass  # silencia logs do servidor
+    
     try:
-        arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.html")
-        with open(arquivo, 'w', encoding='utf-8') as f:
-            f.write(html)
-        
-        file_url = f'file:///{arquivo.replace(os.sep, "/")}'
-        log(f"HTML salvo: {arquivo}", "PRINT")
-
-        browser_exe = encontrar_chrome()
-        if browser_exe:
-            perfil_temp = tempfile.mkdtemp(prefix="comanda_printer_")
-            log("Imprimindo via Chrome kiosk-printing oculto...", "PRINT")
-            try:
-                processo = subprocess.Popen([
-                    browser_exe,
-                    f"--user-data-dir={perfil_temp}",
-                    "--no-first-run",
-                    "--no-default-browser-check",
-                    "--disable-extensions",
-                    "--disable-background-networking",
-                    "--kiosk-printing",
-                    "--disable-print-preview",
-                    "--allow-file-access-from-files",
-                    "--window-position=-9999,-9999",
-                    "--window-size=1,1",
-                    "--app=" + file_url,
-                ], shell=False)
-                log("Aguardando impressão...", "PRINT")
-                time.sleep(25)
-                try:
-                    processo.kill()
-                except Exception:
-                    pass
-                try:
-                    os.unlink(arquivo)
-                except Exception:
-                    pass
-                try:
-                    import shutil
-                    shutil.rmtree(perfil_temp, ignore_errors=True)
-                except Exception:
-                    pass
-                return True
-            except Exception as e:
-                log(f"Falha no kiosk-printing: {e}", "ERRO")
-
-        log("Nenhum Chrome/Edge encontrado.", "ERRO")
+        servidor = socketserver.TCPServer(("127.0.0.1", porta), Handler)
+    except OSError:
+        porta = 9877  # tenta porta alternativa se 9876 estiver ocupada
+        servidor = socketserver.TCPServer(("127.0.0.1", porta), Handler)
+    
+    thread = threading.Thread(target=servidor.serve_forever)
+    thread.daemon = True
+    thread.start()
+    log(f"Servidor local iniciado na porta {porta}", "PRINT")
+    
+    url = f"http://127.0.0.1:{porta}"
+    
+    browser_exe = encontrar_chrome()
+    if not browser_exe:
+        log("Chrome/Edge não encontrado.", "ERRO")
+        servidor.shutdown()
         return False
-    except Exception as e:
-        log(f"Falha na impressão: {e}", "ERRO")
-        return False
+    
+    perfil_temp = tempfile.mkdtemp(prefix="comanda_printer_")
+    try:
+        log("Imprimindo via Chrome kiosk-printing...", "PRINT")
+        processo = subprocess.Popen([
+            browser_exe,
+            f"--user-data-dir={perfil_temp}",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-extensions",
+            "--kiosk-printing",
+            "--disable-print-preview",
+            "--window-position=-2000,-2000",
+            "--window-size=400,600",
+            "--app=" + url,
+        ], shell=False)
+        log("Aguardando impressão...", "PRINT")
+        time.sleep(20)
+        try:
+            processo.kill()
+        except Exception:
+            pass
+    finally:
+        servidor.shutdown()
+        try:
+            import shutil
+            shutil.rmtree(perfil_temp, ignore_errors=True)
+        except Exception:
+            pass
+    
+    return True
 
 def diagnosticar_impressora():
     """Verifica se a impressora padrão está configurada e acessível"""
