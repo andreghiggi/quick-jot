@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '15/04/2026',
+    version: '1.26.7',
+    type: 'fix',
+    description: 'Impressão automática v7.0: restaurado método original do domingo (webbrowser.open + window.print) que funcionava corretamente. Adicionada fila de impressão para mesas. Sem mudanças experimentais.',
+  },
+  {
+    date: '15/04/2026',
     version: '1.26.6',
     type: 'fix',
     description: 'Impressão automática v6.2: headless PDF volta como método principal (rundll32 retornava sucesso falso). Cadeia de impressão: PDF→PowerShell silencioso→SumatraPDF→os.startfile. Scripts removidos do HTML.',
