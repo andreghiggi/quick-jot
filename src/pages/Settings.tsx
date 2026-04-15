@@ -20,6 +20,9 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
 import { ButtonColorPicker } from '@/components/settings/ButtonColorPicker';
+import autoPrinterTemplate from '../../scripts/auto_printer.py?raw';
+
+const escapePythonString = (value: string) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
 export default function Settings() {
   const { company, profile, refetchUserData, isSuperAdmin } = useAuthContext();

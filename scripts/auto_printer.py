@@ -26,7 +26,7 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v5.3"
+SCRIPT_VERSION = "v5.4"
 PILOT_PRINT_SLUGS = {"lancheria-da-i9-263ee29a"}
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 VERSION_FILE = Path(__file__).with_name("auto_printer.version.txt")
@@ -631,8 +631,12 @@ if __name__ == "__main__":
     print("=" * 50)
     print()
     
-    # Solicita slug da empresa
-    slug = input("Digite o SLUG da sua empresa (ex: avenida-lanches): ").strip()
+    # Usa slug preconfigurado quando existir; caso contrário, solicita ao usuário
+    slug = (COMPANY_SLUG or "").strip()
+    if slug:
+        log(f"Usando slug preconfigurado: {slug}", "CONFIG")
+    else:
+        slug = input("Digite o SLUG da sua empresa (ex: avenida-lanches): ").strip()
     if not slug:
         print("Slug não informado. Encerrando.")
         exit(1)
