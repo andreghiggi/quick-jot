@@ -1000,6 +1000,27 @@ export default function PDV() {
     return null;
   }
 
+  // Mark a sale as cancelled in the database
+  async function markSaleAsCancelled(saleId: string, currentNotes: string | null) {
+    const cancelledNotes = `[CANCELADA] ${currentNotes || ''}`.trim();
+    await supabase
+      .from('pdv_sales')
+      .update({ notes: cancelledNotes })
+      .eq('id', saleId);
+    // Refresh sales list
+    if (currentRegister) {
+      const { data } = await supabase
+        .from('pdv_sales')
+        .select('*, payment_method:payment_methods(name), items:pdv_sale_items(*)')
+        .eq('cash_register_id', currentRegister.id)
+        .order('created_at', { ascending: false });
+      if (data) {
+        // Force re-render by triggering refetch
+        window.location.reload();
+      }
+    }
+  }
+
   // Handle TEF estorno (cancel/reverse completed transaction)
   async function handleTefEstorno(sale: typeof sales[0]) {
     if (!company?.id) return;
