@@ -26,7 +26,7 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v5.9"
+SCRIPT_VERSION = "v6.0"
 SHOW_DEBUG_IN_CONSOLE = False
 SHOW_HEARTBEAT_DOTS = False
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
@@ -456,7 +456,7 @@ def encontrar_browser_headless():
     return None
 
 def imprimir_html(html, order_number):
-    """Salva HTML e imprime com modo piloto isolado por loja."""
+    """Salva HTML e imprime silenciosamente (headless PDF prioritário)."""
     try:
         arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}_{int(time.time())}.html")
 
@@ -479,12 +479,9 @@ def imprimir_html(html, order_number):
         file_url = f'file:///{arquivo.replace(os.sep, "/")}'
         sucesso = False
 
-        # 1) Tenta impressão silenciosa nativa do Windows para HTML
-        sucesso = imprimir_via_windows_html(arquivo)
-
-        # 2) Fallback silencioso: HTML → PDF headless → print PDF
+        # 1) MÉTODO PRINCIPAL: HTML → PDF headless → print PDF
         browser_path = encontrar_browser_headless()
-        if not sucesso and browser_path:
+        if browser_path:
             pdf_path = arquivo.replace('.html', '.pdf')
             try:
                 log(f"Gerando PDF via {os.path.basename(browser_path)} headless...", "PRINT")
@@ -503,7 +500,7 @@ def imprimir_html(html, order_number):
                         time.sleep(5)
                         sucesso = True
                     except Exception as e:
-                        log(f"startfile PDF falhou: {e}, tentando ShellExecute...", "AVISO")
+                        log(f"startfile PDF falhou: {e}, tentando rundll32...", "AVISO")
                         try:
                             subprocess.run(
                                 ['rundll32.exe', 'mshtml.dll,PrintHTML', pdf_path],
@@ -512,7 +509,7 @@ def imprimir_html(html, order_number):
                             time.sleep(5)
                             sucesso = True
                         except Exception as e2:
-                            log(f"ShellExecute PDF falhou: {e2}", "AVISO")
+                            log(f"rundll32 PDF falhou: {e2}", "AVISO")
                     try:
                         os.unlink(pdf_path)
                     except Exception:
@@ -526,9 +523,13 @@ def imprimir_html(html, order_number):
             except Exception as e:
                 log(f"Headless falhou: {e}", "AVISO")
 
-        # Nunca abre navegador no PC
+        # 2) FALLBACK: rundll32 PrintHTML direto no HTML
         if not sucesso:
-            log("Impressão silenciosa falhou; navegador bloqueado.", "ERRO")
+            log("Tentando fallback rundll32 PrintHTML...", "PRINT")
+            sucesso = imprimir_via_windows_html(arquivo)
+
+        if not sucesso:
+            log("Todas as tentativas de impressão falharam.", "ERRO")
 
         # Limpeza
         time.sleep(2)
