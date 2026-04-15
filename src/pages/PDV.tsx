@@ -2042,6 +2042,18 @@ export default function PDV() {
                             </Button>
                           );
                         })()}
+                        {parseTefDataFromNotes(sale.notes) && (
+                          <Button 
+                            size="icon" 
+                            variant="ghost"
+                            onClick={() => handleTefEstorno(sale)}
+                            disabled={tefEstornoLoading === sale.id}
+                            title="Estornar TEF"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            {tefEstornoLoading === sale.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                          </Button>
+                        )}
                         <Button 
                           size="icon" 
                           variant="ghost"
