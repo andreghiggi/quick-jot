@@ -25,7 +25,7 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v8.0"
+SCRIPT_VERSION = "v8.1"
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -371,95 +371,63 @@ def encontrar_chrome():
     return None
 
 def imprimir_html(html, order_number):
-    """Imprime HTML silenciosamente: Chrome headless → PDF → impressora padrão"""
+    """Imprime HTML silenciosamente direto na impressora padrão (sem abrir janela)"""
     try:
         # 1. Salva HTML em arquivo temporário
         html_file = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.html")
-        pdf_file = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.pdf")
         
         with open(html_file, 'w', encoding='utf-8') as f:
             f.write(html)
         log(f"HTML salvo: {html_file}", "PRINT")
         
-        # 2. Converte HTML → PDF via Chrome headless (sem janela)
-        browser_exe = encontrar_chrome()
-        if not browser_exe:
-            log("Chrome/Edge não encontrado! Impossível imprimir.", "ERRO")
-            return False
-        
-        perfil_temp = tempfile.mkdtemp(prefix="comanda_printer_")
-        file_url = f'file:///{html_file.replace(os.sep, "/")}'
-        
-        cmd = [
-            browser_exe,
-            "--headless",
-            "--disable-gpu",
-            f"--print-to-pdf={pdf_file}",
-            "--no-pdf-header-footer",
-            "--print-to-pdf-no-header",
-            f"--user-data-dir={perfil_temp}",
-            "--no-first-run",
-            "--disable-extensions",
-            "--disable-background-networking",
-            file_url,
-        ]
-        
-        log("Convertendo HTML → PDF (headless)...", "PRINT")
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        
-        if not os.path.exists(pdf_file):
-            log(f"PDF não foi gerado. Chrome stderr: {result.stderr[:200]}", "ERRO")
-            # Fallback: tenta com --headless=new
-            cmd[1] = "--headless=new"
-            log("Tentando com --headless=new...", "PRINT")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        
-        if not os.path.exists(pdf_file):
-            log("PDF não gerado mesmo com fallback. Verifique o Chrome.", "ERRO")
-            return False
-        
-        log(f"PDF gerado: {pdf_file}", "PRINT")
-        
-        # 3. Envia PDF direto para impressora padrão via ShellExecute (sem janela)
+        # 2. Imprime via COM (Internet Explorer invisível) — 100% silencioso
         try:
-            import win32api
-            import win32print
+            import win32com.client
             
-            impressora = win32print.GetDefaultPrinter()
-            log(f"Enviando para impressora: {impressora}", "PRINT")
+            log("Abrindo impressão via COM (silencioso)...", "PRINT")
+            ie = win32com.client.Dispatch("InternetExplorer.Application")
+            ie.Visible = False
+            ie.Navigate(f"file:///{html_file.replace(os.sep, '/')}")
             
-            win32api.ShellExecute(0, "print", pdf_file, None, ".", 0)
-            log("Enviado para impressora!", "PRINT")
-            time.sleep(8)
+            # Aguarda carregar
+            tentativas = 0
+            while ie.Busy or ie.ReadyState != 4:
+                time.sleep(0.3)
+                tentativas += 1
+                if tentativas > 40:  # ~12s timeout
+                    log("Timeout aguardando HTML carregar", "ERRO")
+                    ie.Quit()
+                    return False
+            
+            time.sleep(1)  # garante renderização completa
+            
+            # OLECMDID_PRINT = 6, OLECMDEXECOPT_DONTPROMPTUSER = 2
+            ie.ExecWB(6, 2)
+            log("Enviado para impressora padrão!", "PRINT")
+            
+            time.sleep(5)  # aguarda spooler processar
+            ie.Quit()
             
         except ImportError:
-            # Fallback sem pywin32: usa SumatraPDF ou comando do sistema
-            log("pywin32 não disponível. Tentando via comando do sistema...", "AVISO")
+            log("pywin32 (win32com) não instalado! Rode: pip install pywin32", "ERRO")
+            return False
+        except Exception as e:
+            log(f"Erro COM: {e}", "ERRO")
             try:
-                os.startfile(pdf_file, "print")
-                log("Enviado via os.startfile!", "PRINT")
-                time.sleep(8)
-            except Exception as e:
-                log(f"Fallback os.startfile falhou: {e}", "ERRO")
-                return False
-        
-        # 4. Limpeza
-        for f in [html_file, pdf_file]:
-            try:
-                os.unlink(f)
-            except Exception:
+                ie.Quit()
+            except:
                 pass
+            return False
+        
+        # 3. Limpeza
         try:
-            import shutil
-            shutil.rmtree(perfil_temp, ignore_errors=True)
-        except Exception:
+            os.unlink(html_file)
+            log("Arquivo temporário removido", "PRINT")
+        except:
             pass
         
         return True
         
-    except subprocess.TimeoutExpired:
-        log("Timeout na conversão PDF. Chrome travou?", "ERRO")
-        return False
     except Exception as e:
         log(f"Falha na impressão: {e}", "ERRO")
         return False
