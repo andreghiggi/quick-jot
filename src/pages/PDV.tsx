@@ -23,6 +23,7 @@ import {
   pollPinpadStatus,
   confirmPinpadTransaction,
   cancelPinpadTransaction,
+  reversePinpadTransaction,
   PinpadTransactionResult,
 } from '@/services/pinpadService';
 import { supabase } from '@/integrations/supabase/client';
