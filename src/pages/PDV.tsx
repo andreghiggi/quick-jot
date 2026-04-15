@@ -1557,7 +1557,7 @@ export default function PDV() {
           <DialogHeader>
             <DialogTitle>Forma de Pagamento</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 overflow-y-auto flex-1 pr-1">
+          <div className="space-y-4 overflow-y-auto overflow-x-hidden flex-1 pr-2">
             {/* Divide by People Toggle */}
             <div className="flex items-center space-x-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
               <Checkbox 
