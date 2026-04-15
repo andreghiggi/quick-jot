@@ -1653,6 +1653,16 @@ export default function PDV() {
                 <span className="text-primary">{formatCurrency(finalTotal)}</span>
               </div>
             </div>
+
+            {tefProcessing && (
+              <div className="flex items-center gap-3 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                <Loader2 className="w-5 h-5 animate-spin text-primary flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">{tefStatus || 'Processando TEF...'}</p>
+                  <p className="text-xs text-muted-foreground">Use o botão abaixo para cancelar a operação</p>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             {tefProcessing ? (
