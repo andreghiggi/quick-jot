@@ -26,7 +26,7 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v7.1"
+SCRIPT_VERSION = "v7.2"
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
