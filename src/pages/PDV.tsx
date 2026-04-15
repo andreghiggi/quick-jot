@@ -61,7 +61,8 @@ import {
   ClipboardList,
   Import,
   CheckCircle,
-  Plug
+  Plug,
+  FileText
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
