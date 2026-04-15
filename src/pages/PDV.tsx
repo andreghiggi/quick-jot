@@ -1070,6 +1070,7 @@ export default function PDV() {
         const success = await abortMultiplusCardSale(company.id, tefInfo.nsu, true);
         if (success) {
           toast.success('Estorno enviado para a maquininha!');
+          await markSaleAsCancelled(sale.id, sale.notes);
         } else {
           toast.error('Erro ao enviar estorno para a maquininha');
         }
