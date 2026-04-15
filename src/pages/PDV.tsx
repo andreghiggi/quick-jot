@@ -1655,28 +1655,44 @@ export default function PDV() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPaymentDialog(false)} disabled={isProcessingSale}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleFinalizeSale} 
-              disabled={
-                isProcessingSale || 
-                (divideByPeople 
-                  ? (peoplePaying.length === 0 || Math.abs(remainingAmount) > 0.01)
-                  : (!selectedPaymentMethod || (useSplitPayment && (!secondPaymentMethod || !firstPaymentAmount)))
-                )
-              }
-            >
-              {isProcessingSale ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {tefProcessing ? tefStatus || 'Processando TEF...' : 'Processando...'}
-                </>
-              ) : (
-                'Confirmar Pagamento'
-              )}
-            </Button>
+            {tefProcessing ? (
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  tefCancelRef.current = true;
+                  setTefStatus('Cancelando operação...');
+                }}
+                className="w-full h-14 text-lg"
+              >
+                <X className="w-5 h-5 mr-2" />
+                Cancelar Operação TEF
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setPaymentDialog(false)} disabled={isProcessingSale}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleFinalizeSale} 
+                  disabled={
+                    isProcessingSale || 
+                    (divideByPeople 
+                      ? (peoplePaying.length === 0 || Math.abs(remainingAmount) > 0.01)
+                      : (!selectedPaymentMethod || (useSplitPayment && (!secondPaymentMethod || !firstPaymentAmount)))
+                    )
+                  }
+                >
+                  {isProcessingSale ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    'Confirmar Pagamento'
+                  )}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
