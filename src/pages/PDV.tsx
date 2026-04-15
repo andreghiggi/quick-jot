@@ -61,7 +61,8 @@ import {
   ClipboardList,
   Import,
   CheckCircle,
-  Plug
+  Plug,
+  FileText
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -2061,7 +2062,9 @@ export default function PDV() {
                           <p className="text-sm text-muted-foreground">Cliente: {sale.customer_name}</p>
                         )}
                         {sale.notes && !isCancelled && (
-                          <p className="text-xs text-muted-foreground mt-1">{sale.notes}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {sale.notes.replace(/\s*\|\s*\[COMPROVANTE\][\s\S]*?\[\/COMPROVANTE\]/, '').trim()}
+                          </p>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
@@ -2212,8 +2215,9 @@ export default function PDV() {
                             variant="ghost"
                             onClick={() => printTefReceipt(sale)}
                             title="Reimprimir comprovante TEF"
+                            className="text-blue-600 hover:text-blue-700"
                           >
-                            <Receipt className="w-4 h-4" />
+                            <FileText className="w-4 h-4" />
                           </Button>
                         )}
                       </div>
