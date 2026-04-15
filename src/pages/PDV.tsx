@@ -9,6 +9,8 @@ import { useTables } from '@/hooks/useTables';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
+import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { emitirNFCe, consultarNFCe, reprocessarNFCe, NFCeItem, NFCeTefData, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
 import { 
   isMultiplusCardConfigured, 
