@@ -1857,6 +1857,20 @@ export default function PDV() {
         </DialogContent>
       </Dialog>
 
+      {/* PIX QR Code Dialog */}
+      <PixQRCodeDialog
+        open={pixQrDialog}
+        onOpenChange={setPixQrDialog}
+        amount={finalTotal}
+        pixKey={storeSettings.pixKey}
+        merchantName={storeSettings.pixName}
+        merchantCity={storeSettings.pixCity}
+        onConfirmPayment={() => {
+          setPixQrDialog(false);
+          handleFinalizeSale();
+        }}
+      />
+
       {/* Close Register Dialog */}
       <Dialog open={closeRegisterDialog} onOpenChange={setCloseRegisterDialog}>
         <DialogContent>
