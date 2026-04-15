@@ -12,7 +12,6 @@ import time
 import tempfile
 import subprocess
 import os
-import os
 import webbrowser
 from datetime import datetime, timezone, timedelta
 
