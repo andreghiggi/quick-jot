@@ -1423,19 +1423,100 @@ export default function PDV() {
                 <div>
                   <Label className="mb-2 block">Forma de Pagamento</Label>
                   <div className="grid grid-cols-2 gap-2">
-                    {activePaymentMethods.map(method => (
-                      <Button
-                        key={method.id}
-                        variant={selectedPaymentMethod === method.id ? 'default' : 'outline'}
-                        className="h-14 gap-2"
-                        onClick={() => setSelectedPaymentMethod(method.id)}
-                      >
-                        <CreditCard className="w-4 h-4" />
-                        {method.name}
-                      </Button>
-                    ))}
+                    {activePaymentMethods.map(method => {
+                      const hasInteg = !!(method as any).integration_type;
+                      return (
+                        <Button
+                          key={method.id}
+                          variant={selectedPaymentMethod === method.id ? 'default' : 'outline'}
+                          className="h-14 gap-2 relative"
+                          onClick={() => setSelectedPaymentMethod(method.id)}
+                        >
+                          <CreditCard className="w-4 h-4" />
+                          {method.name}
+                          {hasInteg && (
+                            <Plug className="w-3 h-3 absolute top-1 right-1 text-primary" />
+                          )}
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
+
+                {/* TEF Options — shown when selected payment method has integration */}
+                {selectedMethodIntegration && (selectedMethodIntegration === 'tef_pinpad' || selectedMethodIntegration === 'tef_smartpos') && (
+                  <div className="p-3 border border-primary/30 bg-primary/5 rounded-lg space-y-3">
+                    <p className="text-sm font-medium flex items-center gap-1">
+                      <Plug className="w-4 h-4 text-primary" />
+                      Opções TEF
+                    </p>
+                    <div>
+                      <Label className="mb-2 block text-xs">Tipo de Pagamento</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          size="sm"
+                          variant={tefCardType === 'credit' ? 'default' : 'outline'}
+                          onClick={() => setTefCardType('credit')}
+                        >
+                          Crédito
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={tefCardType === 'debit' ? 'default' : 'outline'}
+                          onClick={() => { setTefCardType('debit'); setTefInstallmentMode('avista'); }}
+                        >
+                          Débito
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={tefCardType === 'pix' ? 'default' : 'outline'}
+                          onClick={() => { setTefCardType('pix'); setTefInstallmentMode('avista'); }}
+                        >
+                          PIX
+                        </Button>
+                      </div>
+                    </div>
+                    {tefCardType === 'credit' && (
+                      <div>
+                        <Label className="mb-2 block text-xs">Modalidade</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            size="sm"
+                            variant={tefInstallmentMode === 'avista' ? 'default' : 'outline'}
+                            onClick={() => setTefInstallmentMode('avista')}
+                          >
+                            À Vista
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={tefInstallmentMode === 'parcelado' ? 'default' : 'outline'}
+                            onClick={() => setTefInstallmentMode('parcelado')}
+                          >
+                            Parcelado
+                          </Button>
+                        </div>
+                        {tefInstallmentMode === 'parcelado' && (
+                          <div className="mt-2 space-y-1">
+                            <Label className="text-xs">Parcelas</Label>
+                            <Input
+                              type="number"
+                              min="2"
+                              max="18"
+                              value={tefInstallments}
+                              onChange={(e) => setTefInstallments(e.target.value)}
+                              className="h-9"
+                            />
+                            {parseInt(tefInstallments) >= 2 && (
+                              <p className="text-xs text-muted-foreground">
+                                {tefInstallments}x de {formatCurrency(finalTotal / (parseInt(tefInstallments) || 2))}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Split Payment Toggle */}
                 <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
