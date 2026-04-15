@@ -262,19 +262,24 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
       const finalTotal = total - discount;
 
       // Create sale
+      const insertData: any = {
+        company_id: companyId,
+        cash_register_id: currentRegister.id,
+        payment_method_id: paymentMethodId,
+        total,
+        discount,
+        final_total: finalTotal,
+        customer_name: customerName || null,
+        notes: notes || null,
+        created_by: userId,
+      };
+      if (orderId) {
+        insertData.order_id = orderId;
+      }
+
       const { data: saleData, error: saleError } = await supabase
         .from('pdv_sales')
-        .insert({
-          company_id: companyId,
-          cash_register_id: currentRegister.id,
-          payment_method_id: paymentMethodId,
-          total,
-          discount,
-          final_total: finalTotal,
-          customer_name: customerName || null,
-          notes: notes || null,
-          created_by: userId
-        })
+        .insert(insertData)
         .select()
         .single();
 
