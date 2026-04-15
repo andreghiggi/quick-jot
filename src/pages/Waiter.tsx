@@ -575,7 +575,7 @@ export default function Waiter() {
             </div>
 
             {/* Cart */}
-            <div className="w-full md:w-72 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-4 flex flex-col min-h-0 max-h-[50vh] md:max-h-none">
+            <div className="w-full md:w-72 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-4 flex flex-col min-h-0 max-h-[40vh] md:max-h-none">
               <div className="flex items-center gap-2 mb-2 md:mb-4">
                 <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
                 <h3 className="font-semibold text-sm md:text-base">Carrinho ({cart.length})</h3>
