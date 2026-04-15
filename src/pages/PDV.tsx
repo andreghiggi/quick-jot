@@ -1697,96 +1697,68 @@ export default function PDV() {
                       Opções TEF
                     </p>
                     <div>
-                      <Label className="mb-2 block text-xs">Tipo de Pagamento</Label>
-                      <div className="grid grid-cols-3 gap-2">
+                      <Label className="mb-2 block text-xs">Modalidade</Label>
+                      <div className="grid grid-cols-2 gap-2">
                         <Button
                           size="sm"
-                          variant={tefCardType === 'credit' ? 'default' : 'outline'}
-                          onClick={() => setTefCardType('credit')}
+                          variant={tefInstallmentMode === 'avista' ? 'default' : 'outline'}
+                          onClick={() => setTefInstallmentMode('avista')}
                         >
-                          Crédito
+                          À Vista
                         </Button>
                         <Button
                           size="sm"
-                          variant={tefCardType === 'debit' ? 'default' : 'outline'}
-                          onClick={() => { setTefCardType('debit'); setTefInstallmentMode('avista'); }}
+                          variant={tefInstallmentMode === 'parcelado' ? 'default' : 'outline'}
+                          onClick={() => setTefInstallmentMode('parcelado')}
                         >
-                          Débito
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={tefCardType === 'pix' ? 'default' : 'outline'}
-                          onClick={() => { setTefCardType('pix'); setTefInstallmentMode('avista'); }}
-                        >
-                          PIX
+                          Parcelado
                         </Button>
                       </div>
                     </div>
-                    {tefCardType === 'credit' && (
-                      <div>
-                        <Label className="mb-2 block text-xs">Modalidade</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button
-                            size="sm"
-                            variant={tefInstallmentMode === 'avista' ? 'default' : 'outline'}
-                            onClick={() => setTefInstallmentMode('avista')}
-                          >
-                            À Vista
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={tefInstallmentMode === 'parcelado' ? 'default' : 'outline'}
-                            onClick={() => setTefInstallmentMode('parcelado')}
-                          >
-                            Parcelado
-                          </Button>
-                        </div>
-                        {tefInstallmentMode === 'parcelado' && (
-                          <div className="mt-2 space-y-2">
-                            <div className="space-y-1">
-                              <Label className="text-xs">Tipo de Parcelamento</Label>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant={tefInstallmentType === 'loja' ? 'default' : 'outline'}
-                                  onClick={() => setTefInstallmentType('loja')}
-                                  className="flex-1"
-                                >
-                                  Loja
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant={tefInstallmentType === 'adm' ? 'default' : 'outline'}
-                                  onClick={() => setTefInstallmentType('adm')}
-                                  className="flex-1"
-                                >
-                                  ADM
-                                </Button>
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                {tefInstallmentType === 'loja' 
-                                  ? 'Loja: juros por conta do lojista' 
-                                  : 'ADM: juros por conta do cliente'}
-                              </p>
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Parcelas</Label>
-                              <Input
-                                type="number"
-                                min="2"
-                                max="18"
-                                value={tefInstallments}
-                                onChange={(e) => setTefInstallments(e.target.value)}
-                                className="h-9"
-                              />
-                              {parseInt(tefInstallments) >= 2 && (
-                                <p className="text-xs text-muted-foreground">
-                                  {tefInstallments}x de {formatCurrency(finalTotal / (parseInt(tefInstallments) || 2))}
-                                </p>
-                              )}
-                            </div>
+                    {tefInstallmentMode === 'parcelado' && (
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Tipo de Parcelamento</Label>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant={tefInstallmentType === 'loja' ? 'default' : 'outline'}
+                              onClick={() => setTefInstallmentType('loja')}
+                              className="flex-1"
+                            >
+                              Loja
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={tefInstallmentType === 'adm' ? 'default' : 'outline'}
+                              onClick={() => setTefInstallmentType('adm')}
+                              className="flex-1"
+                            >
+                              ADM
+                            </Button>
                           </div>
-                        )}
+                          <p className="text-xs text-muted-foreground">
+                            {tefInstallmentType === 'loja' 
+                              ? 'Loja: juros por conta do lojista' 
+                              : 'ADM: juros por conta do cliente'}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Parcelas</Label>
+                          <Input
+                            type="number"
+                            min="2"
+                            max="18"
+                            value={tefInstallments}
+                            onChange={(e) => setTefInstallments(e.target.value)}
+                            className="h-9"
+                          />
+                          {parseInt(tefInstallments) >= 2 && (
+                            <p className="text-xs text-muted-foreground">
+                              {tefInstallments}x de {formatCurrency(finalTotal / (parseInt(tefInstallments) || 2))}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
