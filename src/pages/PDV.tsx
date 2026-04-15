@@ -130,6 +130,12 @@ export default function PDV() {
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
   const [isProcessingSale, setIsProcessingSale] = useState(false);
+
+  // TEF payment options
+  const [tefCardType, setTefCardType] = useState<'credit' | 'debit' | 'pix'>('credit');
+  const [tefInstallmentMode, setTefInstallmentMode] = useState<'avista' | 'parcelado'>('avista');
+  const [tefInstallments, setTefInstallments] = useState('2');
+
   const [documentMode, setDocumentMode] = useState<'sale_only' | 'sale_with_nfce'>(() => {
     const saved = localStorage.getItem('pdv_document_mode');
     return (saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only');
