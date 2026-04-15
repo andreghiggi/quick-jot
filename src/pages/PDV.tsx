@@ -1718,32 +1718,6 @@ export default function PDV() {
                     {tefInstallmentMode === 'parcelado' && (
                       <div className="space-y-2">
                         <div className="space-y-1">
-                          <Label className="text-xs">Tipo de Parcelamento</Label>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant={tefInstallmentType === 'loja' ? 'default' : 'outline'}
-                              onClick={() => setTefInstallmentType('loja')}
-                              className="flex-1"
-                            >
-                              Loja
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={tefInstallmentType === 'adm' ? 'default' : 'outline'}
-                              onClick={() => setTefInstallmentType('adm')}
-                              className="flex-1"
-                            >
-                              ADM
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {tefInstallmentType === 'loja' 
-                              ? 'Loja: juros por conta do lojista' 
-                              : 'ADM: juros por conta do cliente'}
-                          </p>
-                        </div>
-                        <div className="space-y-1">
                           <Label className="text-xs">Parcelas</Label>
                           <Input
                             type="number"
