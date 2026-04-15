@@ -11,6 +11,7 @@ import { useTaxRules } from '@/hooks/useTaxRules';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
+import { printProductionTicket } from '@/utils/printProductionTicket';
 import { emitirNFCe, consultarNFCe, reprocessarNFCe, NFCeItem, NFCeTefData, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
 import { 
   isMultiplusCardConfigured, 
@@ -2341,6 +2342,29 @@ export default function PDV() {
                             <div className="text-right">
                               <p className="font-bold text-lg text-primary">{formatCurrency(tabTotal)}</p>
                             </div>
+                            <Button 
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                printProductionTicket({
+                                  tabNumber: tab.tab_number,
+                                  tableNumber: tab.table?.number,
+                                  customerName: tab.customer_name,
+                                  items: (tab.items || []).map(item => ({
+                                    productName: item.product_name,
+                                    quantity: item.quantity,
+                                    notes: item.notes
+                                  })),
+                                  createdAt: new Date(tab.created_at || new Date()),
+                                  paperSize: storeSettings.printerPaperSize
+                                });
+                                toast.success('Comanda enviada para impressão');
+                              }}
+                              title="Reimprimir comanda"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </Button>
                             <Button onClick={() => handleImportTab(tab)} className="gap-2">
                               <Import className="w-4 h-4" />
                               Importar
