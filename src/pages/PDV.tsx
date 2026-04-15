@@ -516,6 +516,17 @@ export default function PDV() {
             let tefCompleted = false;
 
             for (let i = 0; i < 120 && !tefCompleted; i++) {
+              if (tefCancelRef.current) {
+                toast.info('Operação TEF cancelada pelo operador.');
+                await cancelPinpadTransaction(company!.id, {
+                  identificacao: String(Date.now()),
+                });
+                setTefProcessing(false);
+                setTefStatus('');
+                setIsProcessingSale(false);
+                tefHashRef.current = '';
+                return;
+              }
               await new Promise(resolve => setTimeout(resolve, 1000));
               
               const statusResult = await pollPinpadStatus(company!.id, createResult.hash!);
