@@ -143,6 +143,7 @@ export default function PDV() {
   // TEF payment options
   const [tefCardType, setTefCardType] = useState<'credit' | 'debit' | 'pix'>('credit');
   const [tefInstallmentMode, setTefInstallmentMode] = useState<'avista' | 'parcelado'>('avista');
+  const [tefInstallmentType, setTefInstallmentType] = useState<'loja' | 'adm'>('loja');
   const [tefInstallments, setTefInstallments] = useState('2');
 
   const [documentMode, setDocumentMode] = useState<'sale_only' | 'sale_with_nfce'>(() => {
@@ -511,6 +512,7 @@ export default function PDV() {
               amount: finalTotal,
               paymentType: tefPaymentType,
               installments: installmentCount,
+              installmentType: tefInstallmentType,
             });
 
             if (!createResult.success || !createResult.hash) {
@@ -567,8 +569,10 @@ export default function PDV() {
                   valor: finalTotal,
                 };
                 
-                const installLabel = installmentCount > 1 ? ` | ${installmentCount}x ${tefCardType === 'credit' ? 'Crédito' : 'Débito'}` : ` | ${tefCardType === 'credit' ? 'Crédito à Vista' : tefCardType === 'debit' ? 'Débito' : 'PIX'}`;
-                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}`;
+                const installTypeLabel = tefInstallmentType === 'adm' ? ' ADM' : ' Loja';
+                const installLabel = installmentCount > 1 ? ` | ${installmentCount}x ${tefCardType === 'credit' ? 'Crédito' : 'Débito'}${installTypeLabel}` : ` | ${tefCardType === 'credit' ? 'Crédito à Vista' : tefCardType === 'debit' ? 'Débito' : 'PIX'}`;
+                const receiptData = statusResult.receiptLines && statusResult.receiptLines.length > 0 ? ` | [COMPROVANTE]${statusResult.receiptLines.join('\\n')}[/COMPROVANTE]` : '';
+                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}${receiptData}`;
               } else if (statusResult.status === 'declined' || statusResult.status === 'cancelled' || statusResult.status === 'error') {
                 tefCompleted = true;
                 toast.error(`TEF PinPad: ${statusResult.errorMessage || statusResult.operatorMessage || 'Pagamento não aprovado'}`);
@@ -901,6 +905,52 @@ export default function PDV() {
       </html>
     `;
 
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  }
+
+  // Print TEF receipt (comprovante) from saved receipt lines
+  function printTefReceipt(sale: typeof sales[0]) {
+    const notesStr = sale.notes || '';
+    const receiptMatch = notesStr.match(/\[COMPROVANTE\]([\s\S]*?)\[\/COMPROVANTE\]/);
+    if (!receiptMatch) {
+      toast.error('Comprovante TEF não disponível para esta venda');
+      return;
+    }
+
+    const receiptLines = receiptMatch[1].split('\\n').filter(Boolean);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const receiptHtml = receiptLines.map(line => `<p>${line}</p>`).join('');
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Comprovante TEF</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Courier New', monospace;
+            width: ${storeSettings.printerPaperSize === '58mm' ? '58mm' : '80mm'};
+            padding: 2mm;
+            font-size: ${storeSettings.printerPaperSize === '58mm' ? '10px' : '12px'};
+          }
+          p { line-height: 1.4; white-space: pre-wrap; }
+          .header { text-align: center; font-weight: bold; margin-bottom: 3mm; font-size: 14px; }
+          .separator { border-top: 1px dashed #000; margin: 2mm 0; }
+        </style>
+      </head>
+      <body>
+        <p class="header">COMPROVANTE TEF</p>
+        <div class="separator"></div>
+        ${receiptHtml}
+        <div class="separator"></div>
+        <script>window.onload = function() { window.print(); window.close(); }</script>
+      </body>
+      </html>
+    `;
     printWindow.document.write(printContent);
     printWindow.document.close();
   }
@@ -1692,21 +1742,49 @@ export default function PDV() {
                           </Button>
                         </div>
                         {tefInstallmentMode === 'parcelado' && (
-                          <div className="mt-2 space-y-1">
-                            <Label className="text-xs">Parcelas</Label>
-                            <Input
-                              type="number"
-                              min="2"
-                              max="18"
-                              value={tefInstallments}
-                              onChange={(e) => setTefInstallments(e.target.value)}
-                              className="h-9"
-                            />
-                            {parseInt(tefInstallments) >= 2 && (
+                          <div className="mt-2 space-y-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Tipo de Parcelamento</Label>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant={tefInstallmentType === 'loja' ? 'default' : 'outline'}
+                                  onClick={() => setTefInstallmentType('loja')}
+                                  className="flex-1"
+                                >
+                                  Loja
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant={tefInstallmentType === 'adm' ? 'default' : 'outline'}
+                                  onClick={() => setTefInstallmentType('adm')}
+                                  className="flex-1"
+                                >
+                                  ADM
+                                </Button>
+                              </div>
                               <p className="text-xs text-muted-foreground">
-                                {tefInstallments}x de {formatCurrency(finalTotal / (parseInt(tefInstallments) || 2))}
+                                {tefInstallmentType === 'loja' 
+                                  ? 'Loja: juros por conta do lojista' 
+                                  : 'ADM: juros por conta do cliente'}
                               </p>
-                            )}
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Parcelas</Label>
+                              <Input
+                                type="number"
+                                min="2"
+                                max="18"
+                                value={tefInstallments}
+                                onChange={(e) => setTefInstallments(e.target.value)}
+                                className="h-9"
+                              />
+                              {parseInt(tefInstallments) >= 2 && (
+                                <p className="text-xs text-muted-foreground">
+                                  {tefInstallments}x de {formatCurrency(finalTotal / (parseInt(tefInstallments) || 2))}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -2182,6 +2260,16 @@ export default function PDV() {
                         >
                           <Printer className="w-4 h-4" />
                         </Button>
+                        {sale.notes?.includes('[COMPROVANTE]') && (
+                          <Button 
+                            size="icon" 
+                            variant="ghost"
+                            onClick={() => printTefReceipt(sale)}
+                            title="Reimprimir comprovante TEF"
+                          >
+                            <Receipt className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

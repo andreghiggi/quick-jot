@@ -146,6 +146,7 @@ export async function sendPinpadPayment(
     amount: number;
     paymentType: 'credit' | 'debit' | 'pix';
     installments?: number;
+    installmentType?: 'loja' | 'adm';
     documentoFiscal?: string;
   }
 ): Promise<{ success: boolean; hash?: string; errorMessage?: string }> {
@@ -162,6 +163,7 @@ export async function sendPinpadPayment(
       identificacao: String(Date.now()),
       paymentType: mapPaymentTypeToTef(options.paymentType),
       installments: options.installments || 1,
+      installmentType: options.installmentType || 'loja',
       documentoFiscal: options.documentoFiscal,
       equipment: 1, // PinPad
     });

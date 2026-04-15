@@ -182,7 +182,8 @@ serve(async (req) => {
       // 800-002: 0=À vista, 1=Parcelado
       if (installments && installments > 1) {
         fields['800-002'] = '1'; // Parcelado
-        fields['800-003'] = '1'; // Parcelado Loja
+        // 800-003: 1=Parcelado Loja, 2=Parcelado ADM
+        fields['800-003'] = params.installmentType === 'adm' ? '2' : '1';
         fields['800-004'] = String(installments);
       } else if (paymentType !== undefined) {
         fields['800-002'] = '0'; // À vista
