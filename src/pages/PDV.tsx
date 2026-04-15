@@ -1986,29 +1986,36 @@ export default function PDV() {
           </DialogHeader>
           <ScrollArea className="max-h-[60vh]">
             <div className="space-y-3">
-              {sales.map((sale) => (
-                <Card key={sale.id}>
+              {sales.map((sale) => {
+                const isCancelled = sale.notes?.includes('[CANCELADA]');
+                return (
+                <Card key={sale.id} className={isCancelled ? 'border-destructive/40 bg-destructive/5 opacity-75' : ''}>
                   <CardContent className="p-4">
+                    {isCancelled && (
+                      <div className="flex items-center justify-center gap-2 mb-2 py-1 px-2 rounded bg-destructive/10 border border-destructive/20">
+                        <span className="text-xs font-bold text-destructive tracking-wider">⛔ VENDA CANCELADA / ESTORNADA</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium">
+                          <p className={`font-medium ${isCancelled ? 'text-muted-foreground' : ''}`}>
                             {format(new Date(sale.created_at), "HH:mm", { locale: ptBR })}
                           </p>
-                          <Badge variant={sale.notes?.includes('[CANCELADA]') ? 'destructive' : 'outline'}>
-                            {sale.notes?.includes('[CANCELADA]') ? 'CANCELADA' : (sale.payment_method?.name || 'N/A')}
+                          <Badge variant={isCancelled ? 'destructive' : 'outline'}>
+                            {isCancelled ? 'CANCELADA' : (sale.payment_method?.name || 'N/A')}
                           </Badge>
                         </div>
                         {sale.customer_name && (
                           <p className="text-sm text-muted-foreground">Cliente: {sale.customer_name}</p>
                         )}
-                        {sale.notes && (
+                        {sale.notes && !isCancelled && (
                           <p className="text-xs text-muted-foreground mt-1">{sale.notes}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-right">
-                          <p className={`font-bold ${sale.notes?.includes('[CANCELADA]') ? 'line-through text-muted-foreground' : 'text-primary'}`}>{formatCurrency(sale.final_total)}</p>
+                          <p className={`font-bold ${isCancelled ? 'line-through text-destructive/60' : 'text-primary'}`}>{formatCurrency(sale.final_total)}</p>
                           {sale.discount > 0 && (
                             <p className="text-xs text-muted-foreground">Desc: {formatCurrency(sale.discount)}</p>
                           )}
