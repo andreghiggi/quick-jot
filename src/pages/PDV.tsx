@@ -329,8 +329,10 @@ export default function PDV() {
   // Detect if selected payment method has TEF integration
   const selectedMethodObj = activePaymentMethods.find(m => m.id === selectedPaymentMethod);
   const selectedMethodIntegration = (selectedMethodObj as any)?.integration_type as string | null | undefined;
+  const selectedMethodIsTef = selectedMethodIntegration === 'tef_pinpad' || selectedMethodIntegration === 'tef_smartpos';
   const isPixPayment = selectedMethodObj?.name?.toLowerCase().includes('pix') && !selectedMethodIntegration;
   const pixConfigured = !!(storeSettings.pixKey && storeSettings.pixName && storeSettings.pixCity);
+  const activeTefMode = tefCardType === 'debit' ? 'debit' : tefInstallmentMode;
 
   function addToCart(product: typeof products[0]) {
     const existing = cart.find(item => item.product_id === product.id);
@@ -418,6 +420,21 @@ export default function PDV() {
     setPaymentDialog(true);
   }
 
+  function handleSelectTefMode(mode: 'avista' | 'debit' | 'parcelado') {
+    if (mode === 'debit') {
+      setTefCardType('debit');
+      setTefInstallmentMode('avista');
+      return;
+    }
+
+    setTefCardType('credit');
+    setTefInstallmentMode(mode);
+
+    if (mode === 'parcelado' && (parseInt(tefInstallments) || 0) < 2) {
+      setTefInstallments('2');
+    }
+  }
+
   function handleImportTab(tab: Tab) {
     // Import items from tab to cart
     if (tab.items && tab.items.length > 0) {
@@ -495,11 +512,15 @@ export default function PDV() {
 
       // ===== TEF: Run BEFORE creating the sale =====
       const integType = selectedMethodIntegration;
-      const isTefPayment = (integType === 'tef_pinpad' || integType === 'tef_smartpos') && !divideByPeople;
+      const isTefPayment = selectedMethodIsTef && !divideByPeople;
 
       if (isTefPayment && company?.id) {
-        const tefPaymentType = 'credit' as const; // TEF handles card type detection
-        const installmentCount = tefInstallmentMode === 'parcelado' ? parseInt(tefInstallments) || 2 : 1;
+        const tefPaymentType = tefCardType === 'debit' ? 'debit' as const : 'credit' as const;
+        const installmentCount = tefCardType === 'debit'
+          ? 1
+          : tefInstallmentMode === 'parcelado'
+            ? parseInt(tefInstallments) || 2
+            : 1;
 
         setTefProcessing(true);
         tefCancelRef.current = false;
@@ -571,7 +592,11 @@ export default function PDV() {
                 };
                 
                 const installTypeLabel = tefInstallmentType === 'adm' ? ' ADM' : ' Loja';
-                const installLabel = installmentCount > 1 ? ` | ${installmentCount}x Cartão${installTypeLabel}` : ' | Cartão à Vista';
+                const installLabel = tefPaymentType === 'debit'
+                  ? ' | Débito'
+                  : installmentCount > 1
+                    ? ` | ${installmentCount}x Cartão${installTypeLabel}`
+                    : ' | Crédito à Vista';
                 const receiptData = statusResult.receiptLines && statusResult.receiptLines.length > 0 ? ` | [COMPROVANTE]${statusResult.receiptLines.join('\\n')}[/COMPROVANTE]` : '';
                 saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}${receiptData}`;
               } else if (statusResult.status === 'declined' || statusResult.status === 'cancelled' || statusResult.status === 'error') {
@@ -654,7 +679,11 @@ export default function PDV() {
                   valor: finalTotal,
                 };
                 
-                const installLabelSmart = installmentCount > 1 ? ` | ${installmentCount}x ${tefCardType === 'credit' ? 'Crédito' : 'Débito'}` : ` | ${tefCardType === 'credit' ? 'Crédito à Vista' : tefCardType === 'debit' ? 'Débito' : 'PIX'}`;
+                const installLabelSmart = tefPaymentType === 'debit'
+                  ? ' | Débito'
+                  : installmentCount > 1
+                    ? ` | ${installmentCount}x Crédito`
+                    : ' | Crédito à Vista';
                 saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand}${installLabelSmart}`;
               } else if (statusResult.status === 'cancelled' || statusResult.status === 'error') {
                 tefCompleted = true;
@@ -1554,11 +1583,22 @@ export default function PDV() {
 
       {/* Payment Dialog */}
       <Dialog open={paymentDialog} onOpenChange={setPaymentDialog}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-x-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[90vh] overflow-hidden p-0 gap-0 flex flex-col">
+          <DialogHeader className="shrink-0 border-b px-6 py-4 pr-12">
             <DialogTitle>Forma de Pagamento</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 overflow-y-auto overflow-x-hidden flex-1 pr-2">
+          {tefProcessing && (
+            <div className="shrink-0 border-b bg-primary/5 px-6 py-3">
+              <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/10 p-4">
+                <Loader2 className="h-5 w-5 animate-spin text-primary flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-medium text-sm">{tefStatus || 'Processando TEF...'}</p>
+                  <p className="text-xs text-muted-foreground">A operação está em andamento; se precisar, use o botão abaixo para cancelar.</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-6 py-4">
             {/* Divide by People Toggle */}
             <div className="flex items-center space-x-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
               <Checkbox 
@@ -1641,6 +1681,7 @@ export default function PDV() {
                             key={method.id}
                             size="sm"
                             variant={person.paymentMethodId === method.id ? 'default' : 'outline'}
+                            className="h-auto min-h-9 whitespace-normal px-3 py-2 text-left"
                             onClick={() => updatePersonPayment(index, 'paymentMethodId', method.id)}
                           >
                             {method.name}
@@ -1676,7 +1717,7 @@ export default function PDV() {
                         <Button
                           key={method.id}
                           variant={selectedPaymentMethod === method.id ? 'default' : 'outline'}
-                          className="h-14 gap-2 relative"
+                          className="relative h-14 min-w-0 gap-2 whitespace-normal text-center"
                           onClick={() => setSelectedPaymentMethod(method.id)}
                         >
                           <CreditCard className="w-4 h-4" />
@@ -1691,7 +1732,7 @@ export default function PDV() {
                 </div>
 
                 {/* TEF Options — shown when selected payment method has integration */}
-                {selectedMethodIntegration && (selectedMethodIntegration === 'tef_pinpad' || selectedMethodIntegration === 'tef_smartpos') && (
+                {selectedMethodIsTef && (
                   <div className="p-3 border border-primary/30 bg-primary/5 rounded-lg space-y-3">
                     <p className="text-sm font-medium flex items-center gap-1">
                       <Plug className="w-4 h-4 text-primary" />
@@ -1699,18 +1740,25 @@ export default function PDV() {
                     </p>
                     <div>
                       <Label className="mb-2 block text-xs">Modalidade</Label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         <Button
                           size="sm"
-                          variant={tefInstallmentMode === 'avista' ? 'default' : 'outline'}
-                          onClick={() => setTefInstallmentMode('avista')}
+                          variant={activeTefMode === 'avista' ? 'default' : 'outline'}
+                          onClick={() => handleSelectTefMode('avista')}
                         >
                           À Vista
                         </Button>
                         <Button
                           size="sm"
-                          variant={tefInstallmentMode === 'parcelado' ? 'default' : 'outline'}
-                          onClick={() => setTefInstallmentMode('parcelado')}
+                          variant={activeTefMode === 'debit' ? 'default' : 'outline'}
+                          onClick={() => handleSelectTefMode('debit')}
+                        >
+                          Débito
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={activeTefMode === 'parcelado' ? 'default' : 'outline'}
+                          onClick={() => handleSelectTefMode('parcelado')}
                         >
                           Parcelado
                         </Button>
@@ -1778,7 +1826,7 @@ export default function PDV() {
                           <Button
                             key={method.id}
                             variant={secondPaymentMethod === method.id ? 'default' : 'outline'}
-                            className="h-12 gap-2"
+                            className="h-12 min-w-0 gap-2 whitespace-normal text-center"
                             onClick={() => setSecondPaymentMethod(method.id)}
                           >
                             <CreditCard className="w-4 h-4" />
@@ -1846,18 +1894,8 @@ export default function PDV() {
                 <span className="text-primary">{formatCurrency(finalTotal)}</span>
               </div>
             </div>
-
-            {tefProcessing && (
-              <div className="flex items-center gap-3 p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                <Loader2 className="w-5 h-5 animate-spin text-primary flex-shrink-0" />
-                <div>
-                  <p className="font-medium text-sm">{tefStatus || 'Processando TEF...'}</p>
-                  <p className="text-xs text-muted-foreground">Use o botão abaixo para cancelar a operação</p>
-                </div>
-              </div>
-            )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t px-6 py-4">
             {tefProcessing ? (
               <Button
                 variant="destructive"
