@@ -24,8 +24,10 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 CHECK_INTERVAL = 5  # segundos entre verificações
 STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
+COMPANY_SLUG = ""
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v5.2"
+SCRIPT_VERSION = "v5.3"
+PILOT_PRINT_SLUGS = {"lancheria-da-i9-263ee29a"}
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -390,10 +392,10 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     return html
 
 def imprimir_html(html, order_number):
-    """Salva HTML e abre no navegador para impressão automática"""
+    """Salva HTML e imprime com modo piloto isolado por loja."""
     try:
         arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}_{int(time.time())}.html")
-        
+
         html_com_print = html
         if '<script>' not in html.lower():
             html_com_print = html.replace('</body>', '''
@@ -405,43 +407,52 @@ def imprimir_html(html, order_number):
         };
     </script>
 </body>''')
-        
+
         with open(arquivo, 'w', encoding='utf-8') as f:
             f.write(html_com_print)
-        
+
         log(f"HTML salvo: {arquivo}", "PRINT")
         file_url = f'file:///{arquivo.replace(os.sep, "/")}'
+        usar_modo_piloto = COMPANY_SLUG in PILOT_PRINT_SLUGS
 
-        tentativas = []
-        if os.name == 'nt':
-            tentativas = [
-                ('startfile_print', lambda: os.startfile(arquivo, 'print')),
-                ('browser_open', lambda: webbrowser.open(file_url)),
-                ('rundll32_open', lambda: subprocess.Popen(['rundll32.exe', 'url.dll,FileProtocolHandler', arquivo], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)),
-            ]
+        if usar_modo_piloto:
+            log(f"Modo piloto ativo para {COMPANY_SLUG}", "PRINT")
+            tentativas = []
+            if os.name == 'nt':
+                tentativas = [
+                    ('startfile_print', lambda: os.startfile(arquivo, 'print')),
+                    ('browser_open', lambda: webbrowser.open(file_url)),
+                    ('rundll32_open', lambda: subprocess.Popen(['rundll32.exe', 'url.dll,FileProtocolHandler', arquivo], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)),
+                ]
+            else:
+                tentativas = [
+                    ('browser_open', lambda: webbrowser.open(file_url)),
+                ]
+
+            sucesso = False
+            for nome, acao in tentativas:
+                try:
+                    log(f"Tentando imprimir via {nome}...", "PRINT")
+                    acao()
+                    time.sleep(4)
+                    log(f"Tentativa {nome} disparada.", "PRINT")
+                    sucesso = True
+                    break
+                except Exception as e:
+                    log(f"Tentativa {nome} falhou: {e}", "ERRO")
         else:
-            tentativas = [
-                ('browser_open', lambda: webbrowser.open(file_url)),
-            ]
+            log(f"Modo legado preservado para {COMPANY_SLUG or 'loja sem slug'}", "PRINT")
+            webbrowser.open(file_url)
+            log("Enviado para o navegador no modo legado.", "PRINT")
+            time.sleep(5)
+            sucesso = True
 
-        sucesso = False
-        for nome, acao in tentativas:
-            try:
-                log(f"Tentando imprimir via {nome}...", "PRINT")
-                acao()
-                time.sleep(4)
-                log(f"Tentativa {nome} disparada.", "PRINT")
-                sucesso = True
-                break
-            except Exception as e:
-                log(f"Tentativa {nome} falhou: {e}", "ERRO")
-        
         try:
             os.unlink(arquivo)
             log("Arquivo temporário removido", "PRINT")
         except Exception:
             pass
-        
+
         return sucesso
     except Exception as e:
         log(f"Falha na impressão: {e}", "ERRO")
@@ -603,6 +614,7 @@ if __name__ == "__main__":
     
     log(f"Buscando empresa: {slug}...", "INFO")
     company_id, company_name, company_address = buscar_empresa_por_slug(slug)
+    COMPANY_SLUG = slug
     
     if not company_id:
         print(f"Empresa '{slug}' não encontrada ou inativa. Verifique o slug.")
@@ -616,6 +628,7 @@ if __name__ == "__main__":
     log(f"Empresa encontrada: {company_name}", "OK")
     log(f"Company ID: {company_id}", "OK")
     log(f"Papel: {PAPER_SIZE}", "OK")
+    log(f"Modo de impressão: {'piloto i9' if COMPANY_SLUG in PILOT_PRINT_SLUGS else 'legado'}", "CONFIG")
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
     print("  Pressione Ctrl+C para parar")
