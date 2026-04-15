@@ -94,7 +94,8 @@ export default function PDV() {
     closeRegister, 
     reopenRegister,
     addSale,
-    deleteSale
+    deleteSale,
+    refetch: refetchSales
   } = useCashRegister({ companyId: company?.id });
 
   const mesasEnabled = isModuleEnabled('mesas');
