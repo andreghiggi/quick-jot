@@ -1957,8 +1957,8 @@ export default function PDV() {
                           <p className="font-medium">
                             {format(new Date(sale.created_at), "HH:mm", { locale: ptBR })}
                           </p>
-                          <Badge variant="outline">
-                            {sale.payment_method?.name || 'N/A'}
+                          <Badge variant={sale.notes?.includes('[CANCELADA]') ? 'destructive' : 'outline'}>
+                            {sale.notes?.includes('[CANCELADA]') ? 'CANCELADA' : (sale.payment_method?.name || 'N/A')}
                           </Badge>
                         </div>
                         {sale.customer_name && (
