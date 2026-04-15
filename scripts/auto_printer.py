@@ -3,7 +3,7 @@ Comanda Tech - Impressão Automática de Pedidos (Windows)
 
 COMO USAR:
 1. Instale Python: https://python.org (marque "Add to PATH")
-2. Abra o CMD e rode: pip install requests
+2. Abra o CMD e rode: pip install requests pywin32
 3. Dê duplo clique neste arquivo OU rode: python auto_printer.py
 """
 
@@ -12,7 +12,6 @@ import time
 import tempfile
 import subprocess
 import os
-import webbrowser
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -26,7 +25,7 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v7.2"
+SCRIPT_VERSION = "v8.0"
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -352,14 +351,6 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     {notes_html}
     <hr class="divider">
     <p class="footer">Obrigado pela preferencia!</p>
-    <script>
-        window.onload = function() {{
-            setTimeout(function() {{
-                window.print();
-                setTimeout(function() {{ window.close(); }}, 1000);
-            }}, 300);
-        }};
-    </script>
 </body>
 </html>'''
     
@@ -376,32 +367,99 @@ def encontrar_chrome():
     ]
     for caminho in caminhos:
         if os.path.exists(caminho):
-            log(f"Navegador encontrado: {caminho}", "PRINT")
             return caminho
     return None
 
 def imprimir_html(html, order_number):
-    """Salva HTML e abre no navegador para impressão automática"""
+    """Imprime HTML silenciosamente: Chrome headless → PDF → impressora padrão"""
     try:
-        arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.html")
-        with open(arquivo, 'w', encoding='utf-8') as f:
+        # 1. Salva HTML em arquivo temporário
+        html_file = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.html")
+        pdf_file = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.pdf")
+        
+        with open(html_file, 'w', encoding='utf-8') as f:
             f.write(html)
+        log(f"HTML salvo: {html_file}", "PRINT")
         
-        log(f"HTML salvo: {arquivo}", "PRINT")
-        log(f"Abrindo no navegador para impressão...", "PRINT")
+        # 2. Converte HTML → PDF via Chrome headless (sem janela)
+        browser_exe = encontrar_chrome()
+        if not browser_exe:
+            log("Chrome/Edge não encontrado! Impossível imprimir.", "ERRO")
+            return False
         
-        webbrowser.open(f'file:///{arquivo}')
+        perfil_temp = tempfile.mkdtemp(prefix="comanda_printer_")
+        file_url = f'file:///{html_file.replace(os.sep, "/")}'
         
-        log(f"Enviado para o navegador!", "PRINT")
-        time.sleep(5)
+        cmd = [
+            browser_exe,
+            "--headless",
+            "--disable-gpu",
+            f"--print-to-pdf={pdf_file}",
+            "--no-pdf-header-footer",
+            "--print-to-pdf-no-header",
+            f"--user-data-dir={perfil_temp}",
+            "--no-first-run",
+            "--disable-extensions",
+            "--disable-background-networking",
+            file_url,
+        ]
         
+        log("Convertendo HTML → PDF (headless)...", "PRINT")
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        
+        if not os.path.exists(pdf_file):
+            log(f"PDF não foi gerado. Chrome stderr: {result.stderr[:200]}", "ERRO")
+            # Fallback: tenta com --headless=new
+            cmd[1] = "--headless=new"
+            log("Tentando com --headless=new...", "PRINT")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        
+        if not os.path.exists(pdf_file):
+            log("PDF não gerado mesmo com fallback. Verifique o Chrome.", "ERRO")
+            return False
+        
+        log(f"PDF gerado: {pdf_file}", "PRINT")
+        
+        # 3. Envia PDF direto para impressora padrão via ShellExecute (sem janela)
         try:
-            os.unlink(arquivo)
-            log(f"Arquivo temporário removido", "PRINT")
-        except:
+            import win32api
+            import win32print
+            
+            impressora = win32print.GetDefaultPrinter()
+            log(f"Enviando para impressora: {impressora}", "PRINT")
+            
+            win32api.ShellExecute(0, "print", pdf_file, None, ".", 0)
+            log("Enviado para impressora!", "PRINT")
+            time.sleep(8)
+            
+        except ImportError:
+            # Fallback sem pywin32: usa SumatraPDF ou comando do sistema
+            log("pywin32 não disponível. Tentando via comando do sistema...", "AVISO")
+            try:
+                os.startfile(pdf_file, "print")
+                log("Enviado via os.startfile!", "PRINT")
+                time.sleep(8)
+            except Exception as e:
+                log(f"Fallback os.startfile falhou: {e}", "ERRO")
+                return False
+        
+        # 4. Limpeza
+        for f in [html_file, pdf_file]:
+            try:
+                os.unlink(f)
+            except Exception:
+                pass
+        try:
+            import shutil
+            shutil.rmtree(perfil_temp, ignore_errors=True)
+        except Exception:
             pass
         
         return True
+        
+    except subprocess.TimeoutExpired:
+        log("Timeout na conversão PDF. Chrome travou?", "ERRO")
+        return False
     except Exception as e:
         log(f"Falha na impressão: {e}", "ERRO")
         return False
@@ -423,6 +481,13 @@ def diagnosticar_impressora():
         log(f"Navegador encontrado: {browser}", "DIAG")
     else:
         log("ATENÇÃO: Chrome/Edge não encontrado! Impressão automática não funcionará.", "ERRO")
+    
+    # Verifica pywin32
+    try:
+        import win32print
+        log(f"pywin32 instalado ✓", "DIAG")
+    except ImportError:
+        log("pywin32 NÃO instalado. Rode: pip install pywin32", "AVISO")
     
     try:
         resultado = subprocess.run(
@@ -461,7 +526,7 @@ def processar_pedido(pedido, store_name="Comanda Tech"):
     log("Gerando recibo HTML...", "INFO")
     html = formatar_recibo_html(pedido, itens, store_name)
     
-    # Imprime via navegador
+    # Imprime silenciosamente
     log("Iniciando impressão...", "PRINT")
     if imprimir_html(html, order_number):
         log("IMPRESSÃO CONCLUÍDA COM SUCESSO!", "OK")
@@ -574,9 +639,11 @@ def processar_fila(company_id):
 # LOOP PRINCIPAL
 # ============================================
 if __name__ == "__main__":
+    os.system("title Comanda Tech - Impressao Automatica")
     print()
     print("=" * 50)
-    print(f"  {STORE_NAME} - Impressão Automática {SCRIPT_VERSION}")
+    print(f"  {STORE_NAME} - Impressão Automática")
+    print(f"  Versão: {SCRIPT_VERSION}")
     print("=" * 50)
     print(f"  URL: {SUPABASE_URL}")
     print("=" * 50)
@@ -610,6 +677,7 @@ if __name__ == "__main__":
     log(f"Empresa encontrada: {company_name}", "OK")
     log(f"Company ID: {company_id}", "OK")
     log(f"Papel: {PAPER_SIZE}", "OK")
+    log(f"Versão do script: {SCRIPT_VERSION}", "OK")
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
     print("  Pressione Ctrl+C para parar")
@@ -627,7 +695,7 @@ if __name__ == "__main__":
     contador = 0
     try:
         while True:
-            # 1. Pedidos do cardápio online
+            # 1. Pedidos do cardápio online / express / garçom
             pedidos = buscar_pedidos_nao_impressos(company_id)
             
             if pedidos:
@@ -636,7 +704,7 @@ if __name__ == "__main__":
                     processar_pedido(pedido, STORE_NAME)
                 mostrar_status(company_id)
             
-            # 2. Fila de impressão (garçom / mesa)
+            # 2. Fila de impressão (garçom / mesa - print_queue)
             fila_count = processar_fila(company_id)
             
             if not pedidos and fila_count == 0:
