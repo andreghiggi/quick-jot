@@ -1553,7 +1553,7 @@ export default function PDV() {
 
       {/* Payment Dialog */}
       <Dialog open={paymentDialog} onOpenChange={setPaymentDialog}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-x-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Forma de Pagamento</DialogTitle>
           </DialogHeader>
