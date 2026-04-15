@@ -955,6 +955,7 @@ export default function PDV() {
     printWindow.document.close();
   }
 
+  function printSaleReceipt(sale: typeof sales[0]) {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
