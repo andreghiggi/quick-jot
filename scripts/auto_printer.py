@@ -353,28 +353,60 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     
     return html
 
+def encontrar_chrome():
+    """Encontra o executável do Chrome ou Edge no Windows"""
+    caminhos = [
+        os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
+        os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
+    ]
+    for caminho in caminhos:
+        if os.path.exists(caminho):
+            log(f"Navegador encontrado: {caminho}", "PRINT")
+            return caminho
+    return None
+
 def imprimir_html(html, order_number):
-    """Salva HTML e abre no navegador para impressão automática.
-    Método idêntico ao que funcionava no domingo (v4.0).
-    O navegador abre, o JS dispara window.print(), a impressora térmica imprime."""
+    """Salva HTML e envia direto para a impressora padrão.
+    Usa Chrome/Edge --kiosk-printing para impressão silenciosa (sem diálogo)."""
     try:
         arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.html")
         with open(arquivo, 'w', encoding='utf-8') as f:
             f.write(html)
         
+        file_url = f'file:///{arquivo.replace(os.sep, "/")}'
         log(f"HTML salvo: {arquivo}", "PRINT")
-        log(f"Abrindo no navegador para impressão...", "PRINT")
         
-        # Abre no navegador padrão - o JS auto-print cuida do resto
-        webbrowser.open(f'file:///{arquivo}')
+        # Método 1: Chrome/Edge com --kiosk-printing (envia direto, sem diálogo)
+        browser_exe = encontrar_chrome()
+        if browser_exe:
+            log(f"Imprimindo via --kiosk-printing (silencioso)...", "PRINT")
+            try:
+                subprocess.Popen([
+                    browser_exe,
+                    "--kiosk-printing",
+                    "--disable-print-preview",
+                    file_url
+                ], shell=False)
+                log(f"Enviado para impressora via kiosk-printing!", "PRINT")
+                time.sleep(5)
+                # Remove arquivo temporário
+                try:
+                    os.unlink(arquivo)
+                except:
+                    pass
+                return True
+            except Exception as e:
+                log(f"Falha no kiosk-printing: {e}", "ERRO")
         
-        log(f"Enviado para o navegador!", "PRINT")
-        time.sleep(5)  # Aguarda impressão
-        
-        # Remove arquivo temporário
+        # Método 2: Fallback - webbrowser.open (abre diálogo, mas funciona)
+        log(f"Fallback: abrindo navegador padrão...", "PRINT")
+        webbrowser.open(file_url)
+        time.sleep(5)
         try:
             os.unlink(arquivo)
-            log(f"Arquivo temporário removido", "PRINT")
         except:
             pass
         
