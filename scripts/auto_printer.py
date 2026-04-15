@@ -12,6 +12,7 @@ import time
 import tempfile
 import subprocess
 import os
+import shutil
 import webbrowser
 from datetime import datetime, timezone, timedelta
 
@@ -380,29 +381,84 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     
     return html
 
+def encontrar_navegador_silencioso():
+    """Encontra um navegador Chromium para impressão silenciosa no Windows."""
+    if os.name == "nt":
+        bases = [
+            os.environ.get("PROGRAMFILES", ""),
+            os.environ.get("PROGRAMFILES(X86)", ""),
+            os.environ.get("LOCALAPPDATA", ""),
+        ]
+        sufixos = [
+            os.path.join("Google", "Chrome", "Application", "chrome.exe"),
+            os.path.join("Microsoft", "Edge", "Application", "msedge.exe"),
+            os.path.join("Chromium", "Application", "chrome.exe"),
+        ]
+        for base in bases:
+            if not base:
+                continue
+            for sufixo in sufixos:
+                caminho = os.path.join(base, sufixo)
+                if os.path.exists(caminho):
+                    return caminho
+        return None
+
+    for nome in ("google-chrome", "chrome", "chromium", "chromium-browser", "microsoft-edge", "msedge"):
+        caminho = shutil.which(nome)
+        if caminho:
+            return caminho
+    return None
+
+
 def imprimir_html(html, order_number):
-    """Salva HTML e abre no navegador para impressão automática"""
+    """Salva HTML e dispara impressão automática com fallback por plataforma."""
     try:
-        arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.html")
+        arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}_{int(time.time())}.html")
         with open(arquivo, 'w', encoding='utf-8') as f:
             f.write(html)
-        
+
         log(f"HTML salvo: {arquivo}", "PRINT")
-        log(f"Abrindo no navegador para impressão...", "PRINT")
-        
-        # Abre no navegador padrão - o JS auto-print cuida do resto
-        webbrowser.open(f'file:///{arquivo}')
-        
-        log(f"Enviado para o navegador!", "PRINT")
-        time.sleep(5)  # Aguarda impressão
-        
-        # Remove arquivo temporário
+        file_url = f"file:///{arquivo.replace(os.sep, '/')}"
+
+        if os.name == "nt":
+            navegador = encontrar_navegador_silencioso()
+            if navegador:
+                perfil_temp = os.path.join(tempfile.gettempdir(), "comanda_printer_profile")
+                os.makedirs(perfil_temp, exist_ok=True)
+                log(f"Usando impressão silenciosa com {os.path.basename(navegador)}...", "PRINT")
+                subprocess.Popen(
+                    [
+                        navegador,
+                        f"--user-data-dir={perfil_temp}",
+                        "--no-first-run",
+                        "--disable-session-crashed-bubble",
+                        "--disable-print-preview",
+                        "--kiosk-printing",
+                        "--new-window",
+                        file_url,
+                    ],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                log("Comando enviado ao navegador em modo silencioso.", "PRINT")
+                time.sleep(10)
+            else:
+                log("Chrome/Edge não encontrado. Tentando impressão padrão do Windows...", "PRINT")
+                os.startfile(arquivo, "print")
+                log("Comando PRINT enviado ao Windows.", "PRINT")
+                time.sleep(10)
+        else:
+            log("Abrindo no navegador padrão para impressão...", "PRINT")
+            webbrowser.open(file_url)
+            log("Enviado para o navegador!", "PRINT")
+            time.sleep(8)
+
         try:
             os.unlink(arquivo)
-            log(f"Arquivo temporário removido", "PRINT")
-        except:
+            log("Arquivo temporário removido", "PRINT")
+        except Exception:
             pass
-        
+
         return True
     except Exception as e:
         log(f"Falha na impressão: {e}", "ERRO")
