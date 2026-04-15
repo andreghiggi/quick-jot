@@ -2144,7 +2144,8 @@ export default function PDV() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              );
+              })}
               {sales.length === 0 && (
                 <p className="text-center text-muted-foreground py-8">Nenhuma venda realizada</p>
               )}
