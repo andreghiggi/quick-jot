@@ -358,6 +358,28 @@ export default function PDV() {
     }
   }
 
+  function addItemsToCart(items: Array<{ product_id: string | null; product_name: string; quantity: number; unit_price: number }>) {
+    setCart(prev => [...prev, ...items]);
+  }
+
+  function handleProductClick(product: typeof products[0]) {
+    // Check if this product has optional groups linked
+    const productGroups = optionalGroups.filter(group => {
+      // Check if the group is linked to this product directly
+      if (group.productIds.includes(product.id)) return true;
+      // Check if the group is linked to the product's category
+      // We need to find category ID from the categories list
+      return false;
+    });
+
+    if (productGroups.length > 0) {
+      setOptionalsDialogProduct(product);
+      setOptionalsDialogGroups(productGroups);
+    } else {
+      addToCart(product);
+    }
+  }
+
   function updateQuantity(productId: string | null, delta: number) {
     setCart(cart.map(item => {
       if (item.product_id === productId) {
