@@ -708,11 +708,16 @@ if __name__ == "__main__":
         while True:
             # 1. Pedidos do cardápio online / express / garçom
             pedidos = buscar_pedidos_nao_impressos(company_id)
+            # Filtra pedidos que já falharam nesta sessão (evita loop infinito)
+            pedidos = [p for p in pedidos if p.get('id') not in ids_com_falha]
             
             if pedidos:
                 log(f"Encontrados {len(pedidos)} pedido(s) para imprimir!", "INFO")
                 for pedido in pedidos:
-                    processar_pedido(pedido, STORE_NAME)
+                    ok = processar_pedido(pedido, STORE_NAME)
+                    if not ok:
+                        ids_com_falha.add(pedido.get('id'))
+                        log(f"Pedido {pedido.get('order_code','')} adicionado à lista de falhas (não tentará novamente)", "AVISO")
                 mostrar_status(company_id)
             
             # 2. Fila de impressão (garçom / mesa - print_queue)
