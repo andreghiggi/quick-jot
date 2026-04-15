@@ -445,14 +445,6 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     {notes_html}
     <hr class="divider">
     <p class="footer">Obrigado pela preferencia!</p>
-    <script>
-        window.onload = function() {{
-            setTimeout(function() {{
-                window.print();
-                setTimeout(function() {{ window.close(); }}, 1000);
-            }}, 300);
-        }};
-    </script>
 </body>
 </html>'''
     
