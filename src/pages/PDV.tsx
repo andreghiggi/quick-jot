@@ -559,7 +559,8 @@ export default function PDV() {
                   valor: finalTotal,
                 };
                 
-                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}`;
+                const installLabel = installmentCount > 1 ? ` | ${installmentCount}x ${tefCardType === 'credit' ? 'Crédito' : 'Débito'}` : ` | ${tefCardType === 'credit' ? 'Crédito à Vista' : tefCardType === 'debit' ? 'Débito' : 'PIX'}`;
+                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}`;
               } else if (statusResult.status === 'declined' || statusResult.status === 'cancelled' || statusResult.status === 'error') {
                 tefCompleted = true;
                 toast.error(`TEF PinPad: ${statusResult.errorMessage || statusResult.operatorMessage || 'Pagamento não aprovado'}`);
@@ -640,7 +641,8 @@ export default function PDV() {
                   valor: finalTotal,
                 };
                 
-                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand}`;
+                const installLabelSmart = installmentCount > 1 ? ` | ${installmentCount}x ${tefCardType === 'credit' ? 'Crédito' : 'Débito'}` : ` | ${tefCardType === 'credit' ? 'Crédito à Vista' : tefCardType === 'debit' ? 'Débito' : 'PIX'}`;
+                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand}${installLabelSmart}`;
               } else if (statusResult.status === 'cancelled' || statusResult.status === 'error') {
                 tefCompleted = true;
                 toast.error(`TEF: ${statusResult.errorMessage || 'Pagamento não aprovado'}`);
