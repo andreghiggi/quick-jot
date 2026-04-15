@@ -381,22 +381,34 @@ def encontrar_chrome():
     return None
 
 def imprimir_html(html, order_number):
-    """Salva HTML e abre no navegador para impressão automática"""
+    """Imprime diretamente na impressora padrão via win32print sem abrir navegador"""
     try:
+        import win32print
+        import win32api
+        
         arquivo = os.path.join(tempfile.gettempdir(), f"pedido_{order_number}.html")
         with open(arquivo, 'w', encoding='utf-8') as f:
             f.write(html)
         
         log(f"HTML salvo: {arquivo}", "PRINT")
-        log(f"Abrindo no navegador para impressão...", "PRINT")
         
-        # Abre no navegador padrão - o JS auto-print cuida do resto
-        webbrowser.open(f'file:///{arquivo}')
+        # Pega impressora padrão
+        impressora = win32print.GetDefaultPrinter()
+        log(f"Imprimindo em: {impressora}", "PRINT")
         
-        log(f"Enviado para o navegador!", "PRINT")
-        time.sleep(5)  # Aguarda impressão
+        # Imprime diretamente via ShellExecute
+        win32api.ShellExecute(
+            0,
+            "print",
+            arquivo,
+            None,
+            ".",
+            0
+        )
         
-        # Remove arquivo temporário
+        log(f"Enviado para impressora!", "PRINT")
+        time.sleep(5)
+        
         try:
             os.unlink(arquivo)
             log(f"Arquivo temporário removido", "PRINT")
@@ -404,6 +416,9 @@ def imprimir_html(html, order_number):
             pass
         
         return True
+    except ImportError:
+        log("pywin32 não instalado. Rode: pip install pywin32", "ERRO")
+        return False
     except Exception as e:
         log(f"Falha na impressão: {e}", "ERRO")
         return False
