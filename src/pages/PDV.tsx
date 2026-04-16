@@ -1056,7 +1056,19 @@ export default function PDV() {
       }
     }
     const isCancelled = saleNotesStr.includes('[CANCELADA]');
-    const cancelledBanner = isCancelled ? '<p style="color:red;font-weight:bold;text-align:center;font-size:14px;margin:2mm 0">*** VENDA CANCELADA ***</p>' : '';
+    const tefInfo = parseTefDataFromNotes(saleNotesStr);
+    let cancelledBanner = '';
+    if (isCancelled) {
+      cancelledBanner = `
+        <div style="border:2px solid red;padding:3mm;margin:2mm 0;text-align:center">
+          <p style="color:red;font-weight:bold;font-size:16px;margin:0">*** VENDA CANCELADA ***</p>
+          ${tefInfo ? `
+            <p style="font-size:11px;margin:1mm 0"><strong>Estorno TEF</strong></p>
+            <p style="font-size:10px;margin:0">NSU: ${tefInfo.nsu} | Aut: ${tefInfo.authCode}</p>
+            <p style="font-size:10px;margin:0">${tefInfo.cardBrand}${tefInfo.acquirer ? ' | ' + tefInfo.acquirer : ''}</p>
+          ` : ''}
+        </div>`;
+    }
 
     const printContent = `
       <!DOCTYPE html>
