@@ -417,11 +417,21 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       if (settings.autoPrintProductionTicket && company?.id) {
         try {
           const productionItems = cart.flatMap(item => {
-            const optionalNames = item.groupedOptionalNames && item.groupedOptionalNames.length > 0
-              ? item.groupedOptionalNames
-              : item.selectedOptionals.map(o => o.name);
+            // Build a clean list of additional names (without prices, without group prefix)
+            const additionalNames: string[] = [];
+            if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+              // groupedOptionalNames already comes formatted like "GroupName: a R$1.00, b R$2.00"
+              // Strip group prefix and prices to get only item names
+              for (const entry of item.groupedOptionalNames) {
+                const afterColon = entry.includes(':') ? entry.split(':').slice(1).join(':') : entry;
+                const items = afterColon.split(',').map(s => s.replace(/\s*R\$\s*[\d.,]+\s*$/i, '').trim()).filter(Boolean);
+                additionalNames.push(...items);
+              }
+            } else if (item.selectedOptionals.length > 0) {
+              additionalNames.push(...item.selectedOptionals.map(o => o.name));
+            }
             const notesParts: string[] = [];
-            if (optionalNames.length > 0) notesParts.push(`Adicionais: ${optionalNames.join(', ')}`);
+            if (additionalNames.length > 0) notesParts.push(`Adicionais: ${additionalNames.join(', ')}`);
             if (item.notes) notesParts.push(item.notes);
             return [{
               productName: item.product.name,
