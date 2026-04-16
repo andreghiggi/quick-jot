@@ -89,7 +89,7 @@ export default function PDV() {
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
   const { settings: storeSettings, updateSetting } = useStoreSettings({ companyId: company?.id });
-  const { openTabs, getTabTotal, closeTab } = useTabs({ companyId: company?.id });
+  const { openTabs, getTabTotal, closeTab, removeItemFromTab } = useTabs({ companyId: company?.id });
   const { tables } = useTables({ companyId: company?.id });
   const { groups: optionalGroups } = useOptionalGroups({ companyId: company?.id });
   const { categories: dbCategories } = useCategories({ companyId: company?.id });
