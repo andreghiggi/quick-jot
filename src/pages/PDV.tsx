@@ -10,6 +10,7 @@ import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
+import { useCategories } from '@/hooks/useCategories';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { printProductionTicket } from '@/utils/printProductionTicket';
 import { emitirNFCe, consultarNFCe, reprocessarNFCe, NFCeItem, NFCeTefData, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
@@ -91,6 +92,7 @@ export default function PDV() {
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId: company?.id });
   const { tables } = useTables({ companyId: company?.id });
   const { groups: optionalGroups } = useOptionalGroups({ companyId: company?.id });
+  const { categories: dbCategories } = useCategories({ companyId: company?.id });
   const { 
     currentRegister, 
     registers,
