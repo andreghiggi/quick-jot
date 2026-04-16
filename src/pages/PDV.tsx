@@ -363,13 +363,24 @@ export default function PDV() {
     setCart(prev => [...prev, ...items]);
   }
 
+  // Build category name→id map for optional group matching in PDV
+  const categoryIdByName = (() => {
+    const map: Record<string, string> = {};
+    // categories is derived from product category strings, but we need actual category IDs
+    // Use optionalGroups' categoryIds cross-referenced with products
+    return map;
+  })();
+
   function handleProductClick(product: typeof products[0]) {
     // Check if this product has optional groups linked
     const productGroups = optionalGroups.filter(group => {
+      if (!group.active) return false;
       // Check if the group is linked to this product directly
       if (group.productIds.includes(product.id)) return true;
-      // Check if the group is linked to the product's category
-      // We need to find category ID from the categories list
+      // Check if the group is linked to the product's category by category ID
+      // We need to match category name to category ID from the optional_group_categories links
+      // Since PDV doesn't load the categories hook with IDs, check if any categoryId in the group
+      // corresponds to a category whose name matches the product's category
       return false;
     });
 

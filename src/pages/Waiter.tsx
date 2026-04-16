@@ -150,10 +150,18 @@ export default function Waiter() {
     setTabNotes('');
   };
 
+  // Build category name→id map for optional group matching
+  const categoryIdByName = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach(c => { map[c.name] = c.id; });
+    return map;
+  }, [categories]);
+
   const handleAddToCart = (product: typeof products[0]) => {
-    // Check if product has optional groups
+    // Check if product has optional groups (match by product ID or category ID)
+    const catId = categoryIdByName[product.category];
     const productGroups = optionalGroups.filter(g => 
-      g.active && (g.productIds.includes(product.id) || g.categoryIds.includes(product.category))
+      g.active && (g.productIds.includes(product.id) || (catId && g.categoryIds.includes(catId)))
     );
     
     if (productGroups.length > 0) {
@@ -691,31 +699,19 @@ export default function Waiter() {
                     <span>Total</span>
                     <span>R$ {cartTotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline"
-                      className="flex-1" 
-                      onClick={() => handleConfirmItems(false)}
-                      disabled={isProcessing}
-                      size="sm"
-                    >
-                      {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Adicionar
-                    </Button>
-                    <Button 
-                      className="flex-1 gap-1" 
-                      onClick={() => handleConfirmItems(true)}
-                      disabled={isProcessing}
-                      size="sm"
-                    >
-                      {isProcessing ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Printer className="w-4 h-4" />
-                      )}
-                      Finalizar
-                    </Button>
-                  </div>
+                  <Button 
+                    className="w-full gap-1" 
+                    onClick={() => handleConfirmItems(true)}
+                    disabled={isProcessing}
+                    size="sm"
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Printer className="w-4 h-4" />
+                    )}
+                    Finalizar e Imprimir
+                  </Button>
                 </div>
               )}
             </div>
