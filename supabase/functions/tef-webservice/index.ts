@@ -11,8 +11,14 @@ const TEF_API_URL = 'https://api.multipluscard.com.br/api/Servicos';
 const SEP = '¬';
 
 // Build CONTEUDO string from key-value pairs
+// IMPORTANT: 999-999 MUST always be the LAST field
 function buildConteudo(fields: Record<string, string>): string {
-  return Object.entries(fields)
+  const entries = Object.entries(fields);
+  // Separate 999-999 and put it last
+  const regular = entries.filter(([key]) => key !== '999-999');
+  const terminator = entries.find(([key]) => key === '999-999');
+  const ordered = terminator ? [...regular, terminator] : regular;
+  return ordered
     .map(([key, value]) => `${key} = ${value}`)
     .join(SEP);
 }
@@ -40,7 +46,6 @@ function extractReceipt(parsed: Record<string, string>): string[] {
   for (let i = 1; i <= totalLines; i++) {
     const key = `029-${String(i).padStart(3, '0')}`;
     if (parsed[key] !== undefined) {
-      // Remove surrounding quotes if present
       lines.push(parsed[key].replace(/^"|"$/g, ''));
     }
   }
@@ -97,7 +102,6 @@ serve(async (req) => {
         );
       }
 
-      // Check for error responses
       if (text.startsWith('[ERRO]')) {
         return new Response(
           JSON.stringify({ success: false, errorMessage: text }),
@@ -105,10 +109,8 @@ serve(async (req) => {
         );
       }
 
-      // ATV returns hash if successful
       const hash = text.trim();
 
-      // Now poll GetVendasTef to get ATV result
       await new Promise(resolve => setTimeout(resolve, 600));
       
       const getResponse = await fetch(`${TEF_API_URL}/GetVendasTef`, {
@@ -161,47 +163,40 @@ serve(async (req) => {
         );
       }
 
-      // Build CONTEUDO fields
+      const ident = identificacao || String(Date.now());
+
+      // Build CONTEUDO fields - 999-999 will be placed last by buildConteudo
       const fields: Record<string, string> = {
         '000-000': 'CRT',
-        '001-000': identificacao || String(Date.now()),
-        '003-000': String(Math.round(amount * 100)), // Value in cents without decimal separator
-        '999-999': '0',
+        '001-000': ident,
+        '003-000': String(Math.round(amount * 100)),
       };
 
       if (documentoFiscal) {
         fields['002-000'] = documentoFiscal;
       }
 
-      // Optional: payment type specification (direct integration)
-      // 800-001: 0=Credit, 1=Debit, 5=Pix
       if (paymentType !== undefined && paymentType !== null) {
         fields['800-001'] = String(paymentType);
       }
 
-      // 800-002: 0=À vista, 1=Parcelado
       if (installments && installments > 1) {
         fields['800-002'] = '1'; // Parcelado
-        // 800-003: 1=Parcelado Loja, 2=Parcelado ADM
         fields['800-003'] = params.installmentType === 'adm' ? '2' : '1';
         fields['800-004'] = String(installments);
       } else if (paymentType !== undefined) {
         fields['800-002'] = '0'; // À vista
       }
 
-      // 800-005: CNPJ da empresa
       if (cnpj) {
         fields['800-005'] = cnpj;
       }
 
-      // 800-006: Equipment type (1=PINPAD, 2=CIELO LIO, 3=PINPDV)
-      fields['800-006'] = String(equipment || 1); // Default to PINPAD
+      fields['800-006'] = String(equipment || 1);
+      fields['999-999'] = '0';
 
       const conteudo = buildConteudo(fields);
       console.log('[TEF-WS] CRT CONTEUDO:', conteudo);
-
-      // Optional: callback URL
-      const callbackUrl = params.callbackUrl;
 
       const headers: Record<string, string> = {
         'CNPJ': cnpj,
@@ -210,6 +205,7 @@ serve(async (req) => {
         'CONTEUDO': conteudo,
       };
 
+      const callbackUrl = params.callbackUrl;
       if (callbackUrl) {
         headers['CALLBACK'] = callbackUrl;
       }
@@ -237,8 +233,9 @@ serve(async (req) => {
       }
 
       const hash = text.trim();
+      // Return the identificacao used so the client can reuse it for CNF/NCN
       return new Response(
-        JSON.stringify({ success: true, hash }),
+        JSON.stringify({ success: true, hash, identificacao: ident }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -312,7 +309,7 @@ serve(async (req) => {
         success: isApproved,
         status: isApproved ? 'approved' : 'declined',
         raw: parsed,
-        // Transaction details
+        identificacao: parsed['001-000'] || '',
         nsu: parsed['012-000'] || parsed['012-001'] || '',
         authorizationCode: parsed['013-000'] || parsed['013-001'] || '',
         nsuHost: parsed['170-000'] || '',
@@ -354,15 +351,17 @@ serve(async (req) => {
 
       const { identificacao, rede, nsu, finalizacao } = params;
 
+      // Field order: 000-000, 001-000, 010-000, 012-000, 027-000, 999-999
+      // 999-999 is always placed last by buildConteudo
       const fields: Record<string, string> = {
         '000-000': 'CNF',
         '001-000': identificacao || '1',
-        '027-000': finalizacao || '',
-        '999-999': '0',
       };
 
       if (rede) fields['010-000'] = rede;
       if (nsu) fields['012-000'] = nsu;
+      fields['027-000'] = finalizacao || '';
+      fields['999-999'] = '0';
 
       const conteudo = buildConteudo(fields);
       console.log('[TEF-WS] CNF CONTEUDO:', conteudo);
@@ -400,14 +399,15 @@ serve(async (req) => {
       const fields: Record<string, string> = {
         '000-000': 'NCN',
         '001-000': identificacao || '1',
-        '027-000': finalizacao || '',
-        '999-999': '0',
       };
 
       if (rede) fields['010-000'] = rede;
       if (nsu) fields['012-000'] = nsu;
+      fields['027-000'] = finalizacao || '';
+      fields['999-999'] = '0';
 
       const conteudo = buildConteudo(fields);
+      console.log('[TEF-WS] NCN CONTEUDO:', conteudo);
 
       const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
         method: 'POST',
@@ -443,14 +443,15 @@ serve(async (req) => {
         '000-000': 'CNC',
         '001-000': identificacao || String(Date.now()),
         '003-000': String(Math.round(amount * 100)),
-        '010-000': rede,
-        '012-000': nsu,
-        '022-000': dataTransacao,
-        '023-000': horaTransacao,
+        '010-000': rede || '',
+        '012-000': nsu || '',
+        '022-000': dataTransacao || '',
+        '023-000': horaTransacao || '',
         '999-999': '0',
       };
 
       const conteudo = buildConteudo(fields);
+      console.log('[TEF-WS] CNC CONTEUDO:', conteudo);
 
       const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
         method: 'POST',
@@ -472,8 +473,9 @@ serve(async (req) => {
         );
       }
 
+      // Return the identificacao used so client can send CNF after CNC completes
       return new Response(
-        JSON.stringify({ success: true, hash: text.trim() }),
+        JSON.stringify({ success: true, hash: text.trim(), identificacao: fields['001-000'] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
