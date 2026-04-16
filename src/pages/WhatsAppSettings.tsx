@@ -261,7 +261,19 @@ export default function WhatsAppSettings() {
                 )}
 
                 {/* Management Buttons */}
-                <div className="flex gap-3 justify-end border-t pt-4">
+                <div className="flex gap-3 justify-end border-t pt-4 flex-wrap">
+                  {showResetButton && (
+                    <Button
+                      variant="outline"
+                      onClick={resetInstance}
+                      disabled={connecting}
+                      className="gap-2 border-amber-500 text-amber-700 hover:bg-amber-50"
+                      title="Apaga e recria a conexão do zero (use quando o celular não consegue parear o QR Code)"
+                    >
+                      {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                      Resetar Conexão
+                    </Button>
+                  )}
                   {isConnected && (
                     <Button variant="outline" onClick={disconnect} className="gap-2">
                       <WifiOff className="w-4 h-4" />
