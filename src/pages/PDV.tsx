@@ -2495,10 +2495,10 @@ export default function PDV() {
             {/* Document Generation Mode */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">Geração de Documentos</p>
-              <RadioGroup value={documentMode} onValueChange={(v) => setDocumentMode(v as 'sale_only' | 'sale_with_nfce')}>
+              <RadioGroup value={selectedMethodIsTef ? 'sale_with_nfce' : documentMode} onValueChange={(v) => setDocumentMode(v as 'sale_only' | 'sale_with_nfce')}>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="sale_only" id="float-sale-only" />
-                  <label htmlFor="float-sale-only" className="text-xs cursor-pointer">Somente Venda</label>
+                  <RadioGroupItem value="sale_only" id="float-sale-only" disabled={selectedMethodIsTef} />
+                  <label htmlFor="float-sale-only" className={`text-xs cursor-pointer ${selectedMethodIsTef ? 'opacity-50' : ''}`}>Somente Venda</label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="sale_with_nfce" id="float-sale-nfce" />
