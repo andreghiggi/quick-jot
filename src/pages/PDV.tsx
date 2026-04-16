@@ -185,6 +185,8 @@ export default function PDV() {
   // PDV Optionals state
   const [optionalsDialogProduct, setOptionalsDialogProduct] = useState<typeof products[0] | null>(null);
   const [optionalsDialogGroups, setOptionalsDialogGroups] = useState<OptionalGroup[]>([]);
+  // Tab detail (edit items) state
+  const [editingTab, setEditingTab] = useState<Tab | null>(null);
   // Dialog states
   const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
   const [closeRegisterDialog, setCloseRegisterDialog] = useState(false);
