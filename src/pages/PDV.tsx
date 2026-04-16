@@ -623,9 +623,11 @@ export default function PDV() {
                 setPinpadResult(statusResult);
                 setTefStatus('Pagamento aprovado!');
                 toast.success(`TEF PinPad aprovado! NSU: ${statusResult.nsu}`);
+                hadApproval = true;
                 
+                // CNF must use the SAME identificacao from CRT
                 await confirmPinpadTransaction(company!.id, {
-                  identificacao: String(Date.now()),
+                  identificacao: crtIdentificacao,
                   rede: statusResult.acquirer,
                   nsu: statusResult.nsu,
                   finalizacao: statusResult.finalizacao,
