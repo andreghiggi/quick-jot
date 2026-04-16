@@ -137,6 +137,34 @@ export function useWhatsApp(companyId?: string) {
     }
   }
 
+  // whatsapp-reset-v1: hard-reset (delete + recreate) to clear corrupted Baileys session.
+  // Use when QR pairing fails on the user's phone with "Não foi possível associar o dispositivo".
+  async function resetInstance() {
+    if (!companyId) return;
+    const instanceName = instance?.instance_name || `ct-${companyId.slice(0, 8)}`;
+    setConnecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
+        body: { action: 'reset_instance', instanceName, companyId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      await fetchInstance();
+      if (data?.qrCode) {
+        setQrCode(data.qrCode);
+      } else {
+        await getQRCode(instanceName);
+      }
+      toast.success('Conexão resetada! Escaneie o novo QR Code.');
+    } catch (e: any) {
+      console.error('Error resetting instance:', e);
+      toast.error(e.message || 'Erro ao resetar conexão');
+    } finally {
+      setConnecting(false);
+    }
+  }
+
   async function sendMessage(phone: string, message: string, orderId?: string) {
     if (!instance?.instance_name || !companyId) return false;
     if (instance.status !== 'connected') {
