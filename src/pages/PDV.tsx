@@ -162,8 +162,7 @@ export default function PDV() {
   useEffect(() => {
     localStorage.setItem('pdv_document_mode', documentMode);
   }, [documentMode]);
-  // Force NFC-e when TEF payment is selected
-  const emitNFCe = documentMode === 'sale_with_nfce' || selectedMethodIsTef;
+  const emitNFCeBase = documentMode === 'sale_with_nfce';
 
   // NFC-e post-sale dialog
   const [nfcePostSaleDialog, setNfcePostSaleDialog] = useState(false);
