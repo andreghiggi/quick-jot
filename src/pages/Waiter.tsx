@@ -81,6 +81,14 @@ export default function Waiter() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [optionalsDialogProduct, setOptionalsDialogProduct] = useState<typeof products[0] | null>(null);
   const [optionalsDialogGroups, setOptionalsDialogGroups] = useState<OptionalGroup[]>([]);
+  const cartEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll cart to show the last added item
+  useEffect(() => {
+    if (cart.length > 0 && cartEndRef.current) {
+      cartEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [cart.length]);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
