@@ -356,6 +356,12 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         .item-name {{ font-size: 11pt; font-weight: bold; text-transform: uppercase; }}
         .item-detail {{ font-size: 9pt; margin-left: 2mm; }}
         .item-notes {{ font-size: 9pt; font-style: italic; margin-left: 2mm; }}
+        /* V2: adicionais empilhados em negrito */
+        .additionals {{ margin: 1mm 0 0 2mm; }}
+        .add-line {{ font-size: 11pt; font-weight: 900; line-height: 1.4; word-break: break-word; text-transform: uppercase; }}
+        /* V2: observações texto invertido (fundo preto, letras brancas) */
+        .obs-block {{ margin: 1mm 0 0 2mm; }}
+        .obs {{ display: inline-block; background: #000 !important; color: #fff !important; padding: 0.5mm 2mm; font-weight: bold; font-size: 10pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
         .total-line {{ display: flex; justify-content: space-between; font-size: 10pt; margin: 0.5mm 0; }}
         .grand-total {{ display: flex; justify-content: space-between; font-size: 13pt; font-weight: bold; margin: 1mm 0; }}
         .notes {{ font-size: 9pt; margin: 1mm 0; }}
