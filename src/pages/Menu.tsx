@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { generateProductionTicketText } from '@/utils/printProductionTicket';
+import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { Progress } from '@/components/ui/progress';
 import { NovidadesSlideshow } from '@/components/menu/NovidadesSlideshow';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -760,24 +760,41 @@ export default function Menu() {
         // Send production ticket to print queue if enabled
         if (settings.autoPrintProductionTicket) {
           try {
-            const shouldIncludeProductionOptionals = company?.slug === 'rei-do-acai';
-            const productionText = generateProductionTicketText({
-              tabNumber: newOrder.daily_number || 0,
-              customerName: customerName,
-              items: cart.map(item => ({
-                productName: shouldIncludeProductionOptionals ? buildCartItemDisplayName(item) : item.product.name,
+            const productionItems = cart.map((item) => {
+              const optionalNames = item.groupedOptionalNames && item.groupedOptionalNames.length > 0
+                ? item.groupedOptionalNames
+                : item.selectedOptionals.map((optional) => optional.name);
+
+              const notesParts: string[] = [];
+              if (optionalNames.length > 0) {
+                notesParts.push(`Adicionais: ${optionalNames.join(', ')}`);
+              }
+              if (item.notes) {
+                notesParts.push(item.notes);
+              }
+
+              return {
+                productName: item.product.name,
                 quantity: item.quantity,
-                notes: item.notes || null,
-              })),
+                notes: notesParts.length > 0 ? notesParts.join(' | ') : undefined,
+              };
+            });
+
+            const productionHtml = generateProductionTicketHTML({
+              tabNumber: newOrder.daily_number || 0,
+              customerName,
+              items: productionItems,
               createdAt: new Date(),
+              paperSize: settings.printerPaperSize,
               referenceLabel: `PEDIDO #${newOrder.daily_number || newOrder.order_code}`,
+              layout: settings.printLayout,
             });
 
             await supabase
               .from('print_queue')
               .insert({
                 company_id: company.id,
-                html_content: productionText,
+                html_content: productionHtml,
                 label: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}`,
               });
           } catch (printErr) {
