@@ -737,8 +737,9 @@ if __name__ == "__main__":
         print(f"Empresa '{slug}' não encontrada ou inativa. Verifique o slug.")
         exit(1)
     
-    # Busca configuração de papel
+    # Busca configuração de papel e layout
     buscar_paper_size(company_id)
+    buscar_print_layout(company_id)
     
     # Diagnóstico de impressora e navegador
     diagnosticar_impressora()
