@@ -366,23 +366,19 @@ export default function PDV() {
   }
 
   // Build category name→id map for optional group matching in PDV
-  const categoryIdByName = (() => {
+  const pdvCategoryIdByName = useMemo(() => {
     const map: Record<string, string> = {};
-    // categories is derived from product category strings, but we need actual category IDs
-    // Use optionalGroups' categoryIds cross-referenced with products
+    dbCategories.forEach(c => { map[c.name] = c.id; });
     return map;
-  })();
+  }, [dbCategories]);
 
   function handleProductClick(product: typeof products[0]) {
     // Check if this product has optional groups linked
+    const catId = pdvCategoryIdByName[product.category];
     const productGroups = optionalGroups.filter(group => {
       if (!group.active) return false;
-      // Check if the group is linked to this product directly
       if (group.productIds.includes(product.id)) return true;
-      // Check if the group is linked to the product's category by category ID
-      // We need to match category name to category ID from the optional_group_categories links
-      // Since PDV doesn't load the categories hook with IDs, check if any categoryId in the group
-      // corresponds to a category whose name matches the product's category
+      if (catId && group.categoryIds.includes(catId)) return true;
       return false;
     });
 
