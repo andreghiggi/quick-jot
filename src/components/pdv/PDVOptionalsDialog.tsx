@@ -53,10 +53,12 @@ export function PDVOptionalsDialog({
       if (current.has(itemId)) {
         current.delete(itemId);
       } else {
-        if (maxSelect === 1) {
+        // maxSelect 0 means unlimited
+        const effectiveMax = maxSelect <= 0 ? Infinity : maxSelect;
+        if (effectiveMax === 1) {
           return { ...prev, [groupId]: new Set([itemId]) };
         }
-        if (current.size < maxSelect) {
+        if (current.size < effectiveMax) {
           current.add(itemId);
         }
       }
