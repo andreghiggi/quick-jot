@@ -200,6 +200,7 @@ export function useWhatsApp(companyId?: string) {
     checkStatus,
     disconnect,
     deleteInstance,
+    resetInstance,
     sendMessage,
     refetch: fetchInstance,
   };
