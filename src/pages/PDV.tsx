@@ -600,9 +600,12 @@ export default function PDV() {
             for (let i = 0; i < 120 && !tefCompleted; i++) {
               if (tefCancelRef.current) {
                 toast.info('Operação TEF cancelada pelo operador.');
-                await cancelPinpadTransaction(company!.id, {
-                  identificacao: String(Date.now()),
-                });
+                // Only send NCN if transaction had approval (receipt generated)
+                if (hadApproval) {
+                  await cancelPinpadTransaction(company!.id, {
+                    identificacao: crtIdentificacao,
+                  });
+                }
                 setTefProcessing(false);
                 setTefStatus('');
                 setIsProcessingSale(false);
