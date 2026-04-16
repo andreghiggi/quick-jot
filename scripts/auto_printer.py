@@ -26,7 +26,7 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v8.5"
+SCRIPT_VERSION = "v8.6"  # word-wrap dos adicionais — não corta mais texto longo
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -454,6 +454,35 @@ def imprimir_html(html, order_number):
 
         y = margin_y
 
+        def quebrar_linha(texto, largura):
+            """Quebra texto em múltiplas linhas respeitando palavras (word-wrap)."""
+            if len(texto) <= largura:
+                return [texto]
+            palavras = texto.split(' ')
+            linhas_out = []
+            atual = ''
+            for palavra in palavras:
+                # Palavra individual maior que a largura: quebra forçada
+                if len(palavra) > largura:
+                    if atual:
+                        linhas_out.append(atual)
+                        atual = ''
+                    while len(palavra) > largura:
+                        linhas_out.append(palavra[:largura])
+                        palavra = palavra[largura:]
+                    atual = palavra
+                    continue
+                if not atual:
+                    atual = palavra
+                elif len(atual) + 1 + len(palavra) <= largura:
+                    atual += ' ' + palavra
+                else:
+                    linhas_out.append(atual)
+                    atual = palavra
+            if atual:
+                linhas_out.append(atual)
+            return linhas_out
+
         for linha in linhas:
             # Pula linhas completamente vazias duplicadas
             stripped = linha.strip()
@@ -464,10 +493,13 @@ def imprimir_html(html, order_number):
             # Centraliza cabeçalhos e divisórias
             if set(stripped) <= {'-', '=', '_'} and len(stripped) > 3:
                 hDC.TextOut(margin_x, y, '-' * colunas)
-            else:
-                hDC.TextOut(margin_x, y, stripped[:colunas * 2])
+                y += line_h
+                continue
 
-            y += line_h
+            # Word-wrap: quebra a linha em várias se ultrapassar a largura
+            for sublinha in quebrar_linha(stripped, colunas):
+                hDC.TextOut(margin_x, y, sublinha)
+                y += line_h
 
         hDC.EndPage()
         hDC.EndDoc()
