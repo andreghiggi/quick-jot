@@ -301,6 +301,103 @@ serve(async (req) => {
         });
       }
 
+      // ─── whatsapp-reset-v1 ───────────────────────────────────────────
+      // Hard-reset: deletes the instance on Evolution (clearing the corrupted
+      // Baileys session that causes "Não foi possível associar o dispositivo"
+      // on the phone), waits a moment, then recreates it from scratch and
+      // returns a fresh QR code. Use when QR pairing fails on the user's phone.
+      // ─────────────────────────────────────────────────────────────────
+      case 'reset_instance': {
+        const { instanceName, companyId } = params;
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook`;
+
+        console.log(`[reset_instance] Starting hard-reset for ${instanceName}`);
+
+        // 1) Logout (best-effort, may fail if already disconnected)
+        try {
+          await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
+            method: 'DELETE',
+            headers: { 'apikey': EVOLUTION_API_KEY },
+          });
+        } catch (e) {
+          console.warn('[reset_instance] logout failed (continuing):', e);
+        }
+
+        // 2) Delete the instance entirely on Evolution
+        try {
+          await fetch(`${baseUrl}/instance/delete/${instanceName}`, {
+            method: 'DELETE',
+            headers: { 'apikey': EVOLUTION_API_KEY },
+          });
+        } catch (e) {
+          console.warn('[reset_instance] delete failed (continuing):', e);
+        }
+
+        // 3) Small delay so Evolution fully releases the name
+        await new Promise((r) => setTimeout(r, 1500));
+
+        // 4) Recreate from scratch
+        const createRes = await fetch(`${baseUrl}/instance/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': EVOLUTION_API_KEY,
+          },
+          body: JSON.stringify({
+            instanceName,
+            integration: 'WHATSAPP-BAILEYS',
+            qrcode: true,
+            rejectCall: false,
+            alwaysOnline: false,
+            readMessages: false,
+            readStatus: false,
+            webhook: {
+              url: webhookUrl,
+              byEvents: false,
+              base64: false,
+              events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
+            },
+          }),
+        });
+        const createData = await createRes.json();
+
+        if (!createRes.ok) {
+          console.error('[reset_instance] recreate failed:', createData);
+          throw new Error(createData.message || JSON.stringify(createData));
+        }
+
+        // 5) Update DB
+        if (companyId) {
+          await supabase.from('whatsapp_instances').upsert({
+            company_id: companyId,
+            instance_name: instanceName,
+            instance_id: createData.instance?.instanceId || createData.instanceId || instanceName,
+            status: 'disconnected',
+          }, { onConflict: 'company_id' });
+        }
+
+        // 6) Try to fetch a fresh QR right away
+        let qr: string | null = null;
+        try {
+          await new Promise((r) => setTimeout(r, 800));
+          const qrRes = await fetch(`${baseUrl}/instance/connect/${instanceName}`, {
+            method: 'GET',
+            headers: { 'apikey': EVOLUTION_API_KEY },
+          });
+          const qrData = await qrRes.json();
+          qr = qrData?.base64 || qrData?.qrcode?.base64 || qrData?.code || null;
+        } catch (e) {
+          console.warn('[reset_instance] could not fetch fresh QR:', e);
+        }
+
+        console.log(`[reset_instance] Completed for ${instanceName}, qr=${!!qr}`);
+
+        return new Response(JSON.stringify({ success: true, data: createData, qrCode: qr }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: 'Unknown action' }),
