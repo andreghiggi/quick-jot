@@ -305,6 +305,10 @@ serve(async (req) => {
       const transactionStatus = parsed['009-000'];
       const isApproved = transactionStatus === '0';
 
+      // Extract clean acquirer name from 010-000 (may contain "REDE | Crédito | [COMPROVANTE]...")
+      const raw010 = parsed['010-000'] || parsed['010-010'] || '';
+      const cleanAcquirer = raw010.includes('|') ? raw010.split('|')[0].trim() : raw010.split('[')[0].trim();
+
       const result: Record<string, unknown> = {
         success: isApproved,
         status: isApproved ? 'approved' : 'declined',
@@ -313,7 +317,8 @@ serve(async (req) => {
         nsu: parsed['012-000'] || parsed['012-001'] || '',
         authorizationCode: parsed['013-000'] || parsed['013-001'] || '',
         nsuHost: parsed['170-000'] || '',
-        acquirer: parsed['010-000'] || parsed['010-010'] || '',
+        acquirer: cleanAcquirer,
+        acquirerFull: raw010,
         acquirerCnpj: parsed['010-001'] || parsed['010-011'] || '',
         acquirerSatCode: parsed['010-002'] || parsed['010-012'] || '',
         transactionType: parsed['011-000'] || parsed['011-001'] || '',
