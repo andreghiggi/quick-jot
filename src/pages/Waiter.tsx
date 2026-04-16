@@ -6,6 +6,7 @@ import { useTabs, Tab } from '@/hooks/useTabs';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
@@ -60,6 +61,7 @@ export default function Waiter() {
   const { products, loading: loadingProducts } = useProducts({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
   const { groups: optionalGroups } = useOptionalGroups({ companyId: company?.id });
+  const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
 
   const [activeView, setActiveView] = useState<'tables' | 'tabs'>('tables');
   const [selectedTab, setSelectedTab] = useState<Tab | null>(null);
