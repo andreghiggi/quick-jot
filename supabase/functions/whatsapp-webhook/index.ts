@@ -108,6 +108,25 @@ serve(async (req) => {
     const body = await req.json();
     console.log('Webhook received:', JSON.stringify(body).slice(0, 500));
 
+    // ─── Handle CONNECTION_UPDATE: keep DB status in sync with real session state ───
+    if (body.event === 'connection.update') {
+      const instanceName = body.instance;
+      const state = body.data?.state; // 'open' | 'connecting' | 'close'
+      console.log(`[connection.update] instance=${instanceName} state=${state}`);
+
+      if (instanceName && state) {
+        const newStatus = state === 'open' ? 'connected' : 'disconnected';
+        await supabase
+          .from('whatsapp_instances')
+          .update({ status: newStatus })
+          .eq('instance_name', instanceName);
+      }
+
+      return new Response(JSON.stringify({ ok: true, handled: 'connection.update' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (body.event !== 'messages.upsert') {
       return new Response(JSON.stringify({ ok: true, ignored: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

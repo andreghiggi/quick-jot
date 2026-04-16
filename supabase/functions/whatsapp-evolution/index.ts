@@ -56,7 +56,7 @@ serve(async (req) => {
               url: webhookUrl,
               byEvents: false,
               base64: false,
-              events: ['MESSAGES_UPSERT'],
+              events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
             },
           }),
         });
@@ -86,7 +86,7 @@ serve(async (req) => {
               url: webhookUrl,
               webhook_by_events: false,
               webhook_base64: false,
-              events: ['MESSAGES_UPSERT'],
+              events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
               enabled: true,
             }),
           });
@@ -147,6 +147,55 @@ serve(async (req) => {
           .replace(/\r\n/g, '\n')
           .replace(/\r/g, '\n');
 
+        // ─── PRE-FLIGHT: validate real instance status before sending ───
+        try {
+          const stateRes = await fetch(`${baseUrl}/instance/connectionState/${instanceName}`, {
+            method: 'GET',
+            headers: { 'apikey': EVOLUTION_API_KEY },
+          });
+          const stateData = await stateRes.json();
+          const realState = stateData.instance?.state;
+
+          if (realState !== 'open') {
+            console.warn(`[send_message] Instance ${instanceName} not open (state=${realState}). Aborting send.`);
+
+            // Auto-correct DB status
+            if (companyId) {
+              await supabase.from('whatsapp_instances')
+                .update({ status: 'disconnected' })
+                .eq('company_id', companyId);
+
+              // Log failed attempt for visibility
+              await supabase.from('whatsapp_messages').insert({
+                company_id: companyId,
+                order_id: orderId || null,
+                phone: fullPhone,
+                message,
+                status: 'failed',
+              });
+            }
+
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'instance_disconnected',
+              state: realState,
+              message: 'Instância WhatsApp desconectada. Reconecte na tela de Configurações.',
+            }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+
+          // Instance is open - ensure DB reflects that
+          if (companyId) {
+            await supabase.from('whatsapp_instances')
+              .update({ status: 'connected' })
+              .eq('company_id', companyId);
+          }
+        } catch (preflightErr) {
+          console.warn('[send_message] Pre-flight check failed, proceeding anyway:', preflightErr);
+        }
+
         const res = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
           method: 'POST',
           headers: {
@@ -160,6 +209,26 @@ serve(async (req) => {
           }),
         });
         const data = await res.json();
+
+        // If send failed, mark instance as potentially disconnected
+        if (!res.ok && companyId) {
+          console.warn(`[send_message] Send failed for ${instanceName}:`, JSON.stringify(data).slice(0, 200));
+          // Re-check status to confirm
+          try {
+            const recheckRes = await fetch(`${baseUrl}/instance/connectionState/${instanceName}`, {
+              method: 'GET',
+              headers: { 'apikey': EVOLUTION_API_KEY },
+            });
+            const recheckData = await recheckRes.json();
+            if (recheckData.instance?.state !== 'open') {
+              await supabase.from('whatsapp_instances')
+                .update({ status: 'disconnected' })
+                .eq('company_id', companyId);
+            }
+          } catch (e) {
+            console.warn('[send_message] Recheck failed:', e);
+          }
+        }
 
         // Log message
         if (companyId) {
