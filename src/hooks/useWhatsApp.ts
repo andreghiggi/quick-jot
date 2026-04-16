@@ -147,6 +147,8 @@ export function useWhatsApp(companyId?: string) {
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
         body: { action: 'reset_instance', instanceName, companyId },
       });
+      // Edge returns 200 with {success:false,error} on handled failures
+      if (data && data.success === false) throw new Error(data.error || 'Falha ao resetar conexão');
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
