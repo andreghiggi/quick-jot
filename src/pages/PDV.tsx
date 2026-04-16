@@ -1134,9 +1134,10 @@ export default function PDV() {
           <p><strong>Pagamento:</strong> ${sale.payment_method?.name || 'N/A'}</p>
           ${paymentConditionHtml}
         </div>
-        ${saleNotesStr ? `<div class="divider"></div><p class="notes"><strong>Obs:</strong> ${saleNotesStr}</p>` : ''}
+        ${saleNotesStr && !isCancelled ? `<div class="divider"></div><p class="notes"><strong>Obs:</strong> ${saleNotesStr}</p>` : ''}
+        ${isCancelled ? `<div class="divider"></div>${cancelledBanner}` : ''}
         <div class="divider"></div>
-        <p class="footer">Obrigado pela preferência!</p>
+        <p class="footer">${isCancelled ? 'DOCUMENTO SEM VALOR FISCAL' : 'Obrigado pela preferência!'}</p>
         <script>window.onload = function() { window.print(); window.close(); }</script>
       </body>
       </html>
