@@ -1184,6 +1184,54 @@ pause
             </CardContent>
           </Card>
 
+          {/* Layout Selection — Super Admin Only */}
+          {isSuperAdmin && (
+            <Card className="border-primary/40">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Printer className="w-5 h-5" />
+                  Layout de Impressão
+                  <Badge variant="secondary" className="ml-2">Admin Master</Badge>
+                </CardTitle>
+                <CardDescription>
+                  Selecione o layout visual da comanda de produção. Visível apenas para administradores master.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={storeSettings.printLayout}
+                  onValueChange={async (value: 'v1' | 'v2') => {
+                    await updateSetting('print_layout', value);
+                    toast({
+                      title: 'Layout salvo',
+                      description: `Layout de impressão alterado para ${value.toUpperCase()}`,
+                    });
+                  }}
+                  className="space-y-3"
+                >
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="v1" id="layout-v1" />
+                    <div className="flex-1">
+                      <Label htmlFor="layout-v1" className="font-medium cursor-pointer">Layout V1 (padrão)</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Layout original. Adicionais aparecem em uma única linha após o produto.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="v2" id="layout-v2" />
+                    <div className="flex-1">
+                      <Label htmlFor="layout-v2" className="font-medium cursor-pointer">Layout V2 (novo)</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Adicionais empilhados (um por linha) em negrito. Observações destacadas em fundo preto / texto branco.
+                      </p>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Production Ticket Setting */}
           <Card>
             <CardHeader>
