@@ -652,6 +652,7 @@ export default function PDV() {
                 saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}${receiptData}`;
               } else if (statusResult.status === 'declined' || statusResult.status === 'cancelled' || statusResult.status === 'error') {
                 tefCompleted = true;
+                // Do NOT send NCN — no receipt was generated on error/decline
                 toast.error(`TEF PinPad: ${statusResult.errorMessage || statusResult.operatorMessage || 'Pagamento não aprovado'}`);
                 setTefProcessing(false);
                 setTefStatus('');
