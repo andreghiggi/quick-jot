@@ -30,6 +30,7 @@ interface StoreSettings {
   pixKey: string;
   pixName: string;
   pixCity: string;
+  autoPrintProductionTicket: boolean;
 }
 
 interface UseStoreSettingsOptions {
