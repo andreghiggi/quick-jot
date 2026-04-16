@@ -4,10 +4,11 @@ import { StatsCard } from '@/components/StatsCard';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Plus, Clock, CheckCircle, ShoppingBag, TrendingUp, DollarSign, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Plus, Clock, CheckCircle, ShoppingBag, TrendingUp, DollarSign, Loader2, RefreshCw, Eye, EyeOff, Volume2, VolumeX } from 'lucide-react';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { OrderTabs } from '@/components/OrderTabs';
+import { useOrderNotificationSound } from '@/hooks/useOrderNotificationSound';
 
 const Index = () => {
   const [isPedidoExpressOpen, setIsPedidoExpressOpen] = useState(false);
@@ -15,6 +16,7 @@ const Index = () => {
   const { orders, loading } = useOrderContext();
   const { company } = useAuthContext();
   const { settings } = useStoreSettings({ companyId: company?.id });
+  const { isUnlocked, playSound } = useOrderNotificationSound(!!company?.id);
 
   const toSPDateString = (date: Date) => {
     return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
@@ -72,6 +74,22 @@ const Index = () => {
       }
     >
       <div className="space-y-6">
+        {!isUnlocked && (
+          <button
+            type="button"
+            onClick={() => playSound()}
+            className="w-full flex items-center justify-between gap-3 rounded-lg border border-warning/50 bg-warning/10 px-4 py-3 text-left transition-colors hover:bg-warning/20"
+          >
+            <div className="flex items-center gap-3">
+              <VolumeX className="w-5 h-5 text-warning shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Som de notificação bloqueado</p>
+                <p className="text-xs text-muted-foreground">Toque aqui para ativar o sino de novos pedidos.</p>
+              </div>
+            </div>
+            <Volume2 className="w-5 h-5 text-warning shrink-0" />
+          </button>
+        )}
         <section className="flex flex-nowrap gap-3 overflow-x-auto">
           {settings.showCardPendentes && (
             <StatsCard
