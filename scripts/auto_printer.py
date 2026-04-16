@@ -26,7 +26,8 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v8.6"  # word-wrap dos adicionais — não corta mais texto longo
+PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
+SCRIPT_VERSION = "v8.7"  # layout V2: adicionais empilhados em negrito + observações invertidas
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -89,6 +90,25 @@ def buscar_paper_size(company_id):
             log(f"Usando tamanho padrão: {PAPER_SIZE}", "CONFIG")
     except Exception as e:
         log(f"Erro ao buscar paper size: {e}", "AVISO")
+
+def buscar_print_layout(company_id):
+    """Busca o layout de impressão configurado para a empresa (v1 ou v2)"""
+    global PRINT_LAYOUT
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/store_settings"
+        params = {
+            "company_id": f"eq.{company_id}",
+            "key": "eq.print_layout"
+        }
+        r = requests.get(url, headers=HEADERS, params=params)
+        if r.ok and r.json():
+            valor = r.json()[0].get('value', 'v1')
+            PRINT_LAYOUT = valor if valor in ('v1', 'v2') else 'v1'
+            log(f"Layout de impressão: {PRINT_LAYOUT}", "CONFIG")
+        else:
+            log(f"Usando layout padrão: {PRINT_LAYOUT}", "CONFIG")
+    except Exception as e:
+        log(f"Erro ao buscar print layout: {e}", "AVISO")
 
 def buscar_todos_pedidos_hoje(company_id):
     """Busca TODOS os pedidos de hoje para mostrar status"""
