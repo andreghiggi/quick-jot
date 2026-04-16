@@ -221,7 +221,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   }
 
   function toggleGroupItem(groupId: string, itemId: string, maxSelect: number) {
-    const effectiveMax = maxSelect > 0 ? maxSelect : 1;
+    const effectiveMax = maxSelect > 0 ? maxSelect : Infinity;
     setSelectedGroupItems(prev => {
       const current = new Set(prev[groupId] || []);
       if (current.has(itemId)) {
