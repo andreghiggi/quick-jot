@@ -109,7 +109,7 @@ export function LateralOptionalsWizard({
               <Label className="text-lg font-bold">{step.group.name}</Label>
               <Badge variant="outline" className="text-xs">
                 {step.group.minSelect > 0 ? `mín ${step.group.minSelect} / ` : ''}
-                máx {step.group.maxSelect > 0 ? step.group.maxSelect : 1}
+                máx {step.group.maxSelect > 0 ? step.group.maxSelect : '∞'}
               </Badge>
               {step.group.minSelect > 0 && (
                 <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
