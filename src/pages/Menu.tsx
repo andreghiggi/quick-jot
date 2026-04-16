@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
+import { generateProductionTicketText } from '@/utils/printProductionTicket';
 import { Progress } from '@/components/ui/progress';
 import { NovidadesSlideshow } from '@/components/menu/NovidadesSlideshow';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -752,7 +752,7 @@ export default function Menu() {
         // Send production ticket to print queue if enabled
         if (settings.autoPrintProductionTicket) {
           try {
-            const productionHtml = generateProductionTicketHTML({
+            const productionText = generateProductionTicketText({
               tabNumber: newOrder.daily_number || 0,
               customerName: customerName,
               items: cart.map(item => ({
@@ -761,14 +761,14 @@ export default function Menu() {
                 notes: item.notes || null,
               })),
               createdAt: new Date(),
-              paperSize: settings.printerPaperSize,
+              referenceLabel: `PEDIDO #${newOrder.daily_number || newOrder.order_code}`,
             });
 
             await supabase
               .from('print_queue')
               .insert({
                 company_id: company.id,
-                html_content: productionHtml,
+                html_content: productionText,
                 label: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}`,
               });
           } catch (printErr) {

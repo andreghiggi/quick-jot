@@ -13,10 +13,44 @@ interface PrintTicketData {
   items: PrintItem[];
   createdAt: Date;
   paperSize?: '58mm' | '80mm';
+  referenceLabel?: string;
 }
 
 function getPaperWidth(size?: '58mm' | '80mm'): string {
   return size === '80mm' ? '80mm' : '58mm';
+}
+
+function getTicketReferenceLabel(data: PrintTicketData): string {
+  if (data.referenceLabel) return data.referenceLabel;
+  if (data.tableNumber) return `MESA ${data.tableNumber}`;
+  return `COMANDA #${data.tabNumber}`;
+}
+
+export function generateProductionTicketText(data: PrintTicketData): string {
+  const now = data.createdAt;
+  const dateStr = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const timeStr = now.toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const lines = [
+    'COMANDA DE PRODUÇÃO',
+    '',
+    getTicketReferenceLabel(data),
+    ...(data.customerName ? [data.customerName] : []),
+    `${dateStr} às ${timeStr}`,
+    '',
+    ...data.items.flatMap((item) => [
+      `${item.quantity}x ${item.productName}`,
+      ...(item.notes ? [`→ ${item.notes}`] : []),
+      ''
+    ]),
+    '--- FIM DO PEDIDO ---',
+  ];
+
+  return lines.join('\n').trim();
 }
 
 export function generateProductionTicketHTML(data: PrintTicketData): string {
