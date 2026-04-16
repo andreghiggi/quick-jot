@@ -1224,6 +1224,7 @@ export default function PDV() {
         if (result.success) {
           // Poll for CNC result
           if (result.hash) {
+            const cncIdentificacao = result.identificacao || '';
             toast.info('Estorno enviado ao PinPad. Aguardando confirmação...');
             let completed = false;
             for (let i = 0; i < 60 && !completed; i++) {
@@ -1231,6 +1232,13 @@ export default function PDV() {
               const status = await pollPinpadStatus(company.id, result.hash);
               if (status.status === 'approved') {
                 completed = true;
+                // After CNC approval, MUST send CNF to confirm the cancellation
+                await confirmPinpadTransaction(company.id, {
+                  identificacao: cncIdentificacao,
+                  rede: status.acquirer,
+                  nsu: status.nsu,
+                  finalizacao: status.finalizacao,
+                });
                 toast.success(`Estorno aprovado! NSU: ${status.nsu}`);
                 await markSaleAsCancelled(sale.id, sale.notes);
               } else if (status.status === 'declined' || status.status === 'error' || status.status === 'cancelled') {
