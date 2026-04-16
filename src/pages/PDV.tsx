@@ -1903,16 +1903,19 @@ export default function PDV() {
                   <Receipt className="w-3.5 h-3.5" />
                   Geração de Documentos
                 </p>
-                <RadioGroup value={documentMode} onValueChange={(v) => setDocumentMode(v as 'sale_only' | 'sale_with_nfce')}>
+                <RadioGroup value={selectedMethodIsTef ? 'sale_with_nfce' : documentMode} onValueChange={(v) => setDocumentMode(v as 'sale_only' | 'sale_with_nfce')}>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="sale_only" id="doc-sale-only" />
-                    <label htmlFor="doc-sale-only" className="text-sm cursor-pointer">Somente Venda</label>
+                    <RadioGroupItem value="sale_only" id="doc-sale-only" disabled={selectedMethodIsTef} />
+                    <label htmlFor="doc-sale-only" className={`text-sm cursor-pointer ${selectedMethodIsTef ? 'opacity-50' : ''}`}>Somente Venda</label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="sale_with_nfce" id="doc-sale-nfce" />
                     <label htmlFor="doc-sale-nfce" className="text-sm cursor-pointer">Venda com NFC-e</label>
                   </div>
                 </RadioGroup>
+                {selectedMethodIsTef && (
+                  <p className="text-xs text-amber-600 mt-1">⚠️ NFC-e obrigatória para pagamentos com TEF</p>
+                )}
               </div>
             )}
 
