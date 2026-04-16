@@ -698,6 +698,7 @@ export default function Waiter() {
                       </div>
                     ))
                   )}
+                  <div ref={cartEndRef} />
                 </div>
               </ScrollArea>
 
