@@ -2404,7 +2404,8 @@ export default function PDV() {
                                     notes: item.notes
                                   })),
                                   createdAt: new Date(tab.created_at || new Date()),
-                                  paperSize: storeSettings.printerPaperSize
+                                  paperSize: storeSettings.printerPaperSize,
+                                  layout: storeSettings.printLayout,
                                 });
                                 toast.success('Comanda enviada para impressão');
                               }}

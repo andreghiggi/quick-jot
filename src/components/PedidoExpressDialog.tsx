@@ -437,6 +437,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             createdAt: new Date(),
             paperSize: settings.printerPaperSize,
             referenceLabel: 'PEDIDO EXPRESS',
+            layout: settings.printLayout,
           });
 
           await supabase.from('print_queue').insert({

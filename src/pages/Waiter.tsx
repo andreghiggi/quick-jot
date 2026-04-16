@@ -269,7 +269,9 @@ export default function Waiter() {
             quantity: item.quantity,
             notes: item.notes
           })),
-          createdAt: new Date()
+          createdAt: new Date(),
+          paperSize: storeSettings.printerPaperSize,
+          layout: storeSettings.printLayout,
         });
         
         const { error: printError } = await supabase
