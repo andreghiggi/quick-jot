@@ -761,13 +761,24 @@ export default function Menu() {
         if (settings.autoPrintProductionTicket) {
           try {
             const productionItems = cart.map((item) => {
-              const optionalNames = item.groupedOptionalNames && item.groupedOptionalNames.length > 0
-                ? item.groupedOptionalNames
-                : item.selectedOptionals.map((optional) => optional.name);
+              // Build a clean list of additional names (without prices, without group prefix)
+              const additionalNames: string[] = [];
+              if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+                for (const entry of item.groupedOptionalNames) {
+                  const afterColon = entry.includes(':') ? entry.split(':').slice(1).join(':') : entry;
+                  const items = afterColon
+                    .split(',')
+                    .map((s) => s.replace(/\s*R\$\s*[\d.,]+\s*$/i, '').trim())
+                    .filter(Boolean);
+                  additionalNames.push(...items);
+                }
+              } else if (item.selectedOptionals.length > 0) {
+                additionalNames.push(...item.selectedOptionals.map((optional) => optional.name));
+              }
 
               const notesParts: string[] = [];
-              if (optionalNames.length > 0) {
-                notesParts.push(`Adicionais: ${optionalNames.join(', ')}`);
+              if (additionalNames.length > 0) {
+                notesParts.push(`Adicionais: ${additionalNames.join(', ')}`);
               }
               if (item.notes) {
                 notesParts.push(item.notes);
