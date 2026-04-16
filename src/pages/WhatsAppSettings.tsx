@@ -46,7 +46,15 @@ export default function WhatsAppSettings() {
     checkStatus,
     disconnect,
     deleteInstance,
+    resetInstance,
   } = useWhatsApp(company?.id);
+
+  // whatsapp-reset-v1 rollout — explicit allow-list of company IDs.
+  // To enable for another store, add its company_id to this array.
+  const RESET_BUTTON_ALLOWED_COMPANIES = [
+    'b2f97590-ff21-4951-95dc-e3e2b19d4ccb', // Rei do Açaí
+  ];
+  const showResetButton = !!company?.id && RESET_BUTTON_ALLOWED_COMPANIES.includes(company.id);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [polling, setPolling] = useState(false);
