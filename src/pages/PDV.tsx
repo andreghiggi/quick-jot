@@ -66,7 +66,8 @@ import {
   Import,
   CheckCircle,
   Plug,
-  FileText
+  FileText,
+  Eye
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -89,7 +90,7 @@ export default function PDV() {
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
   const { settings: storeSettings, updateSetting } = useStoreSettings({ companyId: company?.id });
-  const { openTabs, getTabTotal, closeTab } = useTabs({ companyId: company?.id });
+  const { openTabs, getTabTotal, closeTab, removeItemFromTab } = useTabs({ companyId: company?.id });
   const { tables } = useTables({ companyId: company?.id });
   const { groups: optionalGroups } = useOptionalGroups({ companyId: company?.id });
   const { categories: dbCategories } = useCategories({ companyId: company?.id });
@@ -184,6 +185,8 @@ export default function PDV() {
   // PDV Optionals state
   const [optionalsDialogProduct, setOptionalsDialogProduct] = useState<typeof products[0] | null>(null);
   const [optionalsDialogGroups, setOptionalsDialogGroups] = useState<OptionalGroup[]>([]);
+  // Tab detail (edit items) state
+  const [editingTab, setEditingTab] = useState<Tab | null>(null);
   // Dialog states
   const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
   const [closeRegisterDialog, setCloseRegisterDialog] = useState(false);
@@ -2377,7 +2380,18 @@ export default function PDV() {
                               }}
                               title="Reimprimir comanda"
                             >
-                              <Printer className="w-4 h-4" />
+                            <Printer className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTab(tab);
+                              }}
+                              title="Ver / editar itens"
+                            >
+                              <Eye className="w-4 h-4" />
                             </Button>
                             <Button onClick={() => handleImportTab(tab)} className="gap-2">
                               <Import className="w-4 h-4" />
@@ -2394,6 +2408,74 @@ export default function PDV() {
                 )}
               </div>
             </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Tab Detail / Edit Items Dialog */}
+      {editingTab && (
+        <Dialog open={!!editingTab} onOpenChange={(o) => { if (!o) setEditingTab(null); }}>
+          <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ClipboardList className="w-5 h-5" />
+                Comanda #{editingTab.tab_number}
+                {editingTab.table && <Badge variant="outline">Mesa {editingTab.table.number}</Badge>}
+              </DialogTitle>
+              {editingTab.customer_name && (
+                <p className="text-sm text-muted-foreground">Cliente: {editingTab.customer_name}</p>
+              )}
+            </DialogHeader>
+            <ScrollArea className="flex-1 -mx-6 px-6">
+              <div className="space-y-2 py-2">
+                {editingTab.items && editingTab.items.length > 0 ? (
+                  editingTab.items.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{item.product_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.quantity}x {formatCurrency(item.unit_price)}
+                        </p>
+                        {item.notes && (
+                          <p className="text-xs text-muted-foreground italic">{item.notes}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="font-bold text-sm">{formatCurrency(item.total_price)}</span>
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          className="h-8 w-8"
+                          onClick={async () => {
+                            const ok = await removeItemFromTab(item.id);
+                            if (ok) {
+                              // Update the local editingTab state
+                              setEditingTab(prev => {
+                                if (!prev) return null;
+                                const updatedItems = (prev.items || []).filter(i => i.id !== item.id);
+                                return { ...prev, items: updatedItems };
+                              });
+                              toast.success('Item removido da comanda');
+                            }
+                          }}
+                          title="Remover item"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">Nenhum item na comanda</p>
+                )}
+              </div>
+            </ScrollArea>
+            <div className="border-t pt-3">
+              <div className="flex items-center justify-between text-lg font-bold">
+                <span>Total</span>
+                <span className="text-primary">{formatCurrency(getTabTotal(editingTab))}</span>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       )}
