@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
@@ -10,6 +10,7 @@ import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
+import { useCategories } from '@/hooks/useCategories';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { printProductionTicket } from '@/utils/printProductionTicket';
 import { emitirNFCe, consultarNFCe, reprocessarNFCe, NFCeItem, NFCeTefData, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
@@ -91,6 +92,7 @@ export default function PDV() {
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId: company?.id });
   const { tables } = useTables({ companyId: company?.id });
   const { groups: optionalGroups } = useOptionalGroups({ companyId: company?.id });
+  const { categories: dbCategories } = useCategories({ companyId: company?.id });
   const { 
     currentRegister, 
     registers,
@@ -160,7 +162,7 @@ export default function PDV() {
   useEffect(() => {
     localStorage.setItem('pdv_document_mode', documentMode);
   }, [documentMode]);
-  const emitNFCe = documentMode === 'sale_with_nfce';
+  const emitNFCeBase = documentMode === 'sale_with_nfce';
 
   // NFC-e post-sale dialog
   const [nfcePostSaleDialog, setNfcePostSaleDialog] = useState(false);
@@ -340,6 +342,8 @@ export default function PDV() {
   const isPixPayment = selectedMethodObj?.name?.toLowerCase().includes('pix') && !selectedMethodIntegration;
   const pixConfigured = !!(storeSettings.pixKey && storeSettings.pixName && storeSettings.pixCity);
   const activeTefMode = tefCardType === 'debit' ? 'debit' : tefInstallmentMode;
+  // Force NFC-e when TEF payment is selected
+  const emitNFCe = emitNFCeBase || selectedMethodIsTef;
 
   function addToCart(product: typeof products[0]) {
     const existing = cart.find(item => item.product_id === product.id);
@@ -363,13 +367,20 @@ export default function PDV() {
     setCart(prev => [...prev, ...items]);
   }
 
+  // Build category name→id map for optional group matching in PDV
+  const pdvCategoryIdByName = useMemo(() => {
+    const map: Record<string, string> = {};
+    dbCategories.forEach(c => { map[c.name] = c.id; });
+    return map;
+  }, [dbCategories]);
+
   function handleProductClick(product: typeof products[0]) {
     // Check if this product has optional groups linked
+    const catId = pdvCategoryIdByName[product.category];
     const productGroups = optionalGroups.filter(group => {
-      // Check if the group is linked to this product directly
+      if (!group.active) return false;
       if (group.productIds.includes(product.id)) return true;
-      // Check if the group is linked to the product's category
-      // We need to find category ID from the categories list
+      if (catId && group.categoryIds.includes(catId)) return true;
       return false;
     });
 
@@ -1892,16 +1903,19 @@ export default function PDV() {
                   <Receipt className="w-3.5 h-3.5" />
                   Geração de Documentos
                 </p>
-                <RadioGroup value={documentMode} onValueChange={(v) => setDocumentMode(v as 'sale_only' | 'sale_with_nfce')}>
+                <RadioGroup value={selectedMethodIsTef ? 'sale_with_nfce' : documentMode} onValueChange={(v) => setDocumentMode(v as 'sale_only' | 'sale_with_nfce')}>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="sale_only" id="doc-sale-only" />
-                    <label htmlFor="doc-sale-only" className="text-sm cursor-pointer">Somente Venda</label>
+                    <RadioGroupItem value="sale_only" id="doc-sale-only" disabled={selectedMethodIsTef} />
+                    <label htmlFor="doc-sale-only" className={`text-sm cursor-pointer ${selectedMethodIsTef ? 'opacity-50' : ''}`}>Somente Venda</label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="sale_with_nfce" id="doc-sale-nfce" />
                     <label htmlFor="doc-sale-nfce" className="text-sm cursor-pointer">Venda com NFC-e</label>
                   </div>
                 </RadioGroup>
+                {selectedMethodIsTef && (
+                  <p className="text-xs text-amber-600 mt-1">⚠️ NFC-e obrigatória para pagamentos com TEF</p>
+                )}
               </div>
             )}
 
@@ -2481,10 +2495,10 @@ export default function PDV() {
             {/* Document Generation Mode */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">Geração de Documentos</p>
-              <RadioGroup value={documentMode} onValueChange={(v) => setDocumentMode(v as 'sale_only' | 'sale_with_nfce')}>
+              <RadioGroup value={selectedMethodIsTef ? 'sale_with_nfce' : documentMode} onValueChange={(v) => setDocumentMode(v as 'sale_only' | 'sale_with_nfce')}>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="sale_only" id="float-sale-only" />
-                  <label htmlFor="float-sale-only" className="text-xs cursor-pointer">Somente Venda</label>
+                  <RadioGroupItem value="sale_only" id="float-sale-only" disabled={selectedMethodIsTef} />
+                  <label htmlFor="float-sale-only" className={`text-xs cursor-pointer ${selectedMethodIsTef ? 'opacity-50' : ''}`}>Somente Venda</label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="sale_with_nfce" id="float-sale-nfce" />
