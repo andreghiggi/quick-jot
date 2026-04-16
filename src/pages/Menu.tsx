@@ -550,6 +550,25 @@ export default function Menu() {
     setCart((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function buildCartItemOptionalsText(item: CartItem): string {
+    if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+      return item.groupedOptionalNames.join(' | ');
+    }
+
+    if (item.selectedOptionals.length > 0) {
+      return item.selectedOptionals
+        .map((optional) => optional.price > 0 ? `${optional.name} R$${optional.price.toFixed(2)}` : optional.name)
+        .join(', ');
+    }
+
+    return '';
+  }
+
+  function buildCartItemDisplayName(item: CartItem): string {
+    const optionalsText = buildCartItemOptionalsText(item);
+    return optionalsText ? `${item.product.name} (${optionalsText})` : item.product.name;
+  }
+
   function calculateItemTotal(item: CartItem): number {
     const optionalsTotal = item.selectedOptionals.reduce((sum, opt) => sum + opt.price, 0);
     return (item.product.price + optionalsTotal) * item.quantity;
@@ -682,21 +701,10 @@ export default function Menu() {
 
       // Save order items
       const orderItems = cart.map((item) => {
-        // Build name with grouped optional names if available
-        let optionalsStr = '';
-        if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
-          optionalsStr = ` (${item.groupedOptionalNames.join(' | ')})`;
-        } else if (item.selectedOptionals.length > 0) {
-          // Old-style optionals: include price in name for each optional
-          const optStrs = item.selectedOptionals.map(o => 
-            o.price > 0 ? `${o.name} R$${o.price.toFixed(2)}` : o.name
-          );
-          optionalsStr = ` (Adicionais: ${optStrs.join(', ')})`;
-        }
         return {
           order_id: newOrder.id,
           product_id: item.product.id,
-          name: item.product.name + optionalsStr,
+          name: buildCartItemDisplayName(item),
           quantity: item.quantity,
           price: item.product.price + item.selectedOptionals.reduce((sum, opt) => sum + opt.price, 0),
           notes: item.notes || null,
@@ -752,11 +760,12 @@ export default function Menu() {
         // Send production ticket to print queue if enabled
         if (settings.autoPrintProductionTicket) {
           try {
+            const shouldIncludeProductionOptionals = company?.slug === 'rei-do-acai';
             const productionText = generateProductionTicketText({
               tabNumber: newOrder.daily_number || 0,
               customerName: customerName,
               items: cart.map(item => ({
-                productName: item.product.name,
+                productName: shouldIncludeProductionOptionals ? buildCartItemDisplayName(item) : item.product.name,
                 quantity: item.quantity,
                 notes: item.notes || null,
               })),
