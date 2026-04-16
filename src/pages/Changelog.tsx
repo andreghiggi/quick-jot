@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '16/04/2026',
+    version: '1.26.8',
+    type: 'fix',
+    description: 'Rei do Açaí: a comanda de produção do cardápio online volta a sair com os acompanhamentos/adicionais escolhidos, preservando o nome completo do item enviado para impressão.',
+  },
+  {
     date: '15/04/2026',
     version: '1.26.7',
     type: 'fix',
