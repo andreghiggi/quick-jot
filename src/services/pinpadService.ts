@@ -149,7 +149,7 @@ export async function sendPinpadPayment(
     installmentType?: 'loja' | 'adm';
     documentoFiscal?: string;
   }
-): Promise<{ success: boolean; hash?: string; errorMessage?: string }> {
+): Promise<{ success: boolean; hash?: string; identificacao?: string; errorMessage?: string }> {
   const config = await getPinpadConfig(companyId);
   if (!config) return { success: false, errorMessage: 'PinPad não configurado' };
 
@@ -270,7 +270,7 @@ export async function reversePinpadTransaction(
     dataTransacao: string;
     horaTransacao: string;
   }
-): Promise<{ success: boolean; hash?: string; errorMessage?: string }> {
+): Promise<{ success: boolean; hash?: string; identificacao?: string; errorMessage?: string }> {
   const config = await getPinpadConfig(companyId);
   if (!config) return { success: false, errorMessage: 'PinPad não configurado' };
 

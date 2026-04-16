@@ -589,17 +589,23 @@ export default function PDV() {
             }
 
             tefHashRef.current = createResult.hash;
+            // Store the identificacao used in CRT to reuse in CNF/NCN
+            const crtIdentificacao = createResult.identificacao || '';
 
             // Poll for result (max 120s)
             setTefStatus('Aguardando pagamento no PinPad...');
             let tefCompleted = false;
+            let hadApproval = false;
 
             for (let i = 0; i < 120 && !tefCompleted; i++) {
               if (tefCancelRef.current) {
                 toast.info('Operação TEF cancelada pelo operador.');
-                await cancelPinpadTransaction(company!.id, {
-                  identificacao: String(Date.now()),
-                });
+                // Only send NCN if transaction had approval (receipt generated)
+                if (hadApproval) {
+                  await cancelPinpadTransaction(company!.id, {
+                    identificacao: crtIdentificacao,
+                  });
+                }
                 setTefProcessing(false);
                 setTefStatus('');
                 setIsProcessingSale(false);
@@ -617,9 +623,11 @@ export default function PDV() {
                 setPinpadResult(statusResult);
                 setTefStatus('Pagamento aprovado!');
                 toast.success(`TEF PinPad aprovado! NSU: ${statusResult.nsu}`);
+                hadApproval = true;
                 
+                // CNF must use the SAME identificacao from CRT
                 await confirmPinpadTransaction(company!.id, {
-                  identificacao: String(Date.now()),
+                  identificacao: crtIdentificacao,
                   rede: statusResult.acquirer,
                   nsu: statusResult.nsu,
                   finalizacao: statusResult.finalizacao,
@@ -644,6 +652,7 @@ export default function PDV() {
                 saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}${receiptData}`;
               } else if (statusResult.status === 'declined' || statusResult.status === 'cancelled' || statusResult.status === 'error') {
                 tefCompleted = true;
+                // Do NOT send NCN — no receipt was generated on error/decline
                 toast.error(`TEF PinPad: ${statusResult.errorMessage || statusResult.operatorMessage || 'Pagamento não aprovado'}`);
                 setTefProcessing(false);
                 setTefStatus('');
@@ -1215,6 +1224,7 @@ export default function PDV() {
         if (result.success) {
           // Poll for CNC result
           if (result.hash) {
+            const cncIdentificacao = result.identificacao || '';
             toast.info('Estorno enviado ao PinPad. Aguardando confirmação...');
             let completed = false;
             for (let i = 0; i < 60 && !completed; i++) {
@@ -1222,6 +1232,13 @@ export default function PDV() {
               const status = await pollPinpadStatus(company.id, result.hash);
               if (status.status === 'approved') {
                 completed = true;
+                // After CNC approval, MUST send CNF to confirm the cancellation
+                await confirmPinpadTransaction(company.id, {
+                  identificacao: cncIdentificacao,
+                  rede: status.acquirer,
+                  nsu: status.nsu,
+                  finalizacao: status.finalizacao,
+                });
                 toast.success(`Estorno aprovado! NSU: ${status.nsu}`);
                 await markSaleAsCancelled(sale.id, sale.notes);
               } else if (status.status === 'declined' || status.status === 'error' || status.status === 'cancelled') {
