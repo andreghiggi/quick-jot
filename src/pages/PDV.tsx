@@ -589,10 +589,13 @@ export default function PDV() {
             }
 
             tefHashRef.current = createResult.hash;
+            // Store the identificacao used in CRT to reuse in CNF/NCN
+            const crtIdentificacao = createResult.identificacao || '';
 
             // Poll for result (max 120s)
             setTefStatus('Aguardando pagamento no PinPad...');
             let tefCompleted = false;
+            let hadApproval = false;
 
             for (let i = 0; i < 120 && !tefCompleted; i++) {
               if (tefCancelRef.current) {
