@@ -1184,6 +1184,38 @@ pause
             </CardContent>
           </Card>
 
+          {/* Production Ticket Setting */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Printer className="w-5 h-5" />
+                Comanda de Produção
+              </CardTitle>
+              <CardDescription>
+                Imprime automaticamente uma comanda de produção (somente itens, sem preços) junto com o pedido do cardápio
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Impressão Comanda Produção</p>
+                  <p className="text-sm text-muted-foreground">Ao receber pedido do cardápio, imprime também a comanda para a cozinha</p>
+                </div>
+                <Switch
+                  checked={storeSettings.autoPrintProductionTicket}
+                  onCheckedChange={async (value) => {
+                    await updateSetting('auto_print_production_ticket', value.toString());
+                    toast({
+                      title: value ? 'Comanda de produção ativada' : 'Comanda de produção desativada',
+                      description: value
+                        ? 'Pedidos do cardápio também imprimirão a comanda de produção'
+                        : 'Apenas o recibo do pedido será impresso',
+                    });
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
