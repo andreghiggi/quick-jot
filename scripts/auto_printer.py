@@ -26,7 +26,8 @@ STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-SCRIPT_VERSION = "v8.6"  # word-wrap dos adicionais — não corta mais texto longo
+PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
+SCRIPT_VERSION = "v8.7"  # layout V2: adicionais empilhados em negrito + observações invertidas
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -89,6 +90,25 @@ def buscar_paper_size(company_id):
             log(f"Usando tamanho padrão: {PAPER_SIZE}", "CONFIG")
     except Exception as e:
         log(f"Erro ao buscar paper size: {e}", "AVISO")
+
+def buscar_print_layout(company_id):
+    """Busca o layout de impressão configurado para a empresa (v1 ou v2)"""
+    global PRINT_LAYOUT
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/store_settings"
+        params = {
+            "company_id": f"eq.{company_id}",
+            "key": "eq.print_layout"
+        }
+        r = requests.get(url, headers=HEADERS, params=params)
+        if r.ok and r.json():
+            valor = r.json()[0].get('value', 'v1')
+            PRINT_LAYOUT = valor if valor in ('v1', 'v2') else 'v1'
+            log(f"Layout de impressão: {PRINT_LAYOUT}", "CONFIG")
+        else:
+            log(f"Usando layout padrão: {PRINT_LAYOUT}", "CONFIG")
+    except Exception as e:
+        log(f"Erro ao buscar print layout: {e}", "AVISO")
 
 def buscar_todos_pedidos_hoje(company_id):
     """Busca TODOS os pedidos de hoje para mostrar status"""
@@ -222,10 +242,38 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         
         items_html += f'<div class="item">\n'
         items_html += f'  <div class="item-name">{qtd}x {main_name}</div>\n'
+
+        # Parse extras: "Adicionais: a, b, c" -> lista de adicionais
+        adicionais_list = []
+        extras_resto = ''
         if extras:
-            items_html += f'  <div class="item-detail">+ {extras}</div>\n'
-        if item_notes:
-            items_html += f'  <div class="item-notes">Obs: {item_notes}</div>\n'
+            m = re.match(r'^Adicionais?:\s*(.+)$', extras, re.IGNORECASE)
+            if m:
+                adicionais_list = [s.strip() for s in m.group(1).split(',') if s.strip()]
+            else:
+                extras_resto = extras
+
+        if PRINT_LAYOUT == 'v2':
+            # V2: adicionais empilhados em negrito (uppercase, sem preço)
+            if adicionais_list:
+                items_html += '  <div class="additionals">\n'
+                for ad in adicionais_list:
+                    # Remove eventual " R$X.XX" do nome do adicional
+                    ad_clean = re.sub(r'\s*R\$\s*[\d.,]+\s*$', '', ad).strip()
+                    items_html += f'    <div class="add-line">+ {ad_clean.upper()}</div>\n'
+                items_html += '  </div>\n'
+            if extras_resto:
+                items_html += f'  <div class="item-detail">+ {extras_resto}</div>\n'
+            # V2: observações em texto invertido
+            if item_notes:
+                items_html += f'  <div class="obs-block"><span class="obs">{item_notes}</span></div>\n'
+        else:
+            # V1: comportamento original
+            if extras:
+                items_html += f'  <div class="item-detail">+ {extras}</div>\n'
+            if item_notes:
+                items_html += f'  <div class="item-notes">Obs: {item_notes}</div>\n'
+
         items_html += f'  <div class="item-detail">R$ {preco_str}</div>\n'
         items_html += f'</div>\n'
     
@@ -308,6 +356,12 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         .item-name {{ font-size: 11pt; font-weight: bold; text-transform: uppercase; }}
         .item-detail {{ font-size: 9pt; margin-left: 2mm; }}
         .item-notes {{ font-size: 9pt; font-style: italic; margin-left: 2mm; }}
+        /* V2: adicionais empilhados em negrito */
+        .additionals {{ margin: 1mm 0 0 2mm; }}
+        .add-line {{ font-size: 11pt; font-weight: 900; line-height: 1.4; word-break: break-word; text-transform: uppercase; }}
+        /* V2: observações texto invertido (fundo preto, letras brancas) */
+        .obs-block {{ margin: 1mm 0 0 2mm; }}
+        .obs {{ display: inline-block; background: #000 !important; color: #fff !important; padding: 0.5mm 2mm; font-weight: bold; font-size: 10pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
         .total-line {{ display: flex; justify-content: space-between; font-size: 10pt; margin: 0.5mm 0; }}
         .grand-total {{ display: flex; justify-content: space-between; font-size: 13pt; font-weight: bold; margin: 1mm 0; }}
         .notes {{ font-size: 9pt; margin: 1mm 0; }}
@@ -717,8 +771,9 @@ if __name__ == "__main__":
         print(f"Empresa '{slug}' não encontrada ou inativa. Verifique o slug.")
         exit(1)
     
-    # Busca configuração de papel
+    # Busca configuração de papel e layout
     buscar_paper_size(company_id)
+    buscar_print_layout(company_id)
     
     # Diagnóstico de impressora e navegador
     diagnosticar_impressora()
