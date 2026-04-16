@@ -242,10 +242,38 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         
         items_html += f'<div class="item">\n'
         items_html += f'  <div class="item-name">{qtd}x {main_name}</div>\n'
+
+        # Parse extras: "Adicionais: a, b, c" -> lista de adicionais
+        adicionais_list = []
+        extras_resto = ''
         if extras:
-            items_html += f'  <div class="item-detail">+ {extras}</div>\n'
-        if item_notes:
-            items_html += f'  <div class="item-notes">Obs: {item_notes}</div>\n'
+            m = re.match(r'^Adicionais?:\s*(.+)$', extras, re.IGNORECASE)
+            if m:
+                adicionais_list = [s.strip() for s in m.group(1).split(',') if s.strip()]
+            else:
+                extras_resto = extras
+
+        if PRINT_LAYOUT == 'v2':
+            # V2: adicionais empilhados em negrito (uppercase, sem preço)
+            if adicionais_list:
+                items_html += '  <div class="additionals">\n'
+                for ad in adicionais_list:
+                    # Remove eventual " R$X.XX" do nome do adicional
+                    ad_clean = re.sub(r'\s*R\$\s*[\d.,]+\s*$', '', ad).strip()
+                    items_html += f'    <div class="add-line">+ {ad_clean.upper()}</div>\n'
+                items_html += '  </div>\n'
+            if extras_resto:
+                items_html += f'  <div class="item-detail">+ {extras_resto}</div>\n'
+            # V2: observações em texto invertido
+            if item_notes:
+                items_html += f'  <div class="obs-block"><span class="obs">{item_notes}</span></div>\n'
+        else:
+            # V1: comportamento original
+            if extras:
+                items_html += f'  <div class="item-detail">+ {extras}</div>\n'
+            if item_notes:
+                items_html += f'  <div class="item-notes">Obs: {item_notes}</div>\n'
+
         items_html += f'  <div class="item-detail">R$ {preco_str}</div>\n'
         items_html += f'</div>\n'
     
