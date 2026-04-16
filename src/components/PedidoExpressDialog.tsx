@@ -413,6 +413,42 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     });
 
     if (success) {
+      // Enfileira comanda de produção (mesmo padrão do Waiter)
+      if (settings.autoPrintProductionTicket && company?.id) {
+        try {
+          const productionItems = cart.flatMap(item => {
+            const optionalNames = item.groupedOptionalNames && item.groupedOptionalNames.length > 0
+              ? item.groupedOptionalNames
+              : item.selectedOptionals.map(o => o.name);
+            const notesParts: string[] = [];
+            if (optionalNames.length > 0) notesParts.push(`Adicionais: ${optionalNames.join(', ')}`);
+            if (item.notes) notesParts.push(item.notes);
+            return [{
+              productName: item.product.name,
+              quantity: item.quantity,
+              notes: notesParts.length > 0 ? notesParts.join(' | ') : undefined,
+            }];
+          });
+
+          const html = generateProductionTicketHTML({
+            tabNumber: 0,
+            customerName: customerName.trim(),
+            items: productionItems,
+            createdAt: new Date(),
+            paperSize: settings.paperSize as '58mm' | '80mm',
+            referenceLabel: 'PEDIDO EXPRESS',
+          });
+
+          await supabase.from('print_queue').insert({
+            company_id: company.id,
+            html_content: html,
+            label: `Express - ${customerName.trim()}`,
+          });
+        } catch (e) {
+          console.error('Erro ao enfileirar comanda de produção:', e);
+        }
+      }
+
       toast.success('Pedido Express criado com sucesso!');
       resetForm();
       onOpenChange(false);
