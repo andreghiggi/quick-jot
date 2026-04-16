@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { Progress } from '@/components/ui/progress';
 import { NovidadesSlideshow } from '@/components/menu/NovidadesSlideshow';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -747,6 +748,33 @@ export default function Menu() {
         supabase.functions.invoke('notify-store-order', {
           body: { companyId: company.id, orderId: newOrder.id },
         }).catch(err => console.error('Store notification failed:', err));
+
+        // Send production ticket to print queue if enabled
+        if (settings.autoPrintProductionTicket) {
+          try {
+            const productionHtml = generateProductionTicketHTML({
+              tabNumber: newOrder.daily_number || 0,
+              customerName: customerName,
+              items: cart.map(item => ({
+                productName: item.product.name,
+                quantity: item.quantity,
+                notes: item.notes || null,
+              })),
+              createdAt: new Date(),
+              paperSize: settings.printerPaperSize,
+            });
+
+            await supabase
+              .from('print_queue')
+              .insert({
+                company_id: company.id,
+                html_content: productionHtml,
+                label: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}`,
+              });
+          } catch (printErr) {
+            console.error('Production ticket print queue error:', printErr);
+          }
+        }
       }
 
       // Send scheduled order confirmation is handled server-side in notify-store-order

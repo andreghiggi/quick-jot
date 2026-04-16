@@ -30,6 +30,7 @@ interface StoreSettings {
   pixKey: string;
   pixName: string;
   pixCity: string;
+  autoPrintProductionTicket: boolean;
 }
 
 interface UseStoreSettingsOptions {
@@ -66,6 +67,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     pixKey: '',
     pixName: '',
     pixCity: '',
+    autoPrintProductionTicket: false,
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
@@ -117,6 +119,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         pixKey: settingsMap['pix_key'] || '',
         pixName: settingsMap['pix_name'] || '',
         pixCity: settingsMap['pix_city'] || '',
+        autoPrintProductionTicket: settingsMap['auto_print_production_ticket'] === 'true',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);
