@@ -342,6 +342,8 @@ export default function PDV() {
   const isPixPayment = selectedMethodObj?.name?.toLowerCase().includes('pix') && !selectedMethodIntegration;
   const pixConfigured = !!(storeSettings.pixKey && storeSettings.pixName && storeSettings.pixCity);
   const activeTefMode = tefCardType === 'debit' ? 'debit' : tefInstallmentMode;
+  // Force NFC-e when TEF payment is selected
+  const emitNFCe = emitNFCeBase || selectedMethodIsTef;
 
   function addToCart(product: typeof products[0]) {
     const existing = cart.find(item => item.product_id === product.id);
