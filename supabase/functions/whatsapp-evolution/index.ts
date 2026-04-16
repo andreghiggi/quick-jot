@@ -60,10 +60,33 @@ serve(async (req) => {
             },
           }),
         });
-        const data = await res.json();
+        let data = await res.json();
 
-        if (!res.ok) {
+        // Detect "already in use" → recover gracefully by reusing the existing instance
+        const errorText = JSON.stringify(data).toLowerCase();
+        const alreadyExists =
+          !res.ok &&
+          (res.status === 403 || res.status === 409) &&
+          (errorText.includes('already in use') || errorText.includes('already exists'));
+
+        if (!res.ok && !alreadyExists) {
           throw new Error(data.message || JSON.stringify(data));
+        }
+
+        if (alreadyExists) {
+          console.log(`[create_instance] Instance ${instanceName} already exists on Evolution. Reusing it.`);
+          // Try to fetch its current state so the client can move on to QR code step
+          try {
+            const stateRes = await fetch(`${baseUrl}/instance/connectionState/${instanceName}`, {
+              method: 'GET',
+              headers: { 'apikey': EVOLUTION_API_KEY },
+            });
+            const stateData = await stateRes.json();
+            data = { reused: true, state: stateData.instance?.state, instance: { instanceName } };
+          } catch (e) {
+            console.warn('[create_instance] Could not fetch state of existing instance:', e);
+            data = { reused: true, instance: { instanceName } };
+          }
         }
 
         // Save instance to DB
