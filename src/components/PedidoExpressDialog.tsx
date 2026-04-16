@@ -435,7 +435,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             customerName: customerName.trim(),
             items: productionItems,
             createdAt: new Date(),
-            paperSize: settings.paperSize as '58mm' | '80mm',
+            paperSize: settings.printerPaperSize,
             referenceLabel: 'PEDIDO EXPRESS',
           });
 
