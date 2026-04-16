@@ -314,30 +314,83 @@ serve(async (req) => {
 
         console.log(`[reset_instance] Starting hard-reset for ${instanceName}`);
 
-        // 1) Logout (best-effort, may fail if already disconnected)
-        try {
-          await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
-            method: 'DELETE',
-            headers: { 'apikey': EVOLUTION_API_KEY },
-          });
-        } catch (e) {
-          console.warn('[reset_instance] logout failed (continuing):', e);
+        const apiHeaders = { 'apikey': EVOLUTION_API_KEY };
+
+        // Helper: check if instance still exists on Evolution
+        const instanceExists = async (): Promise<boolean> => {
+          try {
+            const r = await fetch(`${baseUrl}/instance/fetchInstances?instanceName=${instanceName}`, {
+              method: 'GET',
+              headers: apiHeaders,
+            });
+            if (!r.ok) return false;
+            const list = await r.json();
+            if (Array.isArray(list)) {
+              return list.some((i: any) => (i?.name || i?.instance?.instanceName || i?.instanceName) === instanceName);
+            }
+            return false;
+          } catch {
+            return false;
+          }
+        };
+
+        const tryLogoutAndDelete = async (label: string) => {
+          try {
+            const lr = await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
+              method: 'DELETE',
+              headers: apiHeaders,
+            });
+            console.log(`[reset_instance][${label}] logout status=${lr.status}`);
+          } catch (e) {
+            console.warn(`[reset_instance][${label}] logout error:`, e);
+          }
+          await new Promise((r) => setTimeout(r, 800));
+          try {
+            const dr = await fetch(`${baseUrl}/instance/delete/${instanceName}`, {
+              method: 'DELETE',
+              headers: apiHeaders,
+            });
+            const dt = await dr.text();
+            console.log(`[reset_instance][${label}] delete status=${dr.status} body=${dt.slice(0, 200)}`);
+          } catch (e) {
+            console.warn(`[reset_instance][${label}] delete error:`, e);
+          }
+        };
+
+        // Round 1
+        await tryLogoutAndDelete('round1');
+
+        // Poll up to ~6s for the name to be released
+        let exists = true;
+        for (let i = 0; i < 6; i++) {
+          await new Promise((r) => setTimeout(r, 1000));
+          exists = await instanceExists();
+          console.log(`[reset_instance] poll #${i + 1} exists=${exists}`);
+          if (!exists) break;
         }
 
-        // 2) Delete the instance entirely on Evolution
-        try {
-          await fetch(`${baseUrl}/instance/delete/${instanceName}`, {
-            method: 'DELETE',
-            headers: { 'apikey': EVOLUTION_API_KEY },
-          });
-        } catch (e) {
-          console.warn('[reset_instance] delete failed (continuing):', e);
+        // Round 2 if still there
+        if (exists) {
+          console.log('[reset_instance] still exists, doing round2');
+          await tryLogoutAndDelete('round2');
+          for (let i = 0; i < 6; i++) {
+            await new Promise((r) => setTimeout(r, 1000));
+            exists = await instanceExists();
+            console.log(`[reset_instance] r2 poll #${i + 1} exists=${exists}`);
+            if (!exists) break;
+          }
         }
 
-        // 3) Small delay so Evolution fully releases the name
-        await new Promise((r) => setTimeout(r, 1500));
+        if (exists) {
+          const msg = `Não foi possível remover a instância "${instanceName}" na Evolution. Tente novamente em alguns segundos.`;
+          console.error('[reset_instance] giving up: instance still exists');
+          return new Response(JSON.stringify({ success: false, error: msg }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
 
-        // 4) Recreate from scratch
+        // Recreate from scratch
         const createRes = await fetch(`${baseUrl}/instance/create`, {
           method: 'POST',
           headers: {
@@ -360,14 +413,22 @@ serve(async (req) => {
             },
           }),
         });
-        const createData = await createRes.json();
+        const createText = await createRes.text();
+        let createData: any = {};
+        try { createData = JSON.parse(createText); } catch { createData = { raw: createText }; }
 
         if (!createRes.ok) {
-          console.error('[reset_instance] recreate failed:', createData);
-          throw new Error(createData.message || JSON.stringify(createData));
+          console.error('[reset_instance] recreate failed:', createRes.status, createText);
+          return new Response(JSON.stringify({
+            success: false,
+            error: `Falha ao recriar instância (HTTP ${createRes.status}): ${createData?.response?.message?.[0] || createData?.message || createText.slice(0, 200)}`,
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
-        // 5) Update DB
+        // Update DB
         if (companyId) {
           await supabase.from('whatsapp_instances').upsert({
             company_id: companyId,
@@ -377,13 +438,13 @@ serve(async (req) => {
           }, { onConflict: 'company_id' });
         }
 
-        // 6) Try to fetch a fresh QR right away
+        // Try to fetch a fresh QR right away
         let qr: string | null = null;
         try {
           await new Promise((r) => setTimeout(r, 800));
           const qrRes = await fetch(`${baseUrl}/instance/connect/${instanceName}`, {
             method: 'GET',
-            headers: { 'apikey': EVOLUTION_API_KEY },
+            headers: apiHeaders,
           });
           const qrData = await qrRes.json();
           qr = qrData?.base64 || qrData?.qrcode?.base64 || qrData?.code || null;
