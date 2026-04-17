@@ -17,9 +17,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
   Plus, Loader2, Search, Play, Pause, Pencil, Eye, KeyRound, Link2,
-  Users, DollarSign, UserCheck,
+  Users, DollarSign, UserCheck, ChevronDown, ChevronRight, Building2, Settings,
 } from 'lucide-react';
 import { AssignCompaniesDialog } from '@/components/admin/AssignCompaniesDialog';
+import { CompanyModulesDialog } from '@/components/admin/CompanyModulesDialog';
+import { StoreDetailDialog, StoreDetail } from '@/components/reseller/StoreDetailDialog';
 
 // ── Masks ──
 
