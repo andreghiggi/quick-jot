@@ -404,8 +404,8 @@ export default function ResellerLojas() {
                     </span>
                   </div>
                   <div className="flex justify-between text-muted-foreground text-xs">
-                    <span>Vencimento padrão:</span>
-                    <span>Dia {settings.invoice_due_day} de cada mês</span>
+                    <span>Vencimento desta loja:</span>
+                    <span>Dia {dueDay} de cada mês</span>
                   </div>
                 </CardContent>
               </Card>
