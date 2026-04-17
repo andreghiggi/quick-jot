@@ -42,12 +42,14 @@ interface FormData {
   responsavel_rg: string;
   responsavel_email: string;
   responsavel_telefone: string;
+  asaas_env: string;
 }
 
 const emptyForm: FormData = {
   razao_social: '', cnpj: '', endereco_rua: '', endereco_numero: '', endereco_bairro: '',
   endereco_cidade: '', endereco_estado: '', endereco_cep: '', email_comercial: '', telefone: '',
   responsavel_nome: '', responsavel_cpf: '', responsavel_rg: '', responsavel_email: '', responsavel_telefone: '',
+  asaas_env: 'sandbox',
 };
 
 export default function AdminSettings() {
@@ -78,6 +80,7 @@ export default function AdminSettings() {
           responsavel_rg: d.responsavel_rg || '',
           responsavel_email: d.responsavel_email || '',
           responsavel_telefone: d.responsavel_telefone || '',
+          asaas_env: d.asaas_env || 'sandbox',
         });
       }
       setLoading(false);
