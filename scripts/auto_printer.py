@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.17"  # caixa do cabeçalho + nome cliente invertido também na comanda de produção (mesa/garçom)
+SCRIPT_VERSION = "v8.18"  # impede quebra de página dentro da caixa do cabeçalho (não gera mais 2 impressões)
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -408,8 +408,8 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         {phone_html}
         {payment_html}
     </div>
-    {delivery_section}
     <!--BOX_END-->
+    {delivery_section}
     <hr class="divider">
     <div class="section">
         {items_html}
@@ -621,6 +621,8 @@ def imprimir_html(html, order_number):
         hDC.StartPage()
 
         y = margin_y
+        # Estado mutável compartilhado entre closures
+        box_state = {'active': False}
 
         def nova_pagina():
             nonlocal y
@@ -630,6 +632,10 @@ def imprimir_html(html, order_number):
 
         def garantir_espaco(altura_necessaria):
             nonlocal y
+            # Não quebra página enquanto a caixa do cabeçalho está ativa
+            # (evita borda incompleta + páginas extras)
+            if box_state['active']:
+                return
             limite = page_h - margin_y
             if y + altura_necessaria > limite:
                 nova_pagina()
@@ -726,10 +732,10 @@ def imprimir_html(html, order_number):
                 log(f"Falha ao desenhar borda: {ex}", "AVISO")
 
         # Estado da caixa do cabeçalho (borda envolvendo todo o conteúdo pré-itens)
-        box_active = False
+        # Estado da caixa do cabeçalho (borda envolvendo todo o conteúdo pré-itens)
         box_top_y = 0
         box_pad_x = int(dpi_x * 0.04)
-        box_pad_y = int(dpi_y * 0.03)
+        box_pad_y = int(dpi_y * 0.02)
 
         i = 0
         while i < len(linhas):
@@ -740,22 +746,23 @@ def imprimir_html(html, order_number):
             if stripped == '[BOX_START]':
                 y += box_pad_y
                 box_top_y = y
-                box_active = True
+                box_state['active'] = True
                 y += box_pad_y
                 i += 1
                 continue
 
             # CABEÇALHO EM CAIXA — fim: desenha borda em volta da região renderizada
             if stripped == '[BOX_END]':
-                if box_active:
+                if box_state['active']:
                     y += box_pad_y
                     altura = y - box_top_y
                     rect_right = margin_x + int(colunas * tm['tmAveCharWidth']) + box_pad_x * 2
                     desenhar_borda(box_top_y, altura, rect_right)
-                    box_active = False
+                    box_state['active'] = False
                     y += int(line_h * 0.4)
                 i += 1
                 continue
+
 
 
             if not stripped:
