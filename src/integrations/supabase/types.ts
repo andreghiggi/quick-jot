@@ -223,7 +223,9 @@ export type Database = {
           emoji: string | null
           id: string
           image_url: string | null
+          menu_item: boolean
           name: string
+          pdv_item: boolean
         }
         Insert: {
           active?: boolean | null
@@ -234,7 +236,9 @@ export type Database = {
           emoji?: string | null
           id?: string
           image_url?: string | null
+          menu_item?: boolean
           name: string
+          pdv_item?: boolean
         }
         Update: {
           active?: boolean | null
@@ -245,7 +249,9 @@ export type Database = {
           emoji?: string | null
           id?: string
           image_url?: string | null
+          menu_item?: boolean
           name?: string
+          pdv_item?: boolean
         }
         Relationships: [
           {
@@ -1782,7 +1788,9 @@ export type Database = {
           display_order: number | null
           id: string
           image_url: string | null
+          menu_item: boolean
           name: string
+          pdv_item: boolean
         }
         Insert: {
           active?: boolean
@@ -1792,7 +1800,9 @@ export type Database = {
           display_order?: number | null
           id?: string
           image_url?: string | null
+          menu_item?: boolean
           name: string
+          pdv_item?: boolean
         }
         Update: {
           active?: boolean
@@ -1802,7 +1812,9 @@ export type Database = {
           display_order?: number | null
           id?: string
           image_url?: string | null
+          menu_item?: boolean
           name?: string
+          pdv_item?: boolean
         }
         Relationships: [
           {
