@@ -414,7 +414,7 @@ export default function ResellerLojas() {
 
       <StoreDetailDialog
         store={selectedStore}
-        canEdit
+        canEdit={false}
         onClose={() => {
           setSelectedStore(null);
           refetch();
