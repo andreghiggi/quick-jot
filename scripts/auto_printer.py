@@ -337,10 +337,22 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         if pix_match:
             payment_html += f'<p><span class="label">CHAVE PIX:</span> {pix_match.group(1).strip()}</p>'
     
-    # Notes section
+    # Notes section — remove dados já exibidos no cabeçalho (Pagamento/Troco/PIX)
     notes_html = ''
     if notes:
-        notes_html = f'<hr class="divider"><p class="notes"><strong>Obs:</strong> {notes}</p>'
+        clean_notes = notes
+        # Remove "Pagamento: X (Chave PIX: ...) (Troco para R$ ...)" e variações
+        clean_notes = re.sub(r'Pagamento:\s*[^|]+(\||$)', r'\1', clean_notes, flags=re.IGNORECASE)
+        # Remove tokens residuais
+        clean_notes = re.sub(r'Troco para R\$\s*[^\)|]+\)?', '', clean_notes, flags=re.IGNORECASE)
+        clean_notes = re.sub(r'Chave PIX:\s*[^\)]+\)?', '', clean_notes, flags=re.IGNORECASE)
+        # Remove tipo de entrega já exibido como badge (Retirada/Entrega...)
+        clean_notes = re.sub(r'\b(Retirada(\s+no\s+local)?|Entrega(\s+em\s+domic[ií]lio)?)\b(\s*\(R\$[^\)]+\))?', '', clean_notes, flags=re.IGNORECASE)
+        # Limpa separadores e espaços sobrando
+        clean_notes = re.sub(r'\s*\|\s*', ' | ', clean_notes)
+        clean_notes = re.sub(r'^\s*[\|\-,;:\s]+|[\|\-,;:\s]+$', '', clean_notes).strip()
+        if clean_notes:
+            notes_html = f'<hr class="divider"><p class="notes"><strong>Obs:</strong> {clean_notes}</p>'
     
     # Phone section
     phone_html = ''
