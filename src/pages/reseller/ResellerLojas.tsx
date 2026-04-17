@@ -310,61 +310,82 @@ export default function ResellerLojas() {
                   Taxa de ativação: <strong>R$ {settings.activation_fee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
                 </p>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  disabled={isCreating}
-                  onClick={() => setPaymentOption('now')}
-                  className={`text-left rounded-md border p-3 transition ${paymentOption === 'now' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
-                >
-                  <div className="text-sm font-semibold">À vista</div>
-                  <div className="text-xs text-muted-foreground mt-1">Vence em 3 dias · sem acréscimo</div>
-                </button>
-                <button
-                  type="button"
-                  disabled={isCreating}
-                  onClick={() => setPaymentOption('30_days')}
-                  className={`text-left rounded-md border p-3 transition ${paymentOption === '30_days' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
-                >
-                  <div className="text-sm font-semibold">Vencimento no próximo mês</div>
-                  <div className="text-xs text-muted-foreground mt-1">Dia {dueDay} do mês seguinte · + R$ 20,00 de acréscimo</div>
-                </button>
-                <button
-                  type="button"
-                  disabled={isCreating}
-                  onClick={() => setPaymentOption(prev => (prev === '3x_no_entry' || prev === '3x_entry' ? prev : '3x_no_entry'))}
-                  className={`text-left rounded-md border p-3 transition ${(paymentOption === '3x_no_entry' || paymentOption === '3x_entry') ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
-                >
-                  <div className="text-sm font-semibold">Parcelado em 3x</div>
-                  <div className="text-xs text-muted-foreground mt-1">+ R$ 15,00 por parcela</div>
-                </button>
-              </div>
+              {(() => {
+                const fee = settings?.activation_fee ?? 0;
+                const fmt = (n: number) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                const partBase = Math.round((fee / 3) * 100) / 100;
+                const valueNow = fee;
+                const value30 = fee + 20;
+                const installmentNoEntry = partBase + 15;
+                const totalNoEntry = installmentNoEntry * 3;
+                const entryValue = partBase;
+                const installmentEntry = partBase + 15;
+                const totalEntry = entryValue + installmentEntry * 2;
+                return (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        disabled={isCreating}
+                        onClick={() => setPaymentOption('now')}
+                        className={`text-left rounded-md border p-3 transition ${paymentOption === 'now' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                      >
+                        <div className="text-sm font-semibold">À vista</div>
+                        <div className="text-xs text-muted-foreground mt-1">Vence em 3 dias</div>
+                        <div className="text-base font-bold text-primary mt-1">{fmt(valueNow)}</div>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isCreating}
+                        onClick={() => setPaymentOption('30_days')}
+                        className={`text-left rounded-md border p-3 transition ${paymentOption === '30_days' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                      >
+                        <div className="text-sm font-semibold">Vencimento no próximo mês</div>
+                        <div className="text-xs text-muted-foreground mt-1">Dia {dueDay} do mês seguinte</div>
+                        <div className="text-base font-bold text-primary mt-1">{fmt(value30)}</div>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isCreating}
+                        onClick={() => setPaymentOption(prev => (prev === '3x_no_entry' || prev === '3x_entry' ? prev : '3x_no_entry'))}
+                        className={`text-left rounded-md border p-3 transition ${(paymentOption === '3x_no_entry' || paymentOption === '3x_entry') ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                      >
+                        <div className="text-sm font-semibold">Parcelado em 3x</div>
+                        <div className="text-xs text-muted-foreground mt-1">3x de {fmt(installmentNoEntry)}</div>
+                        <div className="text-base font-bold text-primary mt-1">{fmt(totalNoEntry)}</div>
+                      </button>
+                    </div>
 
-              {(paymentOption === '3x_no_entry' || paymentOption === '3x_entry') && (
-                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Como parcelar?</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      disabled={isCreating}
-                      onClick={() => setPaymentOption('3x_no_entry')}
-                      className={`text-left rounded-md border p-2 text-xs transition ${paymentOption === '3x_no_entry' ? 'border-primary bg-background ring-1 ring-primary' : 'bg-background/60 hover:bg-background'}`}
-                    >
-                      <div className="font-semibold text-sm">Sem entrada</div>
-                      <div className="text-muted-foreground mt-1">3 parcelas a partir do próximo mês (dia {dueDay}). +R$15 cada.</div>
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isCreating}
-                      onClick={() => setPaymentOption('3x_entry')}
-                      className={`text-left rounded-md border p-2 text-xs transition ${paymentOption === '3x_entry' ? 'border-primary bg-background ring-1 ring-primary' : 'bg-background/60 hover:bg-background'}`}
-                    >
-                      <div className="font-semibold text-sm">Com entrada</div>
-                      <div className="text-muted-foreground mt-1">1ª hoje (em 3 dias, sem acréscimo) + 2 parcelas mensais (+R$15 cada).</div>
-                    </button>
-                  </div>
-                </div>
-              )}
+                    {(paymentOption === '3x_no_entry' || paymentOption === '3x_entry') && (
+                      <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Como parcelar?</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            disabled={isCreating}
+                            onClick={() => setPaymentOption('3x_no_entry')}
+                            className={`text-left rounded-md border p-2 text-xs transition ${paymentOption === '3x_no_entry' ? 'border-primary bg-background ring-1 ring-primary' : 'bg-background/60 hover:bg-background'}`}
+                          >
+                            <div className="font-semibold text-sm">Sem entrada</div>
+                            <div className="text-muted-foreground mt-1">3x de {fmt(installmentNoEntry)} (a partir do próximo mês, dia {dueDay})</div>
+                            <div className="text-sm font-bold text-primary mt-1">Total: {fmt(totalNoEntry)}</div>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isCreating}
+                            onClick={() => setPaymentOption('3x_entry')}
+                            className={`text-left rounded-md border p-2 text-xs transition ${paymentOption === '3x_entry' ? 'border-primary bg-background ring-1 ring-primary' : 'bg-background/60 hover:bg-background'}`}
+                          >
+                            <div className="font-semibold text-sm">Com entrada</div>
+                            <div className="text-muted-foreground mt-1">Entrada {fmt(entryValue)} + 2x de {fmt(installmentEntry)}</div>
+                            <div className="text-sm font-bold text-primary mt-1">Total: {fmt(totalEntry)}</div>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </section>
 
             {settings && (
