@@ -402,6 +402,35 @@ export default function ResellersPage() {
             </div>
           </div>
         </div>
+
+        {!isEditOpen && (
+          <>
+            <Separator />
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Acesso ao Portal</h3>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>E-mail de login</Label>
+                  <Input value={form.responsible_email} disabled placeholder="Será o e-mail do responsável acima" />
+                  <p className="text-xs text-muted-foreground">O revendedor usará o e-mail do responsável para entrar.</p>
+                </div>
+                <div className="space-y-1">
+                  <Label>Senha de acesso *</Label>
+                  <Input
+                    type="text"
+                    value={form.login_password}
+                    onChange={e => setField('login_password', e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    disabled={isSaving}
+                    autoComplete="new-password"
+                  />
+                  <ErrorMsg field="login_password" />
+                  <p className="text-xs text-muted-foreground">Anote esta senha — ela será usada pelo revendedor no primeiro acesso.</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </ScrollArea>
   );
