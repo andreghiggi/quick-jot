@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.20"  # detecta Pedido Express via marcador [EXPRESS] em notes
+SCRIPT_VERSION = "v8.21"  # remove duplicidade de Pagamento/Troco/PIX no bloco de Observações
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================

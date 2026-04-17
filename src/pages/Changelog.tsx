@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.11',
+    type: 'fix',
+    description: 'Impressão automática v8.21: removida a duplicidade da forma de pagamento na impressão. Pagamento, troco e chave PIX agora aparecem apenas no cabeçalho — o bloco "Obs:" não repete mais essas informações (e some quando não há observação real do cliente).',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.10',
     type: 'fix',
     description: 'Impressão automática v8.20: pedidos criados pelo Pedido Express agora aparecem corretamente como "⚡ PEDIDO EXPRESS" no cabeçalho da impressão (antes eram impressos como "📱 CARDÁPIO ONLINE"). Detecção feita via marcador interno [EXPRESS] nas observações.',
