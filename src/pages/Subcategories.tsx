@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, ChevronUp, ChevronDown, Pencil, Check, X, Layers, Image, Upload } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, Pencil, Check, X, Layers, Image, Upload, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -243,6 +243,32 @@ export default function Subcategories() {
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
                             <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Editar</span>
+                          </div>
+                          <div className="relative group">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={cn("h-8 w-8 p-0", sub.menuItem === false && "text-muted-foreground/40")}
+                              onClick={() => updateSubcategory(sub.id, { menuItem: sub.menuItem === false })}
+                            >
+                              {sub.menuItem === false ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            </Button>
+                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                              {sub.menuItem === false ? 'Oculta no cardápio' : 'Visível no cardápio'}
+                            </span>
+                          </div>
+                          <div className="relative group">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={cn("h-8 px-2 text-[10px] font-bold", sub.pdvItem === false && "text-muted-foreground/40")}
+                              onClick={() => updateSubcategory(sub.id, { pdvItem: sub.pdvItem === false })}
+                            >
+                              PDV
+                            </Button>
+                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                              {sub.pdvItem === false ? 'Oculta no PDV' : 'Visível no PDV'}
+                            </span>
                           </div>
                           <div className="relative group">
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => moveSubcategory(sub.id, 'up', cat.id)} disabled={idx === 0}>
