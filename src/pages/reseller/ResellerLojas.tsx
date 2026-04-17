@@ -311,6 +311,22 @@ export default function ResellerLojas() {
                   disabled={isCreating}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Dia de vencimento das mensalidades *</Label>
+                <Select value={dueDay} onValueChange={setDueDay} disabled={isCreating}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o dia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[5, 10, 15, 20, 25].map(d => (
+                      <SelectItem key={d} value={String(d)}>Dia {d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Define o dia em que as faturas mensais desta loja vencerão.
+                </p>
+              </div>
             </section>
 
             {/* Pagamento da Ativação */}
