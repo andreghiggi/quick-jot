@@ -166,14 +166,15 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
   const dateStr = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   const timeStr = now.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
 
-  const itemsHTML = data.items.map(item => {
+  const itemsHTML = data.items.map((item, index) => {
     const { additionals, observations } = parseNotes(item.notes);
     const additionalsHTML = additionals.length > 0
       ? `<div class="additionals">${additionals.map(a => `<div class="add-line">&gt;&gt; ${a}</div>`).join('')}</div>`
       : '';
     const observationsHTML = observations.length > 0
-      ? `<div class="obs-block">${observations.map(o => `<div class="obs"><span class="obs-text">OBSERVAÇÕES: ${o}</span></div>`).join('')}</div>`
+      ? `<div class="obs-block">${observations.map(o => `<div class="obs"><span class="obs-text">${o}</span></div>`).join('')}</div>`
       : '';
+    const separatorHTML = index < data.items.length - 1 ? '<div class="item-sep">................................</div>' : '';
     return `
       <div class="item">
         <div class="item-header">
@@ -183,6 +184,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         ${additionalsHTML}
         ${observationsHTML}
       </div>
+      ${separatorHTML}
     `;
   }).join('');
 
@@ -211,6 +213,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         .items { margin: 2mm 0; }
         .item { border-bottom: 1px dotted #000; padding: 1.5mm 0; }
         .item:last-child { border-bottom: none; }
+        .item-sep { font-size: 10pt; line-height: 1; margin: 1mm 0; letter-spacing: 0; }
         .item-header { display: flex; align-items: baseline; gap: 1mm; }
         .qty { font-size: ${qtyFontSize}; font-weight: bold; min-width: 8mm; }
         .name { font-size: ${nameFontSize}; font-weight: 400; flex: 1; word-break: break-word; text-transform: uppercase; }
