@@ -77,6 +77,7 @@ interface Props {
 export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [reseller, setReseller] = useState<{ name: string; email: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<InvoiceForEdit | null>(null);
   const [editingItems, setEditingItems] = useState<InvoiceItemRow[]>([]);
