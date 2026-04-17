@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.10',
+    type: 'fix',
+    description: 'Impressão automática v8.20: pedidos criados pelo Pedido Express agora aparecem corretamente como "⚡ PEDIDO EXPRESS" no cabeçalho da impressão (antes eram impressos como "📱 CARDÁPIO ONLINE"). Detecção feita via marcador interno [EXPRESS] nas observações.',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.9',
     type: 'fix',
     description: 'Impressão automática v8.19: corrigida a caixa do cabeçalho que não saía no pedido principal e eliminadas as folhas em branco extras. A página só é iniciada quando há conteúdo real para imprimir e a margem inferior de corte não força mais nova página.',
