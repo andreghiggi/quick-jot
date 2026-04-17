@@ -214,7 +214,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         .qty { font-size: ${qtyFontSize}; font-weight: bold; min-width: 8mm; }
         .name { font-size: ${nameFontSize}; font-weight: bold; flex: 1; word-break: break-word; text-transform: uppercase; }
 
-        /* V2: adicionais empilhados em negrito */
+        /* V2: adicionais empilhados em negrito forte */
         .additionals { margin: 1mm 0 0 8mm; }
         .add-line {
           font-size: ${addFontSize};
@@ -222,26 +222,31 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
           line-height: 1.4;
           word-break: break-word;
           text-transform: uppercase;
+          letter-spacing: 0.3px;
+          -webkit-text-stroke: 0.4px #000;
         }
 
         /* V2: observações texto invertido (fundo preto, letras brancas) */
-        .obs-block { margin: 1mm 0 0 8mm; }
+        .obs-block { margin: 1.5mm 0 0 8mm; }
         .obs {
           display: inline-block;
-          background: #000;
-          color: #fff;
-          padding: 0.5mm 2mm;
+          background-color: #000 !important;
+          color: #fff !important;
+          padding: 1mm 2.5mm;
           font-weight: bold;
           font-size: 10pt;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+          text-transform: uppercase;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
         }
 
         .footer { border-top: 1px dashed #000; padding-top: 2mm; margin-top: 2mm; text-align: center; font-size: 8pt; }
         @media print {
-          body { width: ${paperWidth}; }
+          body { width: ${paperWidth}; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           @page { margin: 0; size: ${paperWidth} auto; }
-          .obs { background: #000 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .obs { background-color: #000 !important; color: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .add-line { -webkit-text-stroke: 0.4px #000; }
         }
       </style>
     </head>
