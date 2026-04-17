@@ -106,6 +106,7 @@ export function useResellerPortal() {
     responsible_rg?: string;
     responsible_email?: string;
     responsible_phone?: string;
+    activation_payment_option?: 'now' | '30_days' | '3x_no_entry' | '3x_entry';
   }): Promise<boolean> {
     if (!reseller) return false;
 
@@ -158,6 +159,22 @@ export function useResellerPortal() {
         });
       } catch (billingErr) {
         console.error('Backfill invoice on create (non-blocking):', billingErr);
+      }
+
+      // Generate activation invoice(s) according to chosen payment option
+      if (data.activation_payment_option) {
+        try {
+          await supabase.functions.invoke('reseller-billing', {
+            body: {
+              action: 'activation_invoice',
+              reseller_id: reseller.id,
+              company_id: newCompany.id,
+              payment_option: data.activation_payment_option,
+            },
+          });
+        } catch (actErr) {
+          console.error('Activation invoice on create (non-blocking):', actErr);
+        }
       }
 
       toast.success('Loja criada com sucesso!');
