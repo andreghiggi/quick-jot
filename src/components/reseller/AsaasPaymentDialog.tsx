@@ -18,6 +18,7 @@ export interface AsaasChargeData {
   invoice_url: string | null;
   pix_qrcode: string | null;
   pix_payload: string | null;
+  pix_error?: string | null;
   boleto_url: string | null;
   status: string | null;
   value: number;
