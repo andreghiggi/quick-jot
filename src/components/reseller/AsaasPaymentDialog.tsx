@@ -75,7 +75,7 @@ export function AsaasPaymentDialog({ charge, onClose, onUpdated, defaultTab }: P
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue={charge.pix_qrcode ? 'pix' : 'boleto'}>
+        <Tabs defaultValue={defaultTab ?? (charge.pix_qrcode ? 'pix' : 'boleto')}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="pix">
               <QrCode className="w-4 h-4 mr-2" /> PIX
