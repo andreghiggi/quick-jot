@@ -39,6 +39,7 @@ export interface StoreDetail {
   address_neighborhood: string | null;
   reseller_id: string | null;
   created_at?: string | null;
+  serial?: string | null;
 }
 
 interface Invoice {
