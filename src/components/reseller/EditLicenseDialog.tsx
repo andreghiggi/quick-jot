@@ -6,8 +6,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
+
+const DUE_DAY_OPTIONS = [5, 10, 15, 20, 25];
 
 interface Props {
   open: boolean;
