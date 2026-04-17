@@ -801,11 +801,12 @@ def imprimir_html(html, order_number):
 
 
             if not stripped:
-                # Linha em branco apenas avança y; não dispara início de página
+                # Linha em branco apenas avança y; no compacto v2 reduz pela metade
                 if page_started['value']:
+                    blank_h = int(line_h * (0.25 if compact_v2 else 0.5))
                     limite = page_h - margin_y
-                    if y + int(line_h * 0.5) <= limite:
-                        y += int(line_h * 0.5)
+                    if y + blank_h <= limite:
+                        y += blank_h
                 i += 1
                 continue
 
