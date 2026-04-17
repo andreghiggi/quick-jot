@@ -706,6 +706,15 @@ export default function ResellersPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Assign Companies Dialog */}
+      <AssignCompaniesDialog
+        open={!!assignReseller}
+        onOpenChange={(o) => { if (!o) setAssignReseller(null); }}
+        resellerId={assignReseller?.id || null}
+        resellerName={assignReseller?.name || ''}
+        onAssigned={refetch}
+      />
     </AppLayout>
   );
 }
