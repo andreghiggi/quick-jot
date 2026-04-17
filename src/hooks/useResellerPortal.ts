@@ -93,6 +93,19 @@ export function useResellerPortal() {
     phone?: string;
     login_email?: string;
     initial_password?: string;
+    cnpj?: string;
+    razao_social?: string;
+    address_cep?: string;
+    address_street?: string;
+    address_number?: string;
+    address_neighborhood?: string;
+    address_city?: string;
+    address_state?: string;
+    responsible_name?: string;
+    responsible_cpf?: string;
+    responsible_rg?: string;
+    responsible_email?: string;
+    responsible_phone?: string;
   }): Promise<boolean> {
     if (!reseller) return false;
 
@@ -105,9 +118,22 @@ export function useResellerPortal() {
           phone: data.phone || null,
           login_email: data.login_email || null,
           initial_password: data.initial_password || null,
+          cnpj: data.cnpj || null,
+          razao_social: data.razao_social || null,
+          address_cep: data.address_cep || null,
+          address_street: data.address_street || null,
+          address_number: data.address_number || null,
+          address_neighborhood: data.address_neighborhood || null,
+          address_city: data.address_city || null,
+          address_state: data.address_state || null,
+          responsible_name: data.responsible_name || null,
+          responsible_cpf: data.responsible_cpf || null,
+          responsible_rg: data.responsible_rg || null,
+          responsible_email: data.responsible_email || null,
+          responsible_phone: data.responsible_phone || null,
           reseller_id: reseller.id,
           active: true,
-        })
+        } as any)
         .select()
         .single();
 
