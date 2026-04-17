@@ -95,6 +95,7 @@ export default function PDV() {
   const { tables } = useTables({ companyId: company?.id });
   const { groups: optionalGroups } = useOptionalGroups({ companyId: company?.id });
   const { categories: dbCategories } = useCategories({ companyId: company?.id });
+  const { subcategories: dbSubcategories } = useSubcategories({ companyId: company?.id });
   const { 
     currentRegister, 
     registers,
