@@ -29,9 +29,10 @@ interface Props {
   charge: AsaasChargeData | null;
   onClose: () => void;
   onUpdated?: () => void;
+  defaultTab?: 'pix' | 'boleto';
 }
 
-export function AsaasPaymentDialog({ charge, onClose, onUpdated }: Props) {
+export function AsaasPaymentDialog({ charge, onClose, onUpdated, defaultTab }: Props) {
   const [syncing, setSyncing] = useState(false);
 
   if (!charge) return null;
