@@ -331,17 +331,45 @@ export default function PDV() {
 
   // Build sets of categories/subcategories hidden from PDV
   const hiddenPdvCategoryNames = new Set(dbCategories.filter(c => c.pdvItem === false).map(c => c.name));
+  const hiddenPdvSubcategoryIds = new Set(dbSubcategories.filter(s => s.pdvItem === false).map(s => s.id));
   const activeProducts = products.filter(p =>
     p.active &&
     p.pdvItem !== false &&
-    !hiddenPdvCategoryNames.has(p.category)
+    !hiddenPdvCategoryNames.has(p.category) &&
+    !(p.subcategoryId && hiddenPdvSubcategoryIds.has(p.subcategoryId))
   );
   const categories = [...new Set(activeProducts.map(p => p.category))];
 
+  // Map category name -> id (for subcategory lookup)
+  const categoryIdByName = useMemo(() => {
+    const map: Record<string, string> = {};
+    dbCategories.forEach(c => { map[c.name] = c.id; });
+    return map;
+  }, [dbCategories]);
+
+  // Subcategories visible in the currently selected category
+  const visibleSubcategoriesForSelected = useMemo(() => {
+    if (!selectedCategory) return [];
+    const catId = categoryIdByName[selectedCategory];
+    if (!catId) return [];
+    return dbSubcategories
+      .filter(s => s.categoryId === catId && s.active && s.pdvItem !== false)
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+  }, [selectedCategory, categoryIdByName, dbSubcategories]);
+
+  const isSearching = searchTerm.trim().length > 0;
+
   const filteredProducts = activeProducts.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || p.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    if (isSearching) return matchesSearch;
+    if (!selectedCategory) return false; // require category navigation when not searching
+    if (p.category !== selectedCategory) return false;
+    // If category has visible subcategories, require one selected
+    if (visibleSubcategoriesForSelected.length > 0) {
+      if (!selectedSubcategoryId) return false;
+      return p.subcategoryId === selectedSubcategoryId;
+    }
+    return true;
   });
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
