@@ -132,14 +132,21 @@ Deno.serve(async (req) => {
       // Fetch PIX QR code
       let pixQrcode: string | null = null;
       let pixPayload: string | null = null;
+      let pixError: string | null = null;
       try {
         const pixData = await asaasFetch(`/payments/${charge.id}/pixQrCode`, {
           method: "GET",
         }, ASAAS_API_KEY, env);
         pixQrcode = pixData.encodedImage || null;
         pixPayload = pixData.payload || null;
-      } catch (e) {
+      } catch (e: any) {
         console.warn("PIX QR Code fetch failed:", e);
+        const msg = String(e?.message || e);
+        if (msg.includes("não possui uma chave Pix")) {
+          pixError = "A conta Asaas não possui uma chave PIX cadastrada. Acesse o painel Asaas → Configurações → Minhas Chaves PIX para cadastrar uma.";
+        } else {
+          pixError = "Não foi possível gerar o QR Code PIX: " + msg;
+        }
       }
 
       const updates: any = {
