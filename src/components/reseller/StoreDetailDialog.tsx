@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, Zap, ExternalLink, Briefcase, Settings, Lock, FileEdit, Ban } from 'lucide-react';
+import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, Zap, ExternalLink, Briefcase, Settings, Lock, FileEdit, Ban, Printer, QrCode } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getMonthLabel } from '@/services/resellerBilling';
@@ -93,6 +93,7 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
   const [editingItems, setEditingItems] = useState<InvoiceItemRow[]>([]);
   const [generatingChargeId, setGeneratingChargeId] = useState<string | null>(null);
   const [activeCharge, setActiveCharge] = useState<AsaasChargeData | null>(null);
+  const [activeTab, setActiveTab] = useState<'pix' | 'boleto' | undefined>(undefined);
   const [storeData, setStoreData] = useState<StoreDetail | null>(null);
   const [showBlock, setShowBlock] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -107,7 +108,7 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
     if (data) setStoreData(data as any);
   }
 
-  async function handleGenerateOrShowCharge(invoice: Invoice) {
+  async function handleGenerateOrShowCharge(invoice: Invoice, tab?: 'pix' | 'boleto') {
     setGeneratingChargeId(invoice.id);
     try {
       const { data, error } = await supabase.functions.invoke('asaas-billing', {
@@ -116,6 +117,7 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || 'Falha ao gerar cobrança');
 
+      setActiveTab(tab);
       setActiveCharge({
         invoice_id: invoice.id,
         charge_id: data.charge_id,
@@ -419,21 +421,30 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
                               {!isPaid && (
-                                <Button
-                                  size="sm"
-                                  variant={hasCharge ? 'outline' : 'default'}
-                                  onClick={() => handleGenerateOrShowCharge(inv)}
-                                  disabled={generatingChargeId === inv.id}
-                                  title={hasCharge ? 'Ver cobrança' : 'Gerar cobrança Asaas'}
-                                >
-                                  {generatingChargeId === inv.id ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                  ) : hasCharge ? (
-                                    <ExternalLink className="w-4 h-4" />
-                                  ) : (
-                                    <Zap className="w-4 h-4" />
-                                  )}
-                                </Button>
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleGenerateOrShowCharge(inv, 'boleto')}
+                                    disabled={generatingChargeId === inv.id}
+                                    title="Abrir boleto"
+                                  >
+                                    {generatingChargeId === inv.id ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Printer className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleGenerateOrShowCharge(inv, 'pix')}
+                                    disabled={generatingChargeId === inv.id}
+                                    title="Gerar QR Code PIX"
+                                  >
+                                    <QrCode className="w-4 h-4" />
+                                  </Button>
+                                </>
                               )}
                               {canEdit && (
                                 <Button
@@ -467,7 +478,8 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
 
       <AsaasPaymentDialog
         charge={activeCharge}
-        onClose={() => setActiveCharge(null)}
+        defaultTab={activeTab}
+        onClose={() => { setActiveCharge(null); setActiveTab(undefined); }}
         onUpdated={() => store && loadData(store.id)}
       />
 

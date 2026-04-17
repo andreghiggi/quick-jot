@@ -29,9 +29,10 @@ interface Props {
   charge: AsaasChargeData | null;
   onClose: () => void;
   onUpdated?: () => void;
+  defaultTab?: 'pix' | 'boleto';
 }
 
-export function AsaasPaymentDialog({ charge, onClose, onUpdated }: Props) {
+export function AsaasPaymentDialog({ charge, onClose, onUpdated, defaultTab }: Props) {
   const [syncing, setSyncing] = useState(false);
 
   if (!charge) return null;
@@ -74,7 +75,7 @@ export function AsaasPaymentDialog({ charge, onClose, onUpdated }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue={charge.pix_qrcode ? 'pix' : 'boleto'}>
+        <Tabs defaultValue={defaultTab ?? (charge.pix_qrcode ? 'pix' : 'boleto')}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="pix">
               <QrCode className="w-4 h-4 mr-2" /> PIX
