@@ -427,12 +427,14 @@ def encontrar_chrome():
     return None
 
 def html_para_texto(html):
-    """Converte HTML do recibo para texto plano formatado para impressora térmica"""
+    """Converte HTML do recibo para texto plano formatado para impressora térmica.
+    No layout V2 marca adicionais com [ADD] e observações com [OBS] para o GDI
+    renderizar com estilos diferentes (negrito real / fundo preto)."""
     is_80mm = PAPER_SIZE == '80mm'
-    cols = 24 if is_80mm else 20  # mesma largura usada na renderização GDI
+    cols = 24 if is_80mm else 20
     divider = '-' * cols
 
-    # 1. Remove blocos que não são conteúdo
+    # 1. Remove blocos não-conteúdo
     text = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r'<head[^>]*>.*?</head>', '', text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL | re.IGNORECASE)
@@ -442,36 +444,28 @@ def html_para_texto(html):
     text = re.sub(r'<body[^>]*>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'</body>', '', text, flags=re.IGNORECASE)
 
-    # 1b. LAYOUT V2: emoldura blocos de observação com ASCII (simula texto invertido)
-    def envolver_obs(match):
-        conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip().upper()
+    # 1b. LAYOUT V2: marca adicionais e observações com prefixos especiais
+    # Adicional: <div class="add-line">>> texto</div>  ->  [ADD]texto[/ADD]
+    def marcar_add(match):
+        conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
+        # remove prefixo >> ou + se houver
+        conteudo = re.sub(r'^(&gt;&gt;|>>|\+)\s*', '', conteudo).strip()
+        return f'\n[ADD]{conteudo}[/ADD]\n'
+    text = re.sub(r'<div\s+class="add-line"[^>]*>(.*?)</div>', marcar_add, text, flags=re.DOTALL | re.IGNORECASE)
+
+    # Observação: <div class="obs">...<span class="obs-text">TEXTO</span>...</div>  ->  [OBS]texto[/OBS]
+    def marcar_obs(match):
+        conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
         if not conteudo:
             return ''
-        borda = '*' * cols
-        max_len = cols - 4
-        palavras = conteudo.split(' ')
-        linhas_obs = []
-        atual = ''
-        for p in palavras:
-            if not atual:
-                atual = p
-            elif len(atual) + 1 + len(p) <= max_len:
-                atual += ' ' + p
-            else:
-                linhas_obs.append(atual)
-                atual = p
-        if atual:
-            linhas_obs.append(atual)
-        out = ['', borda]
-        for ln in linhas_obs:
-            espaco = cols - 2 - len(ln)
-            esq = espaco // 2
-            dir_ = espaco - esq
-            out.append('*' + ' ' * esq + ln + ' ' * dir_ + '*')
-        out.append(borda)
-        out.append('')
-        return '\n' + '\n'.join(out) + '\n'
-    text = re.sub(r'<div\s+class="obs"[^>]*>(.*?)</div>', envolver_obs, text, flags=re.DOTALL | re.IGNORECASE)
+        return f'\n[OBS]{conteudo}[/OBS]\n'
+    text = re.sub(r'<div\s+class="obs"[^>]*>(.*?)</div>', marcar_obs, text, flags=re.DOTALL | re.IGNORECASE)
+
+    # Nome do produto V2: <span class="name">NOME</span>  ->  [NAME]NOME[/NAME]
+    def marcar_name(match):
+        conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
+        return f'[NAME]{conteudo}[/NAME]'
+    text = re.sub(r'<span\s+class="name"[^>]*>(.*?)</span>', marcar_name, text, flags=re.DOTALL | re.IGNORECASE)
 
     # 2. <hr> em divisórias
     text = re.sub(r'<hr[^>]*/?>', f'\n{divider}\n', text, flags=re.IGNORECASE)
