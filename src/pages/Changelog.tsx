@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.16',
+    type: 'feature',
+    description: 'Revendedores já cadastrados sem login agora exibem o botão "Criar acesso" na lista. O super admin define a senha e o sistema cria o usuário (ou atualiza a senha caso o e-mail já esteja registrado), liberando o acesso imediato ao portal.',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.15',
     type: 'feature',
     description: 'Cadastro de revendedor agora cria automaticamente o login de acesso ao portal. O super admin define a senha inicial no formulário e o revendedor já pode entrar usando o e-mail do responsável. Validação de campos obrigatórios passou a exibir aviso visível em toast.',
