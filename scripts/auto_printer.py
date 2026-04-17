@@ -703,11 +703,89 @@ def imprimir_html(html, order_number):
 
         is_v2 = (PRINT_LAYOUT == 'v2')
 
-        for linha in linhas:
+        def desenhar_fundo_preto(rect_top_px, rect_h_px, rect_right_px):
+            try:
+                import win32gui
+                brush = win32gui.CreateSolidBrush(0x000000)
+                pen = win32gui.CreatePen(win32con.PS_SOLID, 1, 0x000000)
+                old_brush = win32gui.SelectObject(hDC.GetSafeHdc(), brush)
+                old_pen = win32gui.SelectObject(hDC.GetSafeHdc(), pen)
+                win32gui.Rectangle(hDC.GetSafeHdc(), margin_x, rect_top_px, rect_right_px, rect_top_px + rect_h_px)
+                win32gui.SelectObject(hDC.GetSafeHdc(), old_brush)
+                win32gui.SelectObject(hDC.GetSafeHdc(), old_pen)
+                win32gui.DeleteObject(brush)
+                win32gui.DeleteObject(pen)
+            except Exception as ex:
+                log(f"Falha ao desenhar fundo preto: {ex}", "AVISO")
+
+        def desenhar_borda(rect_top_px, rect_h_px, rect_right_px):
+            try:
+                import win32gui
+                # Borda apenas (sem preenchimento) — usa NULL_BRUSH
+                pen = win32gui.CreatePen(win32con.PS_SOLID, 2, 0x000000)
+                null_brush = win32gui.GetStockObject(win32con.NULL_BRUSH)
+                old_pen = win32gui.SelectObject(hDC.GetSafeHdc(), pen)
+                old_brush = win32gui.SelectObject(hDC.GetSafeHdc(), null_brush)
+                win32gui.Rectangle(hDC.GetSafeHdc(), margin_x, rect_top_px, rect_right_px, rect_top_px + rect_h_px)
+                win32gui.SelectObject(hDC.GetSafeHdc(), old_pen)
+                win32gui.SelectObject(hDC.GetSafeHdc(), old_brush)
+                win32gui.DeleteObject(pen)
+            except Exception as ex:
+                log(f"Falha ao desenhar borda: {ex}", "AVISO")
+
+        i = 0
+        while i < len(linhas):
+            linha = linhas[i]
             stripped = linha.strip()
+
+            # CABEÇALHO EM CAIXA: coleta todas as linhas até [BOX_END] e desenha borda em volta
+            if stripped == '[BOX_START]':
+                box_lines = []
+                i += 1
+                while i < len(linhas) and linhas[i].strip() != '[BOX_END]':
+                    s = linhas[i].strip()
+                    if s:
+                        box_lines.append(s)
+                    i += 1
+                # pula o [BOX_END]
+                i += 1
+                if not box_lines:
+                    continue
+                pad_x = int(dpi_x * 0.04)
+                pad_y = int(dpi_y * 0.03)
+                hDC.SelectObject(font_normal)
+                # quebra cada linha do cabeçalho respeitando largura interna da caixa
+                largura_interna = colunas - 2
+                linhas_render = []
+                for bl in box_lines:
+                    linhas_render.extend(quebrar_linha(bl, largura_interna))
+                altura_total = line_h * len(linhas_render) + pad_y * 2
+                garantir_espaco(altura_total + int(line_h * 0.4))
+                rect_top = y
+                rect_right = margin_x + int(colunas * tm['tmAveCharWidth']) + pad_x * 2
+                desenhar_borda(rect_top, altura_total, rect_right)
+                # Renderiza o texto centralizado dentro da caixa
+                text_y = y + pad_y
+                largura_caixa_chars = colunas
+                hDC.SetTextColor(0x000000)
+                hDC.SetBkMode(win32con.TRANSPARENT)
+                for sub in linhas_render:
+                    # centraliza adicionando espaços
+                    pad_left_chars = max(0, (largura_caixa_chars - len(sub)) // 2)
+                    texto_centralizado = (' ' * pad_left_chars) + sub
+                    hDC.TextOut(margin_x + pad_x, text_y, texto_centralizado)
+                    text_y += line_h
+                y += altura_total + int(line_h * 0.4)
+                continue
+
+            if stripped == '[BOX_END]':
+                i += 1
+                continue
+
             if not stripped:
                 garantir_espaco(int(line_h * 0.5))
                 y += int(line_h * 0.5)
+                i += 1
                 continue
 
             if set(stripped) <= {'-', '=', '_'} and len(stripped) > 3:
@@ -717,6 +795,7 @@ def imprimir_html(html, order_number):
                 hDC.SetBkMode(win32con.TRANSPARENT)
                 hDC.TextOut(margin_x, y, '-' * colunas)
                 y += line_h
+                i += 1
                 continue
 
             # Detecta marcadores V2
@@ -724,9 +803,10 @@ def imprimir_html(html, order_number):
             m_add = re.match(r'^\[ADD\](.*)\[/ADD\]$', stripped)
             m_obs = re.match(r'^\[OBS\](.*)\[/OBS\]$', stripped)
             m_name = re.match(r'^\[NAME\](.*)\[/NAME\]$', stripped)
+            m_cliente = re.match(r'^\[CLIENTE\](.*)\[/CLIENTE\]$', stripped)
             m_sep = (stripped == '[SEP]')
 
-            if is_v2 and m_sep:
+            if m_sep and is_v2:
                 garantir_espaco(int(line_h * 1.4))
                 hDC.SelectObject(font_normal)
                 hDC.SetTextColor(0x000000)
@@ -735,6 +815,7 @@ def imprimir_html(html, order_number):
                 hDC.TextOut(margin_x, y, '.' * colunas)
                 y += line_h
                 y += int(line_h * 0.2)
+                i += 1
                 continue
 
             if is_v2 and m_item:
@@ -766,10 +847,10 @@ def imprimir_html(html, order_number):
                     y += line_h
 
                 hDC.SelectObject(font_normal)
+                i += 1
                 continue
 
             if is_v2 and m_add:
-                # Adicional: negrito forte com prefixo ">>"
                 texto_add = '>> ' + m_add.group(1).strip().upper()
                 sublinhas_add = quebrar_linha(texto_add, colunas)
                 garantir_espaco(line_h * len(sublinhas_add))
@@ -780,50 +861,57 @@ def imprimir_html(html, order_number):
                     hDC.TextOut(margin_x, y, sub)
                     y += line_h
                 hDC.SelectObject(font_normal)
+                i += 1
                 continue
 
-            if is_v2 and m_obs:
-                # Observação: fundo PRETO + letras BRANCAS (texto invertido real)
-                conteudo_obs = m_obs.group(1).strip().upper()
-                conteudo_obs = re.sub(r'^OBSERVAÇÕES:\s*', '', conteudo_obs, flags=re.IGNORECASE)
-                texto_obs = f'OBSERVAÇÕES: {conteudo_obs}'
+            # CLIENTE invertido (sempre, V1 e V2) — fundo preto + texto branco
+            if m_cliente:
+                conteudo_cli = m_cliente.group(1).strip().upper()
                 hDC.SelectObject(font_obs)
-                sublinhas = quebrar_linha(texto_obs, colunas - 2)
-                # desenha um retângulo preto cobrindo todas as linhas
+                sublinhas = quebrar_linha(conteudo_cli, colunas - 2)
                 pad_x = int(dpi_x * 0.02)
                 pad_y = int(dpi_y * 0.015)
                 garantir_espaco(line_h * len(sublinhas) + pad_y * 2 + int(line_h * 0.3))
                 rect_top = y - pad_y
                 rect_h = line_h * len(sublinhas) + pad_y * 2
                 rect_right = margin_x + int(colunas * tm['tmAveCharWidth']) + pad_x * 2
-                # Cria pincel e caneta pretos
-                try:
-                    import win32gui
-                    brush = win32gui.CreateSolidBrush(0x000000)
-                    pen = win32gui.CreatePen(win32con.PS_SOLID, 1, 0x000000)
-                    old_brush = win32gui.SelectObject(hDC.GetSafeHdc(), brush)
-                    old_pen = win32gui.SelectObject(hDC.GetSafeHdc(), pen)
-                    win32gui.Rectangle(hDC.GetSafeHdc(), margin_x, rect_top, rect_right, rect_top + rect_h)
-                    win32gui.SelectObject(hDC.GetSafeHdc(), old_brush)
-                    win32gui.SelectObject(hDC.GetSafeHdc(), old_pen)
-                    win32gui.DeleteObject(brush)
-                    win32gui.DeleteObject(pen)
-                except Exception as ex:
-                    log(f"Falha ao desenhar fundo preto: {ex}", "AVISO")
-                # Texto branco em cima
+                desenhar_fundo_preto(rect_top, rect_h, rect_right)
                 hDC.SetTextColor(0xFFFFFF)
                 hDC.SetBkMode(win32con.TRANSPARENT)
                 for sub in sublinhas:
                     hDC.TextOut(margin_x + pad_x, y, sub)
                     y += line_h
-                # Volta padrão
                 hDC.SetTextColor(0x000000)
                 hDC.SelectObject(font_normal)
                 y += int(line_h * 0.3)
+                i += 1
+                continue
+
+            if is_v2 and m_obs:
+                conteudo_obs = m_obs.group(1).strip().upper()
+                conteudo_obs = re.sub(r'^OBSERVAÇÕES:\s*', '', conteudo_obs, flags=re.IGNORECASE)
+                texto_obs = f'OBSERVAÇÕES: {conteudo_obs}'
+                hDC.SelectObject(font_obs)
+                sublinhas = quebrar_linha(texto_obs, colunas - 2)
+                pad_x = int(dpi_x * 0.02)
+                pad_y = int(dpi_y * 0.015)
+                garantir_espaco(line_h * len(sublinhas) + pad_y * 2 + int(line_h * 0.3))
+                rect_top = y - pad_y
+                rect_h = line_h * len(sublinhas) + pad_y * 2
+                rect_right = margin_x + int(colunas * tm['tmAveCharWidth']) + pad_x * 2
+                desenhar_fundo_preto(rect_top, rect_h, rect_right)
+                hDC.SetTextColor(0xFFFFFF)
+                hDC.SetBkMode(win32con.TRANSPARENT)
+                for sub in sublinhas:
+                    hDC.TextOut(margin_x + pad_x, y, sub)
+                    y += line_h
+                hDC.SetTextColor(0x000000)
+                hDC.SelectObject(font_normal)
+                y += int(line_h * 0.3)
+                i += 1
                 continue
 
             if is_v2 and m_name:
-                # Nome do produto V2: peso REGULAR (sem negrito)
                 texto_nome = m_name.group(1).strip()
                 hDC.SelectObject(font_regular)
                 hDC.SetTextColor(0x000000)
@@ -832,11 +920,13 @@ def imprimir_html(html, order_number):
                     hDC.TextOut(margin_x, y, sub)
                     y += line_h
                 hDC.SelectObject(font_normal)
+                i += 1
                 continue
 
             # Linha normal: remove marcadores residuais e imprime
-            stripped_clean = re.sub(r'\[/?(ADD|OBS|NAME|ITEM|SEP)\]', '', stripped).replace('|||', ' ').strip()
+            stripped_clean = re.sub(r'\[/?(ADD|OBS|NAME|ITEM|SEP|CLIENTE|BOX_START|BOX_END)\]', '', stripped).replace('|||', ' ').strip()
             if not stripped_clean:
+                i += 1
                 continue
             sublinhas_normais = quebrar_linha(stripped_clean, colunas)
             garantir_espaco(line_h * len(sublinhas_normais))
@@ -846,6 +936,7 @@ def imprimir_html(html, order_number):
             for sublinha in sublinhas_normais:
                 hDC.TextOut(margin_x, y, sublinha)
                 y += line_h
+            i += 1
 
         # Espaço para corte: 6 linhas em branco ao final do pedido
         garantir_espaco(line_h * 6)
