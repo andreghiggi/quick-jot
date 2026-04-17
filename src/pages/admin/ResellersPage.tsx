@@ -600,6 +600,7 @@ export default function ResellersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8"></TableHead>
                     <TableHead>Razão Social</TableHead>
                     <TableHead>CNPJ</TableHead>
                     <TableHead>Responsável</TableHead>
@@ -612,94 +613,187 @@ export default function ResellersPage() {
                 <TableBody>
                   {filteredResellers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         Nenhum revendedor encontrado
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredResellers.map(r => (
-                      <TableRow key={r.id}>
-                        <TableCell>
-                          <div>
-                            <span className="font-medium">{r.name}</span>
-                            <p className="text-xs text-muted-foreground">{r.email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {r.cnpj ? maskCNPJ(r.cnpj) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <span className="text-sm">{r.responsible_name || '-'}</span>
-                            {r.responsible_phone && (
-                              <p className="text-xs text-muted-foreground">{maskPhone(r.responsible_phone)}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">{r.total_companies}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          R$ {r.mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={r.status === 'active' ? 'default' : 'secondary'}>
-                            {r.status === 'active' ? 'Ativo' : 'Inativo'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2 flex-wrap">
-                            <Button variant="outline" size="sm" className="gap-1" onClick={() => openEdit(r.id)}>
-                              <Pencil className="w-3 h-3" /> Editar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1"
-                              onClick={() => setAssignReseller({ id: r.id, name: r.name })}
-                            >
-                              <Link2 className="w-3 h-3" /> Vincular lojas
-                            </Button>
-                            {!r.user_id && (
+                    filteredResellers.map(r => {
+                      const isOpen = expanded.has(r.id);
+                      const lojas = companiesByReseller[r.id] || [];
+                      const loadingLojas = loadingCompanies.has(r.id);
+                      return (
+                        <>
+                          <TableRow key={r.id}>
+                            <TableCell>
                               <Button
-                                variant="default"
-                                size="sm"
-                                className="gap-1"
-                                onClick={() => {
-                                  setAccessReseller({
-                                    id: r.id,
-                                    email: r.responsible_email || '',
-                                    name: r.responsible_name || r.name,
-                                  });
-                                  setAccessPassword('');
-                                }}
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => toggleExpand(r.id)}
+                                title={isOpen ? 'Recolher lojas' : 'Ver lojas'}
                               >
-                                <KeyRound className="w-3 h-3" /> Criar acesso
+                                {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                               </Button>
-                            )}
-                            <Button
-                              variant={r.status === 'active' ? 'outline' : 'default'}
-                              size="sm" className="gap-1"
-                              onClick={() => toggleResellerStatus(r.id, r.status)}
-                            >
-                              {r.status === 'active' ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                              {r.status === 'active' ? 'Pausar' : 'Ativar'}
-                            </Button>
-                            {r.user_id && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                className="gap-1"
-                                onClick={async () => {
-                                  const ok = await impersonateReseller(r.id);
-                                  if (ok) navigate('/revendedor/home');
-                                }}
-                              >
-                                <Eye className="w-3 h-3" /> Acessar painel
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <span className="font-medium">{r.name}</span>
+                                <p className="text-xs text-muted-foreground">{r.email}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {r.cnpj ? maskCNPJ(r.cnpj) : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <span className="text-sm">{r.responsible_name || '-'}</span>
+                                {r.responsible_phone && (
+                                  <p className="text-xs text-muted-foreground">{maskPhone(r.responsible_phone)}</p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">{r.total_companies}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              R$ {r.mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={r.status === 'active' ? 'default' : 'secondary'}>
+                                {r.status === 'active' ? 'Ativo' : 'Inativo'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2 flex-wrap">
+                                <Button variant="outline" size="sm" className="gap-1" onClick={() => openEdit(r.id)}>
+                                  <Pencil className="w-3 h-3" /> Editar
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1"
+                                  onClick={() => setAssignReseller({ id: r.id, name: r.name })}
+                                >
+                                  <Link2 className="w-3 h-3" /> Vincular lojas
+                                </Button>
+                                {!r.user_id && (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="gap-1"
+                                    onClick={() => {
+                                      setAccessReseller({
+                                        id: r.id,
+                                        email: r.responsible_email || '',
+                                        name: r.responsible_name || r.name,
+                                      });
+                                      setAccessPassword('');
+                                    }}
+                                  >
+                                    <KeyRound className="w-3 h-3" /> Criar acesso
+                                  </Button>
+                                )}
+                                <Button
+                                  variant={r.status === 'active' ? 'outline' : 'default'}
+                                  size="sm" className="gap-1"
+                                  onClick={() => toggleResellerStatus(r.id, r.status)}
+                                >
+                                  {r.status === 'active' ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                                  {r.status === 'active' ? 'Pausar' : 'Ativar'}
+                                </Button>
+                                {r.user_id && (
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="gap-1"
+                                    onClick={async () => {
+                                      const ok = await impersonateReseller(r.id);
+                                      if (ok) navigate('/revendedor/home');
+                                    }}
+                                  >
+                                    <Eye className="w-3 h-3" /> Acessar painel
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {isOpen && (
+                            <TableRow className="bg-muted/30 hover:bg-muted/30">
+                              <TableCell colSpan={8} className="p-0">
+                                <div className="p-4 space-y-2">
+                                  <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                    <Building2 className="w-4 h-4" />
+                                    Lojas vinculadas a {r.name}
+                                  </div>
+                                  {loadingLojas ? (
+                                    <div className="flex items-center justify-center py-4">
+                                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                    </div>
+                                  ) : lojas.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground italic py-2">
+                                      Nenhuma loja vinculada a este revendedor.
+                                    </p>
+                                  ) : (
+                                    <div className="rounded-md border bg-background">
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow>
+                                            <TableHead>Loja</TableHead>
+                                            <TableHead>Slug</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Ações</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {lojas.map((c: any) => (
+                                            <TableRow key={c.id}>
+                                              <TableCell className="font-medium">{c.name}</TableCell>
+                                              <TableCell className="text-xs text-muted-foreground">{c.slug}</TableCell>
+                                              <TableCell>
+                                                <Badge variant={c.active ? 'default' : 'secondary'}>
+                                                  {c.active ? 'Ativa' : 'Inativa'}
+                                                </Badge>
+                                              </TableCell>
+                                              <TableCell className="text-right">
+                                                <div className="flex items-center justify-end gap-1 flex-wrap">
+                                                  <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="gap-1"
+                                                    onClick={() => setSelectedStore(c as StoreDetail)}
+                                                  >
+                                                    <Eye className="w-3 h-3" /> Detalhes
+                                                  </Button>
+                                                  <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="gap-1"
+                                                    onClick={() => setModulesCompany({ id: c.id, name: c.name })}
+                                                  >
+                                                    <Settings className="w-3 h-3" /> Módulos
+                                                  </Button>
+                                                  <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    className="gap-1"
+                                                    onClick={() => handleAccessCompany(c.id)}
+                                                  >
+                                                    <Eye className="w-3 h-3" /> Acessar
+                                                  </Button>
+                                                </div>
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
