@@ -172,7 +172,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
       ? `<div class="additionals">${additionals.map(a => `<div class="add-line">&gt;&gt; ${a}</div>`).join('')}</div>`
       : '';
     const observationsHTML = observations.length > 0
-      ? `<div class="obs-block">${observations.map(o => `<div class="obs"><span class="obs-text">${o}</span></div>`).join('')}</div>`
+      ? `<div class="obs-block">${observations.map(o => `<div class="obs"><span class="obs-text">OBSERVAÇÕES: ${o}</span></div>`).join('')}</div>`
       : '';
     return `
       <div class="item">
@@ -213,7 +213,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         .item:last-child { border-bottom: none; }
         .item-header { display: flex; align-items: baseline; gap: 1mm; }
         .qty { font-size: ${qtyFontSize}; font-weight: bold; min-width: 8mm; }
-        .name { font-size: ${nameFontSize}; font-weight: bold; flex: 1; word-break: break-word; text-transform: uppercase; }
+        .name { font-size: ${nameFontSize}; font-weight: 400; flex: 1; word-break: break-word; text-transform: uppercase; }
 
         /* V2: adicionais empilhados destacados com >> e fonte maior */
         .additionals { margin: 1.5mm 0 0 4mm; }
