@@ -860,6 +860,18 @@ export default function ResellersPage() {
         resellerName={assignReseller?.name || ''}
         onAssigned={refetch}
       />
+
+      <CompanyModulesDialog
+        companyId={modulesCompany?.id || null}
+        companyName={modulesCompany?.name}
+        onClose={() => setModulesCompany(null)}
+      />
+
+      <StoreDetailDialog
+        store={selectedStore}
+        canEdit
+        onClose={() => setSelectedStore(null)}
+      />
     </AppLayout>
   );
 }
