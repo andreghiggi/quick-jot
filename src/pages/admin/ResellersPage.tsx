@@ -108,6 +108,11 @@ export default function ResellersPage() {
   const [loadingCompanies, setLoadingCompanies] = useState<Set<string>>(new Set());
   const [modulesCompany, setModulesCompany] = useState<{ id: string; name: string } | null>(null);
   const [selectedStore, setSelectedStore] = useState<StoreDetail | null>(null);
+  const [lojaSearchByReseller, setLojaSearchByReseller] = useState<Record<string, string>>({});
+
+  function normalizeText(s: string) {
+    return (s || '').toLowerCase().replace(/[^\w]/g, '');
+  }
 
   async function toggleExpand(resellerId: string) {
     const next = new Set(expanded);
