@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, CreditCard, Zap, ExternalLink } from 'lucide-react';
+import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, Zap, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getMonthLabel } from '@/services/resellerBilling';
