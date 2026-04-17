@@ -105,6 +105,9 @@ export function ProtectedRoute({ children, requiredRole, requireCompany = false 
         companyName={company?.name}
         resellerName={suspendCheck.resellerName}
         resellerPhone={suspendCheck.resellerPhone}
+        licenseStatus={suspendCheck.licenseStatus}
+        blockReason={suspendCheck.blockReason}
+        blockMessage={suspendCheck.blockMessage}
       />
     );
   }
