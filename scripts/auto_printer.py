@@ -961,11 +961,11 @@ def imprimir_html(html, order_number):
             i += 1
 
         # Margem inferior leve para corte (sem forçar nova página).
-        # Se não couber na página atual, simplesmente ignoramos — a impressora
-        # térmica já avança o papel naturalmente após EndPage.
+        # No modo compacto v2, reduz para 1 linha; padrão é 3 linhas.
         limite_final = page_h - margin_y
-        if y + line_h * 3 <= limite_final:
-            y += line_h * 3
+        cut_lines = 1 if compact_v2 else 3
+        if y + line_h * cut_lines <= limite_final:
+            y += line_h * cut_lines
 
         # Só finaliza a página se realmente houve desenho — evita folha em branco extra
         if page_started['value']:
