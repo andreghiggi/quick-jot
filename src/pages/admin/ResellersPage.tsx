@@ -660,6 +660,40 @@ export default function ResellersPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Create Access Dialog */}
+      <Dialog open={!!accessReseller} onOpenChange={(o) => { if (!o) { setAccessReseller(null); setAccessPassword(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Criar acesso ao portal</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateAccess} className="space-y-4">
+            <div className="space-y-1">
+              <Label>E-mail de login</Label>
+              <Input value={accessReseller?.email || ''} disabled />
+              <p className="text-xs text-muted-foreground">
+                E-mail do responsável. Se já existir uma conta com este e-mail, a senha será atualizada.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label>Senha de acesso *</Label>
+              <Input
+                type="text"
+                value={accessPassword}
+                onChange={e => setAccessPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                disabled={isCreatingAccess}
+                autoComplete="new-password"
+              />
+              <p className="text-xs text-muted-foreground">Anote esta senha — ela será informada ao revendedor.</p>
+            </div>
+            <Button type="submit" className="w-full" disabled={isCreatingAccess}>
+              {isCreatingAccess && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Criar acesso
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
