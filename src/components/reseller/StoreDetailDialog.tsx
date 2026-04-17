@@ -145,8 +145,10 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
       setInvoices([]);
       setPlan(null);
       setReseller(null);
+      setStoreData(null);
       return;
     }
+    setStoreData(store);
     void loadData(store.id, store.reseller_id);
   }, [store?.id]);
 
