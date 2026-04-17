@@ -213,6 +213,7 @@ export function InvoiceEditDialog({ invoice, items, onClose, onSaved }: Props) {
                 <SelectItem value="paid">Pago</SelectItem>
                 <SelectItem value="overdue">Vencido</SelectItem>
                 <SelectItem value="canceled">Cancelado</SelectItem>
+                <SelectItem value="bonificada">Bonificada</SelectItem>
               </SelectContent>
             </Select>
           </div>
