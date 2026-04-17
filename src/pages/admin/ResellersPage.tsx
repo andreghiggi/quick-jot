@@ -108,6 +108,11 @@ export default function ResellersPage() {
   const [loadingCompanies, setLoadingCompanies] = useState<Set<string>>(new Set());
   const [modulesCompany, setModulesCompany] = useState<{ id: string; name: string } | null>(null);
   const [selectedStore, setSelectedStore] = useState<StoreDetail | null>(null);
+  const [lojaSearchByReseller, setLojaSearchByReseller] = useState<Record<string, string>>({});
+
+  function normalizeText(s: string) {
+    return (s || '').toLowerCase().replace(/[^\w]/g, '');
+  }
 
   async function toggleExpand(resellerId: string) {
     const next = new Set(expanded);
@@ -720,63 +725,91 @@ export default function ResellersPage() {
                                       Nenhuma loja vinculada a este revendedor.
                                     </p>
                                   ) : (
-                                    <div className="rounded-md border bg-background">
-                                      <Table>
-                                        <TableHeader>
-                                          <TableRow>
-                                            <TableHead>Serial</TableHead>
-                                            <TableHead>Loja</TableHead>
-                                            <TableHead>Slug</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead className="text-right">Ações</TableHead>
-                                          </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                          {lojas.map((c: any) => (
-                                            <TableRow key={c.id}>
-                                              <TableCell className="font-mono text-xs font-bold tracking-wider select-all">
-                                                {c.serial || '—'}
-                                              </TableCell>
-                                              <TableCell className="font-medium">{c.name}</TableCell>
-                                              <TableCell className="text-xs text-muted-foreground">{c.slug}</TableCell>
-                                              <TableCell>
-                                                <Badge variant={c.active ? 'default' : 'secondary'}>
-                                                  {c.active ? 'Ativa' : 'Inativa'}
-                                                </Badge>
-                                              </TableCell>
-                                              <TableCell className="text-right">
-                                                <div className="flex items-center justify-end gap-1 flex-wrap">
-                                                  <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="gap-1"
-                                                    onClick={() => setSelectedStore(c as StoreDetail)}
-                                                  >
-                                                    <Eye className="w-3 h-3" /> Detalhes
-                                                  </Button>
-                                                  <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="gap-1"
-                                                    onClick={() => setModulesCompany({ id: c.id, name: c.name })}
-                                                  >
-                                                    <Settings className="w-3 h-3" /> Módulos
-                                                  </Button>
-                                                  <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    className="gap-1"
-                                                    onClick={() => handleAccessCompany(c.id)}
-                                                  >
-                                                    <Eye className="w-3 h-3" /> Acessar
-                                                  </Button>
-                                                </div>
-                                              </TableCell>
-                                            </TableRow>
-                                          ))}
-                                        </TableBody>
-                                      </Table>
-                                    </div>
+                                    <>
+                                      <div className="relative max-w-sm">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                        <Input
+                                          placeholder="Buscar por serial ou CNPJ..."
+                                          value={lojaSearchByReseller[r.id] || ''}
+                                          onChange={e => setLojaSearchByReseller(prev => ({ ...prev, [r.id]: e.target.value }))}
+                                          className="pl-10 h-9"
+                                        />
+                                      </div>
+                                      {(() => {
+                                        const term = normalizeText(lojaSearchByReseller[r.id] || '');
+                                        const filteredLojas = term
+                                          ? lojas.filter((c: any) =>
+                                              normalizeText(c.serial || '').includes(term) ||
+                                              normalizeText(c.cnpj || '').includes(term)
+                                            )
+                                          : lojas;
+                                        return (
+                                          <div className="rounded-md border bg-background">
+                                            <Table>
+                                              <TableHeader>
+                                                <TableRow>
+                                                  <TableHead>Serial</TableHead>
+                                                  <TableHead>Loja</TableHead>
+                                                  <TableHead>Slug</TableHead>
+                                                  <TableHead>Status</TableHead>
+                                                  <TableHead className="text-right">Ações</TableHead>
+                                                </TableRow>
+                                              </TableHeader>
+                                              <TableBody>
+                                                {filteredLojas.length === 0 ? (
+                                                  <TableRow>
+                                                    <TableCell colSpan={5} className="text-center py-6 text-sm text-muted-foreground">
+                                                      Nenhuma loja encontrada para "{lojaSearchByReseller[r.id]}"
+                                                    </TableCell>
+                                                  </TableRow>
+                                                ) : filteredLojas.map((c: any) => (
+                                                  <TableRow key={c.id}>
+                                                    <TableCell className="font-mono text-xs font-bold tracking-wider select-all">
+                                                      {c.serial || '—'}
+                                                    </TableCell>
+                                                    <TableCell className="font-medium">{c.name}</TableCell>
+                                                    <TableCell className="text-xs text-muted-foreground">{c.slug}</TableCell>
+                                                    <TableCell>
+                                                      <Badge variant={c.active ? 'default' : 'secondary'}>
+                                                        {c.active ? 'Ativa' : 'Inativa'}
+                                                      </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                      <div className="flex items-center justify-end gap-1 flex-wrap">
+                                                        <Button
+                                                          variant="outline"
+                                                          size="sm"
+                                                          className="gap-1"
+                                                          onClick={() => setSelectedStore(c as StoreDetail)}
+                                                        >
+                                                          <Eye className="w-3 h-3" /> Detalhes
+                                                        </Button>
+                                                        <Button
+                                                          variant="outline"
+                                                          size="sm"
+                                                          className="gap-1"
+                                                          onClick={() => setModulesCompany({ id: c.id, name: c.name })}
+                                                        >
+                                                          <Settings className="w-3 h-3" /> Módulos
+                                                        </Button>
+                                                        <Button
+                                                          variant="secondary"
+                                                          size="sm"
+                                                          className="gap-1"
+                                                          onClick={() => handleAccessCompany(c.id)}
+                                                        >
+                                                          <Eye className="w-3 h-3" /> Acessar
+                                                        </Button>
+                                                      </div>
+                                                    </TableCell>
+                                                  </TableRow>
+                                                ))}
+                                              </TableBody>
+                                            </Table>
+                                          </div>
+                                        );
+                                      })()}
+                                    </>
                                   )}
                                 </div>
                               </TableCell>
