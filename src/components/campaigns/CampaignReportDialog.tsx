@@ -60,7 +60,7 @@ export function CampaignReportDialog({ open, onOpenChange, campaignId, campaign 
           <div className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <Stat label="Total na base" value={total} />
-              <Stat label="Enviados" value={sent} className="text-emerald-600" />
+              <Stat label="Enviados" value={sent} className="text-primary" />
               <Stat label="Falhas" value={failed} className="text-destructive" />
               <Stat label="Pulados" value={skipped} className="text-muted-foreground" />
               <Stat label="% entrega" value={`${pct}%`} />

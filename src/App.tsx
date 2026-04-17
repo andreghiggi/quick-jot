@@ -39,6 +39,7 @@ import Categories from "./pages/Categories";
 import Subcategories from "./pages/Subcategories";
 import CustomerReport from "./pages/CustomerReport";
 import ABCReport from "./pages/ABCReport";
+import SalesCampaigns from "./pages/SalesCampaigns";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -47,6 +48,7 @@ import CompanyModulesPage from "./pages/admin/CompanyModulesPage";
 import SuggestionsAdmin from "./pages/admin/SuggestionsAdmin";
 import ResellersPage from "./pages/admin/ResellersPage";
 import AdminSettings from "./pages/admin/AdminSettings";
+import CampaignSettings from "./pages/admin/CampaignSettings";
 import ResellerHome from "./pages/reseller/ResellerHome";
 import ResellerLojas from "./pages/reseller/ResellerLojas";
 import ResellerConfiguracoes from "./pages/reseller/ResellerConfiguracoes";
@@ -216,6 +218,12 @@ function AppRoutes() {
           <ABCReport />
         </ProtectedRoute>
       } />
+
+      <Route path="/campanhas" element={
+        <ProtectedRoute requireCompany>
+          <SalesCampaigns />
+        </ProtectedRoute>
+      } />
       
       <Route path="/garcom" element={
         <ProtectedRoute requireCompany>
@@ -257,6 +265,12 @@ function AppRoutes() {
       <Route path="/admin/dados-empresa" element={
         <ProtectedRoute requiredRole="super_admin">
           <AdminSettings />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/admin/campanhas-config" element={
+        <ProtectedRoute requiredRole="super_admin">
+          <CampaignSettings />
         </ProtectedRoute>
       } />
       

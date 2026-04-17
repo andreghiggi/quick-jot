@@ -118,7 +118,7 @@ function CampaignCard({ campaign, intervalSec, onStart, onPause, onResume, onCan
         <Progress value={pct} />
         <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
           <span><strong>{processed}</strong> de <strong>{total}</strong> processados ({pct}%)</span>
-          <span className="text-emerald-600">✓ {campaign.sent_count} enviados</span>
+          <span className="text-primary">✓ {campaign.sent_count} enviados</span>
           <span className="text-destructive">✗ {campaign.failed_count} falhas</span>
           <span className="text-muted-foreground">⊘ {campaign.skipped_count} pulados</span>
           {campaign.status === 'running' && remaining > 0 && (
