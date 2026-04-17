@@ -51,6 +51,8 @@ export default function ResellerLojas() {
   const [respRg, setRespRg] = useState('');
   const [respEmail, setRespEmail] = useState('');
   const [respPhone, setRespPhone] = useState('');
+  // form state — Pagamento da ativação
+  const [paymentOption, setPaymentOption] = useState<'now' | '30_days' | '3x_no_entry' | '3x_entry'>('now');
 
   function generateSlug(name: string): string {
     return name
