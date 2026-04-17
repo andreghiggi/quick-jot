@@ -19,12 +19,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, Zap, ExternalLink, Briefcase } from 'lucide-react';
+import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, Zap, ExternalLink, Briefcase, Settings, Lock, FileEdit, Ban } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getMonthLabel } from '@/services/resellerBilling';
 import { InvoiceEditDialog, InvoiceForEdit, InvoiceItemRow } from './InvoiceEditDialog';
 import { AsaasPaymentDialog, AsaasChargeData } from './AsaasPaymentDialog';
+import { BlockLicenseDialog } from './BlockLicenseDialog';
+import { EditLicenseDialog } from './EditLicenseDialog';
+import { CancelLicenseDialog } from './CancelLicenseDialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
 export interface StoreDetail {
@@ -40,6 +46,10 @@ export interface StoreDetail {
   reseller_id: string | null;
   created_at?: string | null;
   serial?: string | null;
+  license_status?: string | null;
+  license_block_reason?: string | null;
+  license_block_message?: string | null;
+  next_invoice_due_day?: number | null;
 }
 
 interface Invoice {
@@ -83,6 +93,19 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
   const [editingItems, setEditingItems] = useState<InvoiceItemRow[]>([]);
   const [generatingChargeId, setGeneratingChargeId] = useState<string | null>(null);
   const [activeCharge, setActiveCharge] = useState<AsaasChargeData | null>(null);
+  const [storeData, setStoreData] = useState<StoreDetail | null>(null);
+  const [showBlock, setShowBlock] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showCancel, setShowCancel] = useState(false);
+
+  async function reloadStore(companyId: string) {
+    const { data } = await supabase
+      .from('companies')
+      .select('id, name, cnpj, phone, login_email, active, address_street, address_number, address_neighborhood, reseller_id, created_at, serial, license_status, license_block_reason, license_block_message, next_invoice_due_day')
+      .eq('id', companyId)
+      .maybeSingle();
+    if (data) setStoreData(data as any);
+  }
 
   async function handleGenerateOrShowCharge(invoice: Invoice) {
     setGeneratingChargeId(invoice.id);
@@ -122,8 +145,10 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
       setInvoices([]);
       setPlan(null);
       setReseller(null);
+      setStoreData(null);
       return;
     }
+    setStoreData(store);
     void loadData(store.id, store.reseller_id);
   }, [store?.id]);
 
@@ -204,31 +229,78 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
     return days > 3;
   });
 
+  const currentStore = storeData || store;
+  const licenseStatus = currentStore?.license_status || 'active';
+  const isManuallyBlocked = licenseStatus === 'blocked';
+  const isCanceled = licenseStatus === 'canceled';
+
   return (
     <>
       <Dialog open={!!store} onOpenChange={(o) => { if (!o) onClose(); }}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5" />
-              {store?.name}
-              {isSuspended && <Badge variant="destructive" className="ml-2">Bloqueada</Badge>}
-              {store?.active === false && !isSuspended && <Badge variant="outline">Inativa</Badge>}
-              {store?.active && !isSuspended && <Badge className="bg-green-100 text-green-800">Ativa</Badge>}
-            </DialogTitle>
-            <DialogDescription>
-              Detalhes da licença e histórico de mensalidades
-            </DialogDescription>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="flex items-center gap-2 flex-wrap">
+                  <Building2 className="w-5 h-5" />
+                  {currentStore?.name}
+                  {isCanceled && <Badge variant="destructive">Cancelada</Badge>}
+                  {!isCanceled && isManuallyBlocked && <Badge variant="destructive">Travada pela revenda</Badge>}
+                  {!isCanceled && !isManuallyBlocked && isSuspended && <Badge variant="destructive">Bloqueada</Badge>}
+                  {!isCanceled && !isManuallyBlocked && currentStore?.active === false && !isSuspended && <Badge variant="outline">Inativa</Badge>}
+                  {!isCanceled && !isManuallyBlocked && currentStore?.active && !isSuspended && <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Ativa</Badge>}
+                </DialogTitle>
+                <DialogDescription>
+                  Detalhes da licença e histórico de mensalidades
+                </DialogDescription>
+              </div>
+              {currentStore && !isCanceled && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="gap-1.5 mr-6">
+                      <Settings className="w-4 h-4" />
+                      Ações da licença
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={() => setShowBlock(true)}>
+                      <Lock className="w-4 h-4 mr-2" />
+                      {isManuallyBlocked ? 'Liberar acesso' : 'Trava da revenda'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowEdit(true)}>
+                      <FileEdit className="w-4 h-4 mr-2" />
+                      Editar licença
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setShowCancel(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Ban className="w-4 h-4 mr-2" />
+                      Cancelar licença
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </DialogHeader>
 
           {/* Identity / contact */}
           <Card>
             <CardContent className="pt-4 space-y-2 text-sm">
-              {store?.serial && (
+              {currentStore?.serial && (
                 <div className="flex items-center gap-2 p-2 rounded-md bg-muted border">
                   <span className="text-muted-foreground text-xs uppercase tracking-wide">Serial:</span>
-                  <span className="font-mono font-bold text-base tracking-wider select-all">{store.serial}</span>
+                  <span className="font-mono font-bold text-base tracking-wider select-all">{currentStore.serial}</span>
                   <span className="text-xs text-muted-foreground ml-auto">único e intransferível</span>
+                </div>
+              )}
+              {isManuallyBlocked && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-sm space-y-0.5">
+                  <p><span className="font-semibold">Trava da revenda:</span> {currentStore?.license_block_reason || '—'}</p>
+                  {currentStore?.license_block_message && (
+                    <p className="text-muted-foreground text-xs">{currentStore.license_block_message}</p>
+                  )}
                 </div>
               )}
               {canEdit && (
@@ -246,22 +318,22 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">CNPJ:</span>
-                  <span className="font-medium">{store?.cnpj || '—'}</span>
+                  <span className="font-medium">{currentStore?.cnpj || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="font-medium">{store?.phone || '—'}</span>
+                  <span className="font-medium">{currentStore?.phone || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="font-medium">{store?.login_email || '—'}</span>
+                  <span className="font-medium">{currentStore?.login_email || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="text-muted-foreground">Ativada em:</span>
                   <span className="font-medium">
                     {(() => {
-                      const dateStr = plan?.activated_at || plan?.starts_at || store?.created_at;
+                      const dateStr = plan?.activated_at || plan?.starts_at || currentStore?.created_at;
                       return dateStr
                         ? format(new Date(dateStr), 'dd/MM/yyyy', { locale: ptBR })
                         : '—';
@@ -280,7 +352,7 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
                 <div className="flex items-center gap-2 sm:col-span-2">
                   <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>
-                    {[store?.address_street, store?.address_number, store?.address_neighborhood]
+                    {[currentStore?.address_street, currentStore?.address_number, currentStore?.address_neighborhood]
                       .filter(Boolean)
                       .join(', ') || '—'}
                   </span>
@@ -397,6 +469,30 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
         charge={activeCharge}
         onClose={() => setActiveCharge(null)}
         onUpdated={() => store && loadData(store.id)}
+      />
+
+      <BlockLicenseDialog
+        open={showBlock}
+        onClose={() => setShowBlock(false)}
+        store={currentStore as any}
+        onSaved={() => currentStore && reloadStore(currentStore.id)}
+      />
+
+      <EditLicenseDialog
+        open={showEdit}
+        onClose={() => setShowEdit(false)}
+        store={currentStore as any}
+        onSaved={() => currentStore && reloadStore(currentStore.id)}
+      />
+
+      <CancelLicenseDialog
+        open={showCancel}
+        onClose={() => setShowCancel(false)}
+        store={currentStore as any}
+        onSaved={() => {
+          if (currentStore) reloadStore(currentStore.id);
+          onClose();
+        }}
       />
     </>
   );

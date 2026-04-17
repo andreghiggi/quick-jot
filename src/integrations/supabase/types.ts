@@ -246,9 +246,17 @@ export type Database = {
           created_at: string | null
           id: string
           initial_password: string | null
+          license_block_message: string | null
+          license_block_reason: string | null
+          license_blocked_at: string | null
+          license_blocked_by: string | null
+          license_canceled_at: string | null
+          license_canceled_by: string | null
+          license_status: string
           login_email: string | null
           logo_url: string | null
           name: string
+          next_invoice_due_day: number | null
           phone: string | null
           razao_social: string | null
           reseller_id: string | null
@@ -276,9 +284,17 @@ export type Database = {
           created_at?: string | null
           id?: string
           initial_password?: string | null
+          license_block_message?: string | null
+          license_block_reason?: string | null
+          license_blocked_at?: string | null
+          license_blocked_by?: string | null
+          license_canceled_at?: string | null
+          license_canceled_by?: string | null
+          license_status?: string
           login_email?: string | null
           logo_url?: string | null
           name: string
+          next_invoice_due_day?: number | null
           phone?: string | null
           razao_social?: string | null
           reseller_id?: string | null
@@ -306,9 +322,17 @@ export type Database = {
           created_at?: string | null
           id?: string
           initial_password?: string | null
+          license_block_message?: string | null
+          license_block_reason?: string | null
+          license_blocked_at?: string | null
+          license_blocked_by?: string | null
+          license_canceled_at?: string | null
+          license_canceled_by?: string | null
+          license_status?: string
           login_email?: string | null
           logo_url?: string | null
           name?: string
+          next_invoice_due_day?: number | null
           phone?: string | null
           razao_social?: string | null
           reseller_id?: string | null
