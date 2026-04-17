@@ -83,7 +83,7 @@ export default function CustomerReport() {
 
       // Helper para paginar consultas (Supabase limita a 1000 linhas por requisição)
       const fetchAll = async <T,>(
-        build: (from: number, to: number) => Promise<{ data: T[] | null; error: any }>
+        build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>
       ): Promise<T[]> => {
         const pageSize = 1000;
         let from = 0;
