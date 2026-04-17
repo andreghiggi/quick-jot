@@ -121,30 +121,37 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
     if (!store) {
       setInvoices([]);
       setPlan(null);
+      setReseller(null);
       return;
     }
-    void loadData(store.id);
+    void loadData(store.id, store.reseller_id);
   }, [store?.id]);
 
-  async function loadData(companyId: string) {
+  async function loadData(companyId: string, resellerId: string | null) {
     setLoading(true);
-    const [invRes, planRes] = await Promise.all([
+    const [invRes, planRes, resellerRes] = await Promise.all([
       supabase
         .from('reseller_invoices')
         .select('*')
         .eq('company_id', companyId)
         .order('month', { ascending: false }),
-      // We still query company_plans only to read the activation date as a reference,
-      // since plans/trial are no longer surfaced in the UI.
       supabase
         .from('company_plans')
         .select('plan_name, active, activated_at, expires_at, starts_at')
         .eq('company_id', companyId)
         .maybeSingle(),
+      resellerId
+        ? supabase
+            .from('resellers')
+            .select('name, email')
+            .eq('id', resellerId)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
     setInvoices((invRes.data as any[]) || []);
     setPlan((planRes.data as Plan) || null);
+    setReseller((resellerRes.data as any) || null);
     setLoading(false);
   }
 
