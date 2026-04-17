@@ -631,9 +631,9 @@ export default function ResellersPage() {
                                 size="icon"
                                 className="h-7 w-7"
                                 onClick={() => toggleExpand(r.id)}
-                                title={isOpen ? 'Recolher lojas' : 'Ver lojas'}
+                                title={isOpen ? 'Recolher lojas' : 'Ver lojas do revendedor'}
                               >
-                                {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                <Eye className="w-4 h-4" />
                               </Button>
                             </TableCell>
                             <TableCell>
