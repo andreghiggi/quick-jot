@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.10"  # layout V2: item na mesma linha, adicionais em negrito e observações com rótulo invertido
+SCRIPT_VERSION = "v8.11"  # adiciona 6 linhas em branco no fim do pedido (espaço para corte)
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -745,6 +745,9 @@ def imprimir_html(html, order_number):
             for sublinha in quebrar_linha(stripped_clean, colunas):
                 hDC.TextOut(margin_x, y, sublinha)
                 y += line_h
+
+        # Espaço para corte: 6 linhas em branco ao final do pedido
+        y += line_h * 6
 
         hDC.EndPage()
         hDC.EndDoc()
