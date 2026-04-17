@@ -11,10 +11,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Loader2, Search, Eye, RefreshCw, FileText } from 'lucide-react';
+import { Plus, Loader2, Search, Eye, RefreshCw, FileText, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { StoreDetailDialog, StoreDetail } from '@/components/reseller/StoreDetailDialog';
+import { CompanyModulesDialog } from '@/components/admin/CompanyModulesDialog';
 import { toast } from 'sonner';
 
 export default function ResellerLojas() {
@@ -27,6 +28,7 @@ export default function ResellerLojas() {
   const [isCreating, setIsCreating] = useState(false);
   const [isBackfilling, setIsBackfilling] = useState(false);
   const [selectedStore, setSelectedStore] = useState<StoreDetail | null>(null);
+  const [modulesCompany, setModulesCompany] = useState<{ id: string; name: string } | null>(null);
 
   // form state — Empresa
   const [newName, setNewName] = useState('');
