@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '17/04/2026',
+    version: '1.26.9',
+    type: 'fix',
+    description: 'Impressão automática v8.19: corrigida a caixa do cabeçalho que não saía no pedido principal e eliminadas as folhas em branco extras. A página só é iniciada quando há conteúdo real para imprimir e a margem inferior de corte não força mais nova página.',
+  },
+  {
     date: '16/04/2026',
     version: '1.26.8',
     type: 'fix',

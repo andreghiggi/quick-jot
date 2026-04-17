@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.18"  # impede quebra de página dentro da caixa do cabeçalho (não gera mais 2 impressões)
+SCRIPT_VERSION = "v8.19"  # corrige caixa do cabeçalho no pedido principal e elimina páginas em branco extras
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -618,16 +618,24 @@ def imprimir_html(html, order_number):
         line_h = tm['tmHeight'] + tm['tmExternalLeading'] + int(tm['tmHeight'] * 0.1)
 
         hDC.StartDoc(f"Pedido {order_number}")
-        hDC.StartPage()
+        # StartPage será chamado de forma lazy ao primeiro desenho
+        page_started = {'value': False}
 
         y = margin_y
         # Estado mutável compartilhado entre closures
         box_state = {'active': False}
 
+        def ensure_page():
+            """Inicia uma página apenas quando há algo para desenhar (evita página em branco)."""
+            if not page_started['value']:
+                hDC.StartPage()
+                page_started['value'] = True
+
         def nova_pagina():
             nonlocal y
-            hDC.EndPage()
-            hDC.StartPage()
+            if page_started['value']:
+                hDC.EndPage()
+                page_started['value'] = False
             y = margin_y
 
         def garantir_espaco(altura_necessaria):
@@ -635,10 +643,12 @@ def imprimir_html(html, order_number):
             # Não quebra página enquanto a caixa do cabeçalho está ativa
             # (evita borda incompleta + páginas extras)
             if box_state['active']:
+                ensure_page()
                 return
             limite = page_h - margin_y
             if y + altura_necessaria > limite:
                 nova_pagina()
+            ensure_page()
 
         def quebrar_linha(texto, largura):
             """Quebra texto em múltiplas linhas respeitando palavras (word-wrap)."""
@@ -744,6 +754,7 @@ def imprimir_html(html, order_number):
 
             # CABEÇALHO EM CAIXA — início: marca posição Y atual e adiciona padding superior
             if stripped == '[BOX_START]':
+                ensure_page()
                 y += box_pad_y
                 box_top_y = y
                 box_state['active'] = True
@@ -766,8 +777,11 @@ def imprimir_html(html, order_number):
 
 
             if not stripped:
-                garantir_espaco(int(line_h * 0.5))
-                y += int(line_h * 0.5)
+                # Linha em branco apenas avança y; não dispara início de página
+                if page_started['value']:
+                    limite = page_h - margin_y
+                    if y + int(line_h * 0.5) <= limite:
+                        y += int(line_h * 0.5)
                 i += 1
                 continue
 
@@ -921,11 +935,16 @@ def imprimir_html(html, order_number):
                 y += line_h
             i += 1
 
-        # Espaço para corte: 6 linhas em branco ao final do pedido
-        garantir_espaco(line_h * 6)
-        y += line_h * 6
+        # Margem inferior leve para corte (sem forçar nova página).
+        # Se não couber na página atual, simplesmente ignoramos — a impressora
+        # térmica já avança o papel naturalmente após EndPage.
+        limite_final = page_h - margin_y
+        if y + line_h * 3 <= limite_final:
+            y += line_h * 3
 
-        hDC.EndPage()
+        # Só finaliza a página se realmente houve desenho — evita folha em branco extra
+        if page_started['value']:
+            hDC.EndPage()
         hDC.EndDoc()
         hDC.DeleteDC()
 
