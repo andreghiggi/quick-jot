@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.14',
+    type: 'improvement',
+    description: 'Impressão automática v8.24: modo compacto liberado para TODAS as lojas que utilizam o layout v2. Espaçamento entre linhas reduzido em 15%, margens superior/inferior pela metade e rodapé final encurtado, gerando ~25% de economia de papel sem perda de legibilidade.',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.13',
     type: 'fix',
     description: 'Impressão automática v8.23: corrigido o modo compacto v2 que não estava sendo aplicado na Lancheria da i9. A variável global COMPANY_ID agora é populada corretamente após a resolução do slug, ativando a economia de papel (~25%) prevista no v8.22.',
