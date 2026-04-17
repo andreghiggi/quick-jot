@@ -777,8 +777,11 @@ def imprimir_html(html, order_number):
 
 
             if not stripped:
-                garantir_espaco(int(line_h * 0.5))
-                y += int(line_h * 0.5)
+                # Linha em branco apenas avança y; não dispara início de página
+                if page_started['value']:
+                    limite = page_h - margin_y
+                    if y + int(line_h * 0.5) <= limite:
+                        y += int(line_h * 0.5)
                 i += 1
                 continue
 
