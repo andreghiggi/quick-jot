@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Loader2, Search, Eye, RefreshCw, FileText, Settings } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { StoreDetailDialog, StoreDetail } from '@/components/reseller/StoreDetailDialog';
@@ -53,6 +54,8 @@ export default function ResellerLojas() {
   const [respPhone, setRespPhone] = useState('');
   // form state — Pagamento da ativação
   const [paymentOption, setPaymentOption] = useState<'now' | '30_days' | '3x_no_entry' | '3x_entry'>('now');
+  // form state — Vencimento das mensalidades desta loja
+  const [dueDay, setDueDay] = useState<string>('20');
 
   function generateSlug(name: string): string {
     return name
@@ -70,6 +73,7 @@ export default function ResellerLojas() {
     setNewNeighborhood(''); setNewCity(''); setNewState('');
     setRespName(''); setRespCpf(''); setRespRg(''); setRespEmail(''); setRespPhone('');
     setPaymentOption('now');
+    setDueDay('20');
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -121,6 +125,7 @@ export default function ResellerLojas() {
       responsible_email: respEmail.trim(),
       responsible_phone: respPhone.trim(),
       activation_payment_option: paymentOption,
+      next_invoice_due_day: Number(dueDay),
     });
 
     if (success) {
