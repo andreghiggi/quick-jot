@@ -26,6 +26,7 @@ import {
   FolderOpen,
   BarChart3,
   UserCheck,
+  Megaphone,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -193,6 +194,11 @@ export function AppSidebar() {
       title: 'Dados da Empresa',
       icon: FileText,
       href: '/admin/dados-empresa',
+    },
+    {
+      title: 'Campanhas (config)',
+      icon: Megaphone,
+      href: '/admin/campanhas-config',
     },
   ];
 
