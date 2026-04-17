@@ -378,7 +378,7 @@ export default function ResellerLojas() {
                       className={`text-left rounded-md border p-2 text-xs transition ${paymentOption === '3x_no_entry' ? 'border-primary bg-background ring-1 ring-primary' : 'bg-background/60 hover:bg-background'}`}
                     >
                       <div className="font-semibold text-sm">Sem entrada</div>
-                      <div className="text-muted-foreground mt-1">3 parcelas a partir do próximo mês (dia {settings?.invoice_due_day ?? 20}). +R$15 cada.</div>
+                      <div className="text-muted-foreground mt-1">3 parcelas a partir do próximo mês (dia {dueDay}). +R$15 cada.</div>
                     </button>
                     <button
                       type="button"
@@ -404,8 +404,8 @@ export default function ResellerLojas() {
                     </span>
                   </div>
                   <div className="flex justify-between text-muted-foreground text-xs">
-                    <span>Vencimento padrão:</span>
-                    <span>Dia {settings.invoice_due_day} de cada mês</span>
+                    <span>Vencimento desta loja:</span>
+                    <span>Dia {dueDay} de cada mês</span>
                   </div>
                 </CardContent>
               </Card>
