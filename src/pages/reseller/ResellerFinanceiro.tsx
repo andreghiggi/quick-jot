@@ -37,10 +37,14 @@ interface InvoiceItem {
 
 export default function ResellerFinanceiro() {
   const { reseller, settings, stats, loading } = useResellerPortal();
+  const { isSuperAdmin } = useAuthContext();
+  const canEdit = isSuperAdmin();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoiceItems, setInvoiceItems] = useState<Record<string, InvoiceItem[]>>({});
   const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
+  const [editingInvoice, setEditingInvoice] = useState<InvoiceForEdit | null>(null);
+  const [editingItems, setEditingItems] = useState<InvoiceItemRow[]>([]);
 
   useEffect(() => {
     if (!reseller) return;
