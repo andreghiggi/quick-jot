@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.15',
+    type: 'feature',
+    description: 'Cadastro de revendedor agora cria automaticamente o login de acesso ao portal. O super admin define a senha inicial no formulário e o revendedor já pode entrar usando o e-mail do responsável. Validação de campos obrigatórios passou a exibir aviso visível em toast.',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.14',
     type: 'improvement',
     description: 'Impressão automática v8.24: modo compacto liberado para TODAS as lojas que utilizam o layout v2. Espaçamento entre linhas reduzido em 15%, margens superior/inferior pela metade e rodapé final encurtado, gerando ~25% de economia de papel sem perda de legibilidade.',

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useResellers, ResellerFormData } from '@/hooks/useResellers';
@@ -95,6 +96,7 @@ export default function ResellersPage() {
     address_city: '', address_state: '', address_cep: '',
     responsible_name: '', responsible_email: '', responsible_phone: '',
     due_day: '10', activation_fee: '180.00', monthly_fee: '29.90',
+    login_password: '',
   });
 
   function setField(key: string, value: string) {
@@ -109,6 +111,7 @@ export default function ResellersPage() {
       address_city: '', address_state: '', address_cep: '',
       responsible_name: '', responsible_email: '', responsible_phone: '',
       due_day: '10', activation_fee: '180.00', monthly_fee: '29.90',
+      login_password: '',
     });
     setErrors({});
   }
@@ -133,13 +136,14 @@ export default function ResellersPage() {
       due_day: String(r.settings?.invoice_due_day || 10),
       activation_fee: String(r.settings?.activation_fee || 180),
       monthly_fee: String(r.settings?.monthly_fee || 29.90),
+      login_password: '',
     });
     setEditingReseller(resellerId);
     setErrors({});
     setIsEditOpen(true);
   }
 
-  function validate(): boolean {
+  function validate(isCreate: boolean): boolean {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = 'Razão Social é obrigatória';
     const cnpjDigits = form.cnpj.replace(/\D/g, '');
@@ -157,6 +161,11 @@ export default function ResellersPage() {
     else if (!validateFullName(form.responsible_name)) e.responsible_name = 'Informe nome e sobrenome';
     if (!form.responsible_email.trim()) e.responsible_email = 'E-mail do responsável é obrigatório';
     if (!form.responsible_phone.replace(/\D/g, '')) e.responsible_phone = 'Telefone do responsável é obrigatório';
+    if (isCreate) {
+      if (!form.login_password || form.login_password.length < 6) {
+        e.login_password = 'Senha deve ter pelo menos 6 caracteres';
+      }
+    }
     setErrors(e);
     if (Object.keys(e).length > 0) {
       const firstError = Object.keys(e)[0];
@@ -166,6 +175,7 @@ export default function ResellersPage() {
         address_city: 'Cidade', address_state: 'Estado', address_cep: 'CEP',
         responsible_name: 'Nome do responsável', responsible_email: 'E-mail do responsável',
         responsible_phone: 'WhatsApp do responsável',
+        login_password: 'Senha de acesso',
       };
       toast.error(`${labels[firstError] || firstError}: ${e[firstError]}`);
       return false;
@@ -197,16 +207,34 @@ export default function ResellersPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!validate() || !user) return;
+    if (!validate(true) || !user) return;
     setIsSaving(true);
-    const success = await createReseller(buildData(), user.id);
-    if (success) { setIsCreateOpen(false); resetForm(); }
+    const newResellerId = await createReseller(buildData(), user.id);
+    if (newResellerId) {
+      // Create login user via edge function
+      const { data: invokeData, error: invokeErr } = await supabase.functions.invoke('create-reseller-user', {
+        body: {
+          reseller_id: newResellerId,
+          email: form.responsible_email.trim(),
+          password: form.login_password,
+          full_name: form.responsible_name.trim(),
+        },
+      });
+      if (invokeErr || (invokeData as any)?.error) {
+        const msg = (invokeData as any)?.error || invokeErr?.message || 'Erro ao criar login';
+        toast.error(`Revendedor criado, mas falhou ao criar login: ${msg}`);
+      } else {
+        toast.success('Login do revendedor criado com sucesso!');
+      }
+      setIsCreateOpen(false);
+      resetForm();
+    }
     setIsSaving(false);
   }
 
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault();
-    if (!validate() || !editingReseller) return;
+    if (!validate(false) || !editingReseller) return;
     setIsSaving(true);
     const success = await updateReseller(editingReseller, buildData());
     if (success) { setIsEditOpen(false); setEditingReseller(null); resetForm(); }
@@ -374,6 +402,35 @@ export default function ResellersPage() {
             </div>
           </div>
         </div>
+
+        {!isEditOpen && (
+          <>
+            <Separator />
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Acesso ao Portal</h3>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>E-mail de login</Label>
+                  <Input value={form.responsible_email} disabled placeholder="Será o e-mail do responsável acima" />
+                  <p className="text-xs text-muted-foreground">O revendedor usará o e-mail do responsável para entrar.</p>
+                </div>
+                <div className="space-y-1">
+                  <Label>Senha de acesso *</Label>
+                  <Input
+                    type="text"
+                    value={form.login_password}
+                    onChange={e => setField('login_password', e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    disabled={isSaving}
+                    autoComplete="new-password"
+                  />
+                  <ErrorMsg field="login_password" />
+                  <p className="text-xs text-muted-foreground">Anote esta senha — ela será usada pelo revendedor no primeiro acesso.</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </ScrollArea>
   );
