@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.20',
+    type: 'feature',
+    description: 'Faturas individuais por loja: cada loja vinculada a um revendedor agora gera sua própria fatura mensal (não mais uma fatura agregada). O painel Financeiro do revendedor lista as lojas com status (Em dia / Aberta / Vencida / Bloqueada) e ao clicar abre a tela de detalhes estilo Gdoor com dados da licença, plano, contato e histórico completo de mensalidades. Bloqueio automático: 3 dias após o vencimento sem pagamento, a loja é suspensa e o usuário vê uma tela de bloqueio com botão direto para falar com o revendedor no WhatsApp; ao quitar a fatura, o acesso é restaurado automaticamente. Geração e cobrança rodam por cron (mensal no dia 1 às 03h e processamento diário às 08h).',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.19',
     type: 'feature',
     description: 'Faturas dos revendedores agora são editáveis pelo Super Admin (via "Acessar painel" → Financeiro → ✏️). É possível alterar valor, dias e descrição de cada item, adicionar/remover linhas, mudar vencimento e status, ou substituir o total manualmente. O cálculo proporcional ao vincular lojas existentes passou a usar a data de ativação do plano: lojas ativadas antes do mês cobram mês cheio; ativadas dentro do mês cobram apenas os dias restantes desde a ativação.',
