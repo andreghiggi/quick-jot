@@ -608,8 +608,11 @@ def imprimir_html(html, order_number):
         is_80mm = PAPER_SIZE == '80mm'
         colunas = 24 if is_80mm else 20
         font_height = int(page_w / colunas * 2.0)
+        # MODO COMPACTO V2: economia de papel para empresas selecionadas (apenas no layout v2)
+        compact_v2 = (PRINT_LAYOUT == 'v2') and (COMPANY_ID in COMPACT_V2_COMPANY_IDS)
+        margin_factor = 0.02 if compact_v2 else 0.04  # margem cai pela metade
         margin_x = int(dpi_x * 0.04)  # ~1mm margem mínima
-        margin_y = int(dpi_y * 0.04)
+        margin_y = int(dpi_y * margin_factor)
 
         font_normal = win32ui.CreateFont({
             'name': 'Courier New',
@@ -633,9 +636,10 @@ def imprimir_html(html, order_number):
         })
         hDC.SelectObject(font_normal)
 
-        # Altura da linha
+        # Altura da linha (compacta -15% no modo economia)
         tm = hDC.GetTextMetrics()
-        line_h = tm['tmHeight'] + tm['tmExternalLeading'] + int(tm['tmHeight'] * 0.1)
+        line_h_base = tm['tmHeight'] + tm['tmExternalLeading'] + int(tm['tmHeight'] * 0.1)
+        line_h = int(line_h_base * 0.85) if compact_v2 else line_h_base
 
         hDC.StartDoc(f"Pedido {order_number}")
         # StartPage será chamado de forma lazy ao primeiro desenho
