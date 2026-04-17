@@ -246,6 +246,38 @@ export default function ResellersPage() {
     setIsSaving(false);
   }
 
+  async function handleCreateAccess(e: React.FormEvent) {
+    e.preventDefault();
+    if (!accessReseller) return;
+    if (!accessReseller.email) {
+      toast.error('Revendedor sem e-mail do responsável. Edite o cadastro primeiro.');
+      return;
+    }
+    if (!accessPassword || accessPassword.length < 6) {
+      toast.error('Senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    setIsCreatingAccess(true);
+    const { data, error } = await supabase.functions.invoke('create-reseller-user', {
+      body: {
+        reseller_id: accessReseller.id,
+        email: accessReseller.email,
+        password: accessPassword,
+        full_name: accessReseller.name,
+      },
+    });
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || 'Erro ao criar acesso');
+    } else {
+      toast.success('Acesso criado com sucesso!');
+      setAccessReseller(null);
+      setAccessPassword('');
+      // Refresh list to update user_id
+      window.location.reload();
+    }
+    setIsCreatingAccess(false);
+  }
+
   const filteredResellers = resellers.filter(r =>
     r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     r.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
