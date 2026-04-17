@@ -7,96 +7,69 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Loader2, DollarSign, Clock, AlertCircle, FileText, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
-import { getMonthLabel } from '@/services/resellerBilling';
+import { Loader2, DollarSign, Clock, FileText, Eye, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { InvoiceEditDialog, InvoiceForEdit, InvoiceItemRow } from '@/components/reseller/InvoiceEditDialog';
+import { StoreDetailDialog, StoreDetail } from '@/components/reseller/StoreDetailDialog';
 
-interface Invoice {
+interface CompanyRow {
   id: string;
-  reseller_id: string;
+  name: string;
+  cnpj: string | null;
+  phone: string | null;
+  login_email: string | null;
+  active: boolean;
+  address_street: string | null;
+  address_number: string | null;
+  address_neighborhood: string | null;
+  reseller_id: string | null;
+}
+
+interface InvoiceRow {
+  id: string;
+  company_id: string;
   month: string;
   due_date: string;
   total_value: number;
   status: string;
   paid_at: string | null;
-  payment_method: string | null;
-  created_at: string;
-}
-
-interface InvoiceItem {
-  id: string;
-  invoice_id: string;
-  company_id: string | null;
-  company_name: string;
-  type: string;
-  value: number;
-  days_counted: number | null;
 }
 
 export default function ResellerFinanceiro() {
   const { reseller, settings, stats, loading } = useResellerPortal();
   const { isSuperAdmin } = useAuthContext();
   const canEdit = isSuperAdmin();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [invoiceItems, setInvoiceItems] = useState<Record<string, InvoiceItem[]>>({});
-  const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null);
-  const [loadingInvoices, setLoadingInvoices] = useState(true);
-  const [editingInvoice, setEditingInvoice] = useState<InvoiceForEdit | null>(null);
-  const [editingItems, setEditingItems] = useState<InvoiceItemRow[]>([]);
+
+  const [companies, setCompanies] = useState<CompanyRow[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [selectedStore, setSelectedStore] = useState<StoreDetail | null>(null);
 
   useEffect(() => {
     if (!reseller) return;
-    fetchInvoices();
+    void fetchData();
   }, [reseller]);
 
-  async function fetchInvoices() {
+  async function fetchData() {
     if (!reseller) return;
-    setLoadingInvoices(true);
-    const { data } = await supabase
-      .from('reseller_invoices')
-      .select('*')
-      .eq('reseller_id', reseller.id)
-      .order('month', { ascending: false });
+    setLoadingData(true);
 
-    setInvoices((data as any[]) || []);
-    setLoadingInvoices(false);
-  }
+    const [companiesRes, invoicesRes] = await Promise.all([
+      supabase
+        .from('companies')
+        .select('id, name, cnpj, phone, login_email, active, address_street, address_number, address_neighborhood, reseller_id')
+        .eq('reseller_id', reseller.id)
+        .order('name'),
+      supabase
+        .from('reseller_invoices')
+        .select('id, company_id, month, due_date, total_value, status, paid_at')
+        .eq('reseller_id', reseller.id)
+        .order('due_date', { ascending: false }),
+    ]);
 
-  async function fetchItems(invoiceId: string) {
-    if (invoiceItems[invoiceId]) {
-      setExpandedInvoice(expandedInvoice === invoiceId ? null : invoiceId);
-      return;
-    }
-    const { data } = await supabase
-      .from('reseller_invoice_items')
-      .select('*')
-      .eq('invoice_id', invoiceId);
-
-    setInvoiceItems(prev => ({ ...prev, [invoiceId]: (data as any[]) || [] }));
-    setExpandedInvoice(invoiceId);
-  }
-
-  async function openEdit(invoice: Invoice) {
-    const { data } = await supabase
-      .from('reseller_invoice_items')
-      .select('*')
-      .eq('invoice_id', invoice.id);
-    setEditingItems((data as any[]) || []);
-    setEditingInvoice(invoice as InvoiceForEdit);
-  }
-
-  async function handleSaved() {
-    // Refresh invoice list and any expanded items
-    await fetchInvoices();
-    if (editingInvoice) {
-      const { data } = await supabase
-        .from('reseller_invoice_items')
-        .select('*')
-        .eq('invoice_id', editingInvoice.id);
-      setInvoiceItems(prev => ({ ...prev, [editingInvoice.id]: (data as any[]) || [] }));
-    }
+    setCompanies((companiesRes.data as any[]) || []);
+    setInvoices((invoicesRes.data as any[]) || []);
+    setLoadingData(false);
   }
 
   if (loading) {
@@ -107,16 +80,30 @@ export default function ResellerFinanceiro() {
     );
   }
 
-  const monthlyFee = settings?.monthly_fee || 29.90;
-  const activeCount = stats.totalActive;
-  const nextInvoiceValue = activeCount * monthlyFee;
-  const dueDay = settings?.invoice_due_day || 10;
-
-  const now = new Date();
-  let nextDueDate = new Date(now.getFullYear(), now.getMonth(), dueDay);
-  if (nextDueDate <= now) {
-    nextDueDate = new Date(now.getFullYear(), now.getMonth() + 1, dueDay);
-  }
+  // Aggregate per store
+  const storeRows = companies.map(c => {
+    const myInvoices = invoices.filter(i => i.company_id === c.id);
+    const open = myInvoices.filter(i => i.status === 'pending' || i.status === 'overdue');
+    const totalOpen = open.reduce((s, i) => s + Number(i.total_value), 0);
+    const lastOpen = open.sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    let storeStatus: 'paid' | 'pending' | 'overdue' | 'blocked' = 'paid';
+    if (lastOpen) {
+      const due = new Date(lastOpen.due_date + 'T12:00:00');
+      const diffDays = (today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24);
+      if (diffDays > 3) storeStatus = 'blocked';
+      else if (diffDays > 0) storeStatus = 'overdue';
+      else storeStatus = 'pending';
+    }
+    return {
+      company: c,
+      invoiceCount: myInvoices.length,
+      totalOpen,
+      nextDue: lastOpen?.due_date || null,
+      storeStatus,
+    };
+  });
 
   const totalPaid = invoices
     .filter(i => i.status === 'paid')
@@ -126,25 +113,20 @@ export default function ResellerFinanceiro() {
     .filter(i => i.status === 'pending' || i.status === 'overdue')
     .reduce((sum, i) => sum + Number(i.total_value), 0);
 
-  const hasIntegration = !!settings?.asaas_api_key;
+  const monthlyFee = settings?.monthly_fee || 29.90;
+  const nextInvoiceValue = stats.totalActive * monthlyFee;
+  const dueDay = settings?.invoice_due_day || 10;
 
-  function getStatusBadge(status: string) {
+  function getStoreStatusBadge(status: string) {
     switch (status) {
-      case 'paid':
-        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Pago</Badge>;
+      case 'blocked':
+        return <Badge variant="destructive">Bloqueada</Badge>;
       case 'overdue':
-        return <Badge variant="destructive">Vencido</Badge>;
+        return <Badge variant="destructive">Vencida</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="text-yellow-700 border-yellow-400">Aberta</Badge>;
       default:
-        return <Badge variant="outline" className="text-yellow-700 border-yellow-400">Pendente</Badge>;
-    }
-  }
-
-  function getTypeLabel(type: string) {
-    switch (type) {
-      case 'activation': return 'Taxa de Ativação';
-      case 'monthly': return 'Mensalidade';
-      case 'prorated': return 'Proporcional';
-      default: return type;
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Em dia</Badge>;
     }
   }
 
@@ -155,7 +137,7 @@ export default function ResellerFinanceiro() {
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Próxima Fatura</CardTitle>
+              <CardTitle className="text-sm font-medium">Próximo Mês</CardTitle>
               <DollarSign className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -163,13 +145,13 @@ export default function ResellerFinanceiro() {
                 R$ {nextInvoiceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                Vencimento: dia {dueDay}/{String(nextDueDate.getMonth() + 1).padStart(2, '0')}
+                {stats.totalActive} loja(s) ativa(s) • venc. dia {dueDay}
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Pago</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Recebido</CardTitle>
               <DollarSign className="w-4 h-4 text-green-500" />
             </CardHeader>
             <CardContent>
@@ -183,7 +165,7 @@ export default function ResellerFinanceiro() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Pendente</CardTitle>
+              <CardTitle className="text-sm font-medium">Em Aberto</CardTitle>
               <Clock className="w-4 h-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
@@ -197,116 +179,85 @@ export default function ResellerFinanceiro() {
           </Card>
         </section>
 
-        {/* Invoices */}
+        {/* Stores with invoices */}
         <Card>
           <CardHeader>
-            <CardTitle>Faturas</CardTitle>
-            <CardDescription>Histórico de cobranças e pagamentos</CardDescription>
+            <CardTitle>Lojas e Mensalidades</CardTitle>
+            <CardDescription>
+              Cada loja tem sua própria fatura. Clique em uma linha para ver os detalhes e o histórico.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {loadingInvoices ? (
+            {loadingData ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
-            ) : invoices.length === 0 ? (
-              <div className="text-center py-12 space-y-4">
+            ) : storeRows.length === 0 ? (
+              <div className="text-center py-12 space-y-2">
                 <FileText className="w-12 h-12 text-muted-foreground mx-auto" />
-                <div>
-                  <h3 className="text-lg font-semibold">Nenhuma fatura</h3>
-                  <p className="text-sm text-muted-foreground max-w-md mx-auto mt-2">
-                    As faturas serão geradas automaticamente no início de cada mês com base nas lojas ativas.
-                  </p>
-                </div>
-                {!hasIntegration && (
-                  <Badge variant="outline" className="text-sm">
-                    Integração Asaas • Em breve
-                  </Badge>
-                )}
+                <h3 className="text-lg font-semibold">Nenhuma loja vinculada</h3>
+                <p className="text-sm text-muted-foreground">
+                  Vincule lojas em "Lojas" para começar a gerar mensalidades.
+                </p>
               </div>
             ) : (
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Mês</TableHead>
-                      <TableHead>Vencimento</TableHead>
+                      <TableHead>Loja</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                      <TableHead>Pagamento</TableHead>
-                      <TableHead className="text-right">Detalhes</TableHead>
+                      <TableHead>Próximo Vencimento</TableHead>
+                      <TableHead className="text-right">Em Aberto</TableHead>
+                      <TableHead className="text-center">Faturas</TableHead>
+                      <TableHead className="text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoices.map(invoice => (
-                      <>
-                        <TableRow key={invoice.id}>
-                          <TableCell className="font-medium">
-                            {getMonthLabel(invoice.month)}
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(invoice.due_date + 'T12:00:00'), 'dd/MM/yyyy')}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            R$ {Number(invoice.total_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell>
-                            {invoice.paid_at
-                              ? format(new Date(invoice.paid_at), "dd/MM/yyyy", { locale: ptBR })
-                              : hasIntegration
-                                ? <Button size="sm" variant="outline" disabled>Pagar via PIX</Button>
-                                : <span className="text-xs text-muted-foreground">—</span>
-                            }
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              {canEdit && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => openEdit(invoice)}
-                                  title="Editar fatura"
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => fetchItems(invoice.id)}
-                              >
-                                {expandedInvoice === invoice.id ? (
-                                  <ChevronUp className="w-4 h-4" />
-                                ) : (
-                                  <ChevronDown className="w-4 h-4" />
-                                )}
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        {expandedInvoice === invoice.id && invoiceItems[invoice.id] && (
-                          <TableRow key={`${invoice.id}-items`}>
-                            <TableCell colSpan={6} className="bg-muted/50 p-0">
-                              <div className="px-6 py-3">
-                                <p className="text-xs font-semibold text-muted-foreground mb-2">Itens da fatura</p>
-                                <div className="space-y-1">
-                                  {invoiceItems[invoice.id].map(item => (
-                                    <div key={item.id} className="flex justify-between text-sm">
-                                      <span>
-                                        {item.company_name} — {getTypeLabel(item.type)}
-                                        {item.days_counted ? ` (${item.days_counted} dias)` : ''}
-                                      </span>
-                                      <span className="font-medium">
-                                        R$ {Number(item.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </>
+                    {storeRows.map(({ company, invoiceCount, totalOpen, nextDue, storeStatus }) => (
+                      <TableRow
+                        key={company.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedStore(company as StoreDetail)}
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="w-4 h-4 text-muted-foreground" />
+                            {company.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getStoreStatusBadge(storeStatus)}</TableCell>
+                        <TableCell>
+                          {nextDue
+                            ? format(new Date(nextDue + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })
+                            : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {totalOpen > 0 ? (
+                            <span className="text-yellow-600">
+                              R$ {totalOpen.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center text-sm text-muted-foreground">
+                          {invoiceCount}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedStore(company as StoreDetail);
+                            }}
+                            title="Ver detalhes"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                     ))}
                   </TableBody>
                 </Table>
@@ -316,11 +267,13 @@ export default function ResellerFinanceiro() {
         </Card>
       </div>
 
-      <InvoiceEditDialog
-        invoice={editingInvoice}
-        items={editingItems}
-        onClose={() => setEditingInvoice(null)}
-        onSaved={handleSaved}
+      <StoreDetailDialog
+        store={selectedStore}
+        canEdit={canEdit}
+        onClose={() => {
+          setSelectedStore(null);
+          void fetchData();
+        }}
       />
     </ResellerLayout>
   );

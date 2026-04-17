@@ -1318,6 +1318,7 @@ export type Database = {
       }
       reseller_invoices: {
         Row: {
+          company_id: string
           created_at: string
           due_date: string
           id: string
@@ -1330,6 +1331,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          company_id: string
           created_at?: string
           due_date: string
           id?: string
@@ -1342,6 +1344,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          company_id?: string
           created_at?: string
           due_date?: string
           id?: string
@@ -1354,6 +1357,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reseller_invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reseller_invoices_reseller_id_fkey"
             columns: ["reseller_id"]
@@ -2004,6 +2014,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_company_suspended: { Args: { _company_id: string }; Returns: boolean }
+      process_overdue_invoices: { Args: never; Returns: Json }
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
