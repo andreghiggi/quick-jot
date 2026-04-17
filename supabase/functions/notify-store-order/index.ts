@@ -72,15 +72,10 @@ serve(async (req) => {
       .eq('id', companyId)
       .single();
 
-    // ─── STORE NOTIFICATION: only send if explicitly enabled via store_settings ───
-    const { data: notifySetting } = await supabase
-      .from('store_settings')
-      .select('value')
-      .eq('company_id', companyId)
-      .eq('key', 'notify_store_whatsapp')
-      .maybeSingle();
-
-    const storeNotifyEnabled = notifySetting?.value === 'true';
+    // ─── STORE NOTIFICATION: DISABLED GLOBALLY ───
+    // Política da plataforma: nenhuma loja deve receber notificação de novo pedido
+    // no próprio WhatsApp do dono. As notificações ficam apenas no painel.
+    const storeNotifyEnabled = false;
     let storeNotifySent = false;
 
     if (storeNotifyEnabled && company?.phone) {
