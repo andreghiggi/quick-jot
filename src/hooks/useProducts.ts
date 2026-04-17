@@ -236,11 +236,15 @@ export function useProducts(options: UseProductsOptions = {}) {
   }
 
   function getActiveProducts(): Product[] {
+    return products.filter((p) => p.active);
+  }
+
+  function getMenuProducts(): Product[] {
     return products.filter((p) => p.active && p.menuItem !== false);
   }
 
   function getNewProducts(): Product[] {
-    return products.filter((p) => p.active && p.isNew);
+    return products.filter((p) => p.active && p.isNew && p.menuItem !== false);
   }
 
   async function toggleNewProduct(productId: string, isNew: boolean): Promise<boolean> {
