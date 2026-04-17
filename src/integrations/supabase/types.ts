@@ -257,6 +257,7 @@ export type Database = {
           responsible_name: string | null
           responsible_phone: string | null
           responsible_rg: string | null
+          serial: string
           slug: string
           updated_at: string | null
         }
@@ -286,6 +287,7 @@ export type Database = {
           responsible_name?: string | null
           responsible_phone?: string | null
           responsible_rg?: string | null
+          serial: string
           slug: string
           updated_at?: string | null
         }
@@ -315,6 +317,7 @@ export type Database = {
           responsible_name?: string | null
           responsible_phone?: string | null
           responsible_rg?: string | null
+          serial?: string
           slug?: string
           updated_at?: string | null
         }
@@ -2058,6 +2061,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_company_serial: { Args: never; Returns: string }
       get_next_daily_order_number: { Args: never; Returns: number }
       get_reseller_id: { Args: { _user_id: string }; Returns: string }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
