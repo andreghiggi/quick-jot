@@ -724,6 +724,7 @@ export default function ResellersPage() {
                                       <Table>
                                         <TableHeader>
                                           <TableRow>
+                                            <TableHead>Serial</TableHead>
                                             <TableHead>Loja</TableHead>
                                             <TableHead>Slug</TableHead>
                                             <TableHead>Status</TableHead>
@@ -733,6 +734,9 @@ export default function ResellersPage() {
                                         <TableBody>
                                           {lojas.map((c: any) => (
                                             <TableRow key={c.id}>
+                                              <TableCell className="font-mono text-xs font-bold tracking-wider select-all">
+                                                {c.serial || '—'}
+                                              </TableCell>
                                               <TableCell className="font-medium">{c.name}</TableCell>
                                               <TableCell className="text-xs text-muted-foreground">{c.slug}</TableCell>
                                               <TableCell>
