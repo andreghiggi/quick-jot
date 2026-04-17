@@ -101,22 +101,6 @@ export default function ResellerConfiguracoes() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSaveSettings} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Dia de vencimento da fatura</Label>
-                <Select value={dueDay} onValueChange={setDueDay} disabled={savingSettings}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">Dia 5</SelectItem>
-                    <SelectItem value="10">Dia 10</SelectItem>
-                    <SelectItem value="15">Dia 15</SelectItem>
-                    <SelectItem value="20">Dia 20</SelectItem>
-                    <SelectItem value="25">Dia 25</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Separator />
-
               {/* Read-only fees */}
               <div className="space-y-3">
                 <Label className="flex items-center gap-2">
