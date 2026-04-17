@@ -931,11 +931,16 @@ def imprimir_html(html, order_number):
                 y += line_h
             i += 1
 
-        # Espaço para corte: 6 linhas em branco ao final do pedido
-        garantir_espaco(line_h * 6)
-        y += line_h * 6
+        # Margem inferior leve para corte (sem forçar nova página).
+        # Se não couber na página atual, simplesmente ignoramos — a impressora
+        # térmica já avança o papel naturalmente após EndPage.
+        limite_final = page_h - margin_y
+        if y + line_h * 3 <= limite_final:
+            y += line_h * 3
 
-        hDC.EndPage()
+        # Só finaliza a página se realmente houve desenho — evita folha em branco extra
+        if page_started['value']:
+            hDC.EndPage()
         hDC.EndDoc()
         hDC.DeleteDC()
 
