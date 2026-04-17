@@ -135,15 +135,16 @@ export function EditLicenseDialog({ open, onClose, store, onSaved }: Props) {
 
           <div className="rounded-md border bg-muted/40 p-3 space-y-1.5">
             <Label htmlFor="ed-dueday">Dia de vencimento das próximas faturas</Label>
-            <Input
-              id="ed-dueday"
-              type="number"
-              min={1}
-              max={28}
-              placeholder="Ex: 10"
-              value={dueDay}
-              onChange={(e) => setDueDay(e.target.value)}
-            />
+            <Select value={dueDay} onValueChange={setDueDay}>
+              <SelectTrigger id="ed-dueday">
+                <SelectValue placeholder="Selecione um dia" />
+              </SelectTrigger>
+              <SelectContent>
+                {DUE_DAY_OPTIONS.map((d) => (
+                  <SelectItem key={d} value={String(d)}>Dia {d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground">
               Aplicado apenas às faturas geradas a partir de agora. Faturas já existentes mantêm a data atual.
             </p>
