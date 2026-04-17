@@ -623,8 +623,8 @@ export default function ResellersPage() {
                       const lojas = companiesByReseller[r.id] || [];
                       const loadingLojas = loadingCompanies.has(r.id);
                       return (
-                        <>
-                          <TableRow key={r.id}>
+                        <React.Fragment key={r.id}>
+                          <TableRow>
                             <TableCell>
                               <Button
                                 variant="ghost"
