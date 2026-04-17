@@ -171,6 +171,18 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
   const totalPaid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.total_value), 0);
   const totalOpen = invoices.filter(i => i.status !== 'paid' && i.status !== 'canceled').reduce((s, i) => s + Number(i.total_value), 0);
 
+  // License validity: due date of the next open invoice + 1 month
+  const licenseValidUntil = (() => {
+    const open = invoices
+      .filter(i => i.status !== 'paid' && i.status !== 'canceled')
+      .sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
+    const ref = open || invoices.filter(i => i.status === 'paid').sort((a, b) => b.due_date.localeCompare(a.due_date))[0];
+    if (!ref) return null;
+    const d = new Date(ref.due_date + 'T12:00:00');
+    d.setMonth(d.getMonth() + 1);
+    return d;
+  })();
+
   // Determine if store is suspended (has overdue invoice >3 days)
   const isSuspended = invoices.some(i => {
     if (i.status !== 'overdue' && i.status !== 'pending') return false;
