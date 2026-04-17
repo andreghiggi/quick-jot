@@ -421,21 +421,30 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
                               {!isPaid && (
-                                <Button
-                                  size="sm"
-                                  variant={hasCharge ? 'outline' : 'default'}
-                                  onClick={() => handleGenerateOrShowCharge(inv)}
-                                  disabled={generatingChargeId === inv.id}
-                                  title={hasCharge ? 'Ver cobrança' : 'Gerar cobrança Asaas'}
-                                >
-                                  {generatingChargeId === inv.id ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                  ) : hasCharge ? (
-                                    <ExternalLink className="w-4 h-4" />
-                                  ) : (
-                                    <Zap className="w-4 h-4" />
-                                  )}
-                                </Button>
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleGenerateOrShowCharge(inv, 'boleto')}
+                                    disabled={generatingChargeId === inv.id}
+                                    title="Abrir boleto"
+                                  >
+                                    {generatingChargeId === inv.id ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Printer className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleGenerateOrShowCharge(inv, 'pix')}
+                                    disabled={generatingChargeId === inv.id}
+                                    title="Gerar QR Code PIX"
+                                  >
+                                    <QrCode className="w-4 h-4" />
+                                  </Button>
+                                </>
                               )}
                               {canEdit && (
                                 <Button
