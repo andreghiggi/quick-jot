@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.23',
+    type: 'feature',
+    description: 'Novo botão "Ações da licença" no detalhe da loja (disponível para Admin Master e Revendedores). Inclui três opções: (1) Trava da revenda — bloqueia o acesso do lojista imediatamente exigindo motivo e mensagem opcional, com possibilidade de liberar depois; (2) Editar licença — permite atualizar nome, CNPJ, telefone, e-mail, endereço e o dia de vencimento das próximas faturas (faturas já geradas não são alteradas); (3) Cancelar licença — pede confirmação dupla ("Não cancelar licença" / "Sim, quero cancelar") e marca a empresa como cancelada, parando a geração de faturas e bloqueando acesso. Quando o lojista tenta entrar em uma loja travada, vê o motivo informado pelo revendedor e botão de WhatsApp para regularizar.',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.22',
     type: 'feature',
     description: 'Faturamento de revendedores reformulado: removidas as opções "Plano" e "Trial" das lojas (cobrança agora é apenas via faturas mensais). A aba Financeiro saiu do menu e foi embutida em cada loja — clicando em "Faturas" na lista de Lojas o revendedor vê o histórico, gera cobranças Asaas e edita valores. Revendedores agora cadastram novas lojas com o mesmo formulário do Admin Master (incluindo login e senha), e a loja já fica vinculada automaticamente ao revendedor logado. Vencimento padrão das faturas alterado para dia 20. Novo botão "Gerar Faturas" no topo da página Lojas faz backfill retroativo: para cada loja ativa o sistema cria a fatura proporcional do mês de ativação (vencimento no mês seguinte) e todas as faturas cheias subsequentes até o mês corrente. Geração mensal automática agendada para o dia 1 de cada mês via cron.',
