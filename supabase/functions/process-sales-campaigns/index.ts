@@ -114,8 +114,7 @@ Deno.serve(async (req) => {
       // Get menu URL
       const { data: company } = await supabase
         .from('companies').select('slug').eq('id', c.company_id).maybeSingle();
-      const origin = req.headers.get('origin') || 'https://memo-spark-56.lovable.app';
-      const menuLink = `${origin}/${company?.slug || ''}`;
+      const menuLink = `https://memo-spark-56.lovable.app/cardapio/${company?.slug || ''}`;
 
       // Variation: A on even sent_count, B on odd
       const variation = (c.sent_count % 2 === 0) ? 'A' : 'B';
