@@ -378,7 +378,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       ? `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood}${deliveryReference ? ` | Ref: ${deliveryReference}` : ''}`
       : '';
 
-    const noteParts = [`Pagamento: ${paymentName}`, deliveryTypeLabel];
+    const noteParts = ['[EXPRESS]', `Pagamento: ${paymentName}`, deliveryTypeLabel];
     const noteStr = noteParts.join(' | ');
 
     const orderItems: OrderItem[] = cart.map(item => {

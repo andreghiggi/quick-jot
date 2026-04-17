@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.19"  # corrige caixa do cabeçalho no pedido principal e elimina páginas em branco extras
+SCRIPT_VERSION = "v8.20"  # detecta Pedido Express via marcador [EXPRESS] em notes
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -189,9 +189,11 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     paper_size = PAPER_SIZE
     font_size = '11pt' if paper_size == '80mm' else '10pt'
     
-    # Origem do pedido
+    # Origem do pedido (detecta marcador [EXPRESS] em notes como fallback)
     source = pedido.get('source', '')
-    if source == 'express':
+    notes_raw = (pedido.get('notes') or '')
+    is_express_note = '[EXPRESS]' in notes_raw
+    if source == 'express' or is_express_note:
         origem_label = '⚡ PEDIDO EXPRESS'
     elif source == 'waiter':
         origem_label = '🍽️ PEDIDO GARÇOM'
@@ -213,7 +215,11 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     customer_name = pedido.get('customer_name', '')
     customer_phone = pedido.get('customer_phone', '')
     delivery_address = pedido.get('delivery_address', '')
-    notes = pedido.get('notes', '')
+    notes = pedido.get('notes', '') or ''
+    # Remove marcador interno [EXPRESS] (usado apenas para detectar origem)
+    notes = re.sub(r'\[EXPRESS\]\s*\|\s*', '', notes).strip()
+    notes = re.sub(r'\s*\|\s*\[EXPRESS\]', '', notes).strip()
+    notes = notes.replace('[EXPRESS]', '').strip()
     total = float(pedido.get('total', 0))
     
     # Calcular subtotal e taxa de entrega
