@@ -127,6 +127,33 @@ export type Database = {
           },
         ]
       }
+      campaign_settings: {
+        Row: {
+          end_hour: number
+          id: string
+          interval_seconds: number
+          max_per_day: number
+          start_hour: number
+          updated_at: string
+        }
+        Insert: {
+          end_hour?: number
+          id?: string
+          interval_seconds?: number
+          max_per_day?: number
+          start_hour?: number
+          updated_at?: string
+        }
+        Update: {
+          end_hour?: number
+          id?: string
+          interval_seconds?: number
+          max_per_day?: number
+          start_hour?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cash_registers: {
         Row: {
           closed_at: string | null
@@ -1569,6 +1596,144 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      sales_campaign_messages: {
+        Row: {
+          campaign_id: string
+          company_id: string
+          created_at: string
+          customer_id: string | null
+          customer_name: string
+          customer_phone: string | null
+          error_message: string | null
+          id: string
+          message_text: string | null
+          sent_at: string | null
+          status: string
+          variation: string | null
+        }
+        Insert: {
+          campaign_id: string
+          company_id: string
+          created_at?: string
+          customer_id?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          error_message?: string | null
+          id?: string
+          message_text?: string | null
+          sent_at?: string | null
+          status?: string
+          variation?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          company_id?: string
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          error_message?: string | null
+          id?: string
+          message_text?: string | null
+          sent_at?: string | null
+          status?: string
+          variation?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_campaign_messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "sales_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_campaign_messages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_campaign_messages_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_campaigns: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          failed_count: number
+          id: string
+          last_sent_at: string | null
+          message_a: string
+          message_b: string
+          name: string
+          sent_count: number
+          sent_today: number
+          sent_today_date: string | null
+          skipped_count: number
+          started_at: string | null
+          status: string
+          total_recipients: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          failed_count?: number
+          id?: string
+          last_sent_at?: string | null
+          message_a: string
+          message_b: string
+          name?: string
+          sent_count?: number
+          sent_today?: number
+          sent_today_date?: string | null
+          skipped_count?: number
+          started_at?: string | null
+          status?: string
+          total_recipients?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          failed_count?: number
+          id?: string
+          last_sent_at?: string | null
+          message_a?: string
+          message_b?: string
+          name?: string
+          sent_count?: number
+          sent_today?: number
+          sent_today_date?: string | null
+          skipped_count?: number
+          started_at?: string | null
+          status?: string
+          total_recipients?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_campaigns_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       store_settings: {
         Row: {
