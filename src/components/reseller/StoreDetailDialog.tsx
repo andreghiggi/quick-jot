@@ -462,6 +462,30 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
         onClose={() => setActiveCharge(null)}
         onUpdated={() => store && loadData(store.id)}
       />
+
+      <BlockLicenseDialog
+        open={showBlock}
+        onClose={() => setShowBlock(false)}
+        store={currentStore as any}
+        onSaved={() => currentStore && reloadStore(currentStore.id)}
+      />
+
+      <EditLicenseDialog
+        open={showEdit}
+        onClose={() => setShowEdit(false)}
+        store={currentStore as any}
+        onSaved={() => currentStore && reloadStore(currentStore.id)}
+      />
+
+      <CancelLicenseDialog
+        open={showCancel}
+        onClose={() => setShowCancel(false)}
+        store={currentStore as any}
+        onSaved={() => {
+          if (currentStore) reloadStore(currentStore.id);
+          onClose();
+        }}
+      />
     </>
   );
 }
