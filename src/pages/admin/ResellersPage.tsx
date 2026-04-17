@@ -206,16 +206,34 @@ export default function ResellersPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!validate() || !user) return;
+    if (!validate(true) || !user) return;
     setIsSaving(true);
-    const success = await createReseller(buildData(), user.id);
-    if (success) { setIsCreateOpen(false); resetForm(); }
+    const newResellerId = await createReseller(buildData(), user.id);
+    if (newResellerId) {
+      // Create login user via edge function
+      const { data: invokeData, error: invokeErr } = await supabase.functions.invoke('create-reseller-user', {
+        body: {
+          reseller_id: newResellerId,
+          email: form.responsible_email.trim(),
+          password: form.login_password,
+          full_name: form.responsible_name.trim(),
+        },
+      });
+      if (invokeErr || (invokeData as any)?.error) {
+        const msg = (invokeData as any)?.error || invokeErr?.message || 'Erro ao criar login';
+        toast.error(`Revendedor criado, mas falhou ao criar login: ${msg}`);
+      } else {
+        toast.success('Login do revendedor criado com sucesso!');
+      }
+      setIsCreateOpen(false);
+      resetForm();
+    }
     setIsSaving(false);
   }
 
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault();
-    if (!validate() || !editingReseller) return;
+    if (!validate(false) || !editingReseller) return;
     setIsSaving(true);
     const success = await updateReseller(editingReseller, buildData());
     if (success) { setIsEditOpen(false); setEditingReseller(null); resetForm(); }
