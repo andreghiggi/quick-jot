@@ -120,7 +120,7 @@ export default function AdminDashboard() {
           phone: newCompanyPhone.trim() || null,
           login_email: newCompanyEmail.trim() || null,
           initial_password: newCompanyPassword.trim() || null,
-        });
+        } as any);
 
       if (error) throw error;
 
