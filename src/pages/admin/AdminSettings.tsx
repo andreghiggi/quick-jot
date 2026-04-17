@@ -199,6 +199,42 @@ export default function AdminSettings() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Zap className="w-5 h-5" /> Integração Asaas</CardTitle>
+            <CardDescription>
+              Configure o ambiente para gerar cobranças PIX/Boleto dos revendedores. A chave de API é gerenciada via secrets seguros.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Ambiente</Label>
+                <Select value={form.asaas_env} onValueChange={(v) => set('asaas_env', v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sandbox">Sandbox (testes)</SelectItem>
+                    <SelectItem value="production">Produção (cobranças reais)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Sandbox: cobranças simuladas. Produção: cobranças reais.
+                </p>
+              </div>
+              <div className="flex flex-col justify-end">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Webhook URL</strong> (configure no Asaas):
+                </p>
+                <code className="text-xs bg-muted p-2 rounded break-all">
+                  {`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/asaas-billing`}
+                </code>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Button onClick={handleSave} disabled={saving} className="w-full md:w-auto">
           {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Salvando...</> : 'Salvar'}
         </Button>
