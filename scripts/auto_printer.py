@@ -521,6 +521,34 @@ def html_para_texto(html):
         return f'[NAME]{conteudo}[/NAME]'
     text = re.sub(r'<span\s+class="name"[^>]*>(.*?)</span>', marcar_name, text, flags=re.DOTALL | re.IGNORECASE)
 
+    # CABEÇALHO: envolve o bloco <div class="header">...</div> em [BOX_START]/[BOX_END]
+    def marcar_header(match):
+        inner = match.group(1)
+        # Transforma os divs internos em quebras de linha; remove tags
+        inner = re.sub(r'</div>', '\n', inner, flags=re.IGNORECASE)
+        inner = re.sub(r'<[^>]+>', '', inner)
+        inner = re.sub(r'[ \t]+', ' ', inner)
+        linhas_h = [l.strip() for l in inner.split('\n') if l.strip()]
+        return '\n[BOX_START]\n' + '\n'.join(linhas_h) + '\n[BOX_END]\n'
+    text = re.sub(
+        r'<div\s+class="header"[^>]*>(.*?)</div>\s*(?=<hr|<div|<body|$)',
+        marcar_header,
+        text,
+        flags=re.DOTALL | re.IGNORECASE
+    )
+
+    # CLIENTE: linha "<p><span class="label">Cliente:</span> NOME</p>" vira [CLIENTE]Cliente: NOME[/CLIENTE]
+    def marcar_cliente(match):
+        conteudo = re.sub(r'<[^>]+>', '', match.group(0)).strip()
+        conteudo = re.sub(r'[ \t]+', ' ', conteudo)
+        return f'\n[CLIENTE]{conteudo}[/CLIENTE]\n'
+    text = re.sub(
+        r'<p[^>]*>\s*<span\s+class="label"[^>]*>\s*Cliente:\s*</span>.*?</p>',
+        marcar_cliente,
+        text,
+        flags=re.DOTALL | re.IGNORECASE
+    )
+
     # 2. <hr> em divisórias
     text = re.sub(r'<hr[^>]*/?>', f'\n{divider}\n', text, flags=re.IGNORECASE)
     # 3. Quebras de linha por bloco
