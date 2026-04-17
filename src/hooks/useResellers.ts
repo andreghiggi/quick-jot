@@ -111,7 +111,7 @@ export function useResellers() {
     fetchResellers();
   }, [fetchResellers]);
 
-  async function createReseller(data: ResellerFormData, createdBy: string): Promise<boolean> {
+  async function createReseller(data: ResellerFormData, createdBy: string): Promise<string | null> {
     try {
       const { data: newReseller, error } = await supabase
         .from('resellers')
@@ -149,11 +149,11 @@ export function useResellers() {
 
       toast.success('Revendedor criado com sucesso!');
       fetchResellers();
-      return true;
+      return newReseller.id;
     } catch (error: any) {
       console.error('Error creating reseller:', error);
       toast.error('Erro ao criar revendedor');
-      return false;
+      return null;
     }
   }
 
