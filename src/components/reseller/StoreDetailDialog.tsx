@@ -46,6 +46,10 @@ export interface StoreDetail {
   reseller_id: string | null;
   created_at?: string | null;
   serial?: string | null;
+  license_status?: string | null;
+  license_block_reason?: string | null;
+  license_block_message?: string | null;
+  next_invoice_due_day?: number | null;
 }
 
 interface Invoice {
