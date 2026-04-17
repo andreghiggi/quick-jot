@@ -478,7 +478,8 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
 
       <AsaasPaymentDialog
         charge={activeCharge}
-        onClose={() => setActiveCharge(null)}
+        defaultTab={activeTab}
+        onClose={() => { setActiveCharge(null); setActiveTab(undefined); }}
         onUpdated={() => store && loadData(store.id)}
       />
 
