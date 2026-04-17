@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.9"  # layout V2 GDI: nome regular, adicionais negrito, observação fundo preto real
+SCRIPT_VERSION = "v8.10"  # layout V2: item na mesma linha, adicionais em negrito e observações com rótulo invertido
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -444,7 +444,21 @@ def html_para_texto(html):
     text = re.sub(r'<body[^>]*>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'</body>', '', text, flags=re.IGNORECASE)
 
-    # 1b. LAYOUT V2: marca adicionais e observações com prefixos especiais
+    # 1b. LAYOUT V2: marca blocos especiais antes de remover as tags
+    def marcar_item_header(match):
+        qty = re.sub(r'<[^>]+>', '', match.group(1)).strip()
+        name = re.sub(r'<[^>]+>', '', match.group(2)).strip()
+        if not qty and not name:
+            return '\n'
+        return f'\n[ITEM]{qty}|||{name}[/ITEM]\n'
+    text = re.sub(
+        r'<div\s+class="item-header"[^>]*>.*?<span\s+class="qty"[^>]*>(.*?)</span>.*?<span\s+class="name"[^>]*>(.*?)</span>.*?</div>',
+        marcar_item_header,
+        text,
+        flags=re.DOTALL | re.IGNORECASE
+    )
+
+    # 1c. LAYOUT V2: marca adicionais e observações com prefixos especiais
     # Adicional: <div class="add-line">>> texto</div>  ->  [ADD]texto[/ADD]
     def marcar_add(match):
         conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
@@ -461,7 +475,7 @@ def html_para_texto(html):
         return f'\n[OBS]{conteudo}[/OBS]\n'
     text = re.sub(r'<div\s+class="obs"[^>]*>(.*?)</div>', marcar_obs, text, flags=re.DOTALL | re.IGNORECASE)
 
-    # Nome do produto V2: <span class="name">NOME</span>  ->  [NAME]NOME[/NAME]
+    # Nome do produto V2: fallback caso venha fora do item-header
     def marcar_name(match):
         conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
         return f'[NAME]{conteudo}[/NAME]'
@@ -576,6 +590,37 @@ def imprimir_html(html, order_number):
                 linhas_out.append(atual)
             return linhas_out
 
+        def quebrar_nome_com_recuo(texto, largura_primeira, largura_demais):
+            """Quebra nome do produto respeitando o espaço após a quantidade."""
+            palavras = texto.split(' ')
+            linhas_out = []
+            atual = ''
+            largura_atual = max(1, largura_primeira)
+
+            for palavra in palavras:
+                while len(palavra) > largura_atual:
+                    if atual:
+                        linhas_out.append(atual)
+                        atual = ''
+                        largura_atual = max(1, largura_demais)
+                    linhas_out.append(palavra[:largura_atual])
+                    palavra = palavra[largura_atual:]
+                    largura_atual = max(1, largura_demais)
+
+                if not atual:
+                    atual = palavra
+                elif len(atual) + 1 + len(palavra) <= largura_atual:
+                    atual += ' ' + palavra
+                else:
+                    linhas_out.append(atual)
+                    atual = palavra
+                    largura_atual = max(1, largura_demais)
+
+            if atual:
+                linhas_out.append(atual)
+
+            return linhas_out or ['']
+
         is_v2 = (PRINT_LAYOUT == 'v2')
 
         for linha in linhas:
@@ -593,9 +638,40 @@ def imprimir_html(html, order_number):
                 continue
 
             # Detecta marcadores V2
+            m_item = re.match(r'^\[ITEM\](.*?)\|\|\|(.*?)\[/ITEM\]$', stripped)
             m_add = re.match(r'^\[ADD\](.*)\[/ADD\]$', stripped)
             m_obs = re.match(r'^\[OBS\](.*)\[/OBS\]$', stripped)
             m_name = re.match(r'^\[NAME\](.*)\[/NAME\]$', stripped)
+
+            if is_v2 and m_item:
+                qty = m_item.group(1).strip()
+                nome = m_item.group(2).strip()
+
+                qty_text = qty or ''
+                gap_px = tm['tmAveCharWidth']
+                qty_width_px = hDC.GetTextExtent(qty_text + (' ' if qty_text else ''))[0] if qty_text else 0
+                nome_x = margin_x + qty_width_px + (gap_px if qty_text else 0)
+
+                qty_cols = len(qty_text) + (1 if qty_text else 0)
+                nome_largura_primeira = max(1, colunas - qty_cols - (1 if qty_text else 0))
+                nome_linhas = quebrar_nome_com_recuo(nome, nome_largura_primeira, colunas)
+
+                if qty_text:
+                    hDC.SelectObject(font_normal)
+                    hDC.SetTextColor(0x000000)
+                    hDC.SetBkMode(win32con.TRANSPARENT)
+                    hDC.TextOut(margin_x, y, qty_text)
+
+                for idx, sub in enumerate(nome_linhas):
+                    hDC.SelectObject(font_regular)
+                    hDC.SetTextColor(0x000000)
+                    hDC.SetBkMode(win32con.TRANSPARENT)
+                    current_x = nome_x if idx == 0 and qty_text else margin_x
+                    hDC.TextOut(current_x, y, sub)
+                    y += line_h
+
+                hDC.SelectObject(font_normal)
+                continue
 
             if is_v2 and m_add:
                 # Adicional: negrito forte com prefixo ">>"
@@ -611,7 +687,8 @@ def imprimir_html(html, order_number):
 
             if is_v2 and m_obs:
                 # Observação: fundo PRETO + letras BRANCAS (texto invertido real)
-                texto_obs = m_obs.group(1).strip().upper()
+                conteudo_obs = m_obs.group(1).strip().upper()
+                texto_obs = f'OBSERVAÇÕES: {conteudo_obs}'
                 hDC.SelectObject(font_obs)
                 sublinhas = quebrar_linha(texto_obs, colunas - 2)
                 # desenha um retângulo preto cobrindo todas as linhas
@@ -659,7 +736,7 @@ def imprimir_html(html, order_number):
                 continue
 
             # Linha normal: remove marcadores residuais e imprime
-            stripped_clean = re.sub(r'\[/?(ADD|OBS|NAME)\]', '', stripped).strip()
+            stripped_clean = re.sub(r'\[/?(ADD|OBS|NAME|ITEM)\]', '', stripped).replace('|||', ' ').strip()
             if not stripped_clean:
                 continue
             hDC.SelectObject(font_normal)
