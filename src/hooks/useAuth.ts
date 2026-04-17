@@ -77,7 +77,9 @@ export function useAuth() {
           setRoles([]);
           setCompany(null);
           setImpersonatedCompany(null);
+          setImpersonatedReseller(null);
           sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
+          sessionStorage.removeItem(IMPERSONATED_RESELLER_KEY);
           setLoading(false);
         }
       }
