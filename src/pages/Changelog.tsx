@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.18',
+    type: 'feature',
+    description: 'Botão "Acessar painel" do revendedor agora está funcional. O Super Admin entra no portal de qualquer revendedor (Home, Lojas, Financeiro, Configurações) sem precisar de senha, com banner âmbar de "Painel do Revendedor" identificando a sessão e botão para sair a qualquer momento. O botão fica visível apenas para revendedores que já possuem login criado.',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.17',
     type: 'feature',
     description: 'Super Admin agora pode vincular lojas já cadastradas a um revendedor pelo botão "Vincular lojas" na lista de revendedores. O sistema mostra apenas lojas sem revendedor atual, permite seleção múltipla com busca e adiciona automaticamente a mensalidade proporcional aos dias restantes do mês na fatura do revendedor (sem cobrar taxa de ativação).',
