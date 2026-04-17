@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.13"  # v2: corrige duplicidade OBSERVAÇÕES, quebra adicionais por vírgula, suporta grupos com ":"
+SCRIPT_VERSION = "v8.14"  # v2: corrige OBSERVAÇÕES duplicado na comanda, separadores entre itens e quebra de página automática
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -602,6 +602,18 @@ def imprimir_html(html, order_number):
 
         y = margin_y
 
+        def nova_pagina():
+            nonlocal y
+            hDC.EndPage()
+            hDC.StartPage()
+            y = margin_y
+
+        def garantir_espaco(altura_necessaria):
+            nonlocal y
+            limite = page_h - margin_y
+            if y + altura_necessaria > limite:
+                nova_pagina()
+
         def quebrar_linha(texto, largura):
             """Quebra texto em múltiplas linhas respeitando palavras (word-wrap)."""
             if len(texto) <= largura:
@@ -666,10 +678,12 @@ def imprimir_html(html, order_number):
         for linha in linhas:
             stripped = linha.strip()
             if not stripped:
+                garantir_espaco(int(line_h * 0.5))
                 y += int(line_h * 0.5)
                 continue
 
             if set(stripped) <= {'-', '=', '_'} and len(stripped) > 3:
+                garantir_espaco(line_h)
                 hDC.SelectObject(font_normal)
                 hDC.SetTextColor(0x000000)
                 hDC.SetBkMode(win32con.TRANSPARENT)
@@ -685,6 +699,7 @@ def imprimir_html(html, order_number):
             m_sep = (stripped == '[SEP]')
 
             if is_v2 and m_sep:
+                garantir_espaco(int(line_h * 1.4))
                 hDC.SelectObject(font_normal)
                 hDC.SetTextColor(0x000000)
                 hDC.SetBkMode(win32con.TRANSPARENT)
@@ -706,6 +721,7 @@ def imprimir_html(html, order_number):
                 qty_cols = len(qty_text) + (1 if qty_text else 0)
                 nome_largura_primeira = max(1, colunas - qty_cols - (1 if qty_text else 0))
                 nome_linhas = quebrar_nome_com_recuo(nome, nome_largura_primeira, colunas)
+                garantir_espaco(line_h * len(nome_linhas))
 
                 if qty_text:
                     hDC.SelectObject(font_normal)
@@ -727,10 +743,12 @@ def imprimir_html(html, order_number):
             if is_v2 and m_add:
                 # Adicional: negrito forte com prefixo ">>"
                 texto_add = '>> ' + m_add.group(1).strip().upper()
+                sublinhas_add = quebrar_linha(texto_add, colunas)
+                garantir_espaco(line_h * len(sublinhas_add))
                 hDC.SelectObject(font_bold_big)
                 hDC.SetTextColor(0x000000)
                 hDC.SetBkMode(win32con.TRANSPARENT)
-                for sub in quebrar_linha(texto_add, colunas):
+                for sub in sublinhas_add:
                     hDC.TextOut(margin_x, y, sub)
                     y += line_h
                 hDC.SelectObject(font_normal)
@@ -739,12 +757,14 @@ def imprimir_html(html, order_number):
             if is_v2 and m_obs:
                 # Observação: fundo PRETO + letras BRANCAS (texto invertido real)
                 conteudo_obs = m_obs.group(1).strip().upper()
+                conteudo_obs = re.sub(r'^OBSERVAÇÕES:\s*', '', conteudo_obs, flags=re.IGNORECASE)
                 texto_obs = f'OBSERVAÇÕES: {conteudo_obs}'
                 hDC.SelectObject(font_obs)
                 sublinhas = quebrar_linha(texto_obs, colunas - 2)
                 # desenha um retângulo preto cobrindo todas as linhas
                 pad_x = int(dpi_x * 0.02)
                 pad_y = int(dpi_y * 0.015)
+                garantir_espaco(line_h * len(sublinhas) + pad_y * 2 + int(line_h * 0.3))
                 rect_top = y - pad_y
                 rect_h = line_h * len(sublinhas) + pad_y * 2
                 rect_right = margin_x + int(colunas * tm['tmAveCharWidth']) + pad_x * 2
@@ -790,14 +810,17 @@ def imprimir_html(html, order_number):
             stripped_clean = re.sub(r'\[/?(ADD|OBS|NAME|ITEM|SEP)\]', '', stripped).replace('|||', ' ').strip()
             if not stripped_clean:
                 continue
+            sublinhas_normais = quebrar_linha(stripped_clean, colunas)
+            garantir_espaco(line_h * len(sublinhas_normais))
             hDC.SelectObject(font_normal)
             hDC.SetTextColor(0x000000)
             hDC.SetBkMode(win32con.TRANSPARENT)
-            for sublinha in quebrar_linha(stripped_clean, colunas):
+            for sublinha in sublinhas_normais:
                 hDC.TextOut(margin_x, y, sublinha)
                 y += line_h
 
         # Espaço para corte: 6 linhas em branco ao final do pedido
+        garantir_espaco(line_h * 6)
         y += line_h * 6
 
         hDC.EndPage()
