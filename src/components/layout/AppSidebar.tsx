@@ -437,6 +437,19 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {isModuleEnabled('sales_campaigns') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/campanhas'}
+                  >
+                    <Link to="/campanhas">
+                      <Megaphone className="w-4 h-4" />
+                      <span>Campanhas de Vendas</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
