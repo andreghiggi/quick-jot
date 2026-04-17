@@ -39,9 +39,10 @@ export function useAuth() {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [company, setCompany] = useState<Company | null>(null);
   const [impersonatedCompany, setImpersonatedCompany] = useState<Company | null>(null);
+  const [impersonatedReseller, setImpersonatedReseller] = useState<ImpersonatedReseller | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Restore impersonated company from sessionStorage on mount
+  // Restore impersonation state from sessionStorage on mount
   useEffect(() => {
     const stored = sessionStorage.getItem(IMPERSONATED_COMPANY_KEY);
     if (stored) {
@@ -49,6 +50,14 @@ export function useAuth() {
         setImpersonatedCompany(JSON.parse(stored));
       } catch {
         sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
+      }
+    }
+    const storedReseller = sessionStorage.getItem(IMPERSONATED_RESELLER_KEY);
+    if (storedReseller) {
+      try {
+        setImpersonatedReseller(JSON.parse(storedReseller));
+      } catch {
+        sessionStorage.removeItem(IMPERSONATED_RESELLER_KEY);
       }
     }
   }, []);
