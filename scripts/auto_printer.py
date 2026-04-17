@@ -621,6 +621,8 @@ def imprimir_html(html, order_number):
         hDC.StartPage()
 
         y = margin_y
+        # Estado mutável compartilhado entre closures
+        box_state = {'active': False}
 
         def nova_pagina():
             nonlocal y
@@ -630,6 +632,10 @@ def imprimir_html(html, order_number):
 
         def garantir_espaco(altura_necessaria):
             nonlocal y
+            # Não quebra página enquanto a caixa do cabeçalho está ativa
+            # (evita borda incompleta + páginas extras)
+            if box_state['active']:
+                return
             limite = page_h - margin_y
             if y + altura_necessaria > limite:
                 nova_pagina()
