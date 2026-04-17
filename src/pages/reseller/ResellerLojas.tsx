@@ -120,6 +120,7 @@ export default function ResellerLojas() {
       responsible_rg: respRg.trim(),
       responsible_email: respEmail.trim(),
       responsible_phone: respPhone.trim(),
+      activation_payment_option: paymentOption,
     });
 
     if (success) {
