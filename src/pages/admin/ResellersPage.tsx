@@ -222,7 +222,7 @@ export default function ResellersPage() {
   }
 
   const formFields = (
-    <ScrollArea className="max-h-[65vh] pr-4">
+    <ScrollArea className="h-[60vh] pr-4">
       <div className="space-y-6 pb-2">
         {/* Company info */}
         <div>
