@@ -732,10 +732,10 @@ def imprimir_html(html, order_number):
                 log(f"Falha ao desenhar borda: {ex}", "AVISO")
 
         # Estado da caixa do cabeçalho (borda envolvendo todo o conteúdo pré-itens)
-        box_active = False
+        # Estado da caixa do cabeçalho (borda envolvendo todo o conteúdo pré-itens)
         box_top_y = 0
         box_pad_x = int(dpi_x * 0.04)
-        box_pad_y = int(dpi_y * 0.03)
+        box_pad_y = int(dpi_y * 0.02)
 
         i = 0
         while i < len(linhas):
@@ -746,22 +746,23 @@ def imprimir_html(html, order_number):
             if stripped == '[BOX_START]':
                 y += box_pad_y
                 box_top_y = y
-                box_active = True
+                box_state['active'] = True
                 y += box_pad_y
                 i += 1
                 continue
 
             # CABEÇALHO EM CAIXA — fim: desenha borda em volta da região renderizada
             if stripped == '[BOX_END]':
-                if box_active:
+                if box_state['active']:
                     y += box_pad_y
                     altura = y - box_top_y
                     rect_right = margin_x + int(colunas * tm['tmAveCharWidth']) + box_pad_x * 2
                     desenhar_borda(box_top_y, altura, rect_right)
-                    box_active = False
+                    box_state['active'] = False
                     y += int(line_h * 0.4)
                 i += 1
                 continue
+
 
 
             if not stripped:
