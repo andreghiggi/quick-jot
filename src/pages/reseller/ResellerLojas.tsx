@@ -142,24 +142,7 @@ export default function ResellerLojas() {
     }
   }
 
-  async function handleBackfill() {
-    if (!reseller) return;
-    setIsBackfilling(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('reseller-billing', {
-        body: { action: 'backfill_invoices', reseller_id: reseller.id },
-      });
-      if (error) throw error;
-      const count = data?.invoices_created ?? 0;
-      toast.success(`${count} fatura(s) gerada(s) com sucesso!`);
-      refetch();
-    } catch (err: any) {
-      console.error(err);
-      toast.error('Erro ao gerar faturas: ' + (err.message || 'falha desconhecida'));
-    } finally {
-      setIsBackfilling(false);
-    }
-  }
+
 
   const filteredCompanies = companies.filter(c =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
