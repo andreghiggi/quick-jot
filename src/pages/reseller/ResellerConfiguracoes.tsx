@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, Save, Lock, AlertCircle } from 'lucide-react';
@@ -16,7 +16,7 @@ export default function ResellerConfiguracoes() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [dueDay, setDueDay] = useState('10');
+  
   const [asaasKey, setAsaasKey] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -28,7 +28,7 @@ export default function ResellerConfiguracoes() {
       setPhone(reseller.phone || '');
     }
     if (settings) {
-      setDueDay(String(settings.invoice_due_day));
+      
       setAsaasKey(settings.asaas_api_key || '');
     }
   }, [reseller, settings]);
@@ -48,7 +48,6 @@ export default function ResellerConfiguracoes() {
     e.preventDefault();
     setSavingSettings(true);
     await updateSettings({
-      invoice_due_day: parseInt(dueDay),
       asaas_api_key: asaasKey.trim() || null,
     });
     setSavingSettings(false);
@@ -101,22 +100,6 @@ export default function ResellerConfiguracoes() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSaveSettings} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Dia de vencimento da fatura</Label>
-                <Select value={dueDay} onValueChange={setDueDay} disabled={savingSettings}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">Dia 5</SelectItem>
-                    <SelectItem value="10">Dia 10</SelectItem>
-                    <SelectItem value="15">Dia 15</SelectItem>
-                    <SelectItem value="20">Dia 20</SelectItem>
-                    <SelectItem value="25">Dia 25</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Separator />
-
               {/* Read-only fees */}
               <div className="space-y-3">
                 <Label className="flex items-center gap-2">
