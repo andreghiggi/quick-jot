@@ -81,7 +81,7 @@ const UF_OPTIONS = [
 
 export default function ResellersPage() {
   const { user } = useAuthContext();
-  const { resellers, loading, createReseller, updateReseller, toggleResellerStatus } = useResellers();
+  const { resellers, loading, createReseller, updateReseller, toggleResellerStatus, refetch } = useResellers();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
