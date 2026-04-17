@@ -273,7 +273,7 @@ export default function ResellerLojas() {
                           variant="outline"
                           size="sm"
                           className="gap-1"
-                          onClick={() => setSelectedStore(c as StoreDetail)}
+                          onClick={() => setSelectedStore(c as unknown as StoreDetail)}
                           title="Ver faturas e detalhes"
                         >
                           <FileText className="w-3 h-3" />
@@ -300,7 +300,7 @@ export default function ResellerLojas() {
 
       <StoreDetailDialog
         store={selectedStore}
-        canEdit={true}
+        canEdit
         onClose={() => {
           setSelectedStore(null);
           refetch();
