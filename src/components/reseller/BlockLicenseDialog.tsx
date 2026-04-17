@@ -327,9 +327,9 @@ export function BlockLicenseDialog({ open, onClose, store, onSaved }: Props) {
               Liberar acesso
             </Button>
           ) : (
-            <Button onClick={handleBlock} disabled={saving || !allAccepted || !reason.trim()} variant="destructive">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
-              Confirmar e bloquear lojista
+            <Button onClick={handleSave} disabled={saving || !allAccepted || !reason.trim() || (mode === 'schedule' && !scheduledDate)} variant="destructive">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : (mode === 'now' ? <Lock className="w-4 h-4 mr-2" /> : <CalendarIcon className="w-4 h-4 mr-2" />)}
+              {mode === 'now' ? 'Confirmar e bloquear lojista' : 'Salvar agendamento'}
             </Button>
           )}
         </DialogFooter>
