@@ -138,13 +138,15 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
       </style>
     </head>
     <body>
+      <!--BOX_START-->
       <div class="header">
         <div class="title">COMANDA DE PRODUÇÃO</div>
         <div class="info">Comanda #${data.tabNumber}</div>
         ${data.tableNumber ? `<div class="table-info">MESA ${data.tableNumber}</div>` : ''}
-        ${data.customerName ? `<div class="info">${data.customerName}</div>` : ''}
+        ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
         <div class="datetime">${dateStr} às ${timeStr}</div>
       </div>
+      <!--BOX_END-->
       <div class="items">${itemsHTML}</div>
       <div class="footer">--- FIM DO PEDIDO ---</div>
     </body>
@@ -263,13 +265,15 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
       </style>
     </head>
     <body>
+      <!--BOX_START-->
       <div class="header">
         <div class="title">COMANDA DE PRODUÇÃO</div>
         <div class="info">Comanda #${data.tabNumber}</div>
         ${data.tableNumber ? `<div class="table-info">MESA ${data.tableNumber}</div>` : ''}
-        ${data.customerName ? `<div class="info">${data.customerName}</div>` : ''}
+        ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
         <div class="datetime">${dateStr} às ${timeStr}</div>
       </div>
+      <!--BOX_END-->
       <div class="items">${itemsHTML}</div>
       <div class="footer">--- FIM DO PEDIDO ---</div>
     </body>

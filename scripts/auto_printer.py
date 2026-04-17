@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.16"  # v2: caixa do cabeçalho engloba TUDO antes dos itens (loja, pedido, cliente, pgto, entrega)
+SCRIPT_VERSION = "v8.17"  # caixa do cabeçalho + nome cliente invertido também na comanda de produção (mesa/garçom)
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
