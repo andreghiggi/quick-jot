@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, Zap, ExternalLink } from 'lucide-react';
+import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, Zap, ExternalLink, Briefcase } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getMonthLabel } from '@/services/resellerBilling';
@@ -77,6 +77,7 @@ interface Props {
 export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [reseller, setReseller] = useState<{ name: string; email: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<InvoiceForEdit | null>(null);
   const [editingItems, setEditingItems] = useState<InvoiceItemRow[]>([]);
@@ -120,30 +121,37 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
     if (!store) {
       setInvoices([]);
       setPlan(null);
+      setReseller(null);
       return;
     }
-    void loadData(store.id);
+    void loadData(store.id, store.reseller_id);
   }, [store?.id]);
 
-  async function loadData(companyId: string) {
+  async function loadData(companyId: string, resellerId: string | null = store?.reseller_id ?? null) {
     setLoading(true);
-    const [invRes, planRes] = await Promise.all([
+    const [invRes, planRes, resellerRes] = await Promise.all([
       supabase
         .from('reseller_invoices')
         .select('*')
         .eq('company_id', companyId)
         .order('month', { ascending: false }),
-      // We still query company_plans only to read the activation date as a reference,
-      // since plans/trial are no longer surfaced in the UI.
       supabase
         .from('company_plans')
         .select('plan_name, active, activated_at, expires_at, starts_at')
         .eq('company_id', companyId)
         .maybeSingle(),
+      resellerId
+        ? supabase
+            .from('resellers')
+            .select('name, email')
+            .eq('id', resellerId)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
     setInvoices((invRes.data as any[]) || []);
     setPlan((planRes.data as Plan) || null);
+    setReseller((resellerRes.data as any) || null);
     setLoading(false);
   }
 
@@ -221,6 +229,18 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
                   <span className="text-muted-foreground text-xs uppercase tracking-wide">Serial:</span>
                   <span className="font-mono font-bold text-base tracking-wider select-all">{store.serial}</span>
                   <span className="text-xs text-muted-foreground ml-auto">único e intransferível</span>
+                </div>
+              )}
+              {canEdit && (
+                <div className="flex items-center gap-2 p-2 rounded-md bg-primary/5 border border-primary/20">
+                  <Briefcase className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide">Revendedor:</span>
+                  <span className="font-semibold text-sm">
+                    {reseller?.name || <span className="italic text-muted-foreground font-normal">Sem revendedor vinculado</span>}
+                  </span>
+                  {reseller?.email && (
+                    <span className="text-xs text-muted-foreground ml-auto">{reseller.email}</span>
+                  )}
                 </div>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
