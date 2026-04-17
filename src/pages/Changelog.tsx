@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.25',
+    type: 'feature',
+    description: 'Visibilidade granular de itens no Cardápio Online vs PDV: produtos, categorias e subcategorias agora possuem toggles independentes "Item de Cardápio" e "Item de PDV". Em Produtos, o cadastro/edição ganhou o switch "Item de Cardápio" (já existia "Item de PDV") — desmarcando, o produto desaparece do cardápio público mas continua disponível no PDV. Em Categorias e Subcategorias, há dois novos botões em cada linha: 👁️ controla a visibilidade no cardápio online e "PDV" controla no PDV; ocultando uma categoria do cardápio, todos os seus produtos somem do cardápio (mesma lógica para PDV). Por padrão tudo continua visível em ambos os canais para não impactar lojas existentes.',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.24',
     type: 'feature',
     description: 'Formas de pagamento agora são separadas por canal: a tela de "Formas de Pagamento" passou a ter três abas (Cardápio Online, PDV e Pedido Express). Cada canal mantém sua própria lista, então é possível, por exemplo, oferecer apenas PIX e Dinheiro no Cardápio Online e habilitar Cartão de Crédito/Débito apenas no PDV. As formas já cadastradas foram automaticamente vinculadas ao Cardápio Online; basta recadastrar (ou usar os atalhos rápidos) nas abas PDV e Pedido Express conforme a necessidade. Integrações TEF (PinPad / SmartPOS) continuam disponíveis somente na aba PDV.',

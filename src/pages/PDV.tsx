@@ -326,7 +326,13 @@ export default function PDV() {
 
   const loading = productsLoading || paymentLoading || registerLoading;
 
-  const activeProducts = products.filter(p => p.active && p.pdvItem !== false);
+  // Build sets of categories/subcategories hidden from PDV
+  const hiddenPdvCategoryNames = new Set(dbCategories.filter(c => c.pdvItem === false).map(c => c.name));
+  const activeProducts = products.filter(p =>
+    p.active &&
+    p.pdvItem !== false &&
+    !hiddenPdvCategoryNames.has(p.category)
+  );
   const categories = [...new Set(activeProducts.map(p => p.category))];
 
   const filteredProducts = activeProducts.filter(p => {

@@ -82,8 +82,11 @@ export default function Menu() {
 
   const { products, loading: productsLoading, getMenuProducts, getNewProducts } = useProducts({ companyId: company?.id });
   const { settings, loading: settingsLoading } = useStoreSettings({ companyId: company?.id });
-  const { categories, loading: categoriesLoading } = useCategories({ companyId: company?.id });
-  const { subcategories } = useSubcategories({ companyId: company?.id });
+  const { categories: allCategories, loading: categoriesLoading } = useCategories({ companyId: company?.id });
+  const { subcategories: allSubcategories } = useSubcategories({ companyId: company?.id });
+  // Filter out categories/subcategories hidden from the public menu
+  const categories = useMemo(() => allCategories.filter(c => c.menuItem !== false), [allCategories]);
+  const subcategories = useMemo(() => allSubcategories.filter(s => s.menuItem !== false), [allSubcategories]);
   const { neighborhoods, loading: neighborhoodsLoading, getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
   const { loading: hoursLoading, isCurrentlyOpen, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
