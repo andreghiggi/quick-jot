@@ -372,7 +372,7 @@ export default function ResellersPage() {
           <span className="hidden sm:inline">Novo Revendedor</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criar Novo Revendedor</DialogTitle>
         </DialogHeader>
