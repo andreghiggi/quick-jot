@@ -19,6 +19,7 @@ export interface Reseller {
   responsible_phone: string | null;
   status: string;
   created_by: string;
+  user_id: string | null;
   created_at: string;
   updated_at: string;
 }

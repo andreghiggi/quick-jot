@@ -64,21 +64,51 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create auth user (auto-confirmed so they can login immediately)
+    // Try to create the auth user (auto-confirmed)
+    let newUserId: string | null = null;
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: { full_name: full_name || email },
     });
-    if (createErr || !created.user) {
-      return new Response(JSON.stringify({ error: createErr?.message || 'Failed to create user' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
-    const newUserId = created.user.id;
+    if (createErr || !created?.user) {
+      // If email already registered, look it up and update password instead
+      const msg = (createErr?.message || '').toLowerCase();
+      const alreadyExists = msg.includes('already') || msg.includes('registered') || msg.includes('exists');
+      if (!alreadyExists) {
+        return new Response(JSON.stringify({ error: createErr?.message || 'Failed to create user' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      // Find existing user by email via listUsers (paginate up to a few pages)
+      let existingId: string | null = null;
+      for (let page = 1; page <= 10 && !existingId; page++) {
+        const { data: list } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+        const match = list?.users?.find((u: any) => (u.email || '').toLowerCase() === email.toLowerCase());
+        if (match) existingId = match.id;
+        if (!list || list.users.length < 200) break;
+      }
+      if (!existingId) {
+        return new Response(JSON.stringify({ error: 'E-mail já registrado, mas usuário não encontrado' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      // Update password for the existing user
+      const { error: updErr } = await admin.auth.admin.updateUserById(existingId, { password });
+      if (updErr) {
+        return new Response(JSON.stringify({ error: `Falha ao atualizar senha: ${updErr.message}` }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      newUserId = existingId;
+    } else {
+      newUserId = created.user.id;
+    }
 
     // Link reseller record to auth user
     const { error: linkErr } = await admin

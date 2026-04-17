@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
-  Plus, Loader2, Search, Play, Pause, Pencil, Eye,
+  Plus, Loader2, Search, Play, Pause, Pencil, Eye, KeyRound,
   Users, DollarSign, UserCheck,
 } from 'lucide-react';
 
@@ -88,6 +88,11 @@ export default function ResellersPage() {
   const [editingReseller, setEditingReseller] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Access creation for existing reseller
+  const [accessReseller, setAccessReseller] = useState<{ id: string; email: string; name: string } | null>(null);
+  const [accessPassword, setAccessPassword] = useState('');
+  const [isCreatingAccess, setIsCreatingAccess] = useState(false);
 
   // Form state
   const [form, setForm] = useState({
@@ -239,6 +244,38 @@ export default function ResellersPage() {
     const success = await updateReseller(editingReseller, buildData());
     if (success) { setIsEditOpen(false); setEditingReseller(null); resetForm(); }
     setIsSaving(false);
+  }
+
+  async function handleCreateAccess(e: React.FormEvent) {
+    e.preventDefault();
+    if (!accessReseller) return;
+    if (!accessReseller.email) {
+      toast.error('Revendedor sem e-mail do responsável. Edite o cadastro primeiro.');
+      return;
+    }
+    if (!accessPassword || accessPassword.length < 6) {
+      toast.error('Senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    setIsCreatingAccess(true);
+    const { data, error } = await supabase.functions.invoke('create-reseller-user', {
+      body: {
+        reseller_id: accessReseller.id,
+        email: accessReseller.email,
+        password: accessPassword,
+        full_name: accessReseller.name,
+      },
+    });
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || 'Erro ao criar acesso');
+    } else {
+      toast.success('Acesso criado com sucesso!');
+      setAccessReseller(null);
+      setAccessPassword('');
+      // Refresh list to update user_id
+      window.location.reload();
+    }
+    setIsCreatingAccess(false);
   }
 
   const filteredResellers = resellers.filter(r =>
@@ -568,6 +605,23 @@ export default function ResellersPage() {
                             <Button variant="outline" size="sm" className="gap-1" onClick={() => openEdit(r.id)}>
                               <Pencil className="w-3 h-3" /> Editar
                             </Button>
+                            {!r.user_id && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => {
+                                  setAccessReseller({
+                                    id: r.id,
+                                    email: r.responsible_email || '',
+                                    name: r.responsible_name || r.name,
+                                  });
+                                  setAccessPassword('');
+                                }}
+                              >
+                                <KeyRound className="w-3 h-3" /> Criar acesso
+                              </Button>
+                            )}
                             <Button
                               variant={r.status === 'active' ? 'outline' : 'default'}
                               size="sm" className="gap-1"
@@ -602,6 +656,40 @@ export default function ResellersPage() {
             <Button type="submit" className="w-full" disabled={isSaving}>
               {isSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               Salvar Alterações
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Access Dialog */}
+      <Dialog open={!!accessReseller} onOpenChange={(o) => { if (!o) { setAccessReseller(null); setAccessPassword(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Criar acesso ao portal</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateAccess} className="space-y-4">
+            <div className="space-y-1">
+              <Label>E-mail de login</Label>
+              <Input value={accessReseller?.email || ''} disabled />
+              <p className="text-xs text-muted-foreground">
+                E-mail do responsável. Se já existir uma conta com este e-mail, a senha será atualizada.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label>Senha de acesso *</Label>
+              <Input
+                type="text"
+                value={accessPassword}
+                onChange={e => setAccessPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                disabled={isCreatingAccess}
+                autoComplete="new-password"
+              />
+              <p className="text-xs text-muted-foreground">Anote esta senha — ela será informada ao revendedor.</p>
+            </div>
+            <Button type="submit" className="w-full" disabled={isCreatingAccess}>
+              {isCreatingAccess && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Criar acesso
             </Button>
           </form>
         </DialogContent>
