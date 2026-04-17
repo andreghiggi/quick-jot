@@ -102,14 +102,15 @@ async function getActivationDate(supabase: any, companyId: string): Promise<Date
 async function ensureMonthlyInvoice(
   supabase: any,
   reseller: { id: string; settings: { monthly_fee: number; invoice_due_day: number } },
-  company: { id: string; name: string },
+  company: { id: string; name: string; next_invoice_due_day?: number | null },
   year: number,
   month: number,
   activationDate: Date
 ): Promise<{ created: boolean; type: "monthly" | "prorated"; value: number } | null> {
   const monthKey = formatMonthKey(year, month);
   const monthlyFee = Number(reseller.settings.monthly_fee);
-  const dueDay = reseller.settings.invoice_due_day;
+  // Per-company override takes precedence over the reseller default
+  const dueDay = company.next_invoice_due_day ?? reseller.settings.invoice_due_day;
   const totalDays = daysInMonth(year, month);
 
   // Skip if invoice already exists for this store/month
