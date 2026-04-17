@@ -82,6 +82,7 @@ const UF_OPTIONS = [
 
 export default function ResellersPage() {
   const { user, impersonateReseller } = useAuthContext();
+  const navigate = useNavigate();
   const { resellers, loading, createReseller, updateReseller, toggleResellerStatus, refetch } = useResellers();
 
   const [searchTerm, setSearchTerm] = useState('');
