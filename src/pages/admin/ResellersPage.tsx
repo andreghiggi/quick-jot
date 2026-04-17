@@ -95,6 +95,9 @@ export default function ResellersPage() {
   const [accessPassword, setAccessPassword] = useState('');
   const [isCreatingAccess, setIsCreatingAccess] = useState(false);
 
+  // Assign companies dialog
+  const [assignReseller, setAssignReseller] = useState<{ id: string; name: string } | null>(null);
+
   // Form state
   const [form, setForm] = useState({
     name: '', cnpj: '', email: '', phone: '',
