@@ -99,15 +99,41 @@ Deno.serve(async (req) => {
         .single();
       if (iErr || !invoice) throw new Error("Fatura não encontrada");
 
-      // If already has charge, return it
+      // If already has charge, try to backfill PIX QR code if missing
       if (invoice.asaas_charge_id) {
+        let pixQrcode = invoice.asaas_pix_qrcode;
+        let pixPayload = invoice.asaas_pix_payload;
+        let pixError: string | null = null;
+
+        if (!pixQrcode) {
+          try {
+            const pixData = await asaasFetch(`/payments/${invoice.asaas_charge_id}/pixQrCode`, {
+              method: "GET",
+            }, ASAAS_API_KEY, env);
+            pixQrcode = pixData.encodedImage || null;
+            pixPayload = pixData.payload || null;
+            if (pixQrcode) {
+              await supabase
+                .from("reseller_invoices")
+                .update({ asaas_pix_qrcode: pixQrcode, asaas_pix_payload: pixPayload })
+                .eq("id", invoice_id);
+            }
+          } catch (e: any) {
+            const msg = String(e?.message || e);
+            pixError = msg.includes("não possui uma chave Pix")
+              ? "A conta Asaas ainda não possui uma chave PIX cadastrada para recebimento."
+              : "Não foi possível gerar o QR Code PIX: " + msg;
+          }
+        }
+
         return new Response(JSON.stringify({
           ok: true,
           already_exists: true,
           charge_id: invoice.asaas_charge_id,
           invoice_url: invoice.asaas_invoice_url,
-          pix_qrcode: invoice.asaas_pix_qrcode,
-          pix_payload: invoice.asaas_pix_payload,
+          pix_qrcode: pixQrcode,
+          pix_payload: pixPayload,
+          pix_error: pixError,
           boleto_url: invoice.asaas_boleto_url,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
