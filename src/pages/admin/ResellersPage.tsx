@@ -102,6 +102,43 @@ export default function ResellersPage() {
   // Assign companies dialog
   const [assignReseller, setAssignReseller] = useState<{ id: string; name: string } | null>(null);
 
+  // Expanded resellers (drill-down lojas)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [companiesByReseller, setCompaniesByReseller] = useState<Record<string, any[]>>({});
+  const [loadingCompanies, setLoadingCompanies] = useState<Set<string>>(new Set());
+  const [modulesCompany, setModulesCompany] = useState<{ id: string; name: string } | null>(null);
+  const [selectedStore, setSelectedStore] = useState<StoreDetail | null>(null);
+
+  async function toggleExpand(resellerId: string) {
+    const next = new Set(expanded);
+    if (next.has(resellerId)) {
+      next.delete(resellerId);
+      setExpanded(next);
+      return;
+    }
+    next.add(resellerId);
+    setExpanded(next);
+    if (!companiesByReseller[resellerId]) {
+      setLoadingCompanies(prev => new Set(prev).add(resellerId));
+      const { data } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('reseller_id', resellerId)
+        .order('created_at', { ascending: false });
+      setCompaniesByReseller(prev => ({ ...prev, [resellerId]: data || [] }));
+      setLoadingCompanies(prev => {
+        const n = new Set(prev);
+        n.delete(resellerId);
+        return n;
+      });
+    }
+  }
+
+  async function handleAccessCompany(companyId: string) {
+    const { impersonateCompany } = await import('@/contexts/AuthContext').then(m => ({ impersonateCompany: null }));
+    // use directly from auth context
+  }
+
   // Form state
   const [form, setForm] = useState({
     name: '', cnpj: '', email: '', phone: '',
