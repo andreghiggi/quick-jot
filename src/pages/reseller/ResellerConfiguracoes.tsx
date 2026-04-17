@@ -16,7 +16,7 @@ export default function ResellerConfiguracoes() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [dueDay, setDueDay] = useState('10');
+  
   const [asaasKey, setAsaasKey] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
