@@ -348,11 +348,11 @@ export default function ResellerLojas() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Serial</TableHead>
                 <TableHead>Loja</TableHead>
                 <TableHead>Slug</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Criação</TableHead>
-                <TableHead className="text-right">Mensalidade</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -366,6 +366,9 @@ export default function ResellerLojas() {
               ) : (
                 filteredCompanies.map(c => (
                   <TableRow key={c.id}>
+                    <TableCell className="font-mono text-xs font-bold tracking-wider select-all">
+                      {(c as any).serial || '—'}
+                    </TableCell>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{c.slug}</TableCell>
                     <TableCell>
@@ -380,9 +383,6 @@ export default function ResellerLojas() {
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(c.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                     </TableCell>
-                    <TableCell className="text-right font-medium">
-                      R$ {(settings?.monthly_fee || 29.90).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2 flex-wrap">
                         <Button
@@ -390,10 +390,10 @@ export default function ResellerLojas() {
                           size="sm"
                           className="gap-1"
                           onClick={() => setSelectedStore(c as unknown as StoreDetail)}
-                          title="Ver faturas e detalhes"
+                          title="Ver detalhes da loja e faturas"
                         >
-                          <FileText className="w-3 h-3" />
-                          <span className="hidden sm:inline">Faturas</span>
+                          <Eye className="w-3 h-3" />
+                          <span className="hidden sm:inline">Detalhes</span>
                         </Button>
                         <Button
                           variant="outline"
