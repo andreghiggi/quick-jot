@@ -5,9 +5,10 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
  * Reseller Billing Edge Function — Per-store invoices
  *
  * Actions:
- * - generate_invoices: Generate monthly invoices for each active store of every reseller (cron, 1st of month)
+ * - generate_invoices: Generate the current month's invoice for each active store of every reseller (cron, 1st of month)
+ * - backfill_invoices: Generate ALL retroactive invoices for every active store, from activation date until today
+ *     (proportional for the activation month with due date in the FOLLOWING month, then full months)
  * - send_notifications: Send due-date reminders + suspend stores 3+ days overdue (cron, daily)
- * - create_prorated_item: Create an individual invoice for a store when it's linked to a reseller
  * - process_overdue: Mark overdue, suspend & reactivate companies (callable on demand)
  */
 
@@ -21,47 +22,38 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const { action, reseller_id, company_id, company_name, activation_fee } = await req.json();
+    const { action, reseller_id, company_id } = await req.json();
 
     switch (action) {
       case "generate_invoices":
-        return await generateInvoices(supabase);
+        return await generateCurrentMonthInvoices(supabase);
+
+      case "backfill_invoices":
+        return await backfillInvoices(supabase, { reseller_id, company_id });
 
       case "send_notifications":
         return await sendNotificationsAndProcess(supabase);
-
-      case "create_prorated_item":
-        return await createProratedInvoice(supabase, {
-          reseller_id,
-          company_id,
-          company_name,
-          activation_fee,
-        });
 
       case "process_overdue":
         return await processOverdue(supabase);
 
       default:
-        return new Response(
-          JSON.stringify({ error: "Invalid action" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResponse({ error: "Invalid action" }, 400);
     }
   } catch (error: any) {
     console.error("Billing error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ error: error.message }, 500);
   }
 });
+
+// ── Helpers ──
 
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 
-function formatMonthKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+function formatMonthKey(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}`;
 }
 
 function getMonthLabel(monthKey: string): string {
@@ -73,12 +65,113 @@ function getMonthLabel(monthKey: string): string {
   return `${months[month - 1]} ${year}`;
 }
 
-async function generateInvoices(supabase: any) {
+/** Due date for a reference month is the (dueDay) of the FOLLOWING month. */
+function buildDueDate(year: number, month: number, dueDay: number): string {
+  // month is 1-indexed; due in month+1
+  let dy = year;
+  let dm = month + 1;
+  if (dm > 12) { dm = 1; dy = year + 1; }
+  const day = Math.min(dueDay, daysInMonth(dy, dm));
+  return `${dy}-${String(dm).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+async function getActivationDate(supabase: any, companyId: string): Promise<Date | null> {
+  // Try plan first
+  const { data: plan } = await supabase
+    .from("company_plans")
+    .select("activated_at, starts_at")
+    .eq("company_id", companyId)
+    .maybeSingle();
+  const dateStr = plan?.activated_at || plan?.starts_at;
+  if (dateStr) return new Date(dateStr);
+
+  // Fallback to company creation
+  const { data: company } = await supabase
+    .from("companies")
+    .select("created_at")
+    .eq("id", companyId)
+    .maybeSingle();
+  return company?.created_at ? new Date(company.created_at) : null;
+}
+
+async function ensureMonthlyInvoice(
+  supabase: any,
+  reseller: { id: string; settings: { monthly_fee: number; invoice_due_day: number } },
+  company: { id: string; name: string },
+  year: number,
+  month: number,
+  activationDate: Date
+): Promise<{ created: boolean; type: "monthly" | "prorated"; value: number } | null> {
+  const monthKey = formatMonthKey(year, month);
+  const monthlyFee = Number(reseller.settings.monthly_fee);
+  const dueDay = reseller.settings.invoice_due_day;
+  const totalDays = daysInMonth(year, month);
+
+  // Skip if invoice already exists for this store/month
+  const { data: existing } = await supabase
+    .from("reseller_invoices")
+    .select("id")
+    .eq("company_id", company.id)
+    .eq("month", monthKey)
+    .maybeSingle();
+  if (existing) return null;
+
+  // Determine if proportional or full month
+  const activationYear = activationDate.getFullYear();
+  const activationMonth = activationDate.getMonth() + 1;
+
+  let isFullMonth = true;
+  let startDay = 1;
+  if (activationYear === year && activationMonth === month) {
+    startDay = activationDate.getDate();
+    isFullMonth = startDay === 1;
+  }
+
+  const remainingDays = totalDays - startDay + 1;
+  const value = isFullMonth
+    ? monthlyFee
+    : Math.round(((monthlyFee / totalDays) * remainingDays) * 100) / 100;
+  const type: "monthly" | "prorated" = isFullMonth ? "monthly" : "prorated";
+
+  const dueDate = buildDueDate(year, month, dueDay);
+
+  const { data: invoice, error: invErr } = await supabase
+    .from("reseller_invoices")
+    .insert({
+      reseller_id: reseller.id,
+      company_id: company.id,
+      month: monthKey,
+      due_date: dueDate,
+      total_value: value,
+      status: "pending",
+    })
+    .select()
+    .single();
+
+  if (invErr) {
+    console.error(`Error creating invoice ${reseller.id}/${company.id}/${monthKey}:`, invErr);
+    return null;
+  }
+
+  await supabase.from("reseller_invoice_items").insert({
+    invoice_id: invoice.id,
+    company_id: company.id,
+    company_name: company.name,
+    type,
+    value,
+    days_counted: isFullMonth ? totalDays : remainingDays,
+  });
+
+  return { created: true, type, value };
+}
+
+// ── Actions ──
+
+/** Generate just the CURRENT month invoice for all active stores (cron monthly). */
+async function generateCurrentMonthInvoices(supabase: any) {
   const now = new Date();
-  const monthKey = formatMonthKey(now);
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
-  const totalDays = daysInMonth(year, month);
 
   const { data: resellers } = await supabase
     .from("resellers")
@@ -94,83 +187,135 @@ async function generateInvoices(supabase: any) {
   for (const reseller of resellers) {
     const { data: settings } = await supabase
       .from("reseller_settings")
-      .select("*")
+      .select("monthly_fee, invoice_due_day")
       .eq("reseller_id", reseller.id)
       .maybeSingle();
 
-    const monthlyFee = Number(settings?.monthly_fee ?? 29.90);
-    const dueDay = settings?.invoice_due_day ?? 10;
+    const fullSettings = {
+      monthly_fee: Number(settings?.monthly_fee ?? 29.90),
+      invoice_due_day: settings?.invoice_due_day ?? 20,
+    };
 
     const { data: companies } = await supabase
       .from("companies")
-      .select("id, name")
-      .eq("reseller_id", reseller.id);
+      .select("id, name, active")
+      .eq("reseller_id", reseller.id)
+      .eq("active", true);
 
     if (!companies?.length) continue;
 
-    // Filter to companies with active plans
-    const companyIds = companies.map((c: any) => c.id);
-    const { data: activePlans } = await supabase
-      .from("company_plans")
-      .select("company_id")
-      .in("company_id", companyIds)
-      .eq("active", true);
+    for (const company of companies) {
+      const activationDate = await getActivationDate(supabase, company.id);
+      if (!activationDate) continue;
 
-    const activeIds = new Set((activePlans || []).map((p: any) => p.company_id));
-    const activeCompanies = companies.filter((c: any) => activeIds.has(c.id));
-
-    for (const company of activeCompanies) {
-      // Skip if invoice already exists for this store/month
-      const { data: existing } = await supabase
-        .from("reseller_invoices")
-        .select("id")
-        .eq("company_id", company.id)
-        .eq("month", monthKey)
-        .maybeSingle();
-      if (existing) continue;
-
-      const day = Math.min(dueDay, totalDays);
-      const dueDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-
-      const { data: invoice, error: invErr } = await supabase
-        .from("reseller_invoices")
-        .insert({
-          reseller_id: reseller.id,
-          company_id: company.id,
-          month: monthKey,
-          due_date: dueDate,
-          total_value: monthlyFee,
-          status: "pending",
-        })
-        .select()
-        .single();
-
-      if (invErr) {
-        console.error(`Error creating invoice ${reseller.id}/${company.id}:`, invErr);
-        continue;
-      }
-
-      await supabase.from("reseller_invoice_items").insert({
-        invoice_id: invoice.id,
-        company_id: company.id,
-        company_name: company.name,
-        type: "monthly",
-        value: monthlyFee,
-        days_counted: totalDays,
-      });
-
-      invoicesCreated++;
+      const result = await ensureMonthlyInvoice(
+        supabase,
+        { id: reseller.id, settings: fullSettings },
+        company,
+        year,
+        month,
+        activationDate
+      );
+      if (result?.created) invoicesCreated++;
     }
   }
 
-  return jsonResponse({ message: "Invoices generated", invoices_created: invoicesCreated });
+  return jsonResponse({ message: "Current-month invoices generated", invoices_created: invoicesCreated });
+}
+
+/** Backfill ALL invoices from activation date until today.
+ * Optional filter: reseller_id and/or company_id.
+ */
+async function backfillInvoices(
+  supabase: any,
+  filter: { reseller_id?: string; company_id?: string }
+) {
+  const now = new Date();
+  const todayYear = now.getFullYear();
+  const todayMonth = now.getMonth() + 1;
+
+  let resellerQuery = supabase.from("resellers").select("id, name").eq("status", "active");
+  if (filter.reseller_id) resellerQuery = resellerQuery.eq("id", filter.reseller_id);
+  const { data: resellers } = await resellerQuery;
+
+  if (!resellers?.length) {
+    return jsonResponse({ message: "No active resellers", invoices_created: 0 });
+  }
+
+  let invoicesCreated = 0;
+  const detail: any[] = [];
+
+  for (const reseller of resellers) {
+    const { data: settings } = await supabase
+      .from("reseller_settings")
+      .select("monthly_fee, invoice_due_day")
+      .eq("reseller_id", reseller.id)
+      .maybeSingle();
+
+    const fullSettings = {
+      monthly_fee: Number(settings?.monthly_fee ?? 29.90),
+      invoice_due_day: settings?.invoice_due_day ?? 20,
+    };
+
+    let companyQuery = supabase
+      .from("companies")
+      .select("id, name, active")
+      .eq("reseller_id", reseller.id)
+      .eq("active", true);
+    if (filter.company_id) companyQuery = companyQuery.eq("id", filter.company_id);
+
+    const { data: companies } = await companyQuery;
+    if (!companies?.length) continue;
+
+    for (const company of companies) {
+      const activationDate = await getActivationDate(supabase, company.id);
+      if (!activationDate) {
+        detail.push({ company: company.name, skipped: "no activation date" });
+        continue;
+      }
+
+      // Iterate from activation month to current month
+      let y = activationDate.getFullYear();
+      let m = activationDate.getMonth() + 1;
+
+      // Hard safety: don't go more than 36 months back
+      let safetyCount = 0;
+      while ((y < todayYear || (y === todayYear && m <= todayMonth)) && safetyCount < 36) {
+        const result = await ensureMonthlyInvoice(
+          supabase,
+          { id: reseller.id, settings: fullSettings },
+          company,
+          y,
+          m,
+          activationDate
+        );
+        if (result?.created) {
+          invoicesCreated++;
+          detail.push({
+            company: company.name,
+            month: formatMonthKey(y, m),
+            label: getMonthLabel(formatMonthKey(y, m)),
+            type: result.type,
+            value: result.value,
+          });
+        }
+        m++;
+        if (m > 12) { m = 1; y++; }
+        safetyCount++;
+      }
+    }
+  }
+
+  return jsonResponse({
+    message: "Backfill completed",
+    invoices_created: invoicesCreated,
+    detail: detail.slice(0, 50), // truncate for response size
+  });
 }
 
 async function sendNotificationsAndProcess(supabase: any) {
-  // Step 1: process overdue and suspensions
   const { data: processed } = await supabase.rpc("process_overdue_invoices");
 
-  // Step 2: send due-date reminders for pending invoices
   const today = new Date().toISOString().slice(0, 10);
 
   const { data: invoices } = await supabase
@@ -185,7 +330,6 @@ async function sendNotificationsAndProcess(supabase: any) {
     const todayDate = new Date(today + "T12:00:00");
     const diffDays = Math.round((dueDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Notify at 5/1/0 days before due, and at -3 (suspension day)
     if (![5, 1, 0, -3].includes(diffDays)) continue;
 
     const reseller = invoice.resellers;
@@ -195,7 +339,7 @@ async function sendNotificationsAndProcess(supabase: any) {
     const name = reseller.name.split(" ")[0];
     const formattedValue = Number(invoice.total_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
     const monthLabel = getMonthLabel(invoice.month);
-    const portalLink = `${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".lovable.app")}/revendedor/financeiro`;
+    const portalLink = `${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".lovable.app")}/revendedor/lojas`;
 
     let message: string;
     if (diffDays === -3) {
@@ -231,134 +375,6 @@ async function processOverdue(supabase: any) {
   const { data, error } = await supabase.rpc("process_overdue_invoices");
   if (error) return jsonResponse({ error: error.message }, 500);
   return jsonResponse({ message: "Processed", result: data });
-}
-
-async function createProratedInvoice(
-  supabase: any,
-  params: { reseller_id: string; company_id: string; company_name?: string; activation_fee?: number }
-) {
-  const now = new Date();
-  const monthKey = formatMonthKey(now);
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  const totalDays = daysInMonth(year, month);
-  const monthStart = new Date(year, month - 1, 1);
-
-  const { data: settings } = await supabase
-    .from("reseller_settings")
-    .select("*")
-    .eq("reseller_id", params.reseller_id)
-    .maybeSingle();
-
-  const monthlyFee = Number(settings?.monthly_fee ?? 29.90);
-  const dueDay = settings?.invoice_due_day ?? 10;
-  const activationFee = params.activation_fee ?? Number(settings?.activation_fee ?? 0);
-
-  let companyName = params.company_name;
-  if (!companyName) {
-    const { data: c } = await supabase
-      .from("companies")
-      .select("name")
-      .eq("id", params.company_id)
-      .maybeSingle();
-    companyName = c?.name || "Loja";
-  }
-
-  // Determine effective billing start date
-  const { data: plan } = await supabase
-    .from("company_plans")
-    .select("activated_at, starts_at")
-    .eq("company_id", params.company_id)
-    .maybeSingle();
-
-  const activationDateStr: string | null = plan?.activated_at || plan?.starts_at || null;
-
-  let effectiveStart: Date;
-  if (activationDateStr) {
-    const activationDate = new Date(activationDateStr);
-    effectiveStart = activationDate < monthStart ? monthStart : activationDate;
-  } else {
-    effectiveStart = now;
-  }
-
-  const startDay = effectiveStart.getMonth() + 1 === month && effectiveStart.getFullYear() === year
-    ? effectiveStart.getDate()
-    : 1;
-
-  const remainingDays = totalDays - startDay + 1;
-  const isFullMonth = remainingDays >= totalDays;
-
-  const chargedValue = isFullMonth
-    ? monthlyFee
-    : Math.round(((monthlyFee / totalDays) * remainingDays) * 100) / 100;
-  const itemType: "monthly" | "prorated" = isFullMonth ? "monthly" : "prorated";
-
-  // Find or create invoice for this store/month (unique per company+month)
-  let { data: invoice } = await supabase
-    .from("reseller_invoices")
-    .select("*")
-    .eq("company_id", params.company_id)
-    .eq("month", monthKey)
-    .maybeSingle();
-
-  if (!invoice) {
-    const day = Math.min(dueDay, totalDays);
-    const dueDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-
-    const { data: newInvoice, error } = await supabase
-      .from("reseller_invoices")
-      .insert({
-        reseller_id: params.reseller_id,
-        company_id: params.company_id,
-        month: monthKey,
-        due_date: dueDate,
-        total_value: 0,
-        status: "pending",
-      })
-      .select()
-      .single();
-    if (error) return jsonResponse({ error: error.message }, 500);
-    invoice = newInvoice;
-  }
-
-  if (!invoice) return jsonResponse({ error: "Failed to create invoice" }, 500);
-
-  const items: any[] = [];
-  if (activationFee > 0) {
-    items.push({
-      invoice_id: invoice.id,
-      company_id: params.company_id,
-      company_name: companyName,
-      type: "activation",
-      value: activationFee,
-    });
-  }
-  items.push({
-    invoice_id: invoice.id,
-    company_id: params.company_id,
-    company_name: companyName,
-    type: itemType,
-    value: chargedValue,
-    days_counted: remainingDays,
-  });
-
-  await supabase.from("reseller_invoice_items").insert(items);
-
-  const newTotal = Number(invoice.total_value) + activationFee + chargedValue;
-  await supabase
-    .from("reseller_invoices")
-    .update({ total_value: newTotal })
-    .eq("id", invoice.id);
-
-  return jsonResponse({
-    invoice_id: invoice.id,
-    company_id: params.company_id,
-    item_type: itemType,
-    charged_value: chargedValue,
-    activation_fee: activationFee,
-    remaining_days: remainingDays,
-    total_days: totalDays,
-  });
 }
 
 function jsonResponse(data: any, status = 200) {
