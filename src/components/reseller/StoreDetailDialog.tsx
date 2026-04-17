@@ -93,6 +93,19 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
   const [editingItems, setEditingItems] = useState<InvoiceItemRow[]>([]);
   const [generatingChargeId, setGeneratingChargeId] = useState<string | null>(null);
   const [activeCharge, setActiveCharge] = useState<AsaasChargeData | null>(null);
+  const [storeData, setStoreData] = useState<StoreDetail | null>(null);
+  const [showBlock, setShowBlock] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showCancel, setShowCancel] = useState(false);
+
+  async function reloadStore(companyId: string) {
+    const { data } = await supabase
+      .from('companies')
+      .select('id, name, cnpj, phone, login_email, active, address_street, address_number, address_neighborhood, reseller_id, created_at, serial, license_status, license_block_reason, license_block_message, next_invoice_due_day')
+      .eq('id', companyId)
+      .maybeSingle();
+    if (data) setStoreData(data as any);
+  }
 
   async function handleGenerateOrShowCharge(invoice: Invoice) {
     setGeneratingChargeId(invoice.id);
