@@ -38,7 +38,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { products, loading: productsLoading, getCategories, getActiveProducts } = useProducts({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
-  const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id });
+  const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id, channel: 'express' });
   const { settings } = useStoreSettings({ companyId: company?.id });
   const { getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
   const activeNeighborhoods = getActiveNeighborhoods();

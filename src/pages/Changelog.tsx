@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.24',
+    type: 'feature',
+    description: 'Formas de pagamento agora são separadas por canal: a tela de "Formas de Pagamento" passou a ter três abas (Cardápio Online, PDV e Pedido Express). Cada canal mantém sua própria lista, então é possível, por exemplo, oferecer apenas PIX e Dinheiro no Cardápio Online e habilitar Cartão de Crédito/Débito apenas no PDV. As formas já cadastradas foram automaticamente vinculadas ao Cardápio Online; basta recadastrar (ou usar os atalhos rápidos) nas abas PDV e Pedido Express conforme a necessidade. Integrações TEF (PinPad / SmartPOS) continuam disponíveis somente na aba PDV.',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.23',
     type: 'feature',
     description: 'Novo botão "Ações da licença" no detalhe da loja (disponível para Admin Master e Revendedores). Inclui três opções: (1) Trava da revenda — bloqueia o acesso do lojista imediatamente exigindo motivo e mensagem opcional, com possibilidade de liberar depois; (2) Editar licença — permite atualizar nome, CNPJ, telefone, e-mail, endereço e o dia de vencimento das próximas faturas (faturas já geradas não são alteradas); (3) Cancelar licença — pede confirmação dupla ("Não cancelar licença" / "Sim, quero cancelar") e marca a empresa como cancelada, parando a geração de faturas e bloqueando acesso. Quando o lojista tenta entrar em uma loja travada, vê o motivo informado pelo revendedor e botão de WhatsApp para regularizar.',
