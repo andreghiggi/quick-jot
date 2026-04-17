@@ -523,21 +523,11 @@ def html_para_texto(html):
         return f'[NAME]{conteudo}[/NAME]'
     text = re.sub(r'<span\s+class="name"[^>]*>(.*?)</span>', marcar_name, text, flags=re.DOTALL | re.IGNORECASE)
 
-    # CABEÇALHO: envolve o bloco <div class="header">...</div> em [BOX_START]/[BOX_END]
-    def marcar_header(match):
-        inner = match.group(1)
-        # Transforma os divs internos em quebras de linha; remove tags
-        inner = re.sub(r'</div>', '\n', inner, flags=re.IGNORECASE)
-        inner = re.sub(r'<[^>]+>', '', inner)
-        inner = re.sub(r'[ \t]+', ' ', inner)
-        linhas_h = [l.strip() for l in inner.split('\n') if l.strip()]
-        return '\n[BOX_START]\n' + '\n'.join(linhas_h) + '\n[BOX_END]\n'
-    text = re.sub(
-        r'<div\s+class="header"[^>]*>(.*?)</div>\s*(?=<hr|<div|<body|$)',
-        marcar_header,
-        text,
-        flags=re.DOTALL | re.IGNORECASE
-    )
+    # CABEÇALHO EM CAIXA: marcadores HTML <!--BOX_START--> / <!--BOX_END-->
+    # viram linhas próprias [BOX_START] / [BOX_END]. O conteúdo entre eles é processado
+    # normalmente, e no GDI desenhamos uma borda em volta da região renderizada.
+    text = re.sub(r'<!--\s*BOX_START\s*-->', '\n[BOX_START]\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'<!--\s*BOX_END\s*-->', '\n[BOX_END]\n', text, flags=re.IGNORECASE)
 
     # CLIENTE: linha "<p><span class="label">Cliente:</span> NOME</p>" vira [CLIENTE]Cliente: NOME[/CLIENTE]
     def marcar_cliente(match):
