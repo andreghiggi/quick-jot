@@ -1479,56 +1479,91 @@ export default function PDV() {
               </Button>
             </div>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            <Button
-              variant={selectedCategory === null ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedCategory(null)}
-            >
-              Todos
-            </Button>
-            {categories.map(cat => (
-              <Button
-                key={cat}
-                variant={selectedCategory === cat ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedCategory(cat)}
-              >
-                {cat}
-              </Button>
-            ))}
-          </div>
+          {/* Category / Subcategory navigation */}
+          {!isSearching && (
+            <>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {selectedCategory && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setSelectedCategory(null); setSelectedSubcategoryId(null); }}
+                  >
+                    ← Categorias
+                  </Button>
+                )}
+                {!selectedCategory && categories.map(cat => (
+                  <Button
+                    key={cat}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setSelectedCategory(cat); setSelectedSubcategoryId(null); }}
+                  >
+                    {cat}
+                  </Button>
+                ))}
+                {selectedCategory && visibleSubcategoriesForSelected.length > 0 && (
+                  <>
+                    <span className="self-center text-sm font-medium px-2">{selectedCategory} →</span>
+                    {visibleSubcategoriesForSelected.map(sub => (
+                      <Button
+                        key={sub.id}
+                        variant={selectedSubcategoryId === sub.id ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedSubcategoryId(sub.id)}
+                      >
+                        {sub.name}
+                      </Button>
+                    ))}
+                  </>
+                )}
+                {selectedCategory && visibleSubcategoriesForSelected.length === 0 && (
+                  <span className="self-center text-sm font-medium px-2">{selectedCategory}</span>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Products Grid */}
           <ScrollArea className="flex-1">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pr-4">
-              {filteredProducts.map(product => (
-                <Card 
-                  key={product.id} 
-                  className="cursor-pointer hover:border-primary transition-colors"
-                  onClick={() => handleProductClick(product)}
-                >
-                  <CardContent className="p-3">
-                    {product.imageUrl ? (
-                      <img 
-                        src={product.imageUrl} 
-                        alt={product.name}
-                        loading="lazy"
-                        className="w-full h-20 object-cover rounded-md mb-2"
-                      />
-                    ) : (
-                      <div className="w-full h-20 bg-muted rounded-md mb-2 flex items-center justify-center">
-                        <Package className="w-8 h-8 text-muted-foreground" />
-                      </div>
-                    )}
-                    <p className="font-medium text-sm truncate">{product.name}</p>
-                    <p className="text-primary font-bold text-sm">
-                      {formatCurrency(product.price)}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {!isSearching && !selectedCategory ? (
+              <div className="text-center text-muted-foreground py-12 text-sm">
+                Selecione uma categoria para ver os produtos ou use a busca acima.
+              </div>
+            ) : !isSearching && selectedCategory && visibleSubcategoriesForSelected.length > 0 && !selectedSubcategoryId ? (
+              <div className="text-center text-muted-foreground py-12 text-sm">
+                Selecione uma subcategoria para ver os produtos.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pr-4">
+                {filteredProducts.map(product => (
+                  <Card 
+                    key={product.id} 
+                    className="cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => handleProductClick(product)}
+                  >
+                    <CardContent className="p-3">
+                      {product.imageUrl ? (
+                        <img 
+                          src={product.imageUrl} 
+                          alt={product.name}
+                          loading="lazy"
+                          className="w-full h-20 object-cover rounded-md mb-2"
+                        />
+                      ) : (
+                        <div className="w-full h-20 bg-muted rounded-md mb-2 flex items-center justify-center">
+                          <Package className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <p className="font-medium text-sm truncate">{product.name}</p>
+                      <p className="text-primary font-bold text-sm">
+                        {formatCurrency(product.price)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </ScrollArea>
         </div>
 
