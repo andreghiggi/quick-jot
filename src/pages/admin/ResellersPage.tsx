@@ -631,9 +631,9 @@ export default function ResellersPage() {
                                 size="icon"
                                 className="h-7 w-7"
                                 onClick={() => toggleExpand(r.id)}
-                                title={isOpen ? 'Recolher lojas' : 'Ver lojas'}
+                                title={isOpen ? 'Recolher lojas' : 'Ver lojas do revendedor'}
                               >
-                                {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                <Eye className="w-4 h-4" />
                               </Button>
                             </TableCell>
                             <TableCell>
@@ -700,19 +700,6 @@ export default function ResellersPage() {
                                   {r.status === 'active' ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                                   {r.status === 'active' ? 'Pausar' : 'Ativar'}
                                 </Button>
-                                {r.user_id && (
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    className="gap-1"
-                                    onClick={async () => {
-                                      const ok = await impersonateReseller(r.id);
-                                      if (ok) navigate('/revendedor/home');
-                                    }}
-                                  >
-                                    <Eye className="w-3 h-3" /> Acessar painel
-                                  </Button>
-                                )}
                               </div>
                             </TableCell>
                           </TableRow>
