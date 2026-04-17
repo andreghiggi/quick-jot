@@ -115,7 +115,7 @@ export function useResellerPortal() {
     } finally {
       setLoading(false);
     }
-  }, [user, isReseller]);
+  }, [user, isReseller, impersonatedReseller]);
 
   useEffect(() => {
     fetchResellerData();
