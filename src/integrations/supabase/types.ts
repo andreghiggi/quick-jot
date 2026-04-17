@@ -248,6 +248,8 @@ export type Database = {
           initial_password: string | null
           license_block_message: string | null
           license_block_reason: string | null
+          license_block_scheduled_by: string | null
+          license_block_scheduled_for: string | null
           license_blocked_at: string | null
           license_blocked_by: string | null
           license_canceled_at: string | null
@@ -286,6 +288,8 @@ export type Database = {
           initial_password?: string | null
           license_block_message?: string | null
           license_block_reason?: string | null
+          license_block_scheduled_by?: string | null
+          license_block_scheduled_for?: string | null
           license_blocked_at?: string | null
           license_blocked_by?: string | null
           license_canceled_at?: string | null
@@ -324,6 +328,8 @@ export type Database = {
           initial_password?: string | null
           license_block_message?: string | null
           license_block_reason?: string | null
+          license_block_scheduled_by?: string | null
+          license_block_scheduled_for?: string | null
           license_blocked_at?: string | null
           license_blocked_by?: string | null
           license_canceled_at?: string | null
