@@ -11,22 +11,18 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { useCompanyPlans } from '@/hooks/useCompanyPlans';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { 
-  Building2, 
-  Plus, 
-  Loader2, 
+import {
+  Building2,
+  Plus,
+  Loader2,
   ExternalLink,
   Search,
-  Play,
-  Pause,
-  Calendar,
   Eye,
   Copy,
   EyeOff,
-  Pencil
+  Pencil,
 } from 'lucide-react';
 
 interface Company {
@@ -38,37 +34,26 @@ interface Company {
   created_at: string;
   login_email: string | null;
   initial_password: string | null;
-}
-
-interface CompanyPlan {
-  id: string;
-  company_id: string;
-  plan_name: string;
-  starts_at: string;
-  expires_at: string | null;
-  active: boolean;
-  activated_at: string | null;
+  reseller_id: string | null;
 }
 
 export default function AdminDashboard() {
-  const { user, impersonateCompany } = useAuthContext();
+  const { impersonateCompany } = useAuthContext();
   const navigate = useNavigate();
-  const { activateTrial, deactivatePlan, loading: planLoading } = useCompanyPlans();
-  
+
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [companyPlans, setCompanyPlans] = useState<Record<string, CompanyPlan>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
-  
+
   // Edit credentials state
   const [editCredentialsCompanyId, setEditCredentialsCompanyId] = useState<string | null>(null);
   const [editEmail, setEditEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
-  
+
   // New company form
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newCompanySlug, setNewCompanySlug] = useState('');
@@ -82,26 +67,15 @@ export default function AdminDashboard() {
 
   async function fetchCompanies() {
     try {
+      // Only direct companies (no reseller) — companies under resellers appear in /admin/revendedores
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select('*')
+        .is('reseller_id', null)
         .order('created_at', { ascending: false });
 
       if (companiesError) throw companiesError;
-      setCompanies(companiesData || []);
-      
-      // Fetch plans for all companies
-      const { data: plansData, error: plansError } = await supabase
-        .from('company_plans')
-        .select('*');
-      
-      if (plansError) throw plansError;
-      
-      const plansMap: Record<string, CompanyPlan> = {};
-      (plansData || []).forEach((plan: CompanyPlan) => {
-        plansMap[plan.company_id] = plan;
-      });
-      setCompanyPlans(plansMap);
+      setCompanies((companiesData || []) as Company[]);
     } catch (error) {
       console.error('Error fetching companies:', error);
       toast.error('Erro ao carregar empresas');
@@ -110,49 +84,11 @@ export default function AdminDashboard() {
     }
   }
 
-  async function handleActivateTrial(companyId: string) {
-    if (!user) return;
-    const success = await activateTrial(companyId, user.id);
-    if (success) {
-      fetchCompanies();
-    }
-  }
-
-  async function handleDeactivatePlan(companyId: string) {
-    const success = await deactivatePlan(companyId);
-    if (success) {
-      fetchCompanies();
-    }
-  }
-
   async function handleAccessCompany(companyId: string) {
     const success = await impersonateCompany(companyId);
     if (success) {
       navigate('/');
     }
-  }
-
-  function getPlanStatus(companyId: string): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; expiresAt?: string } {
-    const plan = companyPlans[companyId];
-    if (!plan) {
-      return { label: 'Sem plano', variant: 'outline' };
-    }
-    if (!plan.active) {
-      return { label: 'Aguardando ativação', variant: 'secondary' };
-    }
-    if (plan.expires_at) {
-      const expiresAt = new Date(plan.expires_at);
-      const now = new Date();
-      if (expiresAt < now) {
-        return { label: 'Expirado', variant: 'destructive' };
-      }
-      return { 
-        label: `Trial ativo`, 
-        variant: 'default',
-        expiresAt: format(expiresAt, "dd/MM/yyyy", { locale: ptBR })
-      };
-    }
-    return { label: 'Ativo', variant: 'default' };
   }
 
   function generateSlug(name: string): string {
@@ -166,7 +102,7 @@ export default function AdminDashboard() {
 
   async function handleCreateCompany(e: React.FormEvent) {
     e.preventDefault();
-    
+
     if (!newCompanyName.trim()) {
       toast.error('Nome da empresa é obrigatório');
       return;
@@ -343,6 +279,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{companies.length}</div>
+              <p className="text-xs text-muted-foreground">Apenas diretas (sem revendedor)</p>
             </CardContent>
           </Card>
           <Card>
@@ -373,8 +310,10 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Empresas Cadastradas</CardTitle>
-              <CardDescription>Gerencie as empresas do sistema</CardDescription>
+              <CardTitle>Empresas Diretas</CardTitle>
+              <CardDescription>
+                Empresas cadastradas diretamente pelo admin master. Empresas de revendedores aparecem em <Link to="/admin/revendedores" className="text-primary underline">Revendedores</Link>.
+              </CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -389,7 +328,7 @@ export default function AdminDashboard() {
                 />
               </div>
             </div>
-            
+
             <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -397,8 +336,6 @@ export default function AdminDashboard() {
                     <TableHead>Empresa</TableHead>
                     <TableHead>Criação</TableHead>
                     <TableHead>Login / Senha</TableHead>
-                    <TableHead>Plano</TableHead>
-                    <TableHead>Ativação</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -406,154 +343,104 @@ export default function AdminDashboard() {
                 <TableBody>
                   {filteredCompanies.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        Nenhuma empresa encontrada
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        Nenhuma empresa direta encontrada
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredCompanies.map((comp) => {
-                      const planStatus = getPlanStatus(comp.id);
-                      const plan = companyPlans[comp.id];
-                      return (
-                        <TableRow key={comp.id}>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{comp.name}</span>
-                              <span className="text-xs text-muted-foreground">{comp.slug}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(comp.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {comp.login_email ? (
-                              <div className="flex flex-col gap-1">
+                    filteredCompanies.map((comp) => (
+                      <TableRow key={comp.id}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{comp.name}</span>
+                            <span className="text-xs text-muted-foreground">{comp.slug}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(comp.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {comp.login_email ? (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs font-mono">{comp.login_email}</span>
+                                <button onClick={() => { navigator.clipboard.writeText(comp.login_email!); toast.success('Email copiado!'); }} className="text-muted-foreground hover:text-foreground">
+                                  <Copy className="w-3 h-3" />
+                                </button>
+                              </div>
+                              {comp.initial_password ? (
                                 <div className="flex items-center gap-1">
-                                  <span className="text-xs font-mono">{comp.login_email}</span>
-                                  <button onClick={() => { navigator.clipboard.writeText(comp.login_email!); toast.success('Email copiado!'); }} className="text-muted-foreground hover:text-foreground">
+                                  <span className="text-xs font-mono">
+                                    {visiblePasswords[comp.id] ? comp.initial_password : '••••••••'}
+                                  </span>
+                                  <button onClick={() => setVisiblePasswords(prev => ({ ...prev, [comp.id]: !prev[comp.id] }))} className="text-muted-foreground hover:text-foreground">
+                                    {visiblePasswords[comp.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                  </button>
+                                  <button onClick={() => { navigator.clipboard.writeText(comp.initial_password!); toast.success('Senha copiada!'); }} className="text-muted-foreground hover:text-foreground">
                                     <Copy className="w-3 h-3" />
                                   </button>
                                 </div>
-                                {comp.initial_password ? (
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs font-mono">
-                                      {visiblePasswords[comp.id] ? comp.initial_password : '••••••••'}
-                                    </span>
-                                    <button onClick={() => setVisiblePasswords(prev => ({ ...prev, [comp.id]: !prev[comp.id] }))} className="text-muted-foreground hover:text-foreground">
-                                      {visiblePasswords[comp.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                                    </button>
-                                    <button onClick={() => { navigator.clipboard.writeText(comp.initial_password!); toast.success('Senha copiada!'); }} className="text-muted-foreground hover:text-foreground">
-                                      <Copy className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs text-muted-foreground italic">Senha definida pelo usuário</span>
-                                    <button
-                                      onClick={() => {
-                                        setEditCredentialsCompanyId(comp.id);
-                                        setEditEmail(comp.login_email || '');
-                                        setEditPassword('');
-                                      }}
-                                      className="text-muted-foreground hover:text-foreground"
-                                      title="Anotar senha"
-                                    >
-                                      <Pencil className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-1 text-xs"
-                                onClick={() => {
-                                  setEditCredentialsCompanyId(comp.id);
-                                  setEditEmail('');
-                                  setEditPassword('');
-                                }}
-                              >
-                                <Pencil className="w-3 h-3" />
-                                Editar credenciais
-                              </Button>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-1">
-                              <Badge variant={planStatus.variant}>
-                                {planStatus.label}
-                              </Badge>
-                              {planStatus.expiresAt && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" />
-                                  Expira: {planStatus.expiresAt}
-                                </span>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs text-muted-foreground italic">Senha definida pelo usuário</span>
+                                  <button
+                                    onClick={() => {
+                                      setEditCredentialsCompanyId(comp.id);
+                                      setEditEmail(comp.login_email || '');
+                                      setEditPassword('');
+                                    }}
+                                    className="text-muted-foreground hover:text-foreground"
+                                    title="Anotar senha"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+                                </div>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            {plan?.activated_at ? (
-                              <span className="text-xs text-muted-foreground">
-                                {format(new Date(plan.activated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={comp.active ? 'default' : 'secondary'}>
-                              {comp.active ? 'Ativa' : 'Inativa'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2 flex-wrap">
-                              {plan && !plan.active && (
-                                <Button 
-                                  variant="default" 
-                                  size="sm" 
-                                  className="gap-1"
-                                  onClick={() => handleActivateTrial(comp.id)}
-                                  disabled={planLoading}
-                                >
-                                  <Play className="w-3 h-3" />
-                                  Ativar Trial
-                                </Button>
-                              )}
-                              {plan && plan.active && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="gap-1"
-                                  onClick={() => handleDeactivatePlan(comp.id)}
-                                  disabled={planLoading}
-                                >
-                                  <Pause className="w-3 h-3" />
-                                  Pausar
-                                </Button>
-                              )}
-                              <Link to={`/admin/empresa/${comp.id}/modulos`}>
-                                <Button variant="outline" size="sm" className="gap-1">
-                                  <ExternalLink className="w-3 h-3" />
-                                  Módulos
-                                </Button>
-                              </Link>
-                              <Button 
-                                variant="secondary" 
-                                size="sm" 
-                                className="gap-1"
-                                onClick={() => handleAccessCompany(comp.id)}
-                              >
-                                <Eye className="w-3 h-3" />
-                                Acessar
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1 text-xs"
+                              onClick={() => {
+                                setEditCredentialsCompanyId(comp.id);
+                                setEditEmail('');
+                                setEditPassword('');
+                              }}
+                            >
+                              <Pencil className="w-3 h-3" />
+                              Editar credenciais
+                            </Button>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={comp.active ? 'default' : 'secondary'}>
+                            {comp.active ? 'Ativa' : 'Inativa'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2 flex-wrap">
+                            <Link to={`/admin/empresa/${comp.id}/modulos`}>
+                              <Button variant="outline" size="sm" className="gap-1">
+                                <ExternalLink className="w-3 h-3" />
+                                Módulos
                               </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
+                            </Link>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => handleAccessCompany(comp.id)}
+                            >
+                              <Eye className="w-3 h-3" />
+                              Acessar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
                 </TableBody>
               </Table>
