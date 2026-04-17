@@ -127,7 +127,7 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
     void loadData(store.id, store.reseller_id);
   }, [store?.id]);
 
-  async function loadData(companyId: string, resellerId: string | null) {
+  async function loadData(companyId: string, resellerId: string | null = store?.reseller_id ?? null) {
     setLoading(true);
     const [invRes, planRes, resellerRes] = await Promise.all([
       supabase
