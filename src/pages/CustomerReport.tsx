@@ -80,21 +80,53 @@ export default function CustomerReport() {
     queryKey: ['customer-report-orders', company?.id],
     queryFn: async () => {
       if (!company?.id) return { orders: [], allCustomers: [] };
-      const [ordersRes, itemsRes, customersRes] = await Promise.all([
-        supabase
-          .from('orders')
-          .select('id, order_code, customer_name, customer_phone, delivery_address, created_at, status, total, daily_number')
-          .eq('company_id', company.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('order_items')
-          .select('order_id, price, quantity')
-          .eq('company_id', company.id),
-        supabase
-          .from('customers')
-          .select('name, phone, address, birth_date, created_at')
-          .eq('company_id', company.id),
+
+      // Helper para paginar consultas (Supabase limita a 1000 linhas por requisição)
+      const fetchAll = async <T,>(
+        build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>
+      ): Promise<T[]> => {
+        const pageSize = 1000;
+        let from = 0;
+        const all: T[] = [];
+        while (true) {
+          const { data, error } = await build(from, from + pageSize - 1);
+          if (error) throw error;
+          const rows = data || [];
+          all.push(...rows);
+          if (rows.length < pageSize) break;
+          from += pageSize;
+        }
+        return all;
+      };
+
+      const [orders, items, customersData] = await Promise.all([
+        fetchAll<any>((from, to) =>
+          supabase
+            .from('orders')
+            .select('id, order_code, customer_name, customer_phone, delivery_address, created_at, status, total, daily_number')
+            .eq('company_id', company.id)
+            .order('created_at', { ascending: false })
+            .range(from, to)
+        ),
+        fetchAll<any>((from, to) =>
+          supabase
+            .from('order_items')
+            .select('order_id, price, quantity')
+            .eq('company_id', company.id)
+            .range(from, to)
+        ),
+        fetchAll<any>((from, to) =>
+          supabase
+            .from('customers')
+            .select('name, phone, address, birth_date, created_at')
+            .eq('company_id', company.id)
+            .range(from, to)
+        ),
       ]);
+
+      const ordersRes = { data: orders, error: null };
+      const itemsRes = { data: items, error: null };
+      const customersRes = { data: customersData, error: null };
       if (ordersRes.error) throw ordersRes.error;
       const subtotalMap = new Map<string, number>();
       for (const item of (itemsRes.data || [])) {
