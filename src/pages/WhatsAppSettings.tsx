@@ -204,6 +204,11 @@ export default function WhatsAppSettings() {
                       <p className="text-sm text-muted-foreground">
                         Instância: {instance.instance_name}
                       </p>
+                      {isConnected && instance.phone_number && (
+                        <p className="text-sm text-muted-foreground">
+                          Número remetente: <span className="font-medium text-foreground">+{instance.phone_number}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                   <Badge variant={isConnected ? 'default' : 'destructive'}>
