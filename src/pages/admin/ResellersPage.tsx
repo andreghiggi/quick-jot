@@ -80,7 +80,7 @@ const UF_OPTIONS = [
 // ── Component ──
 
 export default function ResellersPage() {
-  const { user } = useAuthContext();
+  const { user, impersonateReseller } = useAuthContext();
   const { resellers, loading, createReseller, updateReseller, toggleResellerStatus, refetch } = useResellers();
 
   const [searchTerm, setSearchTerm] = useState('');
