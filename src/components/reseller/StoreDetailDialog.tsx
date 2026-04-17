@@ -288,11 +288,19 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
           {/* Identity / contact */}
           <Card>
             <CardContent className="pt-4 space-y-2 text-sm">
-              {store?.serial && (
+              {currentStore?.serial && (
                 <div className="flex items-center gap-2 p-2 rounded-md bg-muted border">
                   <span className="text-muted-foreground text-xs uppercase tracking-wide">Serial:</span>
-                  <span className="font-mono font-bold text-base tracking-wider select-all">{store.serial}</span>
+                  <span className="font-mono font-bold text-base tracking-wider select-all">{currentStore.serial}</span>
                   <span className="text-xs text-muted-foreground ml-auto">único e intransferível</span>
+                </div>
+              )}
+              {isManuallyBlocked && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-sm space-y-0.5">
+                  <p><span className="font-semibold">Trava da revenda:</span> {currentStore?.license_block_reason || '—'}</p>
+                  {currentStore?.license_block_message && (
+                    <p className="text-muted-foreground text-xs">{currentStore.license_block_message}</p>
+                  )}
                 </div>
               )}
               {canEdit && (
@@ -310,22 +318,22 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">CNPJ:</span>
-                  <span className="font-medium">{store?.cnpj || '—'}</span>
+                  <span className="font-medium">{currentStore?.cnpj || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="font-medium">{store?.phone || '—'}</span>
+                  <span className="font-medium">{currentStore?.phone || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="font-medium">{store?.login_email || '—'}</span>
+                  <span className="font-medium">{currentStore?.login_email || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="text-muted-foreground">Ativada em:</span>
                   <span className="font-medium">
                     {(() => {
-                      const dateStr = plan?.activated_at || plan?.starts_at || store?.created_at;
+                      const dateStr = plan?.activated_at || plan?.starts_at || currentStore?.created_at;
                       return dateStr
                         ? format(new Date(dateStr), 'dd/MM/yyyy', { locale: ptBR })
                         : '—';
@@ -344,7 +352,7 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
                 <div className="flex items-center gap-2 sm:col-span-2">
                   <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>
-                    {[store?.address_street, store?.address_number, store?.address_neighborhood]
+                    {[currentStore?.address_street, currentStore?.address_number, currentStore?.address_neighborhood]
                       .filter(Boolean)
                       .join(', ') || '—'}
                   </span>
