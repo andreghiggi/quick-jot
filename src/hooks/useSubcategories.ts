@@ -10,6 +10,8 @@ export interface Subcategory {
   imageUrl?: string;
   active: boolean;
   displayOrder: number;
+  menuItem?: boolean;
+  pdvItem?: boolean;
 }
 
 interface UseSubcategoriesOptions {
@@ -45,6 +47,8 @@ export function useSubcategories(options: UseSubcategoriesOptions = {}) {
         imageUrl: s.image_url || undefined,
         active: s.active,
         displayOrder: s.display_order ?? 0,
+        menuItem: s.menu_item ?? true,
+        pdvItem: s.pdv_item ?? true,
       }));
 
       setSubcategories(mapped);
@@ -91,13 +95,15 @@ export function useSubcategories(options: UseSubcategoriesOptions = {}) {
     }
   }
 
-  async function updateSubcategory(id: string, data: Partial<Pick<Subcategory, 'name' | 'imageUrl' | 'active' | 'displayOrder'>>): Promise<boolean> {
+  async function updateSubcategory(id: string, data: Partial<Pick<Subcategory, 'name' | 'imageUrl' | 'active' | 'displayOrder' | 'menuItem' | 'pdvItem'>>): Promise<boolean> {
     try {
       const updateData: Record<string, unknown> = {};
       if (data.name !== undefined) updateData.name = data.name;
       if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl;
       if (data.active !== undefined) updateData.active = data.active;
       if (data.displayOrder !== undefined) updateData.display_order = data.displayOrder;
+      if (data.menuItem !== undefined) updateData.menu_item = data.menuItem;
+      if (data.pdvItem !== undefined) updateData.pdv_item = data.pdvItem;
 
       const { error } = await supabase
         .from('subcategories')

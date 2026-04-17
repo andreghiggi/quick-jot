@@ -44,4 +44,6 @@ export interface Category {
   emoji?: string;
   imageUrl?: string;
   animated?: boolean;
+  menuItem?: boolean;
+  pdvItem?: boolean;
 }
