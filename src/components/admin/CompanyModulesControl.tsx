@@ -32,6 +32,11 @@ const AVAILABLE_MODULES = [
     name: 'fiscal',
     label: 'Fiscal - NFC-e',
     description: 'Configuração de regras tributárias (Simples Nacional) para emissão de NFC-e'
+  },
+  {
+    name: 'sales_campaigns',
+    label: 'Campanhas de Vendas',
+    description: 'Envio em massa de mensagens promocionais para a base de clientes via WhatsApp'
   }
 ];
 
