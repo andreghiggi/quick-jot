@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const { action, reseller_id, company_id } = await req.json();
+    const body = await req.json();
+    const { action, reseller_id, company_id } = body;
 
     switch (action) {
       case "generate_invoices":
@@ -30,6 +31,13 @@ Deno.serve(async (req) => {
 
       case "backfill_invoices":
         return await backfillInvoices(supabase, { reseller_id, company_id });
+
+      case "activation_invoice":
+        return await createActivationInvoice(supabase, {
+          reseller_id,
+          company_id,
+          payment_option: body.payment_option,
+        });
 
       case "send_notifications":
         return await sendNotificationsAndProcess(supabase);
@@ -378,6 +386,169 @@ async function processOverdue(supabase: any) {
   const { data, error } = await supabase.rpc("process_overdue_invoices");
   if (error) return jsonResponse({ error: error.message }, 500);
   return jsonResponse({ message: "Processed", result: data });
+}
+
+/** Create activation invoice(s) for a newly created store.
+ * payment_option:
+ *   - "now"        : 1 invoice, due today + 3 days, no surcharge
+ *   - "30_days"    : 1 invoice, due today + 30 days, +R$20 surcharge
+ *   - "3x_no_entry": 3 invoices on the next 3 months (due day = reseller default), each + R$15
+ *   - "3x_entry"   : entry today+3 days (no surcharge) + 2 invoices on the next 2 months (due day), each + R$15
+ */
+async function createActivationInvoice(
+  supabase: any,
+  params: { reseller_id: string; company_id: string; payment_option: string }
+) {
+  const { reseller_id, company_id, payment_option } = params;
+  if (!reseller_id || !company_id || !payment_option) {
+    return jsonResponse({ error: "reseller_id, company_id and payment_option required" }, 400);
+  }
+
+  const { data: reseller } = await supabase
+    .from("resellers")
+    .select("id")
+    .eq("id", reseller_id)
+    .maybeSingle();
+  if (!reseller) return jsonResponse({ error: "Reseller not found" }, 404);
+
+  const { data: settings } = await supabase
+    .from("reseller_settings")
+    .select("activation_fee, invoice_due_day")
+    .eq("reseller_id", reseller_id)
+    .maybeSingle();
+
+  const activationFee = Number(settings?.activation_fee ?? 180);
+  const dueDay = settings?.invoice_due_day ?? 20;
+
+  const { data: company } = await supabase
+    .from("companies")
+    .select("id, name")
+    .eq("id", company_id)
+    .maybeSingle();
+  if (!company) return jsonResponse({ error: "Company not found" }, 404);
+
+  // Skip if any activation invoice already exists for this company
+  const { data: existing } = await supabase
+    .from("reseller_invoice_items")
+    .select("id")
+    .eq("company_id", company_id)
+    .eq("type", "activation")
+    .limit(1);
+  if (existing && existing.length > 0) {
+    return jsonResponse({ message: "Activation invoice already exists", skipped: true });
+  }
+
+  const today = new Date();
+  const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+  const addDays = (d: Date, n: number) => {
+    const r = new Date(d);
+    r.setDate(r.getDate() + n);
+    return r;
+  };
+  const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const nextMonthDueDate = (refDate: Date, monthsAhead: number): Date => {
+    const y = refDate.getFullYear();
+    const m = refDate.getMonth() + 1 + monthsAhead;
+    const yy = y + Math.floor((m - 1) / 12);
+    const mm = ((m - 1) % 12) + 1;
+    const day = Math.min(dueDay, daysInMonth(yy, mm));
+    return new Date(`${yy}-${String(mm).padStart(2, "0")}-${String(day).padStart(2, "0")}T12:00:00`);
+  };
+
+  const invoicesToCreate: Array<{
+    due: Date;
+    value: number;
+    label: string;
+    item_type: string;
+    item_value: number;
+  }> = [];
+
+  if (payment_option === "now") {
+    invoicesToCreate.push({
+      due: addDays(today, 3),
+      value: activationFee,
+      label: "Taxa de ativação (à vista)",
+      item_type: "activation",
+      item_value: activationFee,
+    });
+  } else if (payment_option === "30_days") {
+    invoicesToCreate.push({
+      due: addDays(today, 30),
+      value: activationFee + 20,
+      label: "Taxa de ativação (30 dias) + acréscimo R$20",
+      item_type: "activation",
+      item_value: activationFee + 20,
+    });
+  } else if (payment_option === "3x_no_entry") {
+    const partBase = Math.round((activationFee / 3) * 100) / 100;
+    for (let i = 1; i <= 3; i++) {
+      invoicesToCreate.push({
+        due: nextMonthDueDate(today, i),
+        value: partBase + 15,
+        label: `Taxa de ativação ${i}/3 (parcelado) + acréscimo R$15`,
+        item_type: "activation",
+        item_value: partBase + 15,
+      });
+    }
+  } else if (payment_option === "3x_entry") {
+    const partBase = Math.round((activationFee / 3) * 100) / 100;
+    invoicesToCreate.push({
+      due: addDays(today, 3),
+      value: partBase,
+      label: "Taxa de ativação 1/3 (entrada à vista)",
+      item_type: "activation",
+      item_value: partBase,
+    });
+    for (let i = 1; i <= 2; i++) {
+      invoicesToCreate.push({
+        due: nextMonthDueDate(today, i),
+        value: partBase + 15,
+        label: `Taxa de ativação ${i + 1}/3 (parcelado) + acréscimo R$15`,
+        item_type: "activation",
+        item_value: partBase + 15,
+      });
+    }
+  } else {
+    return jsonResponse({ error: "Invalid payment_option" }, 400);
+  }
+
+  const created: string[] = [];
+  for (const inv of invoicesToCreate) {
+    const { data: invoice, error } = await supabase
+      .from("reseller_invoices")
+      .insert({
+        reseller_id,
+        company_id,
+        month: monthKey(inv.due),
+        due_date: isoDate(inv.due),
+        total_value: inv.value,
+        status: "pending",
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating activation invoice:", error);
+      continue;
+    }
+
+    await supabase.from("reseller_invoice_items").insert({
+      invoice_id: invoice.id,
+      company_id,
+      company_name: company.name,
+      type: inv.item_type,
+      value: inv.item_value,
+    });
+
+    created.push(invoice.id);
+  }
+
+  return jsonResponse({
+    message: "Activation invoice(s) created",
+    created_count: created.length,
+    invoice_ids: created,
+    payment_option,
+  });
 }
 
 function jsonResponse(data: any, status = 200) {
