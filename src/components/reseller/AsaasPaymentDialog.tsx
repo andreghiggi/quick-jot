@@ -76,7 +76,7 @@ export function AsaasPaymentDialog({ charge, onClose, onUpdated }: Props) {
 
         <Tabs defaultValue={charge.pix_qrcode ? 'pix' : 'boleto'}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="pix" disabled={!charge.pix_qrcode}>
+            <TabsTrigger value="pix">
               <QrCode className="w-4 h-4 mr-2" /> PIX
             </TabsTrigger>
             <TabsTrigger value="boleto" disabled={!charge.boleto_url && !charge.invoice_url}>
