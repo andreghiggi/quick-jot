@@ -229,21 +229,60 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
     return days > 3;
   });
 
+  const currentStore = storeData || store;
+  const licenseStatus = currentStore?.license_status || 'active';
+  const isManuallyBlocked = licenseStatus === 'blocked';
+  const isCanceled = licenseStatus === 'canceled';
+
   return (
     <>
       <Dialog open={!!store} onOpenChange={(o) => { if (!o) onClose(); }}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5" />
-              {store?.name}
-              {isSuspended && <Badge variant="destructive" className="ml-2">Bloqueada</Badge>}
-              {store?.active === false && !isSuspended && <Badge variant="outline">Inativa</Badge>}
-              {store?.active && !isSuspended && <Badge className="bg-green-100 text-green-800">Ativa</Badge>}
-            </DialogTitle>
-            <DialogDescription>
-              Detalhes da licença e histórico de mensalidades
-            </DialogDescription>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="flex items-center gap-2 flex-wrap">
+                  <Building2 className="w-5 h-5" />
+                  {currentStore?.name}
+                  {isCanceled && <Badge variant="destructive">Cancelada</Badge>}
+                  {!isCanceled && isManuallyBlocked && <Badge variant="destructive">Travada pela revenda</Badge>}
+                  {!isCanceled && !isManuallyBlocked && isSuspended && <Badge variant="destructive">Bloqueada</Badge>}
+                  {!isCanceled && !isManuallyBlocked && currentStore?.active === false && !isSuspended && <Badge variant="outline">Inativa</Badge>}
+                  {!isCanceled && !isManuallyBlocked && currentStore?.active && !isSuspended && <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Ativa</Badge>}
+                </DialogTitle>
+                <DialogDescription>
+                  Detalhes da licença e histórico de mensalidades
+                </DialogDescription>
+              </div>
+              {currentStore && !isCanceled && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="gap-1.5 mr-6">
+                      <Settings className="w-4 h-4" />
+                      Ações da licença
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={() => setShowBlock(true)}>
+                      <Lock className="w-4 h-4 mr-2" />
+                      {isManuallyBlocked ? 'Liberar acesso' : 'Trava da revenda'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowEdit(true)}>
+                      <FileEdit className="w-4 h-4 mr-2" />
+                      Editar licença
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setShowCancel(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Ban className="w-4 h-4 mr-2" />
+                      Cancelar licença
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </DialogHeader>
 
           {/* Identity / contact */}
