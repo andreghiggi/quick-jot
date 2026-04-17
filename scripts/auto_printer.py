@@ -606,8 +606,8 @@ def imprimir_html(html, order_number):
         is_80mm = PAPER_SIZE == '80mm'
         colunas = 24 if is_80mm else 20
         font_height = int(page_w / colunas * 2.0)
-        # MODO COMPACTO V2: economia de papel para empresas selecionadas (apenas no layout v2)
-        compact_v2 = (PRINT_LAYOUT == 'v2') and (COMPANY_ID in COMPACT_V2_COMPANY_IDS)
+        # MODO COMPACTO V2: economia de papel para qualquer loja no layout v2
+        compact_v2 = (PRINT_LAYOUT == 'v2')
         margin_factor = 0.02 if compact_v2 else 0.04  # margem cai pela metade
         margin_x = int(dpi_x * 0.04)  # ~1mm margem mínima
         margin_y = int(dpi_y * margin_factor)
