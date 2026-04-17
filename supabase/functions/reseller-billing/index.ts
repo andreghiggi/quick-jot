@@ -65,14 +65,11 @@ function getMonthLabel(monthKey: string): string {
   return `${months[month - 1]} ${year}`;
 }
 
-/** Due date for a reference month is the (dueDay) of the FOLLOWING month. */
+/** Due date for a reference month is the (dueDay) of the SAME month. */
 function buildDueDate(year: number, month: number, dueDay: number): string {
-  // month is 1-indexed; due in month+1
-  let dy = year;
-  let dm = month + 1;
-  if (dm > 12) { dm = 1; dy = year + 1; }
-  const day = Math.min(dueDay, daysInMonth(dy, dm));
-  return `${dy}-${String(dm).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  // month is 1-indexed
+  const day = Math.min(dueDay, daysInMonth(year, month));
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 async function getActivationDate(supabase: any, companyId: string): Promise<Date | null> {
@@ -125,6 +122,12 @@ async function ensureMonthlyInvoice(
   if (activationYear === year && activationMonth === month) {
     startDay = activationDate.getDate();
     isFullMonth = startDay === 1;
+
+    // Nova regra: se o cadastro é APÓS o dia de vencimento, pula a fatura
+    // proporcional do mês de cadastro — a primeira fatura será a do mês seguinte (cheia).
+    if (!isFullMonth && startDay > dueDay) {
+      return null;
+    }
   }
 
   const remainingDays = totalDays - startDay + 1;
