@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.15"  # v2: nome do cliente com texto invertido + cabeçalho dentro de caixa com borda
+SCRIPT_VERSION = "v8.16"  # v2: caixa do cabeçalho engloba TUDO antes dos itens (loja, pedido, cliente, pgto, entrega)
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -395,6 +395,7 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     </style>
 </head>
 <body>
+    <!--BOX_START-->
     <div class="header">
         <div class="store-name">{store_name.upper()}</div>
         <div class="order-num">PEDIDO #{order_num}</div>
@@ -408,6 +409,7 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         {payment_html}
     </div>
     {delivery_section}
+    <!--BOX_END-->
     <hr class="divider">
     <div class="section">
         {items_html}
@@ -521,21 +523,11 @@ def html_para_texto(html):
         return f'[NAME]{conteudo}[/NAME]'
     text = re.sub(r'<span\s+class="name"[^>]*>(.*?)</span>', marcar_name, text, flags=re.DOTALL | re.IGNORECASE)
 
-    # CABEÇALHO: envolve o bloco <div class="header">...</div> em [BOX_START]/[BOX_END]
-    def marcar_header(match):
-        inner = match.group(1)
-        # Transforma os divs internos em quebras de linha; remove tags
-        inner = re.sub(r'</div>', '\n', inner, flags=re.IGNORECASE)
-        inner = re.sub(r'<[^>]+>', '', inner)
-        inner = re.sub(r'[ \t]+', ' ', inner)
-        linhas_h = [l.strip() for l in inner.split('\n') if l.strip()]
-        return '\n[BOX_START]\n' + '\n'.join(linhas_h) + '\n[BOX_END]\n'
-    text = re.sub(
-        r'<div\s+class="header"[^>]*>(.*?)</div>\s*(?=<hr|<div|<body|$)',
-        marcar_header,
-        text,
-        flags=re.DOTALL | re.IGNORECASE
-    )
+    # CABEÇALHO EM CAIXA: marcadores HTML <!--BOX_START--> / <!--BOX_END-->
+    # viram linhas próprias [BOX_START] / [BOX_END]. O conteúdo entre eles é processado
+    # normalmente, e no GDI desenhamos uma borda em volta da região renderizada.
+    text = re.sub(r'<!--\s*BOX_START\s*-->', '\n[BOX_START]\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'<!--\s*BOX_END\s*-->', '\n[BOX_END]\n', text, flags=re.IGNORECASE)
 
     # CLIENTE: linha "<p><span class="label">Cliente:</span> NOME</p>" vira [CLIENTE]Cliente: NOME[/CLIENTE]
     def marcar_cliente(match):
@@ -733,54 +725,38 @@ def imprimir_html(html, order_number):
             except Exception as ex:
                 log(f"Falha ao desenhar borda: {ex}", "AVISO")
 
+        # Estado da caixa do cabeçalho (borda envolvendo todo o conteúdo pré-itens)
+        box_active = False
+        box_top_y = 0
+        box_pad_x = int(dpi_x * 0.04)
+        box_pad_y = int(dpi_y * 0.03)
+
         i = 0
         while i < len(linhas):
             linha = linhas[i]
             stripped = linha.strip()
 
-            # CABEÇALHO EM CAIXA: coleta todas as linhas até [BOX_END] e desenha borda em volta
+            # CABEÇALHO EM CAIXA — início: marca posição Y atual e adiciona padding superior
             if stripped == '[BOX_START]':
-                box_lines = []
+                y += box_pad_y
+                box_top_y = y
+                box_active = True
+                y += box_pad_y
                 i += 1
-                while i < len(linhas) and linhas[i].strip() != '[BOX_END]':
-                    s = linhas[i].strip()
-                    if s:
-                        box_lines.append(s)
-                    i += 1
-                # pula o [BOX_END]
-                i += 1
-                if not box_lines:
-                    continue
-                pad_x = int(dpi_x * 0.04)
-                pad_y = int(dpi_y * 0.03)
-                hDC.SelectObject(font_normal)
-                # quebra cada linha do cabeçalho respeitando largura interna da caixa
-                largura_interna = colunas - 2
-                linhas_render = []
-                for bl in box_lines:
-                    linhas_render.extend(quebrar_linha(bl, largura_interna))
-                altura_total = line_h * len(linhas_render) + pad_y * 2
-                garantir_espaco(altura_total + int(line_h * 0.4))
-                rect_top = y
-                rect_right = margin_x + int(colunas * tm['tmAveCharWidth']) + pad_x * 2
-                desenhar_borda(rect_top, altura_total, rect_right)
-                # Renderiza o texto centralizado dentro da caixa
-                text_y = y + pad_y
-                largura_caixa_chars = colunas
-                hDC.SetTextColor(0x000000)
-                hDC.SetBkMode(win32con.TRANSPARENT)
-                for sub in linhas_render:
-                    # centraliza adicionando espaços
-                    pad_left_chars = max(0, (largura_caixa_chars - len(sub)) // 2)
-                    texto_centralizado = (' ' * pad_left_chars) + sub
-                    hDC.TextOut(margin_x + pad_x, text_y, texto_centralizado)
-                    text_y += line_h
-                y += altura_total + int(line_h * 0.4)
                 continue
 
+            # CABEÇALHO EM CAIXA — fim: desenha borda em volta da região renderizada
             if stripped == '[BOX_END]':
+                if box_active:
+                    y += box_pad_y
+                    altura = y - box_top_y
+                    rect_right = margin_x + int(colunas * tm['tmAveCharWidth']) + box_pad_x * 2
+                    desenhar_borda(box_top_y, altura, rect_right)
+                    box_active = False
+                    y += int(line_h * 0.4)
                 i += 1
                 continue
+
 
             if not stripped:
                 garantir_espaco(int(line_h * 0.5))
