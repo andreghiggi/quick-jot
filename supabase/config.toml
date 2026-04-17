@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.reseller-billing]
 verify_jwt = false
+
+[functions.process-sales-campaigns]
+verify_jwt = false
