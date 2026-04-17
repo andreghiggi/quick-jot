@@ -231,6 +231,18 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
                   <span className="text-xs text-muted-foreground ml-auto">único e intransferível</span>
                 </div>
               )}
+              {canEdit && (
+                <div className="flex items-center gap-2 p-2 rounded-md bg-primary/5 border border-primary/20">
+                  <Briefcase className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide">Revendedor:</span>
+                  <span className="font-semibold text-sm">
+                    {reseller?.name || <span className="italic text-muted-foreground font-normal">Sem revendedor vinculado</span>}
+                  </span>
+                  {reseller?.email && (
+                    <span className="text-xs text-muted-foreground ml-auto">{reseller.email}</span>
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">CNPJ:</span>
