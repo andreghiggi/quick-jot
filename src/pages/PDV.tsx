@@ -145,6 +145,7 @@ export default function PDV() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
   const [discount, setDiscount] = useState(0);
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
