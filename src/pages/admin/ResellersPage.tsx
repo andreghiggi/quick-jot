@@ -89,6 +89,11 @@ export default function ResellersPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Access creation for existing reseller
+  const [accessReseller, setAccessReseller] = useState<{ id: string; email: string; name: string } | null>(null);
+  const [accessPassword, setAccessPassword] = useState('');
+  const [isCreatingAccess, setIsCreatingAccess] = useState(false);
+
   // Form state
   const [form, setForm] = useState({
     name: '', cnpj: '', email: '', phone: '',
