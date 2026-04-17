@@ -395,6 +395,7 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     </style>
 </head>
 <body>
+    <!--BOX_START-->
     <div class="header">
         <div class="store-name">{store_name.upper()}</div>
         <div class="order-num">PEDIDO #{order_num}</div>
@@ -408,6 +409,7 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         {payment_html}
     </div>
     {delivery_section}
+    <!--BOX_END-->
     <hr class="divider">
     <div class="section">
         {items_html}
