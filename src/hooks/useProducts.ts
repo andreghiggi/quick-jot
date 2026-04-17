@@ -60,6 +60,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         taxRuleId: product.tax_rule_id || null,
         displayOrder: product.display_order ?? 0,
         pdvItem: product.pdv_item ?? true,
+        menuItem: (product as any).menu_item ?? true,
         isNew: (product as any).is_new ?? false,
         subcategoryId: (product as any).subcategory_id || null,
         optionals: optionalsData
@@ -100,6 +101,8 @@ export function useProducts(options: UseProductsOptions = {}) {
           active: productData.active,
           company_id: productData.companyId || companyId || null,
           subcategory_id: (productData as any).subcategoryId || null,
+          pdv_item: productData.pdvItem ?? true,
+          menu_item: productData.menuItem ?? true,
         } as any)
         .select()
         .single();
@@ -126,6 +129,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       if (productData.imageUrl !== undefined) updateData.image_url = productData.imageUrl;
       if (productData.active !== undefined) updateData.active = productData.active;
       if (productData.pdvItem !== undefined) updateData.pdv_item = productData.pdvItem;
+      if (productData.menuItem !== undefined) (updateData as any).menu_item = productData.menuItem;
       if (productData.subcategoryId !== undefined) updateData.subcategory_id = productData.subcategoryId || null;
 
       const { error } = await supabase
@@ -237,8 +241,12 @@ export function useProducts(options: UseProductsOptions = {}) {
     return products.filter((p) => p.active);
   }
 
+  function getMenuProducts(): Product[] {
+    return products.filter((p) => p.active && p.menuItem !== false);
+  }
+
   function getNewProducts(): Product[] {
-    return products.filter((p) => p.active && p.isNew);
+    return products.filter((p) => p.active && p.isNew && p.menuItem !== false);
   }
 
   async function toggleNewProduct(productId: string, isNew: boolean): Promise<boolean> {
@@ -367,6 +375,7 @@ export function useProducts(options: UseProductsOptions = {}) {
     updateOptional,
     deleteOptional,
     getActiveProducts,
+    getMenuProducts,
     getNewProducts,
     getCategories,
     moveProduct,

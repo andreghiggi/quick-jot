@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS menu_item boolean NOT NULL DEFAULT true;

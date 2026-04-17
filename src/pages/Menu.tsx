@@ -80,7 +80,7 @@ export default function Menu() {
     fetchCompany();
   }, [slug, navigate]);
 
-  const { products, loading: productsLoading, getActiveProducts, getNewProducts } = useProducts({ companyId: company?.id });
+  const { products, loading: productsLoading, getMenuProducts, getNewProducts } = useProducts({ companyId: company?.id });
   const { settings, loading: settingsLoading } = useStoreSettings({ companyId: company?.id });
   const { categories, loading: categoriesLoading } = useCategories({ companyId: company?.id });
   const { subcategories } = useSubcategories({ companyId: company?.id });
@@ -373,7 +373,7 @@ export default function Menu() {
     }
   }, [customerPhone]);
 
-  const activeProducts = getActiveProducts();
+  const activeProducts = getMenuProducts();
   const newProducts = getNewProducts();
 
   const validReorder = useMemo(() => {
