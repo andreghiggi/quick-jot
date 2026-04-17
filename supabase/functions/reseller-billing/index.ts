@@ -102,14 +102,15 @@ async function getActivationDate(supabase: any, companyId: string): Promise<Date
 async function ensureMonthlyInvoice(
   supabase: any,
   reseller: { id: string; settings: { monthly_fee: number; invoice_due_day: number } },
-  company: { id: string; name: string },
+  company: { id: string; name: string; next_invoice_due_day?: number | null },
   year: number,
   month: number,
   activationDate: Date
 ): Promise<{ created: boolean; type: "monthly" | "prorated"; value: number } | null> {
   const monthKey = formatMonthKey(year, month);
   const monthlyFee = Number(reseller.settings.monthly_fee);
-  const dueDay = reseller.settings.invoice_due_day;
+  // Per-company override takes precedence over the reseller default
+  const dueDay = company.next_invoice_due_day ?? reseller.settings.invoice_due_day;
   const totalDays = daysInMonth(year, month);
 
   // Skip if invoice already exists for this store/month
@@ -209,7 +210,7 @@ async function generateCurrentMonthInvoices(supabase: any) {
 
     const { data: companies } = await supabase
       .from("companies")
-      .select("id, name, active")
+      .select("id, name, active, next_invoice_due_day")
       .eq("reseller_id", reseller.id)
       .eq("active", true);
 
@@ -270,7 +271,7 @@ async function backfillInvoices(
 
     let companyQuery = supabase
       .from("companies")
-      .select("id, name, active")
+      .select("id, name, active, next_invoice_due_day")
       .eq("reseller_id", reseller.id)
       .eq("active", true);
     if (filter.company_id) companyQuery = companyQuery.eq("id", filter.company_id);
@@ -418,14 +419,17 @@ async function createActivationInvoice(
     .maybeSingle();
 
   const activationFee = Number(settings?.activation_fee ?? 180);
-  const dueDay = settings?.invoice_due_day ?? 20;
+  const resellerDueDay = settings?.invoice_due_day ?? 20;
 
   const { data: company } = await supabase
     .from("companies")
-    .select("id, name")
+    .select("id, name, next_invoice_due_day")
     .eq("id", company_id)
     .maybeSingle();
   if (!company) return jsonResponse({ error: "Company not found" }, 404);
+
+  // Per-company override takes precedence over the reseller default
+  const dueDay = company.next_invoice_due_day ?? resellerDueDay;
 
   // Skip if any activation invoice already exists for this company
   const { data: existing } = await supabase

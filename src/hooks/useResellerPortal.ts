@@ -107,6 +107,7 @@ export function useResellerPortal() {
     responsible_email?: string;
     responsible_phone?: string;
     activation_payment_option?: 'now' | '30_days' | '3x_no_entry' | '3x_entry';
+    next_invoice_due_day?: number;
   }): Promise<boolean> {
     if (!reseller) return false;
 
@@ -134,6 +135,7 @@ export function useResellerPortal() {
           responsible_phone: data.responsible_phone || null,
           reseller_id: reseller.id,
           active: true,
+          next_invoice_due_day: data.next_invoice_due_day ?? null,
         } as any)
         .select()
         .single();
