@@ -23,6 +23,14 @@ export interface UserProfile {
 }
 
 const IMPERSONATED_COMPANY_KEY = 'impersonated_company';
+const IMPERSONATED_RESELLER_KEY = 'impersonated_reseller';
+
+export interface ImpersonatedReseller {
+  id: string;
+  name: string;
+  email: string;
+  user_id: string | null;
+}
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
