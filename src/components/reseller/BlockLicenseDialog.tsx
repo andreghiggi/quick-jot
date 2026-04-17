@@ -35,6 +35,8 @@ interface Props {
 export function BlockLicenseDialog({ open, onClose, store, onSaved }: Props) {
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState('');
+  const [mode, setMode] = useState<'now' | 'schedule'>('now');
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   const [accept1, setAccept1] = useState(false);
   const [accept2, setAccept2] = useState(false);
   const [accept3, setAccept3] = useState(false);
@@ -42,21 +44,28 @@ export function BlockLicenseDialog({ open, onClose, store, onSaved }: Props) {
 
   const isBlocked = store?.license_status === 'blocked';
   const allAccepted = accept1 && accept2 && accept3;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
 
   useEffect(() => {
     if (open && store) {
       setReason(store.license_block_reason || '');
       setMessage(store.license_block_message || '');
+      setMode('now');
+      setScheduledDate(undefined);
       setAccept1(false);
       setAccept2(false);
       setAccept3(false);
     }
   }, [open, store?.id]);
 
-  async function handleBlock() {
+  async function handleSave() {
     if (!store) return;
     if (!reason.trim()) {
       toast.error('Informe o motivo do bloqueio');
+      return;
+    }
+    if (mode === 'schedule' && !scheduledDate) {
+      toast.error('Selecione a data do bloqueio agendado');
       return;
     }
     if (!allAccepted) {
@@ -65,23 +74,35 @@ export function BlockLicenseDialog({ open, onClose, store, onSaved }: Props) {
     }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
+
+    const updates: Record<string, unknown> = {
+      license_block_reason: reason.trim().slice(0, 60),
+      license_block_message: message.trim().slice(0, 120) || null,
+    };
+
+    if (mode === 'now') {
+      updates.license_status = 'blocked';
+      updates.license_blocked_at = new Date().toISOString();
+      updates.license_blocked_by = user?.id ?? null;
+      updates.license_block_scheduled_for = null;
+      updates.license_block_scheduled_by = null;
+      updates.active = false;
+    } else {
+      // agendado: mantém ativo, salva agendamento
+      updates.license_block_scheduled_for = scheduledDate!.toISOString();
+      updates.license_block_scheduled_by = user?.id ?? null;
+    }
+
     const { error } = await supabase
       .from('companies')
-      .update({
-        license_status: 'blocked',
-        license_block_reason: reason.trim().slice(0, 60),
-        license_block_message: message.trim().slice(0, 120) || null,
-        license_blocked_at: new Date().toISOString(),
-        license_blocked_by: user?.id ?? null,
-        active: false,
-      })
+      .update(updates)
       .eq('id', store.id);
     setSaving(false);
     if (error) {
-      toast.error('Erro ao bloquear: ' + error.message);
+      toast.error('Erro ao salvar: ' + error.message);
       return;
     }
-    toast.success('Licença bloqueada');
+    toast.success(mode === 'now' ? 'Licença bloqueada' : 'Bloqueio agendado');
     onSaved();
     onClose();
   }
