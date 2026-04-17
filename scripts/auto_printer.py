@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.11"  # adiciona 6 linhas em branco no fim do pedido (espaço para corte)
+SCRIPT_VERSION = "v8.12"  # v2: separador pontilhado entre itens + compat item-name
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -224,7 +224,8 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     
     # Gerar HTML dos itens (com formatação correta de preço)
     items_html = ""
-    for item in itens:
+    total_itens = len(itens)
+    for idx_item, item in enumerate(itens):
         qtd = int(item.get('quantity', 1))
         nome_completo = item.get('name', 'Item')
         preco_unit = float(item.get('price', 0))
@@ -276,6 +277,9 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
 
         items_html += f'  <div class="item-detail">R$ {preco_str}</div>\n'
         items_html += f'</div>\n'
+        # V2: separador pontilhado entre itens (não imprime depois do último)
+        if PRINT_LAYOUT == 'v2' and idx_item < total_itens - 1:
+            items_html += '<div class="item-sep">................................</div>\n'
     
     # Delivery section
     if delivery_address:
@@ -454,6 +458,28 @@ def html_para_texto(html):
     text = re.sub(
         r'<div\s+class="item-header"[^>]*>.*?<span\s+class="qty"[^>]*>(.*?)</span>.*?<span\s+class="name"[^>]*>(.*?)</span>.*?</div>',
         marcar_item_header,
+        text,
+        flags=re.DOTALL | re.IGNORECASE
+    )
+
+    # 1b'. Cabeçalho compacto vindo do recibo (formatar_recibo_html): "<div class="item-name">2x X-Tudo</div>"
+    def marcar_item_name(match):
+        conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
+        m = re.match(r'^(\d+x)\s+(.+)$', conteudo)
+        if m:
+            return f'\n[ITEM]{m.group(1)}|||{m.group(2)}[/ITEM]\n'
+        return f'\n[ITEM]|||{conteudo}[/ITEM]\n'
+    text = re.sub(
+        r'<div\s+class="item-name"[^>]*>(.*?)</div>',
+        marcar_item_name,
+        text,
+        flags=re.DOTALL | re.IGNORECASE
+    )
+
+    # 1b''. Separador pontilhado entre itens
+    text = re.sub(
+        r'<div\s+class="item-sep"[^>]*>(.*?)</div>',
+        lambda m: '\n[SEP]\n',
         text,
         flags=re.DOTALL | re.IGNORECASE
     )
@@ -642,6 +668,17 @@ def imprimir_html(html, order_number):
             m_add = re.match(r'^\[ADD\](.*)\[/ADD\]$', stripped)
             m_obs = re.match(r'^\[OBS\](.*)\[/OBS\]$', stripped)
             m_name = re.match(r'^\[NAME\](.*)\[/NAME\]$', stripped)
+            m_sep = (stripped == '[SEP]')
+
+            if is_v2 and m_sep:
+                hDC.SelectObject(font_normal)
+                hDC.SetTextColor(0x000000)
+                hDC.SetBkMode(win32con.TRANSPARENT)
+                y += int(line_h * 0.2)
+                hDC.TextOut(margin_x, y, '.' * colunas)
+                y += line_h
+                y += int(line_h * 0.2)
+                continue
 
             if is_v2 and m_item:
                 qty = m_item.group(1).strip()
@@ -736,7 +773,7 @@ def imprimir_html(html, order_number):
                 continue
 
             # Linha normal: remove marcadores residuais e imprime
-            stripped_clean = re.sub(r'\[/?(ADD|OBS|NAME|ITEM)\]', '', stripped).replace('|||', ' ').strip()
+            stripped_clean = re.sub(r'\[/?(ADD|OBS|NAME|ITEM|SEP)\]', '', stripped).replace('|||', ' ').strip()
             if not stripped_clean:
                 continue
             hDC.SelectObject(font_normal)
