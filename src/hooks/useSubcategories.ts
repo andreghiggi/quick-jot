@@ -111,6 +111,21 @@ export function useSubcategories(options: UseSubcategoriesOptions = {}) {
         .eq('id', id);
 
       if (error) throw error;
+
+      // Cascade visibility changes to all products linked to this subcategory
+      const productUpdate: Record<string, unknown> = {};
+      if (data.menuItem !== undefined) productUpdate.menu_item = data.menuItem;
+      if (data.pdvItem !== undefined) productUpdate.pdv_item = data.pdvItem;
+      if (Object.keys(productUpdate).length > 0) {
+        const { error: prodError } = await supabase
+          .from('products')
+          .update(productUpdate)
+          .eq('subcategory_id', id);
+        if (prodError) {
+          console.error('Error cascading visibility to products:', prodError);
+        }
+      }
+
       await fetchSubcategories();
       toast.success('Subcategoria atualizada!');
       return true;
