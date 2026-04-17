@@ -69,6 +69,7 @@ export default function ResellerLojas() {
     setNewCep(''); setNewStreet(''); setNewNumber('');
     setNewNeighborhood(''); setNewCity(''); setNewState('');
     setRespName(''); setRespCpf(''); setRespRg(''); setRespEmail(''); setRespPhone('');
+    setPaymentOption('now');
   }
 
   async function handleCreate(e: React.FormEvent) {
