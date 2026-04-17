@@ -97,6 +97,7 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
         pix_qrcode: data.pix_qrcode,
         pix_payload: data.pix_payload,
         boleto_url: data.boleto_url,
+        pix_error: data.pix_error,
         status: data.status,
         value: Number(invoice.total_value),
         due_date: invoice.due_date,

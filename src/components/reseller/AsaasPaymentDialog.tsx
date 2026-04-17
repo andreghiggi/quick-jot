@@ -18,6 +18,7 @@ export interface AsaasChargeData {
   invoice_url: string | null;
   pix_qrcode: string | null;
   pix_payload: string | null;
+  pix_error?: string | null;
   boleto_url: string | null;
   status: string | null;
   value: number;
@@ -75,7 +76,7 @@ export function AsaasPaymentDialog({ charge, onClose, onUpdated }: Props) {
 
         <Tabs defaultValue={charge.pix_qrcode ? 'pix' : 'boleto'}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="pix" disabled={!charge.pix_qrcode}>
+            <TabsTrigger value="pix">
               <QrCode className="w-4 h-4 mr-2" /> PIX
             </TabsTrigger>
             <TabsTrigger value="boleto" disabled={!charge.boleto_url && !charge.invoice_url}>
@@ -85,30 +86,46 @@ export function AsaasPaymentDialog({ charge, onClose, onUpdated }: Props) {
 
           <TabsContent value="pix" className="space-y-3">
             {charge.pix_qrcode ? (
-              <div className="flex justify-center bg-white p-4 rounded-md border">
-                <img
-                  src={`data:image/png;base64,${charge.pix_qrcode}`}
-                  alt="QR Code PIX"
-                  className="w-56 h-56"
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                QR Code PIX não disponível.
-              </p>
-            )}
-            {charge.pix_payload && (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">PIX Copia e Cola:</p>
-                <div className="bg-muted p-2 rounded text-xs font-mono break-all max-h-24 overflow-y-auto">
-                  {charge.pix_payload}
+              <>
+                <div className="flex justify-center bg-white p-4 rounded-md border">
+                  <img
+                    src={`data:image/png;base64,${charge.pix_qrcode}`}
+                    alt="QR Code PIX"
+                    className="w-56 h-56"
+                  />
                 </div>
+                {charge.pix_payload && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">PIX Copia e Cola:</p>
+                    <div className="bg-muted p-2 rounded text-xs font-mono break-all max-h-24 overflow-y-auto">
+                      {charge.pix_payload}
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => copy(charge.pix_payload!, 'Código PIX')}
+                    >
+                      <Copy className="w-4 h-4 mr-2" /> Copiar código PIX
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+                <p className="text-sm font-medium text-destructive">PIX indisponível</p>
+                <p className="text-xs text-muted-foreground">
+                  {charge.pix_error || 'A conta Asaas não possui uma chave PIX cadastrada para recebimento.'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Acesse o painel Asaas → <strong>Configurações → Minhas Chaves PIX</strong> e cadastre uma chave (CPF/CNPJ, e-mail ou aleatória). Depois, gere a cobrança novamente.
+                </p>
                 <Button
                   variant="outline"
-                  className="w-full"
-                  onClick={() => copy(charge.pix_payload!, 'Código PIX')}
+                  size="sm"
+                  className="w-full mt-2"
+                  onClick={() => window.open('https://sandbox.asaas.com', '_blank')}
                 >
-                  <Copy className="w-4 h-4 mr-2" /> Copiar código PIX
+                  <ExternalLink className="w-4 h-4 mr-2" /> Abrir painel Asaas
                 </Button>
               </div>
             )}
