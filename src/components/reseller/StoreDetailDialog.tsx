@@ -257,7 +257,7 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
               {currentStore && !isCanceled && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" className="gap-1.5 mr-6">
+                    <Button size="sm" variant="destructive" className="gap-1.5 mr-6">
                       <Settings className="w-4 h-4" />
                       Ações da licença
                     </Button>
