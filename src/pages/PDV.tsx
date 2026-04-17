@@ -11,6 +11,7 @@ import { useTaxRules } from '@/hooks/useTaxRules';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useCategories } from '@/hooks/useCategories';
+import { useSubcategories } from '@/hooks/useSubcategories';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { printProductionTicket } from '@/utils/printProductionTicket';
 import { emitirNFCe, consultarNFCe, reprocessarNFCe, NFCeItem, NFCeTefData, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
