@@ -618,31 +618,37 @@ def imprimir_html(html, order_number):
         line_h = tm['tmHeight'] + tm['tmExternalLeading'] + int(tm['tmHeight'] * 0.1)
 
         hDC.StartDoc(f"Pedido {order_number}")
-        hDC.StartPage()
+        # StartPage será chamado de forma lazy ao primeiro desenho
+        page_started = {'value': False}
 
         y = margin_y
         # Estado mutável compartilhado entre closures
         box_state = {'active': False}
-        # page_dirty: indica se a página atual já recebeu algum desenho.
-        # Evita comitar páginas em branco no final do documento.
-        page_dirty = {'value': False}
+
+        def ensure_page():
+            """Inicia uma página apenas quando há algo para desenhar (evita página em branco)."""
+            if not page_started['value']:
+                hDC.StartPage()
+                page_started['value'] = True
 
         def nova_pagina():
             nonlocal y
-            hDC.EndPage()
-            hDC.StartPage()
+            if page_started['value']:
+                hDC.EndPage()
+                page_started['value'] = False
             y = margin_y
-            page_dirty['value'] = False
 
         def garantir_espaco(altura_necessaria):
             nonlocal y
             # Não quebra página enquanto a caixa do cabeçalho está ativa
             # (evita borda incompleta + páginas extras)
             if box_state['active']:
+                ensure_page()
                 return
             limite = page_h - margin_y
             if y + altura_necessaria > limite:
                 nova_pagina()
+            ensure_page()
 
         def quebrar_linha(texto, largura):
             """Quebra texto em múltiplas linhas respeitando palavras (word-wrap)."""
