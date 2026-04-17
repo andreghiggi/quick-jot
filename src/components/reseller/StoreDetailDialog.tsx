@@ -108,7 +108,7 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
     if (data) setStoreData(data as any);
   }
 
-  async function handleGenerateOrShowCharge(invoice: Invoice) {
+  async function handleGenerateOrShowCharge(invoice: Invoice, tab?: 'pix' | 'boleto') {
     setGeneratingChargeId(invoice.id);
     try {
       const { data, error } = await supabase.functions.invoke('asaas-billing', {
@@ -117,6 +117,7 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || 'Falha ao gerar cobrança');
 
+      setActiveTab(tab);
       setActiveCharge({
         invoice_id: invoice.id,
         charge_id: data.charge_id,
