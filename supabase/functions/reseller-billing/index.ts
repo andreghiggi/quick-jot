@@ -210,7 +210,7 @@ async function generateCurrentMonthInvoices(supabase: any) {
 
     const { data: companies } = await supabase
       .from("companies")
-      .select("id, name, active")
+      .select("id, name, active, next_invoice_due_day")
       .eq("reseller_id", reseller.id)
       .eq("active", true);
 
@@ -271,7 +271,7 @@ async function backfillInvoices(
 
     let companyQuery = supabase
       .from("companies")
-      .select("id, name, active")
+      .select("id, name, active, next_invoice_due_day")
       .eq("reseller_id", reseller.id)
       .eq("active", true);
     if (filter.company_id) companyQuery = companyQuery.eq("id", filter.company_id);
@@ -419,14 +419,17 @@ async function createActivationInvoice(
     .maybeSingle();
 
   const activationFee = Number(settings?.activation_fee ?? 180);
-  const dueDay = settings?.invoice_due_day ?? 20;
+  const resellerDueDay = settings?.invoice_due_day ?? 20;
 
   const { data: company } = await supabase
     .from("companies")
-    .select("id, name")
+    .select("id, name, next_invoice_due_day")
     .eq("id", company_id)
     .maybeSingle();
   if (!company) return jsonResponse({ error: "Company not found" }, 404);
+
+  // Per-company override takes precedence over the reseller default
+  const dueDay = company.next_invoice_due_day ?? resellerDueDay;
 
   // Skip if any activation invoice already exists for this company
   const { data: existing } = await supabase
