@@ -605,6 +605,23 @@ export default function ResellersPage() {
                             <Button variant="outline" size="sm" className="gap-1" onClick={() => openEdit(r.id)}>
                               <Pencil className="w-3 h-3" /> Editar
                             </Button>
+                            {!r.user_id && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => {
+                                  setAccessReseller({
+                                    id: r.id,
+                                    email: r.responsible_email || '',
+                                    name: r.responsible_name || r.name,
+                                  });
+                                  setAccessPassword('');
+                                }}
+                              >
+                                <KeyRound className="w-3 h-3" /> Criar acesso
+                              </Button>
+                            )}
                             <Button
                               variant={r.status === 'active' ? 'outline' : 'default'}
                               size="sm" className="gap-1"
