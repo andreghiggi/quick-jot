@@ -16,6 +16,9 @@ interface SuspendInfo {
   suspended: boolean;
   resellerName: string | null;
   resellerPhone: string | null;
+  licenseStatus: string;
+  blockReason: string | null;
+  blockMessage: string | null;
 }
 
 export function ProtectedRoute({ children, requiredRole, requireCompany = false }: ProtectedRouteProps) {
@@ -40,10 +43,9 @@ export function ProtectedRoute({ children, requiredRole, requireCompany = false 
       });
 
       if (suspended) {
-        // Fetch reseller contact info for support
         const { data: comp } = await supabase
           .from('companies')
-          .select('reseller_id')
+          .select('reseller_id, license_status, license_block_reason, license_block_message')
           .eq('id', companyId)
           .maybeSingle();
 
@@ -58,13 +60,20 @@ export function ProtectedRoute({ children, requiredRole, requireCompany = false 
           resellerName = r?.name ?? null;
           resellerPhone = r?.phone ?? null;
         }
-        setSuspendCheck({ suspended: true, resellerName, resellerPhone });
+        setSuspendCheck({
+          suspended: true,
+          resellerName,
+          resellerPhone,
+          licenseStatus: (comp as any)?.license_status || 'active',
+          blockReason: (comp as any)?.license_block_reason ?? null,
+          blockMessage: (comp as any)?.license_block_message ?? null,
+        });
       } else {
-        setSuspendCheck({ suspended: false, resellerName: null, resellerPhone: null });
+        setSuspendCheck({ suspended: false, resellerName: null, resellerPhone: null, licenseStatus: 'active', blockReason: null, blockMessage: null });
       }
     } catch (err) {
       console.error('Error checking suspension:', err);
-      setSuspendCheck({ suspended: false, resellerName: null, resellerPhone: null });
+      setSuspendCheck({ suspended: false, resellerName: null, resellerPhone: null, licenseStatus: 'active', blockReason: null, blockMessage: null });
     } finally {
       setChecking(false);
     }
