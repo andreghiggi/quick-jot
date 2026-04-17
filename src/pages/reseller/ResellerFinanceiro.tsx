@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { ResellerLayout } from '@/components/reseller/ResellerLayout';
 import { useResellerPortal } from '@/hooks/useResellerPortal';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Loader2, DollarSign, Clock, AlertCircle, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, DollarSign, Clock, AlertCircle, FileText, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { getMonthLabel } from '@/services/resellerBilling';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { InvoiceEditDialog, InvoiceForEdit, InvoiceItemRow } from '@/components/reseller/InvoiceEditDialog';
 
 interface Invoice {
   id: string;
