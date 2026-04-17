@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       admin_settings: {
         Row: {
+          asaas_env: string | null
           cnpj: string | null
           created_at: string
           email_comercial: string | null
@@ -36,6 +37,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asaas_env?: string | null
           cnpj?: string | null
           created_at?: string
           email_comercial?: string | null
@@ -56,6 +58,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asaas_env?: string | null
           cnpj?: string | null
           created_at?: string
           email_comercial?: string | null
@@ -1318,6 +1321,13 @@ export type Database = {
       }
       reseller_invoices: {
         Row: {
+          asaas_boleto_url: string | null
+          asaas_charge_id: string | null
+          asaas_env: string | null
+          asaas_invoice_url: string | null
+          asaas_pix_payload: string | null
+          asaas_pix_qrcode: string | null
+          asaas_status: string | null
           company_id: string
           created_at: string
           due_date: string
@@ -1331,6 +1341,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asaas_boleto_url?: string | null
+          asaas_charge_id?: string | null
+          asaas_env?: string | null
+          asaas_invoice_url?: string | null
+          asaas_pix_payload?: string | null
+          asaas_pix_qrcode?: string | null
+          asaas_status?: string | null
           company_id: string
           created_at?: string
           due_date: string
@@ -1344,6 +1361,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asaas_boleto_url?: string | null
+          asaas_charge_id?: string | null
+          asaas_env?: string | null
+          asaas_invoice_url?: string | null
+          asaas_pix_payload?: string | null
+          asaas_pix_qrcode?: string | null
+          asaas_status?: string | null
           company_id?: string
           created_at?: string
           due_date?: string
@@ -1422,6 +1446,7 @@ export type Database = {
           address_number: string | null
           address_state: string | null
           address_street: string | null
+          asaas_customer_id: string | null
           cnpj: string | null
           created_at: string
           created_by: string
@@ -1443,6 +1468,7 @@ export type Database = {
           address_number?: string | null
           address_state?: string | null
           address_street?: string | null
+          asaas_customer_id?: string | null
           cnpj?: string | null
           created_at?: string
           created_by: string
@@ -1464,6 +1490,7 @@ export type Database = {
           address_number?: string | null
           address_state?: string | null
           address_street?: string | null
+          asaas_customer_id?: string | null
           cnpj?: string | null
           created_at?: string
           created_by?: string

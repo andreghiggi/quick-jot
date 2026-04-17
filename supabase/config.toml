@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.extract-optionals]
 verify_jwt = false
+
+[functions.asaas-billing]
+verify_jwt = false

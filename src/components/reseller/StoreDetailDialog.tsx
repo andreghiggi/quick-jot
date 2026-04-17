@@ -19,11 +19,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, CreditCard } from 'lucide-react';
+import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, CreditCard, Zap, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getMonthLabel } from '@/services/resellerBilling';
 import { InvoiceEditDialog, InvoiceForEdit, InvoiceItemRow } from './InvoiceEditDialog';
+import { AsaasPaymentDialog, AsaasChargeData } from './AsaasPaymentDialog';
+import { toast } from 'sonner';
 
 export interface StoreDetail {
   id: string;
@@ -49,6 +51,11 @@ interface Invoice {
   paid_at: string | null;
   payment_method: string | null;
   created_at: string;
+  asaas_charge_id?: string | null;
+  asaas_invoice_url?: string | null;
+  asaas_pix_qrcode?: string | null;
+  asaas_pix_payload?: string | null;
+  asaas_boleto_url?: string | null;
 }
 
 interface Plan {
@@ -71,6 +78,40 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<InvoiceForEdit | null>(null);
   const [editingItems, setEditingItems] = useState<InvoiceItemRow[]>([]);
+  const [generatingChargeId, setGeneratingChargeId] = useState<string | null>(null);
+  const [activeCharge, setActiveCharge] = useState<AsaasChargeData | null>(null);
+
+  async function handleGenerateOrShowCharge(invoice: Invoice) {
+    setGeneratingChargeId(invoice.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('asaas-billing', {
+        body: { action: 'create_charge', invoice_id: invoice.id },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || 'Falha ao gerar cobrança');
+
+      setActiveCharge({
+        invoice_id: invoice.id,
+        charge_id: data.charge_id,
+        invoice_url: data.invoice_url,
+        pix_qrcode: data.pix_qrcode,
+        pix_payload: data.pix_payload,
+        boleto_url: data.boleto_url,
+        status: data.status,
+        value: Number(invoice.total_value),
+        due_date: invoice.due_date,
+      });
+
+      if (!data.already_exists) {
+        toast.success('Cobrança gerada no Asaas!');
+        if (store) await loadData(store.id);
+      }
+    } catch (err: any) {
+      toast.error('Erro: ' + (err.message || 'falha ao gerar cobrança'));
+    } finally {
+      setGeneratingChargeId(null);
+    }
+  }
 
   useEffect(() => {
     if (!store) {
@@ -251,30 +292,53 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoices.map(inv => (
-                      <TableRow key={inv.id}>
-                        <TableCell className="font-medium">{getMonthLabel(inv.month)}</TableCell>
-                        <TableCell>
-                          {format(new Date(inv.due_date + 'T12:00:00'), 'dd/MM/yyyy')}
-                        </TableCell>
-                        <TableCell>{statusBadge(inv.status)}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          R$ {Number(inv.total_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {canEdit && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => openEdit(inv)}
-                              title="Editar fatura"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {invoices.map(inv => {
+                      const isPaid = inv.status === 'paid' || inv.status === 'canceled';
+                      const hasCharge = !!inv.asaas_charge_id;
+                      return (
+                        <TableRow key={inv.id}>
+                          <TableCell className="font-medium">{getMonthLabel(inv.month)}</TableCell>
+                          <TableCell>
+                            {format(new Date(inv.due_date + 'T12:00:00'), 'dd/MM/yyyy')}
+                          </TableCell>
+                          <TableCell>{statusBadge(inv.status)}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            R$ {Number(inv.total_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {!isPaid && (
+                                <Button
+                                  size="sm"
+                                  variant={hasCharge ? 'outline' : 'default'}
+                                  onClick={() => handleGenerateOrShowCharge(inv)}
+                                  disabled={generatingChargeId === inv.id}
+                                  title={hasCharge ? 'Ver cobrança' : 'Gerar cobrança Asaas'}
+                                >
+                                  {generatingChargeId === inv.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : hasCharge ? (
+                                    <ExternalLink className="w-4 h-4" />
+                                  ) : (
+                                    <Zap className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              )}
+                              {canEdit && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => openEdit(inv)}
+                                  title="Editar fatura"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -288,6 +352,12 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
         items={editingItems}
         onClose={() => setEditingInvoice(null)}
         onSaved={() => store && loadData(store.id)}
+      />
+
+      <AsaasPaymentDialog
+        charge={activeCharge}
+        onClose={() => setActiveCharge(null)}
+        onUpdated={() => store && loadData(store.id)}
       />
     </>
   );
