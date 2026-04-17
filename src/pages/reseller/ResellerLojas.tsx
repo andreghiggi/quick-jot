@@ -176,16 +176,6 @@ export default function ResellerLojas() {
 
   const headerActions = (
     <div className="flex items-center gap-2">
-      <Button
-        variant="outline"
-        onClick={handleBackfill}
-        disabled={isBackfilling}
-        className="gap-2"
-        title="Gera todas as faturas retroativas (proporcional + cheias) desde a ativação de cada loja"
-      >
-        {isBackfilling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-        <span className="hidden sm:inline">Gerar Faturas</span>
-      </Button>
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogTrigger asChild>
           <Button className="gap-2">
