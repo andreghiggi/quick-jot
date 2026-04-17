@@ -163,13 +163,15 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
         return <Badge variant="destructive">Vencida</Badge>;
       case 'canceled':
         return <Badge variant="outline">Cancelada</Badge>;
+      case 'bonificada':
+        return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Bonificada</Badge>;
       default:
         return <Badge variant="outline" className="text-yellow-700 border-yellow-400">Aberta</Badge>;
     }
   }
 
-  const totalPaid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.total_value), 0);
-  const totalOpen = invoices.filter(i => i.status !== 'paid' && i.status !== 'canceled').reduce((s, i) => s + Number(i.total_value), 0);
+  const totalPaid = invoices.filter(i => i.status === 'paid' || i.status === 'bonificada').reduce((s, i) => s + Number(i.total_value), 0);
+  const totalOpen = invoices.filter(i => i.status !== 'paid' && i.status !== 'canceled' && i.status !== 'bonificada').reduce((s, i) => s + Number(i.total_value), 0);
 
   // License validity: due date of the next open invoice + 1 month
   const licenseValidUntil = (() => {
