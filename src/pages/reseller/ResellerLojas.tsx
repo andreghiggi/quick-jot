@@ -396,6 +396,16 @@ export default function ResellerLojas() {
                           <span className="hidden sm:inline">Faturas</span>
                         </Button>
                         <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          onClick={() => setModulesCompany({ id: c.id, name: c.name })}
+                          title="Habilitar/Desabilitar módulos"
+                        >
+                          <Settings className="w-3 h-3" />
+                          <span className="hidden sm:inline">Módulos</span>
+                        </Button>
+                        <Button
                           variant="secondary"
                           size="sm"
                           className="gap-1"
@@ -421,6 +431,12 @@ export default function ResellerLojas() {
           setSelectedStore(null);
           refetch();
         }}
+      />
+
+      <CompanyModulesDialog
+        companyId={modulesCompany?.id || null}
+        companyName={modulesCompany?.name}
+        onClose={() => setModulesCompany(null)}
       />
     </ResellerLayout>
   );
