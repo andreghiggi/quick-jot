@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useAuth, AppRole, Company, UserProfile } from '@/hooks/useAuth';
+import { useAuth, AppRole, Company, UserProfile, ImpersonatedReseller } from '@/hooks/useAuth';
 import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -22,7 +22,9 @@ interface AuthContextType {
   // Impersonation
   isImpersonating: boolean;
   impersonatedCompany: Company | null;
+  impersonatedReseller: ImpersonatedReseller | null;
   impersonateCompany: (companyId: string) => Promise<boolean>;
+  impersonateReseller: (resellerId: string) => Promise<boolean>;
   exitImpersonation: () => void;
 }
 
