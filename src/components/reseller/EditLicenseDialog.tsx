@@ -6,8 +6,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
+
+const DUE_DAY_OPTIONS = [5, 10, 15, 20, 25];
 
 interface Props {
   open: boolean;
@@ -57,8 +60,8 @@ export function EditLicenseDialog({ open, onClose, store, onSaved }: Props) {
       return;
     }
     const dueDayNum = dueDay ? Number(dueDay) : null;
-    if (dueDayNum !== null && (dueDayNum < 1 || dueDayNum > 28)) {
-      toast.error('Dia de vencimento deve estar entre 1 e 28');
+    if (dueDayNum !== null && !DUE_DAY_OPTIONS.includes(dueDayNum)) {
+      toast.error('Dia de vencimento inválido');
       return;
     }
     setSaving(true);
@@ -132,15 +135,16 @@ export function EditLicenseDialog({ open, onClose, store, onSaved }: Props) {
 
           <div className="rounded-md border bg-muted/40 p-3 space-y-1.5">
             <Label htmlFor="ed-dueday">Dia de vencimento das próximas faturas</Label>
-            <Input
-              id="ed-dueday"
-              type="number"
-              min={1}
-              max={28}
-              placeholder="Ex: 10"
-              value={dueDay}
-              onChange={(e) => setDueDay(e.target.value)}
-            />
+            <Select value={dueDay} onValueChange={setDueDay}>
+              <SelectTrigger id="ed-dueday">
+                <SelectValue placeholder="Selecione um dia" />
+              </SelectTrigger>
+              <SelectContent>
+                {DUE_DAY_OPTIONS.map((d) => (
+                  <SelectItem key={d} value={String(d)}>Dia {d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground">
               Aplicado apenas às faturas geradas a partir de agora. Faturas já existentes mantêm a data atual.
             </p>
