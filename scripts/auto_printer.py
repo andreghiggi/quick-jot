@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.8"  # layout V2: observações emolduradas com asteriscos (GDI não suporta fundo preto)
+SCRIPT_VERSION = "v8.9"  # layout V2 GDI: nome regular, adicionais negrito, observação fundo preto real
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
