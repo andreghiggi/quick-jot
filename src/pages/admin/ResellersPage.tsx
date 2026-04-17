@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useResellers, ResellerFormData } from '@/hooks/useResellers';
@@ -157,8 +158,21 @@ export default function ResellersPage() {
     if (!form.responsible_email.trim()) e.responsible_email = 'E-mail do responsável é obrigatório';
     if (!form.responsible_phone.replace(/\D/g, '')) e.responsible_phone = 'Telefone do responsável é obrigatório';
     setErrors(e);
-    return Object.keys(e).length === 0;
+    if (Object.keys(e).length > 0) {
+      const firstError = Object.keys(e)[0];
+      const labels: Record<string, string> = {
+        name: 'Razão Social', cnpj: 'CNPJ', email: 'E-mail da empresa', phone: 'Telefone da empresa',
+        address_street: 'Rua', address_number: 'Número', address_neighborhood: 'Bairro',
+        address_city: 'Cidade', address_state: 'Estado', address_cep: 'CEP',
+        responsible_name: 'Nome do responsável', responsible_email: 'E-mail do responsável',
+        responsible_phone: 'WhatsApp do responsável',
+      };
+      toast.error(`${labels[firstError] || firstError}: ${e[firstError]}`);
+      return false;
+    }
+    return true;
   }
+
 
   function buildData(): ResellerFormData {
     return {
