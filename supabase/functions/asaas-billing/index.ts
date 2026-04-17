@@ -167,6 +167,7 @@ Deno.serve(async (req) => {
         invoice_url: charge.invoiceUrl,
         pix_qrcode: pixQrcode,
         pix_payload: pixPayload,
+        pix_error: pixError,
         boleto_url: charge.bankSlipUrl,
         status: charge.status,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
