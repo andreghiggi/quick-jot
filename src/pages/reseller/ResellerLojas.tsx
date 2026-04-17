@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Loader2, Search, Eye, RefreshCw, FileText, Settings } from 'lucide-react';
+import { Plus, Loader2, Search, Eye, FileText, Settings } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -27,7 +27,7 @@ export default function ResellerLojas() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [isBackfilling, setIsBackfilling] = useState(false);
+  
   const [selectedStore, setSelectedStore] = useState<StoreDetail | null>(null);
   const [modulesCompany, setModulesCompany] = useState<{ id: string; name: string } | null>(null);
 
@@ -142,24 +142,7 @@ export default function ResellerLojas() {
     }
   }
 
-  async function handleBackfill() {
-    if (!reseller) return;
-    setIsBackfilling(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('reseller-billing', {
-        body: { action: 'backfill_invoices', reseller_id: reseller.id },
-      });
-      if (error) throw error;
-      const count = data?.invoices_created ?? 0;
-      toast.success(`${count} fatura(s) gerada(s) com sucesso!`);
-      refetch();
-    } catch (err: any) {
-      console.error(err);
-      toast.error('Erro ao gerar faturas: ' + (err.message || 'falha desconhecida'));
-    } finally {
-      setIsBackfilling(false);
-    }
-  }
+
 
   const filteredCompanies = companies.filter(c =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -176,16 +159,6 @@ export default function ResellerLojas() {
 
   const headerActions = (
     <div className="flex items-center gap-2">
-      <Button
-        variant="outline"
-        onClick={handleBackfill}
-        disabled={isBackfilling}
-        className="gap-2"
-        title="Gera todas as faturas retroativas (proporcional + cheias) desde a ativação de cada loja"
-      >
-        {isBackfilling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-        <span className="hidden sm:inline">Gerar Faturas</span>
-      </Button>
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogTrigger asChild>
           <Button className="gap-2">
