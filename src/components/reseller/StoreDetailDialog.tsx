@@ -38,6 +38,7 @@ export interface StoreDetail {
   address_number: string | null;
   address_neighborhood: string | null;
   reseller_id: string | null;
+  created_at?: string | null;
 }
 
 interface Invoice {
@@ -217,9 +218,12 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
                   <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="text-muted-foreground">Ativada em:</span>
                   <span className="font-medium">
-                    {plan?.activated_at
-                      ? format(new Date(plan.activated_at), 'dd/MM/yyyy', { locale: ptBR })
-                      : '—'}
+                    {(() => {
+                      const dateStr = plan?.activated_at || plan?.starts_at || store?.created_at;
+                      return dateStr
+                        ? format(new Date(dateStr), 'dd/MM/yyyy', { locale: ptBR })
+                        : '—';
+                    })()}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 sm:col-span-2">
