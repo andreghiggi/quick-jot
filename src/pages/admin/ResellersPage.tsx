@@ -142,7 +142,7 @@ export default function ResellersPage() {
     setIsEditOpen(true);
   }
 
-  function validate(): boolean {
+  function validate(isCreate: boolean): boolean {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = 'Razão Social é obrigatória';
     const cnpjDigits = form.cnpj.replace(/\D/g, '');
@@ -160,6 +160,11 @@ export default function ResellersPage() {
     else if (!validateFullName(form.responsible_name)) e.responsible_name = 'Informe nome e sobrenome';
     if (!form.responsible_email.trim()) e.responsible_email = 'E-mail do responsável é obrigatório';
     if (!form.responsible_phone.replace(/\D/g, '')) e.responsible_phone = 'Telefone do responsável é obrigatório';
+    if (isCreate) {
+      if (!form.login_password || form.login_password.length < 6) {
+        e.login_password = 'Senha deve ter pelo menos 6 caracteres';
+      }
+    }
     setErrors(e);
     if (Object.keys(e).length > 0) {
       const firstError = Object.keys(e)[0];
@@ -169,6 +174,7 @@ export default function ResellersPage() {
         address_city: 'Cidade', address_state: 'Estado', address_cep: 'CEP',
         responsible_name: 'Nome do responsável', responsible_email: 'E-mail do responsável',
         responsible_phone: 'WhatsApp do responsável',
+        login_password: 'Senha de acesso',
       };
       toast.error(`${labels[firstError] || firstError}: ${e[firstError]}`);
       return false;
