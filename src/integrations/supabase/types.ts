@@ -1233,6 +1233,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_new: boolean
+          menu_item: boolean
           name: string
           pdv_item: boolean
           price: number
@@ -1250,6 +1251,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_new?: boolean
+          menu_item?: boolean
           name: string
           pdv_item?: boolean
           price: number
@@ -1267,6 +1269,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_new?: boolean
+          menu_item?: boolean
           name?: string
           pdv_item?: boolean
           price?: number
