@@ -408,8 +408,8 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         {phone_html}
         {payment_html}
     </div>
-    {delivery_section}
     <!--BOX_END-->
+    {delivery_section}
     <hr class="divider">
     <div class="section">
         {items_html}
