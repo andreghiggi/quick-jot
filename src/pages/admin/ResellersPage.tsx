@@ -135,8 +135,8 @@ export default function ResellersPage() {
   }
 
   async function handleAccessCompany(companyId: string) {
-    const { impersonateCompany } = await import('@/contexts/AuthContext').then(m => ({ impersonateCompany: null }));
-    // use directly from auth context
+    const ok = await impersonateCompany(companyId);
+    if (ok) navigate('/');
   }
 
   // Form state
