@@ -78,6 +78,27 @@ export default function ResellerFinanceiro() {
     setExpandedInvoice(invoiceId);
   }
 
+  async function openEdit(invoice: Invoice) {
+    const { data } = await supabase
+      .from('reseller_invoice_items')
+      .select('*')
+      .eq('invoice_id', invoice.id);
+    setEditingItems((data as any[]) || []);
+    setEditingInvoice(invoice as InvoiceForEdit);
+  }
+
+  async function handleSaved() {
+    // Refresh invoice list and any expanded items
+    await fetchInvoices();
+    if (editingInvoice) {
+      const { data } = await supabase
+        .from('reseller_invoice_items')
+        .select('*')
+        .eq('invoice_id', editingInvoice.id);
+      setInvoiceItems(prev => ({ ...prev, [editingInvoice.id]: (data as any[]) || [] }));
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
