@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.12',
+    type: 'improvement',
+    description: 'Impressão automática v8.22: modo compacto exclusivo para a Lancheria da i9 no layout v2 — espaçamento entre linhas reduzido em 15%, margens superior/inferior reduzidas pela metade e rodapé final encurtado. Economia estimada de ~25% de papel sem perda de legibilidade.',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.11',
     type: 'fix',
     description: 'Impressão automática v8.21: removida a duplicidade da forma de pagamento na impressão. Pagamento, troco e chave PIX agora aparecem apenas no cabeçalho — o bloco "Obs:" não repete mais essas informações (e some quando não há observação real do cliente).',
