@@ -101,6 +101,8 @@ export function useProducts(options: UseProductsOptions = {}) {
           active: productData.active,
           company_id: productData.companyId || companyId || null,
           subcategory_id: (productData as any).subcategoryId || null,
+          pdv_item: productData.pdvItem ?? true,
+          menu_item: productData.menuItem ?? true,
         } as any)
         .select()
         .single();
