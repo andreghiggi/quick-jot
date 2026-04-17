@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -9,7 +11,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Lock, Unlock } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { Loader2, Lock, Unlock, Calendar as CalendarIcon, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -29,6 +35,8 @@ interface Props {
 export function BlockLicenseDialog({ open, onClose, store, onSaved }: Props) {
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState('');
+  const [mode, setMode] = useState<'now' | 'schedule'>('now');
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   const [accept1, setAccept1] = useState(false);
   const [accept2, setAccept2] = useState(false);
   const [accept3, setAccept3] = useState(false);
@@ -36,21 +44,28 @@ export function BlockLicenseDialog({ open, onClose, store, onSaved }: Props) {
 
   const isBlocked = store?.license_status === 'blocked';
   const allAccepted = accept1 && accept2 && accept3;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
 
   useEffect(() => {
     if (open && store) {
       setReason(store.license_block_reason || '');
       setMessage(store.license_block_message || '');
+      setMode('now');
+      setScheduledDate(undefined);
       setAccept1(false);
       setAccept2(false);
       setAccept3(false);
     }
   }, [open, store?.id]);
 
-  async function handleBlock() {
+  async function handleSave() {
     if (!store) return;
     if (!reason.trim()) {
       toast.error('Informe o motivo do bloqueio');
+      return;
+    }
+    if (mode === 'schedule' && !scheduledDate) {
+      toast.error('Selecione a data do bloqueio agendado');
       return;
     }
     if (!allAccepted) {
@@ -59,23 +74,35 @@ export function BlockLicenseDialog({ open, onClose, store, onSaved }: Props) {
     }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
+
+    const updates: Record<string, unknown> = {
+      license_block_reason: reason.trim().slice(0, 60),
+      license_block_message: message.trim().slice(0, 120) || null,
+    };
+
+    if (mode === 'now') {
+      updates.license_status = 'blocked';
+      updates.license_blocked_at = new Date().toISOString();
+      updates.license_blocked_by = user?.id ?? null;
+      updates.license_block_scheduled_for = null;
+      updates.license_block_scheduled_by = null;
+      updates.active = false;
+    } else {
+      // agendado: mantém ativo, salva agendamento
+      updates.license_block_scheduled_for = scheduledDate!.toISOString();
+      updates.license_block_scheduled_by = user?.id ?? null;
+    }
+
     const { error } = await supabase
       .from('companies')
-      .update({
-        license_status: 'blocked',
-        license_block_reason: reason.trim().slice(0, 60),
-        license_block_message: message.trim().slice(0, 120) || null,
-        license_blocked_at: new Date().toISOString(),
-        license_blocked_by: user?.id ?? null,
-        active: false,
-      })
+      .update(updates)
       .eq('id', store.id);
     setSaving(false);
     if (error) {
-      toast.error('Erro ao bloquear: ' + error.message);
+      toast.error('Erro ao salvar: ' + error.message);
       return;
     }
-    toast.success('Licença bloqueada');
+    toast.success(mode === 'now' ? 'Licença bloqueada' : 'Bloqueio agendado');
     onSaved();
     onClose();
   }
@@ -127,6 +154,62 @@ export function BlockLicenseDialog({ open, onClose, store, onSaved }: Props) {
 
           {!isBlocked && (
             <>
+              <div className="space-y-2 rounded-md border p-3">
+                <Label className="text-sm font-semibold">Quando bloquear?</Label>
+                <RadioGroup value={mode} onValueChange={(v) => setMode(v as 'now' | 'schedule')} className="gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem value="now" id="mode-now" />
+                    <span className="text-sm">Bloquear agora</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem value="schedule" id="mode-schedule" />
+                    <span className="text-sm">Agendar bloqueio</span>
+                  </label>
+                </RadioGroup>
+
+                {mode === 'schedule' && (
+                  <div className="pt-2 space-y-1.5">
+                    <Label className="text-xs">Data do bloqueio</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn(
+                            'w-full justify-start text-left font-normal',
+                            !scheduledDate && 'text-muted-foreground',
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {scheduledDate
+                            ? format(scheduledDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                            : 'Selecione uma data'}
+                          {scheduledDate && (
+                            <X
+                              className="ml-auto h-4 w-4 opacity-60 hover:opacity-100"
+                              onClick={(e) => { e.stopPropagation(); setScheduledDate(undefined); }}
+                            />
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={scheduledDate}
+                          onSelect={setScheduledDate}
+                          disabled={(d) => d < today}
+                          initialFocus
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <p className="text-xs text-muted-foreground">
+                      O bloqueio será efetivado na data selecionada. A loja continua liberada até lá.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="reason">Motivo do bloqueio</Label>
                 <Input
@@ -244,9 +327,9 @@ export function BlockLicenseDialog({ open, onClose, store, onSaved }: Props) {
               Liberar acesso
             </Button>
           ) : (
-            <Button onClick={handleBlock} disabled={saving || !allAccepted || !reason.trim()} variant="destructive">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
-              Confirmar e bloquear lojista
+            <Button onClick={handleSave} disabled={saving || !allAccepted || !reason.trim() || (mode === 'schedule' && !scheduledDate)} variant="destructive">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : (mode === 'now' ? <Lock className="w-4 h-4 mr-2" /> : <CalendarIcon className="w-4 h-4 mr-2" />)}
+              {mode === 'now' ? 'Confirmar e bloquear lojista' : 'Salvar agendamento'}
             </Button>
           )}
         </DialogFooter>
