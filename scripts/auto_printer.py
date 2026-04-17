@@ -1205,9 +1205,10 @@ if __name__ == "__main__":
     print("=" * 50)
     print()
     
-    # Atualiza nome da loja
+    # Atualiza nome da loja e ID global (necessário para flags por empresa, ex: compact_v2)
     STORE_NAME = company_name
-    
+    COMPANY_ID = company_id
+
     # Mostra status inicial
     log("Iniciando monitoramento...", "START")
     mostrar_status(company_id)
