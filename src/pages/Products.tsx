@@ -50,7 +50,7 @@ export default function Products() {
   
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true, subcategoryId: '' });
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, subcategoryId: '' });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
   
   const [isUploading, setIsUploading] = useState(false);
@@ -148,7 +148,7 @@ export default function Products() {
       active: newProduct.active,
       subcategoryId: newProduct.subcategoryId || null,
     } as any);
-    setNewProduct({ name: '', price: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true, subcategoryId: '' });
+    setNewProduct({ name: '', price: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, subcategoryId: '' });
     setIsProductDialogOpen(false);
   }
 
@@ -204,6 +204,7 @@ export default function Products() {
       imageUrl: editingProduct.imageUrl,
       active: editingProduct.active,
       pdvItem: editingProduct.pdvItem,
+      menuItem: editingProduct.menuItem,
       subcategoryId: editingProduct.subcategoryId,
     });
     setEditingProduct(null);
@@ -637,6 +638,13 @@ export default function Products() {
                 <Label>Item de PDV</Label>
               </div>
             )}
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={newProduct.menuItem}
+                onCheckedChange={(v) => setNewProduct({ ...newProduct, menuItem: v })}
+              />
+              <Label>Item de Cardápio</Label>
+            </div>
             <Button onClick={handleAddProduct} className="w-full">Salvar</Button>
           </div>
         </DialogContent>
@@ -1028,6 +1036,13 @@ export default function Products() {
                   <Label>Item de PDV</Label>
                 </div>
               )}
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={editingProduct.menuItem !== false}
+                  onCheckedChange={(v) => setEditingProduct({ ...editingProduct, menuItem: v })}
+                />
+                <Label>Item de Cardápio</Label>
+              </div>
               <Button onClick={handleUpdateProduct} className="w-full">Salvar alterações</Button>
             </div>
           )}
