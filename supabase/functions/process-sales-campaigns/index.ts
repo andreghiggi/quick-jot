@@ -10,6 +10,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const PUBLIC_MENU_ORIGIN = 'https://appcomandatech.agilizeerp.com.br';
 
 function firstName(full: string) {
   return (full || '').trim().split(/\s+/)[0] || 'Cliente';
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
       // Get menu URL
       const { data: company } = await supabase
         .from('companies').select('slug').eq('id', c.company_id).maybeSingle();
-      const menuLink = `https://memo-spark-56.lovable.app/cardapio/${company?.slug || ''}`;
+      const menuLink = `${PUBLIC_MENU_ORIGIN}/cardapio/${company?.slug || ''}`;
 
       // Variation: A on even sent_count, B on odd
       const variation = (c.sent_count % 2 === 0) ? 'A' : 'B';
