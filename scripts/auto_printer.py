@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.22"  # modo compacto v2 (line_h -15%, margem -50%, rodapé reduzido) — Lancheria da i9
+SCRIPT_VERSION = "v8.23"  # corrige modo compacto v2: COMPANY_ID global agora é populada após resolver slug
 # Empresas que recebem layout v2 compacto (economia de papel ~25%)
 COMPACT_V2_COMPANY_IDS = {"8c9e7a0e-dbb6-49b9-8344-c23155a71164"}
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
@@ -1205,9 +1205,10 @@ if __name__ == "__main__":
     print("=" * 50)
     print()
     
-    # Atualiza nome da loja
+    # Atualiza nome da loja e ID global (necessário para flags por empresa, ex: compact_v2)
     STORE_NAME = company_name
-    
+    COMPANY_ID = company_id
+
     # Mostra status inicial
     log("Iniciando monitoramento...", "START")
     mostrar_status(company_id)
