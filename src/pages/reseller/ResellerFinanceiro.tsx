@@ -315,6 +315,13 @@ export default function ResellerFinanceiro() {
           </CardContent>
         </Card>
       </div>
+
+      <InvoiceEditDialog
+        invoice={editingInvoice}
+        items={editingItems}
+        onClose={() => setEditingInvoice(null)}
+        onSaved={handleSaved}
+      />
     </ResellerLayout>
   );
 }
