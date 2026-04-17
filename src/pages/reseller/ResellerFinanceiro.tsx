@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { ResellerLayout } from '@/components/reseller/ResellerLayout';
 import { useResellerPortal } from '@/hooks/useResellerPortal';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Loader2, DollarSign, Clock, AlertCircle, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, DollarSign, Clock, AlertCircle, FileText, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { getMonthLabel } from '@/services/resellerBilling';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { InvoiceEditDialog, InvoiceForEdit, InvoiceItemRow } from '@/components/reseller/InvoiceEditDialog';
 
 interface Invoice {
   id: string;
@@ -35,10 +37,14 @@ interface InvoiceItem {
 
 export default function ResellerFinanceiro() {
   const { reseller, settings, stats, loading } = useResellerPortal();
+  const { isSuperAdmin } = useAuthContext();
+  const canEdit = isSuperAdmin();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoiceItems, setInvoiceItems] = useState<Record<string, InvoiceItem[]>>({});
   const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
+  const [editingInvoice, setEditingInvoice] = useState<InvoiceForEdit | null>(null);
+  const [editingItems, setEditingItems] = useState<InvoiceItemRow[]>([]);
 
   useEffect(() => {
     if (!reseller) return;
@@ -70,6 +76,27 @@ export default function ResellerFinanceiro() {
 
     setInvoiceItems(prev => ({ ...prev, [invoiceId]: (data as any[]) || [] }));
     setExpandedInvoice(invoiceId);
+  }
+
+  async function openEdit(invoice: Invoice) {
+    const { data } = await supabase
+      .from('reseller_invoice_items')
+      .select('*')
+      .eq('invoice_id', invoice.id);
+    setEditingItems((data as any[]) || []);
+    setEditingInvoice(invoice as InvoiceForEdit);
+  }
+
+  async function handleSaved() {
+    // Refresh invoice list and any expanded items
+    await fetchInvoices();
+    if (editingInvoice) {
+      const { data } = await supabase
+        .from('reseller_invoice_items')
+        .select('*')
+        .eq('invoice_id', editingInvoice.id);
+      setInvoiceItems(prev => ({ ...prev, [editingInvoice.id]: (data as any[]) || [] }));
+    }
   }
 
   if (loading) {
@@ -232,17 +259,29 @@ export default function ResellerFinanceiro() {
                             }
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => fetchItems(invoice.id)}
-                            >
-                              {expandedInvoice === invoice.id ? (
-                                <ChevronUp className="w-4 h-4" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4" />
+                            <div className="flex items-center justify-end gap-1">
+                              {canEdit && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => openEdit(invoice)}
+                                  title="Editar fatura"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
                               )}
-                            </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => fetchItems(invoice.id)}
+                              >
+                                {expandedInvoice === invoice.id ? (
+                                  <ChevronUp className="w-4 h-4" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                         {expandedInvoice === invoice.id && invoiceItems[invoice.id] && (
@@ -276,6 +315,13 @@ export default function ResellerFinanceiro() {
           </CardContent>
         </Card>
       </div>
+
+      <InvoiceEditDialog
+        invoice={editingInvoice}
+        items={editingItems}
+        onClose={() => setEditingInvoice(null)}
+        onSaved={handleSaved}
+      />
     </ResellerLayout>
   );
 }

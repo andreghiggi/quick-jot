@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.19',
+    type: 'feature',
+    description: 'Faturas dos revendedores agora são editáveis pelo Super Admin (via "Acessar painel" → Financeiro → ✏️). É possível alterar valor, dias e descrição de cada item, adicionar/remover linhas, mudar vencimento e status, ou substituir o total manualmente. O cálculo proporcional ao vincular lojas existentes passou a usar a data de ativação do plano: lojas ativadas antes do mês cobram mês cheio; ativadas dentro do mês cobram apenas os dias restantes desde a ativação.',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.18',
     type: 'feature',
     description: 'Botão "Acessar painel" do revendedor agora está funcional. O Super Admin entra no portal de qualquer revendedor (Home, Lojas, Financeiro, Configurações) sem precisar de senha, com banner âmbar de "Painel do Revendedor" identificando a sessão e botão para sair a qualquer momento. O botão fica visível apenas para revendedores que já possuem login criado.',
