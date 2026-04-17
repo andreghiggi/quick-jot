@@ -373,6 +373,7 @@ export function useProducts(options: UseProductsOptions = {}) {
     updateOptional,
     deleteOptional,
     getActiveProducts,
+    getMenuProducts,
     getNewProducts,
     getCategories,
     moveProduct,
