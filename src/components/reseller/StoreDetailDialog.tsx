@@ -19,12 +19,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, Zap, ExternalLink, Briefcase } from 'lucide-react';
+import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, Zap, ExternalLink, Briefcase, Settings, Lock, FileEdit, Ban } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getMonthLabel } from '@/services/resellerBilling';
 import { InvoiceEditDialog, InvoiceForEdit, InvoiceItemRow } from './InvoiceEditDialog';
 import { AsaasPaymentDialog, AsaasChargeData } from './AsaasPaymentDialog';
+import { BlockLicenseDialog } from './BlockLicenseDialog';
+import { EditLicenseDialog } from './EditLicenseDialog';
+import { CancelLicenseDialog } from './CancelLicenseDialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
 export interface StoreDetail {
