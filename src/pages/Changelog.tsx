@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.22',
+    type: 'feature',
+    description: 'Faturamento de revendedores reformulado: removidas as opções "Plano" e "Trial" das lojas (cobrança agora é apenas via faturas mensais). A aba Financeiro saiu do menu e foi embutida em cada loja — clicando em "Faturas" na lista de Lojas o revendedor vê o histórico, gera cobranças Asaas e edita valores. Revendedores agora cadastram novas lojas com o mesmo formulário do Admin Master (incluindo login e senha), e a loja já fica vinculada automaticamente ao revendedor logado. Vencimento padrão das faturas alterado para dia 20. Novo botão "Gerar Faturas" no topo da página Lojas faz backfill retroativo: para cada loja ativa o sistema cria a fatura proporcional do mês de ativação (vencimento no mês seguinte) e todas as faturas cheias subsequentes até o mês corrente. Geração mensal automática agendada para o dia 1 de cada mês via cron.',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.20',
     type: 'feature',
     description: 'Faturas individuais por loja: cada loja vinculada a um revendedor agora gera sua própria fatura mensal (não mais uma fatura agregada). O painel Financeiro do revendedor lista as lojas com status (Em dia / Aberta / Vencida / Bloqueada) e ao clicar abre a tela de detalhes estilo Gdoor com dados da licença, plano, contato e histórico completo de mensalidades. Bloqueio automático: 3 dias após o vencimento sem pagamento, a loja é suspensa e o usuário vê uma tela de bloqueio com botão direto para falar com o revendedor no WhatsApp; ao quitar a fatura, o acesso é restaurado automaticamente. Geração e cobrança rodam por cron (mensal no dia 1 às 03h e processamento diário às 08h).',

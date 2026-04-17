@@ -49,7 +49,6 @@ import ResellersPage from "./pages/admin/ResellersPage";
 import AdminSettings from "./pages/admin/AdminSettings";
 import ResellerHome from "./pages/reseller/ResellerHome";
 import ResellerLojas from "./pages/reseller/ResellerLojas";
-import ResellerFinanceiro from "./pages/reseller/ResellerFinanceiro";
 import ResellerConfiguracoes from "./pages/reseller/ResellerConfiguracoes";
 
 const queryClient = new QueryClient();
@@ -272,11 +271,8 @@ function AppRoutes() {
           <ResellerLojas />
         </ProtectedRoute>
       } />
-      <Route path="/revendedor/financeiro" element={
-        <ProtectedRoute requiredRole="reseller">
-          <ResellerFinanceiro />
-        </ProtectedRoute>
-      } />
+      {/* Financeiro foi embutido em /revendedor/lojas (Faturas por loja) */}
+      <Route path="/revendedor/financeiro" element={<Navigate to="/revendedor/lojas" replace />} />
       <Route path="/revendedor/configuracoes" element={
         <ProtectedRoute requiredRole="reseller">
           <ResellerConfiguracoes />

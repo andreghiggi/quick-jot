@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, CreditCard, Zap, ExternalLink } from 'lucide-react';
+import { Loader2, Pencil, Building2, Phone, Mail, MapPin, Calendar, Zap, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getMonthLabel } from '@/services/resellerBilling';
@@ -131,6 +131,8 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
         .select('*')
         .eq('company_id', companyId)
         .order('month', { ascending: false }),
+      // We still query company_plans only to read the activation date as a reference,
+      // since plans/trial are no longer surfaced in the UI.
       supabase
         .from('company_plans')
         .select('plan_name, active, activated_at, expires_at, starts_at')
@@ -204,30 +206,12 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
                   <span className="font-medium">{store?.cnpj || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">Plano:</span>
-                  <span className="font-medium capitalize">{plan?.plan_name || '—'}</span>
-                  {plan?.active ? (
-                    <Badge className="bg-green-100 text-green-800 text-xs">Ativo</Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs">Inativo</Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
                   <Phone className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="font-medium">{store?.phone || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="font-medium">{store?.login_email || '—'}</span>
-                </div>
-                <div className="flex items-center gap-2 sm:col-span-2">
-                  <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span>
-                    {[store?.address_street, store?.address_number, store?.address_neighborhood]
-                      .filter(Boolean)
-                      .join(', ') || '—'}
-                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
@@ -238,13 +222,12 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
                       : '—'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">Validade:</span>
-                  <span className="font-medium">
-                    {plan?.expires_at
-                      ? format(new Date(plan.expires_at), 'dd/MM/yyyy', { locale: ptBR })
-                      : 'Indefinida'}
+                <div className="flex items-center gap-2 sm:col-span-2">
+                  <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>
+                    {[store?.address_street, store?.address_number, store?.address_neighborhood]
+                      .filter(Boolean)
+                      .join(', ') || '—'}
                   </span>
                 </div>
               </div>

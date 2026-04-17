@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.asaas-billing]
 verify_jwt = false
+
+[functions.reseller-billing]
+verify_jwt = false

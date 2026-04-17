@@ -26,13 +26,8 @@ export interface ResellerCompany {
   phone: string | null;
   active: boolean;
   created_at: string;
-  plan?: {
-    id: string;
-    plan_name: string;
-    active: boolean;
-    starts_at: string;
-    expires_at: string | null;
-  } | null;
+  login_email?: string | null;
+  initial_password?: string | null;
 }
 
 export function useResellerPortal() {
@@ -51,8 +46,6 @@ export function useResellerPortal() {
     }
 
     try {
-      // When super_admin is impersonating a reseller, fetch by reseller id
-      // Otherwise, fetch by current authenticated user_id
       const resellerQuery = supabase.from('resellers').select('*');
       const { data: resellerData, error: rErr } = impersonatedReseller
         ? await resellerQuery.eq('id', impersonatedReseller.id).single()
@@ -61,7 +54,6 @@ export function useResellerPortal() {
       if (rErr) throw rErr;
       setReseller(resellerData);
 
-      // Fetch settings
       const { data: settingsData } = await supabase
         .from('reseller_settings')
         .select('*')
@@ -77,39 +69,13 @@ export function useResellerPortal() {
         });
       }
 
-      // Fetch companies via reseller_companies
-      const { data: rcData } = await supabase
-        .from('reseller_companies')
-        .select('company_id')
-        .eq('reseller_id', resellerData.id);
+      const { data: companiesData } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('reseller_id', resellerData.id)
+        .order('created_at', { ascending: false });
 
-      const companyIds = (rcData || []).map((rc: any) => rc.company_id);
-
-      if (companyIds.length > 0) {
-        const { data: companiesData } = await supabase
-          .from('companies')
-          .select('*')
-          .in('id', companyIds)
-          .order('created_at', { ascending: false });
-
-        // Fetch plans
-        const { data: plansData } = await supabase
-          .from('company_plans')
-          .select('*')
-          .in('company_id', companyIds);
-
-        const plansMap: Record<string, any> = {};
-        (plansData || []).forEach((p: any) => {
-          plansMap[p.company_id] = p;
-        });
-
-        setCompanies((companiesData || []).map((c: any) => ({
-          ...c,
-          plan: plansMap[c.id] || null,
-        })));
-      } else {
-        setCompanies([]);
-      }
+      setCompanies((companiesData || []) as ResellerCompany[]);
     } catch (error) {
       console.error('Error fetching reseller data:', error);
     } finally {
@@ -125,6 +91,8 @@ export function useResellerPortal() {
     name: string;
     slug: string;
     phone?: string;
+    login_email?: string;
+    initial_password?: string;
   }): Promise<boolean> {
     if (!reseller) return false;
 
@@ -135,31 +103,36 @@ export function useResellerPortal() {
           name: data.name,
           slug: data.slug,
           phone: data.phone || null,
+          login_email: data.login_email || null,
+          initial_password: data.initial_password || null,
           reseller_id: reseller.id,
+          active: true,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Link to reseller
-      const { error: linkError } = await supabase
+      // Link via reseller_companies (kept for backward compat)
+      await supabase
         .from('reseller_companies')
         .insert({
           reseller_id: reseller.id,
           company_id: newCompany.id,
         });
 
-      if (linkError) throw linkError;
-
-      // Create inactive trial plan
-      await supabase
-        .from('company_plans')
-        .insert({
-          company_id: newCompany.id,
-          plan_name: 'trial',
-          active: false,
+      // Trigger backfill for this newly created company so the prorated invoice appears immediately
+      try {
+        await supabase.functions.invoke('reseller-billing', {
+          body: {
+            action: 'backfill_invoices',
+            reseller_id: reseller.id,
+            company_id: newCompany.id,
+          },
         });
+      } catch (billingErr) {
+        console.error('Backfill invoice on create (non-blocking):', billingErr);
+      }
 
       toast.success('Loja criada com sucesso!');
       fetchResellerData();
@@ -171,70 +144,6 @@ export function useResellerPortal() {
       } else {
         toast.error('Erro ao criar loja');
       }
-      return false;
-    }
-  }
-
-  async function activateTrial(companyId: string): Promise<boolean> {
-    if (!user || !reseller) return false;
-    try {
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 14);
-
-      const { error } = await supabase
-        .from('company_plans')
-        .update({
-          active: true,
-          activated_by: user.id,
-          activated_at: new Date().toISOString(),
-          expires_at: expiresAt.toISOString(),
-        })
-        .eq('company_id', companyId);
-
-      if (error) throw error;
-
-      // Create prorated billing item for this activation
-      const company = companies.find(c => c.id === companyId);
-      if (company) {
-        try {
-          await supabase.functions.invoke('reseller-billing', {
-            body: {
-              action: 'create_prorated_item',
-              reseller_id: reseller.id,
-              company_id: companyId,
-              company_name: company.name,
-              activation_fee: settings?.activation_fee ?? 180,
-            },
-          });
-        } catch (billingErr) {
-          console.error('Billing prorated item error (non-blocking):', billingErr);
-        }
-      }
-
-      toast.success('Trial de 14 dias ativado!');
-      fetchResellerData();
-      return true;
-    } catch (error) {
-      console.error('Error activating trial:', error);
-      toast.error('Erro ao ativar trial');
-      return false;
-    }
-  }
-
-  async function toggleCompanyPlan(companyId: string, currentActive: boolean): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('company_plans')
-        .update({ active: !currentActive })
-        .eq('company_id', companyId);
-
-      if (error) throw error;
-      toast.success(currentActive ? 'Plano pausado' : 'Plano ativado');
-      fetchResellerData();
-      return true;
-    } catch (error) {
-      console.error('Error toggling plan:', error);
-      toast.error('Erro ao alterar plano');
       return false;
     }
   }
@@ -284,14 +193,9 @@ export function useResellerPortal() {
     }
   }
 
-  // Computed stats
-  const activeCompanies = companies.filter(c => c.plan?.active);
-  const trialCompanies = companies.filter(c => c.plan?.active && c.plan?.expires_at);
-  const expiredCompanies = companies.filter(c => {
-    if (!c.plan?.expires_at || !c.plan?.active) return false;
-    return new Date(c.plan.expires_at) < new Date();
-  });
-
+  // Computed stats — based purely on company.active (no more plan/trial concept)
+  const activeCompanies = companies.filter(c => c.active);
+  const inactiveCompanies = companies.filter(c => !c.active);
   const mrr = activeCompanies.length * (settings?.monthly_fee || 29.90);
 
   return {
@@ -302,13 +206,10 @@ export function useResellerPortal() {
     isReseller,
     stats: {
       totalActive: activeCompanies.length,
-      totalTrial: trialCompanies.length,
-      totalExpired: expiredCompanies.length,
+      totalInactive: inactiveCompanies.length,
       mrr,
     },
     createCompany,
-    activateTrial,
-    toggleCompanyPlan,
     updateProfile,
     updateSettings,
     refetch: fetchResellerData,
