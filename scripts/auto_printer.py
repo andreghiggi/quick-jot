@@ -27,7 +27,9 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.21"  # remove duplicidade de Pagamento/Troco/PIX no bloco de Observações
+SCRIPT_VERSION = "v8.22"  # modo compacto v2 (line_h -15%, margem -50%, rodapé reduzido) — Lancheria da i9
+# Empresas que recebem layout v2 compacto (economia de papel ~25%)
+COMPACT_V2_COMPANY_IDS = {"8c9e7a0e-dbb6-49b9-8344-c23155a71164"}
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -606,8 +608,11 @@ def imprimir_html(html, order_number):
         is_80mm = PAPER_SIZE == '80mm'
         colunas = 24 if is_80mm else 20
         font_height = int(page_w / colunas * 2.0)
+        # MODO COMPACTO V2: economia de papel para empresas selecionadas (apenas no layout v2)
+        compact_v2 = (PRINT_LAYOUT == 'v2') and (COMPANY_ID in COMPACT_V2_COMPANY_IDS)
+        margin_factor = 0.02 if compact_v2 else 0.04  # margem cai pela metade
         margin_x = int(dpi_x * 0.04)  # ~1mm margem mínima
-        margin_y = int(dpi_y * 0.04)
+        margin_y = int(dpi_y * margin_factor)
 
         font_normal = win32ui.CreateFont({
             'name': 'Courier New',
@@ -631,9 +636,10 @@ def imprimir_html(html, order_number):
         })
         hDC.SelectObject(font_normal)
 
-        # Altura da linha
+        # Altura da linha (compacta -15% no modo economia)
         tm = hDC.GetTextMetrics()
-        line_h = tm['tmHeight'] + tm['tmExternalLeading'] + int(tm['tmHeight'] * 0.1)
+        line_h_base = tm['tmHeight'] + tm['tmExternalLeading'] + int(tm['tmHeight'] * 0.1)
+        line_h = int(line_h_base * 0.85) if compact_v2 else line_h_base
 
         hDC.StartDoc(f"Pedido {order_number}")
         # StartPage será chamado de forma lazy ao primeiro desenho
@@ -795,11 +801,12 @@ def imprimir_html(html, order_number):
 
 
             if not stripped:
-                # Linha em branco apenas avança y; não dispara início de página
+                # Linha em branco apenas avança y; no compacto v2 reduz pela metade
                 if page_started['value']:
+                    blank_h = int(line_h * (0.25 if compact_v2 else 0.5))
                     limite = page_h - margin_y
-                    if y + int(line_h * 0.5) <= limite:
-                        y += int(line_h * 0.5)
+                    if y + blank_h <= limite:
+                        y += blank_h
                 i += 1
                 continue
 
@@ -954,11 +961,11 @@ def imprimir_html(html, order_number):
             i += 1
 
         # Margem inferior leve para corte (sem forçar nova página).
-        # Se não couber na página atual, simplesmente ignoramos — a impressora
-        # térmica já avança o papel naturalmente após EndPage.
+        # No modo compacto v2, reduz para 1 linha; padrão é 3 linhas.
         limite_final = page_h - margin_y
-        if y + line_h * 3 <= limite_final:
-            y += line_h * 3
+        cut_lines = 1 if compact_v2 else 3
+        if y + line_h * cut_lines <= limite_final:
+            y += line_h * cut_lines
 
         # Só finaliza a página se realmente houve desenho — evita folha em branco extra
         if page_started['value']:
