@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const { action, reseller_id, company_id } = await req.json();
+    const body = await req.json();
+    const { action, reseller_id, company_id } = body;
 
     switch (action) {
       case "generate_invoices":
@@ -30,6 +31,13 @@ Deno.serve(async (req) => {
 
       case "backfill_invoices":
         return await backfillInvoices(supabase, { reseller_id, company_id });
+
+      case "activation_invoice":
+        return await createActivationInvoice(supabase, {
+          reseller_id,
+          company_id,
+          payment_option: body.payment_option,
+        });
 
       case "send_notifications":
         return await sendNotificationsAndProcess(supabase);
