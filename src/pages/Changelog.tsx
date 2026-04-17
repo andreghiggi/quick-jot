@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/04/2026',
+    version: '1.26.17',
+    type: 'feature',
+    description: 'Super Admin agora pode vincular lojas já cadastradas a um revendedor pelo botão "Vincular lojas" na lista de revendedores. O sistema mostra apenas lojas sem revendedor atual, permite seleção múltipla com busca e adiciona automaticamente a mensalidade proporcional aos dias restantes do mês na fatura do revendedor (sem cobrar taxa de ativação).',
+  },
+  {
+    date: '17/04/2026',
     version: '1.26.16',
     type: 'feature',
     description: 'Revendedores já cadastrados sem login agora exibem o botão "Criar acesso" na lista. O super admin define a senha e o sistema cria o usuário (ou atualiza a senha caso o e-mail já esteja registrado), liberando o acesso imediato ao portal.',

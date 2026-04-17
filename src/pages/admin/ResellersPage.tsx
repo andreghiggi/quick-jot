@@ -15,9 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
-  Plus, Loader2, Search, Play, Pause, Pencil, Eye, KeyRound,
+  Plus, Loader2, Search, Play, Pause, Pencil, Eye, KeyRound, Link2,
   Users, DollarSign, UserCheck,
 } from 'lucide-react';
+import { AssignCompaniesDialog } from '@/components/admin/AssignCompaniesDialog';
 
 // ── Masks ──
 
@@ -80,7 +81,7 @@ const UF_OPTIONS = [
 
 export default function ResellersPage() {
   const { user } = useAuthContext();
-  const { resellers, loading, createReseller, updateReseller, toggleResellerStatus } = useResellers();
+  const { resellers, loading, createReseller, updateReseller, toggleResellerStatus, refetch } = useResellers();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -93,6 +94,9 @@ export default function ResellersPage() {
   const [accessReseller, setAccessReseller] = useState<{ id: string; email: string; name: string } | null>(null);
   const [accessPassword, setAccessPassword] = useState('');
   const [isCreatingAccess, setIsCreatingAccess] = useState(false);
+
+  // Assign companies dialog
+  const [assignReseller, setAssignReseller] = useState<{ id: string; name: string } | null>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -605,6 +609,14 @@ export default function ResellersPage() {
                             <Button variant="outline" size="sm" className="gap-1" onClick={() => openEdit(r.id)}>
                               <Pencil className="w-3 h-3" /> Editar
                             </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => setAssignReseller({ id: r.id, name: r.name })}
+                            >
+                              <Link2 className="w-3 h-3" /> Vincular lojas
+                            </Button>
                             {!r.user_id && (
                               <Button
                                 variant="default"
@@ -694,6 +706,15 @@ export default function ResellersPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Assign Companies Dialog */}
+      <AssignCompaniesDialog
+        open={!!assignReseller}
+        onOpenChange={(o) => { if (!o) setAssignReseller(null); }}
+        resellerId={assignReseller?.id || null}
+        resellerName={assignReseller?.name || ''}
+        onAssigned={refetch}
+      />
     </AppLayout>
   );
 }
