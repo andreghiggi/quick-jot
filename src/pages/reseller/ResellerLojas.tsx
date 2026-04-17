@@ -308,6 +308,71 @@ export default function ResellerLojas() {
               </div>
             </section>
 
+            {/* Pagamento da Ativação */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Pagamento da Ativação</h3>
+              {settings && (
+                <p className="text-xs text-muted-foreground">
+                  Taxa de ativação: <strong>R$ {settings.activation_fee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                </p>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  disabled={isCreating}
+                  onClick={() => setPaymentOption('now')}
+                  className={`text-left rounded-md border p-3 transition ${paymentOption === 'now' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                >
+                  <div className="text-sm font-semibold">À vista</div>
+                  <div className="text-xs text-muted-foreground mt-1">Vence em 3 dias · sem acréscimo</div>
+                </button>
+                <button
+                  type="button"
+                  disabled={isCreating}
+                  onClick={() => setPaymentOption('30_days')}
+                  className={`text-left rounded-md border p-3 transition ${paymentOption === '30_days' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                >
+                  <div className="text-sm font-semibold">Em 30 dias</div>
+                  <div className="text-xs text-muted-foreground mt-1">+ R$ 20,00 de acréscimo</div>
+                </button>
+                <button
+                  type="button"
+                  disabled={isCreating}
+                  onClick={() => setPaymentOption(prev => (prev === '3x_no_entry' || prev === '3x_entry' ? prev : '3x_no_entry'))}
+                  className={`text-left rounded-md border p-3 transition ${(paymentOption === '3x_no_entry' || paymentOption === '3x_entry') ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                >
+                  <div className="text-sm font-semibold">Parcelado em 3x</div>
+                  <div className="text-xs text-muted-foreground mt-1">+ R$ 15,00 por parcela</div>
+                </button>
+              </div>
+
+              {(paymentOption === '3x_no_entry' || paymentOption === '3x_entry') && (
+                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Como parcelar?</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={isCreating}
+                      onClick={() => setPaymentOption('3x_no_entry')}
+                      className={`text-left rounded-md border p-2 text-xs transition ${paymentOption === '3x_no_entry' ? 'border-primary bg-background ring-1 ring-primary' : 'bg-background/60 hover:bg-background'}`}
+                    >
+                      <div className="font-semibold text-sm">Sem entrada</div>
+                      <div className="text-muted-foreground mt-1">3 parcelas a partir do próximo mês (dia {settings?.invoice_due_day ?? 20}). +R$15 cada.</div>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isCreating}
+                      onClick={() => setPaymentOption('3x_entry')}
+                      className={`text-left rounded-md border p-2 text-xs transition ${paymentOption === '3x_entry' ? 'border-primary bg-background ring-1 ring-primary' : 'bg-background/60 hover:bg-background'}`}
+                    >
+                      <div className="font-semibold text-sm">Com entrada</div>
+                      <div className="text-muted-foreground mt-1">1ª hoje (em 3 dias, sem acréscimo) + 2 parcelas mensais (+R$15 cada).</div>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+
             {settings && (
               <Card className="bg-muted/50">
                 <CardContent className="pt-4 space-y-1 text-sm">
