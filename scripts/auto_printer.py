@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.12"  # v2: separador pontilhado entre itens + compat item-name
+SCRIPT_VERSION = "v8.13"  # v2: corrige duplicidade OBSERVAÇÕES, quebra adicionais por vírgula, suporta grupos com ":"
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -255,17 +255,31 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
                 extras_resto = extras
 
         if PRINT_LAYOUT == 'v2':
-            # V2: adicionais empilhados em negrito (uppercase, sem preço)
+            # V2: extrai TODOS os adicionais — formato legado (vírgula) ou novo (grupos com "Nome: a, b | Nome2: c")
+            v2_adicionais = []
             if adicionais_list:
-                items_html += '  <div class="additionals">\n'
-                for ad in adicionais_list:
-                    # Remove eventual " R$X.XX" do nome do adicional
-                    ad_clean = re.sub(r'\s*R\$\s*[\d.,]+\s*$', '', ad).strip()
-                    items_html += f'    <div class="add-line">+ {ad_clean.upper()}</div>\n'
-                items_html += '  </div>\n'
+                v2_adicionais.extend(adicionais_list)
             if extras_resto:
-                items_html += f'  <div class="item-detail">+ {extras_resto}</div>\n'
-            # V2: observações em texto invertido
+                # Formato com grupos: "Frutas: Abacaxi, Manga | Adicionais: Leite Condensado R$3,00, Banana R$2,00"
+                grupos = [g.strip() for g in extras_resto.split('|') if g.strip()]
+                for grupo in grupos:
+                    if ':' in grupo:
+                        _, after = grupo.split(':', 1)
+                        partes = [p.strip() for p in after.split(',') if p.strip()]
+                        v2_adicionais.extend(partes)
+                    else:
+                        partes = [p.strip() for p in grupo.split(',') if p.strip()]
+                        v2_adicionais.extend(partes)
+
+            if v2_adicionais:
+                items_html += '  <div class="additionals">\n'
+                for ad in v2_adicionais:
+                    ad_clean = re.sub(r'\s*R\$\s*[\d.,]+\s*$', '', ad).strip()
+                    if ad_clean:
+                        items_html += f'    <div class="add-line">+ {ad_clean.upper()}</div>\n'
+                items_html += '  </div>\n'
+
+            # V2: observações em texto invertido (apenas o conteúdo — o GDI adiciona o rótulo "OBSERVAÇÕES:")
             if item_notes:
                 items_html += f'  <div class="obs-block"><span class="obs">{item_notes}</span></div>\n'
         else:
