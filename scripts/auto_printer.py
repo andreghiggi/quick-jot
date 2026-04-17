@@ -754,6 +754,7 @@ def imprimir_html(html, order_number):
 
             # CABEÇALHO EM CAIXA — início: marca posição Y atual e adiciona padding superior
             if stripped == '[BOX_START]':
+                ensure_page()
                 y += box_pad_y
                 box_top_y = y
                 box_state['active'] = True
