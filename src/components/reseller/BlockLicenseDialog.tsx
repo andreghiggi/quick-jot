@@ -154,6 +154,62 @@ export function BlockLicenseDialog({ open, onClose, store, onSaved }: Props) {
 
           {!isBlocked && (
             <>
+              <div className="space-y-2 rounded-md border p-3">
+                <Label className="text-sm font-semibold">Quando bloquear?</Label>
+                <RadioGroup value={mode} onValueChange={(v) => setMode(v as 'now' | 'schedule')} className="gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem value="now" id="mode-now" />
+                    <span className="text-sm">Bloquear agora</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem value="schedule" id="mode-schedule" />
+                    <span className="text-sm">Agendar bloqueio</span>
+                  </label>
+                </RadioGroup>
+
+                {mode === 'schedule' && (
+                  <div className="pt-2 space-y-1.5">
+                    <Label className="text-xs">Data do bloqueio</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn(
+                            'w-full justify-start text-left font-normal',
+                            !scheduledDate && 'text-muted-foreground',
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {scheduledDate
+                            ? format(scheduledDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                            : 'Selecione uma data'}
+                          {scheduledDate && (
+                            <X
+                              className="ml-auto h-4 w-4 opacity-60 hover:opacity-100"
+                              onClick={(e) => { e.stopPropagation(); setScheduledDate(undefined); }}
+                            />
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={scheduledDate}
+                          onSelect={setScheduledDate}
+                          disabled={(d) => d < today}
+                          initialFocus
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <p className="text-xs text-muted-foreground">
+                      O bloqueio será efetivado na data selecionada. A loja continua liberada até lá.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="reason">Motivo do bloqueio</Label>
                 <Input
