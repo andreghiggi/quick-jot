@@ -428,7 +428,11 @@ def encontrar_chrome():
 
 def html_para_texto(html):
     """Converte HTML do recibo para texto plano formatado para impressora térmica"""
-    # 1. Remove blocos que não são conteúdo (style, head, script)
+    is_80mm = PAPER_SIZE == '80mm'
+    cols = 24 if is_80mm else 20  # mesma largura usada na renderização GDI
+    divider = '-' * cols
+
+    # 1. Remove blocos que não são conteúdo
     text = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r'<head[^>]*>.*?</head>', '', text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL | re.IGNORECASE)
@@ -437,18 +441,47 @@ def html_para_texto(html):
     text = re.sub(r'</html>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'<body[^>]*>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'</body>', '', text, flags=re.IGNORECASE)
-    # 2. Converte <hr> em divisórias
-    is_80mm = PAPER_SIZE == '80mm'
-    cols = 48 if is_80mm else 32
-    divider = '-' * cols
+
+    # 1b. LAYOUT V2: emoldura blocos de observação com ASCII (simula texto invertido)
+    def envolver_obs(match):
+        conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip().upper()
+        if not conteudo:
+            return ''
+        borda = '*' * cols
+        max_len = cols - 4
+        palavras = conteudo.split(' ')
+        linhas_obs = []
+        atual = ''
+        for p in palavras:
+            if not atual:
+                atual = p
+            elif len(atual) + 1 + len(p) <= max_len:
+                atual += ' ' + p
+            else:
+                linhas_obs.append(atual)
+                atual = p
+        if atual:
+            linhas_obs.append(atual)
+        out = ['', borda]
+        for ln in linhas_obs:
+            espaco = cols - 2 - len(ln)
+            esq = espaco // 2
+            dir_ = espaco - esq
+            out.append('*' + ' ' * esq + ln + ' ' * dir_ + '*')
+        out.append(borda)
+        out.append('')
+        return '\n' + '\n'.join(out) + '\n'
+    text = re.sub(r'<div\s+class="obs"[^>]*>(.*?)</div>', envolver_obs, text, flags=re.DOTALL | re.IGNORECASE)
+
+    # 2. <hr> em divisórias
     text = re.sub(r'<hr[^>]*/?>', f'\n{divider}\n', text, flags=re.IGNORECASE)
     # 3. Quebras de linha por bloco
     text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
     text = re.sub(r'</(div|p|tr|li|h[1-6])>', '\n', text, flags=re.IGNORECASE)
     text = re.sub(r'</(td|th)>', '  ', text, flags=re.IGNORECASE)
-    # 4. Remove todas as tags restantes
+    # 4. Remove tags restantes
     text = re.sub(r'<[^>]+>', '', text)
-    # 5. Decodifica entidades
+    # 5. Entidades
     text = text.replace('&nbsp;', ' ').replace('&amp;', '&')
     text = text.replace('&lt;', '<').replace('&gt;', '>')
     text = text.replace('&quot;', '"').replace('&#39;', "'")
