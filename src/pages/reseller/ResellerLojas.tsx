@@ -28,12 +28,27 @@ export default function ResellerLojas() {
   const [isBackfilling, setIsBackfilling] = useState(false);
   const [selectedStore, setSelectedStore] = useState<StoreDetail | null>(null);
 
-  // form state
+  // form state — Empresa
   const [newName, setNewName] = useState('');
   const [newSlug, setNewSlug] = useState('');
+  const [newRazao, setNewRazao] = useState('');
+  const [newCnpj, setNewCnpj] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  // form state — Endereço
+  const [newCep, setNewCep] = useState('');
+  const [newStreet, setNewStreet] = useState('');
+  const [newNumber, setNewNumber] = useState('');
+  const [newNeighborhood, setNewNeighborhood] = useState('');
+  const [newCity, setNewCity] = useState('');
+  const [newState, setNewState] = useState('');
+  // form state — Responsável
+  const [respName, setRespName] = useState('');
+  const [respCpf, setRespCpf] = useState('');
+  const [respRg, setRespRg] = useState('');
+  const [respEmail, setRespEmail] = useState('');
+  const [respPhone, setRespPhone] = useState('');
 
   function generateSlug(name: string): string {
     return name
@@ -44,10 +59,38 @@ export default function ResellerLojas() {
       .replace(/(^-|-$)/g, '');
   }
 
+  function resetForm() {
+    setNewName(''); setNewSlug(''); setNewRazao(''); setNewCnpj('');
+    setNewPhone(''); setNewEmail(''); setNewPassword('');
+    setNewCep(''); setNewStreet(''); setNewNumber('');
+    setNewNeighborhood(''); setNewCity(''); setNewState('');
+    setRespName(''); setRespCpf(''); setRespRg(''); setRespEmail(''); setRespPhone('');
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!newName.trim()) {
-      toast.error('Nome da loja é obrigatório');
+
+    const missing: string[] = [];
+    if (!newName.trim()) missing.push('Nome da Loja');
+    if (!newRazao.trim()) missing.push('Razão Social');
+    if (!newCnpj.trim()) missing.push('CNPJ');
+    if (!newEmail.trim()) missing.push('E-mail Comercial');
+    if (!newPhone.trim()) missing.push('Telefone');
+    if (!newCep.trim()) missing.push('CEP');
+    if (!newStreet.trim()) missing.push('Rua');
+    if (!newNumber.trim()) missing.push('Número');
+    if (!newNeighborhood.trim()) missing.push('Bairro');
+    if (!newCity.trim()) missing.push('Cidade');
+    if (!newState.trim()) missing.push('Estado');
+    if (!respName.trim()) missing.push('Nome do Responsável');
+    if (!respCpf.trim()) missing.push('CPF do Responsável');
+    if (!respRg.trim()) missing.push('RG do Responsável');
+    if (!respEmail.trim()) missing.push('E-mail do Responsável');
+    if (!respPhone.trim()) missing.push('Telefone do Responsável');
+    if (!newPassword.trim()) missing.push('Senha Inicial');
+
+    if (missing.length > 0) {
+      toast.error(`Preencha: ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? '...' : ''}`);
       return;
     }
 
@@ -56,18 +99,27 @@ export default function ResellerLojas() {
     const success = await createCompany({
       name: newName.trim(),
       slug,
-      phone: newPhone.trim() || undefined,
-      login_email: newEmail.trim() || undefined,
-      initial_password: newPassword.trim() || undefined,
+      razao_social: newRazao.trim(),
+      cnpj: newCnpj.trim(),
+      phone: newPhone.trim(),
+      login_email: newEmail.trim(),
+      initial_password: newPassword.trim(),
+      address_cep: newCep.trim(),
+      address_street: newStreet.trim(),
+      address_number: newNumber.trim(),
+      address_neighborhood: newNeighborhood.trim(),
+      address_city: newCity.trim(),
+      address_state: newState.trim().toUpperCase(),
+      responsible_name: respName.trim(),
+      responsible_cpf: respCpf.trim(),
+      responsible_rg: respRg.trim(),
+      responsible_email: respEmail.trim(),
+      responsible_phone: respPhone.trim(),
     });
 
     if (success) {
       setIsCreateOpen(false);
-      setNewName('');
-      setNewSlug('');
-      setNewPhone('');
-      setNewEmail('');
-      setNewPassword('');
+      resetForm();
     }
     setIsCreating(false);
   }
@@ -130,63 +182,125 @@ export default function ResellerLojas() {
             <span className="hidden sm:inline">Nova Loja</span>
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Cadastrar Nova Loja</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome da Loja *</Label>
-              <Input
-                placeholder="Ex: Hamburgueria do João"
-                value={newName}
-                onChange={e => {
-                  setNewName(e.target.value);
-                  if (!newSlug) setNewSlug(generateSlug(e.target.value));
-                }}
-                disabled={isCreating}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Slug (URL)</Label>
-              <Input
-                placeholder="hamburgueria-do-joao"
-                value={newSlug}
-                onChange={e => setNewSlug(e.target.value)}
-                disabled={isCreating}
-              />
-              <p className="text-xs text-muted-foreground">
-                URL do cardápio: /cardapio/{newSlug || 'slug-da-loja'}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>WhatsApp</Label>
-              <Input
-                placeholder="5511999999999"
-                value={newPhone}
-                onChange={e => setNewPhone(e.target.value)}
-                disabled={isCreating}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Login (E-mail)</Label>
-              <Input
-                type="email"
-                placeholder="loja@email.com"
-                value={newEmail}
-                onChange={e => setNewEmail(e.target.value)}
-                disabled={isCreating}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Senha Inicial</Label>
-              <Input
-                placeholder="Senha inicial da loja"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                disabled={isCreating}
-              />
-            </div>
+          <form onSubmit={handleCreate} className="space-y-6">
+            {/* Dados da Empresa */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Dados da Empresa</h3>
+              <div className="space-y-2">
+                <Label>Razão Social *</Label>
+                <Input value={newRazao} onChange={e => setNewRazao(e.target.value)} disabled={isCreating} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>CNPJ *</Label>
+                  <Input placeholder="00.000.000/0000-00" value={newCnpj} onChange={e => setNewCnpj(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>E-mail Comercial *</Label>
+                  <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefone *</Label>
+                  <Input placeholder="(54) 99999-9999" value={newPhone} onChange={e => setNewPhone(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>CEP *</Label>
+                  <Input placeholder="00000-000" value={newCep} onChange={e => setNewCep(e.target.value)} disabled={isCreating} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Rua *</Label>
+                <Input value={newStreet} onChange={e => setNewStreet(e.target.value)} disabled={isCreating} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Número *</Label>
+                  <Input value={newNumber} onChange={e => setNewNumber(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Bairro *</Label>
+                  <Input value={newNeighborhood} onChange={e => setNewNeighborhood(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cidade *</Label>
+                  <Input value={newCity} onChange={e => setNewCity(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Estado *</Label>
+                  <Input maxLength={2} placeholder="RS" value={newState} onChange={e => setNewState(e.target.value.toUpperCase())} disabled={isCreating} />
+                </div>
+              </div>
+            </section>
+
+            {/* Dados do Responsável */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Dados do Responsável</h3>
+              <div className="space-y-2">
+                <Label>Nome Completo *</Label>
+                <Input value={respName} onChange={e => setRespName(e.target.value)} disabled={isCreating} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>CPF *</Label>
+                  <Input placeholder="000.000.000-00" value={respCpf} onChange={e => setRespCpf(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>RG *</Label>
+                  <Input value={respRg} onChange={e => setRespRg(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>E-mail *</Label>
+                  <Input type="email" value={respEmail} onChange={e => setRespEmail(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefone / WhatsApp *</Label>
+                  <Input placeholder="(54) 99999-9999" value={respPhone} onChange={e => setRespPhone(e.target.value)} disabled={isCreating} />
+                </div>
+              </div>
+            </section>
+
+            {/* Loja & Acesso */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Loja & Acesso</h3>
+              <div className="space-y-2">
+                <Label>Nome Fantasia da Loja *</Label>
+                <Input
+                  placeholder="Ex: Hamburgueria do João"
+                  value={newName}
+                  onChange={e => {
+                    setNewName(e.target.value);
+                    if (!newSlug) setNewSlug(generateSlug(e.target.value));
+                  }}
+                  disabled={isCreating}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Slug (URL)</Label>
+                <Input
+                  placeholder="hamburgueria-do-joao"
+                  value={newSlug}
+                  onChange={e => setNewSlug(e.target.value)}
+                  disabled={isCreating}
+                />
+                <p className="text-xs text-muted-foreground">
+                  URL do cardápio: /cardapio/{newSlug || 'slug-da-loja'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Senha Inicial *</Label>
+                <Input
+                  type="text"
+                  placeholder="Senha inicial da loja"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  disabled={isCreating}
+                />
+              </div>
+            </section>
 
             {settings && (
               <Card className="bg-muted/50">

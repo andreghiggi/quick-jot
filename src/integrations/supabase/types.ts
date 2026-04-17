@@ -234,10 +234,13 @@ export type Database = {
         Row: {
           active: boolean | null
           address: string | null
+          address_cep: string | null
+          address_city: string | null
           address_complement: string | null
           address_neighborhood: string | null
           address_number: string | null
           address_reference: string | null
+          address_state: string | null
           address_street: string | null
           cnpj: string | null
           created_at: string | null
@@ -247,17 +250,26 @@ export type Database = {
           logo_url: string | null
           name: string
           phone: string | null
+          razao_social: string | null
           reseller_id: string | null
+          responsible_cpf: string | null
+          responsible_email: string | null
+          responsible_name: string | null
+          responsible_phone: string | null
+          responsible_rg: string | null
           slug: string
           updated_at: string | null
         }
         Insert: {
           active?: boolean | null
           address?: string | null
+          address_cep?: string | null
+          address_city?: string | null
           address_complement?: string | null
           address_neighborhood?: string | null
           address_number?: string | null
           address_reference?: string | null
+          address_state?: string | null
           address_street?: string | null
           cnpj?: string | null
           created_at?: string | null
@@ -267,17 +279,26 @@ export type Database = {
           logo_url?: string | null
           name: string
           phone?: string | null
+          razao_social?: string | null
           reseller_id?: string | null
+          responsible_cpf?: string | null
+          responsible_email?: string | null
+          responsible_name?: string | null
+          responsible_phone?: string | null
+          responsible_rg?: string | null
           slug: string
           updated_at?: string | null
         }
         Update: {
           active?: boolean | null
           address?: string | null
+          address_cep?: string | null
+          address_city?: string | null
           address_complement?: string | null
           address_neighborhood?: string | null
           address_number?: string | null
           address_reference?: string | null
+          address_state?: string | null
           address_street?: string | null
           cnpj?: string | null
           created_at?: string | null
@@ -287,7 +308,13 @@ export type Database = {
           logo_url?: string | null
           name?: string
           phone?: string | null
+          razao_social?: string | null
           reseller_id?: string | null
+          responsible_cpf?: string | null
+          responsible_email?: string | null
+          responsible_name?: string | null
+          responsible_phone?: string | null
+          responsible_rg?: string | null
           slug?: string
           updated_at?: string | null
         }
