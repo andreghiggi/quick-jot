@@ -60,7 +60,7 @@ export function useCompanies() {
           slug: data.slug,
           phone: data.phone || null,
           address: data.address || null,
-        })
+        } as any)
         .select()
         .single();
 
