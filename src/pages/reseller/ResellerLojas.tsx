@@ -182,63 +182,125 @@ export default function ResellerLojas() {
             <span className="hidden sm:inline">Nova Loja</span>
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Cadastrar Nova Loja</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome da Loja *</Label>
-              <Input
-                placeholder="Ex: Hamburgueria do João"
-                value={newName}
-                onChange={e => {
-                  setNewName(e.target.value);
-                  if (!newSlug) setNewSlug(generateSlug(e.target.value));
-                }}
-                disabled={isCreating}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Slug (URL)</Label>
-              <Input
-                placeholder="hamburgueria-do-joao"
-                value={newSlug}
-                onChange={e => setNewSlug(e.target.value)}
-                disabled={isCreating}
-              />
-              <p className="text-xs text-muted-foreground">
-                URL do cardápio: /cardapio/{newSlug || 'slug-da-loja'}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>WhatsApp</Label>
-              <Input
-                placeholder="5511999999999"
-                value={newPhone}
-                onChange={e => setNewPhone(e.target.value)}
-                disabled={isCreating}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Login (E-mail)</Label>
-              <Input
-                type="email"
-                placeholder="loja@email.com"
-                value={newEmail}
-                onChange={e => setNewEmail(e.target.value)}
-                disabled={isCreating}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Senha Inicial</Label>
-              <Input
-                placeholder="Senha inicial da loja"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                disabled={isCreating}
-              />
-            </div>
+          <form onSubmit={handleCreate} className="space-y-6">
+            {/* Dados da Empresa */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Dados da Empresa</h3>
+              <div className="space-y-2">
+                <Label>Razão Social *</Label>
+                <Input value={newRazao} onChange={e => setNewRazao(e.target.value)} disabled={isCreating} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>CNPJ *</Label>
+                  <Input placeholder="00.000.000/0000-00" value={newCnpj} onChange={e => setNewCnpj(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>E-mail Comercial *</Label>
+                  <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefone *</Label>
+                  <Input placeholder="(54) 99999-9999" value={newPhone} onChange={e => setNewPhone(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>CEP *</Label>
+                  <Input placeholder="00000-000" value={newCep} onChange={e => setNewCep(e.target.value)} disabled={isCreating} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Rua *</Label>
+                <Input value={newStreet} onChange={e => setNewStreet(e.target.value)} disabled={isCreating} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Número *</Label>
+                  <Input value={newNumber} onChange={e => setNewNumber(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Bairro *</Label>
+                  <Input value={newNeighborhood} onChange={e => setNewNeighborhood(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cidade *</Label>
+                  <Input value={newCity} onChange={e => setNewCity(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Estado *</Label>
+                  <Input maxLength={2} placeholder="RS" value={newState} onChange={e => setNewState(e.target.value.toUpperCase())} disabled={isCreating} />
+                </div>
+              </div>
+            </section>
+
+            {/* Dados do Responsável */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Dados do Responsável</h3>
+              <div className="space-y-2">
+                <Label>Nome Completo *</Label>
+                <Input value={respName} onChange={e => setRespName(e.target.value)} disabled={isCreating} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>CPF *</Label>
+                  <Input placeholder="000.000.000-00" value={respCpf} onChange={e => setRespCpf(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>RG *</Label>
+                  <Input value={respRg} onChange={e => setRespRg(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>E-mail *</Label>
+                  <Input type="email" value={respEmail} onChange={e => setRespEmail(e.target.value)} disabled={isCreating} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefone / WhatsApp *</Label>
+                  <Input placeholder="(54) 99999-9999" value={respPhone} onChange={e => setRespPhone(e.target.value)} disabled={isCreating} />
+                </div>
+              </div>
+            </section>
+
+            {/* Loja & Acesso */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Loja & Acesso</h3>
+              <div className="space-y-2">
+                <Label>Nome Fantasia da Loja *</Label>
+                <Input
+                  placeholder="Ex: Hamburgueria do João"
+                  value={newName}
+                  onChange={e => {
+                    setNewName(e.target.value);
+                    if (!newSlug) setNewSlug(generateSlug(e.target.value));
+                  }}
+                  disabled={isCreating}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Slug (URL)</Label>
+                <Input
+                  placeholder="hamburgueria-do-joao"
+                  value={newSlug}
+                  onChange={e => setNewSlug(e.target.value)}
+                  disabled={isCreating}
+                />
+                <p className="text-xs text-muted-foreground">
+                  URL do cardápio: /cardapio/{newSlug || 'slug-da-loja'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Senha Inicial *</Label>
+                <Input
+                  type="text"
+                  placeholder="Senha inicial da loja"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  disabled={isCreating}
+                />
+              </div>
+            </section>
 
             {settings && (
               <Card className="bg-muted/50">
