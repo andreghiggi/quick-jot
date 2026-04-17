@@ -122,6 +122,12 @@ async function ensureMonthlyInvoice(
   if (activationYear === year && activationMonth === month) {
     startDay = activationDate.getDate();
     isFullMonth = startDay === 1;
+
+    // Nova regra: se o cadastro é APÓS o dia de vencimento, pula a fatura
+    // proporcional do mês de cadastro — a primeira fatura será a do mês seguinte (cheia).
+    if (!isFullMonth && startDay > dueDay) {
+      return null;
+    }
   }
 
   const remainingDays = totalDays - startDay + 1;
