@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.8"  # layout V2: observações emolduradas com asteriscos (GDI não suporta fundo preto)
+SCRIPT_VERSION = "v8.9"  # layout V2 GDI: nome regular, adicionais negrito, observação fundo preto real
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -427,12 +427,14 @@ def encontrar_chrome():
     return None
 
 def html_para_texto(html):
-    """Converte HTML do recibo para texto plano formatado para impressora térmica"""
+    """Converte HTML do recibo para texto plano formatado para impressora térmica.
+    No layout V2 marca adicionais com [ADD] e observações com [OBS] para o GDI
+    renderizar com estilos diferentes (negrito real / fundo preto)."""
     is_80mm = PAPER_SIZE == '80mm'
-    cols = 24 if is_80mm else 20  # mesma largura usada na renderização GDI
+    cols = 24 if is_80mm else 20
     divider = '-' * cols
 
-    # 1. Remove blocos que não são conteúdo
+    # 1. Remove blocos não-conteúdo
     text = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r'<head[^>]*>.*?</head>', '', text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL | re.IGNORECASE)
@@ -442,36 +444,28 @@ def html_para_texto(html):
     text = re.sub(r'<body[^>]*>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'</body>', '', text, flags=re.IGNORECASE)
 
-    # 1b. LAYOUT V2: emoldura blocos de observação com ASCII (simula texto invertido)
-    def envolver_obs(match):
-        conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip().upper()
+    # 1b. LAYOUT V2: marca adicionais e observações com prefixos especiais
+    # Adicional: <div class="add-line">>> texto</div>  ->  [ADD]texto[/ADD]
+    def marcar_add(match):
+        conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
+        # remove prefixo >> ou + se houver
+        conteudo = re.sub(r'^(&gt;&gt;|>>|\+)\s*', '', conteudo).strip()
+        return f'\n[ADD]{conteudo}[/ADD]\n'
+    text = re.sub(r'<div\s+class="add-line"[^>]*>(.*?)</div>', marcar_add, text, flags=re.DOTALL | re.IGNORECASE)
+
+    # Observação: <div class="obs">...<span class="obs-text">TEXTO</span>...</div>  ->  [OBS]texto[/OBS]
+    def marcar_obs(match):
+        conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
         if not conteudo:
             return ''
-        borda = '*' * cols
-        max_len = cols - 4
-        palavras = conteudo.split(' ')
-        linhas_obs = []
-        atual = ''
-        for p in palavras:
-            if not atual:
-                atual = p
-            elif len(atual) + 1 + len(p) <= max_len:
-                atual += ' ' + p
-            else:
-                linhas_obs.append(atual)
-                atual = p
-        if atual:
-            linhas_obs.append(atual)
-        out = ['', borda]
-        for ln in linhas_obs:
-            espaco = cols - 2 - len(ln)
-            esq = espaco // 2
-            dir_ = espaco - esq
-            out.append('*' + ' ' * esq + ln + ' ' * dir_ + '*')
-        out.append(borda)
-        out.append('')
-        return '\n' + '\n'.join(out) + '\n'
-    text = re.sub(r'<div\s+class="obs"[^>]*>(.*?)</div>', envolver_obs, text, flags=re.DOTALL | re.IGNORECASE)
+        return f'\n[OBS]{conteudo}[/OBS]\n'
+    text = re.sub(r'<div\s+class="obs"[^>]*>(.*?)</div>', marcar_obs, text, flags=re.DOTALL | re.IGNORECASE)
+
+    # Nome do produto V2: <span class="name">NOME</span>  ->  [NAME]NOME[/NAME]
+    def marcar_name(match):
+        conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
+        return f'[NAME]{conteudo}[/NAME]'
+    text = re.sub(r'<span\s+class="name"[^>]*>(.*?)</span>', marcar_name, text, flags=re.DOTALL | re.IGNORECASE)
 
     # 2. <hr> em divisórias
     text = re.sub(r'<hr[^>]*/?>', f'\n{divider}\n', text, flags=re.IGNORECASE)
@@ -523,19 +517,32 @@ def imprimir_html(html, order_number):
         margin_x = int(dpi_x * 0.04)  # ~1mm margem mínima
         margin_y = int(dpi_y * 0.04)
 
-        font = win32ui.CreateFont({
+        font_normal = win32ui.CreateFont({
             'name': 'Courier New',
             'height': font_height,
-            'weight': 900,  # extra bold
+            'weight': 900,  # padrão V1: tudo bold
         })
-        hDC.SelectObject(font)
+        font_regular = win32ui.CreateFont({
+            'name': 'Courier New',
+            'height': font_height,
+            'weight': 400,  # peso normal (para nome do produto no V2)
+        })
+        font_bold_big = win32ui.CreateFont({
+            'name': 'Courier New',
+            'height': int(font_height * 1.05),
+            'weight': 900,  # adicionais V2 — negrito forte
+        })
+        font_obs = win32ui.CreateFont({
+            'name': 'Courier New',
+            'height': font_height,
+            'weight': 900,
+        })
+        hDC.SelectObject(font_normal)
 
         # Altura da linha
         tm = hDC.GetTextMetrics()
         line_h = tm['tmHeight'] + tm['tmExternalLeading'] + int(tm['tmHeight'] * 0.1)
 
-        # Para impressoras térmicas: imprime tudo em uma página contínua
-        # (a impressora corta no final automaticamente)
         hDC.StartDoc(f"Pedido {order_number}")
         hDC.StartPage()
 
@@ -549,7 +556,6 @@ def imprimir_html(html, order_number):
             linhas_out = []
             atual = ''
             for palavra in palavras:
-                # Palavra individual maior que a largura: quebra forçada
                 if len(palavra) > largura:
                     if atual:
                         linhas_out.append(atual)
@@ -570,21 +576,96 @@ def imprimir_html(html, order_number):
                 linhas_out.append(atual)
             return linhas_out
 
+        is_v2 = (PRINT_LAYOUT == 'v2')
+
         for linha in linhas:
-            # Pula linhas completamente vazias duplicadas
             stripped = linha.strip()
             if not stripped:
-                y += int(line_h * 0.5)  # meia linha de espaço
+                y += int(line_h * 0.5)
                 continue
 
-            # Centraliza cabeçalhos e divisórias
             if set(stripped) <= {'-', '=', '_'} and len(stripped) > 3:
+                hDC.SelectObject(font_normal)
+                hDC.SetTextColor(0x000000)
+                hDC.SetBkMode(win32con.TRANSPARENT)
                 hDC.TextOut(margin_x, y, '-' * colunas)
                 y += line_h
                 continue
 
-            # Word-wrap: quebra a linha em várias se ultrapassar a largura
-            for sublinha in quebrar_linha(stripped, colunas):
+            # Detecta marcadores V2
+            m_add = re.match(r'^\[ADD\](.*)\[/ADD\]$', stripped)
+            m_obs = re.match(r'^\[OBS\](.*)\[/OBS\]$', stripped)
+            m_name = re.match(r'^\[NAME\](.*)\[/NAME\]$', stripped)
+
+            if is_v2 and m_add:
+                # Adicional: negrito forte com prefixo ">>"
+                texto_add = '>> ' + m_add.group(1).strip().upper()
+                hDC.SelectObject(font_bold_big)
+                hDC.SetTextColor(0x000000)
+                hDC.SetBkMode(win32con.TRANSPARENT)
+                for sub in quebrar_linha(texto_add, colunas):
+                    hDC.TextOut(margin_x, y, sub)
+                    y += line_h
+                hDC.SelectObject(font_normal)
+                continue
+
+            if is_v2 and m_obs:
+                # Observação: fundo PRETO + letras BRANCAS (texto invertido real)
+                texto_obs = m_obs.group(1).strip().upper()
+                hDC.SelectObject(font_obs)
+                sublinhas = quebrar_linha(texto_obs, colunas - 2)
+                # desenha um retângulo preto cobrindo todas as linhas
+                pad_x = int(dpi_x * 0.02)
+                pad_y = int(dpi_y * 0.015)
+                rect_top = y - pad_y
+                rect_h = line_h * len(sublinhas) + pad_y * 2
+                rect_right = margin_x + int(colunas * tm['tmAveCharWidth']) + pad_x * 2
+                # Cria pincel e caneta pretos
+                try:
+                    import win32gui
+                    brush = win32gui.CreateSolidBrush(0x000000)
+                    pen = win32gui.CreatePen(win32con.PS_SOLID, 1, 0x000000)
+                    old_brush = win32gui.SelectObject(hDC.GetSafeHdc(), brush)
+                    old_pen = win32gui.SelectObject(hDC.GetSafeHdc(), pen)
+                    win32gui.Rectangle(hDC.GetSafeHdc(), margin_x, rect_top, rect_right, rect_top + rect_h)
+                    win32gui.SelectObject(hDC.GetSafeHdc(), old_brush)
+                    win32gui.SelectObject(hDC.GetSafeHdc(), old_pen)
+                    win32gui.DeleteObject(brush)
+                    win32gui.DeleteObject(pen)
+                except Exception as ex:
+                    log(f"Falha ao desenhar fundo preto: {ex}", "AVISO")
+                # Texto branco em cima
+                hDC.SetTextColor(0xFFFFFF)
+                hDC.SetBkMode(win32con.TRANSPARENT)
+                for sub in sublinhas:
+                    hDC.TextOut(margin_x + pad_x, y, sub)
+                    y += line_h
+                # Volta padrão
+                hDC.SetTextColor(0x000000)
+                hDC.SelectObject(font_normal)
+                y += int(line_h * 0.3)
+                continue
+
+            if is_v2 and m_name:
+                # Nome do produto V2: peso REGULAR (sem negrito)
+                texto_nome = m_name.group(1).strip()
+                hDC.SelectObject(font_regular)
+                hDC.SetTextColor(0x000000)
+                hDC.SetBkMode(win32con.TRANSPARENT)
+                for sub in quebrar_linha(texto_nome, colunas):
+                    hDC.TextOut(margin_x, y, sub)
+                    y += line_h
+                hDC.SelectObject(font_normal)
+                continue
+
+            # Linha normal: remove marcadores residuais e imprime
+            stripped_clean = re.sub(r'\[/?(ADD|OBS|NAME)\]', '', stripped).strip()
+            if not stripped_clean:
+                continue
+            hDC.SelectObject(font_normal)
+            hDC.SetTextColor(0x000000)
+            hDC.SetBkMode(win32con.TRANSPARENT)
+            for sublinha in quebrar_linha(stripped_clean, colunas):
                 hDC.TextOut(margin_x, y, sublinha)
                 y += line_h
 
