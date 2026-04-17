@@ -135,6 +135,7 @@ export default function ResellersPage() {
       due_day: String(r.settings?.invoice_due_day || 10),
       activation_fee: String(r.settings?.activation_fee || 180),
       monthly_fee: String(r.settings?.monthly_fee || 29.90),
+      login_password: '',
     });
     setEditingReseller(resellerId);
     setErrors({});
