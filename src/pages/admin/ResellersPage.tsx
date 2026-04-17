@@ -95,6 +95,7 @@ export default function ResellersPage() {
     address_city: '', address_state: '', address_cep: '',
     responsible_name: '', responsible_email: '', responsible_phone: '',
     due_day: '10', activation_fee: '180.00', monthly_fee: '29.90',
+    login_password: '',
   });
 
   function setField(key: string, value: string) {
@@ -109,6 +110,7 @@ export default function ResellersPage() {
       address_city: '', address_state: '', address_cep: '',
       responsible_name: '', responsible_email: '', responsible_phone: '',
       due_day: '10', activation_fee: '180.00', monthly_fee: '29.90',
+      login_password: '',
     });
     setErrors({});
   }
