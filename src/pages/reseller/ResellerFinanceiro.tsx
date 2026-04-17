@@ -259,17 +259,29 @@ export default function ResellerFinanceiro() {
                             }
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => fetchItems(invoice.id)}
-                            >
-                              {expandedInvoice === invoice.id ? (
-                                <ChevronUp className="w-4 h-4" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4" />
+                            <div className="flex items-center justify-end gap-1">
+                              {canEdit && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => openEdit(invoice)}
+                                  title="Editar fatura"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
                               )}
-                            </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => fetchItems(invoice.id)}
+                              >
+                                {expandedInvoice === invoice.id ? (
+                                  <ChevronUp className="w-4 h-4" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                         {expandedInvoice === invoice.id && invoiceItems[invoice.id] && (
