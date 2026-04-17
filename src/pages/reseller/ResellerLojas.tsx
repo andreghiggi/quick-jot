@@ -27,7 +27,7 @@ export default function ResellerLojas() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [isBackfilling, setIsBackfilling] = useState(false);
+  
   const [selectedStore, setSelectedStore] = useState<StoreDetail | null>(null);
   const [modulesCompany, setModulesCompany] = useState<{ id: string; name: string } | null>(null);
 
