@@ -477,9 +477,9 @@ async function createActivationInvoice(
     });
   } else if (payment_option === "30_days") {
     invoicesToCreate.push({
-      due: addDays(today, 30),
+      due: nextMonthDueDate(today, 1),
       value: activationFee + 20,
-      label: "Taxa de ativação (30 dias) + acréscimo R$20",
+      label: "Taxa de ativação (vencimento no próximo mês) + acréscimo R$20",
       item_type: "activation",
       item_value: activationFee + 20,
     });

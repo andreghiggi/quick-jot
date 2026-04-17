@@ -353,8 +353,8 @@ export default function ResellerLojas() {
                   onClick={() => setPaymentOption('30_days')}
                   className={`text-left rounded-md border p-3 transition ${paymentOption === '30_days' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
                 >
-                  <div className="text-sm font-semibold">Em 30 dias</div>
-                  <div className="text-xs text-muted-foreground mt-1">+ R$ 20,00 de acréscimo</div>
+                  <div className="text-sm font-semibold">Vencimento no próximo mês</div>
+                  <div className="text-xs text-muted-foreground mt-1">Dia {dueDay} do mês seguinte · + R$ 20,00 de acréscimo</div>
                 </button>
                 <button
                   type="button"
