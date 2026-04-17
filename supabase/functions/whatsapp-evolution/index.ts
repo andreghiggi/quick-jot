@@ -137,21 +137,43 @@ serve(async (req) => {
       }
 
       case 'get_status': {
-        const { instanceName } = params;
+        const { instanceName, companyId } = params;
         const res = await fetch(`${baseUrl}/instance/connectionState/${instanceName}`, {
           method: 'GET',
           headers: { 'apikey': EVOLUTION_API_KEY },
         });
         const data = await res.json();
 
-        // Update status in DB
-        if (data.instance?.state === 'open') {
-          const { companyId } = params;
-          if (companyId) {
-            await supabase.from('whatsapp_instances')
-              .update({ status: 'connected' })
-              .eq('company_id', companyId);
+        // Update status + phone_number in DB
+        if (data.instance?.state === 'open' && companyId) {
+          // Try to fetch the connected phone number from Evolution
+          let connectedPhone: string | null = null;
+          try {
+            const fetchRes = await fetch(`${baseUrl}/instance/fetchInstances`, {
+              method: 'GET',
+              headers: { 'apikey': EVOLUTION_API_KEY },
+            });
+            if (fetchRes.ok) {
+              const list = await fetchRes.json();
+              const arr = Array.isArray(list) ? list : [list];
+              const found = arr.find((i: any) =>
+                (i?.name || i?.instance?.instanceName || i?.instanceName) === instanceName
+              );
+              const owner = found?.ownerJid || found?.owner || found?.instance?.owner || found?.number;
+              if (owner) {
+                // ownerJid format: "5554996771740@s.whatsapp.net"
+                connectedPhone = String(owner).split('@')[0].replace(/\D/g, '') || null;
+              }
+            }
+          } catch (e) {
+            console.warn('[get_status] Could not fetch instance phone:', e);
           }
+
+          const updatePayload: Record<string, unknown> = { status: 'connected' };
+          if (connectedPhone) updatePayload.phone_number = connectedPhone;
+          await supabase.from('whatsapp_instances')
+            .update(updatePayload)
+            .eq('company_id', companyId);
         }
 
         return new Response(JSON.stringify(data), {
