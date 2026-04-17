@@ -60,8 +60,8 @@ export function EditLicenseDialog({ open, onClose, store, onSaved }: Props) {
       return;
     }
     const dueDayNum = dueDay ? Number(dueDay) : null;
-    if (dueDayNum !== null && (dueDayNum < 1 || dueDayNum > 28)) {
-      toast.error('Dia de vencimento deve estar entre 1 e 28');
+    if (dueDayNum !== null && !DUE_DAY_OPTIONS.includes(dueDayNum)) {
+      toast.error('Dia de vencimento inválido');
       return;
     }
     setSaving(true);
