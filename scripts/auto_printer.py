@@ -215,7 +215,11 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     customer_name = pedido.get('customer_name', '')
     customer_phone = pedido.get('customer_phone', '')
     delivery_address = pedido.get('delivery_address', '')
-    notes = pedido.get('notes', '')
+    notes = pedido.get('notes', '') or ''
+    # Remove marcador interno [EXPRESS] (usado apenas para detectar origem)
+    notes = re.sub(r'\[EXPRESS\]\s*\|\s*', '', notes).strip()
+    notes = re.sub(r'\s*\|\s*\[EXPRESS\]', '', notes).strip()
+    notes = notes.replace('[EXPRESS]', '').strip()
     total = float(pedido.get('total', 0))
     
     # Calcular subtotal e taxa de entrega
