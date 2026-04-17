@@ -36,7 +36,7 @@ export interface ResellerCompany {
 }
 
 export function useResellerPortal() {
-  const { user, hasRole } = useAuthContext();
+  const { user, hasRole, impersonatedReseller } = useAuthContext();
   const [reseller, setReseller] = useState<ResellerProfile | null>(null);
   const [settings, setSettings] = useState<ResellerPortalSettings | null>(null);
   const [companies, setCompanies] = useState<ResellerCompany[]>([]);
@@ -51,12 +51,12 @@ export function useResellerPortal() {
     }
 
     try {
-      // Fetch reseller record
-      const { data: resellerData, error: rErr } = await supabase
-        .from('resellers')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+      // When super_admin is impersonating a reseller, fetch by reseller id
+      // Otherwise, fetch by current authenticated user_id
+      const resellerQuery = supabase.from('resellers').select('*');
+      const { data: resellerData, error: rErr } = impersonatedReseller
+        ? await resellerQuery.eq('id', impersonatedReseller.id).single()
+        : await resellerQuery.eq('user_id', user.id).single();
 
       if (rErr) throw rErr;
       setReseller(resellerData);
@@ -115,7 +115,7 @@ export function useResellerPortal() {
     } finally {
       setLoading(false);
     }
-  }, [user, isReseller]);
+  }, [user, isReseller, impersonatedReseller]);
 
   useEffect(() => {
     fetchResellerData();

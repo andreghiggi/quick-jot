@@ -23,6 +23,14 @@ export interface UserProfile {
 }
 
 const IMPERSONATED_COMPANY_KEY = 'impersonated_company';
+const IMPERSONATED_RESELLER_KEY = 'impersonated_reseller';
+
+export interface ImpersonatedReseller {
+  id: string;
+  name: string;
+  email: string;
+  user_id: string | null;
+}
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -31,9 +39,10 @@ export function useAuth() {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [company, setCompany] = useState<Company | null>(null);
   const [impersonatedCompany, setImpersonatedCompany] = useState<Company | null>(null);
+  const [impersonatedReseller, setImpersonatedReseller] = useState<ImpersonatedReseller | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Restore impersonated company from sessionStorage on mount
+  // Restore impersonation state from sessionStorage on mount
   useEffect(() => {
     const stored = sessionStorage.getItem(IMPERSONATED_COMPANY_KEY);
     if (stored) {
@@ -41,6 +50,14 @@ export function useAuth() {
         setImpersonatedCompany(JSON.parse(stored));
       } catch {
         sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
+      }
+    }
+    const storedReseller = sessionStorage.getItem(IMPERSONATED_RESELLER_KEY);
+    if (storedReseller) {
+      try {
+        setImpersonatedReseller(JSON.parse(storedReseller));
+      } catch {
+        sessionStorage.removeItem(IMPERSONATED_RESELLER_KEY);
       }
     }
   }, []);
@@ -60,7 +77,9 @@ export function useAuth() {
           setRoles([]);
           setCompany(null);
           setImpersonatedCompany(null);
+          setImpersonatedReseller(null);
           sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
+          sessionStorage.removeItem(IMPERSONATED_RESELLER_KEY);
           setLoading(false);
         }
       }
@@ -217,7 +236,9 @@ export function useAuth() {
     setRoles([]);
     setCompany(null);
     setImpersonatedCompany(null);
+    setImpersonatedReseller(null);
     sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
+    sessionStorage.removeItem(IMPERSONATED_RESELLER_KEY);
   }
 
   function hasRole(role: AppRole): boolean {
@@ -269,35 +290,78 @@ export function useAuth() {
 
   const exitImpersonation = useCallback(() => {
     setImpersonatedCompany(null);
+    setImpersonatedReseller(null);
     sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
+    sessionStorage.removeItem(IMPERSONATED_RESELLER_KEY);
     toast.info('Modo de suporte encerrado');
   }, []);
 
+  // Impersonate a reseller (super_admin only)
+  const impersonateReseller = useCallback(async (resellerId: string) => {
+    if (!hasRole('super_admin')) {
+      toast.error('Permissão negada');
+      return false;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('resellers')
+        .select('id, name, email, user_id')
+        .eq('id', resellerId)
+        .single();
+      if (error) throw error;
+      const payload: ImpersonatedReseller = {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        user_id: data.user_id,
+      };
+      setImpersonatedReseller(payload);
+      sessionStorage.setItem(IMPERSONATED_RESELLER_KEY, JSON.stringify(payload));
+      toast.success(`Acessando painel de: ${data.name}`);
+      return true;
+    } catch (err) {
+      console.error('Error impersonating reseller:', err);
+      toast.error('Erro ao acessar revendedor');
+      return false;
+    }
+  }, [roles]);
+
   // The effective company is the impersonated one if super admin is impersonating
   const effectiveCompany = impersonatedCompany || company;
-  const isImpersonating = !!impersonatedCompany;
+  const isImpersonating = !!impersonatedCompany || !!impersonatedReseller;
+
+  // Effective roles: when impersonating a reseller, super_admin gains 'reseller' role virtually
+  const effectiveRoles: AppRole[] = impersonatedReseller
+    ? Array.from(new Set([...roles, 'reseller' as AppRole]))
+    : roles;
+
+  function hasEffectiveRole(role: AppRole): boolean {
+    return effectiveRoles.includes(role);
+  }
 
   return {
     user,
     session,
     profile,
-    roles,
+    roles: effectiveRoles,
     company: effectiveCompany,
     realCompany: company,
     loading,
     signIn,
     signUp,
     signOut,
-    hasRole,
+    hasRole: hasEffectiveRole,
     isSuperAdmin,
     isCompanyAdmin,
     isWaiter,
-    isReseller,
+    isReseller: () => hasEffectiveRole('reseller'),
     refetchUserData: () => user && fetchUserData(user.id),
     // Impersonation
     isImpersonating,
     impersonatedCompany,
+    impersonatedReseller,
     impersonateCompany,
+    impersonateReseller,
     exitImpersonation,
   };
 }

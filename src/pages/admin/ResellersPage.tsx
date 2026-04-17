@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -80,7 +81,8 @@ const UF_OPTIONS = [
 // ── Component ──
 
 export default function ResellersPage() {
-  const { user } = useAuthContext();
+  const { user, impersonateReseller } = useAuthContext();
+  const navigate = useNavigate();
   const { resellers, loading, createReseller, updateReseller, toggleResellerStatus, refetch } = useResellers();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -642,9 +644,19 @@ export default function ResellersPage() {
                               {r.status === 'active' ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                               {r.status === 'active' ? 'Pausar' : 'Ativar'}
                             </Button>
-                            <Button variant="secondary" size="sm" className="gap-1" disabled>
-                              <Eye className="w-3 h-3" /> Acessar painel
-                            </Button>
+                            {r.user_id && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="gap-1"
+                                onClick={async () => {
+                                  const ok = await impersonateReseller(r.id);
+                                  if (ok) navigate('/revendedor/home');
+                                }}
+                              >
+                                <Eye className="w-3 h-3" /> Acessar painel
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
