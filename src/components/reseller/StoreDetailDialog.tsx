@@ -93,6 +93,7 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
   const [editingItems, setEditingItems] = useState<InvoiceItemRow[]>([]);
   const [generatingChargeId, setGeneratingChargeId] = useState<string | null>(null);
   const [activeCharge, setActiveCharge] = useState<AsaasChargeData | null>(null);
+  const [activeTab, setActiveTab] = useState<'pix' | 'boleto' | undefined>(undefined);
   const [storeData, setStoreData] = useState<StoreDetail | null>(null);
   const [showBlock, setShowBlock] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
