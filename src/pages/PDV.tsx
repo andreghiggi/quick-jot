@@ -1479,60 +1479,89 @@ export default function PDV() {
               </Button>
             </div>
           </div>
-          {/* Category / Subcategory navigation */}
-          {!isSearching && (
-            <>
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {selectedCategory && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => { setSelectedCategory(null); setSelectedSubcategoryId(null); }}
-                  >
-                    ← Categorias
-                  </Button>
+          {/* Breadcrumb / Back navigation */}
+          {!isSearching && selectedCategory && (
+            <div className="flex items-center gap-2 pb-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (selectedSubcategoryId) {
+                    setSelectedSubcategoryId(null);
+                  } else {
+                    setSelectedCategory(null);
+                  }
+                }}
+              >
+                ← Voltar
+              </Button>
+              <span className="text-sm font-medium text-muted-foreground truncate">
+                {selectedCategory}
+                {selectedSubcategoryId && visibleSubcategoriesForSelected.find(s => s.id === selectedSubcategoryId) && (
+                  <> → {visibleSubcategoriesForSelected.find(s => s.id === selectedSubcategoryId)?.name}</>
                 )}
-                {!selectedCategory && categories.map(cat => (
-                  <Button
-                    key={cat}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => { setSelectedCategory(cat); setSelectedSubcategoryId(null); }}
-                  >
-                    {cat}
-                  </Button>
-                ))}
-                {selectedCategory && visibleSubcategoriesForSelected.length > 0 && (
-                  <>
-                    <span className="self-center text-sm font-medium px-2">{selectedCategory} →</span>
-                    {visibleSubcategoriesForSelected.map(sub => (
-                      <Button
-                        key={sub.id}
-                        variant={selectedSubcategoryId === sub.id ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setSelectedSubcategoryId(sub.id)}
-                      >
-                        {sub.name}
-                      </Button>
-                    ))}
-                  </>
-                )}
-                {selectedCategory && visibleSubcategoriesForSelected.length === 0 && (
-                  <span className="self-center text-sm font-medium px-2">{selectedCategory}</span>
-                )}
-              </div>
-            </>
+              </span>
+            </div>
           )}
 
-          {/* Products Grid */}
+          {/* Categories / Subcategories / Products Grid */}
           <ScrollArea className="flex-1">
             {!isSearching && !selectedCategory ? (
-              <div className="text-center text-muted-foreground py-12 text-sm">
-                Selecione uma categoria para ver os produtos ou use a busca acima.
+              // STEP 1: show category cards
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pr-4">
+                {categories.map(catName => {
+                  const catData = dbCategories.find(c => c.name === catName);
+                  return (
+                    <Card
+                      key={catName}
+                      className="cursor-pointer hover:border-primary transition-colors"
+                      onClick={() => { setSelectedCategory(catName); setSelectedSubcategoryId(null); }}
+                    >
+                      <CardContent className="p-3">
+                        {catData?.imageUrl ? (
+                          <img
+                            src={catData.imageUrl}
+                            alt={catName}
+                            loading="lazy"
+                            className="w-full h-20 object-cover rounded-md mb-2"
+                          />
+                        ) : (
+                          <div className="w-full h-20 bg-muted rounded-md mb-2 flex items-center justify-center text-2xl">
+                            {catData?.emoji || '📂'}
+                          </div>
+                        )}
+                        <p className="font-medium text-sm text-center truncate">{catName}</p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             ) : !isSearching && selectedCategory && visibleSubcategoriesForSelected.length > 0 && !selectedSubcategoryId ? (
-              <div className="text-center text-muted-foreground py-12 text-sm">
-                Selecione uma subcategoria para ver os produtos.
+              // STEP 2: show subcategory cards
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pr-4">
+                {visibleSubcategoriesForSelected.map(sub => (
+                  <Card
+                    key={sub.id}
+                    className="cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => setSelectedSubcategoryId(sub.id)}
+                  >
+                    <CardContent className="p-3">
+                      {sub.imageUrl ? (
+                        <img
+                          src={sub.imageUrl}
+                          alt={sub.name}
+                          loading="lazy"
+                          className="w-full h-20 object-cover rounded-md mb-2"
+                        />
+                      ) : (
+                        <div className="w-full h-20 bg-muted rounded-md mb-2 flex items-center justify-center">
+                          <Package className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <p className="font-medium text-sm text-center truncate">{sub.name}</p>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pr-4">
