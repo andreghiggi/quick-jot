@@ -1,0 +1,1 @@
+UPDATE public.store_settings SET value = 'false', updated_at = now() WHERE key = 'notify_store_whatsapp' AND value = 'true';
