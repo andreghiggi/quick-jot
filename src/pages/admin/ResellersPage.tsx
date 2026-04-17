@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
-  Plus, Loader2, Search, Play, Pause, Pencil, Eye,
+  Plus, Loader2, Search, Play, Pause, Pencil, Eye, KeyRound,
   Users, DollarSign, UserCheck,
 } from 'lucide-react';
 
