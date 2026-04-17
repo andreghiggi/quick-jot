@@ -60,6 +60,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         taxRuleId: product.tax_rule_id || null,
         displayOrder: product.display_order ?? 0,
         pdvItem: product.pdv_item ?? true,
+        menuItem: (product as any).menu_item ?? true,
         isNew: (product as any).is_new ?? false,
         subcategoryId: (product as any).subcategory_id || null,
         optionals: optionalsData
@@ -126,6 +127,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       if (productData.imageUrl !== undefined) updateData.image_url = productData.imageUrl;
       if (productData.active !== undefined) updateData.active = productData.active;
       if (productData.pdvItem !== undefined) updateData.pdv_item = productData.pdvItem;
+      if (productData.menuItem !== undefined) (updateData as any).menu_item = productData.menuItem;
       if (productData.subcategoryId !== undefined) updateData.subcategory_id = productData.subcategoryId || null;
 
       const { error } = await supabase
@@ -234,7 +236,7 @@ export function useProducts(options: UseProductsOptions = {}) {
   }
 
   function getActiveProducts(): Product[] {
-    return products.filter((p) => p.active);
+    return products.filter((p) => p.active && p.menuItem !== false);
   }
 
   function getNewProducts(): Product[] {
