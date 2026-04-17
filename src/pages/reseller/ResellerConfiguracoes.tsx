@@ -28,7 +28,7 @@ export default function ResellerConfiguracoes() {
       setPhone(reseller.phone || '');
     }
     if (settings) {
-      setDueDay(String(settings.invoice_due_day));
+      
       setAsaasKey(settings.asaas_api_key || '');
     }
   }, [reseller, settings]);
