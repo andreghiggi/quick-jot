@@ -48,7 +48,6 @@ export default function ResellerConfiguracoes() {
     e.preventDefault();
     setSavingSettings(true);
     await updateSettings({
-      invoice_due_day: parseInt(dueDay),
       asaas_api_key: asaasKey.trim() || null,
     });
     setSavingSettings(false);
