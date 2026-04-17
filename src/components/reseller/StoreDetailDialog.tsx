@@ -238,6 +238,15 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
                     })()}
                   </span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">Validade da licença:</span>
+                  <span className="font-medium">
+                    {licenseValidUntil
+                      ? format(licenseValidUntil, 'dd/MM/yyyy', { locale: ptBR })
+                      : '—'}
+                  </span>
+                </div>
                 <div className="flex items-center gap-2 sm:col-span-2">
                   <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>
