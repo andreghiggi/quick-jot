@@ -216,6 +216,13 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
           {/* Identity / contact */}
           <Card>
             <CardContent className="pt-4 space-y-2 text-sm">
+              {store?.serial && (
+                <div className="flex items-center gap-2 p-2 rounded-md bg-muted border">
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide">Serial:</span>
+                  <span className="font-mono font-bold text-base tracking-wider select-all">{store.serial}</span>
+                  <span className="text-xs text-muted-foreground ml-auto">único e intransferível</span>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">CNPJ:</span>
