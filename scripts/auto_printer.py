@@ -725,54 +725,38 @@ def imprimir_html(html, order_number):
             except Exception as ex:
                 log(f"Falha ao desenhar borda: {ex}", "AVISO")
 
+        # Estado da caixa do cabeçalho (borda envolvendo todo o conteúdo pré-itens)
+        box_active = False
+        box_top_y = 0
+        box_pad_x = int(dpi_x * 0.04)
+        box_pad_y = int(dpi_y * 0.03)
+
         i = 0
         while i < len(linhas):
             linha = linhas[i]
             stripped = linha.strip()
 
-            # CABEÇALHO EM CAIXA: coleta todas as linhas até [BOX_END] e desenha borda em volta
+            # CABEÇALHO EM CAIXA — início: marca posição Y atual e adiciona padding superior
             if stripped == '[BOX_START]':
-                box_lines = []
+                y += box_pad_y
+                box_top_y = y
+                box_active = True
+                y += box_pad_y
                 i += 1
-                while i < len(linhas) and linhas[i].strip() != '[BOX_END]':
-                    s = linhas[i].strip()
-                    if s:
-                        box_lines.append(s)
-                    i += 1
-                # pula o [BOX_END]
-                i += 1
-                if not box_lines:
-                    continue
-                pad_x = int(dpi_x * 0.04)
-                pad_y = int(dpi_y * 0.03)
-                hDC.SelectObject(font_normal)
-                # quebra cada linha do cabeçalho respeitando largura interna da caixa
-                largura_interna = colunas - 2
-                linhas_render = []
-                for bl in box_lines:
-                    linhas_render.extend(quebrar_linha(bl, largura_interna))
-                altura_total = line_h * len(linhas_render) + pad_y * 2
-                garantir_espaco(altura_total + int(line_h * 0.4))
-                rect_top = y
-                rect_right = margin_x + int(colunas * tm['tmAveCharWidth']) + pad_x * 2
-                desenhar_borda(rect_top, altura_total, rect_right)
-                # Renderiza o texto centralizado dentro da caixa
-                text_y = y + pad_y
-                largura_caixa_chars = colunas
-                hDC.SetTextColor(0x000000)
-                hDC.SetBkMode(win32con.TRANSPARENT)
-                for sub in linhas_render:
-                    # centraliza adicionando espaços
-                    pad_left_chars = max(0, (largura_caixa_chars - len(sub)) // 2)
-                    texto_centralizado = (' ' * pad_left_chars) + sub
-                    hDC.TextOut(margin_x + pad_x, text_y, texto_centralizado)
-                    text_y += line_h
-                y += altura_total + int(line_h * 0.4)
                 continue
 
+            # CABEÇALHO EM CAIXA — fim: desenha borda em volta da região renderizada
             if stripped == '[BOX_END]':
+                if box_active:
+                    y += box_pad_y
+                    altura = y - box_top_y
+                    rect_right = margin_x + int(colunas * tm['tmAveCharWidth']) + box_pad_x * 2
+                    desenhar_borda(box_top_y, altura, rect_right)
+                    box_active = False
+                    y += int(line_h * 0.4)
                 i += 1
                 continue
+
 
             if not stripped:
                 garantir_espaco(int(line_h * 0.5))
