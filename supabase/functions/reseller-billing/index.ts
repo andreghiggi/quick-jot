@@ -259,12 +259,14 @@ async function sendNotifications(supabase: any) {
 
 async function createProratedItem(
   supabase: any,
-  params: { reseller_id: string; company_id: string; company_name: string; activation_fee?: number }
+  params: { reseller_id: string; company_id: string; company_name?: string; activation_fee?: number }
 ) {
   const now = new Date();
   const monthKey = formatMonthKey(now);
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
+  const totalDays = daysInMonth(year, month);
+  const monthStart = new Date(year, month - 1, 1);
 
   // Get reseller settings
   const { data: settings } = await supabase
@@ -273,15 +275,58 @@ async function createProratedItem(
     .eq("reseller_id", params.reseller_id)
     .maybeSingle();
 
-  const monthlyFee = settings?.monthly_fee || 29.90;
-  const dueDay = settings?.invoice_due_day || 10;
-  const activationFee = params.activation_fee ?? settings?.activation_fee ?? 180;
+  const monthlyFee = Number(settings?.monthly_fee ?? 29.90);
+  const dueDay = settings?.invoice_due_day ?? 10;
+  const activationFee = params.activation_fee ?? Number(settings?.activation_fee ?? 180);
 
-  // Calculate prorated fee
-  const totalDays = daysInMonth(year, month);
-  const dayOfMonth = now.getDate();
-  const remainingDays = totalDays - dayOfMonth + 1;
-  const proratedValue = Math.round(((monthlyFee / totalDays) * remainingDays) * 100) / 100;
+  // Resolve company name (if not provided) for invoice item label
+  let companyName = params.company_name;
+  if (!companyName) {
+    const { data: c } = await supabase
+      .from("companies")
+      .select("name")
+      .eq("id", params.company_id)
+      .maybeSingle();
+    companyName = c?.name || "Loja";
+  }
+
+  // Determine the effective start date for billing in the current month:
+  //   - If the company plan was activated before the month → start = day 1 (full month)
+  //   - If activated within the month → start = activation date
+  //   - If never activated → start = today (linking date)
+  const { data: plan } = await supabase
+    .from("company_plans")
+    .select("activated_at, starts_at")
+    .eq("company_id", params.company_id)
+    .maybeSingle();
+
+  const activationDateStr: string | null =
+    plan?.activated_at || plan?.starts_at || null;
+
+  let effectiveStart: Date;
+  if (activationDateStr) {
+    const activationDate = new Date(activationDateStr);
+    effectiveStart = activationDate < monthStart ? monthStart : activationDate;
+  } else {
+    effectiveStart = now;
+  }
+
+  const startDay = effectiveStart.getMonth() + 1 === month && effectiveStart.getFullYear() === year
+    ? effectiveStart.getDate()
+    : 1; // safety: if effective start is outside this month, treat as full month
+
+  const remainingDays = totalDays - startDay + 1;
+  const isFullMonth = remainingDays >= totalDays;
+
+  let chargedValue: number;
+  let itemType: "monthly" | "prorated";
+  if (isFullMonth) {
+    chargedValue = monthlyFee;
+    itemType = "monthly";
+  } else {
+    chargedValue = Math.round(((monthlyFee / totalDays) * remainingDays) * 100) / 100;
+    itemType = "prorated";
+  }
 
   // Find or create invoice for current month
   let { data: invoice } = await supabase
@@ -292,7 +337,7 @@ async function createProratedItem(
     .maybeSingle();
 
   if (!invoice) {
-    const maxDay = daysInMonth(year, month);
+    const maxDay = totalDays;
     const day = Math.min(dueDay, maxDay);
     const dueDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
@@ -316,33 +361,33 @@ async function createProratedItem(
   }
 
   // Add line items
-  const items = [];
+  const items = [] as any[];
 
-  // Activation fee
+  // Activation fee (only when explicitly > 0)
   if (activationFee > 0) {
     items.push({
       invoice_id: invoice.id,
       company_id: params.company_id,
-      company_name: params.company_name,
+      company_name: companyName,
       type: "activation",
       value: activationFee,
     });
   }
 
-  // Prorated monthly
+  // Monthly or prorated charge
   items.push({
     invoice_id: invoice.id,
     company_id: params.company_id,
-    company_name: params.company_name,
-    type: "prorated",
-    value: proratedValue,
+    company_name: companyName,
+    type: itemType,
+    value: chargedValue,
     days_counted: remainingDays,
   });
 
   await supabase.from("reseller_invoice_items").insert(items);
 
   // Update invoice total
-  const newTotal = Number(invoice.total_value) + activationFee + proratedValue;
+  const newTotal = Number(invoice.total_value) + activationFee + chargedValue;
   await supabase
     .from("reseller_invoices")
     .update({ total_value: newTotal })
@@ -350,10 +395,12 @@ async function createProratedItem(
 
   return jsonResponse({
     invoice_id: invoice.id,
-    prorated_value: proratedValue,
+    item_type: itemType,
+    charged_value: chargedValue,
     activation_fee: activationFee,
     remaining_days: remainingDays,
     total_days: totalDays,
+    effective_start: effectiveStart.toISOString(),
   });
 }
 
