@@ -86,7 +86,7 @@ interface CartItem {
 export default function PDV() {
   const { user, company } = useAuthContext();
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
-  const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id });
+  const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id, channel: 'pdv' });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
   const { settings: storeSettings, updateSetting } = useStoreSettings({ companyId: company?.id });
