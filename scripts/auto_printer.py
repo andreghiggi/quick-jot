@@ -623,12 +623,16 @@ def imprimir_html(html, order_number):
         y = margin_y
         # Estado mutável compartilhado entre closures
         box_state = {'active': False}
+        # page_dirty: indica se a página atual já recebeu algum desenho.
+        # Evita comitar páginas em branco no final do documento.
+        page_dirty = {'value': False}
 
         def nova_pagina():
             nonlocal y
             hDC.EndPage()
             hDC.StartPage()
             y = margin_y
+            page_dirty['value'] = False
 
         def garantir_espaco(altura_necessaria):
             nonlocal y
