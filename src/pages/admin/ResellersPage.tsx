@@ -609,6 +609,14 @@ export default function ResellersPage() {
                             <Button variant="outline" size="sm" className="gap-1" onClick={() => openEdit(r.id)}>
                               <Pencil className="w-3 h-3" /> Editar
                             </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => setAssignReseller({ id: r.id, name: r.name })}
+                            >
+                              <Link2 className="w-3 h-3" /> Vincular lojas
+                            </Button>
                             {!r.user_id && (
                               <Button
                                 variant="default"
