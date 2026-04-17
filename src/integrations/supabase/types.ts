@@ -943,6 +943,7 @@ export type Database = {
       payment_methods: {
         Row: {
           active: boolean | null
+          channel: string
           company_id: string
           created_at: string | null
           display_order: number | null
@@ -954,6 +955,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          channel?: string
           company_id: string
           created_at?: string | null
           display_order?: number | null
@@ -965,6 +967,7 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          channel?: string
           company_id?: string
           created_at?: string | null
           display_order?: number | null
