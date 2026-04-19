@@ -19,6 +19,7 @@ import { PDVV2StatusFilters, StatusFilter } from '@/components/pdv-v2/PDVV2Statu
 import { PDVV2OrderCard } from '@/components/pdv-v2/PDVV2OrderCard';
 import { OccupiedTab } from '@/components/pdv-v2/PDVV2TablesPanel';
 import { PDVV2TablesGrid } from '@/components/pdv-v2/PDVV2TablesGrid';
+import { PDVV2TablesSummaryCards } from '@/components/pdv-v2/PDVV2TablesSummaryCards';
 import { PDVV2CloseCashDialog, CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
@@ -45,6 +46,8 @@ export default function PDVV2() {
 
   const [showCash, setShowCash] = useState(true);
   const [showRevenue, setShowRevenue] = useState(true);
+  const [showTablesRevenue, setShowTablesRevenue] = useState(true);
+  const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders');
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [closeOpen, setCloseOpen] = useState(false);
   const [newOrderOpen, setNewOrderOpen] = useState(false);
