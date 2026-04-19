@@ -77,6 +77,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Cobrança via PDVV2PaymentDialog (apenas Retirada)
+  const [pickupChargeOpen, setPickupChargeOpen] = useState(false);
 
   const activeProducts = getActiveProducts();
   const productCategories = getCategories();
