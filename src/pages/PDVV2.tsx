@@ -466,6 +466,8 @@ export default function PDVV2() {
         onOpenChange={setCloseOpen}
         expectedAmount={cashAmount}
         sales={closeCashSales}
+        paymentMethods={activePaymentMethods.map((p) => ({ id: p.id, name: p.name }))}
+        onChangeSalePaymentMethod={handleChangeSalePaymentMethod}
         onConfirm={handleCloseCash}
       />
 
