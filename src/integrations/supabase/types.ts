@@ -226,6 +226,7 @@ export type Database = {
           menu_item: boolean
           name: string
           pdv_item: boolean
+          print_description: boolean
         }
         Insert: {
           active?: boolean | null
@@ -239,6 +240,7 @@ export type Database = {
           menu_item?: boolean
           name: string
           pdv_item?: boolean
+          print_description?: boolean
         }
         Update: {
           active?: boolean | null
@@ -252,6 +254,7 @@ export type Database = {
           menu_item?: boolean
           name?: string
           pdv_item?: boolean
+          print_description?: boolean
         }
         Relationships: [
           {

@@ -1,0 +1,1 @@
+ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS print_description boolean NOT NULL DEFAULT false;
