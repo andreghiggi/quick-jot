@@ -302,7 +302,7 @@ export default function PDVV2() {
             onValueChange={(v) => setActiveTab(v as 'orders' | 'tables')}
             className="flex-1 flex flex-col overflow-hidden"
           >
-            <div className="px-4 pt-3">
+            <div className="px-4 pt-3 pb-0">
               <TabsList>
                 <TabsTrigger value="orders" className="gap-2">
                   <ClipboardList className="h-4 w-4" />
