@@ -192,17 +192,19 @@ export default function PDVV2() {
     discount,
     finalTotal,
     documentMode,
-  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce' }) {
+    extraItems,
+  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[] }) {
     if (!chargeOrder || !user || !currentRegister) {
       toast.error('Caixa precisa estar aberto');
       return;
     }
-    const items = chargeOrder.items.map((i) => ({
+    const baseItems = chargeOrder.items.map((i) => ({
       product_id: i.productId || null,
       product_name: i.name,
       quantity: i.quantity,
       unit_price: i.price,
     }));
+    const items = [...baseItems, ...extraItems.map(({ product_id, product_name, quantity, unit_price }) => ({ product_id, product_name, quantity, unit_price }))];
     const saleId = await addSale(
       items,
       paymentMethodId,
@@ -225,7 +227,8 @@ export default function PDVV2() {
     discount,
     finalTotal,
     documentMode,
-  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce' }) {
+    extraItems,
+  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[] }) {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -235,12 +238,13 @@ export default function PDVV2() {
       toast.error('Comanda sem itens');
       return;
     }
-    const items = fullTab.items.map((i) => ({
+    const baseItems = fullTab.items.map((i) => ({
       product_id: i.product_id,
       product_name: i.product_name,
       quantity: i.quantity,
       unit_price: i.unit_price,
     }));
+    const items = [...baseItems, ...extraItems.map(({ product_id, product_name, quantity, unit_price }) => ({ product_id, product_name, quantity, unit_price }))];
     const customer =
       fullTab.customer_name ||
       (fullTab.table?.number ? `Mesa ${fullTab.table.number}` : `Comanda ${fullTab.tab_number}`);
@@ -254,17 +258,16 @@ export default function PDVV2() {
     );
     if (saleId) {
       const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
+      const printItems = [
+        ...fullTab.items.map((i) => ({ name: i.product_name, quantity: i.quantity, price: i.unit_price, notes: i.notes || undefined })),
+        ...extraItems.map((i) => ({ name: i.product_name, quantity: i.quantity, price: i.unit_price })),
+      ];
       await printOnlyReceipt({
         companyId,
         orderCode: `M${fullTab.tab_number}`,
         dailyNumber: fullTab.tab_number,
         customerName: customer,
-        items: fullTab.items.map((i) => ({
-          name: i.product_name,
-          quantity: i.quantity,
-          price: i.unit_price,
-          notes: i.notes || undefined,
-        })),
+        items: printItems,
         total: finalTotal,
         notes: `Pagamento: ${paymentName}${discount > 0 ? ` | Desconto: R$ ${discount.toFixed(2)}` : ''}`,
         paperSize,
