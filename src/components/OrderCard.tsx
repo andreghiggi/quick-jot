@@ -53,7 +53,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
   delivered: '',
 };
 
-export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech' }: OrderCardProps) {
+export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
   const { company } = useAuthContext();
   
@@ -314,11 +314,12 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     )}>
       <div className="flex items-start justify-between mb-3">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-lg font-bold text-primary">#{order.orderCode || order.dailyNumber}</span>
             <Badge className={cn("text-xs border", config.bgColor, config.textColor, config.borderColor)}>
               {config.label}
             </Badge>
+            {headerExtra}
             {order.printed && (
               <TooltipProvider>
                 <Tooltip>
