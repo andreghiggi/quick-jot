@@ -16,6 +16,24 @@ export interface TefInfoFromNotes {
   cardBrand: string;
   acquirer: string;
   receipt?: string;
+  /** Rótulo legível do tipo de operação: "Débito", "Crédito à Vista", "3x Cartão ADM" etc. */
+  operationType?: string;
+}
+
+/**
+ * Extrai o rótulo do tipo de operação TEF a partir de um trecho de notes.
+ * O PDV salva no formato: "... | ACQUIRER | Débito" ou "... | ACQUIRER | 3x Cartão ADM | [COMPROVANTE]..."
+ * O segmento entre o adquirente e o próximo separador (| ou final) é o tipo.
+ */
+function extractTefOperationType(notes: string, afterMatchIndex: number): string | undefined {
+  const tail = notes.slice(afterMatchIndex);
+  // Pega o próximo segmento entre " | " e o próximo " | " ou fim de linha / [COMPROVANTE]
+  const m = tail.match(/^\s*\|\s*([^|\n\[]+?)(?=\s*\||\s*\[|$)/);
+  if (!m) return undefined;
+  const label = m[1].trim();
+  // Filtra valores que não são tipos de operação (ex: COMPROVANTE etc.)
+  if (!label || /COMPROVANTE/i.test(label)) return undefined;
+  return label;
 }
 
 /** Extrai NSU/Aut/Bandeira/Adquirente e o comprovante do campo `notes` de um pedido. */
