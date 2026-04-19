@@ -27,7 +27,8 @@ import {
   BarChart3,
   UserCheck,
   Megaphone,
-} from 'lucide-react';
+  Settings2,
+
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -511,6 +512,17 @@ export function AppSidebar() {
                   <Link to="/configuracoes/integracoes">
                     <Plug className="w-4 h-4" />
                     <span>Integrações</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/tef-adm'}
+                >
+                  <Link to="/tef-adm">
+                    <Settings2 className="w-4 h-4" />
+                    <span>TEF ADM (Manutenção)</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
