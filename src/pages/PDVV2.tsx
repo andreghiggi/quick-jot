@@ -320,7 +320,7 @@ export default function PDVV2() {
               </TabsList>
             </div>
 
-            <TabsContent value="orders" className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
+            <TabsContent value="orders" className="mt-3 hidden min-h-0 flex-1 flex-col overflow-hidden data-[state=active]:flex">
               <PDVV2SummaryCards
                 pending={counts.pending}
                 preparing={counts.preparing}
@@ -370,7 +370,7 @@ export default function PDVV2() {
               </div>
             </TabsContent>
 
-            <TabsContent value="tables" className="!mt-0 flex min-h-0 flex-1 flex-col overflow-hidden pt-3 data-[state=active]:!mt-0">
+            <TabsContent value="tables" className="hidden !mt-0 min-h-0 flex-1 flex-col overflow-hidden pt-3 data-[state=active]:flex data-[state=active]:!mt-0">
               <PDVV2TablesSummaryCards
                 occupiedTables={tablesMetrics.occupiedTables}
                 openTabs={tablesMetrics.openTabsCount}
