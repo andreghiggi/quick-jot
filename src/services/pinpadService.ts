@@ -260,6 +260,28 @@ export async function cancelPinpadTransaction(
   }
 }
 
+// ADM - Administrative operations (Teste de Comunicação, Reimpressão de Fechamento, etc.)
+export async function sendPinpadAdm(
+  companyId: string,
+  identificacao?: string,
+): Promise<{ success: boolean; hash?: string; errorMessage?: string }> {
+  const config = await getPinpadConfig(companyId);
+  if (!config) return { success: false, errorMessage: 'PinPad não configurado' };
+
+  try {
+    const result = await callTefWebService({
+      action: 'adm',
+      token: config.token,
+      cnpj: config.cnpj,
+      pdv: config.pdv,
+      identificacao: identificacao || String(Date.now()),
+    });
+    return result;
+  } catch (error) {
+    return { success: false, errorMessage: error instanceof Error ? error.message : 'Erro desconhecido' };
+  }
+}
+
 // CNC - Cancel/reverse a completed transaction (estorno)
 export async function reversePinpadTransaction(
   companyId: string,
