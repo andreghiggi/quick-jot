@@ -372,7 +372,7 @@ export default function PDVV2() {
               </div>
             </TabsContent>
 
-            <TabsContent value="tables" className="flex-1 overflow-hidden mt-0 flex flex-col data-[state=active]:mt-0">
+            <TabsContent value="tables" className="flex-1 overflow-hidden !mt-0 flex flex-col data-[state=active]:!mt-0 pt-3">
               <PDVV2TablesSummaryCards
                 occupiedTables={tablesMetrics.occupiedTables}
                 openTabs={tablesMetrics.openTabsCount}
