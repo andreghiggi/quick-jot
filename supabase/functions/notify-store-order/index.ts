@@ -65,119 +65,18 @@ serve(async (req) => {
       );
     }
 
-    // Get company info (needed for customer messages too)
+    // Get company info (needed for customer messages)
     const { data: company } = await supabase
       .from('companies')
-      .select('phone, name')
+      .select('name')
       .eq('id', companyId)
       .single();
 
-    // ─── STORE NOTIFICATION: DISABLED GLOBALLY ───
-    // Política da plataforma: nenhuma loja deve receber notificação de novo pedido
-    // no próprio WhatsApp do dono. As notificações ficam apenas no painel.
-    const storeNotifyEnabled = false;
-    let storeNotifySent = false;
+    // ─── STORE OWNER NOTIFICATION: PERMANENTLY REMOVED ───
+    // Política da plataforma: nenhuma loja recebe notificação de novo pedido
+    // no WhatsApp do dono. As notificações ficam apenas no painel.
+    const storeNotifySent = false;
 
-    if (storeNotifyEnabled && company?.phone) {
-      const storePhone = company.phone;
-
-      // Fetch order from DB
-      const { data: order } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('id', orderId)
-        .single();
-
-      const { data: items } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', orderId);
-
-      if (order) {
-        // Build store notification message
-        let message = '';
-        if (orderSummary) {
-          message = `🔔 *NOVO PEDIDO RECEBIDO!*\n\n${orderSummary}`;
-        } else {
-          const itemsList = (items || [])
-            .map((item: any) => {
-              let displayName = item.name;
-              const lines: string[] = [];
-              if (item.name.includes('(') && item.name.endsWith(')')) {
-                const idx = item.name.indexOf('(');
-                displayName = item.name.substring(0, idx).trim();
-                const content = item.name.substring(idx + 1, item.name.length - 1).trim();
-                if (content.includes(':')) {
-                  const groups = content.split('|').map((g: string) => g.trim()).filter(Boolean);
-                  for (const groupStr of groups) {
-                    const colonIdx = groupStr.indexOf(':');
-                    if (colonIdx > -1) {
-                      const groupName = groupStr.substring(0, colonIdx).trim();
-                      const itemsStr = groupStr.substring(colonIdx + 1).trim();
-                      lines.push(`  - _${groupName}:_ ${itemsStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
-                    } else {
-                      lines.push(`  - ${groupStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
-                    }
-                  }
-                } else {
-                  lines.push(`  - _Adicionais:_ ${content.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
-                }
-              }
-              const totalPrice = (Number(item.price) * item.quantity).toFixed(2).replace('.', ',');
-              let result = `*${item.quantity}x ${displayName}* - R$ ${totalPrice}`;
-              if (lines.length > 0) result += '\n' + lines.join('\n');
-              if (item.notes) result += `\n  - _Observação:_ ${item.notes}`;
-              return result;
-            })
-            .join('\n\n');
-
-          message = `🔔 *NOVO PEDIDO RECEBIDO!*\n`;
-          message += `📋 Pedido #${order.order_code}\n\n`;
-          message += `*Cliente:* ${order.customer_name}\n`;
-          if (order.customer_phone) message += `*Telefone:* ${order.customer_phone}\n`;
-          if (order.delivery_address) message += `*Endereço:* ${order.delivery_address}\n`;
-          if (order.notes) message += `*Obs:* ${order.notes}\n`;
-          message += `\n*Itens:*\n${itemsList}\n`;
-          message += `\n💰 *Total: R$ ${Number(order.total).toFixed(2)}*`;
-        }
-
-        // Send message to the store's own number
-        const cleanPhone = storePhone.replace(/\D/g, '');
-        const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
-        const baseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
-
-        const res = await fetch(`${baseUrl}/message/sendText/${instanceData.instance_name}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': EVOLUTION_API_KEY,
-          },
-          body: JSON.stringify({
-            number: fullPhone,
-            text: message,
-            linkPreview: false,
-          }),
-        });
-
-        const responseData = await res.json();
-        console.log('Store notification sent:', res.ok, JSON.stringify(responseData).slice(0, 200));
-
-        // Log the message
-        await supabase.from('whatsapp_messages').insert({
-          company_id: companyId,
-          order_id: orderId,
-          phone: fullPhone,
-          message,
-          status: res.ok ? 'sent' : 'failed',
-        });
-
-        storeNotifySent = res.ok;
-      }
-    } else {
-      console.log('Store notification skipped: notify_store_whatsapp not enabled for company', companyId);
-    }
-
-    // Fetch order for customer messages (if not already fetched above)
     const baseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
     const { data: order } = await supabase
       .from('orders')
