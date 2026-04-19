@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { formatPrice } from '@/lib/utils';
+import { brl as formatPrice } from './_format';
 
 interface PDVV2CloseCashDialogProps {
   open: boolean;

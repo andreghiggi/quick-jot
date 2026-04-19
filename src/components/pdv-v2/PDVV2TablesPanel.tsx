@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UtensilsCrossed, Download } from 'lucide-react';
-import { formatPrice } from '@/lib/utils';
+import { brl as formatPrice } from './_format';
 
 export interface OccupiedTab {
   id: string;

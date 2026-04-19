@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
-import { formatPrice } from '@/lib/utils';
+import { brl as formatPrice } from './_format';
 
 interface PDVV2PaymentDialogProps {
   open: boolean;

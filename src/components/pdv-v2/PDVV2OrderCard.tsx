@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Order, OrderStatus } from '@/types/order';
-import { formatPrice } from '@/lib/utils';
+import { brl as formatPrice } from './_format';
 import { Clock, Store, ShoppingBag, Truck, ArrowRight, CreditCard } from 'lucide-react';
 
 interface PDVV2OrderCardProps {

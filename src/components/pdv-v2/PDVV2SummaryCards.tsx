@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff } from 'lucide-react';
-import { formatPrice } from '@/lib/utils';
+import { brl as formatPrice } from './_format';
 
 interface PDVV2SummaryCardsProps {
   pending: number;

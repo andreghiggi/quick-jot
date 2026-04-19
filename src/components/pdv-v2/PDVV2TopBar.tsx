@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Eye, EyeOff, Plus, DoorClosed } from 'lucide-react';
-import { formatPrice } from '@/lib/utils';
+import { brl as formatPrice } from './_format';
 
 interface PDVV2TopBarProps {
   storeName: string;
