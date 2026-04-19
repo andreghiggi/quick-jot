@@ -1002,7 +1002,7 @@ def imprimir_html(html, order_number):
                 continue
 
             # Linha normal: remove marcadores residuais e imprime
-            stripped_clean = re.sub(r'\[/?(ADD|OBS|NAME|ITEM|SEP|CLIENTE|BOX_START|BOX_END)\]', '', stripped).replace('|||', ' ').strip()
+            stripped_clean = re.sub(r'\[/?(ADD|OBS|DESC|NAME|ITEM|SEP|CLIENTE|BOX_START|BOX_END)\]', '', stripped).replace('|||', ' ').strip()
             if not stripped_clean:
                 i += 1
                 continue
