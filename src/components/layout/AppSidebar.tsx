@@ -28,7 +28,7 @@ import {
   UserCheck,
   Megaphone,
   Settings2,
-
+} from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
