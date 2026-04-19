@@ -21,7 +21,7 @@ export function PDVV2TablesSummaryCards({
   onToggleRevenue,
 }: Props) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 pt-3 pb-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 pt-0 pb-3">
       <Card>
         <CardContent className="p-3">
           <div className="flex items-center gap-2 text-muted-foreground text-xs">
