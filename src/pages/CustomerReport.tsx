@@ -96,7 +96,7 @@ export default function CustomerReport() {
       const fetchAll = async <T,>(
         build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>
       ): Promise<T[]> => {
-        const pageSize = 30;
+        const pageSize = 1000;
         let from = 0;
         const all: T[] = [];
         while (true) {
