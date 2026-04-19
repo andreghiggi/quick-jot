@@ -140,6 +140,15 @@ serve(async (req) => {
       });
     }
 
+    // Skip group messages — auto-reply must only run in 1:1 chats
+    const remoteJid = messageData.key?.remoteJid || '';
+    if (remoteJid.endsWith('@g.us') || remoteJid.endsWith('@broadcast') || remoteJid.endsWith('@newsletter')) {
+      console.log('Skipping group/broadcast message:', remoteJid);
+      return new Response(JSON.stringify({ ok: true, skipped: 'group_or_broadcast' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const text = messageData.message?.conversation
       || messageData.message?.extendedTextMessage?.text
       || '';
