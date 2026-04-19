@@ -29,6 +29,7 @@ import WaitersConfig from "./pages/WaitersConfig";
 import POS from "./pages/POS";
 import SalesReport from "./pages/SalesReport";
 import TefReport from "./pages/TefReport";
+import TefAdm from "./pages/TefAdm";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import Changelog from "./pages/Changelog";
 import Fiscal from "./pages/Fiscal";
@@ -160,6 +161,12 @@ function AppRoutes() {
       <Route path="/relatorios/tef" element={
         <ProtectedRoute requireCompany>
           <TefReport />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tef-adm" element={
+        <ProtectedRoute requireCompany>
+          <TefAdm />
         </ProtectedRoute>
       } />
       
