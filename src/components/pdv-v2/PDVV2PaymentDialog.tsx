@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { usePaymentMethods } from '@/hooks/usePaymentMethods';
+import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
@@ -19,6 +19,10 @@ interface PDVV2PaymentDialogProps {
   showDocumentMode?: boolean;
   /** Permite adicionar itens à cobrança (mesa importada / retirada) */
   showAddItem?: boolean;
+  /** Canal das formas de pagamento. Default: 'pdv' */
+  channel?: PaymentChannel;
+  /** Restringir a apenas formas em dinheiro (oculta TEF e demais) */
+  cashOnly?: boolean;
   onConfirm: (params: {
     paymentMethodId: string;
     paymentName: string;
@@ -37,9 +41,14 @@ export function PDVV2PaymentDialog({
   title = 'Cobrança',
   showDocumentMode = false,
   showAddItem = false,
+  channel = 'pdv',
+  cashOnly = false,
   onConfirm,
 }: PDVV2PaymentDialogProps) {
-  const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
+  const { activePaymentMethods: rawActivePaymentMethods } = usePaymentMethods({ companyId, channel });
+  const activePaymentMethods = cashOnly
+    ? rawActivePaymentMethods.filter((m) => /dinheiro/i.test(m.name))
+    : rawActivePaymentMethods;
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [discount, setDiscount] = useState('');
   const [amountReceived, setAmountReceived] = useState('');

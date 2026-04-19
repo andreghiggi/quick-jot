@@ -22,6 +22,7 @@ import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard
 import { supabase } from '@/integrations/supabase/client';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
+import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { Plus, Minus, ShoppingBag, X, Loader2, ArrowLeft, ArrowRight, Phone, User, Package, MapPin, CreditCard } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -76,6 +77,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Cobrança via PDVV2PaymentDialog (apenas Retirada)
+  const [pickupChargeOpen, setPickupChargeOpen] = useState(false);
 
   const activeProducts = getActiveProducts();
   const productCategories = getCategories();
@@ -361,6 +364,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       setStep(5);
       return;
     }
+    // Retirada: ao clicar em "Pronto" na etapa 4, abre cobrança em vez de ir para etapa 5
+    if (step === 4 && deliveryType === 'retirada') {
+      setPickupChargeOpen(true);
+      return;
+    }
     if (step < 5) setStep((step + 1) as Step);
   }
 
@@ -372,12 +380,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     if (step > 1) setStep((step - 1) as Step);
   }
 
-  async function handleSubmit() {
-    if (!canGoNext()) return;
+  async function handleSubmit(override?: { paymentMethodId: string; paymentName: string; finalTotal: number; discount: number }) {
+    if (!override && !canGoNext()) return;
     setIsSubmitting(true);
 
-    const selectedPM = activePaymentMethods.find(m => m.id === paymentMethod);
+    const selectedPM = override
+      ? { id: override.paymentMethodId, name: override.paymentName }
+      : activePaymentMethods.find(m => m.id === paymentMethod);
     const paymentName = selectedPM?.name || '';
+    const effectiveTotal = override ? override.finalTotal : total;
     const deliveryTypeLabel = deliveryType === 'entrega' ? 'Entrega' : 'Retirada';
     const fullAddress = deliveryType === 'entrega'
       ? `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood}${deliveryReference ? ` | Ref: ${deliveryReference}` : ''}`
@@ -427,7 +438,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       deliveryAddress: fullAddress || undefined,
       notes: noteStr,
       items: orderItems,
-      total,
+      total: effectiveTotal,
       status: 'pending',
       origin: 'balcao',
     });
@@ -521,6 +532,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setDeliveryFee(0);
     setSelectedDeliveryFeeType('');
     setPaymentMethod('');
+    setPickupChargeOpen(false);
   }
 
   const stepLabels = [
@@ -887,20 +899,27 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 ) : (
                   <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
                     <div className="grid grid-cols-2 gap-3">
-                      {activePaymentMethods.map(pm => (
-                        <label
-                          key={pm.id}
-                          className={cn(
-                            "flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
-                            paymentMethod === pm.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
-                          )}
-                        >
-                          <RadioGroupItem value={pm.id} />
-                          <span className="font-medium">{pm.name}</span>
-                        </label>
-                      ))}
+                      {activePaymentMethods
+                        .filter(pm => !isClienteLoja || (pm.integration_type !== 'tef_pinpad' && pm.integration_type !== 'tef_smartpos'))
+                        .map(pm => (
+                          <label
+                            key={pm.id}
+                            className={cn(
+                              "flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
+                              paymentMethod === pm.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                            )}
+                          >
+                            <RadioGroupItem value={pm.id} />
+                            <span className="font-medium">{pm.name}</span>
+                          </label>
+                        ))}
                     </div>
                   </RadioGroup>
+                )}
+                {isClienteLoja && (
+                  <p className="text-xs text-muted-foreground">
+                    🏪 "Cliente Loja" não permite pagamento via TEF.
+                  </p>
                 )}
 
                 {/* Documento fiscal — apenas para Retirada */}
@@ -1013,10 +1032,14 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
             {step < 5 ? (
               <Button className="flex-1 gap-2" onClick={goNext} disabled={!canGoNext()}>
-                Avançar <ArrowRight className="w-4 h-4" />
+                {step === 4 && deliveryType === 'retirada' ? (
+                  <>Pronto <ArrowRight className="w-4 h-4" /></>
+                ) : (
+                  <>Avançar <ArrowRight className="w-4 h-4" /></>
+                )}
               </Button>
             ) : (
-              <Button className="flex-1 gap-2" onClick={handleSubmit} disabled={!canGoNext() || isSubmitting}>
+              <Button className="flex-1 gap-2" onClick={() => handleSubmit()} disabled={!canGoNext() || isSubmitting}>
                 {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Criando...</> : '✅ Confirmar Pedido'}
               </Button>
             )}
@@ -1200,6 +1223,24 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Cobrança da Retirada — abre após o lojista clicar em "Pronto" na etapa 4 */}
+      <PDVV2PaymentDialog
+        open={pickupChargeOpen}
+        onOpenChange={(o) => {
+          if (!o && !isSubmitting) setPickupChargeOpen(false);
+        }}
+        companyId={company?.id}
+        total={total}
+        title="Cobrar Retirada"
+        channel="express"
+        cashOnly={isClienteLoja}
+        showDocumentMode
+        onConfirm={async ({ paymentMethodId, paymentName, finalTotal, discount }) => {
+          await handleSubmit({ paymentMethodId, paymentName, finalTotal, discount });
+          setPickupChargeOpen(false);
+        }}
+      />
     </>
   );
 }
