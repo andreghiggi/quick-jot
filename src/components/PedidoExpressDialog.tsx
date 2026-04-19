@@ -1102,6 +1102,70 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   </p>
                 )}
 
+                {/* Mini seletor TEF inline — aparece quando método selecionado é TEF */}
+                {(() => {
+                  const sel = activePaymentMethods.find(m => m.id === paymentMethod) as any;
+                  const integ = sel?.integration_type;
+                  const isTef = integ === 'tef_pinpad' || integ === 'tef_smartpos';
+                  if (!isTef) return null;
+                  return (
+                    <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-3 space-y-3">
+                      <p className="text-xs font-semibold text-primary flex items-center gap-1">
+                        <CreditCard className="w-3 h-3" /> Configuração TEF
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['credit', 'debit', 'pix'] as const).map(t => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setTefCardType(t)}
+                            className={cn(
+                              "px-2 py-2 rounded-md text-xs font-medium border-2 transition-colors",
+                              tefCardType === t ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50"
+                            )}
+                          >
+                            {t === 'credit' ? 'Crédito' : t === 'debit' ? 'Débito' : 'Pix'}
+                          </button>
+                        ))}
+                      </div>
+                      {tefCardType === 'credit' && (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            {(['avista', 'parcelado'] as const).map(m => (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => setTefInstallmentMode(m)}
+                                className={cn(
+                                  "px-2 py-1.5 rounded-md text-xs font-medium border-2 transition-colors",
+                                  tefInstallmentMode === m ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50"
+                                )}
+                              >
+                                {m === 'avista' ? '1x à vista' : 'Parcelado ADM'}
+                              </button>
+                            ))}
+                          </div>
+                          {tefInstallmentMode === 'parcelado' && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs whitespace-nowrap">Parcelas:</Label>
+                              <Input
+                                type="number"
+                                inputMode="numeric"
+                                min={2}
+                                max={12}
+                                value={tefInstallments}
+                                onChange={(e) => setTefInstallments(e.target.value)}
+                                className="h-8 w-20 text-sm"
+                              />
+                              <span className="text-xs text-muted-foreground">(2 a 12)</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Documento fiscal — apenas para Retirada */}
                 {deliveryType === 'retirada' && (
                   <PDVV2DocumentModeSelector
