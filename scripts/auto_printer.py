@@ -551,6 +551,18 @@ def html_para_texto(html):
         return f'\n[OBS]{conteudo}[/OBS]\n'
     text = re.sub(r'<div\s+class="obs"[^>]*>(.*?)</div>', marcar_obs, text, flags=re.DOTALL | re.IGNORECASE)
 
+    # Descrição do produto (opt-in por categoria, hoje exclusivo Lancheria da i9):
+    # <div class="item-desc">[DESC]texto[/DESC]</div>  ->  [DESC]texto[/DESC]
+    def marcar_desc(match):
+        conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
+        # remove marcadores [DESC]/[/DESC] caso já venham — normaliza
+        conteudo = re.sub(r'^\[DESC\]', '', conteudo).strip()
+        conteudo = re.sub(r'\[/DESC\]$', '', conteudo).strip()
+        if not conteudo:
+            return ''
+        return f'\n[DESC]{conteudo}[/DESC]\n'
+    text = re.sub(r'<div\s+class="item-desc"[^>]*>(.*?)</div>', marcar_desc, text, flags=re.DOTALL | re.IGNORECASE)
+
     # Nome do produto V2: fallback caso venha fora do item-header
     def marcar_name(match):
         conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
