@@ -898,20 +898,27 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 ) : (
                   <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
                     <div className="grid grid-cols-2 gap-3">
-                      {activePaymentMethods.map(pm => (
-                        <label
-                          key={pm.id}
-                          className={cn(
-                            "flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
-                            paymentMethod === pm.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
-                          )}
-                        >
-                          <RadioGroupItem value={pm.id} />
-                          <span className="font-medium">{pm.name}</span>
-                        </label>
-                      ))}
+                      {activePaymentMethods
+                        .filter(pm => !isClienteLoja || (pm.integration_type !== 'tef_pinpad' && pm.integration_type !== 'tef_smartpos'))
+                        .map(pm => (
+                          <label
+                            key={pm.id}
+                            className={cn(
+                              "flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
+                              paymentMethod === pm.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                            )}
+                          >
+                            <RadioGroupItem value={pm.id} />
+                            <span className="font-medium">{pm.name}</span>
+                          </label>
+                        ))}
                     </div>
                   </RadioGroup>
+                )}
+                {isClienteLoja && (
+                  <p className="text-xs text-muted-foreground">
+                    🏪 "Cliente Loja" não permite pagamento via TEF.
+                  </p>
                 )}
 
                 {/* Documento fiscal — apenas para Retirada */}
