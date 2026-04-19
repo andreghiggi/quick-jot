@@ -25,6 +25,7 @@ export interface Order {
   printed?: boolean;
   printedAt?: Date;
   confirmedAt?: Date;
+  origin?: 'cardapio' | 'balcao' | 'mesa';
 }
 
 export interface Product {
