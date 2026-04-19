@@ -42,7 +42,7 @@ export default function PDVV2() {
   const tablesEnabled = isModuleEnabled('mesas');
 
   const { orders, updateOrderStatus } = useOrders({ companyId });
-  const { currentRegister, totalSales, sales, closeRegister, addSale } = useCashRegister({ companyId });
+  const { currentRegister, totalSales, sales, closeRegister, addSale, refetch: refetchCash } = useCashRegister({ companyId });
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
