@@ -15,8 +15,13 @@ interface CompanyModulesControlProps {
 const AVAILABLE_MODULES = [
   {
     name: 'pdv',
-    label: 'PDV - Ponto de Venda',
-    description: 'Sistema de vendas com abertura/fechamento de caixa e formas de pagamento'
+    label: 'PDV V1 — Sistema atual',
+    description: 'Sistema de vendas atual com abertura/fechamento de caixa e formas de pagamento'
+  },
+  {
+    name: 'pdv_v2',
+    label: 'PDV V2 — Nova Central Operacional',
+    description: 'Nova interface unificada com pedidos online + balcão, mesas e cobrança integrada (em testes)'
   },
   {
     name: 'mesas',
@@ -53,6 +58,17 @@ export function CompanyModulesControl({ companyId }: CompanyModulesControlProps)
     );
   }
 
+  // Regra de exclusividade: ao ativar pdv_v2, desativa pdv. Ao ativar pdv, desativa pdv_v2.
+  async function handleToggle(moduleName: string, checked: boolean) {
+    if (checked && moduleName === 'pdv' && isModuleEnabled('pdv_v2')) {
+      await toggleModule('pdv_v2', false);
+    }
+    if (checked && moduleName === 'pdv_v2' && isModuleEnabled('pdv')) {
+      await toggleModule('pdv', false);
+    }
+    await toggleModule(moduleName, checked);
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -68,17 +84,21 @@ export function CompanyModulesControl({ companyId }: CompanyModulesControlProps)
         <div className="space-y-4">
           {AVAILABLE_MODULES.map(module => {
             const enabled = isModuleEnabled(module.name);
+            const isPdvV2 = module.name === 'pdv_v2';
             return (
               <div 
                 key={module.name} 
-                className="flex items-center justify-between p-4 border rounded-lg"
+                className={`flex items-center justify-between p-4 border rounded-lg ${isPdvV2 ? 'border-primary/40 bg-primary/5' : ''}`}
               >
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Label className="text-base font-medium">{module.label}</Label>
                     <Badge variant={enabled ? 'default' : 'secondary'}>
                       {enabled ? 'Ativo' : 'Inativo'}
                     </Badge>
+                    {isPdvV2 && (
+                      <Badge variant="outline" className="text-xs">Beta</Badge>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     {module.description}
@@ -86,7 +106,7 @@ export function CompanyModulesControl({ companyId }: CompanyModulesControlProps)
                 </div>
                 <Switch
                   checked={enabled}
-                  onCheckedChange={(checked) => toggleModule(module.name, checked)}
+                  onCheckedChange={(checked) => handleToggle(module.name, checked)}
                 />
               </div>
             );
