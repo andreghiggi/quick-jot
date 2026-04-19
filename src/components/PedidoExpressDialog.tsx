@@ -415,6 +415,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       items: orderItems,
       total,
       status: 'pending',
+      origin: 'balcao',
     });
 
     if (success) {

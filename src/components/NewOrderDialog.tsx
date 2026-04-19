@@ -228,6 +228,7 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
       items: orderItems,
       total,
       status: 'pending',
+      origin: 'balcao',
     });
 
     setIsSubmitting(false);
