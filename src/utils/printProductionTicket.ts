@@ -6,6 +6,10 @@ interface PrintItem {
   productName: string;
   quantity: number;
   notes?: string | null;
+  /** Optional product description. When provided, it is rendered below the
+   *  product name in italic small text. When omitted (default), output is
+   *  byte-for-byte identical to the previous behavior. */
+  description?: string | null;
 }
 
 interface PrintTicketData {
@@ -97,6 +101,7 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
         <span class="qty">${item.quantity}x</span>
         <span class="name">${item.productName}</span>
       </div>
+      ${item.description ? `<div class="description">${item.description}</div>` : ''}
       ${item.notes ? `<div class="notes">→ ${item.notes}</div>` : ''}
     </div>
   `).join('');
@@ -130,6 +135,7 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
         .qty { font-size: ${qtyFontSize}; font-weight: bold; min-width: 8mm; }
         .name { font-size: ${nameFontSize}; font-weight: bold; flex: 1; word-break: break-word; text-transform: uppercase; }
         .notes { font-size: 9pt; font-style: italic; margin-left: 8mm; margin-top: 0.5mm; }
+        .description { font-size: 9pt; font-style: italic; font-weight: normal; margin-left: 8mm; margin-top: 0.5mm; }
         .footer { border-top: 1px dashed #000; padding-top: 2mm; margin-top: 2mm; text-align: center; font-size: 8pt; }
         @media print {
           body { width: ${paperWidth}; }
