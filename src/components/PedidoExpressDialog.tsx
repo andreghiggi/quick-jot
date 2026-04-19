@@ -1031,10 +1031,14 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
             {step < 5 ? (
               <Button className="flex-1 gap-2" onClick={goNext} disabled={!canGoNext()}>
-                Avançar <ArrowRight className="w-4 h-4" />
+                {step === 4 && deliveryType === 'retirada' ? (
+                  <>Pronto <ArrowRight className="w-4 h-4" /></>
+                ) : (
+                  <>Avançar <ArrowRight className="w-4 h-4" /></>
+                )}
               </Button>
             ) : (
-              <Button className="flex-1 gap-2" onClick={handleSubmit} disabled={!canGoNext() || isSubmitting}>
+              <Button className="flex-1 gap-2" onClick={() => handleSubmit()} disabled={!canGoNext() || isSubmitting}>
                 {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Criando...</> : '✅ Confirmar Pedido'}
               </Button>
             )}
