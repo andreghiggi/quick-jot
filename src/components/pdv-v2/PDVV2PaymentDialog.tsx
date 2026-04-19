@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice } from './_format';
+import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 
 interface PDVV2PaymentDialogProps {
   open: boolean;
@@ -13,11 +14,14 @@ interface PDVV2PaymentDialogProps {
   companyId?: string;
   total: number;
   title?: string;
+  /** Show "Geração de Documentos" + "Impressão Automática" — habilitar para balcão/retirada/mesa */
+  showDocumentMode?: boolean;
   onConfirm: (params: {
     paymentMethodId: string;
     paymentName: string;
     discount: number;
     finalTotal: number;
+    documentMode: DocumentMode;
   }) => Promise<void> | void;
 }
 
@@ -27,12 +31,23 @@ export function PDVV2PaymentDialog({
   companyId,
   total,
   title = 'Cobrança',
+  showDocumentMode = false,
   onConfirm,
 }: PDVV2PaymentDialogProps) {
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [discount, setDiscount] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [documentMode, setDocumentMode] = useState<DocumentMode>(() => {
+    const saved = localStorage.getItem('pdv_document_mode');
+    return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
+  });
+
+  // Detecta se o método selecionado é TEF — força NFC-e (mesma regra do V1)
+  const selectedMethod = activePaymentMethods.find((m) => m.id === paymentMethodId);
+  const integration = (selectedMethod as any)?.integration_type as string | undefined;
+  const isTef = integration === 'tef_pinpad' || integration === 'tef_smartpos';
+  const effectiveDocumentMode: DocumentMode = isTef ? 'sale_with_nfce' : documentMode;
 
   useEffect(() => {
     if (open && activePaymentMethods.length > 0 && !paymentMethodId) {
@@ -59,6 +74,7 @@ export function PDVV2PaymentDialog({
       paymentName: method.name,
       discount: discountValue,
       finalTotal,
+      documentMode: effectiveDocumentMode,
     });
     setSubmitting(false);
   }
