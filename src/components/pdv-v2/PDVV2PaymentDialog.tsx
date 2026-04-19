@@ -159,6 +159,32 @@ export function PDVV2PaymentDialog({
             )}
           </div>
 
+          {isCash && (
+            <div className="space-y-2">
+              <Label>Valor recebido (R$)</Label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                placeholder="0,00"
+                value={amountReceived}
+                onChange={(e) => setAmountReceived(e.target.value)}
+                autoFocus
+              />
+              <div className="rounded-md border p-3 bg-muted/40 flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Troco</span>
+                <span className="text-xl font-bold tabular-nums">
+                  {formatPrice(change)}
+                </span>
+              </div>
+              {receivedValue > 0 && receivedValue < finalTotal && (
+                <p className="text-xs text-destructive">
+                  Valor recebido menor que o total.
+                </p>
+              )}
+            </div>
+          )}
+
           {showDocumentMode && (
             <PDVV2DocumentModeSelector
               companyId={companyId}
