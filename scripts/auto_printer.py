@@ -850,9 +850,39 @@ def imprimir_html(html, order_number):
             m_item = re.match(r'^\[ITEM\](.*?)\|\|\|(.*?)\[/ITEM\]$', stripped)
             m_add = re.match(r'^\[ADD\](.*)\[/ADD\]$', stripped)
             m_obs = re.match(r'^\[OBS\](.*)\[/OBS\]$', stripped)
+            m_desc = re.match(r'^\[DESC\](.*)\[/DESC\]$', stripped)
             m_name = re.match(r'^\[NAME\](.*)\[/NAME\]$', stripped)
             m_cliente = re.match(r'^\[CLIENTE\](.*)\[/CLIENTE\]$', stripped)
             m_sep = (stripped == '[SEP]')
+
+            # Descrição do produto (V1 e V2) — linha em itálico, prefixo "Descrição:"
+            if m_desc:
+                conteudo_desc = m_desc.group(1).strip()
+                texto_desc = f'Descricao: {conteudo_desc}'
+                # Tenta criar fonte itálica leve; cai pra font_regular se falhar
+                try:
+                    font_desc = win32ui.CreateFont({
+                        'name': 'Courier New',
+                        'height': int(font_height * 0.85),
+                        'weight': 400,
+                        'italic': True,
+                    })
+                except Exception:
+                    font_desc = font_regular
+                hDC.SelectObject(font_desc)
+                # quebra com largura levemente maior por causa da fonte menor
+                largura_desc = int(colunas * 1.1)
+                sublinhas_desc = quebrar_linha(texto_desc, largura_desc)
+                garantir_espaco(line_h * len(sublinhas_desc))
+                hDC.SetTextColor(0x000000)
+                hDC.SetBkMode(win32con.TRANSPARENT)
+                for sub in sublinhas_desc:
+                    hDC.TextOut(margin_x, y, sub)
+                    y += line_h
+                hDC.SelectObject(font_normal)
+                i += 1
+                continue
+
 
             if m_sep and is_v2:
                 garantir_espaco(int(line_h * 1.4))
