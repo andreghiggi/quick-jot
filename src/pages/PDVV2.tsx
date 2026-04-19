@@ -141,7 +141,10 @@ export default function PDVV2() {
       return {
         id: s.id,
         final_total: Number(s.final_total) || 0,
+        payment_method_id: s.payment_method_id || null,
         payment_method_name: s.payment_method?.name || 'Sem forma',
+        customer_name: s.customer_name || null,
+        created_at: s.created_at,
         origin,
       };
     });
