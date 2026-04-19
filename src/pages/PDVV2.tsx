@@ -346,25 +346,28 @@ export default function PDVV2() {
                       const ready = o.status === 'ready';
                       const isDel = isDelivery(o);
                       const showCobrar = ready && !isDel;
-                      return (
-                        <div key={o.id} className="space-y-2">
-                          <OrderCard
-                            order={o}
-                            paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
-                            storeName={company?.name}
-                          />
-                          {showCobrar && (
-                            <Button
-                              size="sm"
-                              className="w-full"
-                              onClick={() => handleChargeFromOrder(o)}
-                            >
-                              <CreditCard className="h-4 w-4 mr-1" />
-                              Cobrar
-                            </Button>
-                          )}
-                        </div>
-                      );
+                        return (
+                          <div key={o.id} className="space-y-2">
+                            <div className="flex flex-wrap gap-1">
+                              <PDVV2OrderOriginBadge origin={o.origin} />
+                            </div>
+                            <OrderCard
+                              order={o}
+                              paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
+                              storeName={company?.name}
+                            />
+                            {showCobrar && (
+                              <Button
+                                size="sm"
+                                className="w-full"
+                                onClick={() => handleChargeFromOrder(o)}
+                              >
+                                <CreditCard className="h-4 w-4 mr-1" />
+                                Cobrar
+                              </Button>
+                            )}
+                          </div>
+                        );
                     })}
                   </div>
                 )}
@@ -413,6 +416,9 @@ export default function PDVV2() {
                     const showCobrar = ready && !isDel;
                     return (
                       <div key={o.id} className="space-y-2">
+                        <div className="flex flex-wrap gap-1">
+                          <PDVV2OrderOriginBadge origin={o.origin} />
+                        </div>
                         <OrderCard
                           order={o}
                           paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
