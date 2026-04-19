@@ -159,7 +159,8 @@ export default function PDVV2() {
     paymentName,
     discount,
     finalTotal,
-  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number }) {
+    documentMode,
+  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce' }) {
     if (!chargeOrder || !user || !currentRegister) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -191,7 +192,8 @@ export default function PDVV2() {
     paymentName,
     discount,
     finalTotal,
-  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number }) {
+    documentMode,
+  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce' }) {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -322,6 +324,7 @@ export default function PDVV2() {
         companyId={companyId}
         total={chargeOrder?.total || 0}
         title={`Cobrar pedido #${chargeOrder?.dailyNumber}`}
+        showDocumentMode
         onConfirm={confirmChargeOrder}
       />
 
@@ -335,6 +338,7 @@ export default function PDVV2() {
             ? `Cobrar Mesa ${importingTab.tableNumber}`
             : `Cobrar Comanda ${importingTab?.tabNumber}`
         }
+        showDocumentMode
         onConfirm={confirmImportTab}
       />
     </PDVV2Layout>
