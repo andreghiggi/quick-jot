@@ -295,6 +295,7 @@ export default function PDVV2() {
           onToggleCashAmount={() => setShowCash((v) => !v)}
           onCloseCash={() => setCloseOpen(true)}
           onNewOrder={() => setNewOrderOpen(true)}
+          companyId={company?.id}
         />
 
         {tablesEnabled ? (
