@@ -189,12 +189,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
 
       if (result.success && result.cancelledNotes) {
         toast.success(result.message || 'Estorno aprovado!');
-        // Persiste a marca [CANCELADA] e cancela o pedido
+        // Persiste a marca [CANCELADA] e mantém o pedido visível como cancelado
         await supabase
           .from('orders')
           .update({ notes: result.cancelledNotes, status: 'delivered' })
           .eq('id', order.id);
-        await deleteOrder(order.id);
       } else {
         toast.error(result.message || 'Falha no estorno');
       }
@@ -359,19 +358,39 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     printWindow.document.close();
   }
 
+  // Detecta se o pedido foi cancelado/estornado (qualquer pagamento — TEF, PIX etc.)
+  const isCancelled = !!order.notes?.includes('[CANCELADA]');
+
   return (
     <div className={cn(
-      "bg-card rounded-xl p-4 shadow-card border-2 animate-slide-up",
+      "bg-card rounded-xl p-4 shadow-card border-2 animate-slide-up relative",
       "hover:shadow-lg transition-shadow duration-200",
-      config.borderColor
+      isCancelled
+        ? "border-destructive/60 bg-destructive/5 opacity-80"
+        : config.borderColor
     )}>
+      {isCancelled && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-3 right-3 -rotate-12 select-none border-2 border-destructive text-destructive font-extrabold uppercase tracking-wider text-xs px-2 py-0.5 rounded opacity-80"
+        >
+          Cancelada
+        </div>
+      )}
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-lg font-bold text-primary">#{order.orderCode || order.dailyNumber}</span>
-            <Badge className={cn("text-xs border", config.bgColor, config.textColor, config.borderColor)}>
-              {config.label}
-            </Badge>
+            <span className={cn(
+              "text-lg font-bold",
+              isCancelled ? "text-destructive line-through" : "text-primary"
+            )}>#{order.orderCode || order.dailyNumber}</span>
+            {isCancelled ? (
+              <Badge variant="destructive" className="text-xs">Cancelada</Badge>
+            ) : (
+              <Badge className={cn("text-xs border", config.bgColor, config.textColor, config.borderColor)}>
+                {config.label}
+              </Badge>
+            )}
             {headerExtra}
             {order.printed && (
               <TooltipProvider>
@@ -582,7 +601,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           >
             <Trash2 className="w-4 h-4" />
           </Button>
-          {order.status === 'pending' && (
+          {!isCancelled && order.status === 'pending' && (
             <Button
               size="sm"
               variant={confirmed ? 'outline' : 'secondary'}
@@ -599,7 +618,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               {confirmed ? 'Confirmado' : 'Confirmar'}
             </Button>
           )}
-          {config.next && (
+          {!isCancelled && config.next && (
             <Button 
               size="sm" 
               onClick={handleAdvanceStatus}
