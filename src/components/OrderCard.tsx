@@ -189,10 +189,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
 
       if (result.success && result.cancelledNotes) {
         toast.success(result.message || 'Estorno aprovado!');
-        // Persiste a marca [CANCELADA] e mantém o pedido visível como cancelado
+        // Persiste a marca [CANCELADA] no notes — mantém o status original
+        // para que o pedido continue visível na aba atual marcado como Cancelada.
         await supabase
           .from('orders')
-          .update({ notes: result.cancelledNotes, status: 'delivered' })
+          .update({ notes: result.cancelledNotes })
           .eq('id', order.id);
       } else {
         toast.error(result.message || 'Falha no estorno');
