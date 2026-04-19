@@ -55,6 +55,7 @@ export function PDVV2PaymentDialog({
   const integration = (selectedMethod as any)?.integration_type as string | undefined;
   const isTef = integration === 'tef_pinpad' || integration === 'tef_smartpos';
   const effectiveDocumentMode: DocumentMode = isTef ? 'sale_with_nfce' : documentMode;
+  const isCash = !!selectedMethod && /dinheiro/i.test(selectedMethod.name);
 
   useEffect(() => {
     if (open && activePaymentMethods.length > 0 && !paymentMethodId) {
@@ -65,15 +66,23 @@ export function PDVV2PaymentDialog({
   useEffect(() => {
     if (!open) {
       setDiscount('');
+      setAmountReceived('');
       setSubmitting(false);
       setExtraItems([]);
     }
   }, [open]);
 
+  // Reset valor recebido ao trocar forma de pagamento
+  useEffect(() => {
+    setAmountReceived('');
+  }, [paymentMethodId]);
+
   const extrasTotal = extraItems.reduce((s, it) => s + it.unit_price * it.quantity, 0);
   const grossTotal = total + extrasTotal;
   const discountValue = parseFloat(discount.replace(',', '.')) || 0;
   const finalTotal = Math.max(0, grossTotal - discountValue);
+  const receivedValue = parseFloat(amountReceived.replace(',', '.')) || 0;
+  const change = isCash ? Math.max(0, receivedValue - finalTotal) : 0;
 
   async function handleConfirm() {
     const method = activePaymentMethods.find((m) => m.id === paymentMethodId);
