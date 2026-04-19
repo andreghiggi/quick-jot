@@ -1222,6 +1222,24 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Cobrança da Retirada — abre após o lojista clicar em "Pronto" na etapa 4 */}
+      <PDVV2PaymentDialog
+        open={pickupChargeOpen}
+        onOpenChange={(o) => {
+          if (!o && !isSubmitting) setPickupChargeOpen(false);
+        }}
+        companyId={company?.id}
+        total={total}
+        title="Cobrar Retirada"
+        channel="express"
+        cashOnly={isClienteLoja}
+        showDocumentMode
+        onConfirm={async ({ paymentMethodId, paymentName, finalTotal, discount }) => {
+          await handleSubmit({ paymentMethodId, paymentName, finalTotal, discount });
+          setPickupChargeOpen(false);
+        }}
+      />
     </>
   );
 }
