@@ -532,6 +532,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setDeliveryFee(0);
     setSelectedDeliveryFeeType('');
     setPaymentMethod('');
+    setPickupChargeOpen(false);
   }
 
   const stepLabels = [
