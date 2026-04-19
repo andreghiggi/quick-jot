@@ -437,6 +437,17 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/relatorios/tef'}
+                >
+                  <Link to="/relatorios/tef">
+                    <CreditCard className="w-4 h-4" />
+                    <span>Relatório TEF</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               {isModuleEnabled('sales_campaigns') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton

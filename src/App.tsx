@@ -28,6 +28,7 @@ import Waiter from "./pages/Waiter";
 import WaitersConfig from "./pages/WaitersConfig";
 import POS from "./pages/POS";
 import SalesReport from "./pages/SalesReport";
+import TefReport from "./pages/TefReport";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import Changelog from "./pages/Changelog";
 import Fiscal from "./pages/Fiscal";
@@ -155,6 +156,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       <Route path="/financeiro/relatorios" element={<Navigate to="/relatorios/vendas" replace />} />
+
+      <Route path="/relatorios/tef" element={
+        <ProtectedRoute requireCompany>
+          <TefReport />
+        </ProtectedRoute>
+      } />
       
       <Route path="/configuracoes/mesas" element={
         <ProtectedRoute requireCompany>
