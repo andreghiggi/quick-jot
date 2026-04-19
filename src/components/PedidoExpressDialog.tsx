@@ -364,6 +364,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       setStep(5);
       return;
     }
+    // Retirada: ao clicar em "Pronto" na etapa 4, abre cobrança em vez de ir para etapa 5
+    if (step === 4 && deliveryType === 'retirada') {
+      setPickupChargeOpen(true);
+      return;
+    }
     if (step < 5) setStep((step + 1) as Step);
   }
 
