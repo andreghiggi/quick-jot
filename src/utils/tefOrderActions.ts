@@ -44,9 +44,11 @@ export function parseTefDataFromNotes(notes: string | null | undefined): TefInfo
   const receiptMatch = notes.match(/\[COMPROVANTE\]([\s\S]*?)\[\/COMPROVANTE\]/);
   const receipt = receiptMatch ? receiptMatch[1].replace(/\\n/g, '\n') : undefined;
 
-  // PinPad: "TEF PinPad: NSU 123 | Aut 456 | BRAND | ACQUIRER"
-  const pinpadMatch = notes.match(/TEF PinPad: NSU (\S+) \| Aut (\S+) \| ([^|]+) \| ([^|]+)/);
+  // PinPad: "TEF PinPad: NSU 123 | Aut 456 | BRAND | ACQUIRER [| OPERAÇÃO]"
+  const pinpadRegex = /TEF PinPad: NSU (\S+) \| Aut (\S+) \| ([^|]+) \| ([^|\n\[]+)/;
+  const pinpadMatch = notes.match(pinpadRegex);
   if (pinpadMatch) {
+    const matchEnd = (pinpadMatch.index ?? 0) + pinpadMatch[0].length;
     return {
       type: 'pinpad',
       nsu: pinpadMatch[1],
@@ -54,12 +56,15 @@ export function parseTefDataFromNotes(notes: string | null | undefined): TefInfo
       cardBrand: pinpadMatch[3].trim(),
       acquirer: pinpadMatch[4].trim(),
       receipt,
+      operationType: extractTefOperationType(notes, matchEnd),
     };
   }
 
-  // SmartPOS: "TEF: NSU 123 | Aut 456 | BRAND"
-  const smartposMatch = notes.match(/TEF: NSU (\S+) \| Aut (\S+) \| ([^|]+)/);
+  // SmartPOS: "TEF: NSU 123 | Aut 456 | BRAND [| OPERAÇÃO]"
+  const smartposRegex = /TEF: NSU (\S+) \| Aut (\S+) \| ([^|\n\[]+)/;
+  const smartposMatch = notes.match(smartposRegex);
   if (smartposMatch) {
+    const matchEnd = (smartposMatch.index ?? 0) + smartposMatch[0].length;
     return {
       type: 'smartpos',
       nsu: smartposMatch[1],
@@ -67,6 +72,7 @@ export function parseTefDataFromNotes(notes: string | null | undefined): TefInfo
       cardBrand: smartposMatch[3].trim(),
       acquirer: '',
       receipt,
+      operationType: extractTefOperationType(notes, matchEnd),
     };
   }
 
