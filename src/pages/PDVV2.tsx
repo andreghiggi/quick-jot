@@ -16,7 +16,7 @@ import { PDVV2Layout } from '@/components/layout/PDVV2Layout';
 import { PDVV2TopBar } from '@/components/pdv-v2/PDVV2TopBar';
 import { PDVV2SummaryCards } from '@/components/pdv-v2/PDVV2SummaryCards';
 import { PDVV2StatusFilters, StatusFilter } from '@/components/pdv-v2/PDVV2StatusFilters';
-import { PDVV2OrderCard } from '@/components/pdv-v2/PDVV2OrderCard';
+import { OrderCard } from '@/components/OrderCard';
 import { OccupiedTab } from '@/components/pdv-v2/PDVV2TablesPanel';
 import { PDVV2TablesGrid } from '@/components/pdv-v2/PDVV2TablesGrid';
 import { PDVV2TablesSummaryCards } from '@/components/pdv-v2/PDVV2TablesSummaryCards';
