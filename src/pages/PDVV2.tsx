@@ -347,8 +347,8 @@ export default function PDVV2() {
                       const isDel = isDelivery(o);
                       const showCobrar = ready && !isDel;
                         return (
-                          <div key={o.id} className="space-y-2 relative">
-                            <div className="absolute top-2 right-2 z-10">
+                          <div key={o.id} className="space-y-2 relative pt-2">
+                            <div className="absolute -top-1 left-3 z-10">
                               <PDVV2OrderOriginBadge origin={o.origin} />
                             </div>
                             <OrderCard
@@ -415,8 +415,8 @@ export default function PDVV2() {
                     const isDel = isDelivery(o);
                     const showCobrar = ready && !isDel;
                     return (
-                      <div key={o.id} className="space-y-2 relative">
-                        <div className="absolute top-2 right-2 z-10">
+                      <div key={o.id} className="space-y-2 relative pt-2">
+                        <div className="absolute -top-1 left-3 z-10">
                           <PDVV2OrderOriginBadge origin={o.origin} />
                         </div>
                         <OrderCard
