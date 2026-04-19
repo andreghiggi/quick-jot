@@ -386,6 +386,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     const noteParts = ['[EXPRESS]', `Pagamento: ${paymentName}`, deliveryTypeLabel];
     const noteStr = noteParts.join(' | ');
 
+    const LANCHERIA_I9_ID_ITEMS = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+    const printDescriptionEnabledItems = company?.id === LANCHERIA_I9_ID_ITEMS;
     const orderItems: OrderItem[] = cart.map(item => {
       let optionalsStr = '';
       if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
@@ -397,13 +399,25 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         optionalsStr = ` (Adicionais: ${optStrs.join(', ')})`;
       }
       const optPrice = item.selectedOptionals.reduce((s, o) => s + o.price, 0);
+
+      // Anexa marcador [DESC] em notes para o auto_printer renderizar a descrição no recibo.
+      // Aplicado APENAS para Lancheria da i9 + categoria com print_description ligado.
+      let itemNotes: string | undefined = item.notes || undefined;
+      if (printDescriptionEnabledItems && item.product.description) {
+        const cat = categories.find((c) => c.name === item.product.category);
+        if (cat?.printDescription) {
+          const descMarker = `[DESC]${item.product.description}[/DESC]`;
+          itemNotes = itemNotes ? `${itemNotes} | ${descMarker}` : descMarker;
+        }
+      }
+
       return {
         id: crypto.randomUUID(),
         productId: item.product.id,
         name: item.product.name + optionalsStr,
         quantity: item.quantity,
         price: item.product.price + optPrice,
-        notes: item.notes || undefined,
+        notes: itemNotes,
       };
     });
 

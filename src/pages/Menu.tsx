@@ -703,14 +703,26 @@ export default function Menu() {
       if (orderError) throw orderError;
 
       // Save order items
+      const LANCHERIA_I9_ID_ITEMS = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+      const printDescriptionEnabledItems = company?.id === LANCHERIA_I9_ID_ITEMS;
       const orderItems = cart.map((item) => {
+        // Anexa marcador [DESC] em notes para o auto_printer renderizar a descrição no recibo.
+        // Aplicado APENAS para Lancheria da i9 + categoria com print_description ligado.
+        let itemNotes = item.notes || null;
+        if (printDescriptionEnabledItems && item.product.description) {
+          const cat = categories.find((c) => c.name === item.product.category);
+          if (cat?.printDescription) {
+            const descMarker = `[DESC]${item.product.description}[/DESC]`;
+            itemNotes = itemNotes ? `${itemNotes} | ${descMarker}` : descMarker;
+          }
+        }
         return {
           order_id: newOrder.id,
           product_id: item.product.id,
           name: buildCartItemDisplayName(item),
           quantity: item.quantity,
           price: item.product.price + item.selectedOptionals.reduce((sum, opt) => sum + opt.price, 0),
-          notes: item.notes || null,
+          notes: itemNotes,
           company_id: company?.id || null,
         };
       });
