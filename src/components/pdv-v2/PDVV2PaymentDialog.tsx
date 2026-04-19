@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
+import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
 
 interface PDVV2PaymentDialogProps {
   open: boolean;
@@ -16,12 +17,15 @@ interface PDVV2PaymentDialogProps {
   title?: string;
   /** Show "Geração de Documentos" + "Impressão Automática" — habilitar para balcão/retirada/mesa */
   showDocumentMode?: boolean;
+  /** Permite adicionar itens à cobrança (mesa importada / retirada) */
+  showAddItem?: boolean;
   onConfirm: (params: {
     paymentMethodId: string;
     paymentName: string;
     discount: number;
     finalTotal: number;
     documentMode: DocumentMode;
+    extraItems: ExtraItem[];
   }) => Promise<void> | void;
 }
 
@@ -32,12 +36,14 @@ export function PDVV2PaymentDialog({
   total,
   title = 'Cobrança',
   showDocumentMode = false,
+  showAddItem = false,
   onConfirm,
 }: PDVV2PaymentDialogProps) {
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [discount, setDiscount] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [extraItems, setExtraItems] = useState<ExtraItem[]>([]);
   const [documentMode, setDocumentMode] = useState<DocumentMode>(() => {
     const saved = localStorage.getItem('pdv_document_mode');
     return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
@@ -59,11 +65,14 @@ export function PDVV2PaymentDialog({
     if (!open) {
       setDiscount('');
       setSubmitting(false);
+      setExtraItems([]);
     }
   }, [open]);
 
+  const extrasTotal = extraItems.reduce((s, it) => s + it.unit_price * it.quantity, 0);
+  const grossTotal = total + extrasTotal;
   const discountValue = parseFloat(discount.replace(',', '.')) || 0;
-  const finalTotal = Math.max(0, total - discountValue);
+  const finalTotal = Math.max(0, grossTotal - discountValue);
 
   async function handleConfirm() {
     const method = activePaymentMethods.find((m) => m.id === paymentMethodId);
@@ -75,6 +84,7 @@ export function PDVV2PaymentDialog({
       discount: discountValue,
       finalTotal,
       documentMode: effectiveDocumentMode,
+      extraItems,
     });
     setSubmitting(false);
   }
@@ -90,12 +100,22 @@ export function PDVV2PaymentDialog({
           <div className="rounded-md border p-3 bg-muted/40">
             <p className="text-sm text-muted-foreground">Total</p>
             <p className="text-2xl font-bold tabular-nums">{formatPrice(finalTotal)}</p>
-            {discountValue > 0 && (
+            {(discountValue > 0 || extrasTotal > 0) && (
               <p className="text-xs text-muted-foreground">
-                Subtotal: {formatPrice(total)} − Desconto: {formatPrice(discountValue)}
+                Subtotal: {formatPrice(total)}
+                {extrasTotal > 0 && ` + Itens: ${formatPrice(extrasTotal)}`}
+                {discountValue > 0 && ` − Desconto: ${formatPrice(discountValue)}`}
               </p>
             )}
           </div>
+
+          {showAddItem && (
+            <PDVV2AddItemSearch
+              companyId={companyId}
+              items={extraItems}
+              onChange={setExtraItems}
+            />
+          )}
 
           <div className="space-y-2">
             <Label>Desconto (R$)</Label>
