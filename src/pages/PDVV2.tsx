@@ -332,77 +332,7 @@ export default function PDVV2() {
                 onToggleRevenue={() => setShowRevenue((v) => !v)}
               />
               <PDVV2StatusFilters active={filter} onChange={setFilter} counts={counts} />
-              <div className="flex-1 overflow-hidden px-4 pb-4">
-                <ScrollArea className="h-full">
-                  {filteredOrders.length === 0 ? (
-                    <Card>
-                      <CardContent className="py-16 text-center text-muted-foreground">
-                        Nenhum pedido neste filtro.
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-min items-start gap-3 pb-4">
-                      {filteredOrders.map((o) => {
-                        const ready = o.status === 'ready';
-                        const isDel = isDelivery(o);
-                        const showCobrar = ready && !isDel;
-                        return (
-                          <div key={o.id} className="space-y-2">
-                            <OrderCard
-                              order={o}
-                              paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
-                              storeName={company?.name}
-                            />
-                            {showCobrar && (
-                              <Button
-                                size="sm"
-                                className="w-full"
-                                onClick={() => handleChargeFromOrder(o)}
-                              >
-                                <CreditCard className="h-4 w-4 mr-1" />
-                                Cobrar
-                              </Button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </ScrollArea>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="tables" className="flex-1 overflow-hidden !mt-0 flex flex-col data-[state=active]:!mt-0 pt-3">
-              <PDVV2TablesSummaryCards
-                occupiedTables={tablesMetrics.occupiedTables}
-                openTabs={tablesMetrics.openTabsCount}
-                closedToday={tablesMetrics.closedToday}
-                revenueToday={tablesMetrics.revenueToday}
-                showRevenue={showTablesRevenue}
-                onToggleRevenue={() => setShowTablesRevenue((v) => !v)}
-              />
-              <div className="flex-1 overflow-hidden px-4 pb-4">
-                <ScrollArea className="h-full">
-                  <PDVV2TablesGrid tabs={occupiedTabs} onImport={(t) => setImportingTab(t)} />
-                </ScrollArea>
-              </div>
-            </TabsContent>
-          </Tabs>
-        ) : (
-          <>
-            <PDVV2SummaryCards
-              pending={counts.pending}
-              preparing={counts.preparing}
-              ready={counts.ready}
-              delivered={counts.delivered}
-              total={counts.all}
-              revenue={revenue}
-              showRevenue={showRevenue}
-              onToggleRevenue={() => setShowRevenue((v) => !v)}
-            />
-            <PDVV2StatusFilters active={filter} onChange={setFilter} counts={counts} />
-            <div className="flex-1 overflow-hidden px-4 pb-4">
-              <ScrollArea className="h-full">
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
                 {filteredOrders.length === 0 ? (
                   <Card>
                     <CardContent className="py-16 text-center text-muted-foreground">
@@ -437,7 +367,71 @@ export default function PDVV2() {
                     })}
                   </div>
                 )}
-              </ScrollArea>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="tables" className="flex-1 overflow-hidden !mt-0 flex flex-col data-[state=active]:!mt-0 pt-3">
+              <PDVV2TablesSummaryCards
+                occupiedTables={tablesMetrics.occupiedTables}
+                openTabs={tablesMetrics.openTabsCount}
+                closedToday={tablesMetrics.closedToday}
+                revenueToday={tablesMetrics.revenueToday}
+                showRevenue={showTablesRevenue}
+                onToggleRevenue={() => setShowTablesRevenue((v) => !v)}
+              />
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+                <PDVV2TablesGrid tabs={occupiedTabs} onImport={(t) => setImportingTab(t)} />
+              </div>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <>
+            <PDVV2SummaryCards
+              pending={counts.pending}
+              preparing={counts.preparing}
+              ready={counts.ready}
+              delivered={counts.delivered}
+              total={counts.all}
+              revenue={revenue}
+              showRevenue={showRevenue}
+              onToggleRevenue={() => setShowRevenue((v) => !v)}
+            />
+            <PDVV2StatusFilters active={filter} onChange={setFilter} counts={counts} />
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+              {filteredOrders.length === 0 ? (
+                <Card>
+                  <CardContent className="py-16 text-center text-muted-foreground">
+                    Nenhum pedido neste filtro.
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-min items-start gap-3 pb-4">
+                  {filteredOrders.map((o) => {
+                    const ready = o.status === 'ready';
+                    const isDel = isDelivery(o);
+                    const showCobrar = ready && !isDel;
+                    return (
+                      <div key={o.id} className="space-y-2">
+                        <OrderCard
+                          order={o}
+                          paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
+                          storeName={company?.name}
+                        />
+                        {showCobrar && (
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handleChargeFromOrder(o)}
+                          >
+                            <CreditCard className="h-4 w-4 mr-1" />
+                            Cobrar
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </>
         )}
