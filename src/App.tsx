@@ -40,6 +40,8 @@ import Subcategories from "./pages/Subcategories";
 import CustomerReport from "./pages/CustomerReport";
 import ABCReport from "./pages/ABCReport";
 import SalesCampaigns from "./pages/SalesCampaigns";
+import PDVV2 from "./pages/PDVV2";
+import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -56,7 +58,8 @@ import ResellerConfiguracoes from "./pages/reseller/ResellerConfiguracoes";
 const queryClient = new QueryClient();
 
 function AppRoutes() {
-  const { user, loading, isSuperAdmin, isWaiter, isReseller } = useAuthContext();
+  const { user, loading, isSuperAdmin, isWaiter, isReseller, company } = useAuthContext();
+  const { enabled: pdvV2Enabled, loading: pdvV2Loading } = usePdvV2Enabled(company?.id);
 
   // Redirect logic for root path
   function RootRedirect() {
@@ -76,6 +79,11 @@ function AppRoutes() {
 
     if (isWaiter()) {
       return <Navigate to="/garcom" replace />;
+    }
+
+    // PDV V2: redireciona para a nova central operacional
+    if (!pdvV2Loading && pdvV2Enabled) {
+      return <Navigate to="/pdv-v2" replace />;
     }
     
     return <Index />;
@@ -119,6 +127,13 @@ function AppRoutes() {
       <Route path="/pos" element={
         <ProtectedRoute requireCompany>
           <POS />
+        </ProtectedRoute>
+      } />
+
+      {/* PDV V2 - Nova Central Operacional (rota nova, isolada) */}
+      <Route path="/pdv-v2" element={
+        <ProtectedRoute requireCompany>
+          <PDVV2 />
         </ProtectedRoute>
       } />
       
