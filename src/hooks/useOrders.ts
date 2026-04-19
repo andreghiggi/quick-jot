@@ -67,7 +67,14 @@ export function useOrders(options: UseOrdersOptions = {}) {
         printed: (order as any).printed || false,
         printedAt: (order as any).printed_at ? new Date((order as any).printed_at) : undefined,
         confirmedAt: (order as any).confirmed_at ? new Date((order as any).confirmed_at) : undefined,
-        origin: ((order as any).origin || 'cardapio') as 'cardapio' | 'balcao' | 'mesa',
+        origin: (
+          companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164' &&
+          ((order as any).origin === 'cardapio' || !(order as any).origin) &&
+          typeof order.notes === 'string' &&
+          order.notes.includes('[EXPRESS]')
+            ? 'balcao'
+            : ((order as any).origin || 'cardapio')
+        ) as 'cardapio' | 'balcao' | 'mesa',
         items: itemsData
           .filter((item) => item.order_id === order.id)
           .map((item) => ({
