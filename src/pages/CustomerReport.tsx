@@ -234,6 +234,10 @@ export default function CustomerReport() {
 
   const filtered = useMemo(() => {
     let result = customers;
+    // Quando há filtro de data, mostrar apenas clientes que tenham pedidos no período
+    if (dateFrom || dateTo) {
+      result = result.filter((c) => c.totalOrders > 0);
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -254,7 +258,7 @@ export default function CustomerReport() {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return result;
-  }, [customers, search, sortField, sortDir]);
+  }, [customers, search, sortField, sortDir, dateFrom, dateTo]);
 
   const totalRevenue = filtered.reduce((s, c) => s + c.totalSpent, 0);
   const totalOrders = filtered.reduce((s, c) => s + c.totalOrders, 0);
