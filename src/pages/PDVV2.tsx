@@ -46,9 +46,9 @@ export default function PDVV2() {
   const { settings } = useStoreSettings({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
 
-  const [showCash, setShowCash] = useState(true);
-  const [showRevenue, setShowRevenue] = useState(true);
-  const [showTablesRevenue, setShowTablesRevenue] = useState(true);
+  const [showCash, setShowCash] = useState(false);
+  const [showRevenue, setShowRevenue] = useState(false);
+  const [showTablesRevenue, setShowTablesRevenue] = useState(false);
   const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders');
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [closeOpen, setCloseOpen] = useState(false);
