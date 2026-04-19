@@ -380,12 +380,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     if (step > 1) setStep((step - 1) as Step);
   }
 
-  async function handleSubmit() {
-    if (!canGoNext()) return;
+  async function handleSubmit(override?: { paymentMethodId: string; paymentName: string; finalTotal: number; discount: number }) {
+    if (!override && !canGoNext()) return;
     setIsSubmitting(true);
 
-    const selectedPM = activePaymentMethods.find(m => m.id === paymentMethod);
+    const selectedPM = override
+      ? { id: override.paymentMethodId, name: override.paymentName }
+      : activePaymentMethods.find(m => m.id === paymentMethod);
     const paymentName = selectedPM?.name || '';
+    const effectiveTotal = override ? override.finalTotal : total;
     const deliveryTypeLabel = deliveryType === 'entrega' ? 'Entrega' : 'Retirada';
     const fullAddress = deliveryType === 'entrega'
       ? `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood}${deliveryReference ? ` | Ref: ${deliveryReference}` : ''}`
