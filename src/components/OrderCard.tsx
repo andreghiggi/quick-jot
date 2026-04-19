@@ -13,6 +13,7 @@ interface OrderCardProps {
   order: Order;
   paperSize?: '58mm' | '80mm';
   storeName?: string;
+  headerExtra?: React.ReactNode;
 }
 
 const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textColor: string; borderColor: string; next?: OrderStatus }> = {
