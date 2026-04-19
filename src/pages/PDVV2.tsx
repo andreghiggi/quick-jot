@@ -5,10 +5,10 @@ import { useOrders } from '@/hooks/useOrders';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { useTabs } from '@/hooks/useTabs';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { Order, OrderStatus } from '@/types/order';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,11 +18,15 @@ import { PDVV2SummaryCards } from '@/components/pdv-v2/PDVV2SummaryCards';
 import { PDVV2StatusFilters, StatusFilter } from '@/components/pdv-v2/PDVV2StatusFilters';
 import { PDVV2OrderCard } from '@/components/pdv-v2/PDVV2OrderCard';
 import { PDVV2TablesPanel, OccupiedTab } from '@/components/pdv-v2/PDVV2TablesPanel';
-import { PDVV2CloseCashDialog } from '@/components/pdv-v2/PDVV2CloseCashDialog';
+import { PDVV2CloseCashDialog, CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 
-import { printOnlineOrBalcao, printOnlyReceipt } from '@/utils/pdvV2Print';
+import { printOnlyReceipt } from '@/utils/pdvV2Print';
+
+function isDelivery(o: Order) {
+  return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
+}
 
 export default function PDVV2() {
   const { company, user } = useAuthContext();
@@ -31,9 +35,10 @@ export default function PDVV2() {
   const tablesEnabled = isModuleEnabled('mesas');
 
   const { orders, updateOrderStatus } = useOrders({ companyId });
-  const { currentRegister, totalSales, closeRegister, addSale } = useCashRegister({ companyId });
+  const { currentRegister, totalSales, sales, closeRegister, addSale } = useCashRegister({ companyId });
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
+  const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
 
   const [showCash, setShowCash] = useState(true);
   const [showRevenue, setShowRevenue] = useState(true);
@@ -55,10 +60,8 @@ export default function PDVV2() {
     return c;
   }, [orders]);
 
-  const revenue = useMemo(
-    () => orders.filter((o) => o.status === 'delivered').reduce((s, o) => s + o.total, 0),
-    [orders]
-  );
+  // Faturamento real = vendas pagas no caixa atual (pdv_sales)
+  const revenue = totalSales;
 
   const filteredOrders = useMemo(
     () => (filter === 'all' ? orders : orders.filter((o) => o.status === filter)),
@@ -80,6 +83,37 @@ export default function PDVV2() {
   const cashAmount = (currentRegister?.opening_amount || 0) + totalSales;
   const cashOpen = !!currentRegister;
 
+  // Mapeia vendas do caixa atual em estrutura para o fechamento
+  const closeCashSales: CloseCashSale[] = useMemo(() => {
+    return sales.map((s) => {
+      // Determina origem cruzando com orders (quando há order_id)
+      let origin: CloseCashSale['origin'] = 'balcao';
+      const orderId = (s as any).order_id as string | undefined;
+      if (orderId) {
+        const linked = orders.find((o) => o.id === orderId);
+        if (linked) {
+          if (linked.origin === 'mesa') origin = 'mesa';
+          else if (linked.origin === 'balcao') origin = 'balcao';
+          else origin = isDelivery(linked) ? 'cardapio_delivery' : 'cardapio_retirada';
+        } else {
+          origin = 'outros';
+        }
+      } else {
+        // Sem order vinculado — venda balcão direta
+        // ou comanda importada (notes contém "Comanda")
+        if (s.notes?.toLowerCase().includes('comanda')) origin = 'mesa';
+        else origin = 'balcao';
+      }
+
+      return {
+        id: s.id,
+        final_total: Number(s.final_total) || 0,
+        payment_method_name: s.payment_method?.name || 'Sem forma',
+        origin,
+      };
+    });
+  }, [sales, orders]);
+
   function handleAdvance(order: Order) {
     const next: Record<OrderStatus, OrderStatus | null> = {
       pending: 'preparing',
@@ -92,7 +126,32 @@ export default function PDVV2() {
   }
 
   function handleChargeFromOrder(order: Order) {
+    if (!cashOpen) {
+      toast.error('Abra o caixa para cobrar');
+      return;
+    }
     setChargeOrder(order);
+  }
+
+  async function handleChangePayment(order: Order, methodName: string) {
+    try {
+      const baseNotes = order.notes || '';
+      const newNotes = baseNotes.match(/Pagamento:\s*.+?(\s*[\(|]|$)/i)
+        ? baseNotes.replace(/Pagamento:\s*.+?(\s*[\(|]|$)/i, `Pagamento: ${methodName}$1`)
+        : baseNotes
+        ? `${baseNotes} | Pagamento: ${methodName}`
+        : `Pagamento: ${methodName}`;
+
+      const { error } = await supabase
+        .from('orders')
+        .update({ notes: newNotes })
+        .eq('id', order.id);
+      if (error) throw error;
+      toast.success('Forma de pagamento atualizada');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao atualizar pagamento');
+    }
   }
 
   async function confirmChargeOrder({
@@ -148,7 +207,9 @@ export default function PDVV2() {
       quantity: i.quantity,
       unit_price: i.unit_price,
     }));
-    const customer = fullTab.customer_name || (fullTab.table?.number ? `Mesa ${fullTab.table.number}` : `Comanda ${fullTab.tab_number}`);
+    const customer =
+      fullTab.customer_name ||
+      (fullTab.table?.number ? `Mesa ${fullTab.table.number}` : `Comanda ${fullTab.tab_number}`);
     const saleId = await addSale(
       items,
       paymentMethodId,
@@ -158,7 +219,6 @@ export default function PDVV2() {
       `Comanda #${fullTab.tab_number} | Pagamento: ${paymentName}`
     );
     if (saleId) {
-      // Imprime apenas recibo (regra: importar mesa = só recibo)
       const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
       await printOnlyReceipt({
         companyId,
@@ -175,7 +235,6 @@ export default function PDVV2() {
         notes: `Pagamento: ${paymentName}${discount > 0 ? ` | Desconto: R$ ${discount.toFixed(2)}` : ''}`,
         paperSize,
       });
-      // Fecha a comanda
       await closeTab(fullTab.id);
       toast.success('Comanda importada e fechada!');
       setImportingTab(null);
@@ -186,14 +245,6 @@ export default function PDVV2() {
     if (!user) return;
     await closeRegister(closingAmount, user.id, notes);
   }
-
-  // Hook customizado: ao detectar nova ordem balcão criada, dispara impressão.
-  // Aqui apenas re-imprime quando o usuário clicar manualmente — para evitar
-  // duplicação, a impressão automática acontecerá via PedidoExpressDialog
-  // (que já imprime produção). Para garantir o RECIBO também (regra balcão),
-  // expomos este botão futuro. Por ora, novas ordens balcão impressas pelo
-  // próprio Pedido Express continuam imprimindo só produção; o operador pode
-  // imprimir recibo manualmente via tela de cobrança.
 
   return (
     <PDVV2Layout>
@@ -221,7 +272,11 @@ export default function PDVV2() {
 
         <PDVV2StatusFilters active={filter} onChange={setFilter} counts={counts} />
 
-        <div className={`flex-1 overflow-hidden grid gap-4 px-4 pb-4 ${tablesEnabled ? 'grid-cols-1 lg:grid-cols-[1fr,320px]' : 'grid-cols-1'}`}>
+        <div
+          className={`flex-1 overflow-hidden grid gap-4 px-4 pb-4 ${
+            tablesEnabled ? 'grid-cols-1 lg:grid-cols-[1fr,320px]' : 'grid-cols-1'
+          }`}
+        >
           <ScrollArea className="h-full">
             {filteredOrders.length === 0 ? (
               <Card>
@@ -234,9 +289,11 @@ export default function PDVV2() {
                 {filteredOrders.map((o) => (
                   <PDVV2OrderCard
                     key={o.id}
-                    order={o as any}
+                    order={o}
                     onAdvance={handleAdvance}
                     onCharge={handleChargeFromOrder}
+                    onChangePayment={handleChangePayment}
+                    paymentOptions={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
                   />
                 ))}
               </div>
@@ -249,13 +306,13 @@ export default function PDVV2() {
         </div>
       </div>
 
-      {/* Reuso integral do Pedido Express para "+ Novo Pedido" balcão */}
       <PedidoExpressDialog open={newOrderOpen} onOpenChange={setNewOrderOpen} />
 
       <PDVV2CloseCashDialog
         open={closeOpen}
         onOpenChange={setCloseOpen}
         expectedAmount={cashAmount}
+        sales={closeCashSales}
         onConfirm={handleCloseCash}
       />
 

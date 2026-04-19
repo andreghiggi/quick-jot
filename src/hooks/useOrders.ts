@@ -67,6 +67,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         printed: (order as any).printed || false,
         printedAt: (order as any).printed_at ? new Date((order as any).printed_at) : undefined,
         confirmedAt: (order as any).confirmed_at ? new Date((order as any).confirmed_at) : undefined,
+        origin: ((order as any).origin || 'cardapio') as 'cardapio' | 'balcao' | 'mesa',
         items: itemsData
           .filter((item) => item.order_id === order.id)
           .map((item) => ({
