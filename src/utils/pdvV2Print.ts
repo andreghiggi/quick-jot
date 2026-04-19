@@ -26,7 +26,7 @@ interface PrintPayload {
   items: PrintItem[];
   total: number;
   notes?: string;
-  paperSize?: '58' | '80';
+  paperSize?: '58mm' | '80mm';
 }
 
 async function enqueue(companyId: string, label: string, html: string) {
@@ -38,7 +38,7 @@ async function enqueue(companyId: string, label: string, html: string) {
 }
 
 function buildReceiptHTML(payload: PrintPayload): string {
-  const w = payload.paperSize === '58' ? '58mm' : '80mm';
+  const w = payload.paperSize === '58mm' ? '58mm' : '80mm';
   const itemsHtml = payload.items
     .map(
       (it) =>
@@ -73,15 +73,23 @@ function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }
 
-export async function printOnlineOrBalcao(payload: PrintPayload) {
-  const productionHtml = generateProductionTicketHTML({
-    orderCode: payload.orderCode,
-    dailyNumber: payload.dailyNumber,
+function buildProductionHtml(payload: PrintPayload, ref: string) {
+  return generateProductionTicketHTML({
+    tabNumber: payload.dailyNumber,
     customerName: payload.customerName,
-    items: payload.items,
-    notes: payload.notes,
-    paperSize: payload.paperSize || '80',
-  } as any);
+    items: payload.items.map((i) => ({
+      productName: i.name,
+      quantity: i.quantity,
+      notes: i.notes || null,
+    })),
+    createdAt: new Date(),
+    paperSize: payload.paperSize || '80mm',
+    referenceLabel: ref,
+  });
+}
+
+export async function printOnlineOrBalcao(payload: PrintPayload) {
+  const productionHtml = buildProductionHtml(payload, `PEDIDO #${payload.dailyNumber}`);
   await enqueue(payload.companyId, `Produção #${payload.dailyNumber}`, productionHtml);
   await enqueue(payload.companyId, `Recibo #${payload.dailyNumber}`, buildReceiptHTML(payload));
 }
