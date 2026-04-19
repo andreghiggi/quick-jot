@@ -16,6 +16,7 @@ import {
   Megaphone,
   ChefHat,
   Monitor,
+  Settings2,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
