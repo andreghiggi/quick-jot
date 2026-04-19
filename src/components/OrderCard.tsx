@@ -2,12 +2,19 @@ import { useState, useEffect, useMemo } from 'react';
 import { Order, OrderStatus } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2 } from 'lucide-react';
+import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt } from 'lucide-react';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import {
+  parseTefDataFromNotes,
+  isOrderTefCancelled,
+  estornarTefPedido,
+  reimprimirComprovanteTef,
+} from '@/utils/tefOrderActions';
 
 interface OrderCardProps {
   order: Order;
@@ -60,7 +67,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const config = statusConfig[order.status];
   const [confirming, setConfirming] = useState(false);
   const [advancing, setAdvancing] = useState(false);
+  const [tefEstornoLoading, setTefEstornoLoading] = useState(false);
   const confirmed = !!order.confirmedAt;
+
+  // Detecta se é pagamento TEF e se já foi estornado
+  const tefInfo = useMemo(() => parseTefDataFromNotes(order.notes), [order.notes]);
+  const tefAlreadyCancelled = isOrderTefCancelled(order.notes);
+  const hasTefReceipt = !!tefInfo?.receipt;
   
   // Catalog lookup to enrich legacy order items with prices and group names
   const [optionalsCatalog, setOptionalsCatalog] = useState<Record<string, Record<string, { price: number; groupName: string }>>>({});
@@ -154,6 +167,46 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
 
   async function handleDelete() {
     await deleteOrder(order.id);
+  }
+
+  async function handleTefEstorno() {
+    if (!company?.id || !tefInfo) return;
+    if (tefAlreadyCancelled) {
+      toast.error('Esta venda TEF já foi estornada');
+      return;
+    }
+    const confirmMsg = `Estornar transação TEF?\n\nValor: R$ ${order.total.toFixed(2).replace('.', ',')}\nNSU: ${tefInfo.nsu}\nBandeira: ${tefInfo.cardBrand}\n\nO cartão será estornado e o pedido cancelado.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setTefEstornoLoading(true);
+    try {
+      const result = await estornarTefPedido({
+        companyId: company.id,
+        amount: order.total,
+        createdAt: order.createdAt,
+        notes: order.notes,
+      });
+
+      if (result.success && result.cancelledNotes) {
+        toast.success(result.message || 'Estorno aprovado!');
+        // Persiste a marca [CANCELADA] e cancela o pedido
+        await supabase
+          .from('orders')
+          .update({ notes: result.cancelledNotes, status: 'delivered' })
+          .eq('id', order.id);
+        await deleteOrder(order.id);
+      } else {
+        toast.error(result.message || 'Falha no estorno');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro inesperado no estorno');
+    } finally {
+      setTefEstornoLoading(false);
+    }
+  }
+
+  function handleReimprimirTef() {
+    reimprimirComprovanteTef(order.notes, order.orderCode || String(order.dailyNumber || ''));
   }
 
   function handlePrint() {
@@ -475,6 +528,41 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           >
             <Printer className="w-4 h-4" />
           </Button>
+          {hasTefReceipt && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0 h-8 w-8"
+                    onClick={handleReimprimirTef}
+                  >
+                    <Receipt className="w-3.5 h-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Reimprimir comprovante TEF</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {tefInfo?.type === 'pinpad' && !tefAlreadyCancelled && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950 shrink-0 h-8 w-8"
+                    onClick={handleTefEstorno}
+                    disabled={tefEstornoLoading}
+                  >
+                    {tefEstornoLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Estornar TEF e cancelar pedido</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           <Button
             variant="ghost"
             size="icon"
