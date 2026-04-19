@@ -81,7 +81,7 @@ export function PDVV2PaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -128,6 +128,15 @@ export function PDVV2PaymentDialog({
               </RadioGroup>
             )}
           </div>
+
+          {showDocumentMode && (
+            <PDVV2DocumentModeSelector
+              companyId={companyId}
+              value={documentMode}
+              onChange={setDocumentMode}
+              forceNFCe={isTef}
+            />
+          )}
         </div>
 
         <DialogFooter>
