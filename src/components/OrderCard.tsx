@@ -189,12 +189,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
 
       if (result.success && result.cancelledNotes) {
         toast.success(result.message || 'Estorno aprovado!');
-        // Persiste a marca [CANCELADA] e cancela o pedido
+        // Persiste a marca [CANCELADA] e mantém o pedido visível como cancelado
         await supabase
           .from('orders')
           .update({ notes: result.cancelledNotes, status: 'delivered' })
           .eq('id', order.id);
-        await deleteOrder(order.id);
       } else {
         toast.error(result.message || 'Falha no estorno');
       }
