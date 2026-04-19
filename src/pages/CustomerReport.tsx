@@ -261,6 +261,35 @@ export default function CustomerReport() {
   const totalProductRevenue = filtered.reduce((s, c) => s + c.totalProductRevenue, 0);
   const avgTicket = totalOrders > 0 ? totalProductRevenue / totalOrders : 0;
 
+  // Pagination (30 per page)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(1);
+  }, [totalPages, currentPage]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, dateFrom, dateTo, sortField, sortDir]);
+  const paginated = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage]
+  );
+
+  const getPageNumbers = (): (number | 'ellipsis')[] => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
+    }
+    pages.push(1);
+    if (currentPage > 3) pages.push('ellipsis');
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (currentPage < totalPages - 2) pages.push('ellipsis');
+    pages.push(totalPages);
+    return pages;
+  };
+
   const clearFilters = () => {
     setDateFrom(undefined);
     setDateTo(undefined);
@@ -430,7 +459,7 @@ export default function CustomerReport() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((customer) => {
+                  {paginated.map((customer) => {
                     const key = (customer.phone || customer.name).toLowerCase().trim();
                     const isExpanded = expandedCustomer === key;
                     return (
