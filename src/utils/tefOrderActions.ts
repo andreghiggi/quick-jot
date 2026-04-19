@@ -16,6 +16,24 @@ export interface TefInfoFromNotes {
   cardBrand: string;
   acquirer: string;
   receipt?: string;
+  /** Rótulo legível do tipo de operação: "Débito", "Crédito à Vista", "3x Cartão ADM" etc. */
+  operationType?: string;
+}
+
+/**
+ * Extrai o rótulo do tipo de operação TEF a partir de um trecho de notes.
+ * O PDV salva no formato: "... | ACQUIRER | Débito" ou "... | ACQUIRER | 3x Cartão ADM | [COMPROVANTE]..."
+ * O segmento entre o adquirente e o próximo separador (| ou final) é o tipo.
+ */
+function extractTefOperationType(notes: string, afterMatchIndex: number): string | undefined {
+  const tail = notes.slice(afterMatchIndex);
+  // Pega o próximo segmento entre " | " e o próximo " | " ou fim de linha / [COMPROVANTE]
+  const m = tail.match(/^\s*\|\s*([^|\n\[]+?)(?=\s*\||\s*\[|$)/);
+  if (!m) return undefined;
+  const label = m[1].trim();
+  // Filtra valores que não são tipos de operação (ex: COMPROVANTE etc.)
+  if (!label || /COMPROVANTE/i.test(label)) return undefined;
+  return label;
 }
 
 /** Extrai NSU/Aut/Bandeira/Adquirente e o comprovante do campo `notes` de um pedido. */
@@ -26,9 +44,11 @@ export function parseTefDataFromNotes(notes: string | null | undefined): TefInfo
   const receiptMatch = notes.match(/\[COMPROVANTE\]([\s\S]*?)\[\/COMPROVANTE\]/);
   const receipt = receiptMatch ? receiptMatch[1].replace(/\\n/g, '\n') : undefined;
 
-  // PinPad: "TEF PinPad: NSU 123 | Aut 456 | BRAND | ACQUIRER"
-  const pinpadMatch = notes.match(/TEF PinPad: NSU (\S+) \| Aut (\S+) \| ([^|]+) \| ([^|]+)/);
+  // PinPad: "TEF PinPad: NSU 123 | Aut 456 | BRAND | ACQUIRER [| OPERAÇÃO]"
+  const pinpadRegex = /TEF PinPad: NSU (\S+) \| Aut (\S+) \| ([^|]+) \| ([^|\n\[]+)/;
+  const pinpadMatch = notes.match(pinpadRegex);
   if (pinpadMatch) {
+    const matchEnd = (pinpadMatch.index ?? 0) + pinpadMatch[0].length;
     return {
       type: 'pinpad',
       nsu: pinpadMatch[1],
@@ -36,12 +56,15 @@ export function parseTefDataFromNotes(notes: string | null | undefined): TefInfo
       cardBrand: pinpadMatch[3].trim(),
       acquirer: pinpadMatch[4].trim(),
       receipt,
+      operationType: extractTefOperationType(notes, matchEnd),
     };
   }
 
-  // SmartPOS: "TEF: NSU 123 | Aut 456 | BRAND"
-  const smartposMatch = notes.match(/TEF: NSU (\S+) \| Aut (\S+) \| ([^|]+)/);
+  // SmartPOS: "TEF: NSU 123 | Aut 456 | BRAND [| OPERAÇÃO]"
+  const smartposRegex = /TEF: NSU (\S+) \| Aut (\S+) \| ([^|\n\[]+)/;
+  const smartposMatch = notes.match(smartposRegex);
   if (smartposMatch) {
+    const matchEnd = (smartposMatch.index ?? 0) + smartposMatch[0].length;
     return {
       type: 'smartpos',
       nsu: smartposMatch[1],
@@ -49,6 +72,7 @@ export function parseTefDataFromNotes(notes: string | null | undefined): TefInfo
       cardBrand: smartposMatch[3].trim(),
       acquirer: '',
       receipt,
+      operationType: extractTefOperationType(notes, matchEnd),
     };
   }
 

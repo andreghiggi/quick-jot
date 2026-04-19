@@ -497,10 +497,55 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           const paymentMatch = order.notes?.match(/Pagamento:\s*([^|()\n]+)/i);
           const trocoMatch = order.notes?.match(/Troco para R\$\s*([^)|\n]+)/i) || null;
           const isDelivery = !!order.deliveryAddress;
+          const paymentLabel = paymentMatch?.[1].trim();
+          const isTefPayment = !!tefInfo;
           return (
             <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
               {paymentMatch && (
-                <p>💳 Pagamento: {paymentMatch[1].trim()}</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span>💳 Pagamento: {paymentLabel}</span>
+                  {isTefPayment && hasTefReceipt && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={handleReimprimirTef}
+                            className="inline-flex items-center justify-center h-5 w-5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                            aria-label="Reimprimir comprovante TEF"
+                          >
+                            <Receipt className="w-3 h-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Reimprimir comprovante TEF</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  {isTefPayment && tefInfo?.type === 'pinpad' && !tefAlreadyCancelled && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={handleTefEstorno}
+                            disabled={tefEstornoLoading}
+                            className="inline-flex items-center justify-center h-5 w-5 rounded text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950 transition-colors disabled:opacity-50"
+                            aria-label="Estornar TEF"
+                          >
+                            {tefEstornoLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Estornar TEF e cancelar pedido</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  {isTefPayment && tefAlreadyCancelled && (
+                    <span className="text-[10px] font-semibold text-destructive uppercase">Estornado</span>
+                  )}
+                </div>
+              )}
+              {isTefPayment && tefInfo?.operationType && (
+                <p className="ml-4 text-[11px] italic">↳ {tefInfo.operationType}</p>
               )}
               {trocoMatch && (
                 <p>💵 Troco para: R$ {trocoMatch[1].trim()}</p>
@@ -528,41 +573,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           >
             <Printer className="w-4 h-4" />
           </Button>
-          {hasTefReceipt && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0 h-8 w-8"
-                    onClick={handleReimprimirTef}
-                  >
-                    <Receipt className="w-3.5 h-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Reimprimir comprovante TEF</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          {tefInfo?.type === 'pinpad' && !tefAlreadyCancelled && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950 shrink-0 h-8 w-8"
-                    onClick={handleTefEstorno}
-                    disabled={tefEstornoLoading}
-                  >
-                    {tefEstornoLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Estornar TEF e cancelar pedido</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
+          
           <Button
             variant="ghost"
             size="icon"
