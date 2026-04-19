@@ -42,6 +42,7 @@ export function PDVV2PaymentDialog({
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [discount, setDiscount] = useState('');
+  const [amountReceived, setAmountReceived] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [extraItems, setExtraItems] = useState<ExtraItem[]>([]);
   const [documentMode, setDocumentMode] = useState<DocumentMode>(() => {
