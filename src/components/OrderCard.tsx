@@ -67,7 +67,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const config = statusConfig[order.status];
   const [confirming, setConfirming] = useState(false);
   const [advancing, setAdvancing] = useState(false);
+  const [tefEstornoLoading, setTefEstornoLoading] = useState(false);
   const confirmed = !!order.confirmedAt;
+
+  // Detecta se é pagamento TEF e se já foi estornado
+  const tefInfo = useMemo(() => parseTefDataFromNotes(order.notes), [order.notes]);
+  const tefAlreadyCancelled = isOrderTefCancelled(order.notes);
+  const hasTefReceipt = !!tefInfo?.receipt;
   
   // Catalog lookup to enrich legacy order items with prices and group names
   const [optionalsCatalog, setOptionalsCatalog] = useState<Record<string, Record<string, { price: number; groupName: string }>>>({});
