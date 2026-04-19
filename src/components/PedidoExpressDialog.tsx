@@ -1079,9 +1079,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 ) : (
                   <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
                     <div className="grid grid-cols-2 gap-3">
-                      {activePaymentMethods
-                        .filter(pm => !isClienteLoja || (pm.integration_type !== 'tef_pinpad' && pm.integration_type !== 'tef_smartpos'))
-                        .map(pm => (
+                      {activePaymentMethods.map(pm => (
                           <label
                             key={pm.id}
                             className={cn(
