@@ -16,6 +16,7 @@ import {
   Megaphone,
   ChefHat,
   Monitor,
+  Settings2,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -77,6 +78,7 @@ export function PDVV2Sidebar() {
     { title: 'Relatório de Vendas', icon: Wallet, href: '/relatorios/vendas' },
     { title: 'Relatório de Clientes', icon: BarChart3, href: '/relatorios/clientes' },
     { title: 'Curva ABC', icon: BarChart3, href: '/relatorios/curva-abc' },
+    { title: 'Relatório TEF', icon: CreditCard, href: '/relatorios/tef' },
     ...(isModuleEnabled('sales_campaigns')
       ? [{ title: 'Campanhas de Vendas', icon: Megaphone, href: '/campanhas' }]
       : []),
@@ -85,6 +87,7 @@ export function PDVV2Sidebar() {
   const settings = [
     { title: 'Configurações', icon: Settings, href: '/configuracoes' },
     { title: 'Integrações', icon: Settings, href: '/configuracoes/integracoes' },
+    { title: 'TEF ADM (Manutenção)', icon: Settings2, href: '/tef-adm' },
     { title: 'WhatsApp', icon: Settings, href: '/configuracoes/whatsapp' },
   ];
 
