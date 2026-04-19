@@ -93,7 +93,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
   // ===== TEF state (mini seletor inline) =====
   const [tefCardType, setTefCardType] = useState<'credit' | 'debit' | 'pix'>('credit');
-  const [tefInstallmentMode, setTefInstallmentMode] = useState<'avista' | 'parcelado'>('avista');
+  const [tefInstallmentMode, setTefInstallmentMode] = useState<'avista' | 'loja' | 'adm'>('avista');
   const [tefInstallments, setTefInstallments] = useState('2');
   const [tefProcessing, setTefProcessing] = useState(false);
   const [tefStatus, setTefStatus] = useState('');
@@ -423,9 +423,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       const tefPaymentType: 'credit' | 'debit' | 'pix' = tefCardType;
       const installmentCount = tefCardType === 'debit' || tefCardType === 'pix'
         ? 1
-        : tefInstallmentMode === 'parcelado'
+        : tefInstallmentMode !== 'avista'
           ? Math.max(2, parseInt(tefInstallments) || 2)
           : 1;
+      const tefInstallmentType: 'loja' | 'adm' = tefInstallmentMode === 'loja' ? 'loja' : 'adm';
 
       tefCancelRef.current = false;
       setTefProcessing(true);
