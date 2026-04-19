@@ -120,10 +120,10 @@ export function PDVV2OrderCard({
   // After "saiu" (status delivered), no further action.
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4 space-y-3">
+    <Card className="hover:shadow-md transition-shadow flex flex-col">
+      <CardContent className="p-4 space-y-3 flex-1 flex flex-col">
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-lg">#{order.dailyNumber}</span>
               <Badge variant={STATUS_VARIANT[order.status]}>
@@ -153,9 +153,9 @@ export function PDVV2OrderCard({
                 </Badge>
               )}
             </div>
-            <p className="font-medium truncate">{order.customerName}</p>
+            <p className="font-medium break-words">{order.customerName}</p>
           </div>
-          <Badge variant="outline" className={origin.className}>
+          <Badge variant="outline" className={`${origin.className} shrink-0`}>
             <OriginIcon className="h-3 w-3 mr-1" />
             {origin.label}
           </Badge>
@@ -164,10 +164,10 @@ export function PDVV2OrderCard({
         <div className="text-sm text-muted-foreground space-y-1">
           {order.items.slice(0, 3).map((it) => (
             <div key={it.id} className="flex justify-between gap-2">
-              <span className="truncate">
+              <span className="break-words flex-1 min-w-0">
                 {it.quantity}× {it.name}
               </span>
-              <span className="tabular-nums">
+              <span className="tabular-nums shrink-0">
                 {formatPrice(it.price * it.quantity)}
               </span>
             </div>
@@ -194,7 +194,7 @@ export function PDVV2OrderCard({
         {paymentName && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <CreditCard className="h-3 w-3 shrink-0" />
-            <span className="truncate flex-1">{paymentName}</span>
+            <span className="break-words flex-1 min-w-0">{paymentName}</span>
             {delivery && isCardapio && onChangePayment && paymentOptions.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -224,7 +224,7 @@ export function PDVV2OrderCard({
           </div>
         )}
 
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-2 pt-1 mt-auto">
           {advanceLabel && advanceTarget && onAdvance && (
             <Button
               size="sm"

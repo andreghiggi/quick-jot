@@ -21,6 +21,7 @@ import { Product, ProductOptional, CartItem } from '@/types/product';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
+import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { Plus, Minus, ShoppingBag, X, Loader2, ArrowLeft, ArrowRight, Phone, User, Package, MapPin, CreditCard } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -70,6 +71,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [selectedDeliveryFeeType, setSelectedDeliveryFeeType] = useState<'city' | 'interior' | ''>('');
 
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [documentMode, setDocumentMode] = useState<DocumentMode>(() => {
+    const saved = localStorage.getItem('pdv_document_mode');
+    return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeProducts = getActiveProducts();
@@ -868,6 +873,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                       ))}
                     </div>
                   </RadioGroup>
+                )}
+
+                {/* Documento fiscal — apenas para Retirada */}
+                {deliveryType === 'retirada' && (
+                  <PDVV2DocumentModeSelector
+                    companyId={company?.id}
+                    value={documentMode}
+                    onChange={setDocumentMode}
+                  />
                 )}
 
                 {/* Resumo Final */}
