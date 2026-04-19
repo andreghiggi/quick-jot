@@ -86,6 +86,30 @@ export default function PDVV2() {
     [openTabs, getTabTotal]
   );
 
+  // Métricas da aba Mesas — derivado das vendas do caixa atual com notes contendo "Comanda"
+  const tablesMetrics = useMemo(() => {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    let closedToday = 0;
+    let revenueToday = 0;
+    for (const s of sales) {
+      const isFromTab = s.notes?.toLowerCase().includes('comanda');
+      if (!isFromTab) continue;
+      const ts = s.created_at ? new Date(s.created_at).getTime() : 0;
+      if (ts >= startOfDay) {
+        closedToday++;
+        revenueToday += Number(s.final_total) || 0;
+      }
+    }
+    const occupiedTables = occupiedTabs.filter((t) => t.tableNumber != null).length;
+    return {
+      occupiedTables,
+      openTabsCount: occupiedTabs.length,
+      closedToday,
+      revenueToday,
+    };
+  }, [sales, occupiedTabs]);
+
   const cashAmount = (currentRegister?.opening_amount || 0) + totalSales;
   const cashOpen = !!currentRegister;
 
