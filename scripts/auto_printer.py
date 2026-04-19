@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.24"  # modo compacto v2 estendido para TODAS as lojas no layout v2
+SCRIPT_VERSION = "v8.25"  # suporte a [DESC] no recibo (descrição do produto opt-in por categoria)
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
