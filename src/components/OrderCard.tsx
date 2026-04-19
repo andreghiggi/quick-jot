@@ -573,7 +573,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           >
             <Printer className="w-4 h-4" />
           </Button>
-          {hasTefReceipt && false}
+          
           <Button
             variant="ghost"
             size="icon"
