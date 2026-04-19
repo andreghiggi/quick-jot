@@ -39,7 +39,13 @@ export function PDVV2TopBar({
     <div className="flex items-center justify-between gap-4 p-4 border-b bg-card">
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <h1 className="text-xl font-bold truncate">{storeName}</h1>
-        <Badge variant={cashOpen ? 'default' : 'secondary'}>
+        <Badge
+          className={
+            cashOpen
+              ? 'bg-green-600 hover:bg-green-600 text-white font-bold border-transparent'
+              : 'bg-destructive hover:bg-destructive text-destructive-foreground font-bold border-transparent'
+          }
+        >
           Caixa {cashOpen ? 'Aberto' : 'Fechado'}
         </Badge>
         {cashOpen && (
