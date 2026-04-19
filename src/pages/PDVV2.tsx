@@ -42,7 +42,7 @@ export default function PDVV2() {
   const tablesEnabled = isModuleEnabled('mesas');
 
   const { orders, updateOrderStatus } = useOrders({ companyId });
-  const { currentRegister, totalSales, sales, closeRegister, addSale } = useCashRegister({ companyId });
+  const { currentRegister, totalSales, sales, closeRegister, addSale, refetch: refetchCash } = useCashRegister({ companyId });
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
@@ -141,7 +141,10 @@ export default function PDVV2() {
       return {
         id: s.id,
         final_total: Number(s.final_total) || 0,
+        payment_method_id: s.payment_method_id || null,
         payment_method_name: s.payment_method?.name || 'Sem forma',
+        customer_name: s.customer_name || null,
+        created_at: s.created_at,
         origin,
       };
     });
@@ -282,6 +285,21 @@ export default function PDVV2() {
   async function handleCloseCash(closingAmount: number, notes: string) {
     if (!user) return;
     await closeRegister(closingAmount, user.id, notes);
+  }
+
+  async function handleChangeSalePaymentMethod(saleId: string, paymentMethodId: string) {
+    try {
+      const { error } = await supabase
+        .from('pdv_sales')
+        .update({ payment_method_id: paymentMethodId })
+        .eq('id', saleId);
+      if (error) throw error;
+      toast.success('Forma de pagamento atualizada');
+      await refetchCash();
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao atualizar forma de pagamento');
+    }
   }
 
   return (
@@ -448,6 +466,8 @@ export default function PDVV2() {
         onOpenChange={setCloseOpen}
         expectedAmount={cashAmount}
         sales={closeCashSales}
+        paymentMethods={activePaymentMethods.map((p) => ({ id: p.id, name: p.name }))}
+        onChangeSalePaymentMethod={handleChangeSalePaymentMethod}
         onConfirm={handleCloseCash}
       />
 
