@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
+import {
+  sendPinpadPayment,
+  pollPinpadStatus,
+  confirmPinpadTransaction,
+  cancelPinpadTransaction,
+} from '@/services/pinpadService';
+import {
+  sendPaymentToMultiplusCard,
+  checkMultiplusCardTransactionStatus,
+  abortMultiplusCardSale,
+} from '@/services/multiplusCardService';
 import { Plus, Minus, ShoppingBag, X, Loader2, ArrowLeft, ArrowRight, Phone, User, Package, MapPin, CreditCard } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -79,6 +90,14 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Cobrança via PDVV2PaymentDialog (apenas Retirada)
   const [pickupChargeOpen, setPickupChargeOpen] = useState(false);
+
+  // ===== TEF state (mini seletor inline) =====
+  const [tefCardType, setTefCardType] = useState<'credit' | 'debit' | 'pix'>('credit');
+  const [tefInstallmentMode, setTefInstallmentMode] = useState<'avista' | 'parcelado'>('avista');
+  const [tefInstallments, setTefInstallments] = useState('2');
+  const [tefProcessing, setTefProcessing] = useState(false);
+  const [tefStatus, setTefStatus] = useState('');
+  const tefCancelRef = useRef(false);
 
   const activeProducts = getActiveProducts();
   const productCategories = getCategories();
@@ -394,7 +413,168 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       ? `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood}${deliveryReference ? ` | Ref: ${deliveryReference}` : ''}`
       : '';
 
+    // ===== TEF: dispara gerenciador ANTES de criar o pedido =====
+    // Só ocorre no fluxo direto da etapa 5 (sem override do PDVV2PaymentDialog).
+    const integType = (selectedPM as any)?.integration_type as string | undefined;
+    const isTefPayment = !override && (integType === 'tef_pinpad' || integType === 'tef_smartpos') && !!company?.id;
+    let tefNote = '';
+
+    if (isTefPayment) {
+      const tefPaymentType: 'credit' | 'debit' | 'pix' = tefCardType;
+      const installmentCount = tefCardType === 'debit' || tefCardType === 'pix'
+        ? 1
+        : tefInstallmentMode === 'parcelado'
+          ? Math.max(2, parseInt(tefInstallments) || 2)
+          : 1;
+
+      tefCancelRef.current = false;
+      setTefProcessing(true);
+
+      try {
+        if (integType === 'tef_pinpad') {
+          // ===== PinPad WebService Flow (CRT → polling → CNF) =====
+          setTefStatus('Enviando para PinPad...');
+          const createResult = await sendPinpadPayment(company!.id, {
+            amount: effectiveTotal,
+            paymentType: tefPaymentType,
+            installments: installmentCount,
+            installmentType: 'adm',
+          });
+
+          if (!createResult.success || !createResult.hash) {
+            toast.error(`Erro TEF PinPad: ${createResult.errorMessage || 'Falha ao iniciar transação'}`);
+            setTefProcessing(false);
+            setTefStatus('');
+            setIsSubmitting(false);
+            return;
+          }
+
+          const crtIdentificacao = createResult.identificacao || '';
+          setTefStatus('Aguardando pagamento no PinPad...');
+          let tefCompleted = false;
+
+          for (let i = 0; i < 120 && !tefCompleted; i++) {
+            if (tefCancelRef.current) {
+              toast.info('Operação TEF cancelada pelo operador.');
+              setTefProcessing(false);
+              setTefStatus('');
+              setIsSubmitting(false);
+              return;
+            }
+            await new Promise((r) => setTimeout(r, 1000));
+            const statusResult = await pollPinpadStatus(company!.id, createResult.hash);
+
+            if (statusResult.status === 'processing') {
+              setTefStatus('Processando pagamento no PinPad...');
+            } else if (statusResult.status === 'approved' && statusResult.success) {
+              tefCompleted = true;
+              setTefStatus('Pagamento aprovado!');
+              toast.success(`TEF aprovado! NSU: ${statusResult.nsu}`);
+
+              await confirmPinpadTransaction(company!.id, {
+                identificacao: crtIdentificacao,
+                rede: statusResult.acquirer,
+                nsu: statusResult.nsu,
+                finalizacao: statusResult.finalizacao,
+              });
+
+              const installLabel = tefPaymentType === 'debit'
+                ? ' | Débito'
+                : tefPaymentType === 'pix'
+                  ? ' | Pix'
+                  : installmentCount > 1
+                    ? ` | ${installmentCount}x Cartão ADM`
+                    : ' | Crédito à Vista';
+              const receiptData = statusResult.receiptLines && statusResult.receiptLines.length > 0
+                ? ` | [COMPROVANTE]${statusResult.receiptLines.join('\\n')}[/COMPROVANTE]`
+                : '';
+              tefNote = `TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode || '-'} | ${statusResult.cardBrand || '-'} | ${statusResult.acquirer || '-'}${installLabel}${receiptData}`;
+            } else if (['declined', 'cancelled', 'error'].includes(statusResult.status)) {
+              tefCompleted = true;
+              toast.error(`TEF: ${statusResult.errorMessage || statusResult.operatorMessage || 'Pagamento não aprovado'}`);
+              setTefProcessing(false);
+              setTefStatus('');
+              setIsSubmitting(false);
+              return;
+            }
+          }
+
+          if (!tefCompleted) {
+            toast.warning('Timeout aguardando resposta do PinPad.');
+            setTefProcessing(false);
+            setTefStatus('');
+            setIsSubmitting(false);
+            return;
+          }
+        } else {
+          // ===== SmartPOS (PINPDV) Flow =====
+          const tefIdentifier = `express-${Date.now()}`;
+          setTefStatus('Enviando para maquininha...');
+          const createResult = await sendPaymentToMultiplusCard(company!.id, {
+            amount: effectiveTotal,
+            paymentType: tefPaymentType === 'pix' ? 'credit' : tefPaymentType,
+            installments: installmentCount,
+            identifier: tefIdentifier,
+            description: customerName ? `Express - ${customerName}` : 'Pedido Express',
+          });
+
+          if (!createResult.success) {
+            toast.error(`Erro TEF: ${createResult.errorMessage || 'Falha ao iniciar transação'}`);
+            setTefProcessing(false);
+            setTefStatus('');
+            setIsSubmitting(false);
+            return;
+          }
+
+          setTefStatus('Aguardando pagamento na maquininha...');
+          let tefCompleted = false;
+          for (let i = 0; i < 60 && !tefCompleted; i++) {
+            if (tefCancelRef.current) {
+              await abortMultiplusCardSale(company!.id, tefIdentifier).catch(() => {});
+              toast.info('Operação TEF cancelada pelo operador.');
+              setTefProcessing(false);
+              setTefStatus('');
+              setIsSubmitting(false);
+              return;
+            }
+            await new Promise((r) => setTimeout(r, 2000));
+            const status = await checkMultiplusCardTransactionStatus(company!.id, tefIdentifier);
+            if (status.status === 'approved') {
+              tefCompleted = true;
+              toast.success(`TEF aprovado! NSU: ${status.nsu}`);
+              tefNote = `TEF SmartPOS: NSU ${status.nsu || '-'} | Aut ${status.authorizationCode || '-'} | ${status.cardBrand || '-'} | ${status.acquirer || '-'}`;
+            } else if (['declined', 'cancelled', 'error'].includes(status.status)) {
+              tefCompleted = true;
+              toast.error(`TEF: ${status.errorMessage || 'Pagamento não aprovado'}`);
+              setTefProcessing(false);
+              setTefStatus('');
+              setIsSubmitting(false);
+              return;
+            }
+          }
+          if (!tefCompleted) {
+            toast.warning('Timeout aguardando resposta da maquininha.');
+            setTefProcessing(false);
+            setTefStatus('');
+            setIsSubmitting(false);
+            return;
+          }
+        }
+      } catch (e: any) {
+        console.error('[Express] TEF error:', e);
+        toast.error(`Erro TEF: ${e?.message || 'Erro desconhecido'}`);
+        setTefProcessing(false);
+        setTefStatus('');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setTefProcessing(false);
+      setTefStatus('');
+    }
+
     const noteParts = ['[EXPRESS]', `Pagamento: ${paymentName}`, deliveryTypeLabel];
+    if (tefNote) noteParts.push(tefNote);
     const noteStr = noteParts.join(' | ');
 
     const LANCHERIA_I9_ID_ITEMS = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
@@ -922,6 +1102,70 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   </p>
                 )}
 
+                {/* Mini seletor TEF inline — aparece quando método selecionado é TEF */}
+                {(() => {
+                  const sel = activePaymentMethods.find(m => m.id === paymentMethod) as any;
+                  const integ = sel?.integration_type;
+                  const isTef = integ === 'tef_pinpad' || integ === 'tef_smartpos';
+                  if (!isTef) return null;
+                  return (
+                    <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-3 space-y-3">
+                      <p className="text-xs font-semibold text-primary flex items-center gap-1">
+                        <CreditCard className="w-3 h-3" /> Configuração TEF
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['credit', 'debit', 'pix'] as const).map(t => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setTefCardType(t)}
+                            className={cn(
+                              "px-2 py-2 rounded-md text-xs font-medium border-2 transition-colors",
+                              tefCardType === t ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50"
+                            )}
+                          >
+                            {t === 'credit' ? 'Crédito' : t === 'debit' ? 'Débito' : 'Pix'}
+                          </button>
+                        ))}
+                      </div>
+                      {tefCardType === 'credit' && (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            {(['avista', 'parcelado'] as const).map(m => (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => setTefInstallmentMode(m)}
+                                className={cn(
+                                  "px-2 py-1.5 rounded-md text-xs font-medium border-2 transition-colors",
+                                  tefInstallmentMode === m ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50"
+                                )}
+                              >
+                                {m === 'avista' ? '1x à vista' : 'Parcelado ADM'}
+                              </button>
+                            ))}
+                          </div>
+                          {tefInstallmentMode === 'parcelado' && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs whitespace-nowrap">Parcelas:</Label>
+                              <Input
+                                type="number"
+                                inputMode="numeric"
+                                min={2}
+                                max={12}
+                                value={tefInstallments}
+                                onChange={(e) => setTefInstallments(e.target.value)}
+                                className="h-8 w-20 text-sm"
+                              />
+                              <span className="text-xs text-muted-foreground">(2 a 12)</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Documento fiscal — apenas para Retirada */}
                 {deliveryType === 'retirada' && (
                   <PDVV2DocumentModeSelector
@@ -1018,14 +1262,31 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             )}
           </div>
 
+          {/* TEF status banner */}
+          {tefProcessing && (
+            <div className="mx-2 mt-2 rounded-lg border-2 border-primary bg-primary/10 p-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+                <p className="text-sm font-medium text-primary truncate">{tefStatus || 'Aguardando TEF...'}</p>
+              </div>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => { tefCancelRef.current = true; }}
+              >
+                Cancelar TEF
+              </Button>
+            </div>
+          )}
+
           {/* Navigation */}
           <div className="flex gap-3 pt-4 pb-4 border-t border-border mt-4">
             {step > 1 ? (
-              <Button variant="outline" className="flex-1 gap-2" onClick={goBack}>
+              <Button variant="outline" className="flex-1 gap-2" onClick={goBack} disabled={tefProcessing}>
                 <ArrowLeft className="w-4 h-4" /> Voltar
               </Button>
             ) : (
-              <Button variant="outline" className="flex-1" onClick={() => { resetForm(); onOpenChange(false); }}>
+              <Button variant="outline" className="flex-1" onClick={() => { resetForm(); onOpenChange(false); }} disabled={tefProcessing}>
                 Cancelar
               </Button>
             )}
@@ -1039,8 +1300,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 )}
               </Button>
             ) : (
-              <Button className="flex-1 gap-2" onClick={() => handleSubmit()} disabled={!canGoNext() || isSubmitting}>
-                {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Criando...</> : '✅ Confirmar Pedido'}
+              <Button className="flex-1 gap-2" onClick={() => handleSubmit()} disabled={!canGoNext() || isSubmitting || tefProcessing}>
+                {tefProcessing
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> {tefStatus || 'TEF...'}</>
+                  : isSubmitting
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Criando...</>
+                    : '✅ Confirmar Pedido'}
               </Button>
             )}
           </div>
