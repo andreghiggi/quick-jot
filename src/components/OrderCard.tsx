@@ -528,6 +528,41 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           >
             <Printer className="w-4 h-4" />
           </Button>
+          {hasTefReceipt && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0 h-8 w-8"
+                    onClick={handleReimprimirTef}
+                  >
+                    <Receipt className="w-3.5 h-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Reimprimir comprovante TEF</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {tefInfo?.type === 'pinpad' && !tefAlreadyCancelled && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950 shrink-0 h-8 w-8"
+                    onClick={handleTefEstorno}
+                    disabled={tefEstornoLoading}
+                  >
+                    {tefEstornoLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Estornar TEF e cancelar pedido</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           <Button
             variant="ghost"
             size="icon"
