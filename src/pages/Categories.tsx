@@ -266,6 +266,21 @@ export default function Categories() {
                         {cat.pdvItem === false ? 'Oculta no PDV' : 'Visível no PDV'}
                       </span>
                     </div>
+                    {showPrintDescriptionToggle && (
+                      <div className="relative group">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={cn("h-8 w-8 p-0", !cat.printDescription && "text-muted-foreground/40")}
+                          onClick={() => updateCategory(cat.id, { printDescription: !cat.printDescription })}
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                          {cat.printDescription ? 'Imprime descrição na comanda' : 'Não imprime descrição'}
+                        </span>
+                      </div>
+                    )}
                     {sortMode === 'manual' && (
                       <>
                         <div className="relative group">
