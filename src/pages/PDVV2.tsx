@@ -302,7 +302,7 @@ export default function PDVV2() {
             onValueChange={(v) => setActiveTab(v as 'orders' | 'tables')}
             className="flex-1 flex flex-col overflow-hidden"
           >
-            <div className="px-4 pt-3">
+            <div className="px-4 pt-3 pb-0">
               <TabsList>
                 <TabsTrigger value="orders" className="gap-2">
                   <ClipboardList className="h-4 w-4" />
@@ -341,7 +341,7 @@ export default function PDVV2() {
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-min items-start gap-3 pb-4">
                       {filteredOrders.map((o) => {
                         const ready = o.status === 'ready';
                         const isDel = isDelivery(o);
@@ -372,7 +372,7 @@ export default function PDVV2() {
               </div>
             </TabsContent>
 
-            <TabsContent value="tables" className="flex-1 overflow-hidden mt-0 flex flex-col data-[state=active]:pt-0">
+            <TabsContent value="tables" className="flex-1 overflow-hidden mt-0 flex flex-col data-[state=active]:mt-0">
               <PDVV2TablesSummaryCards
                 occupiedTables={tablesMetrics.occupiedTables}
                 openTabs={tablesMetrics.openTabsCount}
@@ -410,7 +410,7 @@ export default function PDVV2() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-min items-start gap-3 pb-4">
                     {filteredOrders.map((o) => {
                       const ready = o.status === 'ready';
                       const isDel = isDelivery(o);
