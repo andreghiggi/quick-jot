@@ -182,6 +182,9 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
     const observationsHTML = observations.length > 0
       ? `<div class="obs-block">${observations.map(o => `<div class="obs"><span class="obs-text">${o}</span></div>`).join('')}</div>`
       : '';
+    const descriptionHTML = item.description
+      ? `<div class="description">${item.description}</div>`
+      : '';
     const separatorHTML = index < data.items.length - 1 ? '<div class="item-sep">................................</div>' : '';
     return `
       <div class="item">
@@ -189,6 +192,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
           <span class="qty">${item.quantity}x</span>
           <span class="name">${item.productName}</span>
         </div>
+        ${descriptionHTML}
         ${additionalsHTML}
         ${observationsHTML}
       </div>
@@ -237,6 +241,9 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
           letter-spacing: 0.5px;
           -webkit-text-stroke: 0.5px #000;
         }
+
+        /* V2: descrição do produto (opcional, ativada por categoria) */
+        .description { font-size: 9pt; font-style: italic; font-weight: normal; margin: 0.5mm 0 0 4mm; line-height: 1.3; }
 
         /* V2: observação com fundo preto sólido (forçado para impressão) */
         .obs-block { margin: 2mm 0 0 4mm; }
