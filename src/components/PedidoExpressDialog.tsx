@@ -422,6 +422,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       // Enfileira comanda de produção (mesmo padrão do Waiter)
       if (settings.autoPrintProductionTicket && company?.id) {
         try {
+          const LANCHERIA_I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+          const printDescriptionEnabled = company?.id === LANCHERIA_I9_ID;
           const productionItems = cart.flatMap(item => {
             // Build a clean list of additional names (without prices, without group prefix)
             const additionalNames: string[] = [];
@@ -439,10 +441,21 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             const notesParts: string[] = [];
             if (additionalNames.length > 0) notesParts.push(`Adicionais: ${additionalNames.join(', ')}`);
             if (item.notes) notesParts.push(item.notes);
+
+            // Conditional product description (Lancheria da i9 + category opt-in)
+            let description: string | undefined;
+            if (printDescriptionEnabled && item.product.description) {
+              const cat = categories.find((c) => c.name === item.product.category);
+              if (cat?.printDescription) {
+                description = item.product.description;
+              }
+            }
+
             return [{
               productName: item.product.name,
               quantity: item.quantity,
               notes: notesParts.length > 0 ? notesParts.join(' | ') : undefined,
+              description,
             }];
           });
 
