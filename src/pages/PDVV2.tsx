@@ -19,6 +19,7 @@ import { PDVV2StatusFilters, StatusFilter } from '@/components/pdv-v2/PDVV2Statu
 import { PDVV2OrderCard } from '@/components/pdv-v2/PDVV2OrderCard';
 import { OccupiedTab } from '@/components/pdv-v2/PDVV2TablesPanel';
 import { PDVV2TablesGrid } from '@/components/pdv-v2/PDVV2TablesGrid';
+import { PDVV2TablesSummaryCards } from '@/components/pdv-v2/PDVV2TablesSummaryCards';
 import { PDVV2CloseCashDialog, CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
@@ -45,6 +46,8 @@ export default function PDVV2() {
 
   const [showCash, setShowCash] = useState(true);
   const [showRevenue, setShowRevenue] = useState(true);
+  const [showTablesRevenue, setShowTablesRevenue] = useState(true);
+  const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders');
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [closeOpen, setCloseOpen] = useState(false);
   const [newOrderOpen, setNewOrderOpen] = useState(false);
@@ -82,6 +85,30 @@ export default function PDVV2() {
       })),
     [openTabs, getTabTotal]
   );
+
+  // Métricas da aba Mesas — derivado das vendas do caixa atual com notes contendo "Comanda"
+  const tablesMetrics = useMemo(() => {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    let closedToday = 0;
+    let revenueToday = 0;
+    for (const s of sales) {
+      const isFromTab = s.notes?.toLowerCase().includes('comanda');
+      if (!isFromTab) continue;
+      const ts = s.created_at ? new Date(s.created_at).getTime() : 0;
+      if (ts >= startOfDay) {
+        closedToday++;
+        revenueToday += Number(s.final_total) || 0;
+      }
+    }
+    const occupiedTables = occupiedTabs.filter((t) => t.tableNumber != null).length;
+    return {
+      occupiedTables,
+      openTabsCount: occupiedTabs.length,
+      closedToday,
+      revenueToday,
+    };
+  }, [sales, occupiedTabs]);
 
   const cashAmount = (currentRegister?.opening_amount || 0) + totalSales;
   const cashOpen = !!currentRegister;
@@ -264,23 +291,14 @@ export default function PDVV2() {
           onNewOrder={() => setNewOrderOpen(true)}
         />
 
-        <PDVV2SummaryCards
-          pending={counts.pending}
-          preparing={counts.preparing}
-          ready={counts.ready}
-          delivered={counts.delivered}
-          total={counts.all}
-          revenue={revenue}
-          showRevenue={showRevenue}
-          onToggleRevenue={() => setShowRevenue((v) => !v)}
-        />
-
-        <PDVV2StatusFilters active={filter} onChange={setFilter} counts={counts} />
-
-        <div className="flex-1 overflow-hidden px-4 pb-4">
-          {tablesEnabled ? (
-            <Tabs defaultValue="orders" className="h-full flex flex-col">
-              <TabsList className="self-start">
+        {tablesEnabled ? (
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as 'orders' | 'tables')}
+            className="flex-1 flex flex-col overflow-hidden"
+          >
+            <div className="px-4 pt-3">
+              <TabsList>
                 <TabsTrigger value="orders" className="gap-2">
                   <ClipboardList className="h-4 w-4" />
                   Pedidos
@@ -295,8 +313,21 @@ export default function PDVV2() {
                   )}
                 </TabsTrigger>
               </TabsList>
+            </div>
 
-              <TabsContent value="orders" className="flex-1 overflow-hidden mt-3">
+            <TabsContent value="orders" className="flex-1 overflow-hidden mt-3 flex flex-col">
+              <PDVV2SummaryCards
+                pending={counts.pending}
+                preparing={counts.preparing}
+                ready={counts.ready}
+                delivered={counts.delivered}
+                total={counts.all}
+                revenue={revenue}
+                showRevenue={showRevenue}
+                onToggleRevenue={() => setShowRevenue((v) => !v)}
+              />
+              <PDVV2StatusFilters active={filter} onChange={setFilter} counts={counts} />
+              <div className="flex-1 overflow-hidden px-4 pb-4">
                 <ScrollArea className="h-full">
                   {filteredOrders.length === 0 ? (
                     <Card>
@@ -319,39 +350,64 @@ export default function PDVV2() {
                     </div>
                   )}
                 </ScrollArea>
-              </TabsContent>
+              </div>
+            </TabsContent>
 
-              <TabsContent value="tables" className="flex-1 overflow-hidden mt-3">
+            <TabsContent value="tables" className="flex-1 overflow-hidden mt-3 flex flex-col">
+              <PDVV2TablesSummaryCards
+                occupiedTables={tablesMetrics.occupiedTables}
+                openTabs={tablesMetrics.openTabsCount}
+                closedToday={tablesMetrics.closedToday}
+                revenueToday={tablesMetrics.revenueToday}
+                showRevenue={showTablesRevenue}
+                onToggleRevenue={() => setShowTablesRevenue((v) => !v)}
+              />
+              <div className="flex-1 overflow-hidden px-4 pb-4">
                 <ScrollArea className="h-full">
                   <PDVV2TablesGrid tabs={occupiedTabs} onImport={(t) => setImportingTab(t)} />
                 </ScrollArea>
-              </TabsContent>
-            </Tabs>
-          ) : (
-            <ScrollArea className="h-full">
-              {filteredOrders.length === 0 ? (
-                <Card>
-                  <CardContent className="py-16 text-center text-muted-foreground">
-                    Nenhum pedido neste filtro.
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pb-4">
-                  {filteredOrders.map((o) => (
-                    <PDVV2OrderCard
-                      key={o.id}
-                      order={o}
-                      onAdvance={handleAdvance}
-                      onCharge={handleChargeFromOrder}
-                      onChangePayment={handleChangePayment}
-                      paymentOptions={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
-                    />
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          )}
-        </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <>
+            <PDVV2SummaryCards
+              pending={counts.pending}
+              preparing={counts.preparing}
+              ready={counts.ready}
+              delivered={counts.delivered}
+              total={counts.all}
+              revenue={revenue}
+              showRevenue={showRevenue}
+              onToggleRevenue={() => setShowRevenue((v) => !v)}
+            />
+            <PDVV2StatusFilters active={filter} onChange={setFilter} counts={counts} />
+            <div className="flex-1 overflow-hidden px-4 pb-4">
+              <ScrollArea className="h-full">
+                {filteredOrders.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-16 text-center text-muted-foreground">
+                      Nenhum pedido neste filtro.
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pb-4">
+                    {filteredOrders.map((o) => (
+                      <PDVV2OrderCard
+                        key={o.id}
+                        order={o}
+                        onAdvance={handleAdvance}
+                        onCharge={handleChargeFromOrder}
+                        onChangePayment={handleChangePayment}
+                        paymentOptions={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
+                      />
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+          </>
+        )}
       </div>
 
       <PedidoExpressDialog open={newOrderOpen} onOpenChange={setNewOrderOpen} />
