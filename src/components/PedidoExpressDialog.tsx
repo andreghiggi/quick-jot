@@ -438,7 +438,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       deliveryAddress: fullAddress || undefined,
       notes: noteStr,
       items: orderItems,
-      total,
+      total: effectiveTotal,
       status: 'pending',
       origin: 'balcao',
     });
