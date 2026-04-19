@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.24"  # modo compacto v2 estendido para TODAS as lojas no layout v2
+SCRIPT_VERSION = "v8.25"  # suporte a [DESC] no recibo (descrição do produto opt-in por categoria)
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -245,10 +245,26 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
             extras = nome_completo[idx+1:-1].strip()
         
         item_notes = item.get('notes', '')
+
+        # Extrai marcador [DESC]...[/DESC] de notes — ativado apenas quando a loja
+        # injeta esse marcador no item. Para outras lojas, item_notes permanece intacto.
+        item_description = ''
+        if item_notes:
+            desc_match = re.search(r'\[DESC\](.*?)\[/DESC\]', item_notes, flags=re.DOTALL)
+            if desc_match:
+                item_description = desc_match.group(1).strip()
+                # Remove o marcador (e separador residual " | ") do notes original
+                item_notes = re.sub(r'\s*\|\s*\[DESC\].*?\[/DESC\]\s*', '', item_notes, flags=re.DOTALL)
+                item_notes = re.sub(r'\[DESC\].*?\[/DESC\]\s*\|?\s*', '', item_notes, flags=re.DOTALL).strip()
+
         preco_str = f"{preco_total:.2f}".replace('.', ',')
-        
+
         items_html += f'<div class="item">\n'
         items_html += f'  <div class="item-name">{qtd}x {main_name}</div>\n'
+        # Descrição (linha extra entre nome e adicionais/observações). Marcador [DESC]
+        # é interpretado pelo GDI; outras lojas nunca injetam esse marcador.
+        if item_description:
+            items_html += f'  <div class="item-desc">[DESC]{item_description}[/DESC]</div>\n'
 
         # Parse extras: "Adicionais: a, b, c" -> lista de adicionais
         adicionais_list = []
@@ -534,6 +550,18 @@ def html_para_texto(html):
             return ''
         return f'\n[OBS]{conteudo}[/OBS]\n'
     text = re.sub(r'<div\s+class="obs"[^>]*>(.*?)</div>', marcar_obs, text, flags=re.DOTALL | re.IGNORECASE)
+
+    # Descrição do produto (opt-in por categoria, hoje exclusivo Lancheria da i9):
+    # <div class="item-desc">[DESC]texto[/DESC]</div>  ->  [DESC]texto[/DESC]
+    def marcar_desc(match):
+        conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
+        # remove marcadores [DESC]/[/DESC] caso já venham — normaliza
+        conteudo = re.sub(r'^\[DESC\]', '', conteudo).strip()
+        conteudo = re.sub(r'\[/DESC\]$', '', conteudo).strip()
+        if not conteudo:
+            return ''
+        return f'\n[DESC]{conteudo}[/DESC]\n'
+    text = re.sub(r'<div\s+class="item-desc"[^>]*>(.*?)</div>', marcar_desc, text, flags=re.DOTALL | re.IGNORECASE)
 
     # Nome do produto V2: fallback caso venha fora do item-header
     def marcar_name(match):
@@ -822,9 +850,39 @@ def imprimir_html(html, order_number):
             m_item = re.match(r'^\[ITEM\](.*?)\|\|\|(.*?)\[/ITEM\]$', stripped)
             m_add = re.match(r'^\[ADD\](.*)\[/ADD\]$', stripped)
             m_obs = re.match(r'^\[OBS\](.*)\[/OBS\]$', stripped)
+            m_desc = re.match(r'^\[DESC\](.*)\[/DESC\]$', stripped)
             m_name = re.match(r'^\[NAME\](.*)\[/NAME\]$', stripped)
             m_cliente = re.match(r'^\[CLIENTE\](.*)\[/CLIENTE\]$', stripped)
             m_sep = (stripped == '[SEP]')
+
+            # Descrição do produto (V1 e V2) — linha em itálico, prefixo "Descrição:"
+            if m_desc:
+                conteudo_desc = m_desc.group(1).strip()
+                texto_desc = f'Descricao: {conteudo_desc}'
+                # Tenta criar fonte itálica leve; cai pra font_regular se falhar
+                try:
+                    font_desc = win32ui.CreateFont({
+                        'name': 'Courier New',
+                        'height': int(font_height * 0.85),
+                        'weight': 400,
+                        'italic': True,
+                    })
+                except Exception:
+                    font_desc = font_regular
+                hDC.SelectObject(font_desc)
+                # quebra com largura levemente maior por causa da fonte menor
+                largura_desc = int(colunas * 1.1)
+                sublinhas_desc = quebrar_linha(texto_desc, largura_desc)
+                garantir_espaco(line_h * len(sublinhas_desc))
+                hDC.SetTextColor(0x000000)
+                hDC.SetBkMode(win32con.TRANSPARENT)
+                for sub in sublinhas_desc:
+                    hDC.TextOut(margin_x, y, sub)
+                    y += line_h
+                hDC.SelectObject(font_normal)
+                i += 1
+                continue
+
 
             if m_sep and is_v2:
                 garantir_espaco(int(line_h * 1.4))
@@ -944,7 +1002,7 @@ def imprimir_html(html, order_number):
                 continue
 
             # Linha normal: remove marcadores residuais e imprime
-            stripped_clean = re.sub(r'\[/?(ADD|OBS|NAME|ITEM|SEP|CLIENTE|BOX_START|BOX_END)\]', '', stripped).replace('|||', ' ').strip()
+            stripped_clean = re.sub(r'\[/?(ADD|OBS|DESC|NAME|ITEM|SEP|CLIENTE|BOX_START|BOX_END)\]', '', stripped).replace('|||', ' ').strip()
             if not stripped_clean:
                 i += 1
                 continue

@@ -101,7 +101,7 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
         <span class="qty">${item.quantity}x</span>
         <span class="name">${item.productName}</span>
       </div>
-      ${item.description ? `<div class="description">${item.description}</div>` : ''}
+      ${item.description ? `<div class="description"><strong>Descrição:</strong> ${item.description}</div>` : ''}
       ${item.notes ? `<div class="notes">→ ${item.notes}</div>` : ''}
     </div>
   `).join('');
@@ -183,7 +183,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
       ? `<div class="obs-block">${observations.map(o => `<div class="obs"><span class="obs-text">${o}</span></div>`).join('')}</div>`
       : '';
     const descriptionHTML = item.description
-      ? `<div class="description">${item.description}</div>`
+      ? `<div class="description"><strong>Descrição:</strong> ${item.description}</div>`
       : '';
     const separatorHTML = index < data.items.length - 1 ? '<div class="item-sep">................................</div>' : '';
     return `
