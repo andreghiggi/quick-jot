@@ -1262,14 +1262,31 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             )}
           </div>
 
+          {/* TEF status banner */}
+          {tefProcessing && (
+            <div className="mx-2 mt-2 rounded-lg border-2 border-primary bg-primary/10 p-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+                <p className="text-sm font-medium text-primary truncate">{tefStatus || 'Aguardando TEF...'}</p>
+              </div>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => { tefCancelRef.current = true; }}
+              >
+                Cancelar TEF
+              </Button>
+            </div>
+          )}
+
           {/* Navigation */}
           <div className="flex gap-3 pt-4 pb-4 border-t border-border mt-4">
             {step > 1 ? (
-              <Button variant="outline" className="flex-1 gap-2" onClick={goBack}>
+              <Button variant="outline" className="flex-1 gap-2" onClick={goBack} disabled={tefProcessing}>
                 <ArrowLeft className="w-4 h-4" /> Voltar
               </Button>
             ) : (
-              <Button variant="outline" className="flex-1" onClick={() => { resetForm(); onOpenChange(false); }}>
+              <Button variant="outline" className="flex-1" onClick={() => { resetForm(); onOpenChange(false); }} disabled={tefProcessing}>
                 Cancelar
               </Button>
             )}
@@ -1283,8 +1300,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 )}
               </Button>
             ) : (
-              <Button className="flex-1 gap-2" onClick={() => handleSubmit()} disabled={!canGoNext() || isSubmitting}>
-                {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Criando...</> : '✅ Confirmar Pedido'}
+              <Button className="flex-1 gap-2" onClick={() => handleSubmit()} disabled={!canGoNext() || isSubmitting || tefProcessing}>
+                {tefProcessing
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> {tefStatus || 'TEF...'}</>
+                  : isSubmitting
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Criando...</>
+                    : '✅ Confirmar Pedido'}
               </Button>
             )}
           </div>
