@@ -287,6 +287,21 @@ export default function PDVV2() {
     await closeRegister(closingAmount, user.id, notes);
   }
 
+  async function handleChangeSalePaymentMethod(saleId: string, paymentMethodId: string) {
+    try {
+      const { error } = await supabase
+        .from('pdv_sales')
+        .update({ payment_method_id: paymentMethodId })
+        .eq('id', saleId);
+      if (error) throw error;
+      toast.success('Forma de pagamento atualizada');
+      await refetchCash();
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao atualizar forma de pagamento');
+    }
+  }
+
   return (
     <PDVV2Layout>
       <div className="flex h-full min-h-0 flex-col">
