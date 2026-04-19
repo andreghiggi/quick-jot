@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
+import {
+  sendPinpadPayment,
+  pollPinpadStatus,
+  confirmPinpadTransaction,
+  cancelPinpadTransaction,
+} from '@/services/pinpadService';
+import {
+  sendPaymentToMultiplusCard,
+  checkMultiplusCardTransactionStatus,
+  abortMultiplusCardSale,
+} from '@/services/multiplusCardService';
 import { Plus, Minus, ShoppingBag, X, Loader2, ArrowLeft, ArrowRight, Phone, User, Package, MapPin, CreditCard } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
