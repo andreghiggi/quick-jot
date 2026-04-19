@@ -42,6 +42,7 @@ export function PDVV2PaymentDialog({
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [discount, setDiscount] = useState('');
+  const [amountReceived, setAmountReceived] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [extraItems, setExtraItems] = useState<ExtraItem[]>([]);
   const [documentMode, setDocumentMode] = useState<DocumentMode>(() => {
@@ -54,6 +55,7 @@ export function PDVV2PaymentDialog({
   const integration = (selectedMethod as any)?.integration_type as string | undefined;
   const isTef = integration === 'tef_pinpad' || integration === 'tef_smartpos';
   const effectiveDocumentMode: DocumentMode = isTef ? 'sale_with_nfce' : documentMode;
+  const isCash = !!selectedMethod && /dinheiro/i.test(selectedMethod.name);
 
   useEffect(() => {
     if (open && activePaymentMethods.length > 0 && !paymentMethodId) {
@@ -64,15 +66,23 @@ export function PDVV2PaymentDialog({
   useEffect(() => {
     if (!open) {
       setDiscount('');
+      setAmountReceived('');
       setSubmitting(false);
       setExtraItems([]);
     }
   }, [open]);
 
+  // Reset valor recebido ao trocar forma de pagamento
+  useEffect(() => {
+    setAmountReceived('');
+  }, [paymentMethodId]);
+
   const extrasTotal = extraItems.reduce((s, it) => s + it.unit_price * it.quantity, 0);
   const grossTotal = total + extrasTotal;
   const discountValue = parseFloat(discount.replace(',', '.')) || 0;
   const finalTotal = Math.max(0, grossTotal - discountValue);
+  const receivedValue = parseFloat(amountReceived.replace(',', '.')) || 0;
+  const change = isCash ? Math.max(0, receivedValue - finalTotal) : 0;
 
   async function handleConfirm() {
     const method = activePaymentMethods.find((m) => m.id === paymentMethodId);
@@ -148,6 +158,32 @@ export function PDVV2PaymentDialog({
               </RadioGroup>
             )}
           </div>
+
+          {isCash && (
+            <div className="space-y-2">
+              <Label>Valor recebido (R$)</Label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                placeholder="0,00"
+                value={amountReceived}
+                onChange={(e) => setAmountReceived(e.target.value)}
+                autoFocus
+              />
+              <div className="rounded-md border p-3 bg-muted/40 flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Troco</span>
+                <span className="text-xl font-bold tabular-nums">
+                  {formatPrice(change)}
+                </span>
+              </div>
+              {receivedValue > 0 && receivedValue < finalTotal && (
+                <p className="text-xs text-destructive">
+                  Valor recebido menor que o total.
+                </p>
+              )}
+            </div>
+          )}
 
           {showDocumentMode && (
             <PDVV2DocumentModeSelector
