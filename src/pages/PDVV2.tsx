@@ -285,7 +285,7 @@ export default function PDVV2() {
 
   return (
     <PDVV2Layout>
-      <div className="flex flex-col h-[calc(100vh-3rem)]">
+      <div className="flex h-full min-h-0 flex-col">
         <PDVV2TopBar
           storeName={company?.name || 'Loja'}
           cashOpen={cashOpen}
@@ -300,7 +300,7 @@ export default function PDVV2() {
           <Tabs
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as 'orders' | 'tables')}
-            className="flex-1 flex flex-col overflow-hidden"
+            className="flex-1 flex min-h-0 flex-col overflow-hidden"
           >
             <div className="px-4 pt-3 pb-0">
               <TabsList>
@@ -320,7 +320,7 @@ export default function PDVV2() {
               </TabsList>
             </div>
 
-            <TabsContent value="orders" className="flex-1 overflow-hidden mt-3 flex flex-col">
+            <TabsContent value="orders" className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
               <PDVV2SummaryCards
                 pending={counts.pending}
                 preparing={counts.preparing}
@@ -370,7 +370,7 @@ export default function PDVV2() {
               </div>
             </TabsContent>
 
-            <TabsContent value="tables" className="flex-1 overflow-hidden !mt-0 flex flex-col data-[state=active]:!mt-0 pt-3">
+            <TabsContent value="tables" className="!mt-0 flex min-h-0 flex-1 flex-col overflow-hidden pt-3 data-[state=active]:!mt-0">
               <PDVV2TablesSummaryCards
                 occupiedTables={tablesMetrics.occupiedTables}
                 openTabs={tablesMetrics.openTabsCount}
