@@ -245,10 +245,26 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
             extras = nome_completo[idx+1:-1].strip()
         
         item_notes = item.get('notes', '')
+
+        # Extrai marcador [DESC]...[/DESC] de notes — ativado apenas quando a loja
+        # injeta esse marcador no item. Para outras lojas, item_notes permanece intacto.
+        item_description = ''
+        if item_notes:
+            desc_match = re.search(r'\[DESC\](.*?)\[/DESC\]', item_notes, flags=re.DOTALL)
+            if desc_match:
+                item_description = desc_match.group(1).strip()
+                # Remove o marcador (e separador residual " | ") do notes original
+                item_notes = re.sub(r'\s*\|\s*\[DESC\].*?\[/DESC\]\s*', '', item_notes, flags=re.DOTALL)
+                item_notes = re.sub(r'\[DESC\].*?\[/DESC\]\s*\|?\s*', '', item_notes, flags=re.DOTALL).strip()
+
         preco_str = f"{preco_total:.2f}".replace('.', ',')
-        
+
         items_html += f'<div class="item">\n'
         items_html += f'  <div class="item-name">{qtd}x {main_name}</div>\n'
+        # Descrição (linha extra entre nome e adicionais/observações). Marcador [DESC]
+        # é interpretado pelo GDI; outras lojas nunca injetam esse marcador.
+        if item_description:
+            items_html += f'  <div class="item-desc">[DESC]{item_description}[/DESC]</div>\n'
 
         # Parse extras: "Adicionais: a, b, c" -> lista de adicionais
         adicionais_list = []
