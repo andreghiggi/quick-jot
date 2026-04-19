@@ -19,6 +19,7 @@ import { PDVV2TopBar } from '@/components/pdv-v2/PDVV2TopBar';
 import { PDVV2SummaryCards } from '@/components/pdv-v2/PDVV2SummaryCards';
 import { PDVV2StatusFilters, StatusFilter } from '@/components/pdv-v2/PDVV2StatusFilters';
 import { OrderCard } from '@/components/OrderCard';
+import { PDVV2OrderOriginBadge } from '@/components/pdv-v2/PDVV2OrderOriginBadge';
 import { OccupiedTab } from '@/components/pdv-v2/PDVV2TablesPanel';
 import { PDVV2TablesGrid } from '@/components/pdv-v2/PDVV2TablesGrid';
 import { PDVV2TablesSummaryCards } from '@/components/pdv-v2/PDVV2TablesSummaryCards';
@@ -46,9 +47,9 @@ export default function PDVV2() {
   const { settings } = useStoreSettings({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
 
-  const [showCash, setShowCash] = useState(true);
-  const [showRevenue, setShowRevenue] = useState(true);
-  const [showTablesRevenue, setShowTablesRevenue] = useState(true);
+  const [showCash, setShowCash] = useState(false);
+  const [showRevenue, setShowRevenue] = useState(false);
+  const [showTablesRevenue, setShowTablesRevenue] = useState(false);
   const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders');
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [closeOpen, setCloseOpen] = useState(false);
@@ -345,25 +346,28 @@ export default function PDVV2() {
                       const ready = o.status === 'ready';
                       const isDel = isDelivery(o);
                       const showCobrar = ready && !isDel;
-                      return (
-                        <div key={o.id} className="space-y-2">
-                          <OrderCard
-                            order={o}
-                            paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
-                            storeName={company?.name}
-                          />
-                          {showCobrar && (
-                            <Button
-                              size="sm"
-                              className="w-full"
-                              onClick={() => handleChargeFromOrder(o)}
-                            >
-                              <CreditCard className="h-4 w-4 mr-1" />
-                              Cobrar
-                            </Button>
-                          )}
-                        </div>
-                      );
+                        return (
+                          <div key={o.id} className="space-y-2">
+                            <div className="flex flex-wrap gap-1">
+                              <PDVV2OrderOriginBadge origin={o.origin} />
+                            </div>
+                            <OrderCard
+                              order={o}
+                              paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
+                              storeName={company?.name}
+                            />
+                            {showCobrar && (
+                              <Button
+                                size="sm"
+                                className="w-full"
+                                onClick={() => handleChargeFromOrder(o)}
+                              >
+                                <CreditCard className="h-4 w-4 mr-1" />
+                                Cobrar
+                              </Button>
+                            )}
+                          </div>
+                        );
                     })}
                   </div>
                 )}
@@ -412,6 +416,9 @@ export default function PDVV2() {
                     const showCobrar = ready && !isDel;
                     return (
                       <div key={o.id} className="space-y-2">
+                        <div className="flex flex-wrap gap-1">
+                          <PDVV2OrderOriginBadge origin={o.origin} />
+                        </div>
                         <OrderCard
                           order={o}
                           paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
