@@ -91,6 +91,14 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Cobrança via PDVV2PaymentDialog (apenas Retirada)
   const [pickupChargeOpen, setPickupChargeOpen] = useState(false);
 
+  // ===== TEF state (mini seletor inline) =====
+  const [tefCardType, setTefCardType] = useState<'credit' | 'debit' | 'pix'>('credit');
+  const [tefInstallmentMode, setTefInstallmentMode] = useState<'avista' | 'parcelado'>('avista');
+  const [tefInstallments, setTefInstallments] = useState('2');
+  const [tefProcessing, setTefProcessing] = useState(false);
+  const [tefStatus, setTefStatus] = useState('');
+  const tefCancelRef = useRef(false);
+
   const activeProducts = getActiveProducts();
   const productCategories = getCategories();
 
