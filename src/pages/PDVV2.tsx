@@ -460,6 +460,7 @@ export default function PDVV2() {
         total={chargeOrder?.total || 0}
         title={`Cobrar pedido #${chargeOrder?.dailyNumber}`}
         showDocumentMode
+        showAddItem={!!chargeOrder && !isDelivery(chargeOrder)}
         onConfirm={confirmChargeOrder}
       />
 
@@ -474,6 +475,7 @@ export default function PDVV2() {
             : `Cobrar Comanda ${importingTab?.tabNumber}`
         }
         showDocumentMode
+        showAddItem
         onConfirm={confirmImportTab}
       />
     </PDVV2Layout>
