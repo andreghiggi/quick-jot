@@ -601,7 +601,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           >
             <Trash2 className="w-4 h-4" />
           </Button>
-          {order.status === 'pending' && (
+          {!isCancelled && order.status === 'pending' && (
             <Button
               size="sm"
               variant={confirmed ? 'outline' : 'secondary'}
@@ -618,7 +618,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               {confirmed ? 'Confirmado' : 'Confirmar'}
             </Button>
           )}
-          {config.next && (
+          {!isCancelled && config.next && (
             <Button 
               size="sm" 
               onClick={handleAdvanceStatus}
