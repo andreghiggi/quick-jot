@@ -341,7 +341,7 @@ export default function PDVV2() {
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-min items-start gap-3 pb-4">
                       {filteredOrders.map((o) => {
                         const ready = o.status === 'ready';
                         const isDel = isDelivery(o);
