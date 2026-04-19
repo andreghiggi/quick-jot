@@ -9,6 +9,8 @@ import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { Order, OrderStatus } from '@/types/order';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -337,16 +339,30 @@ export default function PDVV2() {
                     </Card>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pb-4">
-                      {filteredOrders.map((o) => (
-                        <PDVV2OrderCard
-                          key={o.id}
-                          order={o}
-                          onAdvance={handleAdvance}
-                          onCharge={handleChargeFromOrder}
-                          onChangePayment={handleChangePayment}
-                          paymentOptions={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
-                        />
-                      ))}
+                      {filteredOrders.map((o) => {
+                        const ready = o.status === 'ready';
+                        const isDel = isDelivery(o);
+                        const showCobrar = ready && !isDel;
+                        return (
+                          <div key={o.id} className="space-y-2">
+                            <OrderCard
+                              order={o}
+                              paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
+                              storeName={company?.name}
+                            />
+                            {showCobrar && (
+                              <Button
+                                size="sm"
+                                className="w-full"
+                                onClick={() => handleChargeFromOrder(o)}
+                              >
+                                <CreditCard className="h-4 w-4 mr-1" />
+                                Cobrar
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </ScrollArea>
@@ -392,16 +408,30 @@ export default function PDVV2() {
                   </Card>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pb-4">
-                    {filteredOrders.map((o) => (
-                      <PDVV2OrderCard
-                        key={o.id}
-                        order={o}
-                        onAdvance={handleAdvance}
-                        onCharge={handleChargeFromOrder}
-                        onChangePayment={handleChangePayment}
-                        paymentOptions={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
-                      />
-                    ))}
+                    {filteredOrders.map((o) => {
+                      const ready = o.status === 'ready';
+                      const isDel = isDelivery(o);
+                      const showCobrar = ready && !isDel;
+                      return (
+                        <div key={o.id} className="space-y-2">
+                          <OrderCard
+                            order={o}
+                            paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
+                            storeName={company?.name}
+                          />
+                          {showCobrar && (
+                            <Button
+                              size="sm"
+                              className="w-full"
+                              onClick={() => handleChargeFromOrder(o)}
+                            >
+                              <CreditCard className="h-4 w-4 mr-1" />
+                              Cobrar
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </ScrollArea>
