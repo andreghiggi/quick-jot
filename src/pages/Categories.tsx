@@ -9,14 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen, Pencil, Check, X, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen, Pencil, Check, X, Eye, EyeOff, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 
+const LANCHERIA_I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+
 export default function Categories() {
   const { company } = useAuthContext();
+  const showPrintDescriptionToggle = company?.id === LANCHERIA_I9_ID;
   const {
     categories,
     loading,
@@ -263,6 +266,21 @@ export default function Categories() {
                         {cat.pdvItem === false ? 'Oculta no PDV' : 'Visível no PDV'}
                       </span>
                     </div>
+                    {showPrintDescriptionToggle && (
+                      <div className="relative group">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={cn("h-8 w-8 p-0", !cat.printDescription && "text-muted-foreground/40")}
+                          onClick={() => updateCategory(cat.id, { printDescription: !cat.printDescription })}
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                          {cat.printDescription ? 'Imprime descrição na comanda' : 'Não imprime descrição'}
+                        </span>
+                      </div>
+                    )}
                     {sortMode === 'manual' && (
                       <>
                         <div className="relative group">
