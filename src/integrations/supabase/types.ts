@@ -1148,6 +1148,53 @@ export type Database = {
           },
         ]
       }
+      pinpdv_logs: {
+        Row: {
+          action: string
+          company_id: string | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          http_status: number | null
+          id: string
+          identifier: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+        }
+        Insert: {
+          action: string
+          company_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          http_status?: number | null
+          id?: string
+          identifier?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+        }
+        Update: {
+          action?: string
+          company_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          http_status?: number | null
+          id?: string
+          identifier?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinpdv_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       print_queue: {
         Row: {
           company_id: string
