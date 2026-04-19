@@ -152,6 +152,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
           total: orderData.total,
           status: orderData.status,
           company_id: orderData.companyId || companyId || null,
+          origin: orderData.origin || 'cardapio',
         })
         .select()
         .single();
