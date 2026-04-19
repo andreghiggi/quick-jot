@@ -169,6 +169,46 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     await deleteOrder(order.id);
   }
 
+  async function handleTefEstorno() {
+    if (!company?.id || !tefInfo) return;
+    if (tefAlreadyCancelled) {
+      toast.error('Esta venda TEF já foi estornada');
+      return;
+    }
+    const confirmMsg = `Estornar transação TEF?\n\nValor: R$ ${order.total.toFixed(2).replace('.', ',')}\nNSU: ${tefInfo.nsu}\nBandeira: ${tefInfo.cardBrand}\n\nO cartão será estornado e o pedido cancelado.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setTefEstornoLoading(true);
+    try {
+      const result = await estornarTefPedido({
+        companyId: company.id,
+        amount: order.total,
+        createdAt: order.createdAt,
+        notes: order.notes,
+      });
+
+      if (result.success && result.cancelledNotes) {
+        toast.success(result.message || 'Estorno aprovado!');
+        // Persiste a marca [CANCELADA] e cancela o pedido
+        await supabase
+          .from('orders')
+          .update({ notes: result.cancelledNotes, status: 'delivered' })
+          .eq('id', order.id);
+        await deleteOrder(order.id);
+      } else {
+        toast.error(result.message || 'Falha no estorno');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro inesperado no estorno');
+    } finally {
+      setTefEstornoLoading(false);
+    }
+  }
+
+  function handleReimprimirTef() {
+    reimprimirComprovanteTef(order.notes, order.orderCode || String(order.dailyNumber || ''));
+  }
+
   function handlePrint() {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
