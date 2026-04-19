@@ -17,10 +17,13 @@ import { PDVV2TopBar } from '@/components/pdv-v2/PDVV2TopBar';
 import { PDVV2SummaryCards } from '@/components/pdv-v2/PDVV2SummaryCards';
 import { PDVV2StatusFilters, StatusFilter } from '@/components/pdv-v2/PDVV2StatusFilters';
 import { PDVV2OrderCard } from '@/components/pdv-v2/PDVV2OrderCard';
-import { PDVV2TablesPanel, OccupiedTab } from '@/components/pdv-v2/PDVV2TablesPanel';
+import { OccupiedTab } from '@/components/pdv-v2/PDVV2TablesPanel';
+import { PDVV2TablesGrid } from '@/components/pdv-v2/PDVV2TablesGrid';
 import { PDVV2CloseCashDialog, CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { ClipboardList, UtensilsCrossed } from 'lucide-react';
 
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
 
@@ -274,36 +277,79 @@ export default function PDVV2() {
 
         <PDVV2StatusFilters active={filter} onChange={setFilter} counts={counts} />
 
-        <div
-          className={`flex-1 overflow-hidden grid gap-4 px-4 pb-4 ${
-            tablesEnabled ? 'grid-cols-1 lg:grid-cols-[1fr,320px]' : 'grid-cols-1'
-          }`}
-        >
-          <ScrollArea className="h-full">
-            {filteredOrders.length === 0 ? (
-              <Card>
-                <CardContent className="py-16 text-center text-muted-foreground">
-                  Nenhum pedido neste filtro.
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pb-4">
-                {filteredOrders.map((o) => (
-                  <PDVV2OrderCard
-                    key={o.id}
-                    order={o}
-                    onAdvance={handleAdvance}
-                    onCharge={handleChargeFromOrder}
-                    onChangePayment={handleChangePayment}
-                    paymentOptions={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
-                  />
-                ))}
-              </div>
-            )}
-          </ScrollArea>
+        <div className="flex-1 overflow-hidden px-4 pb-4">
+          {tablesEnabled ? (
+            <Tabs defaultValue="orders" className="h-full flex flex-col">
+              <TabsList className="self-start">
+                <TabsTrigger value="orders" className="gap-2">
+                  <ClipboardList className="h-4 w-4" />
+                  Pedidos
+                </TabsTrigger>
+                <TabsTrigger value="tables" className="gap-2">
+                  <UtensilsCrossed className="h-4 w-4" />
+                  Mesas
+                  {occupiedTabs.length > 0 && (
+                    <span className="ml-1 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+                      {occupiedTabs.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+              </TabsList>
 
-          {tablesEnabled && (
-            <PDVV2TablesPanel tabs={occupiedTabs} onImport={(t) => setImportingTab(t)} />
+              <TabsContent value="orders" className="flex-1 overflow-hidden mt-3">
+                <ScrollArea className="h-full">
+                  {filteredOrders.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-16 text-center text-muted-foreground">
+                        Nenhum pedido neste filtro.
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pb-4">
+                      {filteredOrders.map((o) => (
+                        <PDVV2OrderCard
+                          key={o.id}
+                          order={o}
+                          onAdvance={handleAdvance}
+                          onCharge={handleChargeFromOrder}
+                          onChangePayment={handleChangePayment}
+                          paymentOptions={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="tables" className="flex-1 overflow-hidden mt-3">
+                <ScrollArea className="h-full">
+                  <PDVV2TablesGrid tabs={occupiedTabs} onImport={(t) => setImportingTab(t)} />
+                </ScrollArea>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <ScrollArea className="h-full">
+              {filteredOrders.length === 0 ? (
+                <Card>
+                  <CardContent className="py-16 text-center text-muted-foreground">
+                    Nenhum pedido neste filtro.
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pb-4">
+                  {filteredOrders.map((o) => (
+                    <PDVV2OrderCard
+                      key={o.id}
+                      order={o}
+                      onAdvance={handleAdvance}
+                      onCharge={handleChargeFromOrder}
+                      onChangePayment={handleChangePayment}
+                      paymentOptions={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
+                    />
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
           )}
         </div>
       </div>
