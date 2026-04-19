@@ -439,7 +439,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             amount: effectiveTotal,
             paymentType: tefPaymentType,
             installments: installmentCount,
-            installmentType: 'adm',
+            installmentType: tefInstallmentType,
           });
 
           if (!createResult.success || !createResult.hash) {
@@ -484,7 +484,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 : tefPaymentType === 'pix'
                   ? ' | Pix'
                   : installmentCount > 1
-                    ? ` | ${installmentCount}x Cartão ADM`
+                    ? ` | ${installmentCount}x Cartão ${tefInstallmentType === 'loja' ? 'LOJA' : 'ADM'}`
                     : ' | Crédito à Vista';
               const receiptData = statusResult.receiptLines && statusResult.receiptLines.length > 0
                 ? ` | [COMPROVANTE]${statusResult.receiptLines.join('\\n')}[/COMPROVANTE]`
@@ -1129,8 +1129,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                       </div>
                       {tefCardType === 'credit' && (
                         <div className="space-y-2">
-                          <div className="grid grid-cols-2 gap-2">
-                            {(['avista', 'parcelado'] as const).map(m => (
+                          <div className="grid grid-cols-3 gap-2">
+                            {(['avista', 'loja', 'adm'] as const).map(m => (
                               <button
                                 key={m}
                                 type="button"
@@ -1140,11 +1140,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                                   tefInstallmentMode === m ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50"
                                 )}
                               >
-                                {m === 'avista' ? '1x à vista' : 'Parcelado ADM'}
+                                {m === 'avista' ? '1x à vista' : m === 'loja' ? 'Parc. LOJA' : 'Parc. ADM'}
                               </button>
                             ))}
                           </div>
-                          {tefInstallmentMode === 'parcelado' && (
+                          {tefInstallmentMode !== 'avista' && (
                             <div className="flex items-center gap-2">
                               <Label className="text-xs whitespace-nowrap">Parcelas:</Label>
                               <Input
