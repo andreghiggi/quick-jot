@@ -182,7 +182,8 @@ serve(async (req) => {
 
       if (installments && installments > 1) {
         fields['800-002'] = '1'; // Parcelado
-        fields['800-003'] = params.installmentType === 'adm' ? '2' : '1';
+        // Guia Multiplus: 0 = Parcelado ADM (juros do cliente) | 1 = Parcelado Loja (juros da loja)
+        fields['800-003'] = params.installmentType === 'adm' ? '0' : '1';
         fields['800-004'] = String(installments);
       } else if (paymentType !== undefined) {
         fields['800-002'] = '0'; // À vista
