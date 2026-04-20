@@ -535,6 +535,8 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
 
+    // (unreachable — kept for reference)
+
   } catch (error) {
     console.error('[TEF-WS] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
