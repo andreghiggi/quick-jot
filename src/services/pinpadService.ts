@@ -314,3 +314,24 @@ export async function reversePinpadTransaction(
     return { success: false, errorMessage: error instanceof Error ? error.message : 'Erro desconhecido' };
   }
 }
+
+// RPR - Reimpressão do último comprovante TEF
+export async function reprintLastReceipt(
+  companyId: string,
+): Promise<{ success: boolean; hash?: string; identificacao?: string; errorMessage?: string }> {
+  const config = await getPinpadConfig(companyId);
+  if (!config) return { success: false, errorMessage: 'PinPad não configurado' };
+
+  try {
+    const result = await callTefWebService({
+      action: 'rpr',
+      token: config.token,
+      cnpj: config.cnpj,
+      pdv: config.pdv,
+      identificacao: String(Date.now()),
+    });
+    return result;
+  } catch (error) {
+    return { success: false, errorMessage: error instanceof Error ? error.message : 'Erro desconhecido' };
+  }
+}

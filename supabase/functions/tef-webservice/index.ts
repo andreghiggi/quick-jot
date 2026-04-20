@@ -182,7 +182,8 @@ serve(async (req) => {
 
       if (installments && installments > 1) {
         fields['800-002'] = '1'; // Parcelado
-        fields['800-003'] = params.installmentType === 'adm' ? '2' : '1';
+        // Guia Multiplus: 0 = Parcelado ADM (juros do cliente) | 1 = Parcelado Loja (juros da loja)
+        fields['800-003'] = params.installmentType === 'adm' ? '0' : '1';
         fields['800-004'] = String(installments);
       } else if (paymentType !== undefined) {
         fields['800-002'] = '0'; // À vista
@@ -525,6 +526,54 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, hash: text.trim() }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RPR - Reimpressão do último comprovante (CRT com 800-001 = 8)
+    if (action === 'rpr') {
+      if (!cnpj || !pdv) {
+        return new Response(
+          JSON.stringify({ success: false, errorMessage: 'CNPJ e PDV são obrigatórios' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
+      const ident = params.identificacao || String(Date.now());
+      const fields: Record<string, string> = {
+        '000-000': 'CRT',
+        '001-000': ident,
+        '003-000': '0',
+        '800-001': '8', // Reimpressão de comprovante (último)
+        '800-006': '1', // PinPad
+        '999-999': '0',
+      };
+
+      const conteudo = buildConteudo(fields);
+      console.log('[TEF-WS] RPR CONTEUDO:', conteudo);
+
+      const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
+        method: 'POST',
+        headers: {
+          'CNPJ': cnpj,
+          'PDV': pdv,
+          'TOKEN': token,
+          'CONTEUDO': conteudo,
+        },
+      });
+
+      const text = await response.text();
+      console.log('[TEF-WS] RPR response:', text);
+
+      if (!response.ok || text.startsWith('[ERRO]')) {
+        return new Response(
+          JSON.stringify({ success: false, errorMessage: text || `Erro RPR: ${response.status}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, hash: text.trim(), identificacao: ident }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
