@@ -55,9 +55,9 @@ const ADM_ACTIONS: AdmAction[] = [
   {
     id: 'reprint-last',
     title: 'Reimpressão do Último Comprovante',
-    description: 'Reimprime o último comprovante de venda da adquirente.',
+    description: 'Envia comando direto de reimpressão do último comprovante de venda ao PinPad.',
     icon: FileSpreadsheet,
-    hint: 'No menu do PinPad, selecione "REIMPRESSÃO" → "ÚLTIMO COMPROVANTE".',
+    hint: 'O comando é enviado automaticamente. Aguarde o PinPad imprimir a 2ª via.',
   },
   {
     id: 'transactions-report',
@@ -111,16 +111,29 @@ export default function TefAdm() {
     setRunning(action.id);
     setLastResult(null);
     try {
-      const start = await sendPinpadAdm(company.id);
+      // Reimpressão do último comprovante usa comando direto RPR (CRT 800-001=8)
+      // ao invés do menu ADM genérico.
+      const start =
+        action.id === 'reprint-last'
+          ? await reprintLastReceipt(company.id)
+          : await sendPinpadAdm(company.id);
       if (!start.success || !start.hash) {
-        const msg = start.errorMessage || 'Falha ao iniciar operação ADM no PinPad';
+        const msg =
+          start.errorMessage ||
+          (action.id === 'reprint-last'
+            ? 'Falha ao solicitar reimpressão do último comprovante.'
+            : 'Falha ao iniciar operação ADM no PinPad');
         setLastResult({ actionId: action.id, success: false, message: msg });
         toast.error(msg);
         setRunning(null);
         return;
       }
 
-      toast.info('Menu ADM enviado ao PinPad. Siga as instruções no equipamento.');
+      toast.info(
+        action.id === 'reprint-last'
+          ? 'Reimpressão solicitada. Aguardando confirmação do PinPad...'
+          : 'Menu ADM enviado ao PinPad. Siga as instruções no equipamento.'
+      );
 
       // Aguarda finalização da operação (timeout 2 min)
       let lastStatus: string | null = null;
