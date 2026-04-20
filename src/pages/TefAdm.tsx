@@ -11,6 +11,7 @@ import {
   confirmPinpadTransaction,
   checkPinpadActive,
   isPinpadConfigured,
+  reprintLastReceipt,
 } from '@/services/pinpadService';
 import { useQuery } from '@tanstack/react-query';
 import {
