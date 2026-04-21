@@ -27,7 +27,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.25"  # suporte a [DESC] no recibo (descrição do produto opt-in por categoria)
+SCRIPT_VERSION = "v8.26"  # descrição do produto SOMENTE na comanda de produção (removido do recibo)
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -261,10 +261,10 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
 
         items_html += f'<div class="item">\n'
         items_html += f'  <div class="item-name">{qtd}x {main_name}</div>\n'
-        # Descrição (linha extra entre nome e adicionais/observações). Marcador [DESC]
-        # é interpretado pelo GDI; outras lojas nunca injetam esse marcador.
-        if item_description:
-            items_html += f'  <div class="item-desc">[DESC]{item_description}[/DESC]</div>\n'
+        # NOTA: a descrição do produto NÃO é renderizada no recibo.
+        # Ela aparece apenas na comanda de produção (gerada pelo frontend) quando
+        # a categoria tem "Imprimir descrição" ativo. O marcador [DESC] já foi
+        # extraído acima e removido de item_notes para evitar vazamento.
 
         # Parse extras: "Adicionais: a, b, c" -> lista de adicionais
         adicionais_list = []
