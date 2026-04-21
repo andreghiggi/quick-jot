@@ -261,10 +261,10 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
 
         items_html += f'<div class="item">\n'
         items_html += f'  <div class="item-name">{qtd}x {main_name}</div>\n'
-        # Descrição (linha extra entre nome e adicionais/observações). Marcador [DESC]
-        # é interpretado pelo GDI; outras lojas nunca injetam esse marcador.
-        if item_description:
-            items_html += f'  <div class="item-desc">[DESC]{item_description}[/DESC]</div>\n'
+        # NOTA: a descrição do produto NÃO é renderizada no recibo.
+        # Ela aparece apenas na comanda de produção (gerada pelo frontend) quando
+        # a categoria tem "Imprimir descrição" ativo. O marcador [DESC] já foi
+        # extraído acima e removido de item_notes para evitar vazamento.
 
         # Parse extras: "Adicionais: a, b, c" -> lista de adicionais
         adicionais_list = []
