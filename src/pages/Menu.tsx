@@ -540,6 +540,25 @@ export default function Menu() {
   }
 
   function updateQuantity(index: number, delta: number) {
+    // Lancheria I9: ao aumentar a quantidade de um item que tem grupos de adicionais,
+    // reabrir o seletor de adicionais para que o cliente escolha (item será adicionado como nova linha)
+    const LANCHERIA_I9_ID_QTY = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+    if (delta > 0 && company?.id === LANCHERIA_I9_ID_QTY) {
+      const item = cart[index];
+      if (item) {
+        const groupsForItem = getGroupsForProduct(item.product.id, item.product.category);
+        const hasOptionals = groupsForItem.length > 0 ||
+          (item.product.optionals && item.product.optionals.filter(o => o.active).length > 0);
+        if (hasOptionals) {
+          setShowAddedToCart(false);
+          setSelectedOptionals([]);
+          setSelectedGroupItems({});
+          setItemNotes('');
+          setSelectedProduct(item.product);
+          return;
+        }
+      }
+    }
     setCart((prev) =>
       prev
         .map((item, i) =>
