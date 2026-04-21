@@ -722,13 +722,11 @@ export default function Menu() {
       if (orderError) throw orderError;
 
       // Save order items
-      const LANCHERIA_I9_ID_ITEMS = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-      const printDescriptionEnabledItems = company?.id === LANCHERIA_I9_ID_ITEMS;
       const orderItems = cart.map((item) => {
         // Anexa marcador [DESC] em notes para o auto_printer renderizar a descrição no recibo.
-        // Aplicado APENAS para Lancheria da i9 + categoria com print_description ligado.
+        // Aplicado para qualquer loja em que a categoria do produto tenha print_description ligado.
         let itemNotes = item.notes || null;
-        if (printDescriptionEnabledItems && item.product.description) {
+        if (item.product.description) {
           const cat = categories.find((c) => c.name === item.product.category);
           if (cat?.printDescription) {
             const descMarker = `[DESC]${item.product.description}[/DESC]`;
@@ -794,8 +792,6 @@ export default function Menu() {
         // Send production ticket to print queue if enabled
         if (settings.autoPrintProductionTicket) {
           try {
-            const LANCHERIA_I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-            const printDescriptionEnabled = company?.id === LANCHERIA_I9_ID;
             const productionItems = cart.map((item) => {
               // Build a clean list of additional names (without prices, without group prefix)
               const additionalNames: string[] = [];
@@ -820,9 +816,9 @@ export default function Menu() {
                 notesParts.push(item.notes);
               }
 
-              // Conditional product description (Lancheria da i9 + category opt-in)
+              // Conditional product description (category opt-in via print_description)
               let description: string | undefined;
-              if (printDescriptionEnabled && item.product.description) {
+              if (item.product.description) {
                 const cat = categories.find((c) => c.name === item.product.category);
                 if (cat?.printDescription) {
                   description = item.product.description;

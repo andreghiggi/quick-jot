@@ -551,7 +551,7 @@ def html_para_texto(html):
         return f'\n[OBS]{conteudo}[/OBS]\n'
     text = re.sub(r'<div\s+class="obs"[^>]*>(.*?)</div>', marcar_obs, text, flags=re.DOTALL | re.IGNORECASE)
 
-    # Descrição do produto (opt-in por categoria, hoje exclusivo Lancheria da i9):
+    # Descrição do produto (opt-in por categoria, disponível para todas as lojas):
     # <div class="item-desc">[DESC]texto[/DESC]</div>  ->  [DESC]texto[/DESC]
     def marcar_desc(match):
         conteudo = re.sub(r'<[^>]+>', '', match.group(1)).strip()
