@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '21/04/2026',
+    version: '1.26.26',
+    type: 'feature',
+    description: 'Impressão da descrição do produto liberada para TODAS as lojas. O toggle "Imprimir descrição" volta a aparecer na tela de Categorias para qualquer loja — quando ligado, a descrição do produto sai impressa tanto no recibo do cliente (via marcador [DESC] no auto_printer) quanto na comanda de produção. Antes era exclusivo da Lancheria da i9.',
+  },
+  {
     date: '17/04/2026',
     version: '1.26.25',
     type: 'feature',
