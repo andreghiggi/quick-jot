@@ -15,11 +15,9 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 
-const LANCHERIA_I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-
 export default function Categories() {
   const { company } = useAuthContext();
-  const showPrintDescriptionToggle = company?.id === LANCHERIA_I9_ID;
+  const showPrintDescriptionToggle = true;
   const {
     categories,
     loading,
