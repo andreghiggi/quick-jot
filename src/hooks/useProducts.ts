@@ -350,14 +350,18 @@ export function useProducts(options: UseProductsOptions = {}) {
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= categoryProducts.length) return;
 
-    const currentOrder = (categoryProducts[idx] as any).displayOrder ?? idx;
-    const swapOrder = (categoryProducts[swapIdx] as any).displayOrder ?? swapIdx;
+    // Reorder the array swapping the two items
+    const reordered = [...categoryProducts];
+    [reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]];
 
     try {
-      await Promise.all([
-        supabase.from('products').update({ display_order: swapOrder }).eq('id', categoryProducts[idx].id),
-        supabase.from('products').update({ display_order: currentOrder }).eq('id', categoryProducts[swapIdx].id),
-      ]);
+      // Reassign sequential display_order values for the whole category
+      // This ensures ordering works even when products share the same display_order (e.g. all 0)
+      await Promise.all(
+        reordered.map((p, i) =>
+          supabase.from('products').update({ display_order: i }).eq('id', p.id)
+        )
+      );
       await fetchProducts();
     } catch (error) {
       console.error('Error moving product:', error);
