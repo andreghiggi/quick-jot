@@ -540,10 +540,10 @@ export default function Menu() {
   }
 
   function updateQuantity(index: number, delta: number) {
-    // Lancheria I9: ao aumentar a quantidade de um item que tem grupos de adicionais,
-    // reabrir o seletor de adicionais para que o cliente escolha (item será adicionado como nova linha)
-    const LANCHERIA_I9_ID_QTY = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-    if (delta > 0 && company?.id === LANCHERIA_I9_ID_QTY) {
+    // Ao aumentar a quantidade de um item que tem grupos de adicionais,
+    // reabrir o seletor de adicionais para que o cliente escolha
+    // (o novo item será adicionado como linha separada no carrinho).
+    if (delta > 0) {
       const item = cart[index];
       if (item) {
         const groupsForItem = getGroupsForProduct(item.product.id, item.product.category);
