@@ -5,7 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { stripDescMarkers } from '@/utils/orderNotesDisplay';
+import { parseItemNotes } from '@/utils/orderNotesDisplay';
 import {
   Dialog,
   DialogContent,
@@ -217,13 +217,28 @@ export function OrderDetailDialog({ orderId, open, onOpenChange }: OrderDetailDi
                         </div>
                       ))}
 
-                      {/* Item notes */}
-                      {item.notes && (
-                        <div className="ml-4 text-sm">
-                          <span className="text-muted-foreground">↳ Observação: </span>
-                          <span className="italic text-muted-foreground">{stripDescMarkers(item.notes)}</span>
-                        </div>
-                      )}
+                      {/* Item description (cadastro do produto) e observação (cliente) */}
+                      {(() => {
+                        const { description, observation } = parseItemNotes(item.notes);
+                        return (
+                          <>
+                            {description && (
+                              <div className="ml-4 text-sm">
+                                <span className="text-muted-foreground">↳ </span>
+                                <span className="font-medium">Descrição: </span>
+                                <span className="text-muted-foreground">{description}</span>
+                              </div>
+                            )}
+                            {observation && (
+                              <div className="ml-4 text-sm">
+                                <span className="text-muted-foreground">↳ </span>
+                                <span className="font-medium">Observação: </span>
+                                <span className="italic text-muted-foreground">{observation}</span>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
