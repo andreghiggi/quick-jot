@@ -108,7 +108,7 @@ export function PDVV2PaymentDialog({
     : parseFloat(amountReceived.replace(',', '.')) || 0;
   const change = isCash ? Math.max(0, receivedValue - finalTotal) : 0;
 
-  async function handleConfirm() {
+  async function finalizeConfirm(docMode: DocumentMode, printDocument?: boolean) {
     const method = activePaymentMethods.find((m) => m.id === paymentMethodId);
     if (!method) return;
     setSubmitting(true);
@@ -117,10 +117,27 @@ export function PDVV2PaymentDialog({
       paymentName: method.name,
       discount: discountValue,
       finalTotal,
-      documentMode: effectiveDocumentMode,
+      documentMode: docMode,
       extraItems,
+      printDocument,
     });
     setSubmitting(false);
+  }
+
+  async function handleConfirm() {
+    const method = activePaymentMethods.find((m) => m.id === paymentMethodId);
+    if (!method) return;
+    // I9 + showDocumentMode: abre pop-ups em sequência. TEF força NFC-e e pula pop-up 1.
+    if (isLancheriaI9 && showDocumentMode) {
+      if (isTef) {
+        setPendingDocMode('sale_with_nfce');
+        setPrintChoiceOpen(true);
+      } else {
+        setDocChoiceOpen(true);
+      }
+      return;
+    }
+    await finalizeConfirm(effectiveDocumentMode);
   }
 
   return (
