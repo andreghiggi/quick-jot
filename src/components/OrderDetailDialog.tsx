@@ -5,6 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { stripDescMarkers } from '@/utils/orderNotesDisplay';
 import {
   Dialog,
   DialogContent,
@@ -220,7 +221,7 @@ export function OrderDetailDialog({ orderId, open, onOpenChange }: OrderDetailDi
                       {item.notes && (
                         <div className="ml-4 text-sm">
                           <span className="text-muted-foreground">↳ Observação: </span>
-                          <span className="italic text-muted-foreground">{item.notes}</span>
+                          <span className="italic text-muted-foreground">{stripDescMarkers(item.notes)}</span>
                         </div>
                       )}
                     </div>
