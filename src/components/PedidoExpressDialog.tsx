@@ -1569,12 +1569,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         }}
         companyId={company?.id}
         total={total}
-        title="Cobrar Retirada"
+        title={isLancheriaI9 && step === 5 ? 'Finalizar Pedido' : 'Cobrar Retirada'}
         channel="express"
         cashOnly={isClienteLoja}
         showDocumentMode
         onConfirm={async ({ paymentMethodId, paymentName, finalTotal, discount }) => {
-          await handleSubmit({ paymentMethodId, paymentName, finalTotal, discount });
+          // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
+          // e imprime apenas recibo. Caso contrário (Retirada vinda da etapa 4), mantém fluxo original.
+          const finalizeNow = isLancheriaI9 && step === 5;
+          await handleSubmit({ paymentMethodId, paymentName, finalTotal, discount, finalizeNow });
           setPickupChargeOpen(false);
         }}
       />
