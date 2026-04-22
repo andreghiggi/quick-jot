@@ -334,11 +334,9 @@ export default function PDVV2() {
                     Para acessar a Central PDV e iniciar as vendas, abra o caixa primeiro.
                   </p>
                 </div>
-                <Button asChild size="lg" className="gap-2">
-                  <Link to="/financeiro/caixa">
-                    <Unlock className="h-4 w-4" />
-                    Abrir Caixa
-                  </Link>
+                <Button size="lg" className="gap-2" onClick={() => setOpenCashOpen(true)}>
+                  <Unlock className="h-4 w-4" />
+                  Abrir Caixa
                 </Button>
               </CardContent>
             </Card>
