@@ -476,7 +476,9 @@ export default function PDVV2() {
         amount: finalTotal,
         options: tefOptions,
         description: `Comanda #${fullTab.tab_number} - ${customer}`,
+        onStatus: setTefStatus,
       });
+      setTefStatus('');
       if (!result.success) return;
       tefData = result.tefData;
       tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
