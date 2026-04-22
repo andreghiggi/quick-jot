@@ -1083,12 +1083,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 <Label className="font-bold">Forma de pagamento *</Label>
                 {paymentLoading ? (
                   <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto" />
-                ) : activePaymentMethods.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">Nenhuma forma de pagamento cadastrada.</p>
+                ) : visiblePaymentMethods.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    {isClienteLoja
+                      ? 'Cliente Loja aceita apenas Dinheiro ou PIX. Cadastre uma dessas formas.'
+                      : 'Nenhuma forma de pagamento cadastrada.'}
+                  </p>
                 ) : (
                   <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
                     <div className="grid grid-cols-2 gap-3">
-                      {activePaymentMethods.map(pm => (
+                      {visiblePaymentMethods.map(pm => (
                           <label
                             key={pm.id}
                             className={cn(
@@ -1105,7 +1109,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 )}
                 {isClienteLoja && (
                   <p className="text-xs text-muted-foreground">
-                    🏪 "Cliente Loja" não permite pagamento via TEF.
+                    🏪 "Cliente Loja" aceita apenas Dinheiro ou PIX.
                   </p>
                 )}
 
