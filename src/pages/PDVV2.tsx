@@ -28,6 +28,7 @@ import { PDVV2TablesGrid } from '@/components/pdv-v2/PDVV2TablesGrid';
 import { PDVV2TablesSummaryCards } from '@/components/pdv-v2/PDVV2TablesSummaryCards';
 import { PDVV2CloseCashDialog, CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
+import { PDVV2ClosedTabsDialog, ClosedTabSale } from '@/components/pdv-v2/PDVV2ClosedTabsDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ClipboardList, UtensilsCrossed } from 'lucide-react';
@@ -61,6 +62,7 @@ export default function PDVV2() {
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [importingTab, setImportingTab] = useState<OccupiedTab | null>(null);
+  const [closedTabsOpen, setClosedTabsOpen] = useState(false);
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = {
