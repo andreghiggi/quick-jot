@@ -10,6 +10,7 @@ interface Props {
   revenueToday: number;
   showRevenue: boolean;
   onToggleRevenue: () => void;
+  onOpenClosedTabs?: () => void;
 }
 
 export function PDVV2TablesSummaryCards({
@@ -19,6 +20,7 @@ export function PDVV2TablesSummaryCards({
   revenueToday,
   showRevenue,
   onToggleRevenue,
+  onOpenClosedTabs,
 }: Props) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 pt-0 pb-3">
@@ -42,7 +44,18 @@ export function PDVV2TablesSummaryCards({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card
+        role={onOpenClosedTabs ? 'button' : undefined}
+        tabIndex={onOpenClosedTabs ? 0 : undefined}
+        onClick={onOpenClosedTabs}
+        onKeyDown={(e) => {
+          if (onOpenClosedTabs && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onOpenClosedTabs();
+          }
+        }}
+        className={onOpenClosedTabs ? 'cursor-pointer hover:bg-accent/40 transition-colors' : undefined}
+      >
         <CardContent className="p-3">
           <div className="flex items-center gap-2 text-muted-foreground text-xs">
             <CheckCircle2 className="h-4 w-4" />
