@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
-import { useOrders } from '@/hooks/useOrders';
+import { useOrderContext } from '@/contexts/OrderContext';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { useTabs } from '@/hooks/useTabs';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
@@ -41,7 +41,7 @@ export default function PDVV2() {
   const { isModuleEnabled } = useCompanyModules({ companyId });
   const tablesEnabled = isModuleEnabled('mesas');
 
-  const { orders, updateOrderStatus } = useOrders({ companyId });
+  const { orders, updateOrderStatus } = useOrderContext();
   const { currentRegister, totalSales, sales, closeRegister, addSale, refetch: refetchCash } = useCashRegister({ companyId });
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
