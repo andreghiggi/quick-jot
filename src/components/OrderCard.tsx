@@ -622,14 +622,35 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             <Printer className="w-4 h-4" />
           </Button>
           
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-            onClick={handleDelete}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                title="Excluir pedido"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir pedido?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  O pedido #{order.orderCode || order.dailyNumber} de {order.customerName} será excluído permanentemente. Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           {!isCancelled && order.status === 'pending' && (
             <Button
               size="sm"
