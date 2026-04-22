@@ -367,7 +367,9 @@ export default function PDVV2() {
         amount: finalTotal,
         options: tefOptions,
         description: chargeOrder.customerName ? `Venda - ${chargeOrder.customerName}` : 'Venda PDV',
+        onStatus: setTefStatus,
       });
+      setTefStatus('');
       if (!result.success) return; // toast já exibido pelo helper
       tefData = result.tefData;
       tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
