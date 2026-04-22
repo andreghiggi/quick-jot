@@ -161,10 +161,16 @@ export function PDVV2PaymentDialog({
     if (isLancheriaI9 && showDocumentMode) {
       if (isTef) {
         setPendingDocMode('sale_with_nfce');
-        setPrintChoiceOpen(true);
+        setCpfChoiceOpen(true);
       } else {
         setDocChoiceOpen(true);
       }
+      return;
+    }
+    // Demais empresas: se a venda sair com NFC-e (ou TEF), abrir popup de CPF antes
+    if (effectiveDocumentMode === 'sale_with_nfce' || isTef) {
+      setPendingDocMode('sale_with_nfce');
+      setCpfChoiceOpen(true);
       return;
     }
     await finalizeConfirm(effectiveDocumentMode);
