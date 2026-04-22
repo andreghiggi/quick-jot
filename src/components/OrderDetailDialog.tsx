@@ -5,6 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { stripDescMarkers } from '@/utils/orderNotesDisplay';
 import {
   Dialog,
   DialogContent,
