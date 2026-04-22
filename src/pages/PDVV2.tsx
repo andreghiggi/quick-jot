@@ -28,6 +28,7 @@ import { PDVV2TablesGrid } from '@/components/pdv-v2/PDVV2TablesGrid';
 import { PDVV2TablesSummaryCards } from '@/components/pdv-v2/PDVV2TablesSummaryCards';
 import { PDVV2CloseCashDialog, CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
+import { PDVV2ClosedTabsDialog, ClosedTabSale } from '@/components/pdv-v2/PDVV2ClosedTabsDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ClipboardList, UtensilsCrossed } from 'lucide-react';
@@ -61,6 +62,7 @@ export default function PDVV2() {
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [importingTab, setImportingTab] = useState<OccupiedTab | null>(null);
+  const [closedTabsOpen, setClosedTabsOpen] = useState(false);
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = {
@@ -117,6 +119,20 @@ export default function PDVV2() {
       revenueToday,
     };
   }, [sales, occupiedTabs]);
+
+  // Vendas finalizadas vindas de comandas (caixa atual)
+  const closedTabSales: ClosedTabSale[] = useMemo(() => {
+    return sales
+      .filter((s) => s.notes?.toLowerCase().includes('comanda'))
+      .map((s) => ({
+        id: s.id,
+        final_total: Number(s.final_total) || 0,
+        customer_name: s.customer_name || null,
+        notes: s.notes || null,
+        created_at: s.created_at,
+        payment_method_name: s.payment_method?.name || 'Sem forma',
+      }));
+  }, [sales]);
 
   const cashAmount = (currentRegister?.opening_amount || 0) + totalSales;
   const cashOpen = !!currentRegister;
@@ -447,6 +463,7 @@ export default function PDVV2() {
                 revenueToday={tablesMetrics.revenueToday}
                 showRevenue={showTablesRevenue}
                 onToggleRevenue={() => setShowTablesRevenue((v) => !v)}
+                onOpenClosedTabs={() => setClosedTabsOpen(true)}
               />
               <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
                 <PDVV2TablesGrid tabs={occupiedTabs} onImport={(t) => setImportingTab(t)} />
@@ -544,6 +561,15 @@ export default function PDVV2() {
         showDocumentMode
         showAddItem
         onConfirm={confirmImportTab}
+      />
+
+      <PDVV2ClosedTabsDialog
+        open={closedTabsOpen}
+        onOpenChange={setClosedTabsOpen}
+        sales={closedTabSales}
+        companyId={companyId}
+        paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
+        onSaleDeleted={refetchCash}
       />
 
       <Dialog open={openCashOpen} onOpenChange={setOpenCashOpen}>
