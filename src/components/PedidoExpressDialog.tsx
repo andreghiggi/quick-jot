@@ -1123,8 +1123,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             {/* Step 5: Payment + Resumo Final */}
             {step === 5 && (
               <div className="space-y-4">
-                <Label className="font-bold">Forma de pagamento *</Label>
-                {paymentLoading ? (
+                {/* Lancheria I9: forma de pagamento é definida no pop-up de cobrança
+                    ("Finalizar Pedido"). Para "Enviar para Cozinha" a cobrança ocorre
+                    apenas quando o status virar "Pronto". */}
+                {!isLancheriaI9 && (
+                  <>
+                    <Label className="font-bold">Forma de pagamento *</Label>
+                    {paymentLoading ? (
                   <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto" />
                 ) : visiblePaymentMethods.length === 0 ? (
                   <p className="text-muted-foreground text-center py-4">
@@ -1155,9 +1160,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                     🏪 "Cliente Loja" aceita apenas Dinheiro ou PIX.
                   </p>
                 )}
+                  </>
+                )}
 
                 {/* Mini seletor TEF inline — aparece quando método selecionado é TEF */}
-                {(() => {
+                {!isLancheriaI9 && (() => {
                   const sel = activePaymentMethods.find(m => m.id === paymentMethod) as any;
                   const integ = sel?.integration_type;
                   const isTef = integ === 'tef_pinpad' || integ === 'tef_smartpos';
@@ -1284,6 +1291,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
                     <div className="border-t border-border pt-3 space-y-1">
                       {(() => {
+                        if (isLancheriaI9) return null;
                         const selectedPM = activePaymentMethods.find(m => m.id === paymentMethod);
                         return (
                           <>
