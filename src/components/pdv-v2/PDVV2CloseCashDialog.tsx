@@ -9,7 +9,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronRight } from 'lucide-react';
-import { brl as formatPrice } from './_format';
+import {
+  brl as formatPrice,
+  maskCurrencyInput,
+  parseCurrencyInput,
+  LANCHERIA_I9_COMPANY_ID,
+} from './_format';
 
 export interface CloseCashSale {
   id: string;
@@ -34,6 +39,8 @@ interface PDVV2CloseCashDialogProps {
   paymentMethods?: CloseCashPaymentMethod[];
   onChangeSalePaymentMethod?: (saleId: string, paymentMethodId: string) => Promise<void> | void;
   onConfirm: (closingAmount: number, notes: string) => Promise<void>;
+  /** Quando informado, habilita comportamentos isolados por empresa (ex.: máscara monetária). */
+  companyId?: string;
 }
 
 const ORIGIN_LABEL: Record<CloseCashSale['origin'], string> = {
@@ -52,12 +59,15 @@ export function PDVV2CloseCashDialog({
   paymentMethods = [],
   onChangeSalePaymentMethod,
   onConfirm,
+  companyId,
 }: PDVV2CloseCashDialogProps) {
   const [closingAmount, setClosingAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [reconcile, setReconcile] = useState<Record<string, string>>({});
   const [openOrigin, setOpenOrigin] = useState<CloseCashSale['origin'] | null>(null);
+  // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
+  const useCurrencyMask = companyId === LANCHERIA_I9_COMPANY_ID;
 
   // Group: { [origin]: { [paymentName]: total } }
   const grouped = useMemo(() => {
@@ -92,13 +102,17 @@ export function PDVV2CloseCashDialog({
   }, [sales]);
 
   async function handleConfirm() {
-    const v = parseFloat(closingAmount.replace(',', '.')) || 0;
+    const v = useCurrencyMask
+      ? parseCurrencyInput(closingAmount)
+      : parseFloat(closingAmount.replace(',', '.')) || 0;
     setSubmitting(true);
 
     // Build reconciliation note
     const reconcileLines: string[] = [];
     for (const [pay, declared] of Object.entries(declaredByPayment)) {
-      const informed = parseFloat((reconcile[pay] || '').replace(',', '.')) || 0;
+      const informed = useCurrencyMask
+        ? parseCurrencyInput(reconcile[pay] || '')
+        : parseFloat((reconcile[pay] || '').replace(',', '.')) || 0;
       const diff = informed - declared;
       reconcileLines.push(
         `${pay}: declarado ${formatPrice(declared)} | informado ${formatPrice(informed)} | diferença ${formatPrice(diff)}`
@@ -193,7 +207,9 @@ export function PDVV2CloseCashDialog({
                     Informe o valor que você realmente recebeu em cada forma para validar divergências.
                   </p>
                   {Object.entries(declaredByPayment).map(([pay, declared]) => {
-                    const informed = parseFloat((reconcile[pay] || '').replace(',', '.')) || 0;
+                    const informed = useCurrencyMask
+                      ? parseCurrencyInput(reconcile[pay] || '')
+                      : parseFloat((reconcile[pay] || '').replace(',', '.')) || 0;
                     const diff = informed - declared;
                     const hasInput = (reconcile[pay] || '').length > 0;
                     return (
@@ -205,14 +221,19 @@ export function PDVV2CloseCashDialog({
                           </p>
                         </div>
                         <Input
-                          type="number"
+                          type={useCurrencyMask ? 'text' : 'number'}
                           inputMode="decimal"
-                          step="0.01"
-                          placeholder="Informado"
+                          step={useCurrencyMask ? undefined : '0.01'}
+                          placeholder={useCurrencyMask ? 'R$ 0,00' : 'Informado'}
                           className="w-32"
                           value={reconcile[pay] || ''}
                           onChange={(e) =>
-                            setReconcile((s) => ({ ...s, [pay]: e.target.value }))
+                            setReconcile((s) => ({
+                              ...s,
+                              [pay]: useCurrencyMask
+                                ? maskCurrencyInput(e.target.value)
+                                : e.target.value,
+                            }))
                           }
                         />
                         <span
@@ -237,12 +258,16 @@ export function PDVV2CloseCashDialog({
               <div className="space-y-2">
                 <Label>Valor real contado em caixa</Label>
                 <Input
-                  type="number"
+                  type={useCurrencyMask ? 'text' : 'number'}
                   inputMode="decimal"
-                  step="0.01"
-                  placeholder="0,00"
+                  step={useCurrencyMask ? undefined : '0.01'}
+                  placeholder={useCurrencyMask ? 'R$ 0,00' : '0,00'}
                   value={closingAmount}
-                  onChange={(e) => setClosingAmount(e.target.value)}
+                  onChange={(e) =>
+                    setClosingAmount(
+                      useCurrencyMask ? maskCurrencyInput(e.target.value) : e.target.value,
+                    )
+                  }
                 />
               </div>
 

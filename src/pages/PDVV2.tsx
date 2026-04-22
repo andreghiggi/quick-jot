@@ -464,6 +464,7 @@ export default function PDVV2() {
       <PDVV2CloseCashDialog
         open={closeOpen}
         onOpenChange={setCloseOpen}
+        companyId={companyId}
         expectedAmount={cashAmount}
         sales={closeCashSales}
         paymentMethods={activePaymentMethods.map((p) => ({ id: p.id, name: p.name }))}

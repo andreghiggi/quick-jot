@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
-import { brl as formatPrice } from './_format';
+import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput, LANCHERIA_I9_COMPANY_ID } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
 
@@ -49,6 +49,8 @@ export function PDVV2PaymentDialog({
   const activePaymentMethods = cashOnly
     ? rawActivePaymentMethods.filter((m) => /dinheiro/i.test(m.name))
     : rawActivePaymentMethods;
+  // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
+  const useCurrencyMask = companyId === LANCHERIA_I9_COMPANY_ID;
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [discount, setDiscount] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
@@ -88,9 +90,13 @@ export function PDVV2PaymentDialog({
 
   const extrasTotal = extraItems.reduce((s, it) => s + it.unit_price * it.quantity, 0);
   const grossTotal = total + extrasTotal;
-  const discountValue = parseFloat(discount.replace(',', '.')) || 0;
+  const discountValue = useCurrencyMask
+    ? parseCurrencyInput(discount)
+    : parseFloat(discount.replace(',', '.')) || 0;
   const finalTotal = Math.max(0, grossTotal - discountValue);
-  const receivedValue = parseFloat(amountReceived.replace(',', '.')) || 0;
+  const receivedValue = useCurrencyMask
+    ? parseCurrencyInput(amountReceived)
+    : parseFloat(amountReceived.replace(',', '.')) || 0;
   const change = isCash ? Math.max(0, receivedValue - finalTotal) : 0;
 
   async function handleConfirm() {
@@ -139,12 +145,14 @@ export function PDVV2PaymentDialog({
           <div className="space-y-2">
             <Label>Desconto (R$)</Label>
             <Input
-              type="number"
+              type={useCurrencyMask ? 'text' : 'number'}
               inputMode="decimal"
-              step="0.01"
-              placeholder="0,00"
+              step={useCurrencyMask ? undefined : '0.01'}
+              placeholder={useCurrencyMask ? 'R$ 0,00' : '0,00'}
               value={discount}
-              onChange={(e) => setDiscount(e.target.value)}
+              onChange={(e) =>
+                setDiscount(useCurrencyMask ? maskCurrencyInput(e.target.value) : e.target.value)
+              }
             />
           </div>
 
@@ -172,12 +180,16 @@ export function PDVV2PaymentDialog({
             <div className="space-y-2">
               <Label>Valor recebido (R$)</Label>
               <Input
-                type="number"
+                type={useCurrencyMask ? 'text' : 'number'}
                 inputMode="decimal"
-                step="0.01"
-                placeholder="0,00"
+                step={useCurrencyMask ? undefined : '0.01'}
+                placeholder={useCurrencyMask ? 'R$ 0,00' : '0,00'}
                 value={amountReceived}
-                onChange={(e) => setAmountReceived(e.target.value)}
+                onChange={(e) =>
+                  setAmountReceived(
+                    useCurrencyMask ? maskCurrencyInput(e.target.value) : e.target.value,
+                  )
+                }
                 autoFocus
               />
               <div className="rounded-md border p-3 bg-muted/40 flex items-center justify-between">
