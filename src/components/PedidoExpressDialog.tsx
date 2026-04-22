@@ -1164,7 +1164,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 )}
 
                 {/* Mini seletor TEF inline — aparece quando método selecionado é TEF */}
-                {(() => {
+                {!isLancheriaI9 && (() => {
                   const sel = activePaymentMethods.find(m => m.id === paymentMethod) as any;
                   const integ = sel?.integration_type;
                   const isTef = integ === 'tef_pinpad' || integ === 'tef_smartpos';
