@@ -380,6 +380,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
   const isClienteLoja = customerName === 'Cliente Loja';
 
+  // Cliente Loja: aceita apenas Dinheiro ou PIX (não pode TEF/Máquina/Crédito/Débito)
+  const visiblePaymentMethods = isClienteLoja
+    ? activePaymentMethods.filter((pm: any) => {
+        const integ = pm?.integration_type;
+        if (integ === 'tef_pinpad' || integ === 'tef_smartpos') return false;
+        return /dinheiro|pix/i.test(pm.name);
+      })
+    : activePaymentMethods;
+
   function goNext() {
     if (!canGoNext()) return;
     if (step === 3 && isClienteLoja) {
