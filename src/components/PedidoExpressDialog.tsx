@@ -1215,8 +1215,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   );
                 })()}
 
-                {/* Documento fiscal — apenas para Retirada */}
-                {deliveryType === 'retirada' && (
+                {/* Documento fiscal — apenas para Retirada.
+                    Lancheria I9: oculto aqui; aparece como pop-up apenas no fluxo
+                    "Finalizar Pedido" (mesmo padrão do fechamento de comanda). */}
+                {deliveryType === 'retirada' && !isLancheriaI9 && (
                   <PDVV2DocumentModeSelector
                     companyId={company?.id}
                     value={documentMode}
