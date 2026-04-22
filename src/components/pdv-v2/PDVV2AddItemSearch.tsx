@@ -10,7 +10,8 @@ import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { Product, ProductOptional } from '@/types/product';
-import { brl as formatPrice } from './_format';
+import { brl as formatPrice, LANCHERIA_I9_COMPANY_ID } from './_format';
+import { PDVV2CategoryBrowser } from './PDVV2CategoryBrowser';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -33,6 +34,7 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
   const { products, loading } = useProducts({ companyId });
   const { categories } = useCategories({ companyId });
   const { groups: optionalGroups } = useOptionalGroups({ companyId });
+  const isLancheriaI9 = companyId === LANCHERIA_I9_COMPANY_ID;
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -244,7 +246,17 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
             </div>
           )}
 
-          {open && !selectedProduct && (
+          {open && !selectedProduct && isLancheriaI9 && (
+            // I9: navegador estilo cardápio público (categorias com foto → subcategorias → produtos)
+            <PDVV2CategoryBrowser
+              companyId={companyId}
+              pdvOnly
+              onProductSelect={pickProduct}
+              maxHeightClassName="max-h-[55vh]"
+            />
+          )}
+
+          {open && !selectedProduct && !isLancheriaI9 && (
             <div className="space-y-2">
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
