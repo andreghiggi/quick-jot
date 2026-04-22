@@ -676,14 +676,16 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             <Button 
               size="sm" 
               onClick={handleAdvanceStatus}
-              disabled={advancing || (order.status === 'pending' && !confirmed)}
+              disabled={advancing || (order.status === 'pending' && !confirmed) || disableAdvance}
+              title={disableAdvance ? disableAdvanceReason : undefined}
               className={cn(
                 "gap-1 shrink-0 px-3 inline-flex items-center",
                 order.status === 'pending' && !confirmed
                   ? "opacity-50 cursor-not-allowed bg-gray-400 text-white hover:bg-gray-400"
                   : order.status === 'pending' && confirmed
                     ? "bg-red-600 hover:bg-red-700 text-white"
-                    : ""
+                    : "",
+                disableAdvance && "opacity-50 cursor-not-allowed"
               )}
             >
               {advancing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
