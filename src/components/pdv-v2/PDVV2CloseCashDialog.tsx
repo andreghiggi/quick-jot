@@ -153,7 +153,7 @@ export function PDVV2CloseCashDialog({
             <DialogTitle>Fechar Caixa</DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 pr-3">
+          <ScrollArea className="flex-1 min-h-0 pr-3">
             <div className="space-y-4 py-2">
               <div className="rounded-md border p-3 bg-muted/40">
                 <p className="text-sm text-muted-foreground">Valor esperado em caixa</p>
@@ -303,7 +303,7 @@ export function PDVV2CloseCashDialog({
             </DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 pr-3">
+          <ScrollArea className="flex-1 min-h-0 pr-3">
             <div className="space-y-2 py-2">
               {openOriginSales.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma venda nesta origem.</p>
