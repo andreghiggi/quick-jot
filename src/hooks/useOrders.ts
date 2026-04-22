@@ -597,22 +597,34 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
   async function deleteOrder(orderId: string): Promise<boolean> {
     try {
+      // Optimistically remove from local state for instant UI feedback
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+      // Invalidate dedupe cache so the next fetch always re-renders
+      prevOrdersJsonRef.current = '';
+
       // Delete order items first
       const { error: itemsError } = await supabase
         .from('order_items')
         .delete()
         .eq('order_id', orderId);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        await fetchOrders(); // revert
+        throw itemsError;
+      }
 
       const { error: orderError } = await supabase
         .from('orders')
         .delete()
         .eq('id', orderId);
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        await fetchOrders(); // revert
+        throw orderError;
+      }
 
-      await fetchOrders();
+      // Background sync (no need to await for UI feedback)
+      fetchOrders();
       return true;
     } catch (error) {
       console.error('Error deleting order:', error);
