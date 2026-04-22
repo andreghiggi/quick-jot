@@ -30,6 +30,8 @@ interface PDVV2PaymentDialogProps {
     finalTotal: number;
     documentMode: DocumentMode;
     extraItems: ExtraItem[];
+    /** I9: usuário escolheu imprimir o documento gerado neste pop-up */
+    printDocument?: boolean;
   }) => Promise<void> | void;
 }
 
