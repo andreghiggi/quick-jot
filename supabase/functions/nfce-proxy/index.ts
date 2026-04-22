@@ -102,12 +102,17 @@ Deno.serve(async (req) => {
         // Without this block the API emits as "consumidor não identificado".
         if (payload.destinatario && (payload.destinatario.cpf || payload.destinatario.cnpj)) {
           const dest = payload.destinatario
-          emitPayload.destinatario = {
-            ...(dest.cpf ? { CPF: dest.cpf } : {}),
-            ...(dest.cnpj ? { CNPJ: dest.cnpj } : {}),
-            ...(dest.nome ? { xNome: dest.nome } : {}),
-            indIEDest: '9', // Não contribuinte
-          }
+          // ORDEM CRÍTICA: o XML NF-e exige <CNPJ|CPF|idEstrangeiro> ANTES de <xNome>.
+          // Algumas APIs (fiscal-api) preservam a ordem do JSON ao montar o XML, então
+          // colocamos CPF/CNPJ primeiro e nunca enviamos xNome sem documento.
+          // Em homologação, a SEFAZ rejeita nomes reais → omitimos xNome para evitar 422.
+          const destOrdered: Record<string, string> = {}
+          if (dest.cnpj) destOrdered.CNPJ = dest.cnpj
+          else if (dest.cpf) destOrdered.CPF = dest.cpf
+          destOrdered.indIEDest = '9' // Não contribuinte
+          // Só inclui xNome se houver documento E nome (e mesmo assim, opcional)
+          // A API Fiscal estava gerando XML inválido ao receber xNome → omitimos por padrão
+          emitPayload.destinatario = destOrdered
           console.log('[nfce-proxy] Destinatário identificado:', JSON.stringify(emitPayload.destinatario))
         } else {
           // Garante que nada sobre dest vá para a API: evita XML inválido
