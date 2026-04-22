@@ -102,13 +102,17 @@ export function PDVV2CloseCashDialog({
   }, [sales]);
 
   async function handleConfirm() {
-    const v = parseFloat(closingAmount.replace(',', '.')) || 0;
+    const v = useCurrencyMask
+      ? parseCurrencyInput(closingAmount)
+      : parseFloat(closingAmount.replace(',', '.')) || 0;
     setSubmitting(true);
 
     // Build reconciliation note
     const reconcileLines: string[] = [];
     for (const [pay, declared] of Object.entries(declaredByPayment)) {
-      const informed = parseFloat((reconcile[pay] || '').replace(',', '.')) || 0;
+      const informed = useCurrencyMask
+        ? parseCurrencyInput(reconcile[pay] || '')
+        : parseFloat((reconcile[pay] || '').replace(',', '.')) || 0;
       const diff = informed - declared;
       reconcileLines.push(
         `${pay}: declarado ${formatPrice(declared)} | informado ${formatPrice(informed)} | diferença ${formatPrice(diff)}`
