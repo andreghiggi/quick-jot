@@ -1291,6 +1291,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
                     <div className="border-t border-border pt-3 space-y-1">
                       {(() => {
+                        if (isLancheriaI9) return null;
                         const selectedPM = activePaymentMethods.find(m => m.id === paymentMethod);
                         return (
                           <>
