@@ -109,6 +109,11 @@ export default function PDVV2() {
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [importingTab, setImportingTab] = useState<OccupiedTab | null>(null);
   const [closedTabsOpen, setClosedTabsOpen] = useState(false);
+  // NFC-e pós-venda (mesmo padrão do PDV V1: polling visível + ação do operador)
+  const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
+  const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
+  const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
+  const [pendingPostSale, setPendingPostSale] = useState<null | (() => void | Promise<void>)>(null);
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = {
