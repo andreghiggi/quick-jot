@@ -1742,13 +1742,45 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         channel="express"
         cashOnly={isClienteLoja}
         showDocumentMode
-        onConfirm={async ({ paymentMethodId, paymentName, finalTotal, discount }) => {
+        onConfirm={async ({
+          paymentMethodId,
+          paymentName,
+          finalTotal,
+          discount,
+          documentMode: dm,
+          printDocument,
+          tefOptions,
+          tefIntegration,
+          customerDocument,
+        }) => {
           // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
           // e imprime apenas recibo. Caso contrário (Retirada vinda da etapa 4), mantém fluxo original.
           const finalizeNow = isLancheriaI9 && step === 5;
-          await handleSubmit({ paymentMethodId, paymentName, finalTotal, discount, finalizeNow });
+          await handleSubmit({
+            paymentMethodId,
+            paymentName,
+            finalTotal,
+            discount,
+            finalizeNow,
+            documentMode: dm,
+            printDocument,
+            tefOptions,
+            tefIntegration,
+            customerDocument,
+          });
           setPickupChargeOpen(false);
         }}
+      />
+
+      {/* NFC-e — pop-up de status pós-venda (mesmo padrão do PDV V2) */}
+      <PDVV2NFCePostSaleDialog
+        open={nfceDialogOpen}
+        onOpenChange={(o) => {
+          setNfceDialogOpen(o);
+          if (!o) setNfceRecord(null);
+        }}
+        record={nfceRecord}
+        autoPrint={nfceAutoPrint}
       />
     </>
   );
