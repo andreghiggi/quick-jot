@@ -232,7 +232,7 @@ export function PDVV2PaymentDialog({
             </div>
           )}
 
-          {showDocumentMode && (
+          {showDocumentMode && !isLancheriaI9 && (
             <PDVV2DocumentModeSelector
               companyId={companyId}
               value={documentMode}
