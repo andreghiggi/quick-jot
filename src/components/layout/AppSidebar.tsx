@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 import { cn } from '@/lib/utils';
 import {
   Sidebar,
@@ -52,6 +53,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, profile, company, signOut, isSuperAdmin, isWaiter, isCompanyAdmin } = useAuthContext();
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
 
   // Waiter-only menu
   const waiterMenuItems = [
@@ -63,11 +65,17 @@ export function AppSidebar() {
   ];
 
   const mainMenuItems = [
-    {
-      title: 'Dashboard',
-      icon: LayoutDashboard,
-      href: '/',
-    },
+    pdvV2Enabled
+      ? {
+          title: 'PDV',
+          icon: Monitor,
+          href: '/pdv-v2',
+        }
+      : {
+          title: 'Dashboard',
+          icon: LayoutDashboard,
+          href: '/',
+        },
     {
       title: 'Pedidos',
       icon: ShoppingBag,
@@ -103,7 +111,7 @@ export function AppSidebar() {
     },
   ];
 
-  const pdvMenuItems = isModuleEnabled('pdv') ? [
+  const pdvMenuItems = isModuleEnabled('pdv') && !pdvV2Enabled ? [
     {
       title: 'PDV',
       icon: Monitor,
