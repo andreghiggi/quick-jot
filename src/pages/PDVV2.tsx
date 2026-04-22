@@ -331,7 +331,7 @@ export default function PDVV2() {
                   </p>
                 </div>
                 <Button asChild size="lg" className="gap-2">
-                  <Link to="/cash-registers">
+                  <Link to="/financeiro/caixa">
                     <Unlock className="h-4 w-4" />
                     Abrir Caixa
                   </Link>
