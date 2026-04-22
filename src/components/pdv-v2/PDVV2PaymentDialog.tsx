@@ -38,6 +38,8 @@ interface PDVV2PaymentDialogProps {
     tefOptions?: TefOptions;
     /** Tipo de integração TEF detectado (tef_pinpad | tef_smartpos) */
     tefIntegration?: 'tef_pinpad' | 'tef_smartpos';
+    /** CPF/CNPJ do destinatário da NFC-e (apenas dígitos). Opcional. */
+    customerDocument?: string;
   }) => Promise<void> | void;
 }
 
