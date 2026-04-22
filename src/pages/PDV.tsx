@@ -14,6 +14,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { useSubcategories } from '@/hooks/useSubcategories';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { printProductionTicket } from '@/utils/printProductionTicket';
+import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { emitirNFCe, consultarNFCe, reprocessarNFCe, NFCeItem, NFCeTefData, printDanfeFromRecord, NFCeRecord } from '@/services/nfceService';
 import { 
   isMultiplusCardConfigured, 
