@@ -21,6 +21,10 @@ interface PrintTicketData {
   paperSize?: '58mm' | '80mm';
   referenceLabel?: string;
   layout?: PrintLayoutVersion;
+  /** Quando true (layout v2), exibe data/hora de criação e previsão de pronto.
+   *  Previsão = createdAt + readyOffsetMinutes (default 10 min). Usado apenas pela Lancheria I9. */
+  showReadyTime?: boolean;
+  readyOffsetMinutes?: number;
 }
 
 function getPaperWidth(size?: '58mm' | '80mm'): string {
