@@ -463,6 +463,7 @@ export default function PDVV2() {
                 revenueToday={tablesMetrics.revenueToday}
                 showRevenue={showTablesRevenue}
                 onToggleRevenue={() => setShowTablesRevenue((v) => !v)}
+                onOpenClosedTabs={() => setClosedTabsOpen(true)}
               />
               <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
                 <PDVV2TablesGrid tabs={occupiedTabs} onImport={(t) => setImportingTab(t)} />
