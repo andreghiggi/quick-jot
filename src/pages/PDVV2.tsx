@@ -414,6 +414,9 @@ export default function PDVV2() {
             </Card>
           </div>
         ) : tablesEnabled ? (
+          !storageHydrated ? (
+            <div className="flex-1" />
+          ) : (
           <Tabs
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as 'orders' | 'tables')}
@@ -503,6 +506,7 @@ export default function PDVV2() {
               </div>
             </TabsContent>
           </Tabs>
+          )
         ) : (
           <>
             <PDVV2SummaryCards
