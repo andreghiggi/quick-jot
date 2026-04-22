@@ -1123,8 +1123,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             {/* Step 5: Payment + Resumo Final */}
             {step === 5 && (
               <div className="space-y-4">
-                <Label className="font-bold">Forma de pagamento *</Label>
-                {paymentLoading ? (
+                {/* Lancheria I9: forma de pagamento é definida no pop-up de cobrança
+                    ("Finalizar Pedido"). Para "Enviar para Cozinha" a cobrança ocorre
+                    apenas quando o status virar "Pronto". */}
+                {!isLancheriaI9 && (
+                  <>
+                    <Label className="font-bold">Forma de pagamento *</Label>
+                    {paymentLoading ? (
                   <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto" />
                 ) : visiblePaymentMethods.length === 0 ? (
                   <p className="text-muted-foreground text-center py-4">
@@ -1154,6 +1159,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   <p className="text-xs text-muted-foreground">
                     🏪 "Cliente Loja" aceita apenas Dinheiro ou PIX.
                   </p>
+                )}
+                  </>
                 )}
 
                 {/* Mini seletor TEF inline — aparece quando método selecionado é TEF */}
