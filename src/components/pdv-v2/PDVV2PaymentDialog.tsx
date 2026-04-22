@@ -55,6 +55,7 @@ export function PDVV2PaymentDialog({
   showAddItem = false,
   channel = 'pdv',
   cashOnly = false,
+  tefStatus,
   onConfirm,
 }: PDVV2PaymentDialogProps) {
   const { activePaymentMethods: rawActivePaymentMethods } = usePaymentMethods({ companyId, channel });
