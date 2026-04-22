@@ -114,6 +114,8 @@ export default function PDVV2() {
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
   const [pendingPostSale, setPendingPostSale] = useState<null | (() => void | Promise<void>)>(null);
+  // Status do processamento TEF (banner no topo do diálogo de cobrança)
+  const [tefStatus, setTefStatus] = useState('');
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = {
