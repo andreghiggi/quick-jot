@@ -24,6 +24,7 @@ import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
+import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import {
   sendPinpadPayment,
   pollPinpadStatus,
