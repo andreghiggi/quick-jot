@@ -900,7 +900,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   variant="outline"
                   className="w-full"
                   onClick={() => {
-                    setCustomerPhone('(99) 99999-9999');
+                    // Lancheria da I9: telefone "limpo" 99999999999 (sem máscara)
+                    setCustomerPhone(isLancheriaI9 ? '99999999999' : '(99) 99999-9999');
                     setCustomerName('Cliente Loja');
                     setCustomerFound(true);
                     setDeliveryType('retirada');
