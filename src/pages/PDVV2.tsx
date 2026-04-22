@@ -398,6 +398,7 @@ export default function PDVV2() {
           customerName: chargeOrder.customerName,
           shouldPrint: !!printDocument,
           tefData,
+          customerDocument,
         });
         if (!ok) {
           // Falhou ao emitir → fecha como venda comum para não travar o caixa
