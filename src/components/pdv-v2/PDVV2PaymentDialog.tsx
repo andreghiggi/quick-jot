@@ -79,6 +79,7 @@ export function PDVV2PaymentDialog({
   // Pop-ups Lancheria I9: etapa 1 (escolha de documento) → etapa 2 (imprimir?) → confirma
   const [docChoiceOpen, setDocChoiceOpen] = useState(false);
   const [printChoiceOpen, setPrintChoiceOpen] = useState(false);
+  const [cpfChoiceOpen, setCpfChoiceOpen] = useState(false);
   const [pendingDocMode, setPendingDocMode] = useState<DocumentMode>('sale_only');
 
   // Detecta se o método selecionado é TEF — força NFC-e (mesma regra do V1)
@@ -102,6 +103,7 @@ export function PDVV2PaymentDialog({
       setExtraItems([]);
       setDocChoiceOpen(false);
       setPrintChoiceOpen(false);
+      setCpfChoiceOpen(false);
       setTefModality('avista');
       setTefInstallments('2');
       setCustomerDocument('');
