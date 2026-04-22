@@ -448,6 +448,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     discount: number;
     /** I9 — "Finalizar Pedido": cria já como entregue e imprime apenas recibo (sem comanda de produção). */
     finalizeNow?: boolean;
+    /** Documento fiscal escolhido no pop-up de cobrança (I9). */
+    documentMode?: DocumentMode;
+    /** TEF executado pelo PDVV2PaymentDialog (mesma regra do PDV V2). */
+    tefOptions?: TefOptions;
+    tefIntegration?: 'tef_pinpad' | 'tef_smartpos';
+    /** CPF/CNPJ do destinatário da NFC-e (apenas dígitos). */
+    customerDocument?: string;
+    /** I9: usuário escolheu imprimir o documento gerado neste pop-up */
+    printDocument?: boolean;
   }) {
     if (!override && !canGoNext()) return;
     setIsSubmitting(true);
