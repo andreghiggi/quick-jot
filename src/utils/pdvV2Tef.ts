@@ -188,9 +188,11 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
         const installLabel =
           tefPaymentType === 'debit'
             ? ' | Débito'
-            : installmentCount > 1
-              ? ` | ${installmentCount}x Crédito`
-              : ' | Crédito à Vista';
+            : tefPaymentType === 'pix'
+              ? ' | PIX'
+              : installmentCount > 1
+                ? ` | ${installmentCount}x Crédito`
+                : ' | Crédito à Vista';
 
         return {
           success: true,
