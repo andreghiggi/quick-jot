@@ -45,7 +45,7 @@ export default function PDVV2() {
   const tablesEnabled = isModuleEnabled('mesas');
 
   const { orders, updateOrderStatus } = useOrderContext();
-  const { currentRegister, totalSales, sales, closeRegister, addSale, refetch: refetchCash } = useCashRegister({ companyId });
+  const { currentRegister, totalSales, sales, openRegister, closeRegister, addSale, refetch: refetchCash } = useCashRegister({ companyId });
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
@@ -56,6 +56,8 @@ export default function PDVV2() {
   const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders');
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [closeOpen, setCloseOpen] = useState(false);
+  const [openCashOpen, setOpenCashOpen] = useState(false);
+  const [openingAmount, setOpeningAmount] = useState('');
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [importingTab, setImportingTab] = useState<OccupiedTab | null>(null);
