@@ -817,7 +817,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             {/* Step 1: Products — catalog-style browsing */}
             {step === 1 && (
               <div className="space-y-3">
-                {productsLoading || groupsLoading ? (
+                {isLancheriaI9 ? (
+                  // I9: layout idêntico ao cardápio público (categorias em cards com foto → subcategorias → produtos)
+                  <PDVV2CategoryBrowser
+                    companyId={company?.id}
+                    pdvOnly
+                    onProductSelect={handleProductClick}
+                    maxHeightClassName="max-h-[60vh]"
+                  />
+                ) : productsLoading || groupsLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-primary" />
                     <span className="ml-2 text-muted-foreground">Carregando...</span>
