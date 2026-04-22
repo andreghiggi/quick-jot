@@ -135,7 +135,7 @@ export function PDVV2PaymentDialog({
       ? {
           modality: tefModality,
           installments: tefModality === 'parcelado' ? parseInt(tefInstallments) || 2 : undefined,
-          installmentType: 'adm',
+          installmentType: tefInstallmentType,
         }
       : undefined;
     const cleanDoc = customerDocument.replace(/\D/g, '');
