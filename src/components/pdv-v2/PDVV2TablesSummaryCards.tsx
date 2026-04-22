@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, UtensilsCrossed, ClipboardList, CheckCircle2, DollarSign } from 'lucide-react';
+import { Eye, EyeOff, UtensilsCrossed, ClipboardList, CheckCircle2, DollarSign, ArrowRight } from 'lucide-react';
 import { brl as formatPrice } from './_format';
 
 interface Props {
@@ -54,12 +54,24 @@ export function PDVV2TablesSummaryCards({
             onOpenClosedTabs();
           }
         }}
-        className={onOpenClosedTabs ? 'cursor-pointer hover:bg-accent/40 transition-colors' : undefined}
+        className={
+          onOpenClosedTabs
+            ? 'cursor-pointer hover:bg-accent/40 hover:border-primary/40 transition-colors group'
+            : undefined
+        }
       >
         <CardContent className="p-3">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs">
-            <CheckCircle2 className="h-4 w-4" />
-            Comandas Finalizadas
+          <div className="flex items-center justify-between gap-2 text-muted-foreground text-xs">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Comandas Finalizadas
+            </span>
+            {onOpenClosedTabs && (
+              <span className="flex items-center gap-1 text-[11px] font-medium text-primary opacity-80 group-hover:opacity-100">
+                Ver todas
+                <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+              </span>
+            )}
           </div>
           <p className="text-2xl font-bold mt-1 tabular-nums">{closedToday}</p>
         </CardContent>

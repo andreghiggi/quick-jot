@@ -134,20 +134,15 @@ export default function PDVV2() {
     [openTabs, getTabTotal]
   );
 
-  // Métricas da aba Mesas — derivado das vendas do caixa atual com notes contendo "Comanda"
+  // Métricas da aba Mesas — todas as comandas finalizadas do caixa aberto atual
   const tablesMetrics = useMemo(() => {
-    const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
     let closedToday = 0;
     let revenueToday = 0;
     for (const s of sales) {
       const isFromTab = s.notes?.toLowerCase().includes('comanda');
       if (!isFromTab) continue;
-      const ts = s.created_at ? new Date(s.created_at).getTime() : 0;
-      if (ts >= startOfDay) {
-        closedToday++;
-        revenueToday += Number(s.final_total) || 0;
-      }
+      closedToday++;
+      revenueToday += Number(s.final_total) || 0;
     }
     const occupiedTables = occupiedTabs.filter((t) => t.tableNumber != null).length;
     return {
