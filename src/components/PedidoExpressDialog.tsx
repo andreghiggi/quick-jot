@@ -63,6 +63,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [customerFound, setCustomerFound] = useState(false);
   const [searchingCustomer, setSearchingCustomer] = useState(false);
 
+  // Lancheria da I9 — atalho otimizado: pula Telefone/Nome/Entrega ao usar "Cliente Loja"
+  const LANCHERIA_I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const isLancheriaI9 = company?.id === LANCHERIA_I9_ID;
+
   // Cart uses the same CartItem type as the online catalog
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
