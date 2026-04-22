@@ -257,18 +257,20 @@ export default function PDVV2() {
     }
   }
 
-  // Helper compartilhado: emite NFC-e a partir dos itens da venda e, se solicitado,
-  // aguarda a autorização (polling curto) para imprimir o DANFE com QR Code.
-  async function emitAndOptionallyPrintNFCe(args: {
+  // Helper compartilhado: emite NFC-e a partir dos itens da venda e devolve o
+  // registro inicial criado em `nfce_records`. O acompanhamento (polling SEFAZ
+  // + impressão do DANFE) é feito pelo diálogo PDVV2NFCePostSaleDialog —
+  // mesmo padrão usado no PDV V1, garantindo que o operador autorize o fechamento.
+  async function emitNFCeAndOpenDialog(args: {
     saleId: string;
     items: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[];
     discount: number;
     customerName?: string | null;
     shouldPrint: boolean;
     tefData?: NFCeTefData;
-  }) {
+  }): Promise<boolean> {
     const { saleId, items, discount, customerName, shouldPrint, tefData } = args;
-    if (!companyId || !currentRegister) return;
+    if (!companyId || !currentRegister) return false;
     try {
       const nfceItems: NFCeItem[] = items.map((it) => {
         const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
@@ -301,25 +303,23 @@ export default function PDVV2() {
       });
       toast.success('NFC-e enviada para processamento!');
 
-      if (!shouldPrint) return;
+      // Busca o registro recém-criado para abrir o pop-up de status
+      const { data: rec } = await supabase
+        .from('nfce_records')
+        .select('*')
+        .eq('sale_id', saleId)
+        .maybeSingle();
 
-      // Polling curto para imprimir DANFE assim que autorizada (até ~10s)
-      for (let i = 0; i < 10; i++) {
-        await new Promise((r) => setTimeout(r, 1000));
-        try {
-          const rec = await getNFCeRecordBySaleId(saleId);
-          if (rec && (rec.chave_acesso || rec.qrcode_url)) {
-            await printDanfeFromRecord(rec);
-            return;
-          }
-        } catch {
-          /* tenta novamente */
-        }
+      if (rec) {
+        setNfceRecord(rec as unknown as NFCeRecord);
+        setNfceAutoPrint(shouldPrint);
+        setNfceDialogOpen(true);
       }
-      toast.info('NFC-e emitida — imprima manualmente em "Comandas Finalizadas" assim que autorizada.');
+      return true;
     } catch (err: any) {
       console.error('[PDVV2] NFC-e emission error:', err);
       toast.error(`Venda registrada, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
+      return false;
     }
   }
 
