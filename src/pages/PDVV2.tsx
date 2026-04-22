@@ -724,6 +724,8 @@ export default function PDVV2() {
                           paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
                           storeName={company?.name}
                           headerExtra={<PDVV2OrderOriginBadge origin={o.origin} />}
+                          disableAdvance={showCobrar}
+                          disableAdvanceReason="Finalize o pagamento em 'Cobrar' antes de entregar"
                         />
                         {showCobrar && (
                           <Button
