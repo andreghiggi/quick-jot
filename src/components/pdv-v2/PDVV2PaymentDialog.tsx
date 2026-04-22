@@ -417,6 +417,58 @@ export function PDVV2PaymentDialog({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Pop-up CPF/CNPJ na nota — abre antes da emissão da NFC-e */}
+      <Dialog open={cpfChoiceOpen} onOpenChange={setCpfChoiceOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>CPF/CNPJ na nota?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="cpf-cnpj-popup">CPF ou CNPJ do consumidor (opcional)</Label>
+            <Input
+              id="cpf-cnpj-popup"
+              inputMode="numeric"
+              placeholder="Somente números"
+              value={customerDocument}
+              onChange={(e) => setCustomerDocument(e.target.value.replace(/[^\d./-]/g, ''))}
+              maxLength={18}
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              Em branco = NFC-e sem destinatário (consumidor não identificado).
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCustomerDocument('');
+                setCpfChoiceOpen(false);
+                if (isLancheriaI9 && showDocumentMode) {
+                  setPrintChoiceOpen(true);
+                } else {
+                  finalizeConfirm(pendingDocMode);
+                }
+              }}
+            >
+              Sem CPF
+            </Button>
+            <Button
+              onClick={() => {
+                setCpfChoiceOpen(false);
+                if (isLancheriaI9 && showDocumentMode) {
+                  setPrintChoiceOpen(true);
+                } else {
+                  finalizeConfirm(pendingDocMode);
+                }
+              }}
+            >
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
