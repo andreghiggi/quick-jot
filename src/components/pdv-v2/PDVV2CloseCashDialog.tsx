@@ -9,7 +9,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronRight } from 'lucide-react';
-import { brl as formatPrice } from './_format';
+import {
+  brl as formatPrice,
+  maskCurrencyInput,
+  parseCurrencyInput,
+  LANCHERIA_I9_COMPANY_ID,
+} from './_format';
 
 export interface CloseCashSale {
   id: string;
@@ -34,6 +39,8 @@ interface PDVV2CloseCashDialogProps {
   paymentMethods?: CloseCashPaymentMethod[];
   onChangeSalePaymentMethod?: (saleId: string, paymentMethodId: string) => Promise<void> | void;
   onConfirm: (closingAmount: number, notes: string) => Promise<void>;
+  /** Quando informado, habilita comportamentos isolados por empresa (ex.: máscara monetária). */
+  companyId?: string;
 }
 
 const ORIGIN_LABEL: Record<CloseCashSale['origin'], string> = {
@@ -52,12 +59,15 @@ export function PDVV2CloseCashDialog({
   paymentMethods = [],
   onChangeSalePaymentMethod,
   onConfirm,
+  companyId,
 }: PDVV2CloseCashDialogProps) {
   const [closingAmount, setClosingAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [reconcile, setReconcile] = useState<Record<string, string>>({});
   const [openOrigin, setOpenOrigin] = useState<CloseCashSale['origin'] | null>(null);
+  // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
+  const useCurrencyMask = companyId === LANCHERIA_I9_COMPANY_ID;
 
   // Group: { [origin]: { [paymentName]: total } }
   const grouped = useMemo(() => {
