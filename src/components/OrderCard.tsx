@@ -178,7 +178,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   }
 
   async function handleDelete() {
-    await deleteOrder(order.id);
+    console.log('[OrderCard] Excluindo pedido:', order.id, order.orderCode);
+    const ok = await deleteOrder(order.id);
+    if (ok) {
+      toast.success(`Pedido #${order.orderCode || order.dailyNumber} excluído`);
+    }
   }
 
   async function handleTefEstorno() {
