@@ -389,6 +389,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       })
     : activePaymentMethods;
 
+  // Se a forma selecionada não estiver mais visível (ex.: trocou para Cliente Loja após escolher TEF), limpa
+  useEffect(() => {
+    if (paymentMethod && !visiblePaymentMethods.some(m => m.id === paymentMethod)) {
+      setPaymentMethod('');
+    }
+  }, [paymentMethod, visiblePaymentMethods]);
+
   function goNext() {
     if (!canGoNext()) return;
     if (step === 3 && isClienteLoja) {
