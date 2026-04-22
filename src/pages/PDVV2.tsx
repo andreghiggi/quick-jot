@@ -325,7 +325,9 @@ export default function PDVV2() {
     documentMode,
     extraItems,
     printDocument,
-  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean }) {
+    tefOptions,
+    tefIntegration,
+  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean; tefOptions?: TefOptions; tefIntegration?: 'tef_pinpad' | 'tef_smartpos' }) {
     if (!chargeOrder || !user || !currentRegister) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -337,18 +339,35 @@ export default function PDVV2() {
       unit_price: i.price,
     }));
     const items = [...baseItems, ...extraItems.map(({ product_id, product_name, quantity, unit_price }) => ({ product_id, product_name, quantity, unit_price }))];
+
+    // ===== TEF: roda ANTES de criar a venda (igual PDV V1). Aborta se falhar.
+    let tefData: NFCeTefData | undefined;
+    let tefNotesFragment = '';
+    if (tefIntegration && tefOptions && companyId) {
+      const result = await runTefPayment({
+        companyId,
+        integration: tefIntegration,
+        amount: finalTotal,
+        options: tefOptions,
+        description: chargeOrder.customerName ? `Venda - ${chargeOrder.customerName}` : 'Venda PDV',
+      });
+      if (!result.success) return; // toast já exibido pelo helper
+      tefData = result.tefData;
+      tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
+    }
+
     const saleId = await addSale(
       items,
       paymentMethodId,
       user.id,
       discount,
       chargeOrder.customerName,
-      `Pedido #${chargeOrder.dailyNumber} | Pagamento: ${paymentName}`,
+      `Pedido #${chargeOrder.dailyNumber} | Pagamento: ${paymentName}${tefNotesFragment}`,
       chargeOrder.id
     );
     if (saleId) {
-      // NFC-e: emitir quando documentMode === 'sale_with_nfce' e módulo fiscal habilitado
-      const wantsNfce = documentMode === 'sale_with_nfce' && fiscalEnabled && companyId;
+      // NFC-e: TEF força emissão (regra V1). Caso contrário, segue documentMode.
+      const wantsNfce = (tefIntegration ? true : documentMode === 'sale_with_nfce') && fiscalEnabled && companyId;
       if (wantsNfce) {
         await emitAndOptionallyPrintNFCe({
           saleId,
@@ -356,6 +375,7 @@ export default function PDVV2() {
           discount,
           customerName: chargeOrder.customerName,
           shouldPrint: !!printDocument,
+          tefData,
         });
       } else if (printDocument && companyId) {
         const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
