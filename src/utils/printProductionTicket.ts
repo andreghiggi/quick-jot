@@ -22,7 +22,8 @@ interface PrintTicketData {
   referenceLabel?: string;
   layout?: PrintLayoutVersion;
   /** Quando true (layout v2), exibe data/hora de criação e previsão de pronto.
-   *  Previsão = createdAt + readyOffsetMinutes (default 10 min). Usado apenas pela Lancheria I9. */
+   *  Previsão = createdAt + readyOffsetMinutes. Para Lancheria I9 (prazo estimado 20–40 min),
+   *  usar readyOffsetMinutes = 30 (máximo − 10 min). */
   showReadyTime?: boolean;
   readyOffsetMinutes?: number;
 }

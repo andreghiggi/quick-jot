@@ -85,9 +85,9 @@ function buildProductionHtml(payload: PrintPayload, ref: string) {
     createdAt: new Date(),
     paperSize: payload.paperSize || '80mm',
     referenceLabel: ref,
-    // Lancheria I9: imprime data/hora de criação e previsão de pronto (criação + 10 min)
+    // Lancheria I9: prazo estimado 20–40 min → previsão = criação + 30 min (máximo − 10 min)
     showReadyTime: payload.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164',
-    readyOffsetMinutes: 10,
+    readyOffsetMinutes: 30,
   });
 }
 

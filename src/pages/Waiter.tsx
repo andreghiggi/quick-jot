@@ -274,9 +274,9 @@ export default function Waiter() {
           createdAt: new Date(),
           paperSize: storeSettings.printerPaperSize,
           layout: storeSettings.printLayout,
-          // Lancheria I9: imprime data/hora de criação e previsão de pronto (criação + 10 min)
+          // Lancheria I9: prazo estimado 20–40 min → previsão = criação + 30 min (máximo − 10 min)
           showReadyTime: company?.id === '8c9e7a0e-dbb6-49b9-8344-c23155a71164',
-          readyOffsetMinutes: 10,
+          readyOffsetMinutes: 30,
         });
         
         const { error: printError } = await supabase
