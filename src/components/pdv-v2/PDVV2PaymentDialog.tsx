@@ -70,6 +70,7 @@ export function PDVV2PaymentDialog({
   // TEF (mesma UI/regra do PDV V1)
   const [tefModality, setTefModality] = useState<'avista' | 'parcelado' | 'debit'>('avista');
   const [tefInstallments, setTefInstallments] = useState('2');
+  const [tefInstallmentType, setTefInstallmentType] = useState<'adm' | 'loja'>('adm');
   // CPF/CNPJ do consumidor (opcional) — vai para o destinatário da NFC-e
   const [customerDocument, setCustomerDocument] = useState('');
   const [documentMode, setDocumentMode] = useState<DocumentMode>(() => {
