@@ -11,6 +11,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { stripDescMarkers, parseItemNotes } from '@/utils/orderNotesDisplay';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   parseTefDataFromNotes,
   isOrderTefCancelled,
   estornarTefPedido,
@@ -167,7 +178,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   }
 
   async function handleDelete() {
-    await deleteOrder(order.id);
+    console.log('[OrderCard] Excluindo pedido:', order.id, order.orderCode);
+    const ok = await deleteOrder(order.id);
+    if (ok) {
+      toast.success(`Pedido #${order.orderCode || order.dailyNumber} excluído`);
+    }
   }
 
   async function handleTefEstorno() {
@@ -607,14 +622,35 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             <Printer className="w-4 h-4" />
           </Button>
           
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-            onClick={handleDelete}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                title="Excluir pedido"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir pedido?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  O pedido #{order.orderCode || order.dailyNumber} de {order.customerName} será excluído permanentemente. Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           {!isCancelled && order.status === 'pending' && (
             <Button
               size="sm"
