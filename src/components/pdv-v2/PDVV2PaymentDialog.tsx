@@ -329,24 +329,6 @@ export function PDVV2PaymentDialog({
               forceNFCe={isTef}
             />
           )}
-
-          {/* CPF/CNPJ na nota — visível apenas se a venda for sair com NFC-e */}
-          {(effectiveDocumentMode === 'sale_with_nfce' || isTef) && (
-            <div className="space-y-2">
-              <Label htmlFor="cpf-cnpj-nfce">CPF/CNPJ na nota (opcional)</Label>
-              <Input
-                id="cpf-cnpj-nfce"
-                inputMode="numeric"
-                placeholder="Somente números — deixe em branco para consumidor não identificado"
-                value={customerDocument}
-                onChange={(e) => setCustomerDocument(e.target.value.replace(/[^\d./-]/g, ''))}
-                maxLength={18}
-              />
-              <p className="text-xs text-muted-foreground">
-                Em branco = NFC-e sem destinatário (consumidor não identificado).
-              </p>
-            </div>
-          )}
         </div>
 
         <DialogFooter>
