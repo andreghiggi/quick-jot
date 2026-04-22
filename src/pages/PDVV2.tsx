@@ -114,6 +114,8 @@ export default function PDVV2() {
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
   const [pendingPostSale, setPendingPostSale] = useState<null | (() => void | Promise<void>)>(null);
+  // Status do processamento TEF (banner no topo do diálogo de cobrança)
+  const [tefStatus, setTefStatus] = useState('');
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = {
@@ -365,7 +367,9 @@ export default function PDVV2() {
         amount: finalTotal,
         options: tefOptions,
         description: chargeOrder.customerName ? `Venda - ${chargeOrder.customerName}` : 'Venda PDV',
+        onStatus: setTefStatus,
       });
+      setTefStatus('');
       if (!result.success) return; // toast já exibido pelo helper
       tefData = result.tefData;
       tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
@@ -472,7 +476,9 @@ export default function PDVV2() {
         amount: finalTotal,
         options: tefOptions,
         description: `Comanda #${fullTab.tab_number} - ${customer}`,
+        onStatus: setTefStatus,
       });
+      setTefStatus('');
       if (!result.success) return;
       tefData = result.tefData;
       tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
@@ -768,6 +774,7 @@ export default function PDVV2() {
         title={`Cobrar pedido #${chargeOrder?.dailyNumber}`}
         showDocumentMode
         showAddItem={!!chargeOrder && !isDelivery(chargeOrder)}
+        tefStatus={tefStatus}
         onConfirm={confirmChargeOrder}
       />
 
@@ -783,6 +790,7 @@ export default function PDVV2() {
         }
         showDocumentMode
         showAddItem
+        tefStatus={tefStatus}
         onConfirm={confirmImportTab}
       />
 

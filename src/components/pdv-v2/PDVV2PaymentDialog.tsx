@@ -8,7 +8,7 @@ import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput, LANCHERIA_I9_COMPANY_ID } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
-import { Plug } from 'lucide-react';
+import { Plug, Loader2 } from 'lucide-react';
 import type { TefOptions } from '@/utils/pdvV2Tef';
 
 interface PDVV2PaymentDialogProps {
@@ -25,6 +25,8 @@ interface PDVV2PaymentDialogProps {
   channel?: PaymentChannel;
   /** Restringir a apenas formas em dinheiro (oculta TEF e demais) */
   cashOnly?: boolean;
+  /** Mensagem de status do processamento TEF (mostrada como banner topo). Vazio = oculto. */
+  tefStatus?: string;
   onConfirm: (params: {
     paymentMethodId: string;
     paymentName: string;
@@ -53,6 +55,7 @@ export function PDVV2PaymentDialog({
   showAddItem = false,
   channel = 'pdv',
   cashOnly = false,
+  tefStatus,
   onConfirm,
 }: PDVV2PaymentDialogProps) {
   const { activePaymentMethods: rawActivePaymentMethods } = usePaymentMethods({ companyId, channel });
@@ -184,6 +187,16 @@ export function PDVV2PaymentDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
+
+        {tefStatus && (
+          <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin text-primary flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="font-medium text-sm">{tefStatus}</p>
+              <p className="text-xs text-muted-foreground">Operação TEF em andamento. Aguarde a confirmação na maquininha.</p>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4 py-2">
           <div className="rounded-md border p-3 bg-muted/40">
