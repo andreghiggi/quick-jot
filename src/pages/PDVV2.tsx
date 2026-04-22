@@ -774,6 +774,7 @@ export default function PDVV2() {
         title={`Cobrar pedido #${chargeOrder?.dailyNumber}`}
         showDocumentMode
         showAddItem={!!chargeOrder && !isDelivery(chargeOrder)}
+        tefStatus={tefStatus}
         onConfirm={confirmChargeOrder}
       />
 
@@ -789,6 +790,7 @@ export default function PDVV2() {
         }
         showDocumentMode
         showAddItem
+        tefStatus={tefStatus}
         onConfirm={confirmImportTab}
       />
 
