@@ -775,6 +775,26 @@ export default function PDVV2() {
         onSaleDeleted={refetchCash}
       />
 
+      <PDVV2NFCePostSaleDialog
+        open={nfceDialogOpen}
+        onOpenChange={setNfceDialogOpen}
+        companyId={companyId}
+        initialRecord={nfceRecord}
+        autoPrint={nfceAutoPrint}
+        onClosed={async () => {
+          // Executa a ação adiada (fechar comanda / marcar pedido como entregue)
+          if (pendingPostSale) {
+            try {
+              await pendingPostSale();
+            } catch (e) {
+              console.error('[PDVV2] post-sale action error:', e);
+            }
+          }
+          setPendingPostSale(null);
+          setNfceRecord(null);
+        }}
+      />
+
       <Dialog open={openCashOpen} onOpenChange={setOpenCashOpen}>
         <DialogContent>
           <DialogHeader>
