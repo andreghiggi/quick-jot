@@ -13,6 +13,9 @@ import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
+import { useCashRegister } from '@/hooks/useCashRegister';
+import { useTaxRules } from '@/hooks/useTaxRules';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useOrderContext } from '@/contexts/OrderContext';
@@ -25,6 +28,9 @@ import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
+import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
+import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
+import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import {
   sendPinpadPayment,
   pollPinpadStatus,
@@ -56,6 +62,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id, channel: 'express' });
   const { settings } = useStoreSettings({ companyId: company?.id });
   const { getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
+  const { taxRules } = useTaxRules({ companyId: company?.id });
+  const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const fiscalEnabled = isModuleEnabled('fiscal');
   const activeNeighborhoods = getActiveNeighborhoods();
   const useNeighborhoodDeliveryMode = settings.deliveryMode === 'neighborhood' && activeNeighborhoods.length > 0;
 
@@ -96,6 +106,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Cobrança via PDVV2PaymentDialog (apenas Retirada)
   const [pickupChargeOpen, setPickupChargeOpen] = useState(false);
+
+  // Pop-up pós-venda da NFC-e (mesmo padrão do PDVV2)
+  const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
+  const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
+  const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
 
   // ===== TEF state (mini seletor inline) =====
   const [tefCardType, setTefCardType] = useState<'credit' | 'debit' | 'pix'>('credit');
@@ -433,6 +448,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     discount: number;
     /** I9 — "Finalizar Pedido": cria já como entregue e imprime apenas recibo (sem comanda de produção). */
     finalizeNow?: boolean;
+    /** Documento fiscal escolhido no pop-up de cobrança (I9). */
+    documentMode?: DocumentMode;
+    /** TEF executado pelo PDVV2PaymentDialog (mesma regra do PDV V2). */
+    tefOptions?: TefOptions;
+    tefIntegration?: 'tef_pinpad' | 'tef_smartpos';
+    /** CPF/CNPJ do destinatário da NFC-e (apenas dígitos). */
+    customerDocument?: string;
+    /** I9: usuário escolheu imprimir o documento gerado neste pop-up */
+    printDocument?: boolean;
   }) {
     if (!override && !canGoNext()) return;
     setIsSubmitting(true);
@@ -608,8 +632,30 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       setTefStatus('');
     }
 
+    // ===== TEF a partir do PDVV2PaymentDialog (I9 "Finalizar Pedido") =====
+    // Mesmo padrão do PDV V2: executa runTefPayment ANTES de criar o pedido.
+    let overrideTefData: NFCeTefData | undefined;
+    let overrideTefNote = '';
+    if (override?.tefIntegration && override?.tefOptions && company?.id) {
+      const result = await runTefPayment({
+        companyId: company.id,
+        integration: override.tefIntegration,
+        amount: override.finalTotal,
+        options: override.tefOptions,
+        description: customerName ? `Express - ${customerName}` : 'Pedido Express',
+      });
+      if (!result.success) {
+        // toast já exibido pelo helper
+        setIsSubmitting(false);
+        return;
+      }
+      overrideTefData = result.tefData;
+      overrideTefNote = result.notesFragment ? ` | ${result.notesFragment}` : '';
+    }
+
     const noteParts = ['[EXPRESS]', `Pagamento: ${paymentName}`, deliveryTypeLabel];
     if (tefNote) noteParts.push(tefNote);
+    if (overrideTefNote) noteParts.push(overrideTefNote.replace(/^ \| /, ''));
     const noteStr = noteParts.join(' | ');
 
     const orderItems: OrderItem[] = cart.map(item => {
@@ -650,8 +696,106 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     });
 
     if (success) {
+      // ===== NFC-e (I9 "Finalizar Pedido" com Venda + NFC-e) =====
+      // Cria pdv_sale e dispara emissão. Pop-up de status abre ao final.
+      const wantsNfce =
+        override?.finalizeNow &&
+        override?.documentMode === 'sale_with_nfce' &&
+        fiscalEnabled &&
+        !!company?.id;
+      if (wantsNfce) {
+        if (!currentRegister) {
+          toast.error('Caixa precisa estar aberto para emitir NFC-e.');
+          setIsSubmitting(false);
+          return;
+        }
+        try {
+          const saleItems = cart.map((item) => ({
+            product_id: item.product.id || null,
+            product_name: item.product.name,
+            quantity: item.quantity,
+            unit_price:
+              item.product.price + item.selectedOptionals.reduce((s, o) => s + o.price, 0),
+          }));
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          const saleId = authUser
+            ? await addSale(
+                saleItems,
+                override!.paymentMethodId,
+                authUser.id,
+                override!.discount || 0,
+                customerName.trim(),
+                `[EXPRESS] Pagamento: ${paymentName}${overrideTefNote}`,
+              )
+            : null;
+
+          if (saleId) {
+            const nfceItems: NFCeItem[] = saleItems.map((it) => {
+              const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
+              const taxRule = product?.taxRuleId
+                ? taxRules.find((tr) => tr.id === product.taxRuleId)
+                : null;
+              return {
+                codigo: it.product_id || 'AVULSO',
+                descricao: it.product_name,
+                ncm: taxRule?.ncm || '00000000',
+                cfop: taxRule?.cfop || '5102',
+                unidade: 'UN',
+                quantidade: it.quantity,
+                valor_unitario: it.unit_price,
+                csosn: taxRule?.csosn || '102',
+                aliquota_icms: taxRule?.icms_aliquot || 0,
+                cst_pis: taxRule?.pis_cst || '49',
+                aliquota_pis: taxRule?.pis_aliquot || 0,
+                cst_cofins: taxRule?.cofins_cst || '49',
+                aliquota_cofins: taxRule?.cofins_aliquot || 0,
+              };
+            });
+            const externalId = `EXPRESS-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+            const cleanDoc = (override?.customerDocument || '').replace(/\D/g, '');
+            const destinatario =
+              cleanDoc.length === 11
+                ? { cpf: cleanDoc, nome: customerName || undefined }
+                : cleanDoc.length === 14
+                ? { cnpj: cleanDoc, nome: customerName || undefined }
+                : undefined;
+            await emitirNFCe(company!.id, saleId, {
+              external_id: externalId,
+              itens: nfceItems,
+              valor_desconto: override?.discount || 0,
+              valor_frete: 0,
+              observacoes: customerName ? `Cliente: ${customerName}` : undefined,
+              destinatario,
+              tef: overrideTefData,
+            } as any);
+            toast.success('NFC-e enviada para processamento!');
+
+            const { data: rec } = await supabase
+              .from('nfce_records')
+              .select('*')
+              .eq('sale_id', saleId)
+              .maybeSingle();
+            if (rec) {
+              setNfceRecord(rec as unknown as NFCeRecord);
+              setNfceAutoPrint(!!override?.printDocument);
+              setNfceDialogOpen(true);
+            }
+          }
+        } catch (err: any) {
+          console.error('[Express] NFC-e emission error:', err);
+          toast.error(
+            `Pedido criado, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`,
+          );
+        }
+      }
+
       // Fluxo "Finalizar Pedido" (I9): só imprime recibo, sem comanda de produção
       if (override?.finalizeNow && company?.id) {
+        // Quando NFC-e foi solicitada, o pop-up pós-venda controla a impressão do DANFE.
+        // Recibo simples só é gerado para "Somente Venda" + opção "Imprimir".
+        const shouldPrintReceipt =
+          override?.documentMode !== 'sale_with_nfce' && override?.printDocument !== false;
+        if (shouldPrintReceipt) {
         try {
           const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
           const printItems = cart.map((item) => ({
@@ -672,6 +816,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           });
         } catch (e) {
           console.error('Erro ao enfileirar recibo:', e);
+        }
         }
       } else if (settings.autoPrintProductionTicket && company?.id) {
         // Enfileira comanda de produção (mesmo padrão do Waiter)
@@ -1597,13 +1742,46 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         channel="express"
         cashOnly={isClienteLoja}
         showDocumentMode
-        onConfirm={async ({ paymentMethodId, paymentName, finalTotal, discount }) => {
+        onConfirm={async ({
+          paymentMethodId,
+          paymentName,
+          finalTotal,
+          discount,
+          documentMode: dm,
+          printDocument,
+          tefOptions,
+          tefIntegration,
+          customerDocument,
+        }) => {
           // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
           // e imprime apenas recibo. Caso contrário (Retirada vinda da etapa 4), mantém fluxo original.
           const finalizeNow = isLancheriaI9 && step === 5;
-          await handleSubmit({ paymentMethodId, paymentName, finalTotal, discount, finalizeNow });
+          await handleSubmit({
+            paymentMethodId,
+            paymentName,
+            finalTotal,
+            discount,
+            finalizeNow,
+            documentMode: dm,
+            printDocument,
+            tefOptions,
+            tefIntegration,
+            customerDocument,
+          });
           setPickupChargeOpen(false);
         }}
+      />
+
+      {/* NFC-e — pop-up de status pós-venda (mesmo padrão do PDV V2) */}
+      <PDVV2NFCePostSaleDialog
+        open={nfceDialogOpen}
+        onOpenChange={(o) => {
+          setNfceDialogOpen(o);
+          if (!o) setNfceRecord(null);
+        }}
+        companyId={company?.id}
+        initialRecord={nfceRecord}
+        autoPrint={nfceAutoPrint}
       />
     </>
   );
