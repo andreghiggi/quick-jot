@@ -280,7 +280,17 @@ export default function PDVV2() {
       chargeOrder.id
     );
     if (saleId) {
-      if (printDocument && companyId) {
+      // NFC-e: emitir quando documentMode === 'sale_with_nfce' e módulo fiscal habilitado
+      const wantsNfce = documentMode === 'sale_with_nfce' && fiscalEnabled && companyId;
+      if (wantsNfce) {
+        await emitAndOptionallyPrintNFCe({
+          saleId,
+          items,
+          discount,
+          customerName: chargeOrder.customerName,
+          shouldPrint: !!printDocument,
+        });
+      } else if (printDocument && companyId) {
         const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
         const printItems = [
           ...chargeOrder.items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price, notes: i.notes || undefined })),
