@@ -1348,6 +1348,29 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   <>Avançar <ArrowRight className="w-4 h-4" /></>
                 )}
               </Button>
+            ) : isLancheriaI9 ? (
+              // Lancheria I9 — Dois botões: enviar p/ cozinha (sem pagamento) ou finalizar (paga + entrega)
+              <>
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => setPickupChargeOpen(true)}
+                  disabled={cart.length === 0 || isSubmitting || tefProcessing}
+                  title="Cobra agora e marca como entregue (sem comanda de produção)"
+                >
+                  Finalizar Pedido
+                </Button>
+                <Button
+                  className="flex-1 gap-2"
+                  onClick={() => handleSubmit()}
+                  disabled={!canGoNext() || isSubmitting || tefProcessing}
+                  title="Cria pedido pendente e imprime comanda de produção (pagamento depois)"
+                >
+                  {isSubmitting
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                    : '👨‍🍳 Enviar para Cozinha'}
+                </Button>
+              </>
             ) : (
               <Button className="flex-1 gap-2" onClick={() => handleSubmit()} disabled={!canGoNext() || isSubmitting || tefProcessing}>
                 {tefProcessing
