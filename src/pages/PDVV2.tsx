@@ -563,6 +563,15 @@ export default function PDVV2() {
         onConfirm={confirmImportTab}
       />
 
+      <PDVV2ClosedTabsDialog
+        open={closedTabsOpen}
+        onOpenChange={setClosedTabsOpen}
+        sales={closedTabSales}
+        companyId={companyId}
+        paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
+        onSaleDeleted={refetchCash}
+      />
+
       <Dialog open={openCashOpen} onOpenChange={setOpenCashOpen}>
         <DialogContent>
           <DialogHeader>
