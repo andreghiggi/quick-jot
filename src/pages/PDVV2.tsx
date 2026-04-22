@@ -54,7 +54,24 @@ export default function PDVV2() {
   const [showCash, setShowCash] = useState(false);
   const [showRevenue, setShowRevenue] = useState(false);
   const [showTablesRevenue, setShowTablesRevenue] = useState(false);
-  const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders');
+  const tabStorageKey = companyId ? `pdvv2_active_tab_${companyId}` : 'pdvv2_active_tab';
+  const [activeTab, setActiveTab] = useState<'orders' | 'tables'>(() => {
+    if (typeof window === 'undefined') return 'orders';
+    try {
+      const saved = window.localStorage.getItem(tabStorageKey);
+      return saved === 'tables' || saved === 'orders' ? saved : 'orders';
+    } catch {
+      return 'orders';
+    }
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(tabStorageKey, activeTab);
+    } catch {
+      /* ignore */
+    }
+  }, [activeTab, tabStorageKey]);
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [closeOpen, setCloseOpen] = useState(false);
   const [openCashOpen, setOpenCashOpen] = useState(false);
