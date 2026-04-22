@@ -202,7 +202,8 @@ export default function PDVV2() {
     finalTotal,
     documentMode,
     extraItems,
-  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[] }) {
+    printDocument,
+  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean }) {
     if (!chargeOrder || !user || !currentRegister) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -224,6 +225,23 @@ export default function PDVV2() {
       chargeOrder.id
     );
     if (saleId) {
+      if (printDocument && companyId) {
+        const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
+        const printItems = [
+          ...chargeOrder.items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price, notes: i.notes || undefined })),
+          ...extraItems.map((i) => ({ name: i.product_name, quantity: i.quantity, price: i.unit_price })),
+        ];
+        await printOnlyReceipt({
+          companyId,
+          orderCode: chargeOrder.orderCode,
+          dailyNumber: chargeOrder.dailyNumber || 0,
+          customerName: chargeOrder.customerName,
+          items: printItems,
+          total: finalTotal,
+          notes: `Pagamento: ${paymentName}${discount > 0 ? ` | Desconto: R$ ${discount.toFixed(2)}` : ''}${documentMode === 'sale_with_nfce' ? ' | NFC-e' : ''}`,
+          paperSize,
+        });
+      }
       await updateOrderStatus(chargeOrder.id, 'delivered');
       toast.success('Cobrança registrada!');
       setChargeOrder(null);
@@ -237,7 +255,8 @@ export default function PDVV2() {
     finalTotal,
     documentMode,
     extraItems,
-  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[] }) {
+    printDocument,
+  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean }) {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -266,21 +285,25 @@ export default function PDVV2() {
       `Comanda #${fullTab.tab_number} | Pagamento: ${paymentName}`
     );
     if (saleId) {
-      const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
-      const printItems = [
-        ...fullTab.items.map((i) => ({ name: i.product_name, quantity: i.quantity, price: i.unit_price, notes: i.notes || undefined })),
-        ...extraItems.map((i) => ({ name: i.product_name, quantity: i.quantity, price: i.unit_price })),
-      ];
-      await printOnlyReceipt({
-        companyId,
-        orderCode: `M${fullTab.tab_number}`,
-        dailyNumber: fullTab.tab_number,
-        customerName: customer,
-        items: printItems,
-        total: finalTotal,
-        notes: `Pagamento: ${paymentName}${discount > 0 ? ` | Desconto: R$ ${discount.toFixed(2)}` : ''}`,
-        paperSize,
-      });
+      // Imprime se: I9 escolheu "Imprimir" no pop-up, ou demais lojas (comportamento original)
+      const shouldPrint = printDocument !== false;
+      if (shouldPrint) {
+        const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
+        const printItems = [
+          ...fullTab.items.map((i) => ({ name: i.product_name, quantity: i.quantity, price: i.unit_price, notes: i.notes || undefined })),
+          ...extraItems.map((i) => ({ name: i.product_name, quantity: i.quantity, price: i.unit_price })),
+        ];
+        await printOnlyReceipt({
+          companyId,
+          orderCode: `M${fullTab.tab_number}`,
+          dailyNumber: fullTab.tab_number,
+          customerName: customer,
+          items: printItems,
+          total: finalTotal,
+          notes: `Pagamento: ${paymentName}${discount > 0 ? ` | Desconto: R$ ${discount.toFixed(2)}` : ''}${documentMode === 'sale_with_nfce' ? ' | NFC-e' : ''}`,
+          paperSize,
+        });
+      }
       await closeTab(fullTab.id);
       toast.success('Comanda importada e fechada!');
       setImportingTab(null);

@@ -30,6 +30,8 @@ interface PDVV2PaymentDialogProps {
     finalTotal: number;
     documentMode: DocumentMode;
     extraItems: ExtraItem[];
+    /** I9: usuário escolheu imprimir o documento gerado neste pop-up */
+    printDocument?: boolean;
   }) => Promise<void> | void;
 }
 
@@ -51,6 +53,7 @@ export function PDVV2PaymentDialog({
     : rawActivePaymentMethods;
   // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
   const useCurrencyMask = companyId === LANCHERIA_I9_COMPANY_ID;
+  const isLancheriaI9 = companyId === LANCHERIA_I9_COMPANY_ID;
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [discount, setDiscount] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
@@ -60,6 +63,10 @@ export function PDVV2PaymentDialog({
     const saved = localStorage.getItem('pdv_document_mode');
     return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
   });
+  // Pop-ups Lancheria I9: etapa 1 (escolha de documento) → etapa 2 (imprimir?) → confirma
+  const [docChoiceOpen, setDocChoiceOpen] = useState(false);
+  const [printChoiceOpen, setPrintChoiceOpen] = useState(false);
+  const [pendingDocMode, setPendingDocMode] = useState<DocumentMode>('sale_only');
 
   // Detecta se o método selecionado é TEF — força NFC-e (mesma regra do V1)
   const selectedMethod = activePaymentMethods.find((m) => m.id === paymentMethodId);
@@ -80,6 +87,8 @@ export function PDVV2PaymentDialog({
       setAmountReceived('');
       setSubmitting(false);
       setExtraItems([]);
+      setDocChoiceOpen(false);
+      setPrintChoiceOpen(false);
     }
   }, [open]);
 
@@ -99,7 +108,7 @@ export function PDVV2PaymentDialog({
     : parseFloat(amountReceived.replace(',', '.')) || 0;
   const change = isCash ? Math.max(0, receivedValue - finalTotal) : 0;
 
-  async function handleConfirm() {
+  async function finalizeConfirm(docMode: DocumentMode, printDocument?: boolean) {
     const method = activePaymentMethods.find((m) => m.id === paymentMethodId);
     if (!method) return;
     setSubmitting(true);
@@ -108,10 +117,27 @@ export function PDVV2PaymentDialog({
       paymentName: method.name,
       discount: discountValue,
       finalTotal,
-      documentMode: effectiveDocumentMode,
+      documentMode: docMode,
       extraItems,
+      printDocument,
     });
     setSubmitting(false);
+  }
+
+  async function handleConfirm() {
+    const method = activePaymentMethods.find((m) => m.id === paymentMethodId);
+    if (!method) return;
+    // I9 + showDocumentMode: abre pop-ups em sequência. TEF força NFC-e e pula pop-up 1.
+    if (isLancheriaI9 && showDocumentMode) {
+      if (isTef) {
+        setPendingDocMode('sale_with_nfce');
+        setPrintChoiceOpen(true);
+      } else {
+        setDocChoiceOpen(true);
+      }
+      return;
+    }
+    await finalizeConfirm(effectiveDocumentMode);
   }
 
   return (
@@ -206,7 +232,7 @@ export function PDVV2PaymentDialog({
             </div>
           )}
 
-          {showDocumentMode && (
+          {showDocumentMode && !isLancheriaI9 && (
             <PDVV2DocumentModeSelector
               companyId={companyId}
               value={documentMode}
@@ -228,6 +254,74 @@ export function PDVV2PaymentDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Lancheria I9 — Pop-up 1: Geração de Documentos */}
+      <Dialog open={docChoiceOpen} onOpenChange={setDocChoiceOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Geração de Documentos</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-3 py-2">
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-16 text-base"
+              onClick={() => {
+                setPendingDocMode('sale_only');
+                setDocChoiceOpen(false);
+                setPrintChoiceOpen(true);
+              }}
+            >
+              Somente Venda
+            </Button>
+            <Button
+              size="lg"
+              className="h-16 text-base"
+              onClick={() => {
+                setPendingDocMode('sale_with_nfce');
+                setDocChoiceOpen(false);
+                setPrintChoiceOpen(true);
+              }}
+            >
+              Venda com NFC-e
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lancheria I9 — Pop-up 2: Imprimir documento? */}
+      <Dialog open={printChoiceOpen} onOpenChange={setPrintChoiceOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Imprimir {pendingDocMode === 'sale_with_nfce' ? 'NFC-e' : 'recibo de venda'}?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-2">
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-16 text-base"
+              onClick={async () => {
+                setPrintChoiceOpen(false);
+                await finalizeConfirm(pendingDocMode, false);
+              }}
+            >
+              Não imprimir
+            </Button>
+            <Button
+              size="lg"
+              className="h-16 text-base"
+              onClick={async () => {
+                setPrintChoiceOpen(false);
+                await finalizeConfirm(pendingDocMode, true);
+              }}
+            >
+              Imprimir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
