@@ -739,7 +739,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               const Icon = s.icon;
               const stepNum = (i + 1) as Step;
               const isActive = step === stepNum;
-              const isDone = step > stepNum;
+              // Lancheria I9 + Cliente Loja: marcar etapas 2, 3 e 4 como concluídas
+              // (mesmo estando na etapa 5) para refletir o atalho automático.
+              const autoFilledByShortcut =
+                isLancheriaI9 && isClienteLoja && step === 5 && (stepNum === 2 || stepNum === 3 || stepNum === 4);
+              const isDone = step > stepNum || autoFilledByShortcut;
               return (
                 <div key={i} className="flex flex-col items-center gap-1 flex-1">
                   <div className={cn(
