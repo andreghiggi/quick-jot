@@ -54,43 +54,46 @@ export default function PDVV2() {
   const [showCash, setShowCash] = useState(false);
   const [showRevenue, setShowRevenue] = useState(false);
   const [showTablesRevenue, setShowTablesRevenue] = useState(false);
-  const tabStorageKey = companyId ? `pdvv2_active_tab_${companyId}` : 'pdvv2_active_tab';
-  const [activeTab, setActiveTab] = useState<'orders' | 'tables'>(() => {
-    if (typeof window === 'undefined') return 'orders';
-    try {
-      const saved = window.localStorage.getItem(tabStorageKey);
-      return saved === 'tables' || saved === 'orders' ? saved : 'orders';
-    } catch {
-      return 'orders';
-    }
-  });
+  const tabStorageKey = companyId ? `pdvv2_active_tab_${companyId}` : null;
+  const filterStorageKey = companyId ? `pdvv2_status_filter_${companyId}` : null;
+  const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders');
+  const [filter, setFilter] = useState<StatusFilter>('all');
+  const [storageHydrated, setStorageHydrated] = useState(false);
+  // Hydrate state from localStorage once companyId is available, before persisting back.
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!tabStorageKey || !filterStorageKey) return;
+    try {
+      const savedTab = window.localStorage.getItem(tabStorageKey);
+      if (savedTab === 'tables' || savedTab === 'orders') {
+        setActiveTab(savedTab);
+      }
+      const savedFilter = window.localStorage.getItem(filterStorageKey);
+      const valid: StatusFilter[] = ['all', 'pending', 'preparing', 'ready', 'delivered'];
+      if (savedFilter && (valid as string[]).includes(savedFilter)) {
+        setFilter(savedFilter as StatusFilter);
+      }
+    } catch {
+      /* ignore */
+    }
+    setStorageHydrated(true);
+  }, [tabStorageKey, filterStorageKey]);
+  useEffect(() => {
+    if (!storageHydrated || !tabStorageKey || typeof window === 'undefined') return;
     try {
       window.localStorage.setItem(tabStorageKey, activeTab);
     } catch {
       /* ignore */
     }
-  }, [activeTab, tabStorageKey]);
-  const filterStorageKey = companyId ? `pdvv2_status_filter_${companyId}` : 'pdvv2_status_filter';
-  const [filter, setFilter] = useState<StatusFilter>(() => {
-    if (typeof window === 'undefined') return 'all';
-    try {
-      const saved = window.localStorage.getItem(filterStorageKey);
-      const valid: StatusFilter[] = ['all', 'pending', 'preparing', 'ready', 'delivered'];
-      return (valid as string[]).includes(saved || '') ? (saved as StatusFilter) : 'all';
-    } catch {
-      return 'all';
-    }
-  });
+  }, [activeTab, tabStorageKey, storageHydrated]);
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!storageHydrated || !filterStorageKey || typeof window === 'undefined') return;
     try {
       window.localStorage.setItem(filterStorageKey, filter);
     } catch {
       /* ignore */
     }
-  }, [filter, filterStorageKey]);
+  }, [filter, filterStorageKey, storageHydrated]);
   const [closeOpen, setCloseOpen] = useState(false);
   const [openCashOpen, setOpenCashOpen] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
