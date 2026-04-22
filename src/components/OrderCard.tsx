@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { stripDescMarkers } from '@/utils/orderNotesDisplay';
+import { stripDescMarkers, parseItemNotes } from '@/utils/orderNotesDisplay';
 import {
   parseTefDataFromNotes,
   isOrderTefCancelled,
@@ -503,11 +503,23 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                     ))}
                   </div>
                 )}
-                {item.notes && (
-                  <p className="text-xs text-muted-foreground italic ml-4">
-                    ↳ <span className="font-bold not-italic">Observação:</span> {stripDescMarkers(item.notes)}
-                  </p>
-                )}
+                {(() => {
+                  const { description, observation } = parseItemNotes(item.notes);
+                  return (
+                    <>
+                      {description && (
+                        <p className="text-xs text-muted-foreground ml-4">
+                          ↳ <span className="font-bold">Descrição:</span> {description}
+                        </p>
+                      )}
+                      {observation && (
+                        <p className="text-xs text-muted-foreground italic ml-4">
+                          ↳ <span className="font-bold not-italic">Observação:</span> {observation}
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             );
           })}
