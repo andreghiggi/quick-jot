@@ -374,7 +374,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           return hasAddress && hasFee;
         }
         return true;
-      case 5: return !!paymentMethod;
+      case 5: return isLancheriaI9 ? true : !!paymentMethod;
       default: return false;
     }
   }
@@ -404,8 +404,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       setStep(5);
       return;
     }
-    // Retirada: ao clicar em "Pronto" na etapa 4, abre cobrança em vez de ir para etapa 5
+    // Retirada: no fluxo padrão, ao clicar em "Pronto" na etapa 4 abre cobrança.
+    // Lancheria I9 mantém a etapa 5 com os botões "Enviar para Cozinha" / "Finalizar Pedido".
     if (step === 4 && deliveryType === 'retirada') {
+      if (isLancheriaI9) {
+        setStep(5);
+        return;
+      }
       setPickupChargeOpen(true);
       return;
     }
