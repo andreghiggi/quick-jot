@@ -63,6 +63,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [customerFound, setCustomerFound] = useState(false);
   const [searchingCustomer, setSearchingCustomer] = useState(false);
 
+  // Lancheria da I9 — atalho otimizado: pula Telefone/Nome/Entrega ao usar "Cliente Loja"
+  const LANCHERIA_I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const isLancheriaI9 = company?.id === LANCHERIA_I9_ID;
+
   // Cart uses the same CartItem type as the online catalog
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -735,7 +739,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               const Icon = s.icon;
               const stepNum = (i + 1) as Step;
               const isActive = step === stepNum;
-              const isDone = step > stepNum;
+              // Lancheria I9 + Cliente Loja: marcar etapas 2, 3 e 4 como concluídas
+              // (mesmo estando na etapa 5) para refletir o atalho automático.
+              const autoFilledByShortcut =
+                isLancheriaI9 && isClienteLoja && step === 5 && (stepNum === 2 || stepNum === 3 || stepNum === 4);
+              const isDone = step > stepNum || autoFilledByShortcut;
               return (
                 <div key={i} className="flex flex-col items-center gap-1 flex-1">
                   <div className={cn(
@@ -896,7 +904,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   variant="outline"
                   className="w-full"
                   onClick={() => {
-                    setCustomerPhone('(99) 99999-9999');
+                    // Lancheria da I9: telefone "limpo" 99999999999 (sem máscara)
+                    setCustomerPhone(isLancheriaI9 ? '99999999999' : '(99) 99999-9999');
                     setCustomerName('Cliente Loja');
                     setCustomerFound(true);
                     setDeliveryType('retirada');
