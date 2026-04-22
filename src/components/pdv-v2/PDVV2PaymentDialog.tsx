@@ -252,6 +252,65 @@ export function PDVV2PaymentDialog({
             </div>
           )}
 
+          {isTef && (
+            <div className="p-3 border border-primary/30 bg-primary/5 rounded-lg space-y-3">
+              <p className="text-sm font-medium flex items-center gap-1">
+                <Plug className="w-4 h-4 text-primary" />
+                Opções TEF
+              </p>
+              <div>
+                <Label className="mb-2 block text-xs">Modalidade</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={tefModality === 'avista' ? 'default' : 'outline'}
+                    onClick={() => setTefModality('avista')}
+                  >
+                    À Vista
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={tefModality === 'debit' ? 'default' : 'outline'}
+                    onClick={() => setTefModality('debit')}
+                  >
+                    Débito
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={tefModality === 'parcelado' ? 'default' : 'outline'}
+                    onClick={() => setTefModality('parcelado')}
+                  >
+                    Parcelado
+                  </Button>
+                </div>
+              </div>
+              {tefModality === 'parcelado' && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Parcelas</Label>
+                  <Input
+                    type="number"
+                    min={2}
+                    max={18}
+                    value={tefInstallments}
+                    onChange={(e) => setTefInstallments(e.target.value)}
+                    className="h-9"
+                  />
+                  {parseInt(tefInstallments) >= 2 && (
+                    <p className="text-xs text-muted-foreground">
+                      {tefInstallments}x de {formatPrice(finalTotal / (parseInt(tefInstallments) || 2))}
+                    </p>
+                  )}
+                </div>
+              )}
+              <p className="text-xs text-amber-600">
+                ⚠️ NFC-e obrigatória para pagamentos com TEF
+              </p>
+            </div>
+          )}
+
           {showDocumentMode && !isLancheriaI9 && (
             <PDVV2DocumentModeSelector
               companyId={companyId}
