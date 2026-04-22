@@ -408,7 +408,7 @@ export default function PDVV2() {
                 <div className="space-y-1">
                   <h2 className="text-xl font-bold">Caixa Fechado</h2>
                   <p className="text-sm text-muted-foreground">
-                    Para acessar a Central PDV e iniciar as vendas, abra o caixa primeiro.
+                    Para acessar o PDV e iniciar as vendas, abra o caixa primeiro.
                   </p>
                 </div>
                 <Button size="lg" className="gap-2" onClick={() => setOpenCashOpen(true)}>
