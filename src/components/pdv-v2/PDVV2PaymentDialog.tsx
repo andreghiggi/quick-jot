@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
-import { brl as formatPrice } from './_format';
+import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput, LANCHERIA_I9_COMPANY_ID } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
 
@@ -49,6 +49,8 @@ export function PDVV2PaymentDialog({
   const activePaymentMethods = cashOnly
     ? rawActivePaymentMethods.filter((m) => /dinheiro/i.test(m.name))
     : rawActivePaymentMethods;
+  // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
+  const useCurrencyMask = companyId === LANCHERIA_I9_COMPANY_ID;
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [discount, setDiscount] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
@@ -88,9 +90,13 @@ export function PDVV2PaymentDialog({
 
   const extrasTotal = extraItems.reduce((s, it) => s + it.unit_price * it.quantity, 0);
   const grossTotal = total + extrasTotal;
-  const discountValue = parseFloat(discount.replace(',', '.')) || 0;
+  const discountValue = useCurrencyMask
+    ? parseCurrencyInput(discount)
+    : parseFloat(discount.replace(',', '.')) || 0;
   const finalTotal = Math.max(0, grossTotal - discountValue);
-  const receivedValue = parseFloat(amountReceived.replace(',', '.')) || 0;
+  const receivedValue = useCurrencyMask
+    ? parseCurrencyInput(amountReceived)
+    : parseFloat(amountReceived.replace(',', '.')) || 0;
   const change = isCash ? Math.max(0, receivedValue - finalTotal) : 0;
 
   async function handleConfirm() {
