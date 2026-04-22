@@ -153,8 +153,9 @@ export function PDVV2CloseCashDialog({
             <DialogTitle>Fechar Caixa</DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 min-h-0 pr-3">
-            <div className="space-y-4 py-2">
+          {useCurrencyMask ? (
+            <div className="flex-1 min-h-0 overflow-y-auto pr-3">
+              <div className="space-y-4 py-2">
               <div className="rounded-md border p-3 bg-muted/40">
                 <p className="text-sm text-muted-foreground">Valor esperado em caixa</p>
                 <p className="text-2xl font-bold tabular-nums">{formatPrice(expectedAmount)}</p>
