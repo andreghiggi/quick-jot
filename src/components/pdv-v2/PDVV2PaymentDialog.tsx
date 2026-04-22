@@ -8,6 +8,8 @@ import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput, LANCHERIA_I9_COMPANY_ID } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
+import { Plug } from 'lucide-react';
+import type { TefOptions } from '@/utils/pdvV2Tef';
 
 interface PDVV2PaymentDialogProps {
   open: boolean;
@@ -32,6 +34,10 @@ interface PDVV2PaymentDialogProps {
     extraItems: ExtraItem[];
     /** I9: usuário escolheu imprimir o documento gerado neste pop-up */
     printDocument?: boolean;
+    /** Opções TEF quando a forma de pagamento é integração maquininha */
+    tefOptions?: TefOptions;
+    /** Tipo de integração TEF detectado (tef_pinpad | tef_smartpos) */
+    tefIntegration?: 'tef_pinpad' | 'tef_smartpos';
   }) => Promise<void> | void;
 }
 
@@ -59,6 +65,9 @@ export function PDVV2PaymentDialog({
   const [amountReceived, setAmountReceived] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [extraItems, setExtraItems] = useState<ExtraItem[]>([]);
+  // TEF (mesma UI/regra do PDV V1)
+  const [tefModality, setTefModality] = useState<'avista' | 'parcelado' | 'debit'>('avista');
+  const [tefInstallments, setTefInstallments] = useState('2');
   const [documentMode, setDocumentMode] = useState<DocumentMode>(() => {
     const saved = localStorage.getItem('pdv_document_mode');
     return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
@@ -89,6 +98,8 @@ export function PDVV2PaymentDialog({
       setExtraItems([]);
       setDocChoiceOpen(false);
       setPrintChoiceOpen(false);
+      setTefModality('avista');
+      setTefInstallments('2');
     }
   }, [open]);
 
@@ -111,6 +122,13 @@ export function PDVV2PaymentDialog({
   async function finalizeConfirm(docMode: DocumentMode, printDocument?: boolean) {
     const method = activePaymentMethods.find((m) => m.id === paymentMethodId);
     if (!method) return;
+    const tefOptions: TefOptions | undefined = isTef
+      ? {
+          modality: tefModality,
+          installments: tefModality === 'parcelado' ? parseInt(tefInstallments) || 2 : undefined,
+          installmentType: 'adm',
+        }
+      : undefined;
     setSubmitting(true);
     await onConfirm({
       paymentMethodId,
@@ -120,6 +138,8 @@ export function PDVV2PaymentDialog({
       documentMode: docMode,
       extraItems,
       printDocument,
+      tefOptions,
+      tefIntegration: isTef ? (integration as 'tef_pinpad' | 'tef_smartpos') : undefined,
     });
     setSubmitting(false);
   }
@@ -229,6 +249,65 @@ export function PDVV2PaymentDialog({
                   Valor recebido menor que o total.
                 </p>
               )}
+            </div>
+          )}
+
+          {isTef && (
+            <div className="p-3 border border-primary/30 bg-primary/5 rounded-lg space-y-3">
+              <p className="text-sm font-medium flex items-center gap-1">
+                <Plug className="w-4 h-4 text-primary" />
+                Opções TEF
+              </p>
+              <div>
+                <Label className="mb-2 block text-xs">Modalidade</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={tefModality === 'avista' ? 'default' : 'outline'}
+                    onClick={() => setTefModality('avista')}
+                  >
+                    À Vista
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={tefModality === 'debit' ? 'default' : 'outline'}
+                    onClick={() => setTefModality('debit')}
+                  >
+                    Débito
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={tefModality === 'parcelado' ? 'default' : 'outline'}
+                    onClick={() => setTefModality('parcelado')}
+                  >
+                    Parcelado
+                  </Button>
+                </div>
+              </div>
+              {tefModality === 'parcelado' && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Parcelas</Label>
+                  <Input
+                    type="number"
+                    min={2}
+                    max={18}
+                    value={tefInstallments}
+                    onChange={(e) => setTefInstallments(e.target.value)}
+                    className="h-9"
+                  />
+                  {parseInt(tefInstallments) >= 2 && (
+                    <p className="text-xs text-muted-foreground">
+                      {tefInstallments}x de {formatPrice(finalTotal / (parseInt(tefInstallments) || 2))}
+                    </p>
+                  )}
+                </div>
+              )}
+              <p className="text-xs text-destructive">
+                ⚠️ NFC-e obrigatória para pagamentos com TEF
+              </p>
             </div>
           )}
 
