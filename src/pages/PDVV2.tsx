@@ -120,6 +120,20 @@ export default function PDVV2() {
     };
   }, [sales, occupiedTabs]);
 
+  // Vendas finalizadas vindas de comandas (caixa atual)
+  const closedTabSales: ClosedTabSale[] = useMemo(() => {
+    return sales
+      .filter((s) => s.notes?.toLowerCase().includes('comanda'))
+      .map((s) => ({
+        id: s.id,
+        final_total: Number(s.final_total) || 0,
+        customer_name: s.customer_name || null,
+        notes: s.notes || null,
+        created_at: s.created_at,
+        payment_method_name: s.payment_method?.name || 'Sem forma',
+      }));
+  }, [sales]);
+
   const cashAmount = (currentRegister?.opening_amount || 0) + totalSales;
   const cashOpen = !!currentRegister;
 
