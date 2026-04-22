@@ -10,6 +10,7 @@
  */
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { supabase } from '@/integrations/supabase/client';
+import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 
 interface PrintItem {
   name: string;
@@ -27,6 +28,9 @@ interface PrintPayload {
   total: number;
   notes?: string;
   paperSize?: '58mm' | '80mm';
+  /** Texto livre do campo "Prazo estimado de entrega" (estimated_wait_time).
+   *  Usado apenas para Lancheria I9 para calcular "Pronto até = criação + (max − 10 min)". */
+  estimatedWaitTime?: string | null;
 }
 
 async function enqueue(companyId: string, label: string, html: string) {
@@ -74,6 +78,7 @@ function escapeHtml(s: string) {
 }
 
 function buildProductionHtml(payload: PrintPayload, ref: string) {
+  const isLancheriaI9 = payload.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   return generateProductionTicketHTML({
     tabNumber: payload.dailyNumber,
     customerName: payload.customerName,
@@ -85,9 +90,12 @@ function buildProductionHtml(payload: PrintPayload, ref: string) {
     createdAt: new Date(),
     paperSize: payload.paperSize || '80mm',
     referenceLabel: ref,
-    // Lancheria I9: prazo estimado 20–40 min → previsão = criação + 30 min (máximo − 10 min)
-    showReadyTime: payload.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164',
-    readyOffsetMinutes: 30,
+    // Lancheria I9: previsão = criação + (máximo do prazo estimado − 10 min).
+    // Lê dinamicamente "Prazo estimado de entrega" (Configurações → WhatsApp).
+    showReadyTime: isLancheriaI9,
+    readyOffsetMinutes: isLancheriaI9
+      ? computeReadyOffsetMinutes(payload.estimatedWaitTime, 30)
+      : undefined,
   });
 }
 
