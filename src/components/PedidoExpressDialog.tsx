@@ -21,6 +21,7 @@ import { Product, ProductOptional, CartItem } from '@/types/product';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
+import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import {
@@ -419,7 +420,14 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     if (step > 1) setStep((step - 1) as Step);
   }
 
-  async function handleSubmit(override?: { paymentMethodId: string; paymentName: string; finalTotal: number; discount: number }) {
+  async function handleSubmit(override?: {
+    paymentMethodId: string;
+    paymentName: string;
+    finalTotal: number;
+    discount: number;
+    /** I9 — "Finalizar Pedido": cria já como entregue e imprime apenas recibo (sem comanda de produção). */
+    finalizeNow?: boolean;
+  }) {
     if (!override && !canGoNext()) return;
     setIsSubmitting(true);
 
@@ -631,13 +639,36 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       notes: noteStr,
       items: orderItems,
       total: effectiveTotal,
-      status: 'pending',
+      status: override?.finalizeNow ? 'delivered' : 'pending',
       origin: 'balcao',
     });
 
     if (success) {
-      // Enfileira comanda de produção (mesmo padrão do Waiter)
-      if (settings.autoPrintProductionTicket && company?.id) {
+      // Fluxo "Finalizar Pedido" (I9): só imprime recibo, sem comanda de produção
+      if (override?.finalizeNow && company?.id) {
+        try {
+          const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
+          const printItems = cart.map((item) => ({
+            name: item.product.name,
+            quantity: item.quantity,
+            price: item.product.price + item.selectedOptionals.reduce((s, o) => s + o.price, 0),
+            notes: item.notes || undefined,
+          }));
+          await printOnlyReceipt({
+            companyId: company.id,
+            orderCode: 'EXPRESS',
+            dailyNumber: 0,
+            customerName: customerName.trim(),
+            items: printItems,
+            total: effectiveTotal,
+            notes: `Pagamento: ${paymentName}${override.discount > 0 ? ` | Desconto: R$ ${override.discount.toFixed(2)}` : ''}`,
+            paperSize,
+          });
+        } catch (e) {
+          console.error('Erro ao enfileirar recibo:', e);
+        }
+      } else if (settings.autoPrintProductionTicket && company?.id) {
+        // Enfileira comanda de produção (mesmo padrão do Waiter)
         try {
           const productionItems = cart.flatMap(item => {
             // Build a clean list of additional names (without prices, without group prefix)
@@ -1317,6 +1348,29 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   <>Avançar <ArrowRight className="w-4 h-4" /></>
                 )}
               </Button>
+            ) : isLancheriaI9 ? (
+              // Lancheria I9 — Dois botões: enviar p/ cozinha (sem pagamento) ou finalizar (paga + entrega)
+              <>
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => setPickupChargeOpen(true)}
+                  disabled={cart.length === 0 || isSubmitting || tefProcessing}
+                  title="Cobra agora e marca como entregue (sem comanda de produção)"
+                >
+                  Finalizar Pedido
+                </Button>
+                <Button
+                  className="flex-1 gap-2"
+                  onClick={() => handleSubmit()}
+                  disabled={!canGoNext() || isSubmitting || tefProcessing}
+                  title="Cria pedido pendente e imprime comanda de produção (pagamento depois)"
+                >
+                  {isSubmitting
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                    : '👨‍🍳 Enviar para Cozinha'}
+                </Button>
+              </>
             ) : (
               <Button className="flex-1 gap-2" onClick={() => handleSubmit()} disabled={!canGoNext() || isSubmitting || tefProcessing}>
                 {tefProcessing
@@ -1515,12 +1569,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         }}
         companyId={company?.id}
         total={total}
-        title="Cobrar Retirada"
+        title={isLancheriaI9 && step === 5 ? 'Finalizar Pedido' : 'Cobrar Retirada'}
         channel="express"
         cashOnly={isClienteLoja}
         showDocumentMode
         onConfirm={async ({ paymentMethodId, paymentName, finalTotal, discount }) => {
-          await handleSubmit({ paymentMethodId, paymentName, finalTotal, discount });
+          // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
+          // e imprime apenas recibo. Caso contrário (Retirada vinda da etapa 4), mantém fluxo original.
+          const finalizeNow = isLancheriaI9 && step === 5;
+          await handleSubmit({ paymentMethodId, paymentName, finalTotal, discount, finalizeNow });
           setPickupChargeOpen(false);
         }}
       />
