@@ -305,7 +305,7 @@ export function PDVV2PaymentDialog({
                   )}
                 </div>
               )}
-              <p className="text-xs text-amber-600">
+              <p className="text-xs text-destructive">
                 ⚠️ NFC-e obrigatória para pagamentos com TEF
               </p>
             </div>
