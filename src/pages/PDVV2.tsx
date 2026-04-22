@@ -6,6 +6,8 @@ import { useCashRegister } from '@/hooks/useCashRegister';
 import { useTabs } from '@/hooks/useTabs';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
+import { useProducts } from '@/hooks/useProducts';
+import { useTaxRules } from '@/hooks/useTaxRules';
 import { Order, OrderStatus } from '@/types/order';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
@@ -34,6 +36,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ClipboardList, UtensilsCrossed } from 'lucide-react';
 
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
+import { emitirNFCe, getNFCeRecordBySaleId, printDanfeFromRecord, NFCeItem } from '@/services/nfceService';
 
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
