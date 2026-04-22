@@ -98,6 +98,21 @@ Deno.serve(async (req) => {
         // If TEF data is present, add payment group to payload
         const emitPayload = { ...payload }
 
+        // Garante que valor_total esteja presente no payload — evita o warning
+        // PHP "Undefined property: stdClass::$valor_total" na fiscal-api
+        // (linha 448), que ocorre quando o campo não é enviado pelo cliente.
+        if (
+          (emitPayload.valor_total === undefined || emitPayload.valor_total === null) &&
+          Array.isArray(emitPayload.itens)
+        ) {
+          const calc = emitPayload.itens.reduce(
+            (sum: number, item: any) =>
+              sum + Number(item.quantidade || 1) * Number(item.valor_unitario || 0),
+            0,
+          )
+          emitPayload.valor_total = Number(calc.toFixed(2))
+        }
+
         // Map optional destinatário (CPF/CNPJ) to the Fiscal API format.
         // Without this block the API emits as "consumidor não identificado".
         if (payload.destinatario && (payload.destinatario.cpf || payload.destinatario.cnpj)) {
