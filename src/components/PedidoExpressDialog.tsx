@@ -62,6 +62,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id, channel: 'express' });
   const { settings } = useStoreSettings({ companyId: company?.id });
   const { getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
+  const { taxRules } = useTaxRules({ companyId: company?.id });
+  const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const fiscalEnabled = isModuleEnabled('fiscal');
   const activeNeighborhoods = getActiveNeighborhoods();
   const useNeighborhoodDeliveryMode = settings.deliveryMode === 'neighborhood' && activeNeighborhoods.length > 0;
 
@@ -102,6 +106,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Cobrança via PDVV2PaymentDialog (apenas Retirada)
   const [pickupChargeOpen, setPickupChargeOpen] = useState(false);
+
+  // Pop-up pós-venda da NFC-e (mesmo padrão do PDVV2)
+  const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
+  const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
+  const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
 
   // ===== TEF state (mini seletor inline) =====
   const [tefCardType, setTefCardType] = useState<'credit' | 'debit' | 'pix'>('credit');
