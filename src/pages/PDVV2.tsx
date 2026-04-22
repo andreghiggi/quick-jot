@@ -522,6 +522,48 @@ export default function PDVV2() {
         showAddItem
         onConfirm={confirmImportTab}
       />
+
+      <Dialog open={openCashOpen} onOpenChange={setOpenCashOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Abrir Caixa</DialogTitle>
+            <DialogDescription>
+              Informe o valor de abertura (troco inicial). Use 0 se não houver troco.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="opening-amount">Valor de abertura (R$)</Label>
+            <Input
+              id="opening-amount"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              placeholder="0,00"
+              value={openingAmount}
+              onChange={(e) => setOpeningAmount(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenCashOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!user) return;
+                const amount = parseFloat(openingAmount.replace(',', '.')) || 0;
+                const ok = await openRegister(amount, user.id);
+                if (ok) {
+                  setOpenCashOpen(false);
+                  setOpeningAmount('');
+                }
+              }}
+            >
+              Abrir Caixa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PDVV2Layout>
   );
 }
