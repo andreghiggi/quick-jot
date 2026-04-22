@@ -268,8 +268,9 @@ export default function PDVV2() {
     customerName?: string | null;
     shouldPrint: boolean;
     tefData?: NFCeTefData;
+    customerDocument?: string;
   }): Promise<boolean> {
-    const { saleId, items, discount, customerName, shouldPrint, tefData } = args;
+    const { saleId, items, discount, customerName, shouldPrint, tefData, customerDocument } = args;
     if (!companyId || !currentRegister) return false;
     try {
       const nfceItems: NFCeItem[] = items.map((it) => {
@@ -293,14 +294,21 @@ export default function PDVV2() {
       });
 
       const externalId = `PDVV2-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+      const cleanDoc = (customerDocument || '').replace(/\D/g, '');
+      const destinatario = cleanDoc.length === 11
+        ? { cpf: cleanDoc, nome: customerName || undefined }
+        : cleanDoc.length === 14
+          ? { cnpj: cleanDoc, nome: customerName || undefined }
+          : undefined;
       await emitirNFCe(companyId, saleId, {
         external_id: externalId,
         itens: nfceItems,
         valor_desconto: discount || 0,
         valor_frete: 0,
         observacoes: customerName ? `Cliente: ${customerName}` : undefined,
+        destinatario,
         tef: tefData,
-      });
+      } as any);
       toast.success('NFC-e enviada para processamento!');
 
       // Busca o registro recém-criado para abrir o pop-up de status
@@ -333,7 +341,8 @@ export default function PDVV2() {
     printDocument,
     tefOptions,
     tefIntegration,
-  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean; tefOptions?: TefOptions; tefIntegration?: 'tef_pinpad' | 'tef_smartpos' }) {
+    customerDocument,
+  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean; tefOptions?: TefOptions; tefIntegration?: 'tef_pinpad' | 'tef_smartpos'; customerDocument?: string }) {
     if (!chargeOrder || !user || !currentRegister) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -389,6 +398,7 @@ export default function PDVV2() {
           customerName: chargeOrder.customerName,
           shouldPrint: !!printDocument,
           tefData,
+          customerDocument,
         });
         if (!ok) {
           // Falhou ao emitir → fecha como venda comum para não travar o caixa
@@ -430,7 +440,8 @@ export default function PDVV2() {
     printDocument,
     tefOptions,
     tefIntegration,
-  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean; tefOptions?: TefOptions; tefIntegration?: 'tef_pinpad' | 'tef_smartpos' }) {
+    customerDocument,
+  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean; tefOptions?: TefOptions; tefIntegration?: 'tef_pinpad' | 'tef_smartpos'; customerDocument?: string }) {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -499,6 +510,7 @@ export default function PDVV2() {
           customerName: fullTab.customer_name || null,
           shouldPrint,
           tefData,
+          customerDocument,
         });
         if (!ok) {
           await closeTab(fullTab.id);

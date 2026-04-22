@@ -38,6 +38,8 @@ interface PDVV2PaymentDialogProps {
     tefOptions?: TefOptions;
     /** Tipo de integração TEF detectado (tef_pinpad | tef_smartpos) */
     tefIntegration?: 'tef_pinpad' | 'tef_smartpos';
+    /** CPF/CNPJ do destinatário da NFC-e (apenas dígitos). Opcional. */
+    customerDocument?: string;
   }) => Promise<void> | void;
 }
 
@@ -68,6 +70,8 @@ export function PDVV2PaymentDialog({
   // TEF (mesma UI/regra do PDV V1)
   const [tefModality, setTefModality] = useState<'avista' | 'parcelado' | 'debit'>('avista');
   const [tefInstallments, setTefInstallments] = useState('2');
+  // CPF/CNPJ do consumidor (opcional) — vai para o destinatário da NFC-e
+  const [customerDocument, setCustomerDocument] = useState('');
   const [documentMode, setDocumentMode] = useState<DocumentMode>(() => {
     const saved = localStorage.getItem('pdv_document_mode');
     return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
@@ -100,6 +104,7 @@ export function PDVV2PaymentDialog({
       setPrintChoiceOpen(false);
       setTefModality('avista');
       setTefInstallments('2');
+      setCustomerDocument('');
     }
   }, [open]);
 
@@ -129,6 +134,8 @@ export function PDVV2PaymentDialog({
           installmentType: 'adm',
         }
       : undefined;
+    const cleanDoc = customerDocument.replace(/\D/g, '');
+    const isNfce = docMode === 'sale_with_nfce' || isTef;
     setSubmitting(true);
     await onConfirm({
       paymentMethodId,
@@ -140,6 +147,7 @@ export function PDVV2PaymentDialog({
       printDocument,
       tefOptions,
       tefIntegration: isTef ? (integration as 'tef_pinpad' | 'tef_smartpos') : undefined,
+      customerDocument: isNfce && (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : undefined,
     });
     setSubmitting(false);
   }
@@ -318,6 +326,24 @@ export function PDVV2PaymentDialog({
               onChange={setDocumentMode}
               forceNFCe={isTef}
             />
+          )}
+
+          {/* CPF/CNPJ na nota — visível apenas se a venda for sair com NFC-e */}
+          {(effectiveDocumentMode === 'sale_with_nfce' || isTef) && (
+            <div className="space-y-2">
+              <Label htmlFor="cpf-cnpj-nfce">CPF/CNPJ na nota (opcional)</Label>
+              <Input
+                id="cpf-cnpj-nfce"
+                inputMode="numeric"
+                placeholder="Somente números — deixe em branco para consumidor não identificado"
+                value={customerDocument}
+                onChange={(e) => setCustomerDocument(e.target.value.replace(/[^\d./-]/g, ''))}
+                maxLength={18}
+              />
+              <p className="text-xs text-muted-foreground">
+                Em branco = NFC-e sem destinatário (consumidor não identificado).
+              </p>
+            </div>
           )}
         </div>
 

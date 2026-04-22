@@ -97,6 +97,23 @@ Deno.serve(async (req) => {
 
         // If TEF data is present, add payment group to payload
         const emitPayload = { ...payload }
+
+        // Map optional destinatário (CPF/CNPJ) to the Fiscal API format.
+        // Without this block the API emits as "consumidor não identificado".
+        if (payload.destinatario && (payload.destinatario.cpf || payload.destinatario.cnpj)) {
+          const dest = payload.destinatario
+          emitPayload.destinatario = {
+            ...(dest.cpf ? { CPF: dest.cpf } : {}),
+            ...(dest.cnpj ? { CNPJ: dest.cnpj } : {}),
+            ...(dest.nome ? { xNome: dest.nome } : {}),
+            indIEDest: '9', // Não contribuinte
+          }
+          console.log('[nfce-proxy] Destinatário identificado:', JSON.stringify(emitPayload.destinatario))
+        } else {
+          // Garante que nada sobre dest vá para a API: evita XML inválido
+          delete emitPayload.destinatario
+        }
+
         if (payload.tef) {
           const tef = payload.tef
           const tPagMap: Record<string, string> = {

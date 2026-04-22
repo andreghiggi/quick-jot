@@ -33,6 +33,15 @@ export interface NFCeEmitRequest {
   valor_frete?: number;
   observacoes?: string;
   tef?: NFCeTefData;
+  /**
+   * Destinatário da NFC-e (opcional). Quando omitido, a nota é emitida como
+   * "consumidor não identificado" — comportamento padrão para vendas até R$ 10.000.
+   */
+  destinatario?: {
+    cpf?: string;
+    cnpj?: string;
+    nome?: string;
+  };
 }
 
 export interface NFCeRecord {
