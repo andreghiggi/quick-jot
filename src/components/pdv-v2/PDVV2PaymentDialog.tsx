@@ -8,7 +8,7 @@ import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput, LANCHERIA_I9_COMPANY_ID } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
-import { Plug } from 'lucide-react';
+import { Plug, Loader2 } from 'lucide-react';
 import type { TefOptions } from '@/utils/pdvV2Tef';
 
 interface PDVV2PaymentDialogProps {
@@ -25,6 +25,8 @@ interface PDVV2PaymentDialogProps {
   channel?: PaymentChannel;
   /** Restringir a apenas formas em dinheiro (oculta TEF e demais) */
   cashOnly?: boolean;
+  /** Mensagem de status do processamento TEF (mostrada como banner topo). Vazio = oculto. */
+  tefStatus?: string;
   onConfirm: (params: {
     paymentMethodId: string;
     paymentName: string;
