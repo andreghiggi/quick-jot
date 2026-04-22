@@ -19,8 +19,8 @@ import type { NFCeTefData } from '@/services/nfceService';
 export type TefIntegration = 'tef_pinpad' | 'tef_smartpos';
 
 export interface TefOptions {
-  /** 'avista' | 'parcelado' | 'debit' */
-  modality: 'avista' | 'parcelado' | 'debit';
+  /** 'avista' | 'parcelado' | 'debit' | 'pix' */
+  modality: 'avista' | 'parcelado' | 'debit' | 'pix';
   /** Apenas quando modality === 'parcelado' */
   installments?: number;
   /** 'adm' (default) ou 'loja' — usado no rótulo da nota */
@@ -53,10 +53,14 @@ export interface RunTefResult {
  */
 export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
   const { companyId, integration, amount, options, description, onStatus } = args;
-  const tefPaymentType: 'credit' | 'debit' =
-    options.modality === 'debit' ? 'debit' : 'credit';
-  const installmentCount =
+  const tefPaymentType: 'credit' | 'debit' | 'pix' =
     options.modality === 'debit'
+      ? 'debit'
+      : options.modality === 'pix'
+        ? 'pix'
+        : 'credit';
+  const installmentCount =
+    options.modality === 'debit' || options.modality === 'pix'
       ? 1
       : options.modality === 'parcelado'
         ? Math.max(2, options.installments || 2)
@@ -105,9 +109,11 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
           const installLabel =
             tefPaymentType === 'debit'
               ? ' | Débito'
-              : installmentCount > 1
-                ? ` | ${installmentCount}x Cartão${installTypeLabel}`
-                : ' | Crédito à Vista';
+              : tefPaymentType === 'pix'
+                ? ' | PIX'
+                : installmentCount > 1
+                  ? ` | ${installmentCount}x Cartão${installTypeLabel}`
+                  : ' | Crédito à Vista';
           const receiptData =
             statusResult.receiptLines && statusResult.receiptLines.length > 0
               ? ` | [COMPROVANTE]${statusResult.receiptLines.join('\\n')}[/COMPROVANTE]`
@@ -182,9 +188,11 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
         const installLabel =
           tefPaymentType === 'debit'
             ? ' | Débito'
-            : installmentCount > 1
-              ? ` | ${installmentCount}x Crédito`
-              : ' | Crédito à Vista';
+            : tefPaymentType === 'pix'
+              ? ' | PIX'
+              : installmentCount > 1
+                ? ` | ${installmentCount}x Crédito`
+                : ' | Crédito à Vista';
 
         return {
           success: true,
