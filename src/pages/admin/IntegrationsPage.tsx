@@ -5,6 +5,7 @@ import { MultiplusCardSettings } from '@/components/admin/MultiplusCardSettings'
 import { PinpadSettings } from '@/components/admin/PinpadSettings';
 import { NFCeSettings } from '@/components/admin/NFCeSettings';
 import { PixSettings } from '@/components/admin/PixSettings';
+import { FiscalFlowTokenSettings } from '@/components/fiscal/FiscalFlowTokenSettings';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plug } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -57,6 +58,7 @@ export default function IntegrationsPage() {
               <MultiplusCardSettings companyId={companyId} />
               <PinpadSettings companyId={companyId} />
               <NFCeSettings companyId={companyId} />
+              <FiscalFlowTokenSettings companyId={companyId} />
               <PixSettings companyId={companyId} />
             </>
           ) : (

@@ -17,7 +17,6 @@ import { Separator } from '@/components/ui/separator';
 import { Plus, Pencil, Trash2, FileText, Loader2, Receipt } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { FiscalFlowTokenSettings } from '@/components/fiscal/FiscalFlowTokenSettings';
 
 const CSOSN_OPTIONS = [
   { value: '101', label: '101 - Tributada com permissão de crédito' },
@@ -185,8 +184,6 @@ export default function Fiscal() {
   return (
     <AppLayout title="Fiscal" actions={headerActions}>
       <div className="space-y-6">
-        {company?.id && <FiscalFlowTokenSettings companyId={company.id} />}
-
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
