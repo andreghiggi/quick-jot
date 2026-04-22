@@ -1779,7 +1779,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           setNfceDialogOpen(o);
           if (!o) setNfceRecord(null);
         }}
-        record={nfceRecord}
+        companyId={company?.id}
+        initialRecord={nfceRecord}
         autoPrint={nfceAutoPrint}
       />
     </>
