@@ -264,8 +264,14 @@ Deno.serve(async (req) => {
           if (xml) updateData.xml_url = xml
 
           // Motivo rejeição
-          const motivo = d.motivo_rejeicao || d.motivo || d.xMotivo || d.reason
+          const motivo = d.motivo_rejeicao || d.motivo_retorno || d.motivo || d.xMotivo || d.reason
           if (motivo) updateData.motivo_rejeicao = motivo
+
+          // Some Fiscal APIs keep status as "pendente" but include a motivo
+          // (rejection reason). Treat that as "rejeitada" so the UI can react.
+          if (motivo && (!rawStatus || rawStatus === 'pendente' || rawStatus === 'processando')) {
+            updateData.status = 'rejeitada'
+          }
 
           // Ambiente
           if (d.ambiente || d.environment) updateData.ambiente = d.ambiente || d.environment
