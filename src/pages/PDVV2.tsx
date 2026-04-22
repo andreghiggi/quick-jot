@@ -481,7 +481,14 @@ export default function PDVV2() {
       // Imprime se: I9 escolheu "Imprimir" no pop-up, ou demais lojas (comportamento original)
       const shouldPrint = printDocument !== false;
       if (wantsNfce) {
-        await emitAndOptionallyPrintNFCe({
+        // Mesma regra do confirmChargeOrder: só fecha a comanda depois que o
+        // operador autorizar o fechamento do pop-up de NFC-e.
+        const tabIdToClose = fullTab.id;
+        setPendingPostSale(() => async () => {
+          await closeTab(tabIdToClose);
+          toast.success('Comanda importada e fechada!');
+        });
+        const ok = await emitNFCeAndOpenDialog({
           saleId,
           items,
           discount,
@@ -489,6 +496,12 @@ export default function PDVV2() {
           shouldPrint,
           tefData,
         });
+        if (!ok) {
+          await closeTab(fullTab.id);
+          setPendingPostSale(null);
+        }
+        setImportingTab(null);
+        return;
       } else if (shouldPrint) {
         const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
         const printItems = [
