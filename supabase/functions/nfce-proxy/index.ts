@@ -105,10 +105,27 @@ Deno.serve(async (req) => {
           // A fiscal-api PHP espera as chaves em MINÚSCULAS (cpf, cnpj, nome).
           // Quando recebia em maiúsculas (CPF/CNPJ), ela montava um destinatário
           // vazio + xNome em posição inválida no XML, gerando rejeição SEFAZ.
-          // Em homologação, omitimos xNome (a SEFAZ exige nome fictício específico).
+          // ORDEM XML EXIGIDA PELA SEFAZ (rejeição "Element xNome is not expected.
+          // Expected is one of (CNPJ, CPF, idEstrangeiro)"):
+          //   1) CNPJ ou CPF ou idEstrangeiro
+          //   2) xNome
+          // Por isso construímos o objeto JSON nesta ordem — a fiscal-api PHP
+          // preserva a ordem das chaves ao serializar para XML.
+          // Em homologação, a SEFAZ exige o nome fictício
+          // "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL".
+          // Para evitar rejeição, só enviamos o nome real em produção; em
+          // homologação omitimos para que a fiscal-api use o texto exigido.
           const destOrdered: Record<string, string> = {}
+          // 1º: documento (CNPJ tem precedência sobre CPF)
           if (dest.cnpj) destOrdered.cnpj = String(dest.cnpj).replace(/\D/g, '')
           else if (dest.cpf) destOrdered.cpf = String(dest.cpf).replace(/\D/g, '')
+          // 2º: nome — somente DEPOIS do documento
+          const ambientePayload = String(payload.ambiente || '').toLowerCase()
+          const isProducao = ambientePayload === 'producao' || ambientePayload === '1'
+          if (isProducao && dest.nome && String(dest.nome).trim().length > 0) {
+            destOrdered.nome = String(dest.nome).trim().substring(0, 60)
+          }
+          // 3º: indicador de IE
           destOrdered.indIEDest = '9' // Não contribuinte
           emitPayload.destinatario = destOrdered
           console.log('[nfce-proxy] Destinatário identificado:', JSON.stringify(emitPayload.destinatario))
