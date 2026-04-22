@@ -865,6 +865,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             paperSize: settings.printerPaperSize,
             referenceLabel: 'PEDIDO EXPRESS',
             layout: settings.printLayout,
+            // Lancheria I9: imprime data/hora de criação e previsão de pronto (criação + 10 min)
+            showReadyTime: isLancheriaI9,
+            readyOffsetMinutes: 10,
           });
 
           await supabase.from('print_queue').insert({
