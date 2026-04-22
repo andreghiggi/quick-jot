@@ -250,6 +250,70 @@ export default function PDVV2() {
     }
   }
 
+  // Helper compartilhado: emite NFC-e a partir dos itens da venda e, se solicitado,
+  // aguarda a autorização (polling curto) para imprimir o DANFE com QR Code.
+  async function emitAndOptionallyPrintNFCe(args: {
+    saleId: string;
+    items: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[];
+    discount: number;
+    customerName?: string | null;
+    shouldPrint: boolean;
+  }) {
+    const { saleId, items, discount, customerName, shouldPrint } = args;
+    if (!companyId || !currentRegister) return;
+    try {
+      const nfceItems: NFCeItem[] = items.map((it) => {
+        const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
+        const taxRule = product?.taxRuleId ? taxRules.find((tr) => tr.id === product.taxRuleId) : null;
+        return {
+          codigo: it.product_id || 'AVULSO',
+          descricao: it.product_name,
+          ncm: taxRule?.ncm || '00000000',
+          cfop: taxRule?.cfop || '5102',
+          unidade: 'UN',
+          quantidade: it.quantity,
+          valor_unitario: it.unit_price,
+          csosn: taxRule?.csosn || '102',
+          aliquota_icms: taxRule?.icms_aliquot || 0,
+          cst_pis: taxRule?.pis_cst || '49',
+          aliquota_pis: taxRule?.pis_aliquot || 0,
+          cst_cofins: taxRule?.cofins_cst || '49',
+          aliquota_cofins: taxRule?.cofins_aliquot || 0,
+        };
+      });
+
+      const externalId = `PDVV2-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+      await emitirNFCe(companyId, saleId, {
+        external_id: externalId,
+        itens: nfceItems,
+        valor_desconto: discount || 0,
+        valor_frete: 0,
+        observacoes: customerName ? `Cliente: ${customerName}` : undefined,
+      });
+      toast.success('NFC-e enviada para processamento!');
+
+      if (!shouldPrint) return;
+
+      // Polling curto para imprimir DANFE assim que autorizada (até ~10s)
+      for (let i = 0; i < 10; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        try {
+          const rec = await getNFCeRecordBySaleId(saleId);
+          if (rec && (rec.chave_acesso || rec.qrcode_url)) {
+            await printDanfeFromRecord(rec);
+            return;
+          }
+        } catch {
+          /* tenta novamente */
+        }
+      }
+      toast.info('NFC-e emitida — imprima manualmente em "Comandas Finalizadas" assim que autorizada.');
+    } catch (err: any) {
+      console.error('[PDVV2] NFC-e emission error:', err);
+      toast.error(`Venda registrada, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
+    }
+  }
+
   async function confirmChargeOrder({
     paymentMethodId,
     paymentName,
