@@ -13,7 +13,9 @@ import { Button } from '@/components/ui/button';
 import { CreditCard, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Link } from 'react-router-dom';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 import { PDVV2Layout } from '@/components/layout/PDVV2Layout';
 import { PDVV2TopBar } from '@/components/pdv-v2/PDVV2TopBar';
@@ -43,7 +45,7 @@ export default function PDVV2() {
   const tablesEnabled = isModuleEnabled('mesas');
 
   const { orders, updateOrderStatus } = useOrderContext();
-  const { currentRegister, totalSales, sales, closeRegister, addSale, refetch: refetchCash } = useCashRegister({ companyId });
+  const { currentRegister, totalSales, sales, openRegister, closeRegister, addSale, refetch: refetchCash } = useCashRegister({ companyId });
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
@@ -54,6 +56,8 @@ export default function PDVV2() {
   const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders');
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [closeOpen, setCloseOpen] = useState(false);
+  const [openCashOpen, setOpenCashOpen] = useState(false);
+  const [openingAmount, setOpeningAmount] = useState('');
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [importingTab, setImportingTab] = useState<OccupiedTab | null>(null);
@@ -330,11 +334,9 @@ export default function PDVV2() {
                     Para acessar a Central PDV e iniciar as vendas, abra o caixa primeiro.
                   </p>
                 </div>
-                <Button asChild size="lg" className="gap-2">
-                  <Link to="/financeiro/caixa">
-                    <Unlock className="h-4 w-4" />
-                    Abrir Caixa
-                  </Link>
+                <Button size="lg" className="gap-2" onClick={() => setOpenCashOpen(true)}>
+                  <Unlock className="h-4 w-4" />
+                  Abrir Caixa
                 </Button>
               </CardContent>
             </Card>
@@ -520,6 +522,48 @@ export default function PDVV2() {
         showAddItem
         onConfirm={confirmImportTab}
       />
+
+      <Dialog open={openCashOpen} onOpenChange={setOpenCashOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Abrir Caixa</DialogTitle>
+            <DialogDescription>
+              Informe o valor de abertura (troco inicial). Use 0 se não houver troco.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="opening-amount">Valor de abertura (R$)</Label>
+            <Input
+              id="opening-amount"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              placeholder="0,00"
+              value={openingAmount}
+              onChange={(e) => setOpeningAmount(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenCashOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!user) return;
+                const amount = parseFloat(openingAmount.replace(',', '.')) || 0;
+                const ok = await openRegister(amount, user.id);
+                if (ok) {
+                  setOpenCashOpen(false);
+                  setOpeningAmount('');
+                }
+              }}
+            >
+              Abrir Caixa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PDVV2Layout>
   );
 }
