@@ -53,6 +53,7 @@ export function PDVV2PaymentDialog({
     : rawActivePaymentMethods;
   // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
   const useCurrencyMask = companyId === LANCHERIA_I9_COMPANY_ID;
+  const isLancheriaI9 = companyId === LANCHERIA_I9_COMPANY_ID;
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [discount, setDiscount] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
@@ -62,6 +63,10 @@ export function PDVV2PaymentDialog({
     const saved = localStorage.getItem('pdv_document_mode');
     return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
   });
+  // Pop-ups Lancheria I9: etapa 1 (escolha de documento) → etapa 2 (imprimir?) → confirma
+  const [docChoiceOpen, setDocChoiceOpen] = useState(false);
+  const [printChoiceOpen, setPrintChoiceOpen] = useState(false);
+  const [pendingDocMode, setPendingDocMode] = useState<DocumentMode>('sale_only');
 
   // Detecta se o método selecionado é TEF — força NFC-e (mesma regra do V1)
   const selectedMethod = activePaymentMethods.find((m) => m.id === paymentMethodId);
