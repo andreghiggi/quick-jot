@@ -134,6 +134,8 @@ export function PDVV2PaymentDialog({
           installmentType: 'adm',
         }
       : undefined;
+    const cleanDoc = customerDocument.replace(/\D/g, '');
+    const isNfce = docMode === 'sale_with_nfce' || isTef;
     setSubmitting(true);
     await onConfirm({
       paymentMethodId,
@@ -145,6 +147,7 @@ export function PDVV2PaymentDialog({
       printDocument,
       tefOptions,
       tefIntegration: isTef ? (integration as 'tef_pinpad' | 'tef_smartpos') : undefined,
+      customerDocument: isNfce && (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : undefined,
     });
     setSubmitting(false);
   }
