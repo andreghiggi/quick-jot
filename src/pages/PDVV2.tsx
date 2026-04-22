@@ -510,6 +510,7 @@ export default function PDVV2() {
           customerName: fullTab.customer_name || null,
           shouldPrint,
           tefData,
+          customerDocument,
         });
         if (!ok) {
           await closeTab(fullTab.id);
