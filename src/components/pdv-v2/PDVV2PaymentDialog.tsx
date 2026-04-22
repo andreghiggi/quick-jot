@@ -79,6 +79,7 @@ export function PDVV2PaymentDialog({
   // Pop-ups Lancheria I9: etapa 1 (escolha de documento) → etapa 2 (imprimir?) → confirma
   const [docChoiceOpen, setDocChoiceOpen] = useState(false);
   const [printChoiceOpen, setPrintChoiceOpen] = useState(false);
+  const [cpfChoiceOpen, setCpfChoiceOpen] = useState(false);
   const [pendingDocMode, setPendingDocMode] = useState<DocumentMode>('sale_only');
 
   // Detecta se o método selecionado é TEF — força NFC-e (mesma regra do V1)
@@ -102,6 +103,7 @@ export function PDVV2PaymentDialog({
       setExtraItems([]);
       setDocChoiceOpen(false);
       setPrintChoiceOpen(false);
+      setCpfChoiceOpen(false);
       setTefModality('avista');
       setTefInstallments('2');
       setCustomerDocument('');
@@ -159,10 +161,16 @@ export function PDVV2PaymentDialog({
     if (isLancheriaI9 && showDocumentMode) {
       if (isTef) {
         setPendingDocMode('sale_with_nfce');
-        setPrintChoiceOpen(true);
+        setCpfChoiceOpen(true);
       } else {
         setDocChoiceOpen(true);
       }
+      return;
+    }
+    // Demais empresas: se a venda sair com NFC-e (ou TEF), abrir popup de CPF antes
+    if (effectiveDocumentMode === 'sale_with_nfce' || isTef) {
+      setPendingDocMode('sale_with_nfce');
+      setCpfChoiceOpen(true);
       return;
     }
     await finalizeConfirm(effectiveDocumentMode);
@@ -327,24 +335,6 @@ export function PDVV2PaymentDialog({
               forceNFCe={isTef}
             />
           )}
-
-          {/* CPF/CNPJ na nota — visível apenas se a venda for sair com NFC-e */}
-          {(effectiveDocumentMode === 'sale_with_nfce' || isTef) && (
-            <div className="space-y-2">
-              <Label htmlFor="cpf-cnpj-nfce">CPF/CNPJ na nota (opcional)</Label>
-              <Input
-                id="cpf-cnpj-nfce"
-                inputMode="numeric"
-                placeholder="Somente números — deixe em branco para consumidor não identificado"
-                value={customerDocument}
-                onChange={(e) => setCustomerDocument(e.target.value.replace(/[^\d./-]/g, ''))}
-                maxLength={18}
-              />
-              <p className="text-xs text-muted-foreground">
-                Em branco = NFC-e sem destinatário (consumidor não identificado).
-              </p>
-            </div>
-          )}
         </div>
 
         <DialogFooter>
@@ -385,7 +375,7 @@ export function PDVV2PaymentDialog({
               onClick={() => {
                 setPendingDocMode('sale_with_nfce');
                 setDocChoiceOpen(false);
-                setPrintChoiceOpen(true);
+                setCpfChoiceOpen(true);
               }}
             >
               Venda com NFC-e
@@ -425,6 +415,58 @@ export function PDVV2PaymentDialog({
               Imprimir
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pop-up CPF/CNPJ na nota — abre antes da emissão da NFC-e */}
+      <Dialog open={cpfChoiceOpen} onOpenChange={setCpfChoiceOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>CPF/CNPJ na nota?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="cpf-cnpj-popup">CPF ou CNPJ do consumidor (opcional)</Label>
+            <Input
+              id="cpf-cnpj-popup"
+              inputMode="numeric"
+              placeholder="Somente números"
+              value={customerDocument}
+              onChange={(e) => setCustomerDocument(e.target.value.replace(/[^\d./-]/g, ''))}
+              maxLength={18}
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              Em branco = NFC-e sem destinatário (consumidor não identificado).
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCustomerDocument('');
+                setCpfChoiceOpen(false);
+                if (isLancheriaI9 && showDocumentMode) {
+                  setPrintChoiceOpen(true);
+                } else {
+                  finalizeConfirm(pendingDocMode);
+                }
+              }}
+            >
+              Sem CPF
+            </Button>
+            <Button
+              onClick={() => {
+                setCpfChoiceOpen(false);
+                if (isLancheriaI9 && showDocumentMode) {
+                  setPrintChoiceOpen(true);
+                } else {
+                  finalizeConfirm(pendingDocMode);
+                }
+              }}
+            >
+              Confirmar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Dialog>
