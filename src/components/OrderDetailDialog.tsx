@@ -220,7 +220,7 @@ export function OrderDetailDialog({ orderId, open, onOpenChange }: OrderDetailDi
                       {item.notes && (
                         <div className="ml-4 text-sm">
                           <span className="text-muted-foreground">↳ Observação: </span>
-                          <span className="italic text-muted-foreground">{item.notes}</span>
+                          <span className="italic text-muted-foreground">{stripDescMarkers(item.notes)}</span>
                         </div>
                       )}
                     </div>
