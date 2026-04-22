@@ -207,7 +207,9 @@ export function PDVV2CloseCashDialog({
                     Informe o valor que você realmente recebeu em cada forma para validar divergências.
                   </p>
                   {Object.entries(declaredByPayment).map(([pay, declared]) => {
-                    const informed = parseFloat((reconcile[pay] || '').replace(',', '.')) || 0;
+                    const informed = useCurrencyMask
+                      ? parseCurrencyInput(reconcile[pay] || '')
+                      : parseFloat((reconcile[pay] || '').replace(',', '.')) || 0;
                     const diff = informed - declared;
                     const hasInput = (reconcile[pay] || '').length > 0;
                     return (
@@ -219,14 +221,19 @@ export function PDVV2CloseCashDialog({
                           </p>
                         </div>
                         <Input
-                          type="number"
+                          type={useCurrencyMask ? 'text' : 'number'}
                           inputMode="decimal"
-                          step="0.01"
-                          placeholder="Informado"
+                          step={useCurrencyMask ? undefined : '0.01'}
+                          placeholder={useCurrencyMask ? 'R$ 0,00' : 'Informado'}
                           className="w-32"
                           value={reconcile[pay] || ''}
                           onChange={(e) =>
-                            setReconcile((s) => ({ ...s, [pay]: e.target.value }))
+                            setReconcile((s) => ({
+                              ...s,
+                              [pay]: useCurrencyMask
+                                ? maskCurrencyInput(e.target.value)
+                                : e.target.value,
+                            }))
                           }
                         />
                         <span
