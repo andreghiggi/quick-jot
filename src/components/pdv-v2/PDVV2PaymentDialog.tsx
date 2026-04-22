@@ -87,6 +87,8 @@ export function PDVV2PaymentDialog({
       setAmountReceived('');
       setSubmitting(false);
       setExtraItems([]);
+      setDocChoiceOpen(false);
+      setPrintChoiceOpen(false);
     }
   }, [open]);
 
