@@ -10,9 +10,10 @@ import { Order, OrderStatus } from '@/types/order';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { Link } from 'react-router-dom';
 
 import { PDVV2Layout } from '@/components/layout/PDVV2Layout';
 import { PDVV2TopBar } from '@/components/pdv-v2/PDVV2TopBar';
