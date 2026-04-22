@@ -375,7 +375,14 @@ export default function PDVV2() {
       // NFC-e: TEF força emissão (regra V1). Caso contrário, segue documentMode.
       const wantsNfce = (tefIntegration ? true : documentMode === 'sale_with_nfce') && fiscalEnabled && companyId;
       if (wantsNfce) {
-        await emitAndOptionallyPrintNFCe({
+        // Marca o pedido como entregue só depois que o operador autorizar o
+        // fechamento do pop-up de NFC-e (autorizada/rejeitada).
+        const orderIdToFinish = chargeOrder.id;
+        setPendingPostSale(() => async () => {
+          await updateOrderStatus(orderIdToFinish, 'delivered');
+          toast.success('Cobrança registrada!');
+        });
+        const ok = await emitNFCeAndOpenDialog({
           saleId,
           items,
           discount,
@@ -383,6 +390,13 @@ export default function PDVV2() {
           shouldPrint: !!printDocument,
           tefData,
         });
+        if (!ok) {
+          // Falhou ao emitir → fecha como venda comum para não travar o caixa
+          await updateOrderStatus(chargeOrder.id, 'delivered');
+          setPendingPostSale(null);
+        }
+        setChargeOrder(null);
+        return;
       } else if (printDocument && companyId) {
         const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
         const printItems = [
