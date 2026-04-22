@@ -246,7 +246,17 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
             </div>
           )}
 
-          {open && !selectedProduct && (
+          {open && !selectedProduct && isLancheriaI9 && (
+            // I9: navegador estilo cardápio público (categorias com foto → subcategorias → produtos)
+            <PDVV2CategoryBrowser
+              companyId={companyId}
+              pdvOnly
+              onProductSelect={pickProduct}
+              maxHeightClassName="max-h-[55vh]"
+            />
+          )}
+
+          {open && !selectedProduct && !isLancheriaI9 && (
             <div className="space-y-2">
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
