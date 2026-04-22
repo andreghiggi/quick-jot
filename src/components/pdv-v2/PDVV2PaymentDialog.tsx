@@ -145,12 +145,14 @@ export function PDVV2PaymentDialog({
           <div className="space-y-2">
             <Label>Desconto (R$)</Label>
             <Input
-              type="number"
+              type={useCurrencyMask ? 'text' : 'number'}
               inputMode="decimal"
-              step="0.01"
-              placeholder="0,00"
+              step={useCurrencyMask ? undefined : '0.01'}
+              placeholder={useCurrencyMask ? 'R$ 0,00' : '0,00'}
               value={discount}
-              onChange={(e) => setDiscount(e.target.value)}
+              onChange={(e) =>
+                setDiscount(useCurrencyMask ? maskCurrencyInput(e.target.value) : e.target.value)
+              }
             />
           </div>
 
@@ -178,12 +180,16 @@ export function PDVV2PaymentDialog({
             <div className="space-y-2">
               <Label>Valor recebido (R$)</Label>
               <Input
-                type="number"
+                type={useCurrencyMask ? 'text' : 'number'}
                 inputMode="decimal"
-                step="0.01"
-                placeholder="0,00"
+                step={useCurrencyMask ? undefined : '0.01'}
+                placeholder={useCurrencyMask ? 'R$ 0,00' : '0,00'}
                 value={amountReceived}
-                onChange={(e) => setAmountReceived(e.target.value)}
+                onChange={(e) =>
+                  setAmountReceived(
+                    useCurrencyMask ? maskCurrencyInput(e.target.value) : e.target.value,
+                  )
+                }
                 autoFocus
               />
               <div className="rounded-md border p-3 bg-muted/40 flex items-center justify-between">
