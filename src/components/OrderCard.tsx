@@ -33,6 +33,10 @@ interface OrderCardProps {
   paperSize?: '58mm' | '80mm';
   storeName?: string;
   headerExtra?: React.ReactNode;
+  /** Quando true, bloqueia o botão "Próximo status" (ex: "Entregar") até que outra ação seja concluída (ex: pagamento). */
+  disableAdvance?: boolean;
+  /** Mensagem mostrada via tooltip/title quando o avanço está bloqueado. */
+  disableAdvanceReason?: string;
 }
 
 const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textColor: string; borderColor: string; next?: OrderStatus }> = {
@@ -72,7 +76,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
   delivered: '',
 };
 
-export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra }: OrderCardProps) {
+export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
   const { company } = useAuthContext();
   
