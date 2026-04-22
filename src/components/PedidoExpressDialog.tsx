@@ -865,9 +865,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             paperSize: settings.printerPaperSize,
             referenceLabel: 'PEDIDO EXPRESS',
             layout: settings.printLayout,
-            // Lancheria I9: prazo estimado 20–40 min → previsão = criação + 30 min (máximo − 10 min)
+            // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
             showReadyTime: isLancheriaI9,
-            readyOffsetMinutes: 30,
+            readyOffsetMinutes: isLancheriaI9
+              ? computeReadyOffsetMinutes(settings.estimatedWaitTime, 30)
+              : undefined,
           });
 
           await supabase.from('print_queue').insert({
