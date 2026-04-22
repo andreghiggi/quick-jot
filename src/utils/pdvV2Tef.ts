@@ -109,9 +109,11 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
           const installLabel =
             tefPaymentType === 'debit'
               ? ' | Débito'
-              : installmentCount > 1
-                ? ` | ${installmentCount}x Cartão${installTypeLabel}`
-                : ' | Crédito à Vista';
+              : tefPaymentType === 'pix'
+                ? ' | PIX'
+                : installmentCount > 1
+                  ? ` | ${installmentCount}x Cartão${installTypeLabel}`
+                  : ' | Crédito à Vista';
           const receiptData =
             statusResult.receiptLines && statusResult.receiptLines.length > 0
               ? ` | [COMPROVANTE]${statusResult.receiptLines.join('\\n')}[/COMPROVANTE]`
