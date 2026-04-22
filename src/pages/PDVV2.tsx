@@ -36,7 +36,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ClipboardList, UtensilsCrossed } from 'lucide-react';
 
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
-import { emitirNFCe, getNFCeRecordBySaleId, printDanfeFromRecord, NFCeItem } from '@/services/nfceService';
+import { emitirNFCe, getNFCeRecordBySaleId, printDanfeFromRecord, NFCeItem, NFCeTefData } from '@/services/nfceService';
+import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
@@ -258,8 +259,9 @@ export default function PDVV2() {
     discount: number;
     customerName?: string | null;
     shouldPrint: boolean;
+    tefData?: NFCeTefData;
   }) {
-    const { saleId, items, discount, customerName, shouldPrint } = args;
+    const { saleId, items, discount, customerName, shouldPrint, tefData } = args;
     if (!companyId || !currentRegister) return;
     try {
       const nfceItems: NFCeItem[] = items.map((it) => {
@@ -289,6 +291,7 @@ export default function PDVV2() {
         valor_desconto: discount || 0,
         valor_frete: 0,
         observacoes: customerName ? `Cliente: ${customerName}` : undefined,
+        tef: tefData,
       });
       toast.success('NFC-e enviada para processamento!');
 
