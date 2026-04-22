@@ -21,6 +21,10 @@ interface PrintTicketData {
   paperSize?: '58mm' | '80mm';
   referenceLabel?: string;
   layout?: PrintLayoutVersion;
+  /** Quando true (layout v2), exibe data/hora de criação e previsão de pronto.
+   *  Previsão = createdAt + readyOffsetMinutes (default 10 min). Usado apenas pela Lancheria I9. */
+  showReadyTime?: boolean;
+  readyOffsetMinutes?: number;
 }
 
 function getPaperWidth(size?: '58mm' | '80mm'): string {
@@ -174,6 +178,20 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
   const dateStr = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   const timeStr = now.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
 
+  // Previsão de pronto (apenas quando solicitado, ex.: Lancheria I9)
+  const readyOffset = typeof data.readyOffsetMinutes === 'number' ? data.readyOffsetMinutes : 10;
+  const readyDate = new Date(now.getTime() + readyOffset * 60 * 1000);
+  const readyDateStr = readyDate.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const readyTimeStr = readyDate.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+  const readyBlockHTML = data.showReadyTime
+    ? `
+      <div class="ready-block">
+        <div class="ready-line"><strong>Criado em:</strong> ${dateStr} às ${timeStr}</div>
+        <div class="ready-line ready-highlight"><strong>Pronto até:</strong> ${readyDateStr} às ${readyTimeStr}</div>
+      </div>
+    `
+    : '';
+
   const itemsHTML = data.items.map((item, index) => {
     const { additionals, observations } = parseNotes(item.notes);
     const additionalsHTML = additionals.length > 0
@@ -263,6 +281,11 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         }
 
         .footer { border-top: 1px dashed #000; padding-top: 2mm; margin-top: 2mm; text-align: center; font-size: 8pt; }
+
+        /* V2: bloco de previsão de pronto (Lancheria I9) */
+        .ready-block { border: 1px dashed #000; padding: 1.5mm 2mm; margin: 2mm 0; text-align: center; }
+        .ready-line { font-size: 10pt; font-weight: bold; line-height: 1.4; }
+        .ready-highlight { font-size: 12pt; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 0.5mm; }
         @media print {
           html, body, * {
             -webkit-print-color-adjust: exact !important;
@@ -287,6 +310,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         <div class="datetime">${dateStr} às ${timeStr}</div>
       </div>
       <!--BOX_END-->
+      ${readyBlockHTML}
       <div class="items">${itemsHTML}</div>
       <div class="footer">--- FIM DO PEDIDO ---</div>
     </body>
