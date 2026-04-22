@@ -258,12 +258,16 @@ export function PDVV2CloseCashDialog({
               <div className="space-y-2">
                 <Label>Valor real contado em caixa</Label>
                 <Input
-                  type="number"
+                  type={useCurrencyMask ? 'text' : 'number'}
                   inputMode="decimal"
-                  step="0.01"
-                  placeholder="0,00"
+                  step={useCurrencyMask ? undefined : '0.01'}
+                  placeholder={useCurrencyMask ? 'R$ 0,00' : '0,00'}
                   value={closingAmount}
-                  onChange={(e) => setClosingAmount(e.target.value)}
+                  onChange={(e) =>
+                    setClosingAmount(
+                      useCurrencyMask ? maskCurrencyInput(e.target.value) : e.target.value,
+                    )
+                  }
                 />
               </div>
 
