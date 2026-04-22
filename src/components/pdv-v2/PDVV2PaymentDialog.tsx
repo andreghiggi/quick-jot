@@ -107,6 +107,7 @@ export function PDVV2PaymentDialog({
       setCpfChoiceOpen(false);
       setTefModality('avista');
       setTefInstallments('2');
+      setTefInstallmentType('adm');
       setCustomerDocument('');
     }
   }, [open]);
