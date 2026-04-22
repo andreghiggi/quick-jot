@@ -414,9 +414,19 @@ export default function PDVV2() {
       `Comanda #${fullTab.tab_number} | Pagamento: ${paymentName}`
     );
     if (saleId) {
+      // NFC-e: emitir quando documentMode === 'sale_with_nfce' e módulo fiscal habilitado
+      const wantsNfce = documentMode === 'sale_with_nfce' && fiscalEnabled && companyId;
       // Imprime se: I9 escolheu "Imprimir" no pop-up, ou demais lojas (comportamento original)
       const shouldPrint = printDocument !== false;
-      if (shouldPrint) {
+      if (wantsNfce) {
+        await emitAndOptionallyPrintNFCe({
+          saleId,
+          items,
+          discount,
+          customerName: customer,
+          shouldPrint,
+        });
+      } else if (shouldPrint) {
         const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
         const printItems = [
           ...fullTab.items.map((i) => ({ name: i.product_name, quantity: i.quantity, price: i.unit_price, notes: i.notes || undefined })),
