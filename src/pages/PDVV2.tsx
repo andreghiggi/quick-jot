@@ -10,9 +10,10 @@ import { Order, OrderStatus } from '@/types/order';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { Link } from 'react-router-dom';
 
 import { PDVV2Layout } from '@/components/layout/PDVV2Layout';
 import { PDVV2TopBar } from '@/components/pdv-v2/PDVV2TopBar';
@@ -316,7 +317,29 @@ export default function PDVV2() {
           companyId={company?.id}
         />
 
-        {tablesEnabled ? (
+        {!cashOpen ? (
+          <div className="flex-1 min-h-0 flex items-center justify-center p-6">
+            <Card className="max-w-md w-full">
+              <CardContent className="py-10 flex flex-col items-center text-center gap-4">
+                <div className="rounded-full bg-destructive/10 p-4">
+                  <Lock className="h-8 w-8 text-destructive" />
+                </div>
+                <div className="space-y-1">
+                  <h2 className="text-xl font-bold">Caixa Fechado</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Para acessar a Central PDV e iniciar as vendas, abra o caixa primeiro.
+                  </p>
+                </div>
+                <Button asChild size="lg" className="gap-2">
+                  <Link to="/financeiro/caixa">
+                    <Unlock className="h-4 w-4" />
+                    Abrir Caixa
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        ) : tablesEnabled ? (
           <Tabs
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as 'orders' | 'tables')}
