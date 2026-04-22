@@ -36,8 +36,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ClipboardList, UtensilsCrossed } from 'lucide-react';
 
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
-import { emitirNFCe, getNFCeRecordBySaleId, printDanfeFromRecord, NFCeItem, NFCeTefData } from '@/services/nfceService';
+import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
+import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
@@ -108,6 +109,11 @@ export default function PDVV2() {
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [importingTab, setImportingTab] = useState<OccupiedTab | null>(null);
   const [closedTabsOpen, setClosedTabsOpen] = useState(false);
+  // NFC-e pós-venda (mesmo padrão do PDV V1: polling visível + ação do operador)
+  const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
+  const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
+  const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
+  const [pendingPostSale, setPendingPostSale] = useState<null | (() => void | Promise<void>)>(null);
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = {
@@ -251,18 +257,20 @@ export default function PDVV2() {
     }
   }
 
-  // Helper compartilhado: emite NFC-e a partir dos itens da venda e, se solicitado,
-  // aguarda a autorização (polling curto) para imprimir o DANFE com QR Code.
-  async function emitAndOptionallyPrintNFCe(args: {
+  // Helper compartilhado: emite NFC-e a partir dos itens da venda e devolve o
+  // registro inicial criado em `nfce_records`. O acompanhamento (polling SEFAZ
+  // + impressão do DANFE) é feito pelo diálogo PDVV2NFCePostSaleDialog —
+  // mesmo padrão usado no PDV V1, garantindo que o operador autorize o fechamento.
+  async function emitNFCeAndOpenDialog(args: {
     saleId: string;
     items: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[];
     discount: number;
     customerName?: string | null;
     shouldPrint: boolean;
     tefData?: NFCeTefData;
-  }) {
+  }): Promise<boolean> {
     const { saleId, items, discount, customerName, shouldPrint, tefData } = args;
-    if (!companyId || !currentRegister) return;
+    if (!companyId || !currentRegister) return false;
     try {
       const nfceItems: NFCeItem[] = items.map((it) => {
         const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
@@ -295,25 +303,23 @@ export default function PDVV2() {
       });
       toast.success('NFC-e enviada para processamento!');
 
-      if (!shouldPrint) return;
+      // Busca o registro recém-criado para abrir o pop-up de status
+      const { data: rec } = await supabase
+        .from('nfce_records')
+        .select('*')
+        .eq('sale_id', saleId)
+        .maybeSingle();
 
-      // Polling curto para imprimir DANFE assim que autorizada (até ~10s)
-      for (let i = 0; i < 10; i++) {
-        await new Promise((r) => setTimeout(r, 1000));
-        try {
-          const rec = await getNFCeRecordBySaleId(saleId);
-          if (rec && (rec.chave_acesso || rec.qrcode_url)) {
-            await printDanfeFromRecord(rec);
-            return;
-          }
-        } catch {
-          /* tenta novamente */
-        }
+      if (rec) {
+        setNfceRecord(rec as unknown as NFCeRecord);
+        setNfceAutoPrint(shouldPrint);
+        setNfceDialogOpen(true);
       }
-      toast.info('NFC-e emitida — imprima manualmente em "Comandas Finalizadas" assim que autorizada.');
+      return true;
     } catch (err: any) {
       console.error('[PDVV2] NFC-e emission error:', err);
       toast.error(`Venda registrada, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
+      return false;
     }
   }
 
@@ -369,7 +375,14 @@ export default function PDVV2() {
       // NFC-e: TEF força emissão (regra V1). Caso contrário, segue documentMode.
       const wantsNfce = (tefIntegration ? true : documentMode === 'sale_with_nfce') && fiscalEnabled && companyId;
       if (wantsNfce) {
-        await emitAndOptionallyPrintNFCe({
+        // Marca o pedido como entregue só depois que o operador autorizar o
+        // fechamento do pop-up de NFC-e (autorizada/rejeitada).
+        const orderIdToFinish = chargeOrder.id;
+        setPendingPostSale(() => async () => {
+          await updateOrderStatus(orderIdToFinish, 'delivered');
+          toast.success('Cobrança registrada!');
+        });
+        const ok = await emitNFCeAndOpenDialog({
           saleId,
           items,
           discount,
@@ -377,6 +390,13 @@ export default function PDVV2() {
           shouldPrint: !!printDocument,
           tefData,
         });
+        if (!ok) {
+          // Falhou ao emitir → fecha como venda comum para não travar o caixa
+          await updateOrderStatus(chargeOrder.id, 'delivered');
+          setPendingPostSale(null);
+        }
+        setChargeOrder(null);
+        return;
       } else if (printDocument && companyId) {
         const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
         const printItems = [
@@ -461,7 +481,14 @@ export default function PDVV2() {
       // Imprime se: I9 escolheu "Imprimir" no pop-up, ou demais lojas (comportamento original)
       const shouldPrint = printDocument !== false;
       if (wantsNfce) {
-        await emitAndOptionallyPrintNFCe({
+        // Mesma regra do confirmChargeOrder: só fecha a comanda depois que o
+        // operador autorizar o fechamento do pop-up de NFC-e.
+        const tabIdToClose = fullTab.id;
+        setPendingPostSale(() => async () => {
+          await closeTab(tabIdToClose);
+          toast.success('Comanda importada e fechada!');
+        });
+        const ok = await emitNFCeAndOpenDialog({
           saleId,
           items,
           discount,
@@ -469,6 +496,12 @@ export default function PDVV2() {
           shouldPrint,
           tefData,
         });
+        if (!ok) {
+          await closeTab(fullTab.id);
+          setPendingPostSale(null);
+        }
+        setImportingTab(null);
+        return;
       } else if (shouldPrint) {
         const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
         const printItems = [
@@ -740,6 +773,26 @@ export default function PDVV2() {
         companyId={companyId}
         paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
         onSaleDeleted={refetchCash}
+      />
+
+      <PDVV2NFCePostSaleDialog
+        open={nfceDialogOpen}
+        onOpenChange={setNfceDialogOpen}
+        companyId={companyId}
+        initialRecord={nfceRecord}
+        autoPrint={nfceAutoPrint}
+        onClosed={async () => {
+          // Executa a ação adiada (fechar comanda / marcar pedido como entregue)
+          if (pendingPostSale) {
+            try {
+              await pendingPostSale();
+            } catch (e) {
+              console.error('[PDVV2] post-sale action error:', e);
+            }
+          }
+          setPendingPostSale(null);
+          setNfceRecord(null);
+        }}
       />
 
       <Dialog open={openCashOpen} onOpenChange={setOpenCashOpen}>
