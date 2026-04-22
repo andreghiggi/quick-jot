@@ -51,7 +51,7 @@ export function PDVV2Sidebar() {
     return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const home = [{ title: 'Central PDV V2', icon: Monitor, href: '/pdv-v2' }];
+  const home = [{ title: 'PDV', icon: Monitor, href: '/pdv-v2' }];
   const operations = [{ title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' }];
 
   const catalog = [
