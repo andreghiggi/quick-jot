@@ -13,7 +13,9 @@ import { Button } from '@/components/ui/button';
 import { CreditCard, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Link } from 'react-router-dom';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 import { PDVV2Layout } from '@/components/layout/PDVV2Layout';
 import { PDVV2TopBar } from '@/components/pdv-v2/PDVV2TopBar';
