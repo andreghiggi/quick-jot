@@ -72,7 +72,25 @@ export default function PDVV2() {
       /* ignore */
     }
   }, [activeTab, tabStorageKey]);
-  const [filter, setFilter] = useState<StatusFilter>('all');
+  const filterStorageKey = companyId ? `pdvv2_status_filter_${companyId}` : 'pdvv2_status_filter';
+  const [filter, setFilter] = useState<StatusFilter>(() => {
+    if (typeof window === 'undefined') return 'all';
+    try {
+      const saved = window.localStorage.getItem(filterStorageKey);
+      const valid: StatusFilter[] = ['all', 'pending', 'preparing', 'ready', 'delivered'];
+      return (valid as string[]).includes(saved || '') ? (saved as StatusFilter) : 'all';
+    } catch {
+      return 'all';
+    }
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(filterStorageKey, filter);
+    } catch {
+      /* ignore */
+    }
+  }, [filter, filterStorageKey]);
   const [closeOpen, setCloseOpen] = useState(false);
   const [openCashOpen, setOpenCashOpen] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
