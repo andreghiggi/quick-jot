@@ -492,7 +492,11 @@ export default function PDVV2() {
           saleId,
           items,
           discount,
-          customerName: customer,
+          // Só envia nome do cliente para a NFC-e quando for um cliente real
+          // (informado na comanda). Placeholders como "Mesa 2"/"Comanda 5"
+          // não devem virar destinatário, senão a SEFAZ rejeita o XML por
+          // falta de CPF/CNPJ no bloco <dest>.
+          customerName: fullTab.customer_name || null,
           shouldPrint,
           tefData,
         });
