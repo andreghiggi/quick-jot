@@ -13,6 +13,9 @@ import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
+import { useCashRegister } from '@/hooks/useCashRegister';
+import { useTaxRules } from '@/hooks/useTaxRules';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useOrderContext } from '@/contexts/OrderContext';
@@ -25,6 +28,9 @@ import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
+import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
+import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
+import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import {
   sendPinpadPayment,
   pollPinpadStatus,
