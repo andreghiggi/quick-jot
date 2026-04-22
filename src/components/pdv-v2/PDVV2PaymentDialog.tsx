@@ -254,6 +254,74 @@ export function PDVV2PaymentDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Lancheria I9 — Pop-up 1: Geração de Documentos */}
+      <Dialog open={docChoiceOpen} onOpenChange={setDocChoiceOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Geração de Documentos</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-3 py-2">
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-16 text-base"
+              onClick={() => {
+                setPendingDocMode('sale_only');
+                setDocChoiceOpen(false);
+                setPrintChoiceOpen(true);
+              }}
+            >
+              Somente Venda
+            </Button>
+            <Button
+              size="lg"
+              className="h-16 text-base"
+              onClick={() => {
+                setPendingDocMode('sale_with_nfce');
+                setDocChoiceOpen(false);
+                setPrintChoiceOpen(true);
+              }}
+            >
+              Venda com NFC-e
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lancheria I9 — Pop-up 2: Imprimir documento? */}
+      <Dialog open={printChoiceOpen} onOpenChange={setPrintChoiceOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Imprimir {pendingDocMode === 'sale_with_nfce' ? 'NFC-e' : 'recibo de venda'}?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-2">
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-16 text-base"
+              onClick={async () => {
+                setPrintChoiceOpen(false);
+                await finalizeConfirm(pendingDocMode, false);
+              }}
+            >
+              Não imprimir
+            </Button>
+            <Button
+              size="lg"
+              className="h-16 text-base"
+              onClick={async () => {
+                setPrintChoiceOpen(false);
+                await finalizeConfirm(pendingDocMode, true);
+              }}
+            >
+              Imprimir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
