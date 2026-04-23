@@ -60,7 +60,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { products, loading: productsLoading, getCategories, getActiveProducts } = useProducts({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
-  const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id, channel: 'express' });
+  const { activePaymentMethods: expressPaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id, channel: 'express' });
+  // Fallback: para a Lancheria da I9, lista TODAS as formas ativas da empresa
+  // (independente de canal) para garantir TEF e demais métodos no Pedido Express.
+  const { activePaymentMethods: allActivePaymentMethods } = usePaymentMethods({ companyId: company?.id });
   const { settings } = useStoreSettings({ companyId: company?.id });
   const { getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
@@ -79,6 +82,20 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Lancheria da I9 — atalho otimizado: pula Telefone/Nome/Entrega ao usar "Cliente Loja"
   const LANCHERIA_I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const isLancheriaI9 = company?.id === LANCHERIA_I9_ID;
+
+  // Para a Lancheria I9: usa TODAS as formas ativas (deduplicadas por nome+integração).
+  // Demais lojas mantêm apenas as do canal Express.
+  const activePaymentMethods = useMemo(() => {
+    if (!isLancheriaI9) return expressPaymentMethods;
+    const seen = new Set<string>();
+    const merged = [...expressPaymentMethods, ...allActivePaymentMethods].filter((pm: any) => {
+      const key = `${(pm.name || '').toLowerCase().trim()}|${pm.integration_type || ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return merged;
+  }, [isLancheriaI9, expressPaymentMethods, allActivePaymentMethods]);
 
   // Cart uses the same CartItem type as the online catalog
   const [cart, setCart] = useState<CartItem[]>([]);
