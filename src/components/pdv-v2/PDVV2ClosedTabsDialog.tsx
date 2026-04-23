@@ -121,7 +121,6 @@ export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, pa
   }
 
   async function handleCancelSale(sale: ClosedTabSale) {
-  async function handleCancelSale(sale: ClosedTabSale) {
     if (!companyId) return;
     const tefInfo = parseTefDataFromNotes(sale.notes);
     const hasPinpadTef = tefInfo?.type === 'pinpad' && !isOrderTefCancelled(sale.notes);
