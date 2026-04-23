@@ -195,9 +195,17 @@ export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, pa
                 const isLoading = loadingId === s.id;
                 const time = s.created_at ? new Date(s.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
                 const nfceCancelled = nfce?.status === 'cancelada';
+                const isCancelled = !!s.notes?.includes('[CANCELADA]');
+                const tefInfo = parseTefDataFromNotes(s.notes);
+                const hasTefReceipt = !!tefInfo?.receipt;
                 return (
-                  <Card key={s.id}>
+                  <Card key={s.id} className={isCancelled ? 'border-destructive/40 bg-destructive/5' : ''}>
                     <CardContent className="p-3 space-y-2">
+                      {isCancelled && (
+                        <div className="flex items-center justify-center gap-2 py-1 px-2 rounded bg-destructive/10 border border-destructive/20">
+                          <span className="text-xs font-bold text-destructive tracking-wider">⛔ VENDA CANCELADA</span>
+                        </div>
+                      )}
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -216,7 +224,9 @@ export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, pa
                           )}
                           <p className="text-xs text-muted-foreground">{s.payment_method_name}</p>
                         </div>
-                        <span className="font-bold tabular-nums text-sm shrink-0">{formatPrice(s.final_total)}</span>
+                        <span className={`font-bold tabular-nums text-sm shrink-0 ${isCancelled ? 'line-through text-destructive/70' : ''}`}>
+                          {formatPrice(s.final_total)}
+                        </span>
                       </div>
 
                       <div className="flex flex-wrap gap-2 pt-1">
@@ -229,6 +239,19 @@ export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, pa
                           {isLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Printer className="h-3 w-3 mr-1" />}
                           Reimprimir Venda
                         </Button>
+                        {hasTefReceipt && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={isLoading}
+                            onClick={() => reimprimirComprovanteTef(s.notes, tabNumber ? `M${tabNumber}` : s.id.slice(0, 6))}
+                            className="text-blue-600 hover:text-blue-700"
+                            title="Reimprimir comprovante TEF (2ª via)"
+                          >
+                            <FileText className="h-3 w-3 mr-1" />
+                            {isCancelled ? 'Imprimir via cancelada' : 'Reimprimir TEF'}
+                          </Button>
+                        )}
                         {nfce && nfce.chave_acesso && (
                           <Button
                             size="sm"
@@ -251,15 +274,17 @@ export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, pa
                             Cancelar NFC-e
                           </Button>
                         )}
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          disabled={isLoading}
-                          onClick={() => handleCancelSale(s)}
-                        >
-                          <Ban className="h-3 w-3 mr-1" />
-                          Cancelar Venda
-                        </Button>
+                        {!isCancelled && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={isLoading}
+                            onClick={() => handleCancelSale(s)}
+                          >
+                            <Ban className="h-3 w-3 mr-1" />
+                            Cancelar Venda
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
