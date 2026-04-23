@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Printer, Ban, FileX, Loader2, Receipt } from 'lucide-react';
+import { Printer, Ban, FileX, Loader2, Receipt, FileText, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { brl as formatPrice } from './_format';
 import { cancelarNFCe, getNFCeRecordBySaleId, printDanfeFromRecord, type NFCeRecord } from '@/services/nfceService';
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
+import { parseTefDataFromNotes, reimprimirComprovanteTef } from '@/utils/tefOrderActions';
 
 export interface ClosedTabSale {
   id: string;
@@ -123,9 +124,14 @@ export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, pa
     if (!confirm(`Cancelar a venda de ${formatPrice(sale.final_total)}? Esta ação não pode ser desfeita.`)) return;
     setLoadingId(sale.id);
     try {
-      const { error } = await supabase.from('pdv_sales').delete().eq('id', sale.id);
+      // Marca a venda como cancelada (preservando dados TEF para reimpressão da via cancelada)
+      const cancelledNotes = `[CANCELADA] ${sale.notes || ''}`.trim();
+      const { error } = await supabase
+        .from('pdv_sales')
+        .update({ notes: cancelledNotes })
+        .eq('id', sale.id);
       if (error) throw error;
-      toast.success('Venda cancelada');
+      toast.success('Venda cancelada. Use "Imprimir via cancelada" se necessário.');
       onSaleDeleted();
     } catch (e: any) {
       console.error(e);
