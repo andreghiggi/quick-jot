@@ -1763,7 +1763,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         total={total}
         title={isLancheriaI9 && step === 5 ? 'Finalizar Pedido' : 'Cobrar Retirada'}
         channel="express"
-        cashOnly={isClienteLoja}
+        // I9: mostra TODAS as formas (incluindo TEF) mesmo com Cliente Loja.
+        // Demais lojas mantêm a restrição original (Cliente Loja → apenas dinheiro).
+        cashOnly={isClienteLoja && !isLancheriaI9}
         showDocumentMode
         onConfirm={async ({
           paymentMethodId,
