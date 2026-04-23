@@ -121,14 +121,40 @@ export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, pa
   }
 
   async function handleCancelSale(sale: ClosedTabSale) {
-    if (!confirm(`Cancelar a venda de ${formatPrice(sale.final_total)}? Esta ação não pode ser desfeita.`)) return;
+  async function handleCancelSale(sale: ClosedTabSale) {
+    if (!companyId) return;
+    const tefInfo = parseTefDataFromNotes(sale.notes);
+    const hasPinpadTef = tefInfo?.type === 'pinpad' && !isOrderTefCancelled(sale.notes);
+
+    const baseMsg = `Cancelar a venda de ${formatPrice(sale.final_total)}? Esta ação não pode ser desfeita.`;
+    const tefMsg = hasPinpadTef
+      ? '\n\nEsta venda possui pagamento TEF (PinPad). O estorno (CNC) será enviado à maquininha automaticamente.'
+      : '';
+    if (!confirm(baseMsg + tefMsg)) return;
+
     setLoadingId(sale.id);
     try {
-      // Marca a venda como cancelada (preservando dados TEF para reimpressão da via cancelada)
-      const cancelledNotes = `[CANCELADA] ${sale.notes || ''}`.trim();
+      let finalNotes = `[CANCELADA] ${sale.notes || ''}`.trim();
+
+      // Se há TEF PinPad associado, dispara estorno antes de marcar como cancelada
+      if (hasPinpadTef) {
+        const estorno = await estornarTefPedido({
+          companyId,
+          amount: sale.final_total,
+          createdAt: sale.created_at || new Date().toISOString(),
+          notes: sale.notes,
+        });
+        if (!estorno.success) {
+          toast.error(estorno.message || 'Falha ao estornar TEF. Venda não cancelada.');
+          return;
+        }
+        toast.success(estorno.message || 'TEF estornado com sucesso');
+        finalNotes = estorno.cancelledNotes || finalNotes;
+      }
+
       const { error } = await supabase
         .from('pdv_sales')
-        .update({ notes: cancelledNotes })
+        .update({ notes: finalNotes })
         .eq('id', sale.id);
       if (error) throw error;
       toast.success('Venda cancelada. Use "Imprimir via cancelada" se necessário.');
