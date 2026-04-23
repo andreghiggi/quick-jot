@@ -59,9 +59,15 @@ export function PDVV2PaymentDialog({
   onConfirm,
 }: PDVV2PaymentDialogProps) {
   const { activePaymentMethods: rawActivePaymentMethods } = usePaymentMethods({ companyId, channel });
+  // Fallback: se não houver métodos cadastrados no canal PDV, lista TODOS os métodos
+  // ativos da empresa (qualquer canal) para evitar que o operador veja apenas "Dinheiro"
+  // por falta de configuração do canal.
+  const { activePaymentMethods: allActivePaymentMethods } = usePaymentMethods({ companyId });
+  const baseList =
+    rawActivePaymentMethods.length > 0 ? rawActivePaymentMethods : allActivePaymentMethods;
   const activePaymentMethods = cashOnly
-    ? rawActivePaymentMethods.filter((m) => /dinheiro/i.test(m.name))
-    : rawActivePaymentMethods;
+    ? baseList.filter((m) => /dinheiro/i.test(m.name))
+    : baseList;
   // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
   const useCurrencyMask = companyId === LANCHERIA_I9_COMPANY_ID;
   const isLancheriaI9 = companyId === LANCHERIA_I9_COMPANY_ID;
