@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { brl as formatPrice } from './_format';
 import { cancelarNFCe, getNFCeRecordBySaleId, printDanfeFromRecord, type NFCeRecord } from '@/services/nfceService';
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
-import { parseTefDataFromNotes, reimprimirComprovanteTef } from '@/utils/tefOrderActions';
+import { parseTefDataFromNotes, reimprimirComprovanteTef, estornarTefPedido, isOrderTefCancelled } from '@/utils/tefOrderActions';
 
 export interface ClosedTabSale {
   id: string;
