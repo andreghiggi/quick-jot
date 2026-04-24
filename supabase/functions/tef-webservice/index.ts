@@ -10,6 +10,14 @@ const TEF_API_URL = 'https://api.multipluscard.com.br/api/Servicos';
 // Separator character used in CONTEUDO header
 const SEP = '¬';
 
+// ===== TEF v1.2 (homologação Multiplus) =====
+// Comportamento novo isolado para a Lancheria da i9 enquanto valida com a Multiplus.
+// Quando o teste passar, removemos este guard e aplicamos para todos.
+const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+function isI9(companyId: unknown): boolean {
+  return typeof companyId === 'string' && companyId === I9_COMPANY_ID;
+}
+
 // Build CONTEUDO string from key-value pairs
 // IMPORTANT: 999-999 MUST always be the LAST field
 function buildConteudo(fields: Record<string, string>): string {
