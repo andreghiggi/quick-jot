@@ -51,19 +51,52 @@ interface UseCashRegisterOptions {
   companyId?: string;
 }
 
+// Cacheia o último estado conhecido de "caixa aberto" por empresa para evitar
+// flash de "Caixa Fechado" enquanto a query inicial está em andamento.
+const cashOpenCacheKey = (companyId: string) => `cash_open_${companyId}`;
+
+function readCashOpenCache(companyId?: string | null): boolean | null {
+  if (!companyId || typeof window === 'undefined') return null;
+  try {
+    const v = window.localStorage.getItem(cashOpenCacheKey(companyId));
+    if (v === '1') return true;
+    if (v === '0') return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCashOpenCache(companyId: string, value: boolean) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(cashOpenCacheKey(companyId), value ? '1' : '0');
+  } catch {
+    /* ignore */
+  }
+}
+
 export function useCashRegister(options: UseCashRegisterOptions = {}) {
   const { companyId } = options;
   const [currentRegister, setCurrentRegister] = useState<CashRegister | null>(null);
   const [registers, setRegisters] = useState<CashRegister[]>([]);
   const [sales, setSales] = useState<PdvSale[]>([]);
   const [loading, setLoading] = useState(true);
+  // Estado otimista do "caixa aberto" hidratado do cache local. Evita o flash
+  // de "Caixa Fechado" durante o primeiro fetch.
+  const [cashOpenOptimistic, setCashOpenOptimistic] = useState<boolean | null>(
+    () => readCashOpenCache(companyId)
+  );
 
   useEffect(() => {
     if (companyId) {
+      const cached = readCashOpenCache(companyId);
+      setCashOpenOptimistic(cached);
       fetchCurrentRegister();
       fetchRegisters();
     } else {
       setLoading(false);
+      setCashOpenOptimistic(null);
     }
   }, [companyId]);
 
@@ -83,6 +116,8 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
       if (error) throw error;
       
       setCurrentRegister(data as CashRegister | null);
+      writeCashOpenCache(companyId, !!data);
+      setCashOpenOptimistic(!!data);
       
       if (data) {
         await fetchSales(data.id);
@@ -157,6 +192,10 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
       if (error) throw error;
 
       setCurrentRegister(data as CashRegister);
+      if (companyId) {
+        writeCashOpenCache(companyId, true);
+        setCashOpenOptimistic(true);
+      }
       setSales([]);
       await fetchRegisters();
       toast.success('Caixa aberto com sucesso!');
@@ -196,6 +235,10 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
 
       const closedRegister = data as CashRegister;
       setCurrentRegister(null);
+      if (companyId) {
+        writeCashOpenCache(companyId, false);
+        setCashOpenOptimistic(false);
+      }
       setSales([]);
       await fetchRegisters();
       toast.success('Caixa fechado com sucesso!');
@@ -232,6 +275,10 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
       if (error) throw error;
 
       setCurrentRegister(data as CashRegister);
+      if (companyId) {
+        writeCashOpenCache(companyId, true);
+        setCashOpenOptimistic(true);
+      }
       await fetchSales(registerId);
       await fetchRegisters();
       toast.success('Caixa reaberto com sucesso!');
@@ -340,6 +387,13 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
     registers,
     sales,
     loading,
+    /**
+     * Estado otimista do "caixa aberto":
+     *  - `true`/`false` se já temos resposta do servidor OU cache local
+     *  - `null` se ainda não sabemos (primeiro acesso da empresa)
+     * Use isso na UI para evitar o flash de "Caixa Fechado" inicial.
+     */
+    cashOpenKnown: cashOpenOptimistic,
     totalSales,
     salesCount,
     openRegister,
