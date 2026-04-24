@@ -195,6 +195,12 @@ serve(async (req) => {
         fields['800-004'] = String(installments);
       } else if (paymentType !== undefined) {
         fields['800-002'] = '0'; // À vista
+        // Lancheria I9 (homologação Multiplus i9 v1.2): para Débito à vista (800-001=1)
+        // o Gerenciador Padrão não abre se 800-003 estiver ausente. Enviamos '0'
+        // (sem juros) para destravar. Isolado para I9 até validar nas demais lojas.
+        if (isI9(params.companyId) && Number(paymentType) === 1) {
+          fields['800-003'] = '0';
+        }
       }
 
       if (cnpj) {
