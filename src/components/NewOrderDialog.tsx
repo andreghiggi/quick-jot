@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +53,81 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
   // Optional group selection for a product being added
   const [selectingProduct, setSelectingProduct] = useState<{ id: string; name: string; price: number } | null>(null);
   const [selectedOptionals, setSelectedOptionals] = useState<Record<string, Set<string>>>({});
+
+  // ---------- Draft persistence (sobrevive a troca de aba / refresh) ----------
+  const DRAFT_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+  const draftKey = company?.id ? `newOrderDraft_${company.id}` : null;
+  const hydratedRef = useRef(false);
+  const skipNextSaveRef = useRef(false);
+
+  // Hidrata rascunho ao montar (se houver carrinho, reabre o diálogo automaticamente)
+  useEffect(() => {
+    if (!draftKey || hydratedRef.current) return;
+    if (productsLoading) return; // espera produtos para validar
+    hydratedRef.current = true;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return;
+      if (!parsed.savedAt || Date.now() - parsed.savedAt > DRAFT_TTL_MS) {
+        localStorage.removeItem(draftKey);
+        return;
+      }
+
+      const activeIds = new Set(activeProducts.map(p => p.id));
+      const restoredCart: CartItem[] = Array.isArray(parsed.cart)
+        ? parsed.cart.filter((i: any) => i && typeof i.id === 'string' && activeIds.has(String(i.id).split('_')[0]))
+        : [];
+
+      skipNextSaveRef.current = true;
+      if (parsed.customerName) setCustomerName(parsed.customerName);
+      if (parsed.customerPhone) setCustomerPhone(parsed.customerPhone);
+      if (parsed.deliveryAddress) setDeliveryAddress(parsed.deliveryAddress);
+      if (parsed.notes) setNotes(parsed.notes);
+      if (parsed.selectedCategory) setSelectedCategory(parsed.selectedCategory);
+      if (restoredCart.length > 0) {
+        setCart(restoredCart);
+        if (!open) onOpenChange(true);
+        toast.success('Seu pedido foi restaurado');
+      }
+    } catch (e) {
+      console.warn('Falha ao restaurar rascunho de pedido:', e);
+    }
+  }, [draftKey, productsLoading, activeProducts, open, onOpenChange]);
+
+  // Salva rascunho a cada alteração relevante
+  useEffect(() => {
+    if (!draftKey || !hydratedRef.current) return;
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
+    const hasContent =
+      cart.length > 0 ||
+      customerName.trim() ||
+      customerPhone.trim() ||
+      deliveryAddress.trim() ||
+      notes.trim();
+    try {
+      if (hasContent) {
+        localStorage.setItem(draftKey, JSON.stringify({
+          savedAt: Date.now(),
+          cart,
+          customerName,
+          customerPhone,
+          deliveryAddress,
+          notes,
+          selectedCategory,
+        }));
+      } else {
+        localStorage.removeItem(draftKey);
+      }
+    } catch (e) {
+      // ignora erros de quota
+    }
+  }, [draftKey, cart, customerName, customerPhone, deliveryAddress, notes, selectedCategory]);
+  // ---------------------------------------------------------------------------
 
   const activeProducts = getActiveProducts();
   const productCategories = getCategories();
