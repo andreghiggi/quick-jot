@@ -319,6 +319,135 @@ export default function Menu() {
     } catch { return null; }
   }, [lastOrderKey]);
 
+  // ============================================================
+  // Persistência do carrinho em andamento (sobrevive a troca de aba,
+  // descarte de aba em background e refresh acidental).
+  // Chave única por empresa. TTL de 24h.
+  // ============================================================
+  const draftKey = company?.id ? `menuDraft_${company.id}` : null;
+  const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  // Restaurar rascunho ao montar / quando a empresa carrega
+  useEffect(() => {
+    if (!draftKey || draftRestored || !products || products.length === 0) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) {
+        setDraftRestored(true);
+        return;
+      }
+      const parsed = JSON.parse(raw) as {
+        savedAt: number;
+        cart: CartItem[];
+        customerName?: string;
+        customerPhone?: string;
+        customerCpf?: string;
+        customerBirthDate?: string;
+        deliveryAddress?: string;
+        deliveryNumber?: string;
+        deliveryComplement?: string;
+        deliveryNeighborhood?: string;
+        deliveryReference?: string;
+        deliveryCity?: string;
+        deliveryState?: string;
+        paymentMethod?: string;
+        changeFor?: string;
+        deliveryType?: 'pickup' | 'city' | 'interior' | 'neighborhood' | '';
+        selectedNeighborhood?: string;
+      };
+
+      // TTL — descarta rascunho velho
+      if (!parsed.savedAt || Date.now() - parsed.savedAt > DRAFT_TTL_MS) {
+        localStorage.removeItem(draftKey);
+        setDraftRestored(true);
+        return;
+      }
+
+      // Revalida itens contra o catálogo atual (produto pode ter sido removido/desativado)
+      const validCart = (parsed.cart || []).filter((item) => {
+        const exists = products.find((p) => p.id === item.product?.id && p.active !== false);
+        return !!exists;
+      });
+
+      if (validCart.length > 0) setCart(validCart);
+      if (parsed.customerName) setCustomerName(parsed.customerName);
+      if (parsed.customerPhone) setCustomerPhone(parsed.customerPhone);
+      if (parsed.customerCpf) setCustomerCpf(parsed.customerCpf);
+      if (parsed.customerBirthDate) setCustomerBirthDate(parsed.customerBirthDate);
+      if (parsed.deliveryAddress) setDeliveryAddress(parsed.deliveryAddress);
+      if (parsed.deliveryNumber) setDeliveryNumber(parsed.deliveryNumber);
+      if (parsed.deliveryComplement) setDeliveryComplement(parsed.deliveryComplement);
+      if (parsed.deliveryNeighborhood) setDeliveryNeighborhood(parsed.deliveryNeighborhood);
+      if (parsed.deliveryReference) setDeliveryReference(parsed.deliveryReference);
+      if (parsed.deliveryCity) setDeliveryCity(parsed.deliveryCity);
+      if (parsed.deliveryState) setDeliveryState(parsed.deliveryState);
+      if (parsed.paymentMethod) setPaymentMethod(parsed.paymentMethod);
+      if (parsed.changeFor) setChangeFor(parsed.changeFor);
+      if (parsed.deliveryType) setDeliveryType(parsed.deliveryType);
+      if (parsed.selectedNeighborhood) setSelectedNeighborhood(parsed.selectedNeighborhood);
+
+      if (validCart.length > 0) {
+        toast.success('Seu pedido foi restaurado', { duration: 2500 });
+      }
+    } catch {
+      // payload corrompido — limpa
+      try { localStorage.removeItem(draftKey); } catch {}
+    } finally {
+      setDraftRestored(true);
+    }
+  }, [draftKey, draftRestored, products]);
+
+  // Salvar rascunho sempre que carrinho ou campos de checkout mudarem
+  useEffect(() => {
+    if (!draftKey || !draftRestored) return;
+
+    // Se carrinho está vazio e nenhum campo preenchido, remove rascunho
+    const hasAnyData =
+      cart.length > 0 ||
+      customerName || customerPhone || customerCpf || customerBirthDate ||
+      deliveryAddress || deliveryNumber || deliveryComplement || deliveryNeighborhood ||
+      deliveryReference || deliveryCity || deliveryState ||
+      paymentMethod || changeFor || deliveryType || selectedNeighborhood;
+
+    if (!hasAnyData) {
+      try { localStorage.removeItem(draftKey); } catch {}
+      return;
+    }
+
+    try {
+      const payload = {
+        savedAt: Date.now(),
+        cart,
+        customerName,
+        customerPhone,
+        customerCpf,
+        customerBirthDate,
+        deliveryAddress,
+        deliveryNumber,
+        deliveryComplement,
+        deliveryNeighborhood,
+        deliveryReference,
+        deliveryCity,
+        deliveryState,
+        paymentMethod,
+        changeFor,
+        deliveryType,
+        selectedNeighborhood,
+      };
+      localStorage.setItem(draftKey, JSON.stringify(payload));
+    } catch {
+      // localStorage cheio ou indisponível — silencia
+    }
+  }, [
+    draftKey, draftRestored,
+    cart,
+    customerName, customerPhone, customerCpf, customerBirthDate,
+    deliveryAddress, deliveryNumber, deliveryComplement, deliveryNeighborhood,
+    deliveryReference, deliveryCity, deliveryState,
+    paymentMethod, changeFor, deliveryType, selectedNeighborhood,
+  ]);
+
   useEffect(() => {
     if (!customerPhone || customerPhone.length < 10 || !company?.id || customerLoaded) return;
     
