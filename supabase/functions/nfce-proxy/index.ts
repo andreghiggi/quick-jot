@@ -141,6 +141,8 @@ Deno.serve(async (req) => {
         // ("vProd vazio" / "PISOutr Missing child element") na Fiscal Flow.
         if (Array.isArray(emitPayload.itens)) {
           const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
+          const money = (n: number) => round2(n).toFixed(2)
+          const qty = (n: number) => (Number(n) || 0).toFixed(4)
           emitPayload.itens = emitPayload.itens.map((it: any) => {
             const qtd = Number(it.quantidade) || 0
             const vUnit = round2(Number(it.valor_unitario) || 0)
@@ -152,8 +154,17 @@ Deno.serve(async (req) => {
             return {
               ...it,
               quantidade: qtd,
+              qCom: qty(qtd),
+              qTrib: qty(qtd),
               valor_unitario: vUnit,
+              valorUnitario: money(vUnit),
+              valor: money(vUnit),
+              vUnCom: money(vUnit),
+              vUnTrib: money(vUnit),
               valor_total: vTot,
+              valorTotal: money(vTot),
+              total: money(vTot),
+              vProd: money(vTot),
               cst_pis: fixCst(String(it.cst_pis || '49'), Number(it.aliquota_pis) || 0),
               cst_cofins: fixCst(String(it.cst_cofins || '49'), Number(it.aliquota_cofins) || 0),
               aliquota_pis: Number(it.aliquota_pis) || 0,
