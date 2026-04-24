@@ -143,9 +143,12 @@ export default function TefAdm() {
         lastStatus = status.status;
 
         if (status.status === 'approved') {
-          // Confirma para liberar o gerenciador
+          // Confirma para liberar o gerenciador.
+          // IMPORTANTE (Multiplus v1.2): o CNF DEVE reusar o mesmo
+          // 001-000 (identificacao) que foi enviado no ADM/RPR original.
+          // Caso contrário a Multiplus rejeita a confirmação por divergência.
           await confirmPinpadTransaction(company.id, {
-            identificacao: String(Date.now()),
+            identificacao: start.identificacao || '',
             rede: status.acquirer,
             nsu: status.nsu,
             finalizacao: status.finalizacao,
