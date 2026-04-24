@@ -8,7 +8,6 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { useProducts } from '@/hooks/useProducts';
 import { useTaxRules } from '@/hooks/useTaxRules';
-import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -44,7 +43,6 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
   const { products } = useProducts({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
-  const { settings } = useStoreSettings({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const fiscalEnabled = isModuleEnabled('fiscal');
 
