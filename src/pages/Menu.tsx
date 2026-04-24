@@ -1107,6 +1107,11 @@ export default function Menu() {
       } catch {}
     }
 
+    // Limpa rascunho do carrinho persistido — pedido já foi enviado
+    if (draftKey) {
+      try { localStorage.removeItem(draftKey); } catch {}
+    }
+
     // Clear cart and reset form
     setCart([]);
     setCustomerName('');
