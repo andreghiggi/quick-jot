@@ -102,8 +102,12 @@ export async function isPinpadConfigured(companyId: string): Promise<boolean> {
 }
 
 // Call the tef-webservice edge function
-async function callTefWebService(body: Record<string, unknown>) {
-  const { data, error } = await supabase.functions.invoke('tef-webservice', { body });
+async function callTefWebService(companyId: string, body: Record<string, unknown>) {
+  // companyId é repassado para o edge function aplicar comportamentos
+  // específicos por empresa (ex.: homologação Multiplus i9 v1.2).
+  const { data, error } = await supabase.functions.invoke('tef-webservice', {
+    body: { ...body, companyId },
+  });
   if (error) {
     console.error('[PinPad] Edge function error:', error);
     throw new Error(error.message || 'Erro ao comunicar com TEF WebService');
@@ -117,7 +121,7 @@ export async function checkPinpadActive(companyId: string): Promise<{ active: bo
   if (!config) return { active: false, message: 'PinPad não configurado' };
 
   try {
-    const result = await callTefWebService({
+    const result = await callTefWebService(companyId, {
       action: 'atv',
       token: config.token,
       cnpj: config.cnpj,
@@ -154,7 +158,7 @@ export async function sendPinpadPayment(
   if (!config) return { success: false, errorMessage: 'PinPad não configurado' };
 
   try {
-    const result = await callTefWebService({
+    const result = await callTefWebService(companyId, {
       action: 'crt',
       token: config.token,
       cnpj: config.cnpj,
@@ -183,7 +187,7 @@ export async function pollPinpadStatus(
   if (!config) return { success: false, status: 'error', errorMessage: 'PinPad não configurado' };
 
   try {
-    const result = await callTefWebService({
+    const result = await callTefWebService(companyId, {
       action: 'get-status',
       token: config.token,
       cnpj: config.cnpj,
@@ -225,7 +229,7 @@ export async function confirmPinpadTransaction(
   if (!config) return false;
 
   try {
-    const result = await callTefWebService({
+    const result = await callTefWebService(companyId, {
       action: 'cnf',
       token: config.token,
       cnpj: config.cnpj,
@@ -247,7 +251,7 @@ export async function cancelPinpadTransaction(
   if (!config) return false;
 
   try {
-    const result = await callTefWebService({
+    const result = await callTefWebService(companyId, {
       action: 'ncn',
       token: config.token,
       cnpj: config.cnpj,
@@ -269,7 +273,7 @@ export async function sendPinpadAdm(
   if (!config) return { success: false, errorMessage: 'PinPad não configurado' };
 
   try {
-    const result = await callTefWebService({
+    const result = await callTefWebService(companyId, {
       action: 'adm',
       token: config.token,
       cnpj: config.cnpj,
@@ -297,7 +301,7 @@ export async function reversePinpadTransaction(
   if (!config) return { success: false, errorMessage: 'PinPad não configurado' };
 
   try {
-    const result = await callTefWebService({
+    const result = await callTefWebService(companyId, {
       action: 'cnc',
       token: config.token,
       cnpj: config.cnpj,
@@ -323,7 +327,7 @@ export async function reprintLastReceipt(
   if (!config) return { success: false, errorMessage: 'PinPad não configurado' };
 
   try {
-    const result = await callTefWebService({
+    const result = await callTefWebService(companyId, {
       action: 'rpr',
       token: config.token,
       cnpj: config.cnpj,

@@ -10,6 +10,14 @@ const TEF_API_URL = 'https://api.multipluscard.com.br/api/Servicos';
 // Separator character used in CONTEUDO header
 const SEP = '¬';
 
+// ===== TEF v1.2 (homologação Multiplus) =====
+// Comportamento novo isolado para a Lancheria da i9 enquanto valida com a Multiplus.
+// Quando o teste passar, removemos este guard e aplicamos para todos.
+const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+function isI9(companyId: unknown): boolean {
+  return typeof companyId === 'string' && companyId === I9_COMPANY_ID;
+}
+
 // Build CONTEUDO string from key-value pairs
 // IMPORTANT: 999-999 MUST always be the LAST field
 function buildConteudo(fields: Record<string, string>): string {
@@ -357,11 +365,29 @@ serve(async (req) => {
 
       const { identificacao, rede, nsu, finalizacao } = params;
 
+      // ============================================================
+      // CNF (Confirmação)
+      // A Multiplus apontou: o CNF DEVE usar o MESMO 001-000 da
+      // operação que está sendo confirmada (CRT, CNC ou ADM).
+      // Para a Lancheria da i9: validar que identificacao foi passada
+      // e nunca gerar um novo ID.
+      // ============================================================
+      if (isI9(params.companyId) && !identificacao) {
+        console.error('[TEF-WS] CNF rejeitado: identificacao ausente (i9 v1.2)');
+        return new Response(
+          JSON.stringify({
+            success: false,
+            errorMessage: 'CNF requer identificacao da operação original',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
       // Field order: 000-000, 001-000, 010-000, 012-000, 027-000, 999-999
       // 999-999 is always placed last by buildConteudo
       const fields: Record<string, string> = {
         '000-000': 'CNF',
-        '001-000': identificacao || '1',
+        '001-000': String(identificacao || '1'),
       };
 
       if (rede) fields['010-000'] = rede;
@@ -370,7 +396,7 @@ serve(async (req) => {
       fields['999-999'] = '0';
 
       const conteudo = buildConteudo(fields);
-      console.log('[TEF-WS] CNF CONTEUDO:', conteudo);
+      console.log(`[TEF-WS] CNF CONTEUDO (ident=${identificacao}):`, conteudo);
 
       const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
         method: 'POST',
@@ -540,17 +566,32 @@ serve(async (req) => {
       }
 
       const ident = params.identificacao || String(Date.now());
-      const fields: Record<string, string> = {
-        '000-000': 'CRT',
-        '001-000': ident,
-        '003-000': '0',
-        '800-001': '8', // Reimpressão de comprovante (último)
-        '800-006': '1', // PinPad
-        '999-999': '0',
-      };
+      // ============================================================
+      // RPR (Reimpressão do último comprovante)
+      // Multiplus rejeitou 800-001 = 8 (valores válidos: 0..7).
+      // Para a Lancheria da i9 (homologação v1.2): enviar como ADM
+      // sem o campo 800-001 — o gerenciador padrão da Multiplus
+      // tratará a reimpressão pelo menu administrativo do PinPad.
+      // Demais lojas seguem o fluxo legado até a homologação confirmar.
+      // ============================================================
+      const useAdmForRpr = isI9(params.companyId);
+      const fields: Record<string, string> = useAdmForRpr
+        ? {
+            '000-000': 'ADM',
+            '001-000': ident,
+            '999-999': '0',
+          }
+        : {
+            '000-000': 'CRT',
+            '001-000': ident,
+            '003-000': '0',
+            '800-001': '8', // legacy — não validado pela Multiplus
+            '800-006': '1',
+            '999-999': '0',
+          };
 
       const conteudo = buildConteudo(fields);
-      console.log('[TEF-WS] RPR CONTEUDO:', conteudo);
+      console.log(`[TEF-WS] RPR CONTEUDO (mode=${useAdmForRpr ? 'ADM' : 'CRT-legacy'}):`, conteudo);
 
       const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
         method: 'POST',
