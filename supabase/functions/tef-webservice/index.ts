@@ -213,6 +213,30 @@ serve(async (req) => {
       const conteudo = buildConteudo(fields);
       console.log('[TEF-WS] CRT CONTEUDO:', conteudo);
 
+      if (isI9(params.companyId) && Number(paymentType) === 1) {
+        try {
+          const atvConteudo = buildConteudo({
+            '000-000': 'ATV',
+            '001-000': `${ident}-atv`,
+            '999-999': '0',
+          });
+          const atvResponse = await fetch(`${TEF_API_URL}/SetVendaTef`, {
+            method: 'POST',
+            headers: {
+              'CNPJ': cnpj,
+              'PDV': pdv,
+              'TOKEN': token,
+              'CONTEUDO': atvConteudo,
+            },
+          });
+          const atvText = await atvResponse.text();
+          console.log('[TEF-WS] I9 pre-CRT ATV response:', atvText);
+          await new Promise((resolve) => setTimeout(resolve, 800));
+        } catch (error) {
+          console.error('[TEF-WS] I9 pre-CRT ATV error:', error);
+        }
+      }
+
       const headers: Record<string, string> = {
         'CNPJ': cnpj,
         'PDV': pdv,
