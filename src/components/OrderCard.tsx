@@ -731,6 +731,32 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           >
             <Printer className="w-4 h-4" />
           </Button>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
+                  onClick={handleReimprimirVenda}
+                  disabled={reimprimindoVenda}
+                  aria-label="Reimprimir venda"
+                >
+                  {reimprimindoVenda
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : nfceRecord && (nfceRecord.chave_acesso || nfceRecord.qrcode_url)
+                      ? <FileText className="w-4 h-4" />
+                      : <Receipt className="w-4 h-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {nfceRecord && (nfceRecord.chave_acesso || nfceRecord.qrcode_url)
+                  ? 'Reimprimir DANFE NFC-e'
+                  : 'Reimprimir cupom de venda'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <AlertDialog>
             <AlertDialogTrigger asChild>
