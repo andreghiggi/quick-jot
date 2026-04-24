@@ -627,6 +627,80 @@ export function PDVV2PaymentDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* I9 — Diálogo único de confirmação NFC-e (CPF opcional + imprimir opcional) */}
+      <Dialog open={nfceConfirmOpen} onOpenChange={setNfceConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Emitir NFC-e — {formatPrice(finalTotal)}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {!showCpfField ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setShowCpfField(true)}
+              >
+                + Adicionar CPF/CNPJ (opcional)
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="cpf-cnpj-nfce">CPF ou CNPJ do consumidor</Label>
+                <Input
+                  id="cpf-cnpj-nfce"
+                  inputMode="numeric"
+                  placeholder="Somente números"
+                  value={customerDocument}
+                  onChange={(e) => setCustomerDocument(e.target.value.replace(/[^\d./-]/g, ''))}
+                  maxLength={18}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline"
+                  onClick={() => {
+                    setCustomerDocument('');
+                    setShowCpfField(false);
+                  }}
+                >
+                  Remover CPF/CNPJ
+                </button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 rounded-md border p-3">
+              <Checkbox
+                id="print-after-emit"
+                checked={printAfterEmit}
+                onCheckedChange={(c) => setPrintAfterEmit(c === true)}
+              />
+              <Label htmlFor="print-after-emit" className="cursor-pointer text-sm font-normal">
+                Imprimir DANFE após emissão
+              </Label>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setNfceConfirmOpen(false)}
+              disabled={submitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              autoFocus
+              disabled={submitting}
+              onClick={async () => {
+                setNfceConfirmOpen(false);
+                await finalizeConfirm(pendingDocMode, printAfterEmit);
+              }}
+            >
+              Emitir NFC-e
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
