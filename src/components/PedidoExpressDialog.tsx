@@ -475,6 +475,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     customerDocument?: string;
     /** I9: usuário escolheu imprimir o documento gerado neste pop-up */
     printDocument?: boolean;
+    /** TEF já cobrado pelo PaymentDialog (não disparar de novo). */
+    prechargedTef?: {
+      tefData?: NFCeTefData;
+      notesFragment?: string;
+    };
   }) {
     if (!override && !canGoNext()) return;
     setIsSubmitting(true);
