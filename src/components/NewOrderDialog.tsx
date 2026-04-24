@@ -323,6 +323,9 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
     setSelectedCategory(null);
     setSelectingProduct(null);
     setSelectedOptionals({});
+    if (draftKey) {
+      try { localStorage.removeItem(draftKey); } catch {}
+    }
   }
 
   // Get applicable groups for the product being selected
