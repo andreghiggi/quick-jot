@@ -524,9 +524,16 @@ serve(async (req) => {
 
       const { identificacao } = params;
 
+      // ============================================================
+      // ADM (Menu administrativo)
+      // O CNF subsequente DEVE reusar este mesmo 001-000 (identificacao).
+      // Retornamos o ID efetivamente enviado para o cliente reusar.
+      // ============================================================
+      const admIdent = String(identificacao || '1');
+
       const conteudo = buildConteudo({
         '000-000': 'ADM',
-        '001-000': identificacao || '1',
+        '001-000': admIdent,
         '999-999': '0',
       });
 
@@ -551,7 +558,7 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ success: true, hash: text.trim() }),
+        JSON.stringify({ success: true, hash: text.trim(), identificacao: admIdent }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

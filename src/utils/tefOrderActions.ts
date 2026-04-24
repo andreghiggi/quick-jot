@@ -177,6 +177,24 @@ export function reimprimirComprovanteTef(notes: string | null | undefined, order
     return;
   }
 
+  // Normalização do comprovante para impressão:
+  // 1. Garante que sequências literais "\n" virem quebra real (já tratado no parse, mas
+  //    cobertura defensiva caso a fonte traga escapes adicionais);
+  // 2. Normaliza CRLF/CR isolados em LF para o renderer não duplicar linhas em branco;
+  // 3. Remove espaços ao final de cada linha.
+  const normalizedReceipt = tefInfo.receipt
+    .replace(/\\r\\n|\\n|\\r/g, '\n')
+    .replace(/\r\n|\r/g, '\n')
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+$/g, ''))
+    .join('\n');
+
+  // Escapa HTML para renderizar literalmente caracteres especiais no <pre>.
+  const safeReceipt = normalizedReceipt
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     toast.error('Não foi possível abrir a janela de impressão');
@@ -205,12 +223,13 @@ export function reimprimirComprovanteTef(notes: string | null | undefined, order
     .header { text-align: center; margin-bottom: 2mm; font-size: 9pt; }
     .divider { border-top: 1px dashed #000; margin: 2mm 0; }
     .footer { text-align: center; font-size: 8pt; margin-top: 2mm; }
+    pre.receipt { font: inherit; white-space: pre-wrap; word-break: break-word; margin: 0; }
   </style>
 </head>
 <body>
   <div class="header">2ª VIA - COMPROVANTE TEF${orderCode ? ` #${orderCode}` : ''}</div>
   <div class="divider"></div>
-${tefInfo.receipt}
+<pre class="receipt">${safeReceipt}</pre>
   <div class="divider"></div>
   <div class="footer">Reimpressão</div>
   <script>window.onload=function(){setTimeout(function(){window.print();window.close();},200);}</script>
