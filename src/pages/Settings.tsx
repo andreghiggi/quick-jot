@@ -47,6 +47,7 @@ export default function Settings() {
     address_neighborhood: '',
     address_reference: '',
     slug: '',
+    subdomain: '',
   });
 
   // Neighborhood form state
