@@ -282,3 +282,29 @@ export async function getNFCeRecordBySaleId(saleId: string): Promise<NFCeRecord 
   if (error) throw error;
   return data as unknown as NFCeRecord | null;
 }
+
+/**
+ * Retorna o registro NFC-e vinculado a um pedido (via pdv_sales.order_id),
+ * ou null se o pedido não tiver NFC-e emitida.
+ * Usa `select('*, request_payload')` por padrão.
+ */
+export async function getNFCeRecordByOrderId(
+  orderId: string,
+): Promise<(NFCeRecord & { request_payload?: any }) | null> {
+  // 1) Busca a pdv_sale do pedido
+  const { data: sale, error: saleErr } = await supabase
+    .from('pdv_sales')
+    .select('id')
+    .eq('order_id', orderId)
+    .maybeSingle();
+  if (saleErr || !sale?.id) return null;
+
+  // 2) Busca o registro NFC-e vinculado à venda
+  const { data, error } = await supabase
+    .from('nfce_records')
+    .select('*')
+    .eq('sale_id', sale.id)
+    .maybeSingle();
+  if (error) return null;
+  return (data as any) || null;
+}

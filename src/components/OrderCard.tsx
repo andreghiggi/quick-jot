@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Order, OrderStatus } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt } from 'lucide-react';
+import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt, FileText } from 'lucide-react';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,7 @@ import {
   estornarTefPedido,
   reimprimirComprovanteTef,
 } from '@/utils/tefOrderActions';
+import { getNFCeRecordByOrderId, printDanfeFromRecord, type NFCeRecord } from '@/services/nfceService';
 
 interface OrderCardProps {
   order: Order;
@@ -90,6 +91,19 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const tefInfo = useMemo(() => parseTefDataFromNotes(order.notes), [order.notes]);
   const tefAlreadyCancelled = isOrderTefCancelled(order.notes);
   const hasTefReceipt = !!tefInfo?.receipt;
+
+  // NFC-e vinculada (se houver) — carregada sob demanda para habilitar
+  // "Reimprimir Venda" como DANFE quando aplicável.
+  const [nfceRecord, setNfceRecord] = useState<(NFCeRecord & { request_payload?: any }) | null>(null);
+  const [reimprimindoVenda, setReimprimindoVenda] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    if (!order.id) return;
+    getNFCeRecordByOrderId(order.id)
+      .then((rec) => { if (!cancelled) setNfceRecord(rec); })
+      .catch(() => { /* silencioso — pedido sem NFC-e é o caso comum */ });
+    return () => { cancelled = true; };
+  }, [order.id]);
   
   // Catalog lookup to enrich legacy order items with prices and group names
   const [optionalsCatalog, setOptionalsCatalog] = useState<Record<string, Record<string, { price: number; groupName: string }>>>({});
@@ -227,6 +241,98 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
 
   function handleReimprimirTef() {
     reimprimirComprovanteTef(order.notes, order.orderCode || String(order.dailyNumber || ''));
+  }
+
+  /**
+   * Reimpressão de VENDA:
+   * - Se há NFC-e autorizada vinculada → reimprime o DANFE.
+   * - Caso contrário → imprime um cupom de venda simples (recibo),
+   *   distinto da comanda de produção (que continua no botão "Imprimir pedido").
+   */
+  async function handleReimprimirVenda() {
+    if (reimprimindoVenda) return;
+    setReimprimindoVenda(true);
+    try {
+      // Caminho 1: tem NFC-e vinculada → DANFE
+      if (nfceRecord && (nfceRecord.chave_acesso || nfceRecord.qrcode_url)) {
+        try {
+          await printDanfeFromRecord(nfceRecord);
+          return;
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : 'Falha ao reimprimir DANFE');
+          return;
+        }
+      }
+
+      // Caminho 2: cupom de venda simples (sem detalhes de produção)
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error('Não foi possível abrir a janela de impressão');
+        return;
+      }
+      const dt = new Date(order.createdAt).toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+      const subtotal = order.items.reduce((s, it) => s + it.price * it.quantity, 0);
+      const deliveryFee = order.total - subtotal > 0 ? order.total - subtotal : 0;
+      const paymentMatch = order.notes?.match(/Pagamento:\s*([^|()\n]+)/i);
+      const paymentLabel = paymentMatch?.[1]?.trim() || '—';
+      const itemsHtml = order.items.map((it) => {
+        // Remove parênteses de adicionais para um cupom mais limpo
+        const cleanName = it.name.includes('(') ? it.name.substring(0, it.name.indexOf('(')).trim() : it.name;
+        const total = (it.price * it.quantity).toFixed(2).replace('.', ',');
+        return `<div class="row"><span>${it.quantity}x ${cleanName}</span><span>R$ ${total}</span></div>`;
+      }).join('');
+
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Cupom de Venda #${order.orderCode || order.dailyNumber}</title>
+<style>
+  @page { margin: 0; size: ${paperSize} auto; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Courier New', monospace; font-size: ${paperSize === '80mm' ? '11pt' : '10pt'}; font-weight: bold; width: ${paperSize}; max-width: ${paperSize}; padding: 2mm; line-height: 1.3; -webkit-print-color-adjust: exact; }
+  .center { text-align: center; }
+  .header { text-align: center; margin-bottom: 2mm; }
+  .store-name { font-size: 12pt; font-weight: bold; }
+  .order-num { font-size: 14pt; font-weight: bold; margin: 1mm 0; }
+  .label-tag { font-size: 10pt; }
+  .divider { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
+  .row { display: flex; justify-content: space-between; gap: 4mm; font-size: 10pt; margin: 0.5mm 0; }
+  .grand-total { display: flex; justify-content: space-between; font-size: 13pt; font-weight: bold; margin: 1mm 0; }
+  .info { font-size: 9pt; margin: 0.5mm 0; }
+  .footer { text-align: center; font-size: 8pt; margin-top: 2mm; }
+  .label { font-weight: bold; }
+</style>
+</head><body>
+  <div class="header">
+    <div class="store-name">${storeName.toUpperCase()}</div>
+    <div class="label-tag">CUPOM DE VENDA - 2ª VIA</div>
+    <div class="order-num">#${order.orderCode || order.dailyNumber}</div>
+    <div class="info">${dt}</div>
+  </div>
+  <hr class="divider">
+  <div class="info"><span class="label">Cliente:</span> ${order.customerName}</div>
+  ${order.customerPhone ? `<div class="info"><span class="label">Tel:</span> ${order.customerPhone}</div>` : ''}
+  <hr class="divider">
+  ${itemsHtml}
+  <hr class="divider">
+  <div class="row"><span>Subtotal</span><span>R$ ${subtotal.toFixed(2).replace('.', ',')}</span></div>
+  ${deliveryFee > 0 ? `<div class="row"><span>Entrega</span><span>R$ ${deliveryFee.toFixed(2).replace('.', ',')}</span></div>` : ''}
+  <div class="grand-total"><span>TOTAL</span><span>R$ ${order.total.toFixed(2).replace('.', ',')}</span></div>
+  <hr class="divider">
+  <div class="info"><span class="label">Pagamento:</span> ${paymentLabel}</div>
+  ${tefInfo ? `<div class="info"><span class="label">NSU:</span> ${tefInfo.nsu} <span class="label">Aut:</span> ${tefInfo.authCode}</div>` : ''}
+  <hr class="divider">
+  <div class="footer">Documento sem valor fiscal</div>
+  <div class="footer">Reimpressão</div>
+  <script>window.onload=function(){setTimeout(function(){window.print();window.close();},200);}</script>
+</body></html>`;
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } finally {
+      setReimprimindoVenda(false);
+    }
   }
 
   function handlePrint() {
@@ -625,6 +731,32 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           >
             <Printer className="w-4 h-4" />
           </Button>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
+                  onClick={handleReimprimirVenda}
+                  disabled={reimprimindoVenda}
+                  aria-label="Reimprimir venda"
+                >
+                  {reimprimindoVenda
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : nfceRecord && (nfceRecord.chave_acesso || nfceRecord.qrcode_url)
+                      ? <FileText className="w-4 h-4" />
+                      : <Receipt className="w-4 h-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {nfceRecord && (nfceRecord.chave_acesso || nfceRecord.qrcode_url)
+                  ? 'Reimprimir DANFE NFC-e'
+                  : 'Reimprimir cupom de venda'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <AlertDialog>
             <AlertDialogTrigger asChild>
