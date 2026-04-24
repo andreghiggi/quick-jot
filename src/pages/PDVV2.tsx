@@ -589,7 +589,7 @@ export default function PDVV2() {
       <div className="flex h-full min-h-0 flex-col">
         <PDVV2TopBar
           storeName={company?.name || 'Loja'}
-          cashOpen={cashOpen}
+          cashOpen={cashOpenForDisplay}
           cashAmount={cashAmount}
           showCashAmount={showCash}
           onToggleCashAmount={() => setShowCash((v) => !v)}
@@ -598,7 +598,9 @@ export default function PDVV2() {
           companyId={company?.id}
         />
 
-        {!cashOpen ? (
+        {cashStateUnknown ? (
+          <div className="flex-1" />
+        ) : !cashOpenForDisplay ? (
           <div className="flex-1 min-h-0 flex items-center justify-center p-6">
             <Card className="max-w-md w-full">
               <CardContent className="py-10 flex flex-col items-center text-center gap-4">
