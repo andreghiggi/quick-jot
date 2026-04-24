@@ -365,11 +365,29 @@ serve(async (req) => {
 
       const { identificacao, rede, nsu, finalizacao } = params;
 
+      // ============================================================
+      // CNF (Confirmação)
+      // A Multiplus apontou: o CNF DEVE usar o MESMO 001-000 da
+      // operação que está sendo confirmada (CRT, CNC ou ADM).
+      // Para a Lancheria da i9: validar que identificacao foi passada
+      // e nunca gerar um novo ID.
+      // ============================================================
+      if (isI9(params.companyId) && !identificacao) {
+        console.error('[TEF-WS] CNF rejeitado: identificacao ausente (i9 v1.2)');
+        return new Response(
+          JSON.stringify({
+            success: false,
+            errorMessage: 'CNF requer identificacao da operação original',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
       // Field order: 000-000, 001-000, 010-000, 012-000, 027-000, 999-999
       // 999-999 is always placed last by buildConteudo
       const fields: Record<string, string> = {
         '000-000': 'CNF',
-        '001-000': identificacao || '1',
+        '001-000': String(identificacao || '1'),
       };
 
       if (rede) fields['010-000'] = rede;
@@ -378,7 +396,7 @@ serve(async (req) => {
       fields['999-999'] = '0';
 
       const conteudo = buildConteudo(fields);
-      console.log('[TEF-WS] CNF CONTEUDO:', conteudo);
+      console.log(`[TEF-WS] CNF CONTEUDO (ident=${identificacao}):`, conteudo);
 
       const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
         method: 'POST',
