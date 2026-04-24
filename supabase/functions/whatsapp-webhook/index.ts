@@ -14,7 +14,7 @@ const GREETING_PATTERNS = [
 ];
 
 // Production URL - NEVER use Lovable preview URLs
-const PRODUCTION_URL = 'https://appcomandatech.agilizeerp.com.br';
+const PRODUCTION_URL = 'https://app.comandatech.com.br';
 
 function isGreeting(message: string): boolean {
   const clean = message.trim().toLowerCase();

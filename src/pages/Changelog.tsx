@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '24/04/2026',
+    version: '1.27.1',
+    type: 'improvement',
+    description: 'Migração concluída para a nova infraestrutura em comandatech.com.br. Todos os links automáticos (mensagens de WhatsApp, follow-up pós-venda, campanhas de vendas, cardápio compartilhado) agora apontam para o novo domínio app.comandatech.com.br. As metatags de compartilhamento social (Open Graph, Twitter) também foram atualizadas. Deploys agora são automáticos via GitHub Actions — qualquer alteração no código vai pro ar em ~2 minutos. Lojistas e clientes não precisam fazer nada: o domínio antigo continua redirecionando automaticamente.',
+  },
+  {
+    date: '24/04/2026',
     version: '1.27.0',
     type: 'feature',
     description: 'Novo domínio "comandatech.com.br" com endereço próprio para cada loja. Cada estabelecimento ganhou automaticamente um subdomínio limpo no formato {nomedaloja}.comandatech.com.br (ex: lancheriadai9.comandatech.com.br) — sem precisar fazer nada. Os QR codes, links impressos e mensagens antigas no domínio appcomandatech.agilizeerp.com.br continuam funcionando 100% normais e passam a redirecionar automaticamente para o endereço novo da loja, sem quebra. O painel administrativo (login, PDV, pedidos, configurações) ficou em app.comandatech.com.br. Para personalizar o endereço da sua loja, vá em Configurações → Geral → "Endereço da sua loja (Comanda Tech)" — apenas letras minúsculas e números.',
