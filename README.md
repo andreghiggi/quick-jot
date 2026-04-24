@@ -1,5 +1,7 @@
 # Welcome to your Lovable project
 
+> Hospedado em VPS própria via deploy automático (GitHub Actions → Nginx + SSL wildcard).
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/aa48df58-5129-4fc5-b12f-f3e13098e2c6
