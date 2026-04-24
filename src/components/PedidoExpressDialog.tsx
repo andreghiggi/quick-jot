@@ -144,9 +144,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       }
       // Revalida itens contra produtos ativos atuais
       if (Array.isArray(parsed.cart) && parsed.cart.length > 0) {
+        const currentActive = getActiveProducts();
         const validCart: CartItem[] = parsed.cart
           .map((it: any) => {
-            const fresh = activeProducts.find(p => p.id === it?.product?.id);
+            const fresh = currentActive.find(p => p.id === it?.product?.id);
             if (!fresh) return null;
             return {
               product: fresh,
@@ -183,7 +184,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     } finally {
       draftHydratedRef.current = true;
     }
-  }, [draftKey, productsLoading, activeProducts, open]);
+  }, [draftKey, productsLoading, getActiveProducts, open]);
 
   // Persiste o rascunho a cada mudança relevante (após hidratação)
   useEffect(() => {
