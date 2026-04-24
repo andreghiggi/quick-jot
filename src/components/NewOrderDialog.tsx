@@ -54,6 +54,9 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
   const [selectingProduct, setSelectingProduct] = useState<{ id: string; name: string; price: number } | null>(null);
   const [selectedOptionals, setSelectedOptionals] = useState<Record<string, Set<string>>>({});
 
+  const activeProducts = getActiveProducts();
+  const productCategories = getCategories();
+
   // ---------- Draft persistence (sobrevive a troca de aba / refresh) ----------
   const DRAFT_TTL_MS = 24 * 60 * 60 * 1000; // 24h
   const draftKey = company?.id ? `newOrderDraft_${company.id}` : null;
@@ -128,9 +131,6 @@ export function NewOrderDialog({ open, onOpenChange }: NewOrderDialogProps) {
     }
   }, [draftKey, cart, customerName, customerPhone, deliveryAddress, notes, selectedCategory]);
   // ---------------------------------------------------------------------------
-
-  const activeProducts = getActiveProducts();
-  const productCategories = getCategories();
 
   const currentCategory = selectedCategory && productCategories.includes(selectedCategory)
     ? selectedCategory
