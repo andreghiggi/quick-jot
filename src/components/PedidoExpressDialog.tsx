@@ -122,6 +122,116 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ===== Persistência do rascunho (sobrevive a troca de aba / refresh) =====
+  const draftKey = company?.id ? `expressDraft_${company.id}` : null;
+  const DRAFT_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+  const draftHydratedRef = useRef(false);
+  const draftRestoreNotifiedRef = useRef(false);
+
+  // Hidrata uma única vez quando produtos/empresa estiverem prontos
+  useEffect(() => {
+    if (draftHydratedRef.current) return;
+    if (!draftKey || productsLoading) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) { draftHydratedRef.current = true; return; }
+      const parsed = JSON.parse(raw);
+      if (!parsed?.savedAt || Date.now() - parsed.savedAt > DRAFT_TTL_MS) {
+        localStorage.removeItem(draftKey);
+        draftHydratedRef.current = true;
+        return;
+      }
+      // Revalida itens contra produtos ativos atuais
+      if (Array.isArray(parsed.cart) && parsed.cart.length > 0) {
+        const validCart: CartItem[] = parsed.cart
+          .map((it: any) => {
+            const fresh = activeProducts.find(p => p.id === it?.product?.id);
+            if (!fresh) return null;
+            return {
+              product: fresh,
+              quantity: Math.max(1, Number(it.quantity) || 1),
+              selectedOptionals: Array.isArray(it.selectedOptionals) ? it.selectedOptionals : [],
+              groupedOptionalNames: it.groupedOptionalNames,
+              notes: it.notes,
+            } as CartItem;
+          })
+          .filter(Boolean) as CartItem[];
+        if (validCart.length > 0) setCart(validCart);
+      }
+      if (typeof parsed.step === 'number') setStep(parsed.step as Step);
+      if (typeof parsed.customerPhone === 'string') setCustomerPhone(parsed.customerPhone);
+      if (typeof parsed.customerName === 'string') setCustomerName(parsed.customerName);
+      if (parsed.deliveryType === 'entrega' || parsed.deliveryType === 'retirada') setDeliveryType(parsed.deliveryType);
+      if (typeof parsed.deliveryAddress === 'string') setDeliveryAddress(parsed.deliveryAddress);
+      if (typeof parsed.deliveryNumber === 'string') setDeliveryNumber(parsed.deliveryNumber);
+      if (typeof parsed.deliveryComplement === 'string') setDeliveryComplement(parsed.deliveryComplement);
+      if (typeof parsed.deliveryNeighborhood === 'string') setDeliveryNeighborhood(parsed.deliveryNeighborhood);
+      if (typeof parsed.deliveryReference === 'string') setDeliveryReference(parsed.deliveryReference);
+      if (typeof parsed.deliveryFee === 'number') setDeliveryFee(parsed.deliveryFee);
+      if (parsed.selectedDeliveryFeeType === 'city' || parsed.selectedDeliveryFeeType === 'interior') {
+        setSelectedDeliveryFeeType(parsed.selectedDeliveryFeeType);
+      }
+      if (typeof parsed.paymentMethod === 'string') setPaymentMethod(parsed.paymentMethod);
+      if (typeof parsed.selectedCategory === 'string') setSelectedCategory(parsed.selectedCategory);
+      if (open && !draftRestoreNotifiedRef.current && Array.isArray(parsed.cart) && parsed.cart.length > 0) {
+        toast.success('Seu pedido foi restaurado');
+        draftRestoreNotifiedRef.current = true;
+      }
+    } catch (e) {
+      console.warn('[ExpressDraft] falha ao restaurar', e);
+    } finally {
+      draftHydratedRef.current = true;
+    }
+  }, [draftKey, productsLoading, activeProducts, open]);
+
+  // Persiste o rascunho a cada mudança relevante (após hidratação)
+  useEffect(() => {
+    if (!draftKey || !draftHydratedRef.current) return;
+    const hasContent =
+      cart.length > 0 ||
+      customerPhone.length > 0 ||
+      customerName.length > 0 ||
+      deliveryAddress.length > 0;
+    if (!hasContent && step === 1) {
+      localStorage.removeItem(draftKey);
+      return;
+    }
+    try {
+      const payload = {
+        savedAt: Date.now(),
+        step,
+        cart: cart.map(item => ({
+          product: { id: item.product.id },
+          quantity: item.quantity,
+          selectedOptionals: item.selectedOptionals,
+          groupedOptionalNames: item.groupedOptionalNames,
+          notes: item.notes,
+        })),
+        customerPhone,
+        customerName,
+        deliveryType,
+        deliveryAddress,
+        deliveryNumber,
+        deliveryComplement,
+        deliveryNeighborhood,
+        deliveryReference,
+        deliveryFee,
+        selectedDeliveryFeeType,
+        paymentMethod,
+        selectedCategory,
+      };
+      localStorage.setItem(draftKey, JSON.stringify(payload));
+    } catch (e) {
+      console.warn('[ExpressDraft] falha ao salvar', e);
+    }
+  }, [
+    draftKey, step, cart, customerPhone, customerName,
+    deliveryType, deliveryAddress, deliveryNumber, deliveryComplement,
+    deliveryNeighborhood, deliveryReference, deliveryFee,
+    selectedDeliveryFeeType, paymentMethod, selectedCategory,
+  ]);
+
   // Cobrança via PDVV2PaymentDialog (apenas Retirada)
   const [pickupChargeOpen, setPickupChargeOpen] = useState(false);
 
