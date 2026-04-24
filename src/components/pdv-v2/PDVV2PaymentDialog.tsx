@@ -490,9 +490,9 @@ export function PDVV2PaymentDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={submitting || !paymentMethodId || activePaymentMethods.length === 0}
+            disabled={submitting || chargingTef || !paymentMethodId || activePaymentMethods.length === 0}
           >
-            Confirmar Pagamento
+            {chargingTef ? 'Cobrando…' : 'Confirmar Pagamento'}
           </Button>
         </DialogFooter>
       </DialogContent>
