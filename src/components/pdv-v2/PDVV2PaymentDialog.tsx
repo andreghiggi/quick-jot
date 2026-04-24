@@ -531,7 +531,7 @@ export function PDVV2PaymentDialog({
               onClick={() => {
                 setPendingDocMode('sale_with_nfce');
                 setDocChoiceOpen(false);
-                setCpfChoiceOpen(true);
+                setNfceConfirmOpen(true);
               }}
             >
               Venda com NFC-e
