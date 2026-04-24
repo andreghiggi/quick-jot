@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Order, OrderStatus } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt } from 'lucide-react';
+import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt, FileText } from 'lucide-react';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,7 @@ import {
   estornarTefPedido,
   reimprimirComprovanteTef,
 } from '@/utils/tefOrderActions';
+import { getNFCeRecordByOrderId, printDanfeFromRecord, type NFCeRecord } from '@/services/nfceService';
 
 interface OrderCardProps {
   order: Order;
@@ -90,6 +91,19 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const tefInfo = useMemo(() => parseTefDataFromNotes(order.notes), [order.notes]);
   const tefAlreadyCancelled = isOrderTefCancelled(order.notes);
   const hasTefReceipt = !!tefInfo?.receipt;
+
+  // NFC-e vinculada (se houver) — carregada sob demanda para habilitar
+  // "Reimprimir Venda" como DANFE quando aplicável.
+  const [nfceRecord, setNfceRecord] = useState<(NFCeRecord & { request_payload?: any }) | null>(null);
+  const [reimprimindoVenda, setReimprimindoVenda] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    if (!order.id) return;
+    getNFCeRecordByOrderId(order.id)
+      .then((rec) => { if (!cancelled) setNfceRecord(rec); })
+      .catch(() => { /* silencioso — pedido sem NFC-e é o caso comum */ });
+    return () => { cancelled = true; };
+  }, [order.id]);
   
   // Catalog lookup to enrich legacy order items with prices and group names
   const [optionalsCatalog, setOptionalsCatalog] = useState<Record<string, Record<string, { price: number; groupName: string }>>>({});
