@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Order, OrderStatus } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt, FileText } from 'lucide-react';
+import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt, FileText, CreditCard } from 'lucide-react';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,7 @@ import {
   reimprimirComprovanteTef,
 } from '@/utils/tefOrderActions';
 import { getNFCeRecordByOrderId, printDanfeFromRecord, type NFCeRecord } from '@/services/nfceService';
+import { OrderCardChargeDialog } from '@/components/OrderCardChargeDialog';
 
 interface OrderCardProps {
   order: Order;
@@ -85,7 +86,17 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const [confirming, setConfirming] = useState(false);
   const [advancing, setAdvancing] = useState(false);
   const [tefEstornoLoading, setTefEstornoLoading] = useState(false);
+  const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
   const confirmed = !!order.confirmedAt;
+
+  // Lancheria da I9 — cobrança manual de pedidos do cardápio antes de "Entregar".
+  // Rollout isolado (mesma loja já validada para NFC-e e Pedido Express).
+  const LANCHERIA_I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const isLancheriaI9 = company?.id === LANCHERIA_I9_COMPANY_ID;
+  const isCardapioOrder = (order.origin || 'cardapio') === 'cardapio';
+  const alreadyCharged = !!order.notes?.includes('[COBRADO]');
+  const showChargeButton =
+    isLancheriaI9 && isCardapioOrder && order.status === 'ready';
 
   // Detecta se é pagamento TEF e se já foi estornado
   const tefInfo = useMemo(() => parseTefDataFromNotes(order.notes), [order.notes]);
@@ -825,8 +836,33 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               {!advancing && <ChevronRight className="w-4 h-4" />}
             </Button>
           )}
+          {!isCancelled && showChargeButton && (
+            <Button
+              size="sm"
+              variant={alreadyCharged ? 'outline' : 'default'}
+              onClick={() => setChargeDialogOpen(true)}
+              disabled={alreadyCharged}
+              className={cn(
+                'gap-1 shrink-0 px-3 inline-flex items-center',
+                alreadyCharged
+                  ? 'border-green-500 text-green-700 dark:text-green-400 cursor-default'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white',
+              )}
+              title={alreadyCharged ? 'Pedido já cobrado' : 'Cobrar pedido (forma de pagamento + NFC-e opcional)'}
+            >
+              {alreadyCharged ? <Check className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+              {alreadyCharged ? 'Cobrado' : 'Cobrar'}
+            </Button>
+          )}
         </div>
       </div>
+      {showChargeButton && (
+        <OrderCardChargeDialog
+          order={order}
+          open={chargeDialogOpen}
+          onOpenChange={setChargeDialogOpen}
+        />
+      )}
     </div>
   );
 }
