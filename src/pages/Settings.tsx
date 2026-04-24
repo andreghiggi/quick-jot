@@ -166,6 +166,7 @@ export default function Settings() {
           address_neighborhood: formData.address_neighborhood,
           address_reference: formData.address_reference,
           slug: formData.slug,
+          subdomain: formData.subdomain || null,
         } as any)
         .eq('id', company.id);
 
