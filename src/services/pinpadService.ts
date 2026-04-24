@@ -268,19 +268,21 @@ export async function cancelPinpadTransaction(
 export async function sendPinpadAdm(
   companyId: string,
   identificacao?: string,
-): Promise<{ success: boolean; hash?: string; errorMessage?: string }> {
+): Promise<{ success: boolean; hash?: string; identificacao?: string; errorMessage?: string }> {
   const config = await getPinpadConfig(companyId);
   if (!config) return { success: false, errorMessage: 'PinPad não configurado' };
 
   try {
+    const ident = identificacao || String(Date.now());
     const result = await callTefWebService(companyId, {
       action: 'adm',
       token: config.token,
       cnpj: config.cnpj,
       pdv: config.pdv,
-      identificacao: identificacao || String(Date.now()),
+      identificacao: ident,
     });
-    return result;
+    // Garante que o caller sempre receba o identificacao para reusar no CNF
+    return { ...result, identificacao: result?.identificacao || ident };
   } catch (error) {
     return { success: false, errorMessage: error instanceof Error ? error.message : 'Erro desconhecido' };
   }
