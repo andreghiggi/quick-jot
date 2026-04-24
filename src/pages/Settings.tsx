@@ -96,6 +96,7 @@ export default function Settings() {
         address_neighborhood: (company as any).address_neighborhood || '',
         address_reference: (company as any).address_reference || '',
         slug: company.slug || '',
+        subdomain: (company as any).subdomain || '',
       });
     }
   }, [company]);
