@@ -104,7 +104,7 @@ export default function Menu() {
     }
 
     fetchCompany();
-  }, [slug, navigate]);
+  }, [slug, subdomainFromHost, navigate]);
 
   const { products, loading: productsLoading, getMenuProducts, getNewProducts } = useProducts({ companyId: company?.id });
   const { settings, loading: settingsLoading } = useStoreSettings({ companyId: company?.id });
