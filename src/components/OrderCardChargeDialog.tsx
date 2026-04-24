@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import type { DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
+import type { ExtraItem } from '@/components/pdv-v2/PDVV2AddItemSearch';
+import type { TefOptions } from '@/utils/pdvV2Tef';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { useProducts } from '@/hooks/useProducts';
@@ -69,8 +71,10 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     discount: number;
     finalTotal: number;
     documentMode: DocumentMode;
-    extraItems: { name: string; price: number; quantity: number }[];
+    extraItems: ExtraItem[];
     printDocument?: boolean;
+    tefOptions?: TefOptions;
+    tefIntegration?: 'tef_pinpad' | 'tef_smartpos';
     customerDocument?: string;
     prechargedTef?: { tefData?: NFCeTefData; notesFragment?: string };
   }) {
@@ -209,7 +213,8 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
             setNfceDialogOpen(o);
             if (!o) setNfceRecord(null);
           }}
-          record={nfceRecord}
+          companyId={company?.id}
+          initialRecord={nfceRecord}
           autoPrint={nfceAutoPrint}
           paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
         />
