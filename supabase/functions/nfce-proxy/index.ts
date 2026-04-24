@@ -166,9 +166,13 @@ Deno.serve(async (req) => {
               total: money(vTot),
               vProd: money(vTot),
               cst_pis: fixCst(String(it.cst_pis || '49'), Number(it.aliquota_pis) || 0),
+              CSTPIS: fixCst(String(it.cst_pis || '49'), Number(it.aliquota_pis) || 0),
               cst_cofins: fixCst(String(it.cst_cofins || '49'), Number(it.aliquota_cofins) || 0),
+              CSTCOFINS: fixCst(String(it.cst_cofins || '49'), Number(it.aliquota_cofins) || 0),
               aliquota_pis: Number(it.aliquota_pis) || 0,
+              pPIS: money(Number(it.aliquota_pis) || 0),
               aliquota_cofins: Number(it.aliquota_cofins) || 0,
+              pCOFINS: money(Number(it.aliquota_cofins) || 0),
             }
           })
           // Total geral consolidado, descontando desconto e somando frete
