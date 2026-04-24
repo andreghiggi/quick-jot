@@ -256,9 +256,9 @@ export function PDVV2PaymentDialog({
       }
       // TEF aprovado → segue para os pop-ups (CPF + Imprimir)
       if (showDocumentMode) {
-        // I9 com NFC-e forçada por TEF: CPF primeiro, depois imprimir
+        // I9 com NFC-e forçada por TEF: diálogo único de confirmação
         setPendingDocMode('sale_with_nfce');
-        setCpfChoiceOpen(true);
+        setNfceConfirmOpen(true);
       } else {
         await finalizeConfirm('sale_with_nfce');
       }
@@ -269,7 +269,7 @@ export function PDVV2PaymentDialog({
     if (isLancheriaI9 && showDocumentMode) {
       if (isTef) {
         setPendingDocMode('sale_with_nfce');
-        setCpfChoiceOpen(true);
+        setNfceConfirmOpen(true);
       } else {
         setDocChoiceOpen(true);
       }
