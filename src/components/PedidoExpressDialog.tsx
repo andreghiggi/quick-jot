@@ -1779,6 +1779,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         // Demais lojas mantêm a restrição original (Cliente Loja → apenas dinheiro).
         cashOnly={isClienteLoja && !isLancheriaI9}
         showDocumentMode
+        // I9: cobrar TEF antes de perguntar NFC-e/imprimir. Se a cobrança não
+        // for aprovada, nada segue — o lojista pode reprocessar/escolher outra
+        // forma sem ter respondido pop-ups à toa.
+        chargeTefBeforePopups
         onConfirm={async ({
           paymentMethodId,
           paymentName,
@@ -1789,6 +1793,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           tefOptions,
           tefIntegration,
           customerDocument,
+          prechargedTef,
         }) => {
           // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
           // e imprime apenas recibo. Caso contrário (Retirada vinda da etapa 4), mantém fluxo original.
@@ -1804,6 +1809,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             tefOptions,
             tefIntegration,
             customerDocument,
+            prechargedTef,
           });
           setPickupChargeOpen(false);
         }}
