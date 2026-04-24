@@ -1,7 +1,7 @@
 // Cron-driven sales campaign processor.
 // Called every minute by pg_cron. Sends 1 message per running campaign per tick,
 // respecting interval, daily limit and time window.
-import { createClient } from 'jsr:@supabase/supabase-js@2.48.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
