@@ -548,17 +548,32 @@ serve(async (req) => {
       }
 
       const ident = params.identificacao || String(Date.now());
-      const fields: Record<string, string> = {
-        '000-000': 'CRT',
-        '001-000': ident,
-        '003-000': '0',
-        '800-001': '8', // Reimpressão de comprovante (último)
-        '800-006': '1', // PinPad
-        '999-999': '0',
-      };
+      // ============================================================
+      // RPR (Reimpressão do último comprovante)
+      // Multiplus rejeitou 800-001 = 8 (valores válidos: 0..7).
+      // Para a Lancheria da i9 (homologação v1.2): enviar como ADM
+      // sem o campo 800-001 — o gerenciador padrão da Multiplus
+      // tratará a reimpressão pelo menu administrativo do PinPad.
+      // Demais lojas seguem o fluxo legado até a homologação confirmar.
+      // ============================================================
+      const useAdmForRpr = isI9(params.companyId);
+      const fields: Record<string, string> = useAdmForRpr
+        ? {
+            '000-000': 'ADM',
+            '001-000': ident,
+            '999-999': '0',
+          }
+        : {
+            '000-000': 'CRT',
+            '001-000': ident,
+            '003-000': '0',
+            '800-001': '8', // legacy — não validado pela Multiplus
+            '800-006': '1',
+            '999-999': '0',
+          };
 
       const conteudo = buildConteudo(fields);
-      console.log('[TEF-WS] RPR CONTEUDO:', conteudo);
+      console.log(`[TEF-WS] RPR CONTEUDO (mode=${useAdmForRpr ? 'ADM' : 'CRT-legacy'}):`, conteudo);
 
       const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
         method: 'POST',
