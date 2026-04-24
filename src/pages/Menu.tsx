@@ -31,6 +31,7 @@ import { cn, formatPrice } from '@/lib/utils';
 import { MenuV2 } from '@/components/menu/MenuV2';
 import { AddedToCartDialog } from '@/components/menu/AddedToCartDialog';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
+import { detectDomainContext, COMANDATECH_ROOT } from '@/utils/domainRouting';
 
 interface Company {
   id: string;
@@ -38,6 +39,7 @@ interface Company {
   slug: string;
   phone: string | null;
   address: string | null;
+  subdomain?: string | null;
 }
 
 export default function Menu() {
@@ -48,11 +50,18 @@ export default function Menu() {
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companyNotFound, setCompanyNotFound] = useState(false);
 
-  // Fetch company by slug
+  // Detecta se viemos por subdomínio (ex: lancheriadai9.comandatech.com.br) ou pela rota /cardapio/:slug
+  const domainCtx = detectDomainContext();
+  const subdomainFromHost = domainCtx.kind === 'store' ? domainCtx.subdomain : null;
+
+  // Fetch company by slug OU por subdomain
   useEffect(() => {
     async function fetchCompany() {
-      if (!slug) {
-        // Se não tem slug, redireciona para página inicial
+      const lookupBy = subdomainFromHost ? 'subdomain' : 'slug';
+      const lookupValue = subdomainFromHost ?? slug;
+
+      if (!lookupValue) {
+        // Sem identificação de loja → volta pra raiz
         navigate('/');
         return;
       }
@@ -60,14 +69,30 @@ export default function Menu() {
       try {
         const { data, error } = await supabase
           .from('companies')
-          .select('id, name, slug, phone, address')
-          .eq('slug', slug)
+          .select('id, name, slug, phone, address, subdomain')
+          .eq(lookupBy, lookupValue)
           .eq('active', true)
           .single();
 
         if (error || !data) {
           setCompanyNotFound(true);
         } else {
+          // 🔁 Redirect automático: se a loja tem subdomínio configurado e estamos no
+          // domínio antigo OU acessando via /cardapio/:slug no domínio novo, redireciona
+          // para o subdomínio limpo (lancheriadai9.comandatech.com.br).
+          const host = window.location.hostname.toLowerCase();
+          const onComandatech = host === COMANDATECH_ROOT || host.endsWith(`.${COMANDATECH_ROOT}`);
+          const onSubdomain = subdomainFromHost !== null;
+
+          // Só redireciona em produção (não em localhost / preview)
+          // Caso 1: domínio novo via /cardapio/:slug → vira subdomínio
+          // Caso 2: domínio antigo via /cardapio/:slug → vira subdomínio do novo domínio
+          if (data.subdomain && !onSubdomain && (onComandatech || host.endsWith('.com.br'))) {
+            const target = `https://${data.subdomain}.${COMANDATECH_ROOT}/`;
+            window.location.replace(target);
+            return;
+          }
+
           setCompany(data);
         }
       } catch (error) {
@@ -79,7 +104,7 @@ export default function Menu() {
     }
 
     fetchCompany();
-  }, [slug, navigate]);
+  }, [slug, subdomainFromHost, navigate]);
 
   const { products, loading: productsLoading, getMenuProducts, getNewProducts } = useProducts({ companyId: company?.id });
   const { settings, loading: settingsLoading } = useStoreSettings({ companyId: company?.id });

@@ -305,6 +305,7 @@ export type Database = {
           responsible_rg: string | null
           serial: string
           slug: string
+          subdomain: string | null
           updated_at: string | null
         }
         Insert: {
@@ -345,6 +346,7 @@ export type Database = {
           responsible_rg?: string | null
           serial: string
           slug: string
+          subdomain?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -385,6 +387,7 @@ export type Database = {
           responsible_rg?: string | null
           serial?: string
           slug?: string
+          subdomain?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2327,6 +2330,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_unique_subdomain: {
+        Args: { _company_id: string; _name: string }
+        Returns: string
+      }
+      generate_clean_subdomain: { Args: { _input: string }; Returns: string }
       generate_company_serial: { Args: never; Returns: string }
       get_next_daily_order_number: { Args: never; Returns: number }
       get_reseller_id: { Args: { _user_id: string }; Returns: string }
@@ -2339,6 +2347,7 @@ export type Database = {
         Returns: boolean
       }
       is_company_suspended: { Args: { _company_id: string }; Returns: boolean }
+      is_reserved_subdomain: { Args: { _subdomain: string }; Returns: boolean }
       process_overdue_invoices: { Args: never; Returns: Json }
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }

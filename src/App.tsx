@@ -9,6 +9,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import { ImplementedSuggestionsModal } from "@/components/ImplementedSuggestionsModal";
 import { useCompanyModules } from "@/hooks/useCompanyModules";
+import { detectDomainContext, COMANDATECH_ROOT } from "@/utils/domainRouting";
+import { useEffect } from "react";
 
 // Pages
 import Auth from "./pages/Auth";
@@ -62,6 +64,36 @@ const queryClient = new QueryClient();
 function AppRoutes() {
   const { user, loading, isSuperAdmin, isWaiter, isReseller, company } = useAuthContext();
   const { enabled: pdvV2Enabled, loading: pdvV2Loading } = usePdvV2Enabled(company?.id);
+
+  // Detecta o contexto de domínio uma vez por render
+  const domainCtx = detectDomainContext();
+
+  // Domínio raiz comandatech.com.br → redireciona para app.comandatech.com.br
+  useEffect(() => {
+    if (domainCtx.kind === 'root-redirect') {
+      window.location.replace(`https://app.${COMANDATECH_ROOT}${window.location.pathname}${window.location.search}`);
+    }
+  }, [domainCtx.kind]);
+
+  // Quando estamos em um subdomínio de loja (ex: lancheriadai9.comandatech.com.br),
+  // a rota raiz "/" deve carregar o cardápio dessa loja diretamente.
+  if (domainCtx.kind === 'store') {
+    return (
+      <Routes>
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/cardapio/:slug" element={<Menu />} />
+        {/* Rota raiz do subdomínio → cardápio da loja */}
+        <Route path="/" element={<Menu />} />
+        <Route path="*" element={<Menu />} />
+      </Routes>
+    );
+  }
+
+  // Tela em branco enquanto o redirect do domínio raiz acontece
+  if (domainCtx.kind === 'root-redirect') {
+    return null;
+  }
 
   // Redirect logic for root path
   function RootRedirect() {

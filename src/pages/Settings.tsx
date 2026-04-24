@@ -47,6 +47,7 @@ export default function Settings() {
     address_neighborhood: '',
     address_reference: '',
     slug: '',
+    subdomain: '',
   });
 
   // Neighborhood form state
@@ -95,6 +96,7 @@ export default function Settings() {
         address_neighborhood: (company as any).address_neighborhood || '',
         address_reference: (company as any).address_reference || '',
         slug: company.slug || '',
+        subdomain: (company as any).subdomain || '',
       });
     }
   }, [company]);
@@ -164,6 +166,7 @@ export default function Settings() {
           address_neighborhood: formData.address_neighborhood,
           address_reference: formData.address_reference,
           slug: formData.slug,
+          subdomain: formData.subdomain || null,
         } as any)
         .eq('id', company.id);
 
@@ -409,6 +412,34 @@ pause
                     placeholder="minha-empresa"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="subdomain" className="flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  Endereço da sua loja (Comanda Tech)
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="subdomain"
+                    value={formData.subdomain}
+                    onChange={(e) => setFormData({ ...formData, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
+                    placeholder="minhaloja"
+                    maxLength={30}
+                  />
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">.comandatech.com.br</span>
+                </div>
+                {formData.subdomain && (
+                  <p className="text-xs text-muted-foreground">
+                    Sua loja ficará acessível em{' '}
+                    <code className="bg-muted px-1 py-0.5 rounded">
+                      https://{formData.subdomain}.comandatech.com.br
+                    </code>
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Apenas letras minúsculas e números, entre 3 e 30 caracteres. Esse é o endereço curto e profissional do seu cardápio.
+                </p>
               </div>
             </CardContent>
           </Card>
