@@ -659,7 +659,14 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     // Mesmo padrão do PDV V2: executa runTefPayment ANTES de criar o pedido.
     let overrideTefData: NFCeTefData | undefined;
     let overrideTefNote = '';
-    if (override?.tefIntegration && override?.tefOptions && company?.id) {
+    // Caso 1: TEF já foi cobrado pelo PaymentDialog (chargeTefBeforePopups) →
+    // só reaproveita o resultado, sem disparar nova cobrança.
+    if (override?.prechargedTef) {
+      overrideTefData = override.prechargedTef.tefData;
+      overrideTefNote = override.prechargedTef.notesFragment
+        ? ` | ${override.prechargedTef.notesFragment}`
+        : '';
+    } else if (override?.tefIntegration && override?.tefOptions && company?.id) {
       const result = await runTefPayment({
         companyId: company.id,
         integration: override.tefIntegration,
