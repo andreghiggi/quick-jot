@@ -9,6 +9,24 @@
     <meta name="keywords" content="gestão de pedidos, pedidos, delivery, restaurante, lanchonete, controle de vendas, comanda digital" />
     <meta name="theme-color" content="#E63946" />
 
+    <script>
+      // Redireciona automaticamente o domínio antigo para o novo,
+      // preservando rota completa (ex: /cardapio/lancheria-da-i9-263ee29a)
+      (function () {
+        try {
+          var h = window.location.hostname;
+          if (h === 'appcomandatech.agilizeerp.com.br' || h.endsWith('.agilizeerp.com.br')) {
+            var newHost = (h === 'appcomandatech.agilizeerp.com.br')
+              ? 'app.comandatech.com.br'
+              : h.replace('.agilizeerp.com.br', '.comandatech.com.br');
+            window.location.replace(
+              'https://' + newHost + window.location.pathname + window.location.search + window.location.hash
+            );
+          }
+        } catch (e) {}
+      })();
+    </script>
+
     <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="apple-touch-icon" href="/icon-192.png" />
 
