@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput, LANCHERIA_I9_COMPANY_ID } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
@@ -110,6 +111,11 @@ export function PDVV2PaymentDialog({
   const [printChoiceOpen, setPrintChoiceOpen] = useState(false);
   const [cpfChoiceOpen, setCpfChoiceOpen] = useState(false);
   const [pendingDocMode, setPendingDocMode] = useState<DocumentMode>('sale_only');
+  // I9 — Diálogo único de confirmação NFC-e (substitui CPF + Imprimir).
+  // Caminho rápido: 1 clique em "Emitir NFC-e" sem CPF e sem imprimir.
+  const [nfceConfirmOpen, setNfceConfirmOpen] = useState(false);
+  const [showCpfField, setShowCpfField] = useState(false);
+  const [printAfterEmit, setPrintAfterEmit] = useState(false);
   // Resultado do TEF pré-cobrado (chargeTefBeforePopups). Mantemos em ref
   // pra propagar até o finalizeConfirm sem causar re-render desnecessário.
   const [prechargedTef, setPrechargedTef] = useState<{
@@ -141,6 +147,9 @@ export function PDVV2PaymentDialog({
       setDocChoiceOpen(false);
       setPrintChoiceOpen(false);
       setCpfChoiceOpen(false);
+      setNfceConfirmOpen(false);
+      setShowCpfField(false);
+      setPrintAfterEmit(false);
       setTefModality('avista');
       setTefInstallments('2');
       setTefInstallmentType('adm');
@@ -247,9 +256,9 @@ export function PDVV2PaymentDialog({
       }
       // TEF aprovado → segue para os pop-ups (CPF + Imprimir)
       if (showDocumentMode) {
-        // I9 com NFC-e forçada por TEF: CPF primeiro, depois imprimir
+        // I9 com NFC-e forçada por TEF: diálogo único de confirmação
         setPendingDocMode('sale_with_nfce');
-        setCpfChoiceOpen(true);
+        setNfceConfirmOpen(true);
       } else {
         await finalizeConfirm('sale_with_nfce');
       }
@@ -260,7 +269,7 @@ export function PDVV2PaymentDialog({
     if (isLancheriaI9 && showDocumentMode) {
       if (isTef) {
         setPendingDocMode('sale_with_nfce');
-        setCpfChoiceOpen(true);
+        setNfceConfirmOpen(true);
       } else {
         setDocChoiceOpen(true);
       }
@@ -522,7 +531,7 @@ export function PDVV2PaymentDialog({
               onClick={() => {
                 setPendingDocMode('sale_with_nfce');
                 setDocChoiceOpen(false);
-                setCpfChoiceOpen(true);
+                setNfceConfirmOpen(true);
               }}
             >
               Venda com NFC-e
@@ -614,6 +623,80 @@ export function PDVV2PaymentDialog({
               }}
             >
               Próxima
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* I9 — Diálogo único de confirmação NFC-e (CPF opcional + imprimir opcional) */}
+      <Dialog open={nfceConfirmOpen} onOpenChange={setNfceConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Emitir NFC-e — {formatPrice(finalTotal)}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {!showCpfField ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setShowCpfField(true)}
+              >
+                + Adicionar CPF/CNPJ (opcional)
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="cpf-cnpj-nfce">CPF ou CNPJ do consumidor</Label>
+                <Input
+                  id="cpf-cnpj-nfce"
+                  inputMode="numeric"
+                  placeholder="Somente números"
+                  value={customerDocument}
+                  onChange={(e) => setCustomerDocument(e.target.value.replace(/[^\d./-]/g, ''))}
+                  maxLength={18}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline"
+                  onClick={() => {
+                    setCustomerDocument('');
+                    setShowCpfField(false);
+                  }}
+                >
+                  Remover CPF/CNPJ
+                </button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 rounded-md border p-3">
+              <Checkbox
+                id="print-after-emit"
+                checked={printAfterEmit}
+                onCheckedChange={(c) => setPrintAfterEmit(c === true)}
+              />
+              <Label htmlFor="print-after-emit" className="cursor-pointer text-sm font-normal">
+                Imprimir DANFE após emissão
+              </Label>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setNfceConfirmOpen(false)}
+              disabled={submitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              autoFocus
+              disabled={submitting}
+              onClick={async () => {
+                setNfceConfirmOpen(false);
+                await finalizeConfirm(pendingDocMode, printAfterEmit);
+              }}
+            >
+              Emitir NFC-e
             </Button>
           </DialogFooter>
         </DialogContent>
