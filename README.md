@@ -1,6 +1,6 @@
 # Welcome to your Lovable project
 
-> Hospedado em VPS própria via deploy automático (GitHub Actions → Nginx + SSL wildcard).
+> Hospedado em VPS própria via deploy automático (GitHub Actions → Nginx + SSL wildcard). ✅
 
 ## Project info
 
