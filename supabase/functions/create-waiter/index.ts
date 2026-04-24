@@ -72,22 +72,87 @@ Deno.serve(async (req) => {
     });
 
     // Create the auth user
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    let { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true, // Auto-confirm email
       user_metadata: { full_name: name },
     });
 
+    let newUserId: string;
+
     if (createError) {
       console.error("Error creating user:", createError);
-      return new Response(
-        JSON.stringify({ error: createError.message }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+      const isEmailExists =
+        (createError as any)?.code === "email_exists" ||
+        /already.*registered|already been registered|email_exists/i.test(createError.message || "");
 
-    const newUserId = newUser.user.id;
+      if (!isEmailExists) {
+        return new Response(
+          JSON.stringify({ error: createError.message }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Email already exists — try to reuse if it's an orphan (no waiter record yet)
+      const { data: existingUsers, error: listErr } = await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 200,
+      });
+      if (listErr) {
+        return new Response(
+          JSON.stringify({ error: "Email já cadastrado e não foi possível verificar status do usuário." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const existing = existingUsers.users.find(
+        (u) => (u.email || "").toLowerCase() === email.toLowerCase()
+      );
+      if (!existing) {
+        return new Response(
+          JSON.stringify({ error: "Este email já está cadastrado no sistema." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check if it's already a waiter somewhere
+      const { data: existingWaiter } = await supabaseAdmin
+        .from("waiters")
+        .select("id, company_id")
+        .eq("user_id", existing.id)
+        .maybeSingle();
+
+      if (existingWaiter) {
+        return new Response(
+          JSON.stringify({ error: "Este email já está cadastrado como garçom em outra loja." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check if linked to any company
+      const { data: existingCompanyLink } = await supabaseAdmin
+        .from("company_users")
+        .select("company_id")
+        .eq("user_id", existing.id)
+        .maybeSingle();
+
+      if (existingCompanyLink && existingCompanyLink.company_id !== companyUser.company_id) {
+        return new Response(
+          JSON.stringify({ error: "Este email já está vinculado a outra empresa." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Reuse orphan user — update password to the new one
+      await supabaseAdmin.auth.admin.updateUserById(existing.id, {
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: name },
+      });
+      newUserId = existing.id;
+    } else {
+      newUserId = newUser!.user.id;
+    }
 
     // Delete default company_user role and add waiter role
     await supabaseAdmin.from("user_roles").delete().eq("user_id", newUserId);
@@ -99,15 +164,19 @@ Deno.serve(async (req) => {
 
     if (roleError) {
       console.error("Error setting waiter role:", roleError);
-      // Cleanup: delete the user we just created
-      await supabaseAdmin.auth.admin.deleteUser(newUserId);
       return new Response(
         JSON.stringify({ error: "Failed to set waiter role" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Add to company_users
+    // Add to company_users (upsert to be safe if already linked)
+    await supabaseAdmin
+      .from("company_users")
+      .delete()
+      .eq("user_id", newUserId)
+      .eq("company_id", companyUser.company_id);
+
     const { error: companyError } = await supabaseAdmin.from("company_users").insert({
       company_id: companyUser.company_id,
       user_id: newUserId,
@@ -116,7 +185,6 @@ Deno.serve(async (req) => {
 
     if (companyError) {
       console.error("Error adding to company:", companyError);
-      await supabaseAdmin.auth.admin.deleteUser(newUserId);
       return new Response(
         JSON.stringify({ error: "Failed to link to company" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -134,7 +202,6 @@ Deno.serve(async (req) => {
 
     if (waiterError) {
       console.error("Error creating waiter record:", waiterError);
-      await supabaseAdmin.auth.admin.deleteUser(newUserId);
       return new Response(
         JSON.stringify({ error: "Failed to create waiter record" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
