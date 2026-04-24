@@ -7,6 +7,8 @@ import { brl as formatPrice } from './_format';
 interface PDVV2TopBarProps {
   storeName: string;
   cashOpen: boolean;
+  /** Quando true, esconde o badge e o bloco de "Em caixa" para evitar flash. */
+  cashStateUnknown?: boolean;
   cashAmount: number;
   showCashAmount: boolean;
   onToggleCashAmount: () => void;
@@ -20,6 +22,7 @@ const LANCHERIA_I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
 export function PDVV2TopBar({
   storeName,
   cashOpen,
+  cashStateUnknown = false,
   cashAmount,
   showCashAmount,
   onToggleCashAmount,
@@ -44,16 +47,18 @@ export function PDVV2TopBar({
     <div className="flex items-center justify-between gap-4 p-4 border-b bg-card">
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <h1 className="text-xl font-bold truncate">{storeName}</h1>
-        <Badge
-          className={
-            cashOpen
-              ? 'bg-green-600 hover:bg-green-600 text-white font-bold border-transparent'
-              : 'bg-destructive hover:bg-destructive text-destructive-foreground font-bold border-transparent'
-          }
-        >
-          Caixa {cashOpen ? 'Aberto' : 'Fechado'}
-        </Badge>
-        {cashOpen && (
+        {!cashStateUnknown && (
+          <Badge
+            className={
+              cashOpen
+                ? 'bg-green-600 hover:bg-green-600 text-white font-bold border-transparent'
+                : 'bg-destructive hover:bg-destructive text-destructive-foreground font-bold border-transparent'
+            }
+          >
+            Caixa {cashOpen ? 'Aberto' : 'Fechado'}
+          </Badge>
+        )}
+        {!cashStateUnknown && cashOpen && (
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Em caixa:</span>
             <span className="font-semibold tabular-nums">
@@ -67,13 +72,13 @@ export function PDVV2TopBar({
       </div>
 
       <div className="flex items-center gap-2">
-        {cashOpen && (
+        {!cashStateUnknown && cashOpen && (
           <Button variant="outline" size="sm" onClick={onCloseCash}>
             <DoorClosed className="h-4 w-4 mr-2" />
             Fechar Caixa
           </Button>
         )}
-        {cashOpen ? (
+        {cashStateUnknown ? null : cashOpen ? (
           newOrderBtn
         ) : (
           <TooltipProvider>

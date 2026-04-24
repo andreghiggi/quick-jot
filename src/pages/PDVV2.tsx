@@ -51,7 +51,17 @@ export default function PDVV2() {
   const tablesEnabled = isModuleEnabled('mesas');
 
   const { orders, updateOrderStatus } = useOrderContext();
-  const { currentRegister, totalSales, sales, openRegister, closeRegister, addSale, refetch: refetchCash } = useCashRegister({ companyId });
+  const {
+    currentRegister,
+    totalSales,
+    sales,
+    openRegister,
+    closeRegister,
+    addSale,
+    refetch: refetchCash,
+    loading: cashLoading,
+    cashOpenKnown,
+  } = useCashRegister({ companyId });
   const { openTabs, getTabTotal, closeTab } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
@@ -184,6 +194,13 @@ export default function PDVV2() {
 
   const cashAmount = (currentRegister?.opening_amount || 0) + totalSales;
   const cashOpen = !!currentRegister;
+  // Estado a ser exibido na UI: prefere o cache otimista enquanto a query
+  // inicial não retornou, evitando o flash de "Caixa Fechado".
+  const cashOpenForDisplay = cashLoading && cashOpenKnown !== null ? cashOpenKnown : cashOpen;
+  // Se ainda não sabemos absolutamente nada (primeiro acesso) e estamos
+  // carregando, suprimimos completamente os blocos condicionais para não
+  // piscar nem "Caixa Fechado" nem o conteúdo errado.
+  const cashStateUnknown = cashLoading && cashOpenKnown === null;
 
   // Mapeia vendas do caixa atual em estrutura para o fechamento
   const closeCashSales: CloseCashSale[] = useMemo(() => {
@@ -572,7 +589,8 @@ export default function PDVV2() {
       <div className="flex h-full min-h-0 flex-col">
         <PDVV2TopBar
           storeName={company?.name || 'Loja'}
-          cashOpen={cashOpen}
+          cashOpen={cashOpenForDisplay}
+          cashStateUnknown={cashStateUnknown}
           cashAmount={cashAmount}
           showCashAmount={showCash}
           onToggleCashAmount={() => setShowCash((v) => !v)}
@@ -581,7 +599,9 @@ export default function PDVV2() {
           companyId={company?.id}
         />
 
-        {!cashOpen ? (
+        {cashStateUnknown ? (
+          <div className="flex-1" />
+        ) : !cashOpenForDisplay ? (
           <div className="flex-1 min-h-0 flex items-center justify-center p-6">
             <Card className="max-w-md w-full">
               <CardContent className="py-10 flex flex-col items-center text-center gap-4">
