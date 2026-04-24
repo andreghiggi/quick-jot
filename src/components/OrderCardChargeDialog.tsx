@@ -216,7 +216,6 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
           companyId={company?.id}
           initialRecord={nfceRecord}
           autoPrint={nfceAutoPrint}
-          paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
         />
       )}
     </>
