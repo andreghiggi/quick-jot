@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY");
+    const ASAAS_API_KEY: string = Deno.env.get("ASAAS_API_KEY") ?? "";
     if (!ASAAS_API_KEY) throw new Error("ASAAS_API_KEY não configurada");
 
     const supabase = createClient(
