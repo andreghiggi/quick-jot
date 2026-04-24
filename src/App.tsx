@@ -9,6 +9,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import { ImplementedSuggestionsModal } from "@/components/ImplementedSuggestionsModal";
 import { useCompanyModules } from "@/hooks/useCompanyModules";
+import { detectDomainContext, COMANDATECH_ROOT } from "@/utils/domainRouting";
+import { useEffect } from "react";
 
 // Pages
 import Auth from "./pages/Auth";
