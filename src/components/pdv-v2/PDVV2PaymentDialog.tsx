@@ -599,10 +599,12 @@ export function PDVV2PaymentDialog({
                 }
               }}
             >
-              Sem CPF
+              Cancelar
             </Button>
             <Button
               onClick={() => {
+                // Se o operador não digitou CPF/CNPJ, segue como "Sem CPF"
+                // (NFC-e sem destinatário). Caso contrário, usa o que foi digitado.
                 setCpfChoiceOpen(false);
                 if (isLancheriaI9 && showDocumentMode) {
                   setPrintChoiceOpen(true);
@@ -611,7 +613,7 @@ export function PDVV2PaymentDialog({
                 }
               }}
             >
-              Confirmar
+              Próxima
             </Button>
           </DialogFooter>
         </DialogContent>
