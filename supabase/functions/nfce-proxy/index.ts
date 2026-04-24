@@ -136,6 +136,42 @@ Deno.serve(async (req) => {
         // If TEF data is present, add payment group to payload
         const emitPayload = { ...payload }
 
+        // Normalização dos itens: garante valor_total por item, valores numéricos
+        // arredondados a 2 casas e CST PIS/COFINS coerentes para evitar XML inválido
+        // ("vProd vazio" / "PISOutr Missing child element") na Fiscal Flow.
+        if (Array.isArray(emitPayload.itens)) {
+          const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
+          emitPayload.itens = emitPayload.itens.map((it: any) => {
+            const qtd = Number(it.quantidade) || 0
+            const vUnit = round2(Number(it.valor_unitario) || 0)
+            const vTot = round2(qtd * vUnit)
+            // Quando CST 49 (Outras) com alíquota zero, o XML obriga vBC/pPIS/vPIS.
+            // Trocar para 07 (isento) elimina o grupo PISOutr/COFINSOutr inválido.
+            const fixCst = (cst: string, aliq: number) =>
+              (cst === '49' || cst === '99') && (!aliq || aliq === 0) ? '07' : cst
+            return {
+              ...it,
+              quantidade: qtd,
+              valor_unitario: vUnit,
+              valor_total: vTot,
+              cst_pis: fixCst(String(it.cst_pis || '49'), Number(it.aliquota_pis) || 0),
+              cst_cofins: fixCst(String(it.cst_cofins || '49'), Number(it.aliquota_cofins) || 0),
+              aliquota_pis: Number(it.aliquota_pis) || 0,
+              aliquota_cofins: Number(it.aliquota_cofins) || 0,
+            }
+          })
+          // Total geral consolidado, descontando desconto e somando frete
+          const subtotal = emitPayload.itens.reduce(
+            (s: number, it: any) => s + (Number(it.valor_total) || 0),
+            0
+          )
+          const desconto = round2(Number(emitPayload.valor_desconto) || 0)
+          const frete = round2(Number(emitPayload.valor_frete) || 0)
+          emitPayload.valor_total = round2(subtotal - desconto + frete)
+          console.log('[nfce-proxy] Itens normalizados:', JSON.stringify(emitPayload.itens))
+          console.log('[nfce-proxy] valor_total calculado:', emitPayload.valor_total)
+        }
+
         // Map optional destinatário (CPF/CNPJ) to the Fiscal API format.
         // Without this block the API emits as "consumidor não identificado".
         if (payload.destinatario && (payload.destinatario.cpf || payload.destinatario.cnpj)) {
