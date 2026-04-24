@@ -143,13 +143,25 @@ export async function estornarTefPedido(opts: EstornoOptions): Promise<EstornoRe
     await new Promise((r) => setTimeout(r, 1500));
     const status = await pollPinpadStatus(companyId, result.hash);
 
+    // Pending/Processing: continua aguardando.
+    if (status.status === 'pending' || status.status === 'processing') {
+      continue;
+    }
+
+    // Qualquer outro estado (approved, declined, cancelled, error) significa que
+    // a Multiplus já entregou o resultado da operação CNC. Conforme protocolo TEF
+    // Multiplus, o CNF é OBRIGATÓRIO sempre que o gerenciador retorna um resultado
+    // — ele confirma que o ECF recebeu a resposta, não que a transação foi aprovada.
+    // Sem esse CNF, a transação fica "presa" no gerenciador e cancelamentos
+    // subsequentes (especialmente em parcelado loja) podem não ser encaminhados.
+    await confirmPinpadTransaction(companyId, {
+      identificacao: cncIdentificacao,
+      rede: status.acquirer,
+      nsu: status.nsu,
+      finalizacao: status.finalizacao,
+    });
+
     if (status.status === 'approved') {
-      await confirmPinpadTransaction(companyId, {
-        identificacao: cncIdentificacao,
-        rede: status.acquirer,
-        nsu: status.nsu,
-        finalizacao: status.finalizacao,
-      });
       const cancelledNotes = `[CANCELADA] ${notes || ''}`.trim();
       return {
         success: true,
@@ -158,12 +170,10 @@ export async function estornarTefPedido(opts: EstornoOptions): Promise<EstornoRe
       };
     }
 
-    if (['declined', 'error', 'cancelled'].includes(status.status)) {
-      return {
-        success: false,
-        message: status.errorMessage || status.operatorMessage || 'Estorno não aprovado',
-      };
-    }
+    return {
+      success: false,
+      message: status.errorMessage || status.operatorMessage || 'Estorno não aprovado',
+    };
   }
 
   return { success: false, message: 'Timeout aguardando resposta do estorno' };
