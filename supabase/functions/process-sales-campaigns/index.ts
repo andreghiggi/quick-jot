@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const PUBLIC_MENU_ORIGIN = 'https://appcomandatech.agilizeerp.com.br';
+const PUBLIC_MENU_ORIGIN = 'https://app.comandatech.com.br';
 
 function firstName(full: string) {
   return (full || '').trim().split(/\s+/)[0] || 'Cliente';

@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
         if (s.value) settingsMap[s.key] = s.value;
       });
 
-      const menuLink = `https://appcomandatech.agilizeerp.com.br/cardapio/${companyData.slug}`;
+      const menuLink = `https://app.comandatech.com.br/cardapio/${companyData.slug}`;
       const googleReviewUrl = settingsMap['google_review_url'] || '';
 
       // Skip followup if explicitly disabled for this company

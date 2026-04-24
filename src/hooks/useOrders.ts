@@ -271,7 +271,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
               const isPickup = order.notes?.includes('Retirada') || !order.deliveryAddress;
 
               // Build menu link
-              const menuLink = companyData?.slug ? `https://appcomandatech.agilizeerp.com.br/cardapio/${companyData.slug}` : '';
+              const menuLink = companyData?.slug ? `https://app.comandatech.com.br/cardapio/${companyData.slug}` : '';
               
               const message = generateWhatsAppMessage({
                 customerName: order.customerName,
@@ -474,7 +474,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
       });
 
       const isPickup = order.notes?.includes('Retirada') || !order.deliveryAddress;
-      const menuLink = companyData?.slug ? `https://appcomandatech.agilizeerp.com.br/cardapio/${companyData.slug}` : '';
+      const menuLink = companyData?.slug ? `https://app.comandatech.com.br/cardapio/${companyData.slug}` : '';
 
       // Build resumo string with items, payment, and delivery info
       let resumo = '';
