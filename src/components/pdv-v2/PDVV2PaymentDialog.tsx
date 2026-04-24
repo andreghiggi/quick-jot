@@ -9,7 +9,9 @@ import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput, LANCHERIA_I9
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
 import { Plug, Loader2 } from 'lucide-react';
-import type { TefOptions } from '@/utils/pdvV2Tef';
+import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
+import type { NFCeTefData } from '@/services/nfceService';
+import { toast } from 'sonner';
 
 interface PDVV2PaymentDialogProps {
   open: boolean;
@@ -27,6 +29,13 @@ interface PDVV2PaymentDialogProps {
   cashOnly?: boolean;
   /** Mensagem de status do processamento TEF (mostrada como banner topo). Vazio = oculto. */
   tefStatus?: string;
+  /**
+   * Quando true (e for I9), o TEF é executado AQUI — antes dos pop-ups de
+   * CPF/Imprimir. Se a cobrança não for aprovada, nada é confirmado e o
+   * fluxo é abortado. Usado pelo Pedido Express, onde o lojista deve
+   * cobrar primeiro e só responder NFC-e/impressão após aprovação.
+   */
+  chargeTefBeforePopups?: boolean;
   onConfirm: (params: {
     paymentMethodId: string;
     paymentName: string;
@@ -42,6 +51,15 @@ interface PDVV2PaymentDialogProps {
     tefIntegration?: 'tef_pinpad' | 'tef_smartpos';
     /** CPF/CNPJ do destinatário da NFC-e (apenas dígitos). Opcional. */
     customerDocument?: string;
+    /**
+     * Quando o TEF foi executado antes dos pop-ups (chargeTefBeforePopups),
+     * o resultado já aprovado é enviado aqui pro chamador NÃO disparar TEF
+     * novamente.
+     */
+    prechargedTef?: {
+      tefData?: NFCeTefData;
+      notesFragment?: string;
+    };
   }) => Promise<void> | void;
 }
 
@@ -56,6 +74,7 @@ export function PDVV2PaymentDialog({
   channel = 'pdv',
   cashOnly = false,
   tefStatus,
+  chargeTefBeforePopups = false,
   onConfirm,
 }: PDVV2PaymentDialogProps) {
   const { activePaymentMethods: rawActivePaymentMethods } = usePaymentMethods({ companyId, channel });
@@ -91,6 +110,14 @@ export function PDVV2PaymentDialog({
   const [printChoiceOpen, setPrintChoiceOpen] = useState(false);
   const [cpfChoiceOpen, setCpfChoiceOpen] = useState(false);
   const [pendingDocMode, setPendingDocMode] = useState<DocumentMode>('sale_only');
+  // Resultado do TEF pré-cobrado (chargeTefBeforePopups). Mantemos em ref
+  // pra propagar até o finalizeConfirm sem causar re-render desnecessário.
+  const [prechargedTef, setPrechargedTef] = useState<{
+    tefData?: NFCeTefData;
+    notesFragment?: string;
+  } | null>(null);
+  const [internalTefStatus, setInternalTefStatus] = useState('');
+  const [chargingTef, setChargingTef] = useState(false);
 
   // Detecta se o método selecionado é TEF — força NFC-e (mesma regra do V1)
   const selectedMethod = activePaymentMethods.find((m) => m.id === paymentMethodId);
@@ -118,6 +145,9 @@ export function PDVV2PaymentDialog({
       setTefInstallments('2');
       setTefInstallmentType('adm');
       setCustomerDocument('');
+      setPrechargedTef(null);
+      setInternalTefStatus('');
+      setChargingTef(false);
     }
   }, [open]);
 
@@ -161,6 +191,7 @@ export function PDVV2PaymentDialog({
       tefOptions,
       tefIntegration: isTef ? (integration as 'tef_pinpad' | 'tef_smartpos') : undefined,
       customerDocument: isNfce && (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : undefined,
+      prechargedTef: prechargedTef ?? undefined,
     });
     setSubmitting(false);
   }
@@ -168,6 +199,63 @@ export function PDVV2PaymentDialog({
   async function handleConfirm() {
     const method = activePaymentMethods.find((m) => m.id === paymentMethodId);
     if (!method) return;
+    // ===== I9 + Pedido Express: cobrar TEF ANTES dos pop-ups =====
+    // Se a cobrança não for aprovada, abortamos e o lojista pode tentar de novo
+    // (ou trocar a forma) sem ter respondido NFC-e/impressão à toa.
+    if (
+      chargeTefBeforePopups &&
+      isLancheriaI9 &&
+      isTef &&
+      companyId &&
+      !prechargedTef
+    ) {
+      const tefOptions: TefOptions = {
+        modality: tefModality,
+        installments:
+          tefModality === 'parcelado' ? parseInt(tefInstallments) || 2 : undefined,
+        installmentType: tefInstallmentType,
+      };
+      setChargingTef(true);
+      setInternalTefStatus('Iniciando cobrança TEF...');
+      try {
+        const result = await runTefPayment({
+          companyId,
+          integration: integration as 'tef_pinpad' | 'tef_smartpos',
+          amount: finalTotal,
+          options: tefOptions,
+          onStatus: (msg) => setInternalTefStatus(msg),
+        });
+        if (!result.success) {
+          // toast já exibido pelo helper; aborta sem seguir pra NFC-e/impressão
+          setChargingTef(false);
+          setInternalTefStatus('');
+          return;
+        }
+        setPrechargedTef({
+          tefData: result.tefData,
+          notesFragment: result.notesFragment,
+        });
+        setChargingTef(false);
+        setInternalTefStatus('');
+        toast.success('Pagamento aprovado. Confirme os dados da nota.');
+      } catch (e: any) {
+        console.error('[PDVV2PaymentDialog] TEF pre-charge error:', e);
+        toast.error(`Erro TEF: ${e?.message || 'falha na cobrança'}`);
+        setChargingTef(false);
+        setInternalTefStatus('');
+        return;
+      }
+      // TEF aprovado → segue para os pop-ups (CPF + Imprimir)
+      if (showDocumentMode) {
+        // I9 com NFC-e forçada por TEF: CPF primeiro, depois imprimir
+        setPendingDocMode('sale_with_nfce');
+        setCpfChoiceOpen(true);
+      } else {
+        await finalizeConfirm('sale_with_nfce');
+      }
+      return;
+    }
+
     // I9 + showDocumentMode: abre pop-ups em sequência. TEF força NFC-e e pula pop-up 1.
     if (isLancheriaI9 && showDocumentMode) {
       if (isTef) {
@@ -194,11 +282,11 @@ export function PDVV2PaymentDialog({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
-        {tefStatus && (
+        {(tefStatus || internalTefStatus) && (
           <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 flex items-center gap-3">
             <Loader2 className="h-5 w-5 animate-spin text-primary flex-shrink-0" />
             <div className="min-w-0">
-              <p className="font-medium text-sm">{tefStatus}</p>
+              <p className="font-medium text-sm">{tefStatus || internalTefStatus}</p>
               <p className="text-xs text-muted-foreground">Operação TEF em andamento. Aguarde a confirmação na maquininha.</p>
             </div>
           </div>
@@ -402,9 +490,9 @@ export function PDVV2PaymentDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={submitting || !paymentMethodId || activePaymentMethods.length === 0}
+            disabled={submitting || chargingTef || !paymentMethodId || activePaymentMethods.length === 0}
           >
-            Confirmar Pagamento
+            {chargingTef ? 'Cobrando…' : 'Confirmar Pagamento'}
           </Button>
         </DialogFooter>
       </DialogContent>
