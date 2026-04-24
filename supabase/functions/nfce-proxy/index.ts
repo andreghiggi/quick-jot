@@ -28,11 +28,11 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id
-    const NFCE_API_KEY = Deno.env.get('NFCE_API_KEY')
+    const GLOBAL_NFCE_API_KEY = Deno.env.get('NFCE_API_KEY')
     const NFCE_API_URL = Deno.env.get('NFCE_API_URL')
 
-    if (!NFCE_API_KEY || !NFCE_API_URL) {
-      return new Response(JSON.stringify({ error: 'NFC-e API não configurada' }), { status: 500, headers: corsHeaders })
+    if (!NFCE_API_URL) {
+      return new Response(JSON.stringify({ error: 'NFC-e API não configurada (URL ausente)' }), { status: 500, headers: corsHeaders })
     }
 
     const body = await req.json()
@@ -45,6 +45,44 @@ Deno.serve(async (req) => {
     })
     if (!belongs) {
       return new Response(JSON.stringify({ error: 'Acesso negado' }), { status: 403, headers: corsHeaders })
+    }
+
+    // ---- Per-company token (Fiscal Flow) ----------------------------------
+    // Lancheria da i9 (and any future store) vincula o emitente na Fiscal Flow
+    // exclusivamente pelo token. Buscamos o token salvo em store_settings e,
+    // se existir, usamos no x-api-key. Caso contrário, caímos no token global.
+    const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
+    const isI9 = companyId === I9_COMPANY_ID
+
+    let NFCE_API_KEY: string | null = GLOBAL_NFCE_API_KEY ?? null
+    try {
+      const { data: tokenRow } = await supabase
+        .from('store_settings')
+        .select('value')
+        .eq('company_id', companyId)
+        .eq('key', 'fiscal_flow_api_token')
+        .maybeSingle()
+      const perCompanyToken = (tokenRow?.value || '').trim()
+      if (perCompanyToken) {
+        NFCE_API_KEY = perCompanyToken
+        console.log('[nfce-proxy] Using per-company Fiscal Flow token for', companyId)
+      } else if (isI9) {
+        return new Response(
+          JSON.stringify({
+            error: 'Token Fiscal Flow não configurado para esta loja. Configure em Fiscal → Token da API Fiscal Flow.',
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    } catch (err) {
+      console.error('[nfce-proxy] Error loading per-company token:', err)
+    }
+
+    if (!NFCE_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'NFC-e API não configurada (token ausente)' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     let apiResponse: Response
