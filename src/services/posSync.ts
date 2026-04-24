@@ -1,4 +1,5 @@
 // Sync service for POS transactions with backend
+// (sync test commit)
 
 import { supabase } from '@/integrations/supabase/client';
 import { POSTransaction } from '@/types/pos';
