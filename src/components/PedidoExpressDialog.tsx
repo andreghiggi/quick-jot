@@ -175,7 +175,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       }
       if (typeof parsed.paymentMethod === 'string') setPaymentMethod(parsed.paymentMethod);
       if (typeof parsed.selectedCategory === 'string') setSelectedCategory(parsed.selectedCategory);
-      if (open && !draftRestoreNotifiedRef.current && Array.isArray(parsed.cart) && parsed.cart.length > 0) {
+      const hadCart = Array.isArray(parsed.cart) && parsed.cart.length > 0;
+      // Reabre o diálogo automaticamente se havia um rascunho ativo
+      if (!open && hadCart) {
+        onOpenChange(true);
+      }
+      if (hadCart && !draftRestoreNotifiedRef.current) {
         toast.success('Seu pedido foi restaurado');
         draftRestoreNotifiedRef.current = true;
       }
@@ -184,7 +189,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     } finally {
       draftHydratedRef.current = true;
     }
-  }, [draftKey, productsLoading, getActiveProducts, open]);
+  }, [draftKey, productsLoading, getActiveProducts, open, onOpenChange]);
 
   // Persiste o rascunho a cada mudança relevante (após hidratação)
   useEffect(() => {
