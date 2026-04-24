@@ -590,6 +590,7 @@ export default function PDVV2() {
         <PDVV2TopBar
           storeName={company?.name || 'Loja'}
           cashOpen={cashOpenForDisplay}
+          cashStateUnknown={cashStateUnknown}
           cashAmount={cashAmount}
           showCashAmount={showCash}
           onToggleCashAmount={() => setShowCash((v) => !v)}
