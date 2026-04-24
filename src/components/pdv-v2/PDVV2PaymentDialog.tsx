@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput, LANCHERIA_I9_COMPANY_ID } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
@@ -110,6 +111,11 @@ export function PDVV2PaymentDialog({
   const [printChoiceOpen, setPrintChoiceOpen] = useState(false);
   const [cpfChoiceOpen, setCpfChoiceOpen] = useState(false);
   const [pendingDocMode, setPendingDocMode] = useState<DocumentMode>('sale_only');
+  // I9 — Diálogo único de confirmação NFC-e (substitui CPF + Imprimir).
+  // Caminho rápido: 1 clique em "Emitir NFC-e" sem CPF e sem imprimir.
+  const [nfceConfirmOpen, setNfceConfirmOpen] = useState(false);
+  const [showCpfField, setShowCpfField] = useState(false);
+  const [printAfterEmit, setPrintAfterEmit] = useState(false);
   // Resultado do TEF pré-cobrado (chargeTefBeforePopups). Mantemos em ref
   // pra propagar até o finalizeConfirm sem causar re-render desnecessário.
   const [prechargedTef, setPrechargedTef] = useState<{
@@ -141,6 +147,9 @@ export function PDVV2PaymentDialog({
       setDocChoiceOpen(false);
       setPrintChoiceOpen(false);
       setCpfChoiceOpen(false);
+      setNfceConfirmOpen(false);
+      setShowCpfField(false);
+      setPrintAfterEmit(false);
       setTefModality('avista');
       setTefInstallments('2');
       setTefInstallmentType('adm');
