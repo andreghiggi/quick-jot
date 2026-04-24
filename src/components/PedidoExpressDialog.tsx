@@ -1052,6 +1052,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setSelectedDeliveryFeeType('');
     setPaymentMethod('');
     setPickupChargeOpen(false);
+    if (draftKey) {
+      try { localStorage.removeItem(draftKey); } catch {}
+    }
+    draftRestoreNotifiedRef.current = false;
   }
 
   const stepLabels = [
