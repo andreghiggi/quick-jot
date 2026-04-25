@@ -291,7 +291,7 @@ export function MenuV2({
                     <div>
                       <h3 className="font-semibold text-foreground line-clamp-2 break-words">{product.name}</h3>
                       {product.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1 break-words whitespace-pre-line">
                           {product.description}
                         </p>
                       )}
