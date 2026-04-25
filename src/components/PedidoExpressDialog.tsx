@@ -100,6 +100,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Cart uses the same CartItem type as the online catalog
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const contentScrollRef = useRef<HTMLDivElement | null>(null);
+  const pendingScrollTopRef = useRef<number | null>(null);
 
   // Product detail dialog state — mirrors Menu.tsx exactly
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -175,6 +177,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       }
       if (typeof parsed.paymentMethod === 'string') setPaymentMethod(parsed.paymentMethod);
       if (typeof parsed.selectedCategory === 'string') setSelectedCategory(parsed.selectedCategory);
+      if (typeof parsed.contentScrollTop === 'number') pendingScrollTopRef.current = parsed.contentScrollTop;
       const hadCart = Array.isArray(parsed.cart) && parsed.cart.length > 0;
       // Reabre o diálogo automaticamente se havia um rascunho ativo
       if (!open && hadCart) {
@@ -226,6 +229,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         selectedDeliveryFeeType,
         paymentMethod,
         selectedCategory,
+        contentScrollTop: contentScrollRef.current?.scrollTop ?? 0,
       };
       localStorage.setItem(draftKey, JSON.stringify(payload));
     } catch (e) {
