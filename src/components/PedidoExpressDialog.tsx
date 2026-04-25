@@ -265,6 +265,17 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     ? selectedCategory
     : productCategories[0] || null;
 
+  useEffect(() => {
+    if (!open || step !== 1 || pendingScrollTopRef.current === null) return;
+    const node = contentScrollRef.current;
+    if (!node) return;
+    const scrollTop = pendingScrollTopRef.current;
+    requestAnimationFrame(() => {
+      node.scrollTop = scrollTop;
+      pendingScrollTopRef.current = null;
+    });
+  }, [open, step, currentCategory, productsLoading, groupsLoading]);
+
   const filteredProducts = useMemo(() => {
     if (!currentCategory) return activeProducts;
     return activeProducts.filter((p) => p.category === currentCategory);
@@ -1117,7 +1128,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             })}
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-4 px-2 pb-6">
+          <div
+            ref={contentScrollRef}
+            onScroll={(event) => {
+              if (step === 1) pendingScrollTopRef.current = event.currentTarget.scrollTop;
+            }}
+            className="flex-1 overflow-y-auto space-y-4 px-2 pb-6"
+          >
             {/* Step 1: Products — catalog-style browsing */}
             {step === 1 && (
               <div className="space-y-3">
