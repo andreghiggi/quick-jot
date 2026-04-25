@@ -197,11 +197,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         }
       }
       const hadCart = Array.isArray(parsed.cart) && parsed.cart.length > 0;
+      const hadOpenProduct = !!parsed.selectedProductId;
       // Reabre o diálogo automaticamente se havia um rascunho ativo
-      if (!open && hadCart) {
+      if (!open && (hadCart || hadOpenProduct)) {
         onOpenChange(true);
       }
-      if (hadCart && !draftRestoreNotifiedRef.current) {
+      if ((hadCart || hadOpenProduct) && !draftRestoreNotifiedRef.current) {
         toast.success('Seu pedido foi restaurado');
         draftRestoreNotifiedRef.current = true;
       }
@@ -217,6 +218,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     if (!draftKey || !draftHydratedRef.current) return;
     const hasContent =
       cart.length > 0 ||
+      !!selectedProduct ||
+      selectedOptionals.length > 0 ||
+      Object.keys(selectedGroupItems).length > 0 ||
+      itemNotes.length > 0 ||
       customerPhone.length > 0 ||
       customerName.length > 0 ||
       deliveryAddress.length > 0;
