@@ -61,10 +61,21 @@ import ResellerConfiguracoes from "./pages/reseller/ResellerConfiguracoes";
 
 const queryClient = new QueryClient();
 
-function AppRoutes() {
+function RootRedirect() {
   const { user, loading, isSuperAdmin, isWaiter, isReseller, company } = useAuthContext();
   const { enabled: pdvV2Enabled, loading: pdvV2Loading } = usePdvV2Enabled(company?.id);
 
+  if (loading) return null;
+  if (!user) return <Navigate to="/auth" replace />;
+  if (isSuperAdmin()) return <Navigate to="/admin" replace />;
+  if (isReseller()) return <Navigate to="/revendedor/home" replace />;
+  if (isWaiter()) return <Navigate to="/garcom" replace />;
+  if (!pdvV2Loading && pdvV2Enabled) return <Navigate to="/pdv-v2" replace />;
+
+  return <Index />;
+}
+
+function AppRoutes() {
   // Detecta o contexto de domínio uma vez por render
   const domainCtx = detectDomainContext();
 
@@ -93,34 +104,6 @@ function AppRoutes() {
   // Tela em branco enquanto o redirect do domínio raiz acontece
   if (domainCtx.kind === 'root-redirect') {
     return null;
-  }
-
-  // Redirect logic for root path
-  function RootRedirect() {
-    if (loading) return null;
-    
-    if (!user) {
-      return <Navigate to="/auth" replace />;
-    }
-    
-    if (isSuperAdmin()) {
-      return <Navigate to="/admin" replace />;
-    }
-
-    if (isReseller()) {
-      return <Navigate to="/revendedor/home" replace />;
-    }
-
-    if (isWaiter()) {
-      return <Navigate to="/garcom" replace />;
-    }
-
-    // PDV V2: redireciona para a nova central operacional
-    if (!pdvV2Loading && pdvV2Enabled) {
-      return <Navigate to="/pdv-v2" replace />;
-    }
-    
-    return <Index />;
   }
 
   return (
