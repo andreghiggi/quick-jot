@@ -178,6 +178,24 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       if (typeof parsed.paymentMethod === 'string') setPaymentMethod(parsed.paymentMethod);
       if (typeof parsed.selectedCategory === 'string') setSelectedCategory(parsed.selectedCategory);
       if (typeof parsed.contentScrollTop === 'number') pendingScrollTopRef.current = parsed.contentScrollTop;
+      // Restaura produto selecionado (modal de adicionais aberto) com seleções
+      if (parsed.selectedProductId && typeof parsed.selectedProductId === 'string') {
+        const freshProduct = getActiveProducts().find(p => p.id === parsed.selectedProductId);
+        if (freshProduct) {
+          setSelectedProduct(freshProduct);
+          if (Array.isArray(parsed.selectedOptionals)) {
+            setSelectedOptionals(parsed.selectedOptionals);
+          }
+          if (parsed.selectedGroupItems && typeof parsed.selectedGroupItems === 'object') {
+            const restored: Record<string, Set<string>> = {};
+            for (const [gid, ids] of Object.entries(parsed.selectedGroupItems)) {
+              if (Array.isArray(ids)) restored[gid] = new Set(ids as string[]);
+            }
+            setSelectedGroupItems(restored);
+          }
+          if (typeof parsed.itemNotes === 'string') setItemNotes(parsed.itemNotes);
+        }
+      }
       const hadCart = Array.isArray(parsed.cart) && parsed.cart.length > 0;
       // Reabre o diálogo automaticamente se havia um rascunho ativo
       if (!open && hadCart) {
@@ -230,6 +248,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         paymentMethod,
         selectedCategory,
         contentScrollTop: contentScrollRef.current?.scrollTop ?? 0,
+        selectedProductId: selectedProduct?.id ?? null,
+        selectedOptionals,
+        selectedGroupItems: Object.fromEntries(
+          Object.entries(selectedGroupItems).map(([k, v]) => [k, Array.from(v)])
+        ),
+        itemNotes,
       };
       localStorage.setItem(draftKey, JSON.stringify(payload));
     } catch (e) {
@@ -240,6 +264,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     deliveryType, deliveryAddress, deliveryNumber, deliveryComplement,
     deliveryNeighborhood, deliveryReference, deliveryFee,
     selectedDeliveryFeeType, paymentMethod, selectedCategory,
+    selectedProduct, selectedOptionals, selectedGroupItems, itemNotes,
   ]);
 
   // Cobrança via PDVV2PaymentDialog (apenas Retirada)
