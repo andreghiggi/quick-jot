@@ -100,6 +100,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Cart uses the same CartItem type as the online catalog
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const contentScrollRef = useRef<HTMLDivElement | null>(null);
+  const pendingScrollTopRef = useRef<number | null>(null);
 
   // Product detail dialog state — mirrors Menu.tsx exactly
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -175,6 +177,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       }
       if (typeof parsed.paymentMethod === 'string') setPaymentMethod(parsed.paymentMethod);
       if (typeof parsed.selectedCategory === 'string') setSelectedCategory(parsed.selectedCategory);
+      if (typeof parsed.contentScrollTop === 'number') pendingScrollTopRef.current = parsed.contentScrollTop;
       const hadCart = Array.isArray(parsed.cart) && parsed.cart.length > 0;
       // Reabre o diálogo automaticamente se havia um rascunho ativo
       if (!open && hadCart) {
@@ -226,6 +229,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         selectedDeliveryFeeType,
         paymentMethod,
         selectedCategory,
+        contentScrollTop: contentScrollRef.current?.scrollTop ?? 0,
       };
       localStorage.setItem(draftKey, JSON.stringify(payload));
     } catch (e) {
@@ -260,6 +264,17 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const currentCategory = selectedCategory && productCategories.includes(selectedCategory)
     ? selectedCategory
     : productCategories[0] || null;
+
+  useEffect(() => {
+    if (!open || step !== 1 || pendingScrollTopRef.current === null) return;
+    const node = contentScrollRef.current;
+    if (!node) return;
+    const scrollTop = pendingScrollTopRef.current;
+    requestAnimationFrame(() => {
+      node.scrollTop = scrollTop;
+      pendingScrollTopRef.current = null;
+    });
+  }, [open, step, currentCategory, productsLoading, groupsLoading]);
 
   const filteredProducts = useMemo(() => {
     if (!currentCategory) return activeProducts;
@@ -1113,7 +1128,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             })}
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-4 px-2 pb-6">
+          <div
+            ref={contentScrollRef}
+            onScroll={(event) => {
+              if (step === 1) pendingScrollTopRef.current = event.currentTarget.scrollTop;
+            }}
+            className="flex-1 overflow-y-auto space-y-4 px-2 pb-6"
+          >
             {/* Step 1: Products — catalog-style browsing */}
             {step === 1 && (
               <div className="space-y-3">
