@@ -1126,7 +1126,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+          onInteractOutside={(e) => e.preventDefault()}
+          onFocusOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Pedido Express</DialogTitle>
           </DialogHeader>
@@ -1761,7 +1765,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
       {/* Product Detail Dialog — identical to the online catalog */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) { setSelectedProduct(null); setSelectedOptionals([]); setSelectedGroupItems({}); setItemNotes(''); } }}>
-        <DialogContent className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <DialogContent
+          className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          onFocusOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle className="pr-6">{selectedProduct?.name}</DialogTitle>
           </DialogHeader>
