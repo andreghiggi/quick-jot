@@ -136,8 +136,17 @@ export function useOrders(options: UseOrdersOptions = {}) {
       )
       .subscribe();
 
+    // Polling silencioso a cada 5s — só atualiza state se houver mudança real (JSON diff em fetchOrders).
+    // Garante chegada de novos pedidos mesmo se Realtime cair, sem provocar flicker.
+    const pollInterval = companyId
+      ? window.setInterval(() => {
+          fetchOrders();
+        }, 5000)
+      : null;
+
     return () => {
       supabase.removeChannel(channel);
+      if (pollInterval) window.clearInterval(pollInterval);
     };
   }, [companyId]);
 
