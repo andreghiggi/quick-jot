@@ -1389,7 +1389,14 @@ export default function Menu() {
                 <Card
                   key={product.id}
                   className="cursor-pointer hover:border-primary hover:shadow-md transition-all overflow-hidden"
-                  onClick={() => setSelectedProduct(product)}
+                  onClick={() => {
+                    // Reset optional selections before opening a new product
+                    // (defensive: avoids any chance of carryover from a previous product)
+                    setSelectedOptionals([]);
+                    setSelectedGroupItems({});
+                    setItemNotes('');
+                    setSelectedProduct(product);
+                  }}
                 >
                   <CardContent className="p-0">
                     <div className="flex h-full">
@@ -1631,6 +1638,7 @@ export default function Menu() {
                                       <div className="flex items-center gap-3">
                                         <Checkbox
                                           checked={isSelected}
+                                          onClick={(e) => e.stopPropagation()}
                                           onCheckedChange={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
                                         />
                                         {item.imageUrl && (

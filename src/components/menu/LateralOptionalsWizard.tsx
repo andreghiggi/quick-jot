@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Product, ProductOptional } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -62,6 +62,13 @@ export function LateralOptionalsWizard({
   steps.push({ type: 'confirm' });
 
   const [currentStep, setCurrentStep] = useState(0);
+
+  // Reset wizard back to first step whenever the product changes
+  // (prevents wizard state from persisting across different products)
+  useEffect(() => {
+    setCurrentStep(0);
+  }, [product.id]);
+
   const step = steps[currentStep];
   const isFirst = currentStep === 0;
   const isLast = currentStep === steps.length - 1;
@@ -181,6 +188,7 @@ export function LateralOptionalsWizard({
                       <div className="flex items-center gap-3">
                         <Checkbox
                           checked={isSelected}
+                          onClick={(e) => e.stopPropagation()}
                           onCheckedChange={() => onToggleGroupItem(step.group!.id, item.id, step.group!.maxSelect)}
                         />
                         {item.imageUrl && (
@@ -218,6 +226,7 @@ export function LateralOptionalsWizard({
                   <div className="flex items-center gap-3">
                     <Checkbox
                       checked={selectedOptionals.some((o) => o.id === optional.id)}
+                      onClick={(e) => e.stopPropagation()}
                       onCheckedChange={() => onToggleOptional(optional)}
                     />
                     <span className="font-medium">{optional.name}</span>
