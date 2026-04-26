@@ -1638,6 +1638,7 @@ export default function Menu() {
                                       <div className="flex items-center gap-3">
                                         <Checkbox
                                           checked={isSelected}
+                                          onClick={(e) => e.stopPropagation()}
                                           onCheckedChange={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
                                         />
                                         {item.imageUrl && (
