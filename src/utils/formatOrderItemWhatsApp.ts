@@ -17,6 +17,8 @@ export function formatOrderItemWhatsApp(item: {
 }): string {
   let displayName = item.name;
   const lines: string[] = [];
+  const formatOptionalPrices = (value: string) =>
+    value.replace(/R\$\s*(\d+)[.,](\d{2})/g, (_match, reais, centavos) => `R$${reais},${centavos}`);
 
   // Parse grouped optionals from parentheses at the end of the name
   if (item.name.includes('(') && item.name.endsWith(')')) {
@@ -32,17 +34,14 @@ export function formatOrderItemWhatsApp(item: {
         if (colonIdx > -1) {
           const groupName = groupStr.substring(0, colonIdx).trim();
           const itemsStr = groupStr.substring(colonIdx + 1).trim();
-          // Replace . decimal with , for Brazilian format
-          // NOTE: in String.replace, "$$" → "$" literal, and "$1"/"$2" are capture groups.
-          // We need "R$" + group1 + "," + group2 → use "R$$$1,$2".
-          lines.push(`  - _${groupName}:_ ${itemsStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$$1,$2')}`);
+          lines.push(`  - _${groupName}:_ ${formatOptionalPrices(itemsStr)}`);
         } else {
-          lines.push(`  - ${groupStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$$1,$2')}`);
+          lines.push(`  - ${formatOptionalPrices(groupStr)}`);
         }
       }
     } else {
       // Legacy format: just items separated by commas
-      lines.push(`  - _Adicionais:_ ${content.replace(/R\$(\d+)\.(\d{2})/g, 'R$$$1,$2')}`);
+      lines.push(`  - _Adicionais:_ ${formatOptionalPrices(content)}`);
     }
   }
 
