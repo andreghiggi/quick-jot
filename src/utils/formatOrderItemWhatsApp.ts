@@ -33,14 +33,16 @@ export function formatOrderItemWhatsApp(item: {
           const groupName = groupStr.substring(0, colonIdx).trim();
           const itemsStr = groupStr.substring(colonIdx + 1).trim();
           // Replace . decimal with , for Brazilian format
-          lines.push(`  - _${groupName}:_ ${itemsStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
+          // NOTE: in String.replace, "$$" → "$" literal, and "$1"/"$2" are capture groups.
+          // We need "R$" + group1 + "," + group2 → use "R$$$1,$2".
+          lines.push(`  - _${groupName}:_ ${itemsStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$$1,$2')}`);
         } else {
-          lines.push(`  - ${groupStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
+          lines.push(`  - ${groupStr.replace(/R\$(\d+)\.(\d{2})/g, 'R$$$1,$2')}`);
         }
       }
     } else {
       // Legacy format: just items separated by commas
-      lines.push(`  - _Adicionais:_ ${content.replace(/R\$(\d+)\.(\d{2})/g, 'R$$1,$2')}`);
+      lines.push(`  - _Adicionais:_ ${content.replace(/R\$(\d+)\.(\d{2})/g, 'R$$$1,$2')}`);
     }
   }
 
