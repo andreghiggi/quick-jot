@@ -177,6 +177,10 @@ serve(async (req) => {
       const fields: Record<string, string> = {
         '000-000': 'CRT',
         '001-000': ident,
+        // 003-000 — VALOR TOTAL: numérico (até 12 bytes), duas casas decimais
+        // SEM vírgula/ponto. Multiplicar por 100 e enviar como inteiro.
+        // Ex.: R$ 22,00 → "2200" | R$ 0,15 → "15" (Multiplus aceita sem
+        // zero à esquerda, o gerenciador trata como inteiro de centavos).
         '003-000': String(Math.round(amount * 100)),
       };
 
@@ -195,12 +199,9 @@ serve(async (req) => {
         fields['800-004'] = String(installments);
       } else if (paymentType !== undefined) {
         fields['800-002'] = '0'; // À vista
-        // Lancheria I9 (homologação Multiplus i9 v1.2): para Débito à vista (800-001=1)
-        // o Gerenciador Padrão não abre se 800-003 estiver ausente. Enviamos '0'
-        // (sem juros) para destravar. Isolado para I9 até validar nas demais lojas.
-        if (isI9(params.companyId) && Number(paymentType) === 1) {
-          fields['800-003'] = '0';
-        }
+        // Multiplus (homologação): 800-003 é EXCLUSIVO de parcelamento.
+        // NÃO enviar em débito à vista nem em crédito à vista (CRT sem
+        // installments > 1 nunca leva 800-003).
       }
 
       if (cnpj) {
@@ -213,11 +214,15 @@ serve(async (req) => {
       const conteudo = buildConteudo(fields);
       console.log('[TEF-WS] CRT CONTEUDO:', conteudo);
 
+      // ATV pré-CRT: o 023-000/001-000 do ATV deve ser estritamente
+      // numérico (até 10 bytes). Mantido aqui apenas para I9 e usando
+      // somente dígitos (sem sufixo "-atv" que invalidava o header).
       if (isI9(params.companyId) && Number(paymentType) === 1) {
         try {
+          const numericIdent = String(ident).replace(/\D/g, '').slice(-10) || String(Date.now()).slice(-10);
           const atvConteudo = buildConteudo({
             '000-000': 'ATV',
-            '001-000': `${ident}-atv`,
+            '001-000': numericIdent,
             '999-999': '0',
           });
           const atvResponse = await fetch(`${TEF_API_URL}/SetVendaTef`, {
@@ -367,6 +372,9 @@ serve(async (req) => {
         installments: parsed['018-000'] || '1',
         transactionDate: parsed['022-000'] || '',
         transactionTime: parsed['023-000'] || '',
+        // 023-000 é a IDENTIFICAÇÃO/número de controle retornado pelo
+        // gerenciador. DEVE ser ecoado tal-qual no CNC (cancelamento).
+        controlNumber: parsed['023-000'] || '',
         finalizacao: parsed['027-000'] || '',
         operatorMessage: parsed['030-000'] || '',
         clientMessage: parsed['031-000'] || '',
@@ -504,11 +512,16 @@ serve(async (req) => {
       const fields: Record<string, string> = {
         '000-000': 'CNC',
         '001-000': identificacao || String(Date.now()),
+        // 003-000 — valor sem vírgula (centavos como inteiro).
         '003-000': String(Math.round(amount * 100)),
         '010-000': rede || '',
         '012-000': nsu || '',
         '022-000': dataTransacao || '',
-        '023-000': horaTransacao || '',
+        // 023-000 (CNC) — DEVE ecoar EXATAMENTE o 023-000 retornado na
+        // venda original (número de controle, numérico até 10 bytes).
+        // O caller passa esse valor em `horaTransacao` para compatibilidade
+        // com o nome legado do parâmetro.
+        '023-000': String(horaTransacao || '').replace(/\D/g, '').slice(-10),
         '800-006': '1',
         '999-999': '0',
       };

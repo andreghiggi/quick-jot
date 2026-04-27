@@ -18,6 +18,8 @@ export interface TefInfoFromNotes {
   receipt?: string;
   /** Rótulo legível do tipo de operação: "Débito", "Crédito à Vista", "3x Cartão ADM" etc. */
   operationType?: string;
+  /** 023-000 retornado pela venda original (número de controle, deve ser ecoado no CNC). */
+  controlNumber?: string;
 }
 
 /**
@@ -44,6 +46,10 @@ export function parseTefDataFromNotes(notes: string | null | undefined): TefInfo
   const receiptMatch = notes.match(/\[COMPROVANTE\]([\s\S]*?)\[\/COMPROVANTE\]/);
   const receipt = receiptMatch ? receiptMatch[1].replace(/\\n/g, '\n') : undefined;
 
+  // 023-000 da venda original (número de controle). Persistido como [TEF023]xxx[/TEF023].
+  const ctrlMatch = notes.match(/\[TEF023\]([^\[]+)\[\/TEF023\]/);
+  const controlNumber = ctrlMatch ? ctrlMatch[1].trim() : undefined;
+
   // PinPad: "TEF PinPad: NSU 123 | Aut 456 | BRAND | ACQUIRER [| OPERAÇÃO]"
   const pinpadRegex = /TEF PinPad: NSU (\S+) \| Aut (\S+) \| ([^|]+) \| ([^|\n\[]+)/;
   const pinpadMatch = notes.match(pinpadRegex);
@@ -57,6 +63,7 @@ export function parseTefDataFromNotes(notes: string | null | undefined): TefInfo
       acquirer: pinpadMatch[4].trim(),
       receipt,
       operationType: extractTefOperationType(notes, matchEnd),
+      controlNumber,
     };
   }
 
@@ -73,6 +80,7 @@ export function parseTefDataFromNotes(notes: string | null | undefined): TefInfo
       acquirer: '',
       receipt,
       operationType: extractTefOperationType(notes, matchEnd),
+      controlNumber,
     };
   }
 
@@ -119,7 +127,10 @@ export async function estornarTefPedido(opts: EstornoOptions): Promise<EstornoRe
 
   const saleDate = new Date(createdAt);
   const dataTransacao = format(saleDate, 'ddMMyyyy');
-  const horaTransacao = format(saleDate, 'HHmmss');
+  // 023-000 do CNC DEVE ecoar EXATAMENTE o 023-000 retornado na venda original.
+  // Se persistimos esse valor nas notes (vendas novas), reusamos. Caso contrário,
+  // fallback para HHmmss da data da venda (compatibilidade com vendas antigas).
+  const horaTransacao = tefInfo.controlNumber || format(saleDate, 'HHmmss');
 
   const result = await reversePinpadTransaction(companyId, {
     amount,
@@ -148,20 +159,17 @@ export async function estornarTefPedido(opts: EstornoOptions): Promise<EstornoRe
       continue;
     }
 
-    // Qualquer outro estado (approved, declined, cancelled, error) significa que
-    // a Multiplus já entregou o resultado da operação CNC. Conforme protocolo TEF
-    // Multiplus, o CNF é OBRIGATÓRIO sempre que o gerenciador retorna um resultado
-    // — ele confirma que o ECF recebeu a resposta, não que a transação foi aprovada.
-    // Sem esse CNF, a transação fica "presa" no gerenciador e cancelamentos
-    // subsequentes (especialmente em parcelado loja) podem não ser encaminhados.
-    await confirmPinpadTransaction(companyId, {
-      identificacao: cncIdentificacao,
-      rede: status.acquirer,
-      nsu: status.nsu,
-      finalizacao: status.finalizacao,
-    });
-
+    // Multiplus (homologação): o CNF só pode ser enviado quando o CNC foi
+    // efetivamente concluído (approved). Se voltou declined/cancelled/error,
+    // NÃO enviar CNF — a operação não foi finalizada e o CNF indevido faz
+    // o gerenciador reabrir a transação no PinPad.
     if (status.status === 'approved') {
+      await confirmPinpadTransaction(companyId, {
+        identificacao: cncIdentificacao,
+        rede: status.acquirer,
+        nsu: status.nsu,
+        finalizacao: status.finalizacao,
+      });
       const cancelledNotes = `[CANCELADA] ${notes || ''}`.trim();
       return {
         success: true,

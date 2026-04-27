@@ -731,7 +731,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               const receiptData = statusResult.receiptLines && statusResult.receiptLines.length > 0
                 ? ` | [COMPROVANTE]${statusResult.receiptLines.join('\\n')}[/COMPROVANTE]`
                 : '';
-              tefNote = `TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode || '-'} | ${statusResult.cardBrand || '-'} | ${statusResult.acquirer || '-'}${installLabel}${receiptData}`;
+              // 023-000 da venda original — persistido para reuso no CNC (estorno).
+              const ctrlTag = statusResult.controlNumber ? ` | [TEF023]${statusResult.controlNumber}[/TEF023]` : '';
+              tefNote = `TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode || '-'} | ${statusResult.cardBrand || '-'} | ${statusResult.acquirer || '-'}${installLabel}${receiptData}${ctrlTag}`;
             } else if (['declined', 'cancelled', 'error'].includes(statusResult.status)) {
               tefCompleted = true;
               toast.error(`TEF: ${statusResult.errorMessage || statusResult.operatorMessage || 'Pagamento não aprovado'}`);

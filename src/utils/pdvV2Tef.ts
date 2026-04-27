@@ -118,10 +118,14 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
             statusResult.receiptLines && statusResult.receiptLines.length > 0
               ? ` | [COMPROVANTE]${statusResult.receiptLines.join('\\n')}[/COMPROVANTE]`
               : '';
+          // 023-000 da venda original — persistido para reuso no CNC (estorno).
+          const ctrlTag = statusResult.controlNumber
+            ? ` | [TEF023]${statusResult.controlNumber}[/TEF023]`
+            : '';
 
           return {
             success: true,
-            notesFragment: `TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}${receiptData}`,
+            notesFragment: `TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}${receiptData}${ctrlTag}`,
             tefData: {
               nsu: statusResult.nsu || '',
               autorizacao: statusResult.authorizationCode || '',
