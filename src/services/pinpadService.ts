@@ -24,6 +24,8 @@ export interface PinpadTransactionResult {
   installments?: string;
   transactionDate?: string;
   transactionTime?: string;
+  /** 023-000 retornado pelo gerenciador (número de controle, ecoado no CNC). */
+  controlNumber?: string;
   finalizacao?: string;
   operatorMessage?: string;
   receiptLines?: string[];
@@ -210,6 +212,7 @@ export async function pollPinpadStatus(
       installments: result.installments,
       transactionDate: result.transactionDate,
       transactionTime: result.transactionTime,
+      controlNumber: result.controlNumber || result.transactionTime,
       finalizacao: result.finalizacao,
       operatorMessage: result.operatorMessage,
       receiptLines: result.receiptLines,
