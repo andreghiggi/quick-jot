@@ -29,3 +29,18 @@ Logs (Intpos.001):
 - 023-000 = 17772520718-ATV ❌ (deveria ser apenas 1777252071 ou similar, só dígitos)
 
 Arquivo provavelmente afetado: `supabase/functions/tef-webservice/index.ts` (montagem do request ATV — remover sufixo "-ATV" do identificador, manter só dígitos).
+
+## 4. Campo 800-003 não deve ser enviado em débito à vista
+Em vendas de **débito à vista**, o campo 800-003 está sendo enviado indevidamente. Esse campo é **exclusivo para parcelamento** (crédito parcelado) e não deve aparecer no CRT de débito ou crédito à vista.
+
+Logs (Intpos.001 — venda débito à vista):
+- 000-000 = CRT
+- 001-000 = 1777252807185
+- 003-000 = 2200
+- 800-001 = 1
+- 800-002 = 0
+- 800-003 = 0 ❌ (não deveria estar presente)
+- 800-005 = 60177876000130
+- 800-006 = 1
+
+Arquivo provavelmente afetado: `supabase/functions/tef-webservice/index.ts` (montagem do CRT — só incluir 800-003 quando `paymentType === 'credit' && installments > 1`).
