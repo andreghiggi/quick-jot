@@ -21,3 +21,11 @@ Arquivo provavelmente afetado: `supabase/functions/tef-webservice/index.ts` e/ou
 No CNC (cancelamento), o campo 023-000 (IDENTIFICAÇÃO — número de controle da solicitação, numérico até 10 bytes) deve ser enviado **exatamente igual** ao 023-000 retornado no arquivo de resposta da venda original. Hoje provavelmente está sendo gerado um novo número, o que invalida o cancelamento.
 
 Arquivo provavelmente afetado: `supabase/functions/tef-webservice/index.ts` (montagem do CNC) — precisa persistir o 023-000 da resposta da venda e reusar no cancelamento.
+
+## 3. Header ATV com identificador inválido (não-numérico)
+No envio do header ATV (ativação), o campo identificador está sendo enviado com valor incorreto contendo sufixo não-numérico. Exemplo dos logs: `13154648979-ATV` (sufixo "-ATV"). O campo deve ser **somente numérico** (até 10 bytes, mesmo formato do 023-000).
+
+Logs (Intpos.001):
+- 023-000 = 17772520718-ATV ❌ (deveria ser apenas 1777252071 ou similar, só dígitos)
+
+Arquivo provavelmente afetado: `supabase/functions/tef-webservice/index.ts` (montagem do request ATV — remover sufixo "-ATV" do identificador, manter só dígitos).
