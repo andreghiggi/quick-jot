@@ -687,7 +687,9 @@ export default function PDV() {
                     ? ` | ${installmentCount}x Cartão${installTypeLabel}`
                     : ' | Crédito à Vista';
                 const receiptData = statusResult.receiptLines && statusResult.receiptLines.length > 0 ? ` | [COMPROVANTE]${statusResult.receiptLines.join('\\n')}[/COMPROVANTE]` : '';
-                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}${receiptData}`;
+                // 023-000 da venda original (número de controle) — usado no CNC.
+                const ctrlTag = statusResult.controlNumber ? ` | [TEF023]${statusResult.controlNumber}[/TEF023]` : '';
+                saleNotes = `${saleNotes ? saleNotes + ' | ' : ''}TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}${receiptData}${ctrlTag}`;
               } else if (statusResult.status === 'declined' || statusResult.status === 'cancelled' || statusResult.status === 'error') {
                 tefCompleted = true;
                 // Do NOT send NCN — no receipt was generated on error/decline
