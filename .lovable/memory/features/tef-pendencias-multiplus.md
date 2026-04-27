@@ -44,3 +44,14 @@ Logs (Intpos.001 — venda débito à vista):
 - 800-006 = 1
 
 Arquivo provavelmente afetado: `supabase/functions/tef-webservice/index.ts` (montagem do CRT — só incluir 800-003 quando `paymentType === 'credit' && installments > 1`).
+
+## 5. Campo 003-000 (VALOR TOTAL) — duas casas decimais SEM vírgula
+Regra confirmada pela Multiplus: o campo 003-000 (Valor Total) é **numérico até 12 bytes, com duas casas decimais sem a vírgula separadora**.
+
+Exemplo:
+- Valor R$ 0,15 → 003-000 = `015`
+- Valor R$ 22,00 → 003-000 = `2200` (já está correto nos logs atuais)
+
+Garantir que TODOS os valores monetários enviados (003-000 e correlatos) sejam multiplicados por 100 e enviados como inteiro, sem ponto/vírgula. Validar que centavos baixos (ex.: R$0,15, R$0,05) não percam o zero à esquerda.
+
+Arquivo provavelmente afetado: `supabase/functions/tef-webservice/index.ts` (formatação do valor — usar `Math.round(amount * 100).toString()` sem padding ou com cuidado para não trimmar zeros significativos).
