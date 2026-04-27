@@ -16,3 +16,8 @@ Logs de exemplo (Intpos.001):
 Arquivo provavelmente afetado: `supabase/functions/tef-webservice/index.ts` e/ou `src/services/pinpadService.ts` (fluxo de cancelPinpadTransaction → confirmPinpadTransaction).
 
 ## (aguardando demais pendências do usuário)
+
+## 2. Campo 023-000 no CNC deve ecoar o 023-000 da venda original
+No CNC (cancelamento), o campo 023-000 (IDENTIFICAÇÃO — número de controle da solicitação, numérico até 10 bytes) deve ser enviado **exatamente igual** ao 023-000 retornado no arquivo de resposta da venda original. Hoje provavelmente está sendo gerado um novo número, o que invalida o cancelamento.
+
+Arquivo provavelmente afetado: `supabase/functions/tef-webservice/index.ts` (montagem do CNC) — precisa persistir o 023-000 da resposta da venda e reusar no cancelamento.
