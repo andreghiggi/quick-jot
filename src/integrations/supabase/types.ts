@@ -2334,6 +2334,7 @@ export type Database = {
         Args: { _company_id: string; _name: string }
         Returns: string
       }
+      cleanup_old_whatsapp_messages: { Args: never; Returns: Json }
       generate_clean_subdomain: { Args: { _input: string }; Returns: string }
       generate_company_serial: { Args: never; Returns: string }
       get_next_daily_order_number: { Args: never; Returns: number }
