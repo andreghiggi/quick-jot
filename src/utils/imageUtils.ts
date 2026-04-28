@@ -81,6 +81,10 @@ export async function uploadCompressedImage(
       .upload(finalPath, compressed, {
         upsert: options?.upsert ?? false,
         contentType: compressed.type,
+        // Cache no navegador por 7 dias — cardápio público abre instantâneo nas visitas seguintes.
+        // Como os nomes de arquivo já incluem timestamp/uuid, trocas de imagem geram URL nova
+        // e o navegador busca a versão atualizada normalmente.
+        cacheControl: '604800',
       });
 
     if (error) throw error;
