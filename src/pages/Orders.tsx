@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { OrderProvider, useOrderContext } from '@/contexts/OrderContext';
+import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { OrderTabs } from '@/components/OrderTabs';
 import { NewOrderDialog } from '@/components/NewOrderDialog';
@@ -74,9 +74,5 @@ function OrdersContent() {
 }
 
 export default function Orders() {
-  return (
-    <OrderProvider>
-      <OrdersContent />
-    </OrderProvider>
-  );
+  return <OrdersContent />;
 }
