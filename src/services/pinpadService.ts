@@ -212,7 +212,10 @@ export async function pollPinpadStatus(
       installments: result.installments,
       transactionDate: result.transactionDate,
       transactionTime: result.transactionTime,
-      controlNumber: result.controlNumber || result.transactionTime,
+      // 023-000 retornado pelo gerenciador. NÃO usar fallback — o CNC precisa
+      // ecoar EXATAMENTE este valor; um substituto qualquer faz a Multiplus
+      // rejeitar o cancelamento por divergência.
+      controlNumber: result.controlNumber,
       finalizacao: result.finalizacao,
       operatorMessage: result.operatorMessage,
       receiptLines: result.receiptLines,
