@@ -14,6 +14,9 @@ Fix: em `src/utils/tefOrderActions.ts` o CNF agora só é disparado quando `stat
 No CNC (cancelamento), o campo 023-000 (IDENTIFICAÇÃO — número de controle da solicitação, numérico até 10 bytes) deve ser enviado **exatamente igual** ao 023-000 retornado no arquivo de resposta da venda original. Hoje provavelmente está sendo gerado um novo número, o que invalida o cancelamento.
 Fix: edge function expõe `controlNumber` (parsed['023-000']) no `get-status`; pinpadService propaga; os 3 callers (pdvV2Tef, PDV, PedidoExpressDialog) persistem nas notes como `[TEF023]xxx[/TEF023]`; `parseTefDataFromNotes` extrai e `estornarTefPedido` envia esse valor no parâmetro `horaTransacao` (nome legado), que o edge sanitiza para dígitos no campo 023-000 do CNC. Vendas antigas sem a tag mantêm fallback HHmmss.
 
+### Re-validação Multiplus (CNC crédito à vista) — fallback HHmmss removido
+Multiplus reportou que CNC de crédito à vista enviou `023-000=193856` quando o correto era `193852` (delta de 4s — janela entre autorização e gravação no banco). Causa: fallback `format(saleDate, 'HHmmss')` em `estornarTefPedido` quando a venda não tinha `[TEF023]` persistido. Fix v2: removido o fallback; se `controlNumber` ausente, retorna erro pedindo cancelamento manual no gerenciador. Também removido fallback `result.controlNumber || result.transactionTime` em `pinpadService.ts`.
+
 ## 3. Header ATV com identificador inválido (não-numérico) — ✅ CORRIGIDO
 No envio do header ATV (ativação), o campo identificador está sendo enviado com valor incorreto contendo sufixo não-numérico. Exemplo dos logs: `13154648979-ATV` (sufixo "-ATV"). O campo deve ser **somente numérico** (até 10 bytes, mesmo formato do 023-000).
 Fix: ATV pré-CRT (Lancheria I9) agora usa `String(ident).replace(/\D/g,'').slice(-10)` no 001-000.

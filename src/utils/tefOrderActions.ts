@@ -128,9 +128,19 @@ export async function estornarTefPedido(opts: EstornoOptions): Promise<EstornoRe
   const saleDate = new Date(createdAt);
   const dataTransacao = format(saleDate, 'ddMMyyyy');
   // 023-000 do CNC DEVE ecoar EXATAMENTE o 023-000 retornado na venda original.
-  // Se persistimos esse valor nas notes (vendas novas), reusamos. Caso contrário,
-  // fallback para HHmmss da data da venda (compatibilidade com vendas antigas).
-  const horaTransacao = tefInfo.controlNumber || format(saleDate, 'HHmmss');
+  // NÃO usar fallback (HHmmss da data da venda) — isso gera valor próximo mas
+  // diferente do real (delta entre autorização e gravação no banco), e a
+  // Multiplus rejeita o cancelamento por divergência no campo 023-000.
+  // Vendas antigas sem [TEF023] persistido devem ser canceladas manualmente.
+  if (!tefInfo.controlNumber) {
+    return {
+      success: false,
+      message:
+        'Esta venda não possui o número de controle TEF (023-000) salvo. ' +
+        'Cancele manualmente pelo gerenciador da maquininha.',
+    };
+  }
+  const horaTransacao = tefInfo.controlNumber;
 
   const result = await reversePinpadTransaction(companyId, {
     amount,
