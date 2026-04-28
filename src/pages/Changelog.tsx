@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '28/04/2026',
+    version: '1.27.2',
+    type: 'improvement',
+    description: 'Performance e manutenção do banco de dados. Adicionados índices internos nas principais tabelas (pedidos, itens, produtos, opcionais, vendas PDV, comandas e mensagens WhatsApp) — listagens, dashboard e relatórios passam a responder mais rápido conforme a base cresce. Criada também rotina automática diária às 03:00 (horário de Brasília) que limpa logs antigos de notificações WhatsApp com mais de 90 dias (boas-vindas, status de pedido, etc.) — não afeta conversas reais com clientes nem qualquer dado de pedido, fiscal ou TEF. Mudanças invisíveis para o lojista, sem downtime e sem alteração de comportamento.',
+  },
+  {
     date: '24/04/2026',
     version: '1.27.1',
     type: 'improvement',
