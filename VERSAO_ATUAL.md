@@ -7,8 +7,8 @@
 
 ## 🕐 Data do Checkpoint
 
-- **Data/Hora:** 19/04/2026
-- **Mensagem de referência:** `checkpoint: versão estável antes do PDV V2`
+ - **Data/Hora:** 02/05/2026
+ - **Mensagem de referência:** `versao funcional comandatech 02/05/2026`
 - **Como restaurar:** Use o botão **"Revert"** abaixo da mensagem correspondente no chat do Lovable, ou acesse a aba **History** no topo do chat.
 
 ---
@@ -246,9 +246,9 @@ Controlados via tabela `company_modules`:
 
 ## ✅ Como restaurar este checkpoint
 
-1. **Pelo Lovable:** Localize a mensagem do chat com o título *"checkpoint: versão estável antes do PDV V2"* e clique em **Revert** logo abaixo dela.
+ 1. **Pelo Lovable:** Localize a mensagem do chat com o título *"versao funcional comandatech 02/05/2026"* e clique em **Revert** logo abaixo dela.
 2. **Pela aba History:** Topo do chat → **History** → selecione esta versão.
-3. **Pelo GitHub** (se sincronizado): Use `git log` e identifique o commit pela data **19/04/2026**.
+ 3. **Pelo GitHub** (se sincronizado): Use `git log` e identifique o commit pela data **02/05/2026**.
 
 ---
 
