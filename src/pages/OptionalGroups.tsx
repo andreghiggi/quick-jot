@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useCategories } from '@/hooks/useCategories';
 import { useProducts } from '@/hooks/useProducts';
@@ -44,6 +45,8 @@ export default function OptionalGroups() {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupMin, setNewGroupMin] = useState(0);
   const [newGroupMax, setNewGroupMax] = useState(0);
+  const [newGroupMaxPerItem, setNewGroupMaxPerItem] = useState(1);
+  const isI9 = company?.id === LANCHERIA_I9_COMPANY_ID;
 
   // New item form
   const [newItemName, setNewItemName] = useState('');
