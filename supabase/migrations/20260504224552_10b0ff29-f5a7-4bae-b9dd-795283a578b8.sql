@@ -1,0 +1,1 @@
+ALTER TABLE public.tab_items ADD COLUMN paid boolean NOT NULL DEFAULT false;

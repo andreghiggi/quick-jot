@@ -167,7 +167,9 @@ export function PDVV2PaymentDialog({
 
   const extrasTotal = extraItems.reduce((s, it) => s + it.unit_price * it.quantity, 0);
   const grossTotal = total + extrasTotal;
-  const discountValue = useCurrencyMask
+  const discountValue = isLancheriaI9
+    ? 0
+    : useCurrencyMask
     ? parseCurrencyInput(discount)
     : parseFloat(discount.replace(',', '.')) || 0;
   const finalTotal = Math.max(0, grossTotal - discountValue);
@@ -322,19 +324,21 @@ export function PDVV2PaymentDialog({
             />
           )}
 
-          <div className="space-y-2">
-            <Label>Desconto (R$)</Label>
-            <Input
-              type={useCurrencyMask ? 'text' : 'number'}
-              inputMode="decimal"
-              step={useCurrencyMask ? undefined : '0.01'}
-              placeholder={useCurrencyMask ? 'R$ 0,00' : '0,00'}
-              value={discount}
-              onChange={(e) =>
-                setDiscount(useCurrencyMask ? maskCurrencyInput(e.target.value) : e.target.value)
-              }
-            />
-          </div>
+          {!isLancheriaI9 && (
+            <div className="space-y-2">
+              <Label>Desconto (R$)</Label>
+              <Input
+                type={useCurrencyMask ? 'text' : 'number'}
+                inputMode="decimal"
+                step={useCurrencyMask ? undefined : '0.01'}
+                placeholder={useCurrencyMask ? 'R$ 0,00' : '0,00'}
+                value={discount}
+                onChange={(e) =>
+                  setDiscount(useCurrencyMask ? maskCurrencyInput(e.target.value) : e.target.value)
+                }
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Forma de pagamento</Label>
