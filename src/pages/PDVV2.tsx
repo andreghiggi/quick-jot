@@ -39,7 +39,6 @@ import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
-import { PDVV2TabImportDialog } from '@/components/pdv-v2/PDVV2TabImportDialog';
 import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
 
 function isDelivery(o: Order) {
@@ -576,11 +575,7 @@ export default function PDVV2() {
       toast.error('Abra o caixa para cobrar');
       return;
     }
-    if (isI9) {
-      setI9ImportTab(tab);
-    } else {
-      setImportingTab(tab);
-    }
+    setImportingTab(tab);
   }
 
   function handleI9PayPartial(selectedItemIds: string[], total: number) {
@@ -900,7 +895,7 @@ export default function PDVV2() {
         showAddItem={!!chargeOrder && !isDelivery(chargeOrder)}
         tefStatus={tefStatus}
         onConfirm={confirmChargeOrder}
-        checkoutItems={chargeOrder?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price }))}
+        checkoutItems={isI9 ? chargeOrder?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price })) : undefined}
       />
 
       <PDVV2PaymentDialog
@@ -925,20 +920,8 @@ export default function PDVV2() {
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
-        checkoutItems={importingTab ? openTabs.find(t => t.id === importingTab.id)?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price })) : undefined}
+        checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === importingTab.id)?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price })) : undefined}
       />
-
-      {isI9 && (
-        <PDVV2TabImportDialog
-          open={!!i9ImportTab}
-          onOpenChange={(o) => !o && setI9ImportTab(null)}
-          tabItems={i9ImportTab ? openTabs.find((t) => t.id === i9ImportTab.id)?.items || [] : []}
-          tabTotal={i9ImportTab?.total || 0}
-          tabLabel={i9ImportTab?.tableNumber ? `Mesa ${i9ImportTab.tableNumber}` : `Comanda ${i9ImportTab?.tabNumber}`}
-          onPayPartial={handleI9PayPartial}
-          onPaySplit={handleI9PaySplit}
-        />
-      )}
 
       <PDVV2ClosedTabsDialog
         open={closedTabsOpen}
