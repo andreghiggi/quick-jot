@@ -1960,6 +1960,7 @@ export type Database = {
           created_by: string
           id: string
           notes: string | null
+          paid: boolean
           product_id: string | null
           product_name: string
           quantity: number
@@ -1972,6 +1973,7 @@ export type Database = {
           created_by: string
           id?: string
           notes?: string | null
+          paid?: boolean
           product_id?: string | null
           product_name: string
           quantity?: number
@@ -1984,6 +1986,7 @@ export type Database = {
           created_by?: string
           id?: string
           notes?: string | null
+          paid?: boolean
           product_id?: string | null
           product_name?: string
           quantity?: number
