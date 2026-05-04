@@ -202,6 +202,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         showDocumentMode
         chargeTefBeforePopups
         channel="pdv"
+        checkoutItems={order?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price }))}
         onConfirm={handleConfirm}
       />
       {nfceRecord && (
