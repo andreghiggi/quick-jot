@@ -542,6 +542,13 @@ export default function OptionalGroups() {
                 <p className="text-xs text-muted-foreground mt-1">0 = sem limite</p>
               </div>
             </div>
+            {isI9 && (
+              <div>
+                <Label>Máx. por item</Label>
+                <Input type="number" min={1} value={newGroupMaxPerItem} onChange={(e) => setNewGroupMaxPerItem(Math.max(1, parseInt(e.target.value) || 1))} />
+                <p className="text-xs text-muted-foreground mt-1">Quantas vezes o mesmo adicional pode ser selecionado (1 = checkbox)</p>
+              </div>
+            )}
             <Button onClick={handleCreateGroup} className="w-full">Criar Grupo</Button>
           </div>
         </DialogContent>
