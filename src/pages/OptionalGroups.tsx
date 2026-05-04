@@ -77,22 +77,27 @@ export default function OptionalGroups() {
       toast.error('Informe o nome do grupo');
       return;
     }
-    await addGroup({ name: newGroupName.trim(), minSelect: newGroupMin, maxSelect: newGroupMax });
+    const groupData: any = { name: newGroupName.trim(), minSelect: newGroupMin, maxSelect: newGroupMax };
+    if (isI9) groupData.maxQuantityPerItem = newGroupMaxPerItem;
+    await addGroup(groupData);
     setNewGroupName('');
     setNewGroupMin(0);
     setNewGroupMax(0);
+    setNewGroupMaxPerItem(1);
     setIsNewGroupOpen(false);
   }
 
   async function handleUpdateGroup() {
     if (!editingGroup) return;
-    await updateGroup(editingGroup.id, {
+    const updateData: any = {
       name: editingGroup.name,
       minSelect: editingGroup.minSelect,
       maxSelect: editingGroup.maxSelect,
       active: editingGroup.active,
       layout: editingGroup.layout,
-    });
+    };
+    if (isI9) updateData.maxQuantityPerItem = (editingGroup as any).maxQuantityPerItem ?? 1;
+    await updateGroup(editingGroup.id, updateData);
     setEditingGroup(null);
   }
 
