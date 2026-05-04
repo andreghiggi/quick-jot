@@ -40,7 +40,7 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
   const [query, setQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedOptionals, setSelectedOptionals] = useState<ProductOptional[]>([]);
-  const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Set<string>>>({});
+  const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Map<string, number>>>({});
 
   const categoryIdByName = useMemo(() => {
     const map: Record<string, string> = {};
@@ -98,7 +98,7 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
     }
     setSelectedProduct(p);
     setSelectedOptionals([]);
-    setSelectedGroupItems({});
+    setSelectedGroupItems({} as Record<string, Map<string, number>>);
   }
 
   function toggleOptional(opt: ProductOptional) {
@@ -109,16 +109,53 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
     );
   }
 
-  function toggleGroupItem(groupId: string, itemId: string, maxSelect: number) {
-    const max = maxSelect > 0 ? maxSelect : Infinity;
+  function getGroupTotalSelected(groupId: string): number {
+    const m = selectedGroupItems[groupId];
+    if (!m) return 0;
+    let total = 0;
+    m.forEach((qty) => { total += qty; });
+    return total;
+  }
+
+  function toggleGroupItem(groupId: string, itemId: string, maxSelect: number, maxPerItem: number = 1) {
+    const maxGroup = maxSelect > 0 ? maxSelect : Infinity;
     setSelectedGroupItems((prev) => {
-      const cur = new Set(prev[groupId] || []);
-      if (cur.has(itemId)) cur.delete(itemId);
-      else {
-        if (cur.size >= max) {
-          if (max === 1) { cur.clear(); cur.add(itemId); }
-          else { toast.error(`Máximo ${max} no grupo`); return prev; }
-        } else cur.add(itemId);
+      const cur = new Map(prev[groupId] || []);
+      const currentQty = cur.get(itemId) || 0;
+      if (currentQty > 0) {
+        cur.delete(itemId);
+      } else {
+        const totalSel = getGroupTotalSelected(groupId);
+        if (totalSel >= maxGroup) {
+          if (maxGroup === 1) { cur.clear(); cur.set(itemId, 1); }
+          else { toast.error(`Máximo ${maxGroup} no grupo`); return prev; }
+        } else {
+          cur.set(itemId, 1);
+        }
+      }
+      return { ...prev, [groupId]: cur };
+    });
+  }
+
+  function changeGroupItemQty(groupId: string, itemId: string, delta: number, maxSelect: number, maxPerItem: number) {
+    const maxGroup = maxSelect > 0 ? maxSelect : Infinity;
+    setSelectedGroupItems((prev) => {
+      const cur = new Map(prev[groupId] || []);
+      const currentQty = cur.get(itemId) || 0;
+      const newQty = currentQty + delta;
+      if (newQty <= 0) {
+        cur.delete(itemId);
+      } else if (newQty > maxPerItem) {
+        toast.error(`Máximo ${maxPerItem} por item`);
+        return prev;
+      } else {
+        // Check group total
+        const totalSel = getGroupTotalSelected(groupId) - currentQty + newQty;
+        if (totalSel > maxGroup) {
+          toast.error(`Máximo ${maxGroup} no grupo`);
+          return prev;
+        }
+        cur.set(itemId, newQty);
       }
       return { ...prev, [groupId]: cur };
     });
@@ -129,7 +166,7 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
     // Validate min selections
     for (const g of productGroups) {
       const sel = selectedGroupItems[g.id];
-      const count = sel ? sel.size : 0;
+      const count = sel ? getGroupTotalSelected(g.id) : 0;
       if (g.minSelect > 0 && count < g.minSelect) {
         toast.error(`Selecione pelo menos ${g.minSelect} em "${g.name}"`);
         return;
@@ -143,9 +180,12 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
       if (!sel) continue;
       const picked: { name: string; price: number }[] = [];
       for (const it of g.items) {
-        if (sel.has(it.id)) {
-          groupOpts.push({ name: it.name, price: it.price });
-          picked.push({ name: it.name, price: it.price });
+        const qty = sel.get(it.id) || 0;
+        if (qty > 0) {
+          for (let i = 0; i < qty; i++) {
+            groupOpts.push({ name: it.name, price: it.price });
+          }
+          picked.push({ name: qty > 1 ? `${qty}x ${it.name}` : it.name, price: it.price * qty });
         }
       }
       if (picked.length > 0) {
@@ -158,7 +198,7 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
     addItem(selectedProduct, selectedOptionals, groupOpts, groupedNames);
     setSelectedProduct(null);
     setSelectedOptionals([]);
-    setSelectedGroupItems({});
+    setSelectedGroupItems({} as Record<string, Map<string, number>>);
   }
 
   function addItem(
@@ -331,15 +371,26 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
                     {g.minSelect > 0 && <Badge variant="destructive" className="text-[10px]">Obrigatório</Badge>}
                   </div>
                   {g.items.filter((i) => i.active).map((it) => {
-                    const checked = !!selectedGroupItems[g.id]?.has(it.id);
+                    const qty = selectedGroupItems[g.id]?.get(it.id) || 0;
+                    const checked = qty > 0;
+                    const useQtyControls = isLancheriaI9 && g.maxQuantityPerItem > 1;
                     return (
-                      <label key={it.id} className={cn('flex items-center justify-between gap-2 p-2 rounded border cursor-pointer text-sm', checked && 'border-primary bg-primary/5')}>
+                      <div key={it.id} className={cn('flex items-center justify-between gap-2 p-2 rounded border text-sm', checked && 'border-primary bg-primary/5', !useQtyControls && 'cursor-pointer')} onClick={!useQtyControls ? () => toggleGroupItem(g.id, it.id, g.maxSelect, g.maxQuantityPerItem) : undefined}>
                         <div className="flex items-center gap-2">
-                          <Checkbox checked={checked} onCheckedChange={() => toggleGroupItem(g.id, it.id, g.maxSelect)} />
+                          {!useQtyControls && <Checkbox checked={checked} onCheckedChange={() => toggleGroupItem(g.id, it.id, g.maxSelect, g.maxQuantityPerItem)} />}
                           <span>{it.name}</span>
                         </div>
-                        {it.price > 0 && <span className="text-xs text-muted-foreground">+{formatPrice(it.price)}</span>}
-                      </label>
+                        <div className="flex items-center gap-2">
+                          {it.price > 0 && <span className="text-xs text-muted-foreground">+{formatPrice(it.price)}</span>}
+                          {useQtyControls && (
+                            <div className="flex items-center gap-1">
+                              <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => changeGroupItemQty(g.id, it.id, -1, g.maxSelect, g.maxQuantityPerItem)}>−</Button>
+                              <span className="w-5 text-center text-xs tabular-nums">{qty}</span>
+                              <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => changeGroupItemQty(g.id, it.id, 1, g.maxSelect, g.maxQuantityPerItem)}>+</Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
