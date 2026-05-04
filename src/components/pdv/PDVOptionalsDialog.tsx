@@ -137,6 +137,13 @@ export function PDVOptionalsDialog({
     if (selected) selected.forEach(q => { count += q; });
     return count >= group.minSelect;
   });
+  // Check if all required groups are satisfied
+  const allRequiredSatisfied = groups.every(group => {
+    const selected = selectedItems[group.id];
+    let count = 0;
+    if (selected) selected.forEach(q => { count += q; });
+    return count >= group.minSelect;
+  });
 
   function handleAdd() {
     // Build product name with optionals
