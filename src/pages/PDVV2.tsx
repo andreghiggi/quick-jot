@@ -119,9 +119,6 @@ export default function PDVV2() {
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [importingTab, setImportingTab] = useState<OccupiedTab | null>(null);
-  const [i9ImportTab, setI9ImportTab] = useState<OccupiedTab | null>(null);
-  const [i9PartialItemIds, setI9PartialItemIds] = useState<string[]>([]);
-  const [i9SplitInfo, setI9SplitInfo] = useState<{ perPerson: number; remaining: number; total: number } | null>(null);
   const [closedTabsOpen, setClosedTabsOpen] = useState(false);
   // NFC-e pós-venda (mesmo padrão do PDV V1: polling visível + ação do operador)
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
@@ -576,20 +573,6 @@ export default function PDVV2() {
       return;
     }
     setImportingTab(tab);
-  }
-
-  function handleI9PayPartial(selectedItemIds: string[], total: number) {
-    const tab = i9ImportTab;
-    setI9PartialItemIds(selectedItemIds);
-    setI9ImportTab(null);
-    if (tab) setImportingTab({ ...tab, total });
-  }
-
-  function handleI9PaySplit(perPerson: number, remaining: number, totalPeople: number) {
-    const tab = i9ImportTab;
-    setI9SplitInfo({ perPerson, remaining, total: totalPeople });
-    setI9ImportTab(null);
-    if (tab) setImportingTab({ ...tab, total: perPerson });
   }
 
   async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0]) {
