@@ -817,6 +817,7 @@ export type Database = {
           display_order: number | null
           id: string
           layout: string
+          max_quantity_per_item: number
           max_select: number
           min_select: number
           name: string
@@ -829,6 +830,7 @@ export type Database = {
           display_order?: number | null
           id?: string
           layout?: string
+          max_quantity_per_item?: number
           max_select?: number
           min_select?: number
           name: string
@@ -841,6 +843,7 @@ export type Database = {
           display_order?: number | null
           id?: string
           layout?: string
+          max_quantity_per_item?: number
           max_select?: number
           min_select?: number
           name?: string
@@ -1288,55 +1291,73 @@ export type Database = {
         Row: {
           active: boolean
           category: string
+          code: string | null
           company_id: string | null
           created_at: string
           description: string | null
           display_order: number | null
+          gross_weight: number | null
+          gtin: string | null
+          icms_origin: string
           id: string
           image_url: string | null
           is_new: boolean
           menu_item: boolean
           name: string
+          net_weight: number | null
           pdv_item: boolean
           price: number
           subcategory_id: string | null
           tax_rule_id: string | null
+          unit: string
           updated_at: string
         }
         Insert: {
           active?: boolean
           category: string
+          code?: string | null
           company_id?: string | null
           created_at?: string
           description?: string | null
           display_order?: number | null
+          gross_weight?: number | null
+          gtin?: string | null
+          icms_origin?: string
           id?: string
           image_url?: string | null
           is_new?: boolean
           menu_item?: boolean
           name: string
+          net_weight?: number | null
           pdv_item?: boolean
           price: number
           subcategory_id?: string | null
           tax_rule_id?: string | null
+          unit?: string
           updated_at?: string
         }
         Update: {
           active?: boolean
           category?: string
+          code?: string | null
           company_id?: string | null
           created_at?: string
           description?: string | null
           display_order?: number | null
+          gross_weight?: number | null
+          gtin?: string | null
+          icms_origin?: string
           id?: string
           image_url?: string | null
           is_new?: boolean
           menu_item?: boolean
           name?: string
+          net_weight?: number | null
           pdv_item?: boolean
           price?: number
           subcategory_id?: string | null
           tax_rule_id?: string | null
+          unit?: string
           updated_at?: string
         }
         Relationships: [
