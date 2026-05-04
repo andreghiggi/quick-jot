@@ -113,12 +113,14 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     fetchGroups();
   }, [fetchGroups]);
 
-  async function addGroup(data: { name: string; minSelect: number; maxSelect: number }): Promise<string | null> {
+  async function addGroup(data: { name: string; minSelect: number; maxSelect: number; maxQuantityPerItem?: number }): Promise<string | null> {
     if (!companyId) return null;
     try {
+      const insertData: any = { company_id: companyId, name: data.name, min_select: data.minSelect, max_select: data.maxSelect };
+      if (data.maxQuantityPerItem !== undefined) insertData.max_quantity_per_item = data.maxQuantityPerItem;
       const { data: row, error } = await supabase
         .from('optional_groups')
-        .insert({ company_id: companyId, name: data.name, min_select: data.minSelect, max_select: data.maxSelect })
+        .insert(insertData)
         .select()
         .single();
       if (error) throw error;
