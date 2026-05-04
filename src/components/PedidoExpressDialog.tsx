@@ -511,7 +511,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     // Validate min selections
     for (const group of selectedProductGroups) {
       const selected = selectedGroupItems[group.id];
-      const count = selected ? selected.size : 0;
+      let count = 0;
+      if (selected) selected.forEach(q => { count += q; });
       if (group.minSelect > 0 && count < group.minSelect) {
         toast.error(`Selecione pelo menos ${group.minSelect} item(ns) em "${group.name}"`);
         return;
@@ -524,22 +525,25 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     for (const group of selectedProductGroups) {
       const selected = selectedGroupItems[group.id];
       if (!selected) continue;
-      const selectedItems: { name: string; price: number }[] = [];
+      const pickedItems: { name: string; price: number }[] = [];
       for (const item of group.items) {
-        if (selected.has(item.id)) {
-          groupOptionals.push({
-            id: item.id,
-            productId: selectedProduct.id,
-            name: item.name,
-            price: item.price,
-            type: 'extra',
-            active: true,
-          });
-          selectedItems.push({ name: item.name, price: item.price });
+        const qty = selected.get(item.id) || 0;
+        if (qty > 0) {
+          for (let i = 0; i < qty; i++) {
+            groupOptionals.push({
+              id: item.id,
+              productId: selectedProduct.id,
+              name: item.name,
+              price: item.price,
+              type: 'extra',
+              active: true,
+            });
+          }
+          pickedItems.push({ name: qty > 1 ? `${qty}x ${item.name}` : item.name, price: item.price * qty });
         }
       }
-      if (selectedItems.length > 0) {
-        const itemsStr = selectedItems.map(i => i.price > 0 ? `${i.name} R$${i.price.toFixed(2)}` : i.name).join(', ');
+      if (pickedItems.length > 0) {
+        const itemsStr = pickedItems.map(i => i.price > 0 ? `${i.name} R$${i.price.toFixed(2)}` : i.name).join(', ');
         groupedOptionalNames.push(`${group.name}: ${itemsStr}`);
       }
     }
