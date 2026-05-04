@@ -4,6 +4,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { useCategories } from '@/hooks/useCategories';
 import { useSubcategories } from '@/hooks/useSubcategories';
+import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
 
 import { Product, ProductOptional } from '@/types/product';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
@@ -206,7 +207,16 @@ export default function Products() {
       pdvItem: editingProduct.pdvItem,
       menuItem: editingProduct.menuItem,
       subcategoryId: editingProduct.subcategoryId,
-    });
+      ...(company?.id === LANCHERIA_I9_COMPANY_ID ? {
+        code: editingProduct.code,
+        gtin: editingProduct.gtin,
+        unit: editingProduct.unit,
+        icmsOrigin: editingProduct.icmsOrigin,
+        netWeight: editingProduct.netWeight,
+        grossWeight: editingProduct.grossWeight,
+        taxRuleId: editingProduct.taxRuleId,
+      } : {}),
+    } as any);
     setEditingProduct(null);
   }
 
@@ -1043,6 +1053,91 @@ export default function Products() {
                 />
                 <Label>Item de Cardápio</Label>
               </div>
+              {company?.id === LANCHERIA_I9_COMPANY_ID && (
+                <div className="border-t pt-4 mt-2 space-y-4">
+                  <h4 className="font-semibold text-sm">Dados fiscais</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Código interno (cProd)</Label>
+                      <Input
+                        value={editingProduct.code || ''}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, code: e.target.value || null })}
+                        placeholder="Ex: 001"
+                      />
+                    </div>
+                    <div>
+                      <Label>GTIN / EAN</Label>
+                      <Input
+                        value={editingProduct.gtin || ''}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, gtin: e.target.value || null })}
+                        placeholder="Ex: 7891234567890"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Unidade de medida</Label>
+                      <Select value={editingProduct.unit || 'UN'} onValueChange={(v) => setEditingProduct({ ...editingProduct, unit: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="UN">UN</SelectItem>
+                          <SelectItem value="KG">KG</SelectItem>
+                          <SelectItem value="L">L</SelectItem>
+                          <SelectItem value="CX">CX</SelectItem>
+                          <SelectItem value="PCT">PCT</SelectItem>
+                          <SelectItem value="G">G</SelectItem>
+                          <SelectItem value="ML">ML</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Origem</Label>
+                      <Select value={editingProduct.icmsOrigin || '0'} onValueChange={(v) => setEditingProduct({ ...editingProduct, icmsOrigin: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">0 - Nacional</SelectItem>
+                          <SelectItem value="1">1 - Estrangeira (importação direta)</SelectItem>
+                          <SelectItem value="2">2 - Estrangeira (mercado interno)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Peso líquido (kg)</Label>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        value={editingProduct.netWeight ?? ''}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, netWeight: e.target.value ? parseFloat(e.target.value) : null })}
+                        placeholder="0.000"
+                      />
+                    </div>
+                    <div>
+                      <Label>Peso bruto (kg)</Label>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        value={editingProduct.grossWeight ?? ''}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, grossWeight: e.target.value ? parseFloat(e.target.value) : null })}
+                        placeholder="0.000"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Regra de tributação</Label>
+                    <Select value={editingProduct.taxRuleId || 'none'} onValueChange={(v) => setEditingProduct({ ...editingProduct, taxRuleId: v === 'none' ? null : v })}>
+                      <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhuma</SelectItem>
+                        {taxRules.map((tr) => (
+                          <SelectItem key={tr.id} value={tr.id}>{tr.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
               <Button onClick={handleUpdateProduct} className="w-full">Salvar alterações</Button>
             </div>
           )}
