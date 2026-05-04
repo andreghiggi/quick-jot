@@ -773,6 +773,7 @@ export default function Waiter() {
           }}
           groups={optionalsDialogGroups}
           onAddToCart={handleOptionalsAddToCart}
+          companyId={company?.id}
         />
       )}
     </AppLayout>
