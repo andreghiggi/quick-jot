@@ -3,12 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, ShoppingCart } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { OptionalGroup } from '@/hooks/useOptionalGroups';
 
 const LANCHERIA_I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
@@ -42,12 +40,10 @@ export function PDVOptionalsDialog({
   companyId,
 }: PDVOptionalsDialogProps) {
   const isI9 = companyId === LANCHERIA_I9_COMPANY_ID;
-  // Map<itemId, quantity> to support per-item quantities
   const [selectedItems, setSelectedItems] = useState<Record<string, Map<string, number>>>({});
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
 
-  // Reset state when product changes
   const resetState = () => {
     setSelectedItems({});
     setQuantity(1);
@@ -100,7 +96,6 @@ export function PDVOptionalsDialog({
     });
   }
 
-  // Calculate total with optionals
   const optionalsTotal = useMemo(() => {
     let total = 0;
     groups.forEach(group => {
@@ -120,24 +115,6 @@ export function PDVOptionalsDialog({
   const unitTotal = product.price + optionalsTotal;
   const lineTotal = unitTotal * quantity;
 
-  // Check if all required groups are satisfied
-  const allRequiredSatisfied = groups.every(group => {
-    const selected = selectedItems[group.id];
-    let count = 0;
-    if (selected) selected.forEach(q => { count += q; });
-    return selected >= group.minSelect;
-  });
-    return count >= group.minSelect;
-  });
-@@
-  // Check if all required groups are satisfied
-  const allRequiredSatisfied = groups.every(group => {
-    const selected = selectedItems[group.id];
-    let count = 0;
-    if (selected) selected.forEach(q => { count += q; });
-    return count >= group.minSelect;
-  });
-  // Check if all required groups are satisfied
   const allRequiredSatisfied = groups.every(group => {
     const selected = selectedItems[group.id];
     let count = 0;
@@ -146,7 +123,6 @@ export function PDVOptionalsDialog({
   });
 
   function handleAdd() {
-    // Build product name with optionals
     const optionalNames: string[] = [];
     groups.forEach(group => {
       const selected = selectedItems[group.id];
@@ -180,6 +156,12 @@ export function PDVOptionalsDialog({
   const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+  function getGroupCount(groupId: string): number {
+    let c = 0;
+    selectedItems[groupId]?.forEach(q => { c += q; });
+    return c;
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => {
       if (!o) resetState();
@@ -193,12 +175,14 @@ export function PDVOptionalsDialog({
 
         <ScrollArea className="flex-1 pr-2">
           <div className="space-y-4">
-            {groups.map(group => (
+            {groups.map(group => {
+              const useQtyControls = isI9 && group.maxQuantityPerItem > 1;
+              return (
               <div key={group.id} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="font-bold text-sm">{group.name}</Label>
                   <Badge variant={
-                    (selectedItems[group.id]?.size || 0) >= group.minSelect ? 'default' : 'destructive'
+                    getGroupCount(group.id) >= group.minSelect ? 'default' : 'destructive'
                   } className="text-[10px]">
                     {group.minSelect > 0 ? `Mín: ${group.minSelect}` : 'Opcional'}
                     {group.maxSelect > 0 && ` | Máx: ${group.maxSelect}`}
@@ -208,15 +192,12 @@ export function PDVOptionalsDialog({
                   {group.items.filter(i => i.active).map(item => {
                     const qty = selectedItems[group.id]?.get(item.id) || 0;
                     const isSelected = qty > 0;
-                    const useQtyControls = isI9 && (group as any).maxQuantityPerItem > 1;
                     return (
                       <div
                         key={item.id}
                         className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${
                           isSelected ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted'
-                        } ${
-                          !useQtyControls ? 'cursor-pointer' : ''
-                        }`}
+                        } ${!useQtyControls ? 'cursor-pointer' : ''}`}
                         onClick={!useQtyControls ? () => toggleGroupItem(group.id, item.id, group.maxSelect) : undefined}
                       >
                         <div className="flex items-center gap-2">
@@ -224,29 +205,30 @@ export function PDVOptionalsDialog({
                           <span className="text-sm">{item.name}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                        {item.price > 0 && (
-                          <span className="text-xs text-muted-foreground">
-                            +{formatCurrency(item.price)}
-                          </span>
-                        )}
-                        {useQtyControls && (
-                          <div className="flex items-center gap-1">
-                            <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => changeGroupItemQty(group.id, item.id, -1, group.maxSelect, (group as any).maxQuantityPerItem)}>
-                              <Minus className="w-3 h-3" />
-                            </Button>
-                            <span className="w-5 text-center text-xs tabular-nums">{qty}</span>
-                            <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => changeGroupItemQty(group.id, item.id, 1, group.maxSelect, (group as any).maxQuantityPerItem)}>
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
+                          {item.price > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              +{formatCurrency(item.price)}
+                            </span>
+                          )}
+                          {useQtyControls && (
+                            <div className="flex items-center gap-1">
+                              <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => changeGroupItemQty(group.id, item.id, -1, group.maxSelect, group.maxQuantityPerItem)}>
+                                <Minus className="w-3 h-3" />
+                              </Button>
+                              <span className="w-5 text-center text-xs tabular-nums">{qty}</span>
+                              <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => changeGroupItemQty(group.id, item.id, 1, group.maxSelect, group.maxQuantityPerItem)}>
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             {/* Notes */}
             <div className="space-y-1">
