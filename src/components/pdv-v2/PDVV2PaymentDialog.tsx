@@ -9,7 +9,7 @@ import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput, LANCHERIA_I9_COMPANY_ID } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
-import { Plug, Loader2 } from 'lucide-react';
+import { Plug, Loader2, Users, ListChecks } from 'lucide-react';
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
@@ -21,7 +21,11 @@ interface PDVV2PaymentDialogProps {
   total: number;
   title?: string;
   /** Itens para exibição visual no topo (apenas leitura, sem interação) */
-  checkoutItems?: Array<{ name: string; quantity: number; unit_price: number }>;
+  checkoutItems?: Array<{ name: string; quantity: number; unit_price: number; id?: string; paid?: boolean }>;
+  /** Callback chamado após pagamento parcial de itens selecionados (I9 apenas) */
+  onItemsPaid?: (itemIds: string[]) => void;
+  /** Callback chamado após pagamento por divisão de pessoas (I9 apenas) */
+  onSplitPaid?: (perPerson: number, totalPeople: number) => void;
   /** Show "Geração de Documentos" + "Impressão Automática" — habilitar para balcão/retirada/mesa */
   showDocumentMode?: boolean;
   /** Permite adicionar itens à cobrança (mesa importada / retirada) */
@@ -73,6 +77,8 @@ export function PDVV2PaymentDialog({
   total,
   title = 'Cobrança',
   checkoutItems,
+  onItemsPaid,
+  onSplitPaid,
   showDocumentMode = false,
   showAddItem = false,
   channel = 'pdv',
@@ -81,6 +87,11 @@ export function PDVV2PaymentDialog({
   chargeTefBeforePopups = false,
   onConfirm,
 }: PDVV2PaymentDialogProps) {
+  // I9: modo de cobrança avançado (itens selecionados ou divisão por pessoas)
+  const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
+  const [selectedItemIdxs, setSelectedItemIdxs] = useState<Set<number>>(new Set());
+  const [splitPeople, setSplitPeople] = useState(2);
+
   const { activePaymentMethods: rawActivePaymentMethods } = usePaymentMethods({ companyId, channel });
   // Fallback: se não houver métodos cadastrados no canal PDV, lista TODOS os métodos
   // ativos da empresa (qualquer canal) para evitar que o operador veja apenas "Dinheiro"
@@ -160,6 +171,9 @@ export function PDVV2PaymentDialog({
       setPrechargedTef(null);
       setInternalTefStatus('');
       setChargingTef(false);
+      setI9Mode('');
+      setSelectedItemIdxs(new Set());
+      setSplitPeople(2);
     }
   }, [open]);
 
@@ -175,7 +189,29 @@ export function PDVV2PaymentDialog({
     : useCurrencyMask
     ? parseCurrencyInput(discount)
     : parseFloat(discount.replace(',', '.')) || 0;
-  const finalTotal = Math.max(0, grossTotal - discountValue);
+
+  // I9: calcular total baseado no modo selecionado
+  const i9SelectedTotal = (() => {
+    if (!isLancheriaI9 || i9Mode !== 'items' || !checkoutItems) return null;
+    let sum = 0;
+    selectedItemIdxs.forEach((idx) => {
+      const it = checkoutItems[idx];
+      if (it && !it.paid) sum += it.quantity * it.unit_price;
+    });
+    return sum;
+  })();
+
+  const i9SplitValue = (() => {
+    if (!isLancheriaI9 || i9Mode !== 'split' || splitPeople < 1) return null;
+    return grossTotal / splitPeople;
+  })();
+
+  const finalTotal = (() => {
+    if (i9SelectedTotal !== null) return Math.max(0, i9SelectedTotal);
+    if (i9SplitValue !== null) return Math.max(0, i9SplitValue);
+    return Math.max(0, grossTotal - discountValue);
+  })();
+
   const receivedValue = useCurrencyMask
     ? parseCurrencyInput(amountReceived)
     : parseFloat(amountReceived.replace(',', '.')) || 0;
@@ -207,6 +243,16 @@ export function PDVV2PaymentDialog({
       customerDocument: isNfce && (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : undefined,
       prechargedTef: prechargedTef ?? undefined,
     });
+    // I9: callbacks pós-pagamento
+    if (isLancheriaI9 && i9Mode === 'items' && checkoutItems) {
+      const paidIds = Array.from(selectedItemIdxs)
+        .map((idx) => checkoutItems[idx]?.id)
+        .filter((id): id is string => !!id);
+      if (paidIds.length > 0) onItemsPaid?.(paidIds);
+    }
+    if (isLancheriaI9 && i9Mode === 'split') {
+      onSplitPaid?.(finalTotal, splitPeople);
+    }
     setSubmitting(false);
   }
 
@@ -341,6 +387,97 @@ export function PDVV2PaymentDialog({
               items={extraItems}
               onChange={setExtraItems}
             />
+          )}
+
+          {/* I9: opções de cobrança avançada */}
+          {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-medium text-muted-foreground">Modo de cobrança</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={i9Mode === 'items' ? 'default' : 'outline'}
+                  onClick={() => {
+                    setI9Mode(i9Mode === 'items' ? '' : 'items');
+                    setSelectedItemIdxs(new Set());
+                  }}
+                  className="gap-1"
+                >
+                  <ListChecks className="w-4 h-4" />
+                  Itens selecionados
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={i9Mode === 'split' ? 'default' : 'outline'}
+                  onClick={() => {
+                    setI9Mode(i9Mode === 'split' ? '' : 'split');
+                    setSplitPeople(2);
+                  }}
+                  className="gap-1"
+                >
+                  <Users className="w-4 h-4" />
+                  Dividir por pessoas
+                </Button>
+              </div>
+
+              {/* Opção A — selecionar itens */}
+              {i9Mode === 'items' && (
+                <div className="max-h-[8rem] overflow-y-auto space-y-1 border rounded-md p-2">
+                  {checkoutItems.map((item, idx) => {
+                    const isPaid = !!item.paid;
+                    const isSelected = selectedItemIdxs.has(idx);
+                    return (
+                      <div
+                        key={idx}
+                        className={`flex items-center gap-2 text-sm px-1 py-0.5 rounded ${
+                          isPaid ? 'opacity-60 bg-green-50 dark:bg-green-950/30' : ''
+                        }`}
+                      >
+                        <Checkbox
+                          checked={isPaid || isSelected}
+                          disabled={isPaid}
+                          onCheckedChange={(c) => {
+                            const next = new Set(selectedItemIdxs);
+                            if (c) next.add(idx);
+                            else next.delete(idx);
+                            setSelectedItemIdxs(next);
+                          }}
+                        />
+                        <span className="truncate flex-1">
+                          {item.quantity}x {item.name}
+                          {isPaid && <span className="ml-1 text-xs text-green-600">(pago)</span>}
+                        </span>
+                        <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
+                          {formatPrice(item.quantity * item.unit_price)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Opção B — dividir por pessoas */}
+              {i9Mode === 'split' && (
+                <div className="space-y-2 border rounded-md p-2">
+                  <div className="flex items-center gap-3">
+                    <Label className="text-sm whitespace-nowrap">Nº de pessoas</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={splitPeople}
+                      onChange={(e) => setSplitPeople(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="h-8 w-20"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Valor por pessoa: <span className="font-semibold text-foreground">{formatPrice(grossTotal / Math.max(1, splitPeople))}</span>
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {!isLancheriaI9 && (

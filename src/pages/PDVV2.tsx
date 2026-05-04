@@ -905,7 +905,50 @@ export default function PDVV2() {
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
-        checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === importingTab.id)?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price })) : undefined}
+        checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === importingTab.id)?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, id: i.id, paid: !!(i as any).paid })) : undefined}
+        onItemsPaid={isI9 ? async (itemIds) => {
+          if (!importingTab) return;
+          await supabase.from('tab_items').update({ paid: true } as any).in('id', itemIds);
+          const fullTab = openTabs.find(t => t.id === importingTab.id);
+          if (!fullTab?.items) return;
+          const allPaid = fullTab.items.every(i => (i as any).paid || itemIds.includes(i.id));
+          if (allPaid) {
+            await closeTab(fullTab.id);
+            toast.success('Todos os itens pagos — comanda fechada!');
+          } else {
+            toast.success('Pagamento parcial registrado!');
+          }
+          setImportingTab(null);
+        } : undefined}
+        onSplitPaid={isI9 ? async (perPerson, totalPeople) => {
+          if (!importingTab) return;
+          if (!i9SplitInfo) {
+            setI9SplitInfo({ perPerson, remaining: totalPeople - 1, total: totalPeople });
+            const saved = { ...importingTab };
+            setImportingTab(null);
+            if (totalPeople - 1 > 0) {
+              setTimeout(() => setImportingTab({ ...saved, total: perPerson }), 100);
+            } else {
+              const fullTab = openTabs.find(t => t.id === saved.id);
+              if (fullTab) await closeTab(fullTab.id);
+              toast.success('Comanda fechada!');
+            }
+          } else {
+            const newRemaining = i9SplitInfo.remaining - 1;
+            if (newRemaining <= 0) {
+              await closeTab(importingTab.id);
+              toast.success('Última pessoa cobrada — comanda fechada!');
+              setI9SplitInfo(null);
+              setImportingTab(null);
+            } else {
+              toast.success(`Pessoa cobrada. Faltam ${newRemaining}.`);
+              setI9SplitInfo({ ...i9SplitInfo, remaining: newRemaining });
+              const saved = { ...importingTab };
+              setImportingTab(null);
+              setTimeout(() => setImportingTab({ ...saved, total: perPerson }), 100);
+            }
+          }
+        } : undefined}
       />
 
       <PDVV2ClosedTabsDialog
