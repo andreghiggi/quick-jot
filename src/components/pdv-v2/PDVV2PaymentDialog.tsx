@@ -20,6 +20,8 @@ interface PDVV2PaymentDialogProps {
   companyId?: string;
   total: number;
   title?: string;
+  /** Itens para exibição visual no topo (apenas leitura, sem interação) */
+  checkoutItems?: Array<{ name: string; quantity: number; unit_price: number }>;
   /** Show "Geração de Documentos" + "Impressão Automática" — habilitar para balcão/retirada/mesa */
   showDocumentMode?: boolean;
   /** Permite adicionar itens à cobrança (mesa importada / retirada) */
@@ -70,6 +72,7 @@ export function PDVV2PaymentDialog({
   companyId,
   total,
   title = 'Cobrança',
+  checkoutItems,
   showDocumentMode = false,
   showAddItem = false,
   channel = 'pdv',
@@ -315,6 +318,22 @@ export function PDVV2PaymentDialog({
               </p>
             )}
           </div>
+
+          {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Itens</p>
+              <div className="max-h-[6.5rem] overflow-y-auto space-y-0.5">
+                {checkoutItems.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-sm px-1">
+                    <span className="truncate mr-2">{item.quantity}x {item.name}</span>
+                    <span className="tabular-nums text-muted-foreground whitespace-nowrap">
+                      {formatPrice(item.quantity * item.unit_price)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {showAddItem && (
             <PDVV2AddItemSearch

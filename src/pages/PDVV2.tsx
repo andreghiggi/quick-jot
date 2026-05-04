@@ -900,6 +900,7 @@ export default function PDVV2() {
         showAddItem={!!chargeOrder && !isDelivery(chargeOrder)}
         tefStatus={tefStatus}
         onConfirm={confirmChargeOrder}
+        checkoutItems={chargeOrder?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price }))}
       />
 
       <PDVV2PaymentDialog
@@ -924,6 +925,7 @@ export default function PDVV2() {
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
+        checkoutItems={importingTab ? openTabs.find(t => t.id === importingTab.id)?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price })) : undefined}
       />
 
       {isI9 && (

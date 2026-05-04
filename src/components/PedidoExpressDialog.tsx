@@ -2032,6 +2032,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         // for aprovada, nada segue — o lojista pode reprocessar/escolher outra
         // forma sem ter respondido pop-ups à toa.
         chargeTefBeforePopups
+        checkoutItems={cart.map(i => ({ name: i.product.name, quantity: i.quantity, unit_price: i.product.price + (i.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0) }))}
         onConfirm={async ({
           paymentMethodId,
           paymentName,
