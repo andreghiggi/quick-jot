@@ -904,16 +904,24 @@ export default function PDVV2() {
 
       <PDVV2PaymentDialog
         open={!!importingTab}
-        onOpenChange={(o) => !o && setImportingTab(null)}
+        onOpenChange={(o) => {
+          if (!o) {
+            setImportingTab(null);
+            setI9PartialItemIds([]);
+            setI9SplitInfo(null);
+          }
+        }}
         companyId={companyId}
         total={importingTab?.total || 0}
         title={
-          importingTab?.tableNumber
+          i9SplitInfo
+            ? `Pessoa ${i9SplitInfo.total - i9SplitInfo.remaining + 1} de ${i9SplitInfo.total}`
+            : importingTab?.tableNumber
             ? `Cobrar Mesa ${importingTab.tableNumber}`
             : `Cobrar Comanda ${importingTab?.tabNumber}`
         }
         showDocumentMode
-        showAddItem
+        showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
       />
