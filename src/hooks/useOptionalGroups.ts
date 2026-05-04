@@ -33,6 +33,7 @@ export interface OptionalGroup {
   categoryIds: string[];
   productIds: string[];
   productOverrides: ProductOverride[];
+  maxQuantityPerItem: number;
 }
 
 interface UseOptionalGroupsOptions {
@@ -75,6 +76,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
         active: g.active,
         displayOrder: g.display_order ?? 0,
         layout: ((g as any).layout as OptionalGroupLayout) || 'vertical',
+        maxQuantityPerItem: (g as any).max_quantity_per_item ?? 1,
         items: items
           .filter(i => i.group_id === g.id)
           .map(i => ({
@@ -138,6 +140,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
       if (data.maxSelect !== undefined) update.max_select = data.maxSelect;
       if (data.active !== undefined) update.active = data.active;
       if (data.layout !== undefined) update.layout = data.layout;
+      if ((data as any).maxQuantityPerItem !== undefined) (update as any).max_quantity_per_item = (data as any).maxQuantityPerItem;
 
       const { error } = await supabase.from('optional_groups').update(update).eq('id', id);
       if (error) throw error;
