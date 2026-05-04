@@ -77,6 +77,8 @@ export function PDVV2PaymentDialog({
   total,
   title = 'Cobrança',
   checkoutItems,
+  onItemsPaid,
+  onSplitPaid,
   showDocumentMode = false,
   showAddItem = false,
   channel = 'pdv',
