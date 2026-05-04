@@ -63,6 +63,12 @@ export function useProducts(options: UseProductsOptions = {}) {
         menuItem: (product as any).menu_item ?? true,
         isNew: (product as any).is_new ?? false,
         subcategoryId: (product as any).subcategory_id || null,
+        code: (product as any).code || null,
+        gtin: (product as any).gtin || null,
+        unit: (product as any).unit || 'UN',
+        icmsOrigin: (product as any).icms_origin || '0',
+        netWeight: (product as any).net_weight != null ? Number((product as any).net_weight) : null,
+        grossWeight: (product as any).gross_weight != null ? Number((product as any).gross_weight) : null,
         optionals: optionalsData
           .filter((opt) => opt.product_id === product.id)
           .map((opt) => ({
@@ -131,6 +137,12 @@ export function useProducts(options: UseProductsOptions = {}) {
       if (productData.pdvItem !== undefined) updateData.pdv_item = productData.pdvItem;
       if (productData.menuItem !== undefined) (updateData as any).menu_item = productData.menuItem;
       if (productData.subcategoryId !== undefined) updateData.subcategory_id = productData.subcategoryId || null;
+      if ((productData as any).code !== undefined) (updateData as any).code = (productData as any).code || null;
+      if ((productData as any).gtin !== undefined) (updateData as any).gtin = (productData as any).gtin || null;
+      if ((productData as any).unit !== undefined) (updateData as any).unit = (productData as any).unit || 'UN';
+      if ((productData as any).icmsOrigin !== undefined) (updateData as any).icms_origin = (productData as any).icmsOrigin || '0';
+      if ((productData as any).netWeight !== undefined) (updateData as any).net_weight = (productData as any).netWeight;
+      if ((productData as any).grossWeight !== undefined) (updateData as any).gross_weight = (productData as any).grossWeight;
 
       const { error } = await supabase
         .from('products')
