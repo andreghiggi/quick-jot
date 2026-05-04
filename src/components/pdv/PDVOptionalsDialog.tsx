@@ -8,7 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, ShoppingCart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { OptionalGroup } from '@/hooks/useOptionalGroups';
+
+const LANCHERIA_I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
 
 interface PDVOptionalsDialogProps {
   open: boolean;
@@ -27,6 +30,7 @@ interface PDVOptionalsDialogProps {
     quantity: number;
     unit_price: number;
   }>) => void;
+  companyId?: string;
 }
 
 export function PDVOptionalsDialog({
@@ -35,8 +39,11 @@ export function PDVOptionalsDialog({
   product,
   groups,
   onAddToCart,
+  companyId,
 }: PDVOptionalsDialogProps) {
-  const [selectedItems, setSelectedItems] = useState<Record<string, Set<string>>>({});
+  const isI9 = companyId === LANCHERIA_I9_COMPANY_ID;
+  // Map<itemId, quantity> to support per-item quantities
+  const [selectedItems, setSelectedItems] = useState<Record<string, Map<string, number>>>({});
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
 
@@ -49,20 +56,47 @@ export function PDVOptionalsDialog({
 
   function toggleGroupItem(groupId: string, itemId: string, maxSelect: number) {
     setSelectedItems(prev => {
-      const current = new Set(prev[groupId] || []);
-      if (current.has(itemId)) {
+      const current = new Map(prev[groupId] || []);
+      const currentQty = current.get(itemId) || 0;
+      if (currentQty > 0) {
         current.delete(itemId);
       } else {
-        // maxSelect 0 means unlimited
         const effectiveMax = maxSelect <= 0 ? Infinity : maxSelect;
+        let totalSel = 0;
+        current.forEach(q => { totalSel += q; });
         if (effectiveMax === 1) {
-          return { ...prev, [groupId]: new Set([itemId]) };
-        }
-        if (current.size < effectiveMax) {
-          current.add(itemId);
+          current.clear();
+          current.set(itemId, 1);
+        } else if (totalSel >= effectiveMax) {
+          return prev;
+        } else {
+          current.set(itemId, 1);
         }
       }
       return { ...prev, [groupId]: current };
+    });
+  }
+
+  function changeGroupItemQty(groupId: string, itemId: string, delta: number, maxSelect: number, maxPerItem: number) {
+    const maxGroup = maxSelect > 0 ? maxSelect : Infinity;
+    setSelectedItems(prev => {
+      const cur = new Map(prev[groupId] || []);
+      const currentQty = cur.get(itemId) || 0;
+      const newQty = currentQty + delta;
+      if (newQty <= 0) {
+        cur.delete(itemId);
+      } else if (newQty > maxPerItem) {
+        return prev;
+      } else {
+        let prevTotal = 0;
+        (prev[groupId] || new Map()).forEach(q => { prevTotal += q; });
+        const totalSel = prevTotal - currentQty + newQty;
+        if (totalSel > maxGroup) {
+          return prev;
+        }
+        cur.set(itemId, newQty);
+      }
+      return { ...prev, [groupId]: cur };
     });
   }
 
@@ -73,8 +107,9 @@ export function PDVOptionalsDialog({
       const selected = selectedItems[group.id];
       if (selected) {
         group.items.forEach(item => {
-          if (selected.has(item.id)) {
-            total += item.price;
+          const qty = selected.get(item.id) || 0;
+          if (qty > 0) {
+            total += item.price * qty;
           }
         });
       }
@@ -87,8 +122,17 @@ export function PDVOptionalsDialog({
 
   // Check if all required groups are satisfied
   const allRequiredSatisfied = groups.every(group => {
-    const selected = selectedItems[group.id]?.size || 0;
+    const selected = selectedItems[group.id];
+    let count = 0;
+    if (selected) selected.forEach(q => { count += q; });
     return selected >= group.minSelect;
+  });
+@@
+  const allRequiredSatisfied = groups.every(group => {
+    const selected = selectedItems[group.id];
+    let count = 0;
+    if (selected) selected.forEach(q => { count += q; });
+    return count >= group.minSelect;
   });
 
   function handleAdd() {
@@ -98,8 +142,9 @@ export function PDVOptionalsDialog({
       const selected = selectedItems[group.id];
       if (selected && selected.size > 0) {
         group.items.forEach(item => {
-          if (selected.has(item.id)) {
-            optionalNames.push(item.name);
+          const qty = selected.get(item.id) || 0;
+          if (qty > 0) {
+            optionalNames.push(qty > 1 ? `${qty}x ${item.name}` : item.name);
           }
         });
       }
@@ -151,24 +196,41 @@ export function PDVOptionalsDialog({
                 </div>
                 <div className="space-y-1">
                   {group.items.filter(i => i.active).map(item => {
-                    const isSelected = selectedItems[group.id]?.has(item.id) || false;
+                    const qty = selectedItems[group.id]?.get(item.id) || 0;
+                    const isSelected = qty > 0;
+                    const useQtyControls = isI9 && (group as any).maxQuantityPerItem > 1;
                     return (
                       <div
                         key={item.id}
-                        className={`flex items-center justify-between p-2 rounded-lg cursor-pointer border transition-colors ${
+                        className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${
                           isSelected ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted'
+                        } ${
+                          !useQtyControls ? 'cursor-pointer' : ''
                         }`}
-                        onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                        onClick={!useQtyControls ? () => toggleGroupItem(group.id, item.id, group.maxSelect) : undefined}
                       >
                         <div className="flex items-center gap-2">
-                          <Checkbox checked={isSelected} />
+                          {!useQtyControls && <Checkbox checked={isSelected} />}
                           <span className="text-sm">{item.name}</span>
                         </div>
+                        <div className="flex items-center gap-2">
                         {item.price > 0 && (
                           <span className="text-xs text-muted-foreground">
                             +{formatCurrency(item.price)}
                           </span>
                         )}
+                        {useQtyControls && (
+                          <div className="flex items-center gap-1">
+                            <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => changeGroupItemQty(group.id, item.id, -1, group.maxSelect, (group as any).maxQuantityPerItem)}>
+                              <Minus className="w-3 h-3" />
+                            </Button>
+                            <span className="w-5 text-center text-xs tabular-nums">{qty}</span>
+                            <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => changeGroupItemQty(group.id, item.id, 1, group.maxSelect, (group as any).maxQuantityPerItem)}>
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        )}
+                        </div>
                       </div>
                     );
                   })}
