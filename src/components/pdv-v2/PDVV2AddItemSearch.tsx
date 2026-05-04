@@ -125,7 +125,8 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
       if (currentQty > 0) {
         cur.delete(itemId);
       } else {
-        const totalSel = getGroupTotalSelected(groupId);
+        let totalSel = 0;
+        (prev[groupId] || new Map()).forEach((q) => { totalSel += q; });
         if (totalSel >= maxGroup) {
           if (maxGroup === 1) { cur.clear(); cur.set(itemId, 1); }
           else { toast.error(`Máximo ${maxGroup} no grupo`); return prev; }
@@ -150,7 +151,9 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
         return prev;
       } else {
         // Check group total
-        const totalSel = getGroupTotalSelected(groupId) - currentQty + newQty;
+        let prevTotal = 0;
+        (prev[groupId] || new Map()).forEach((q) => { prevTotal += q; });
+        const totalSel = prevTotal - currentQty + newQty;
         if (totalSel > maxGroup) {
           toast.error(`Máximo ${maxGroup} no grupo`);
           return prev;
