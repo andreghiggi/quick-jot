@@ -816,7 +816,6 @@ export default function PDVV2() {
                 onOpenClosedTabs={() => setClosedTabsOpen(true)}
               />
               <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
-                <PDVV2TablesGrid tabs={occupiedTabs} onImport={(t) => setImportingTab(t)} />
                 <PDVV2TablesGrid tabs={occupiedTabs} onImport={handleImportClick} />
               </div>
             </TabsContent>
