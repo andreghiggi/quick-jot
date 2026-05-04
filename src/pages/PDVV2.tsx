@@ -39,6 +39,8 @@ import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
+import { PDVV2TabImportDialog } from '@/components/pdv-v2/PDVV2TabImportDialog';
+import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
 
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
@@ -118,6 +120,9 @@ export default function PDVV2() {
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [importingTab, setImportingTab] = useState<OccupiedTab | null>(null);
+  const [i9ImportTab, setI9ImportTab] = useState<OccupiedTab | null>(null);
+  const [i9PartialItemIds, setI9PartialItemIds] = useState<string[]>([]);
+  const [i9SplitInfo, setI9SplitInfo] = useState<{ perPerson: number; remaining: number; total: number } | null>(null);
   const [closedTabsOpen, setClosedTabsOpen] = useState(false);
   // NFC-e pós-venda (mesmo padrão do PDV V1: polling visível + ação do operador)
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
@@ -564,6 +569,105 @@ export default function PDVV2() {
     }
   }
 
+  const isI9 = companyId === LANCHERIA_I9_COMPANY_ID;
+
+  function handleImportClick(tab: OccupiedTab) {
+    if (!cashOpen) {
+      toast.error('Abra o caixa para cobrar');
+      return;
+    }
+    if (isI9) {
+      setI9ImportTab(tab);
+    } else {
+      setImportingTab(tab);
+    }
+  }
+
+  function handleI9PayPartial(selectedItemIds: string[], total: number) {
+    const tab = i9ImportTab;
+    setI9PartialItemIds(selectedItemIds);
+    setI9ImportTab(null);
+    if (tab) setImportingTab({ ...tab, total });
+  }
+
+  function handleI9PaySplit(perPerson: number, remaining: number, totalPeople: number) {
+    const tab = i9ImportTab;
+    setI9SplitInfo({ perPerson, remaining, total: totalPeople });
+    setI9ImportTab(null);
+    if (tab) setImportingTab({ ...tab, total: perPerson });
+  }
+
+  async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0]) {
+    if (!importingTab || !user || !currentRegister || !companyId) {
+      toast.error('Caixa precisa estar aberto');
+      return;
+    }
+    const fullTab = openTabs.find((t) => t.id === importingTab.id);
+    if (!fullTab?.items?.length) {
+      toast.error('Comanda sem itens');
+      return;
+    }
+    const customer =
+      fullTab.customer_name ||
+      (fullTab.table?.number ? `Mesa ${fullTab.table.number}` : `Comanda ${fullTab.tab_number}`);
+
+    if (i9PartialItemIds.length > 0) {
+      const selectedItems = fullTab.items.filter((i) => i9PartialItemIds.includes(i.id));
+      if (selectedItems.length === 0) { toast.error('Nenhum item selecionado'); return; }
+      const items = selectedItems.map((i) => ({
+        product_id: i.product_id,
+        product_name: i.product_name,
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+      }));
+      const saleId = await addSale(items, params.paymentMethodId, user.id, 0, customer,
+        `Comanda #${fullTab.tab_number} | Pagamento parcial: ${params.paymentName}`);
+      if (saleId) {
+        await supabase.from('tab_items').update({ paid: true } as any).in('id', i9PartialItemIds);
+        const allPaid = fullTab.items.every((i) => i.paid || i9PartialItemIds.includes(i.id));
+        if (allPaid) {
+          await closeTab(fullTab.id);
+          toast.success('Todos os itens pagos — comanda fechada!');
+        } else {
+          toast.success('Pagamento parcial registrado!');
+        }
+      }
+      setI9PartialItemIds([]);
+      setImportingTab(null);
+      return;
+    }
+
+    if (i9SplitInfo) {
+      const personIndex = i9SplitInfo.total - i9SplitInfo.remaining + 1;
+      const items = [{
+        product_id: null as string | null,
+        product_name: `Divisão ${personIndex}/${i9SplitInfo.total} — ${customer}`,
+        quantity: 1,
+        unit_price: i9SplitInfo.perPerson,
+      }];
+      const saleId = await addSale(items, params.paymentMethodId, user.id, 0, customer,
+        `Comanda #${fullTab.tab_number} | Divisão ${personIndex}/${i9SplitInfo.total}: ${params.paymentName}`);
+      if (saleId) {
+        const newRemaining = i9SplitInfo.remaining - 1;
+        if (newRemaining <= 0) {
+          await closeTab(fullTab.id);
+          toast.success('Última pessoa cobrada — comanda fechada!');
+          setI9SplitInfo(null);
+          setImportingTab(null);
+        } else {
+          toast.success(`Pessoa ${personIndex} cobrada. Faltam ${newRemaining}.`);
+          setI9SplitInfo({ ...i9SplitInfo, remaining: newRemaining });
+          const savedTab = { ...importingTab };
+          setImportingTab(null);
+          setTimeout(() => setImportingTab({ ...savedTab, total: i9SplitInfo.perPerson }), 100);
+        }
+      }
+      return;
+    }
+
+    await confirmImportTab(params);
+  }
+
   async function handleCloseCash(closingAmount: number, notes: string) {
     if (!user) return;
     await closeRegister(closingAmount, user.id, notes);
@@ -713,6 +817,7 @@ export default function PDVV2() {
               />
               <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
                 <PDVV2TablesGrid tabs={occupiedTabs} onImport={(t) => setImportingTab(t)} />
+                <PDVV2TablesGrid tabs={occupiedTabs} onImport={handleImportClick} />
               </div>
             </TabsContent>
           </Tabs>
@@ -811,8 +916,20 @@ export default function PDVV2() {
         showDocumentMode
         showAddItem
         tefStatus={tefStatus}
-        onConfirm={confirmImportTab}
+        onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
       />
+
+      {isI9 && (
+        <PDVV2TabImportDialog
+          open={!!i9ImportTab}
+          onOpenChange={(o) => !o && setI9ImportTab(null)}
+          tabItems={i9ImportTab ? openTabs.find((t) => t.id === i9ImportTab.id)?.items || [] : []}
+          tabTotal={i9ImportTab?.total || 0}
+          tabLabel={i9ImportTab?.tableNumber ? `Mesa ${i9ImportTab.tableNumber}` : `Comanda ${i9ImportTab?.tabNumber}`}
+          onPayPartial={handleI9PayPartial}
+          onPaySplit={handleI9PaySplit}
+        />
+      )}
 
       <PDVV2ClosedTabsDialog
         open={closedTabsOpen}
