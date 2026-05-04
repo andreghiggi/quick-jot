@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { cn, formatPrice } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, Plus, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Minus, ShoppingCart } from 'lucide-react';
 
 interface OptionalGroupItem {
   id: string;
@@ -23,6 +23,7 @@ interface OptionalGroup {
   maxSelect: number;
   layout: string;
   items: OptionalGroupItem[];
+  maxQuantityPerItem?: number;
 }
 
 interface LateralOptionalsWizardProps {
@@ -30,12 +31,14 @@ interface LateralOptionalsWizardProps {
   groups: OptionalGroup[];
   oldStyleOptionals: ProductOptional[];
   selectedOptionals: ProductOptional[];
-  selectedGroupItems: Record<string, Set<string>>;
+  selectedGroupItems: Record<string, Map<string, number>>;
   itemNotes: string;
   onToggleOptional: (optional: ProductOptional) => void;
   onToggleGroupItem: (groupId: string, itemId: string, maxSelect: number) => void;
+  onChangeGroupItemQty?: (groupId: string, itemId: string, delta: number, maxSelect: number, maxPerItem: number) => void;
   onNotesChange: (notes: string) => void;
   onAddToCart: () => void;
+  isI9?: boolean;
 }
 
 export function LateralOptionalsWizard({
@@ -47,10 +50,11 @@ export function LateralOptionalsWizard({
   itemNotes,
   onToggleOptional,
   onToggleGroupItem,
+  onChangeGroupItemQty,
   onNotesChange,
   onAddToCart,
+  isI9 = false,
 }: LateralOptionalsWizardProps) {
-  // Build steps: product info, then each group, then old-style optionals (if any), then notes+confirm
   const steps: { type: 'group' | 'oldOptionals' | 'confirm'; group?: OptionalGroup }[] = [];
 
   groups.forEach((g) => steps.push({ type: 'group', group: g }));
@@ -63,8 +67,6 @@ export function LateralOptionalsWizard({
 
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Reset wizard back to first step whenever the product changes
-  // (prevents wizard state from persisting across different products)
   useEffect(() => {
     setCurrentStep(0);
   }, [product.id]);
@@ -73,22 +75,30 @@ export function LateralOptionalsWizard({
   const isFirst = currentStep === 0;
   const isLast = currentStep === steps.length - 1;
 
-  // Validate current step before advancing
+  function getGroupCount(groupId: string): number {
+    let c = 0;
+    selectedGroupItems[groupId]?.forEach(q => { c += q; });
+    return c;
+  }
+
   function canAdvance(): boolean {
     if (step.type === 'group' && step.group) {
       const g = step.group;
-      const selected = selectedGroupItems[g.id];
-      const count = selected ? selected.size : 0;
+      const count = getGroupCount(g.id);
       if (g.minSelect > 0 && count < g.minSelect) return false;
     }
     return true;
   }
 
-  // Calculate running total
   const groupOptionalsPrices = groups.reduce((sum, g) => {
     const sel = selectedGroupItems[g.id];
     if (!sel) return sum;
-    return sum + g.items.filter((i) => sel.has(i.id)).reduce((s, i) => s + i.price, 0);
+    let groupSum = 0;
+    g.items.forEach(i => {
+      const qty = sel.get(i.id) || 0;
+      if (qty > 0) groupSum += i.price * qty;
+    });
+    return sum + groupSum;
   }, 0);
   const oldOptionalsPrices = selectedOptionals.reduce((sum, o) => sum + o.price, 0);
   const totalPrice = product.price + groupOptionalsPrices + oldOptionalsPrices;
@@ -110,23 +120,27 @@ export function LateralOptionalsWizard({
 
       {/* Step content */}
       <div className="flex-1 min-h-0">
-        {step.type === 'group' && step.group && (
-          <div key={step.group.id} className="space-y-3 animate-in slide-in-from-right-4 duration-200">
+        {step.type === 'group' && step.group && (() => {
+          const g = step.group!;
+          const useQtyControls = isI9 && (g.maxQuantityPerItem || 1) > 1 && !!onChangeGroupItemQty;
+          return (
+          <div key={g.id} className="space-y-3 animate-in slide-in-from-right-4 duration-200">
             <div className="flex items-center gap-2 flex-wrap">
-              <Label className="text-lg font-bold">{step.group.name}</Label>
+              <Label className="text-lg font-bold">{g.name}</Label>
               <Badge variant="outline" className="text-xs">
-                {step.group.minSelect > 0 ? `mín ${step.group.minSelect} / ` : ''}
-                máx {step.group.maxSelect > 0 ? step.group.maxSelect : '∞'}
+                {g.minSelect > 0 ? `mín ${g.minSelect} / ` : ''}
+                máx {g.maxSelect > 0 ? g.maxSelect : '∞'}
               </Badge>
-              {step.group.minSelect > 0 && (
+              {g.minSelect > 0 && (
                 <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
               )}
             </div>
 
-            {step.group.layout === 'horizontal' ? (
+            {g.layout === 'horizontal' ? (
               <div className="grid grid-cols-3 gap-2">
-                {step.group.items.filter((i) => i.active).map((item) => {
-                  const isSelected = selectedGroupItems[step.group!.id]?.has(item.id) || false;
+                {g.items.filter((i) => i.active).map((item) => {
+                  const qty = selectedGroupItems[g.id]?.get(item.id) || 0;
+                  const isSelected = qty > 0;
                   return (
                     <button
                       key={item.id}
@@ -137,7 +151,7 @@ export function LateralOptionalsWizard({
                           ? 'border-primary ring-2 ring-primary/30 shadow-md'
                           : 'border-border hover:border-primary/50'
                       )}
-                      onClick={() => onToggleGroupItem(step.group!.id, item.id, step.group!.maxSelect)}
+                      onClick={!useQtyControls ? () => onToggleGroupItem(g.id, item.id, g.maxSelect) : undefined}
                     >
                       {item.imageUrl ? (
                         <div className="w-full aspect-square overflow-hidden">
@@ -161,51 +175,79 @@ export function LateralOptionalsWizard({
                           </p>
                         )}
                       </div>
-                      {isSelected && (
+                      {useQtyControls ? (
+                        <div className="flex items-center justify-center gap-1 p-1">
+                          <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onChangeGroupItemQty!(g.id, item.id, -1, g.maxSelect, g.maxQuantityPerItem || 1); }}>
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <span className="w-5 text-center text-xs tabular-nums font-bold">{qty}</span>
+                          <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onChangeGroupItemQty!(g.id, item.id, 1, g.maxSelect, g.maxQuantityPerItem || 1); }}>
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ) : isSelected ? (
                         <div className="absolute top-1 right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
                           <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                           </svg>
                         </div>
-                      )}
+                      ) : null}
                     </button>
                   );
                 })}
               </div>
             ) : (
               <div className="space-y-2">
-                {step.group.items.filter((i) => i.active).map((item) => {
-                  const isSelected = selectedGroupItems[step.group!.id]?.has(item.id) || false;
+                {g.items.filter((i) => i.active).map((item) => {
+                  const qty = selectedGroupItems[g.id]?.get(item.id) || 0;
+                  const isSelected = qty > 0;
                   return (
                     <div
                       key={item.id}
                       className={cn(
-                        'flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors',
-                        isSelected ? 'border-primary bg-primary/5' : 'hover:border-primary/50'
+                        'flex items-center justify-between p-3 border rounded-lg transition-colors',
+                        isSelected ? 'border-primary bg-primary/5' : 'hover:border-primary/50',
+                        !useQtyControls && 'cursor-pointer'
                       )}
-                      onClick={() => onToggleGroupItem(step.group!.id, item.id, step.group!.maxSelect)}
+                      onClick={!useQtyControls ? () => onToggleGroupItem(g.id, item.id, g.maxSelect) : undefined}
                     >
                       <div className="flex items-center gap-3">
-                        <Checkbox
-                          checked={isSelected}
-                          onClick={(e) => e.stopPropagation()}
-                          onCheckedChange={() => onToggleGroupItem(step.group!.id, item.id, step.group!.maxSelect)}
-                        />
+                        {!useQtyControls && (
+                          <Checkbox
+                            checked={isSelected}
+                            onClick={(e) => e.stopPropagation()}
+                            onCheckedChange={() => onToggleGroupItem(g.id, item.id, g.maxSelect)}
+                          />
+                        )}
                         {item.imageUrl && (
                           <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
                         )}
                         <span className="font-medium">{item.name}</span>
                       </div>
-                      {item.price > 0 && (
-                        <span className="text-green-600 font-semibold">+R$ {formatPrice(item.price)}</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {item.price > 0 && (
+                          <span className="text-green-600 font-semibold">+R$ {formatPrice(item.price)}</span>
+                        )}
+                        {useQtyControls && (
+                          <div className="flex items-center gap-1">
+                            <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => onChangeGroupItemQty!(g.id, item.id, -1, g.maxSelect, g.maxQuantityPerItem || 1)}>
+                              <Minus className="w-3 h-3" />
+                            </Button>
+                            <span className="w-6 text-center text-sm tabular-nums font-bold">{qty}</span>
+                            <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => onChangeGroupItemQty!(g.id, item.id, 1, g.maxSelect, g.maxQuantityPerItem || 1)}>
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
               </div>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {step.type === 'oldOptionals' && (
           <div className="space-y-3 animate-in slide-in-from-right-4 duration-200">
@@ -258,11 +300,16 @@ export function LateralOptionalsWizard({
               {groups.map((g) => {
                 const sel = selectedGroupItems[g.id];
                 if (!sel || sel.size === 0) return null;
-                const selectedNames = g.items.filter((i) => sel.has(i.id));
+                const selectedNames: string[] = [];
+                g.items.forEach(i => {
+                  const qty = sel.get(i.id) || 0;
+                  if (qty > 0) selectedNames.push(qty > 1 ? `${qty}x ${i.name}` : i.name);
+                });
+                if (selectedNames.length === 0) return null;
                 return (
                   <div key={g.id} className="text-xs text-muted-foreground">
                     <span className="font-medium text-foreground">{g.name}:</span>{' '}
-                    {selectedNames.map((i) => i.name).join(', ')}
+                    {selectedNames.join(', ')}
                   </div>
                 );
               })}
@@ -277,7 +324,7 @@ export function LateralOptionalsWizard({
         )}
       </div>
 
-      {/* Navigation - sticky at bottom */}
+      {/* Navigation */}
       <div className="flex gap-2 mt-4 pt-3 border-t flex-shrink-0">
         {!isFirst && (
           <Button
