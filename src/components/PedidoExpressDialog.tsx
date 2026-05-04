@@ -106,7 +106,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Product detail dialog state — mirrors Menu.tsx exactly
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedOptionals, setSelectedOptionals] = useState<ProductOptional[]>([]);
-  const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Set<string>>>({});
+  const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Map<string, number>>>({});
   const [itemNotes, setItemNotes] = useState('');
 
   const [deliveryType, setDeliveryType] = useState<'entrega' | 'retirada' | ''>('');
