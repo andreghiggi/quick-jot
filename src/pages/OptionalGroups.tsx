@@ -574,6 +574,13 @@ export default function OptionalGroups() {
                   <Input type="number" min={0} value={editingGroup.maxSelect} onChange={(e) => setEditingGroup({ ...editingGroup, maxSelect: parseInt(e.target.value) || 0 })} />
                 </div>
               </div>
+              {isI9 && (
+                <div>
+                  <Label>Máx. por item</Label>
+                  <Input type="number" min={1} value={editingGroup.maxQuantityPerItem ?? 1} onChange={(e) => setEditingGroup({ ...editingGroup, maxQuantityPerItem: Math.max(1, parseInt(e.target.value) || 1) })} />
+                  <p className="text-xs text-muted-foreground mt-1">Quantas vezes o mesmo adicional pode ser selecionado (1 = checkbox)</p>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Switch checked={editingGroup.active} onCheckedChange={(v) => setEditingGroup({ ...editingGroup, active: v })} />
                 <Label>Ativo</Label>
