@@ -23,6 +23,12 @@ export interface Product {
   menuItem?: boolean;
   isNew?: boolean;
   subcategoryId?: string | null;
+  code?: string | null;
+  gtin?: string | null;
+  unit?: string;
+  icmsOrigin?: string;
+  netWeight?: number | null;
+  grossWeight?: number | null;
 }
 
 export interface CartItem {

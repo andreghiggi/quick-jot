@@ -300,7 +300,7 @@ export default function PDVV2() {
           descricao: it.product_name,
           ncm: taxRule?.ncm || '00000000',
           cfop: taxRule?.cfop || '5102',
-          unidade: 'UN',
+          unidade: product?.unit || 'UN',
           quantidade: it.quantity,
           valor_unitario: it.unit_price,
           csosn: taxRule?.csosn || '102',

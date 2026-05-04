@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useCategories } from '@/hooks/useCategories';
 import { useProducts } from '@/hooks/useProducts';
@@ -44,6 +45,8 @@ export default function OptionalGroups() {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupMin, setNewGroupMin] = useState(0);
   const [newGroupMax, setNewGroupMax] = useState(0);
+  const [newGroupMaxPerItem, setNewGroupMaxPerItem] = useState(1);
+  const isI9 = company?.id === LANCHERIA_I9_COMPANY_ID;
 
   // New item form
   const [newItemName, setNewItemName] = useState('');
@@ -74,22 +77,27 @@ export default function OptionalGroups() {
       toast.error('Informe o nome do grupo');
       return;
     }
-    await addGroup({ name: newGroupName.trim(), minSelect: newGroupMin, maxSelect: newGroupMax });
+    const groupData: any = { name: newGroupName.trim(), minSelect: newGroupMin, maxSelect: newGroupMax };
+    if (isI9) groupData.maxQuantityPerItem = newGroupMaxPerItem;
+    await addGroup(groupData);
     setNewGroupName('');
     setNewGroupMin(0);
     setNewGroupMax(0);
+    setNewGroupMaxPerItem(1);
     setIsNewGroupOpen(false);
   }
 
   async function handleUpdateGroup() {
     if (!editingGroup) return;
-    await updateGroup(editingGroup.id, {
+    const updateData: any = {
       name: editingGroup.name,
       minSelect: editingGroup.minSelect,
       maxSelect: editingGroup.maxSelect,
       active: editingGroup.active,
       layout: editingGroup.layout,
-    });
+    };
+    if (isI9) updateData.maxQuantityPerItem = (editingGroup as any).maxQuantityPerItem ?? 1;
+    await updateGroup(editingGroup.id, updateData);
     setEditingGroup(null);
   }
 
@@ -534,6 +542,13 @@ export default function OptionalGroups() {
                 <p className="text-xs text-muted-foreground mt-1">0 = sem limite</p>
               </div>
             </div>
+            {isI9 && (
+              <div>
+                <Label>Máx. por item</Label>
+                <Input type="number" min={1} value={newGroupMaxPerItem} onChange={(e) => setNewGroupMaxPerItem(Math.max(1, parseInt(e.target.value) || 1))} />
+                <p className="text-xs text-muted-foreground mt-1">Quantas vezes o mesmo adicional pode ser selecionado (1 = checkbox)</p>
+              </div>
+            )}
             <Button onClick={handleCreateGroup} className="w-full">Criar Grupo</Button>
           </div>
         </DialogContent>
@@ -559,6 +574,13 @@ export default function OptionalGroups() {
                   <Input type="number" min={0} value={editingGroup.maxSelect} onChange={(e) => setEditingGroup({ ...editingGroup, maxSelect: parseInt(e.target.value) || 0 })} />
                 </div>
               </div>
+              {isI9 && (
+                <div>
+                  <Label>Máx. por item</Label>
+                  <Input type="number" min={1} value={editingGroup.maxQuantityPerItem ?? 1} onChange={(e) => setEditingGroup({ ...editingGroup, maxQuantityPerItem: Math.max(1, parseInt(e.target.value) || 1) })} />
+                  <p className="text-xs text-muted-foreground mt-1">Quantas vezes o mesmo adicional pode ser selecionado (1 = checkbox)</p>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Switch checked={editingGroup.active} onCheckedChange={(v) => setEditingGroup({ ...editingGroup, active: v })} />
                 <Label>Ativo</Label>
