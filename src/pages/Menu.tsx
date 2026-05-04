@@ -155,7 +155,9 @@ export default function Menu() {
   const [reorderDismissed, setReorderDismissed] = useState(false);
   
   // Optional group selections state
-  const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Set<string>>>({});
+  const LANCHERIA_I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const isMenuI9 = company?.id === LANCHERIA_I9_ID;
+  const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Map<string, number>>>({});
 
   const brazilianStates = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -303,7 +305,9 @@ export default function Menu() {
   const mandatoryGroups = selectedProductGroups.filter(g => g.minSelect > 0);
   const completedMandatory = mandatoryGroups.filter(g => {
     const sel = selectedGroupItems[g.id];
-    return sel && sel.size >= g.minSelect;
+    let count = 0;
+    if (sel) sel.forEach(q => { count += q; });
+    return count >= g.minSelect;
   });
   const mandatoryProgress = mandatoryGroups.length > 0 ? Math.round((completedMandatory.length / mandatoryGroups.length) * 100) : 100;
   const allMandatoryComplete = completedMandatory.length === mandatoryGroups.length;
@@ -606,24 +610,49 @@ export default function Menu() {
   function toggleGroupItem(groupId: string, itemId: string, maxSelect: number) {
     const effectiveMax = maxSelect > 0 ? maxSelect : Infinity;
     setSelectedGroupItems(prev => {
-      const current = new Set(prev[groupId] || []);
-      if (current.has(itemId)) {
+      const current = new Map(prev[groupId] || []);
+      const currentQty = current.get(itemId) || 0;
+      if (currentQty > 0) {
         current.delete(itemId);
       } else {
-        if (current.size >= effectiveMax) {
-          if (effectiveMax === 1) {
-            // Replace the single selection
-            current.clear();
-            current.add(itemId);
-          } else {
-            toast.error(`Máximo ${effectiveMax} seleções neste grupo`);
-            return prev;
-          }
+        let totalSel = 0;
+        current.forEach(q => { totalSel += q; });
+        if (effectiveMax === 1) {
+          current.clear();
+          current.set(itemId, 1);
+        } else if (totalSel >= effectiveMax) {
+          toast.error(`Máximo ${effectiveMax} seleções neste grupo`);
+          return prev;
         } else {
-          current.add(itemId);
+          current.set(itemId, 1);
         }
       }
       return { ...prev, [groupId]: current };
+    });
+  }
+
+  function changeGroupItemQtyMenu(groupId: string, itemId: string, delta: number, maxSelect: number, maxPerItem: number) {
+    const maxGroup = maxSelect > 0 ? maxSelect : Infinity;
+    setSelectedGroupItems(prev => {
+      const cur = new Map(prev[groupId] || []);
+      const currentQty = cur.get(itemId) || 0;
+      const newQty = currentQty + delta;
+      if (newQty <= 0) {
+        cur.delete(itemId);
+      } else if (newQty > maxPerItem) {
+        toast.error(`Máximo ${maxPerItem} por item`);
+        return prev;
+      } else {
+        let prevTotal = 0;
+        (prev[groupId] || new Map()).forEach(q => { prevTotal += q; });
+        const totalSel = prevTotal - currentQty + newQty;
+        if (totalSel > maxGroup) {
+          toast.error(`Máximo ${maxGroup} no grupo`);
+          return prev;
+        }
+        cur.set(itemId, newQty);
+      }
+      return { ...prev, [groupId]: cur };
     });
   }
 
@@ -633,7 +662,8 @@ export default function Menu() {
     // Validate min selections for optional groups
     for (const group of selectedProductGroups) {
       const selected = selectedGroupItems[group.id];
-      const count = selected ? selected.size : 0;
+      let count = 0;
+      if (selected) selected.forEach(q => { count += q; });
       if (group.minSelect > 0 && count < group.minSelect) {
         toast.error(`Selecione pelo menos ${group.minSelect} item(ns) em "${group.name}"`);
         return;
@@ -646,22 +676,25 @@ export default function Menu() {
     for (const group of selectedProductGroups) {
       const selected = selectedGroupItems[group.id];
       if (!selected) continue;
-      const selectedItems: { name: string; price: number }[] = [];
+      const pickedItems: { name: string; price: number }[] = [];
       for (const item of group.items) {
-        if (selected.has(item.id)) {
-          groupOptionals.push({
-            id: item.id,
-            productId: selectedProduct.id,
-            name: item.name,
-            price: item.price,
-            type: 'extra',
-            active: true,
-          });
-          selectedItems.push({ name: item.name, price: item.price });
+        const qty = selected.get(item.id) || 0;
+        if (qty > 0) {
+          for (let i = 0; i < qty; i++) {
+            groupOptionals.push({
+              id: item.id,
+              productId: selectedProduct.id,
+              name: item.name,
+              price: item.price,
+              type: 'extra',
+              active: true,
+            });
+          }
+          pickedItems.push({ name: qty > 1 ? `${qty}x ${item.name}` : item.name, price: item.price * qty });
         }
       }
-      if (selectedItems.length > 0) {
-        const itemsStr = selectedItems.map(i => i.price > 0 ? `${i.name} R$${i.price.toFixed(2)}` : i.name).join(', ');
+      if (pickedItems.length > 0) {
+        const itemsStr = pickedItems.map(i => i.price > 0 ? `${i.name} R$${i.price.toFixed(2)}` : i.name).join(', ');
         groupedOptionalNames.push(`${group.name}: ${itemsStr}`);
       }
     }
@@ -1513,8 +1546,10 @@ export default function Menu() {
                       itemNotes={itemNotes}
                       onToggleOptional={toggleOptional}
                       onToggleGroupItem={toggleGroupItem}
+                      onChangeGroupItemQty={isMenuI9 ? changeGroupItemQtyMenu : undefined}
                       onNotesChange={setItemNotes}
                       onAddToCart={addToCart}
+                      isI9={isMenuI9}
                     />
                   ) : (
                     <div className="space-y-4">
@@ -1577,7 +1612,8 @@ export default function Menu() {
                               {group.layout === 'horizontal' ? (
                                 <div className="grid grid-cols-3 gap-2">
                                   {group.items.filter(i => i.active).map(item => {
-                                    const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
+                                    const itemQty = selectedGroupItems[group.id]?.get(item.id) || 0;
+                                    const isSelected = itemQty > 0;
                                     return (
                                       <button
                                         key={item.id}
@@ -1625,7 +1661,8 @@ export default function Menu() {
                                 </div>
                               ) : (
                                 group.items.filter(i => i.active).map(item => {
-                                  const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
+                                  const itemQty = selectedGroupItems[group.id]?.get(item.id) || 0;
+                                  const isSelected = itemQty > 0;
                                   return (
                                     <div
                                       key={item.id}

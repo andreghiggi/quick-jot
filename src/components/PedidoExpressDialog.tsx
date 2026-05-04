@@ -106,7 +106,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Product detail dialog state — mirrors Menu.tsx exactly
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedOptionals, setSelectedOptionals] = useState<ProductOptional[]>([]);
-  const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Set<string>>>({});
+  const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Map<string, number>>>({});
   const [itemNotes, setItemNotes] = useState('');
 
   const [deliveryType, setDeliveryType] = useState<'entrega' | 'retirada' | ''>('');
@@ -187,9 +187,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             setSelectedOptionals(parsed.selectedOptionals);
           }
           if (parsed.selectedGroupItems && typeof parsed.selectedGroupItems === 'object') {
-            const restored: Record<string, Set<string>> = {};
+            const restored: Record<string, Map<string, number>> = {};
             for (const [gid, ids] of Object.entries(parsed.selectedGroupItems)) {
-              if (Array.isArray(ids)) restored[gid] = new Set(ids as string[]);
+              if (Array.isArray(ids)) {
+                const m = new Map<string, number>();
+                (ids as any[]).forEach(entry => {
+                  if (typeof entry === 'string') m.set(entry, 1);
+                  else if (Array.isArray(entry) && entry.length === 2) m.set(entry[0], entry[1]);
+                });
+                restored[gid] = m;
+              }
             }
             setSelectedGroupItems(restored);
           }
@@ -256,7 +263,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         selectedProductId: selectedProduct?.id ?? null,
         selectedOptionals,
         selectedGroupItems: Object.fromEntries(
-          Object.entries(selectedGroupItems).map(([k, v]) => [k, Array.from(v)])
+          Object.entries(selectedGroupItems).map(([k, v]) => [k, Array.from(v.entries())])
         ),
         itemNotes,
       };
@@ -451,23 +458,49 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   function toggleGroupItem(groupId: string, itemId: string, maxSelect: number) {
     const effectiveMax = maxSelect > 0 ? maxSelect : Infinity;
     setSelectedGroupItems(prev => {
-      const current = new Set(prev[groupId] || []);
-      if (current.has(itemId)) {
+      const current = new Map(prev[groupId] || []);
+      const currentQty = current.get(itemId) || 0;
+      if (currentQty > 0) {
         current.delete(itemId);
       } else {
-        if (current.size >= effectiveMax) {
-          if (effectiveMax === 1) {
-            current.clear();
-            current.add(itemId);
-          } else {
-            toast.error(`Máximo ${effectiveMax} seleções neste grupo`);
-            return prev;
-          }
+        let totalSel = 0;
+        current.forEach(q => { totalSel += q; });
+        if (effectiveMax === 1) {
+          current.clear();
+          current.set(itemId, 1);
+        } else if (totalSel >= effectiveMax) {
+          toast.error(`Máximo ${effectiveMax} seleções neste grupo`);
+          return prev;
         } else {
-          current.add(itemId);
+          current.set(itemId, 1);
         }
       }
       return { ...prev, [groupId]: current };
+    });
+  }
+
+  function changeGroupItemQty(groupId: string, itemId: string, delta: number, maxSelect: number, maxPerItem: number) {
+    const maxGroup = maxSelect > 0 ? maxSelect : Infinity;
+    setSelectedGroupItems(prev => {
+      const cur = new Map(prev[groupId] || []);
+      const currentQty = cur.get(itemId) || 0;
+      const newQty = currentQty + delta;
+      if (newQty <= 0) {
+        cur.delete(itemId);
+      } else if (newQty > maxPerItem) {
+        toast.error(`Máximo ${maxPerItem} por item`);
+        return prev;
+      } else {
+        let prevTotal = 0;
+        (prev[groupId] || new Map()).forEach(q => { prevTotal += q; });
+        const totalSel = prevTotal - currentQty + newQty;
+        if (totalSel > maxGroup) {
+          toast.error(`Máximo ${maxGroup} no grupo`);
+          return prev;
+        }
+        cur.set(itemId, newQty);
+      }
+      return { ...prev, [groupId]: cur };
     });
   }
 
@@ -478,7 +511,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     // Validate min selections
     for (const group of selectedProductGroups) {
       const selected = selectedGroupItems[group.id];
-      const count = selected ? selected.size : 0;
+      let count = 0;
+      if (selected) selected.forEach(q => { count += q; });
       if (group.minSelect > 0 && count < group.minSelect) {
         toast.error(`Selecione pelo menos ${group.minSelect} item(ns) em "${group.name}"`);
         return;
@@ -491,22 +525,25 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     for (const group of selectedProductGroups) {
       const selected = selectedGroupItems[group.id];
       if (!selected) continue;
-      const selectedItems: { name: string; price: number }[] = [];
+      const pickedItems: { name: string; price: number }[] = [];
       for (const item of group.items) {
-        if (selected.has(item.id)) {
-          groupOptionals.push({
-            id: item.id,
-            productId: selectedProduct.id,
-            name: item.name,
-            price: item.price,
-            type: 'extra',
-            active: true,
-          });
-          selectedItems.push({ name: item.name, price: item.price });
+        const qty = selected.get(item.id) || 0;
+        if (qty > 0) {
+          for (let i = 0; i < qty; i++) {
+            groupOptionals.push({
+              id: item.id,
+              productId: selectedProduct.id,
+              name: item.name,
+              price: item.price,
+              type: 'extra',
+              active: true,
+            });
+          }
+          pickedItems.push({ name: qty > 1 ? `${qty}x ${item.name}` : item.name, price: item.price * qty });
         }
       }
-      if (selectedItems.length > 0) {
-        const itemsStr = selectedItems.map(i => i.price > 0 ? `${i.name} R$${i.price.toFixed(2)}` : i.name).join(', ');
+      if (pickedItems.length > 0) {
+        const itemsStr = pickedItems.map(i => i.price > 0 ? `${i.name} R$${i.price.toFixed(2)}` : i.name).join(', ');
         groupedOptionalNames.push(`${group.name}: ${itemsStr}`);
       }
     }
@@ -1788,8 +1825,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   itemNotes={itemNotes}
                   onToggleOptional={toggleOptional}
                   onToggleGroupItem={toggleGroupItem}
+                  onChangeGroupItemQty={isLancheriaI9 ? changeGroupItemQty : undefined}
                   onNotesChange={setItemNotes}
                   onAddToCart={addToCart}
+                  isI9={isLancheriaI9}
                 />
               ) : (
                 <div className="space-y-4">
@@ -1851,7 +1890,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                           {group.layout === 'horizontal' ? (
                             <div className="grid grid-cols-3 gap-2">
                               {group.items.filter(i => i.active).map(item => {
-                                const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
+                                const itemQty = selectedGroupItems[group.id]?.get(item.id) || 0;
+                                const isSelected = itemQty > 0;
+                                const useQtyControls = isLancheriaI9 && group.maxQuantityPerItem > 1;
                                 return (
                                   <button
                                     key={item.id}
@@ -1860,7 +1901,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                                       "relative rounded-xl border-2 overflow-hidden transition-all text-left",
                                       isSelected ? "border-primary ring-2 ring-primary/30 shadow-md" : "border-border hover:border-primary/50"
                                     )}
-                                    onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                                    onClick={!useQtyControls ? () => toggleGroupItem(group.id, item.id, group.maxSelect) : undefined}
                                   >
                                     {item.imageUrl ? (
                                       <div className="w-full aspect-square overflow-hidden">
@@ -1879,39 +1920,65 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                                         <p className="text-[10px] text-green-600 font-medium text-center">+R$ {formatPrice(item.price)}</p>
                                       )}
                                     </div>
-                                    {isSelected && (
+                                    {useQtyControls ? (
+                                      <div className="flex items-center justify-center gap-1 p-1">
+                                        <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); changeGroupItemQty(group.id, item.id, -1, group.maxSelect, group.maxQuantityPerItem); }}>
+                                          <Minus className="w-3 h-3" />
+                                        </Button>
+                                        <span className="w-5 text-center text-xs tabular-nums font-bold">{itemQty}</span>
+                                        <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); changeGroupItemQty(group.id, item.id, 1, group.maxSelect, group.maxQuantityPerItem); }}>
+                                          <Plus className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                    ) : isSelected ? (
                                       <div className="absolute top-1 right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
                                         <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                         </svg>
                                       </div>
-                                    )}
+                                    ) : null}
                                   </button>
                                 );
                               })}
                             </div>
                           ) : (
                             group.items.filter(i => i.active).map(item => {
-                              const isSelected = selectedGroupItems[group.id]?.has(item.id) || false;
+                              const itemQty = selectedGroupItems[group.id]?.get(item.id) || 0;
+                              const isSelected = itemQty > 0;
+                              const useQtyControls = isLancheriaI9 && group.maxQuantityPerItem > 1;
                               return (
                                 <div
                                   key={item.id}
                                   className={cn(
-                                    "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors",
-                                    isSelected ? "border-primary bg-primary/5" : "hover:border-primary/50"
+                                    "flex items-center justify-between p-3 border rounded-lg transition-colors",
+                                    isSelected ? "border-primary bg-primary/5" : "hover:border-primary/50",
+                                    !useQtyControls && "cursor-pointer"
                                   )}
-                                  onClick={() => toggleGroupItem(group.id, item.id, group.maxSelect)}
+                                  onClick={!useQtyControls ? () => toggleGroupItem(group.id, item.id, group.maxSelect) : undefined}
                                 >
                                   <div className="flex items-center gap-3">
-                                    <Checkbox checked={isSelected} onCheckedChange={() => toggleGroupItem(group.id, item.id, group.maxSelect)} />
+                                    {!useQtyControls && <Checkbox checked={isSelected} onCheckedChange={() => toggleGroupItem(group.id, item.id, group.maxSelect)} />}
                                     {item.imageUrl && (
                                       <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
                                     )}
                                     <span className="font-medium">{item.name}</span>
                                   </div>
+                                  <div className="flex items-center gap-2">
                                   {item.price > 0 && (
                                     <span className="text-green-600 font-semibold">+R$ {formatPrice(item.price)}</span>
                                   )}
+                                  {useQtyControls && (
+                                    <div className="flex items-center gap-1">
+                                      <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => changeGroupItemQty(group.id, item.id, -1, group.maxSelect, group.maxQuantityPerItem)}>
+                                        <Minus className="w-3 h-3" />
+                                      </Button>
+                                      <span className="w-6 text-center text-sm tabular-nums font-bold">{itemQty}</span>
+                                      <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => changeGroupItemQty(group.id, item.id, 1, group.maxSelect, group.maxQuantityPerItem)}>
+                                        <Plus className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                  </div>
                                 </div>
                               );
                             })
