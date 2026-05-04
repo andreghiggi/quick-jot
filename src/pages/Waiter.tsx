@@ -8,6 +8,8 @@ import { useCategories } from '@/hooks/useCategories';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
+import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
+import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
@@ -92,6 +94,8 @@ export default function Waiter() {
       cartEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   }, [cart.length]);
+
+  const isI9 = company?.id === LANCHERIA_I9_COMPANY_ID;
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
@@ -605,7 +609,7 @@ export default function Waiter() {
           <div className="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden p-4 min-h-0">
             {/* Products List */}
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <div className="flex flex-col sm:flex-row gap-2 mb-4 shrink-0">
+              {!isI9 && <div className="flex flex-col sm:flex-row gap-2 mb-4 shrink-0">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -626,8 +630,18 @@ export default function Waiter() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </div>}
 
+              {isI9 ? (
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  <PDVV2CategoryBrowser
+                    companyId={company?.id}
+                    pdvOnly={false}
+                    onProductSelect={handleAddToCart}
+                    maxHeightClassName="max-h-full"
+                  />
+                </div>
+              ) : (
               <div className="flex-1 min-h-0 overflow-y-auto">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pr-2 pb-4">
                   {filteredProducts.map((product) => (
@@ -646,6 +660,7 @@ export default function Waiter() {
                   ))}
                 </div>
               </div>
+              )}
             </div>
 
             {/* Cart */}
