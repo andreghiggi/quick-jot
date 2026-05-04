@@ -39,7 +39,6 @@ import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
-import { PDVV2TabImportDialog } from '@/components/pdv-v2/PDVV2TabImportDialog';
 import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
 
 function isDelivery(o: Order) {
@@ -120,10 +119,9 @@ export default function PDVV2() {
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [importingTab, setImportingTab] = useState<OccupiedTab | null>(null);
-  const [i9ImportTab, setI9ImportTab] = useState<OccupiedTab | null>(null);
+  const [closedTabsOpen, setClosedTabsOpen] = useState(false);
   const [i9PartialItemIds, setI9PartialItemIds] = useState<string[]>([]);
   const [i9SplitInfo, setI9SplitInfo] = useState<{ perPerson: number; remaining: number; total: number } | null>(null);
-  const [closedTabsOpen, setClosedTabsOpen] = useState(false);
   // NFC-e pós-venda (mesmo padrão do PDV V1: polling visível + ação do operador)
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
@@ -576,25 +574,7 @@ export default function PDVV2() {
       toast.error('Abra o caixa para cobrar');
       return;
     }
-    if (isI9) {
-      setI9ImportTab(tab);
-    } else {
-      setImportingTab(tab);
-    }
-  }
-
-  function handleI9PayPartial(selectedItemIds: string[], total: number) {
-    const tab = i9ImportTab;
-    setI9PartialItemIds(selectedItemIds);
-    setI9ImportTab(null);
-    if (tab) setImportingTab({ ...tab, total });
-  }
-
-  function handleI9PaySplit(perPerson: number, remaining: number, totalPeople: number) {
-    const tab = i9ImportTab;
-    setI9SplitInfo({ perPerson, remaining, total: totalPeople });
-    setI9ImportTab(null);
-    if (tab) setImportingTab({ ...tab, total: perPerson });
+    setImportingTab(tab);
   }
 
   async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0]) {
@@ -900,7 +880,7 @@ export default function PDVV2() {
         showAddItem={!!chargeOrder && !isDelivery(chargeOrder)}
         tefStatus={tefStatus}
         onConfirm={confirmChargeOrder}
-        checkoutItems={chargeOrder?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price }))}
+        checkoutItems={isI9 ? chargeOrder?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price })) : undefined}
       />
 
       <PDVV2PaymentDialog
@@ -925,20 +905,8 @@ export default function PDVV2() {
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
-        checkoutItems={importingTab ? openTabs.find(t => t.id === importingTab.id)?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price })) : undefined}
+        checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === importingTab.id)?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price })) : undefined}
       />
-
-      {isI9 && (
-        <PDVV2TabImportDialog
-          open={!!i9ImportTab}
-          onOpenChange={(o) => !o && setI9ImportTab(null)}
-          tabItems={i9ImportTab ? openTabs.find((t) => t.id === i9ImportTab.id)?.items || [] : []}
-          tabTotal={i9ImportTab?.total || 0}
-          tabLabel={i9ImportTab?.tableNumber ? `Mesa ${i9ImportTab.tableNumber}` : `Comanda ${i9ImportTab?.tabNumber}`}
-          onPayPartial={handleI9PayPartial}
-          onPaySplit={handleI9PaySplit}
-        />
-      )}
 
       <PDVV2ClosedTabsDialog
         open={closedTabsOpen}
