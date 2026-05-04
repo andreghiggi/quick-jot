@@ -187,9 +187,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             setSelectedOptionals(parsed.selectedOptionals);
           }
           if (parsed.selectedGroupItems && typeof parsed.selectedGroupItems === 'object') {
-            const restored: Record<string, Set<string>> = {};
+            const restored: Record<string, Map<string, number>> = {};
             for (const [gid, ids] of Object.entries(parsed.selectedGroupItems)) {
-              if (Array.isArray(ids)) restored[gid] = new Set(ids as string[]);
+              if (Array.isArray(ids)) {
+                const m = new Map<string, number>();
+                (ids as any[]).forEach(entry => {
+                  if (typeof entry === 'string') m.set(entry, 1);
+                  else if (Array.isArray(entry) && entry.length === 2) m.set(entry[0], entry[1]);
+                });
+                restored[gid] = m;
+              }
             }
             setSelectedGroupItems(restored);
           }
@@ -256,7 +263,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         selectedProductId: selectedProduct?.id ?? null,
         selectedOptionals,
         selectedGroupItems: Object.fromEntries(
-          Object.entries(selectedGroupItems).map(([k, v]) => [k, Array.from(v)])
+          Object.entries(selectedGroupItems).map(([k, v]) => [k, Array.from(v.entries())])
         ),
         itemNotes,
       };
@@ -451,23 +458,49 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   function toggleGroupItem(groupId: string, itemId: string, maxSelect: number) {
     const effectiveMax = maxSelect > 0 ? maxSelect : Infinity;
     setSelectedGroupItems(prev => {
-      const current = new Set(prev[groupId] || []);
-      if (current.has(itemId)) {
+      const current = new Map(prev[groupId] || []);
+      const currentQty = current.get(itemId) || 0;
+      if (currentQty > 0) {
         current.delete(itemId);
       } else {
-        if (current.size >= effectiveMax) {
-          if (effectiveMax === 1) {
-            current.clear();
-            current.add(itemId);
-          } else {
-            toast.error(`Máximo ${effectiveMax} seleções neste grupo`);
-            return prev;
-          }
+        let totalSel = 0;
+        current.forEach(q => { totalSel += q; });
+        if (effectiveMax === 1) {
+          current.clear();
+          current.set(itemId, 1);
+        } else if (totalSel >= effectiveMax) {
+          toast.error(`Máximo ${effectiveMax} seleções neste grupo`);
+          return prev;
         } else {
-          current.add(itemId);
+          current.set(itemId, 1);
         }
       }
       return { ...prev, [groupId]: current };
+    });
+  }
+
+  function changeGroupItemQty(groupId: string, itemId: string, delta: number, maxSelect: number, maxPerItem: number) {
+    const maxGroup = maxSelect > 0 ? maxSelect : Infinity;
+    setSelectedGroupItems(prev => {
+      const cur = new Map(prev[groupId] || []);
+      const currentQty = cur.get(itemId) || 0;
+      const newQty = currentQty + delta;
+      if (newQty <= 0) {
+        cur.delete(itemId);
+      } else if (newQty > maxPerItem) {
+        toast.error(`Máximo ${maxPerItem} por item`);
+        return prev;
+      } else {
+        let prevTotal = 0;
+        (prev[groupId] || new Map()).forEach(q => { prevTotal += q; });
+        const totalSel = prevTotal - currentQty + newQty;
+        if (totalSel > maxGroup) {
+          toast.error(`Máximo ${maxGroup} no grupo`);
+          return prev;
+        }
+        cur.set(itemId, newQty);
+      }
+      return { ...prev, [groupId]: cur };
     });
   }
 
