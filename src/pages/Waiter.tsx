@@ -673,9 +673,7 @@ export default function Waiter() {
                 <PDVV2CategoryBrowser
                   companyId={company?.id}
                   pdvOnly={true}
-                  onProductSelect={(product) => {
-                    setI9QuantityProduct({ product, quantity: 1 });
-                  }}
+                  onProductSelect={handleAddToCart}
                   maxHeightClassName="max-h-full"
                 />
               </div>
