@@ -5,7 +5,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, ShoppingCart } from 'lucide-react';
 import { OptionalGroup } from '@/hooks/useOptionalGroups';
 
@@ -167,13 +166,13 @@ export function PDVOptionalsDialog({
       if (!o) resetState();
       onOpenChange(o);
     }}>
-      <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-3 border-b">
           <DialogTitle className="text-lg">{product.name}</DialogTitle>
           <p className="text-primary font-bold">{formatCurrency(product.price)}</p>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-2">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
           <div className="space-y-4">
             {groups.map(group => {
               const useQtyControls = isI9 && group.maxQuantityPerItem > 1;
@@ -265,9 +264,9 @@ export function PDVOptionalsDialog({
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
-        <DialogFooter className="border-t pt-3">
+        <DialogFooter className="flex-shrink-0 border-t bg-background px-6 py-4">
           <div className="w-full space-y-2">
             <div className="flex justify-between text-sm">
               <span>Unitário:</span>
