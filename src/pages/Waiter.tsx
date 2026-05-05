@@ -122,9 +122,6 @@ export default function Waiter() {
   // i9: expand notes per item
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
 
-  // i9: quantity picker before adding to cart
-  const [i9QuantityProduct, setI9QuantityProduct] = useState<{ product: typeof products[0]; quantity: number } | null>(null);
-
   // Auto-scroll cart to show the last added item
   useEffect(() => {
     if (cart.length > 0 && cartEndRef.current) {
