@@ -153,6 +153,8 @@ export function PDVV2CategoryBrowser({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-8 h-9"
+          autoFocus={false}
+          tabIndex={-1}
         />
       </div>
     </div>
