@@ -92,6 +92,8 @@ export default function Waiter() {
   const [optionalsDialogGroups, setOptionalsDialogGroups] = useState<OptionalGroup[]>([]);
   const cartEndRef = useRef<HTMLDivElement>(null);
 
+  const isI9 = company?.id === LANCHERIA_I9_COMPANY_ID;
+
   // i9: animated badge counter
   const [cartBounce, setCartBounce] = useState(false);
   const prevCartLength = useRef(cart.length);
@@ -117,8 +119,6 @@ export default function Waiter() {
       cartEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   }, [cart.length]);
-
-  const isI9 = company?.id === LANCHERIA_I9_COMPANY_ID;
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
