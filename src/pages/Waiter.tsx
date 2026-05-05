@@ -122,6 +122,9 @@ export default function Waiter() {
   // i9: expand notes per item
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
 
+  // i9: quantity picker before adding to cart
+  const [i9QuantityProduct, setI9QuantityProduct] = useState<{ product: typeof products[0]; quantity: number } | null>(null);
+
   // Auto-scroll cart to show the last added item
   useEffect(() => {
     if (cart.length > 0 && cartEndRef.current) {
@@ -673,7 +676,9 @@ export default function Waiter() {
                 <PDVV2CategoryBrowser
                   companyId={company?.id}
                   pdvOnly={true}
-                  onProductSelect={handleAddToCart}
+                  onProductSelect={(product) => {
+                    setI9QuantityProduct({ product, quantity: 1 });
+                  }}
                   maxHeightClassName="max-h-full"
                 />
               </div>
@@ -764,43 +769,110 @@ export default function Waiter() {
                 </div>
               </ScrollArea>
 
-              {cart.length > 0 && (
-                <div className="shrink-0 border-t p-4 space-y-3">
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
-                    <span>R$ {cartTotal.toFixed(2).replace('.', ',')}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1 min-h-[52px] text-sm font-semibold"
-                      onClick={() => setI9CartOpen(false)}
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Adicionar mais
-                    </Button>
-                    <Button
-                      className="flex-1 min-h-[60px] text-lg font-bold gap-2"
-                      onClick={() => handleConfirmItems(true)}
-                      disabled={isProcessing}
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="w-6 h-6 animate-spin" />
-                          <span>Enviando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Printer className="w-6 h-6" />
-                          Finalizar
-                        </>
-                      )}
-                    </Button>
-                  </div>
+              <div className="shrink-0 border-t p-4 space-y-3">
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Total</span>
+                  <span>R$ {cartTotal.toFixed(2).replace('.', ',')}</span>
                 </div>
-              )}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 min-h-[52px] text-sm font-semibold"
+                    onClick={() => setI9CartOpen(false)}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Adicionar mais
+                  </Button>
+                  <Button
+                    className="flex-1 min-h-[60px] text-lg font-bold gap-2"
+                    onClick={() => handleConfirmItems(true)}
+                    disabled={isProcessing || cart.length === 0}
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                        <span>Enviando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Printer className="w-6 h-6" />
+                        Finalizar
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </SheetContent>
           </Sheet>
+
+          {/* i9: Quantity picker dialog */}
+          <Dialog open={!!i9QuantityProduct} onOpenChange={(open) => { if (!open) setI9QuantityProduct(null); }}>
+            <DialogContent className="max-w-xs">
+              <DialogHeader>
+                <DialogTitle className="text-base text-center">{i9QuantityProduct?.product.name}</DialogTitle>
+              </DialogHeader>
+              <div className="flex items-center justify-center gap-6 py-4">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-14 w-14 text-xl"
+                  onClick={() => setI9QuantityProduct(prev => prev && prev.quantity > 1 ? { ...prev, quantity: prev.quantity - 1 } : prev)}
+                >
+                  <Minus className="w-6 h-6" />
+                </Button>
+                <span className="text-3xl font-bold w-12 text-center">{i9QuantityProduct?.quantity ?? 1}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-14 w-14 text-xl"
+                  onClick={() => setI9QuantityProduct(prev => prev ? { ...prev, quantity: prev.quantity + 1 } : prev)}
+                >
+                  <Plus className="w-6 h-6" />
+                </Button>
+              </div>
+              <Button
+                className="w-full min-h-[52px] text-base font-bold"
+                onClick={() => {
+                  if (!i9QuantityProduct) return;
+                  const { product, quantity } = i9QuantityProduct;
+                  // Check for optional groups
+                  const catId = categoryIdByName[product.category];
+                  const productGroups = optionalGroups.filter(g =>
+                    g.active && (g.productIds.includes(product.id) || (catId && g.categoryIds.includes(catId)))
+                  );
+                  if (productGroups.length > 0) {
+                    // Add quantity - 1 first, then open optionals for 1
+                    // Actually for optionals, each unit may have different selections
+                    // So just open optionals dialog (handles its own quantity)
+                    setOptionalsDialogProduct(product);
+                    setOptionalsDialogGroups(productGroups);
+                  } else {
+                    // Add directly with chosen quantity
+                    const existing = cart.find(item => item.productId === product.id && item.productName === product.name);
+                    if (existing) {
+                      setCart(prev => prev.map(item =>
+                        item.productId === product.id && item.productName === product.name
+                          ? { ...item, quantity: item.quantity + quantity }
+                          : item
+                      ));
+                    } else {
+                      setCart(prev => [...prev, {
+                        productId: product.id,
+                        productName: product.name,
+                        quantity,
+                        unitPrice: product.price,
+                        notes: ''
+                      }]);
+                    }
+                  }
+                  setI9QuantityProduct(null);
+                }}
+              >
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                Adicionar ao carrinho
+              </Button>
+            </DialogContent>
+          </Dialog>
         </>
       ) : (
         <Dialog open={addItemDialogOpen} onOpenChange={setAddItemDialogOpen}>
