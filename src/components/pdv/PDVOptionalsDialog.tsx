@@ -5,7 +5,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, ShoppingCart } from 'lucide-react';
 import { OptionalGroup } from '@/hooks/useOptionalGroups';
 
