@@ -46,7 +46,11 @@ import {
   ShoppingCart,
   Trash2,
   ClipboardList,
-  Printer
+  Printer,
+  ChevronUp,
+  ChevronDown,
+  Pencil,
+  MessageSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -88,14 +92,33 @@ export default function Waiter() {
   const [optionalsDialogGroups, setOptionalsDialogGroups] = useState<OptionalGroup[]>([]);
   const cartEndRef = useRef<HTMLDivElement>(null);
 
+  const isI9 = company?.id === LANCHERIA_I9_COMPANY_ID;
+
+  // i9: animated badge counter
+  const [cartBounce, setCartBounce] = useState(false);
+  const prevCartLength = useRef(cart.length);
+
+  useEffect(() => {
+    if (isI9 && cart.length > prevCartLength.current) {
+      setCartBounce(true);
+      const t = setTimeout(() => setCartBounce(false), 300);
+      return () => clearTimeout(t);
+    }
+    prevCartLength.current = cart.length;
+  }, [cart.length, isI9]);
+
+  // i9: collapsible cart
+  const [cartCollapsed, setCartCollapsed] = useState(true);
+
+  // i9: expand notes per item
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+
   // Auto-scroll cart to show the last added item
   useEffect(() => {
     if (cart.length > 0 && cartEndRef.current) {
       cartEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   }, [cart.length]);
-
-  const isI9 = company?.id === LANCHERIA_I9_COMPANY_ID;
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
@@ -553,7 +576,20 @@ export default function Waiter() {
                   {selectedTab.items.map((item) => (
                     <div key={item.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                       <div className="flex-1">
-                        <p className="font-medium">{item.product_name}</p>
+                        {isI9 && item.product_name.includes('(') ? (() => {
+                          const match = item.product_name.match(/^(.+?)\s*\((.+)\)$/);
+                          if (match) {
+                            return (
+                              <>
+                                <p className="font-bold">{match[1]}</p>
+                                <p className="text-xs text-muted-foreground">+ {match[2]}</p>
+                              </>
+                            );
+                          }
+                          return <p className="font-medium">{item.product_name}</p>;
+                        })() : (
+                          <p className="font-medium">{item.product_name}</p>
+                        )}
                         <p className="text-sm text-muted-foreground">
                           {item.quantity}x R$ {item.unit_price.toFixed(2)}
                         </p>
@@ -665,12 +701,38 @@ export default function Waiter() {
 
             {/* Cart */}
             <div className="w-full md:w-72 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-4 flex flex-col min-h-0 max-h-[40vh] md:max-h-none">
-              <div className="flex items-center gap-2 mb-2 md:mb-4">
-                <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
-                <h3 className="font-semibold text-sm md:text-base">Carrinho ({cart.length})</h3>
+              <div
+                className={`flex items-center gap-2 mb-2 md:mb-4 ${isI9 ? 'cursor-pointer select-none' : ''}`}
+                onClick={isI9 ? () => setCartCollapsed(c => !c) : undefined}
+              >
+                <div className="relative">
+                  <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
+                  {isI9 && cart.length > 0 && (
+                    <span className={`absolute -top-2 -right-2 bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center transition-transform ${cartBounce ? 'scale-125' : 'scale-100'}`}>
+                      {cart.reduce((s, i) => s + i.quantity, 0)}
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-semibold text-sm md:text-base flex-1">Carrinho ({cart.length})</h3>
+                {isI9 && (
+                  cartCollapsed
+                    ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                    : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                )}
               </div>
 
-              <ScrollArea className="flex-1 min-h-0">
+              {/* i9 collapsed summary bar */}
+              {isI9 && cartCollapsed && cart.length > 0 && (
+                <div
+                  className="flex items-center justify-between p-2 bg-muted rounded-lg mb-2 cursor-pointer"
+                  onClick={() => setCartCollapsed(false)}
+                >
+                  <span className="text-xs font-medium">{cart.reduce((s, i) => s + i.quantity, 0)} itens</span>
+                  <span className="text-xs font-bold">R$ {cartTotal.toFixed(2)} ▲</span>
+                </div>
+              )}
+
+              <ScrollArea className={`flex-1 min-h-0 ${isI9 && cartCollapsed ? 'hidden' : ''}`}>
                 <div className="space-y-2 pr-4">
                   {cart.length === 0 ? (
                     <p className="text-xs text-muted-foreground text-center py-4">
@@ -678,49 +740,78 @@ export default function Waiter() {
                     </p>
                   ) : (
                     cart.map((item) => (
-                      <div key={item.productId} className="p-2 bg-muted rounded-lg space-y-2">
+                      <div key={item.productId} className={`bg-muted rounded-lg space-y-2 ${isI9 ? 'p-3' : 'p-2'}`}>
                         <div className="flex items-center justify-between">
                           <p className="text-xs sm:text-sm font-medium truncate flex-1">{item.productName}</p>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6 shrink-0"
-                            onClick={() => handleRemoveFromCart(item.productId)}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
+                          {isI9 ? (
+                            <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0" onClick={() => handleRemoveFromCart(item.productId)}>
+                              <Trash2 className="w-5 h-5" />
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleRemoveFromCart(item.productId)}>
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          )}
                         </div>
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1">
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              className="h-6 w-6"
-                              onClick={() => handleUpdateCartQuantity(item.productId, -1)}
-                            >
-                              <Minus className="w-3 h-3" />
-                            </Button>
-                            <span className="w-6 text-center text-xs sm:text-sm">{item.quantity}</span>
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              className="h-6 w-6"
-                              onClick={() => handleUpdateCartQuantity(item.productId, 1)}
-                            >
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </div>
+                          {isI9 ? (
+                            <div className="flex items-center gap-3">
+                              <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => handleUpdateCartQuantity(item.productId, -1)}>
+                                <Minus className="w-5 h-5" />
+                              </Button>
+                              <span className="w-8 text-center text-base font-bold">{item.quantity}</span>
+                              <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => handleUpdateCartQuantity(item.productId, 1)}>
+                                <Plus className="w-5 h-5" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => handleUpdateCartQuantity(item.productId, -1)}>
+                                <Minus className="w-3 h-3" />
+                              </Button>
+                              <span className="w-6 text-center text-xs sm:text-sm">{item.quantity}</span>
+                              <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => handleUpdateCartQuantity(item.productId, 1)}>
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
                           <span className="text-xs sm:text-sm font-bold">
                             R$ {(item.quantity * item.unitPrice).toFixed(2)}
                           </span>
                         </div>
-                        <Textarea
-                          placeholder="Observação do item..."
-                          value={item.notes}
-                          onChange={(e) => handleUpdateCartNotes(item.productId, e.target.value)}
-                          className="min-h-[48px] text-xs resize-none"
-                          rows={2}
-                        />
+                        {isI9 ? (
+                          item.notes || expandedNotes.has(item.productId) ? (
+                            expandedNotes.has(item.productId) ? (
+                              <Textarea
+                                placeholder="Observação do item..."
+                                value={item.notes}
+                                onChange={(e) => handleUpdateCartNotes(item.productId, e.target.value)}
+                                onBlur={() => { if (!item.notes) setExpandedNotes(prev => { const n = new Set(prev); n.delete(item.productId); return n; }); }}
+                                className="min-h-[48px] text-xs resize-none"
+                                rows={2}
+                                autoFocus
+                              />
+                            ) : (
+                              <button className="flex items-center gap-1 text-xs text-muted-foreground italic hover:text-foreground" onClick={() => setExpandedNotes(prev => new Set(prev).add(item.productId))}>
+                                <Pencil className="w-3 h-3" />
+                                {item.notes}
+                              </button>
+                            )
+                          ) : (
+                            <button className="flex items-center gap-1 text-xs text-primary hover:underline" onClick={() => setExpandedNotes(prev => new Set(prev).add(item.productId))}>
+                              <MessageSquare className="w-3 h-3" />
+                              + Observação
+                            </button>
+                          )
+                        ) : (
+                          <Textarea
+                            placeholder="Observação do item..."
+                            value={item.notes}
+                            onChange={(e) => handleUpdateCartNotes(item.productId, e.target.value)}
+                            className="min-h-[48px] text-xs resize-none"
+                            rows={2}
+                          />
+                        )}
                       </div>
                     ))
                   )}
@@ -735,17 +826,20 @@ export default function Waiter() {
                     <span>R$ {cartTotal.toFixed(2)}</span>
                   </div>
                   <Button 
-                    className="w-full gap-1" 
+                    className={`w-full gap-1 ${isI9 ? 'min-h-[60px] text-lg font-bold px-4' : ''}`}
                     onClick={() => handleConfirmItems(true)}
                     disabled={isProcessing}
-                    size="sm"
+                    size={isI9 ? 'lg' : 'sm'}
                   >
                     {isProcessing ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <>
+                        <Loader2 className={`animate-spin ${isI9 ? 'w-6 h-6' : 'w-4 h-4'}`} />
+                        {isI9 && <span>Enviando pedido...</span>}
+                      </>
                     ) : (
-                      <Printer className="w-4 h-4" />
+                      <Printer className={isI9 ? 'w-6 h-6' : 'w-4 h-4'} />
                     )}
-                    Finalizar e Imprimir
+                    {!isProcessing && 'Finalizar e Imprimir'}
                   </Button>
                 </div>
               )}
