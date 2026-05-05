@@ -121,6 +121,8 @@ export default function Waiter() {
 
   // i9: expand notes per item
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  // i9: post-add confirmation sheet
+  const [i9PostAddOpen, setI9PostAddOpen] = useState(false);
 
   // Auto-scroll cart to show the last added item
   useEffect(() => {
@@ -218,6 +220,7 @@ export default function Waiter() {
     }
 
     addSimpleToCart(product.id, product.name, product.price);
+    if (isI9) setI9PostAddOpen(true);
   };
 
   const addSimpleToCart = (productId: string, productName: string, unitPrice: number) => {
@@ -256,6 +259,7 @@ export default function Waiter() {
     }
     setOptionalsDialogProduct(null);
     setOptionalsDialogGroups([]);
+    if (isI9) setI9PostAddOpen(true);
   };
 
   const handleUpdateCartQuantity = (productId: string, delta: number) => {
@@ -654,7 +658,7 @@ export default function Waiter() {
         <>
           {/* i9: Full-screen menu Sheet */}
           <Sheet open={addItemDialogOpen} onOpenChange={(open) => { setAddItemDialogOpen(open); if (!open) setI9CartOpen(false); }}>
-            <SheetContent side="bottom" className="h-[100dvh] flex flex-col p-0 rounded-none">
+            <SheetContent side="bottom" className="h-[100dvh] flex flex-col p-0 rounded-none" onOpenAutoFocus={(e) => e.preventDefault()}>
               <SheetHeader className="p-4 pb-2 shrink-0 border-b">
                 <SheetTitle className="flex items-center gap-2 text-base">
                   <ClipboardList className="w-5 h-5" />
@@ -939,6 +943,42 @@ export default function Waiter() {
       )}
 
       {/* Optionals Dialog */}
+      {/* i9: Post-add confirmation sheet */}
+      {isI9 && (
+        <Sheet open={i9PostAddOpen} onOpenChange={setI9PostAddOpen}>
+          <SheetContent side="bottom" className="rounded-t-2xl pb-8">
+            <SheetHeader>
+              <SheetTitle>Item adicionado!</SheetTitle>
+            </SheetHeader>
+            <p className="text-sm text-muted-foreground mt-2">
+              {cart.reduce((s, i) => s + i.quantity, 0)} {cart.reduce((s, i) => s + i.quantity, 0) === 1 ? 'item' : 'itens'} — R$ {cartTotal.toFixed(2).replace('.', ',')}
+            </p>
+            <div className="flex flex-col gap-3 mt-4">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full"
+                onClick={() => setI9PostAddOpen(false)}
+              >
+                + Adicionar mais itens
+              </Button>
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => {
+                  setI9PostAddOpen(false);
+                  handleConfirmItems(true);
+                }}
+                disabled={isProcessing}
+              >
+                {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Printer className="mr-2 h-4 w-4" />}
+                Finalizar e Imprimir
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
       {optionalsDialogProduct && (
         <PDVOptionalsDialog
           open={!!optionalsDialogProduct}
