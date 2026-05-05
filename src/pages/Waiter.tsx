@@ -21,6 +21,12 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -97,6 +103,9 @@ export default function Waiter() {
   // i9: animated badge counter
   const [cartBounce, setCartBounce] = useState(false);
   const prevCartLength = useRef(cart.length);
+
+  // i9: separate cart sheet
+  const [i9CartOpen, setI9CartOpen] = useState(false);
 
   useEffect(() => {
     if (isI9 && cart.length > prevCartLength.current) {
@@ -422,6 +431,16 @@ export default function Waiter() {
                       >
                         {getStatusLabel(table.status)}
                       </Badge>
+                      {isI9 && table.status === 'occupied' && (() => {
+                        const tab = openTabs.find(t => t.table_id === table.id);
+                        if (!tab) return null;
+                        const total = getTabTotal(tab);
+                        return (
+                          <p className="text-xs font-bold text-green-600 mt-1">
+                            R$ {total.toFixed(2).replace('.', ',')}
+                          </p>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 ))}
@@ -631,186 +650,112 @@ export default function Waiter() {
       </Dialog>
 
       {/* Add Items Dialog */}
-      <Dialog open={addItemDialogOpen} onOpenChange={setAddItemDialogOpen}>
-        <DialogContent className="max-w-4xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="p-4 pb-0 shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              Adicionar Itens
-              {selectedTab && (
-                <Badge variant="secondary">Comanda #{selectedTab.tab_number}</Badge>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden p-4 min-h-0">
-            {/* Products List */}
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              {!isI9 && <div className="flex flex-col sm:flex-row gap-2 mb-4 shrink-0">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar produto..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="Categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {categories.filter(c => c.active).map((cat) => (
-                      <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>}
-
-              {isI9 ? (
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                  <PDVV2CategoryBrowser
-                    companyId={company?.id}
-                    pdvOnly={false}
-                    onProductSelect={handleAddToCart}
-                    maxHeightClassName="max-h-full"
-                  />
-                </div>
-              ) : (
-              <div className="flex-1 min-h-0 overflow-y-auto">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pr-2 pb-4">
-                  {filteredProducts.map((product) => (
-                    <Card 
-                      key={product.id} 
-                      className="cursor-pointer hover:shadow-md transition-shadow active:scale-95"
-                      onClick={() => handleAddToCart(product)}
-                    >
-                      <CardContent className="p-2 sm:p-3">
-                        <p className="font-medium text-xs sm:text-sm truncate">{product.name}</p>
-                        <p className="text-xs sm:text-sm font-bold text-primary">
-                          R$ {product.price.toFixed(2)}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-              )}
-            </div>
-
-            {/* Cart */}
-            <div className="w-full md:w-72 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-4 flex flex-col min-h-0 max-h-[40vh] md:max-h-none">
-              <div
-                className={`flex items-center gap-2 mb-2 md:mb-4 ${isI9 ? 'cursor-pointer select-none' : ''}`}
-                onClick={isI9 ? () => setCartCollapsed(c => !c) : undefined}
-              >
-                <div className="relative">
-                  <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
-                  {isI9 && cart.length > 0 && (
-                    <span className={`absolute -top-2 -right-2 bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center transition-transform ${cartBounce ? 'scale-125' : 'scale-100'}`}>
-                      {cart.reduce((s, i) => s + i.quantity, 0)}
-                    </span>
+      {isI9 ? (
+        <>
+          {/* i9: Full-screen menu Sheet */}
+          <Sheet open={addItemDialogOpen} onOpenChange={(open) => { setAddItemDialogOpen(open); if (!open) setI9CartOpen(false); }}>
+            <SheetContent side="bottom" className="h-[100dvh] flex flex-col p-0 rounded-none">
+              <SheetHeader className="p-4 pb-2 shrink-0 border-b">
+                <SheetTitle className="flex items-center gap-2 text-base">
+                  <ClipboardList className="w-5 h-5" />
+                  {selectedTab && (
+                    <>
+                      Comanda #{selectedTab.tab_number}
+                      {selectedTab.table && (
+                        <Badge variant="outline" className="ml-1">Mesa {selectedTab.table.number}</Badge>
+                      )}
+                    </>
                   )}
-                </div>
-                <h3 className="font-semibold text-sm md:text-base flex-1">Carrinho ({cart.length})</h3>
-                {isI9 && (
-                  cartCollapsed
-                    ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                    : <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                )}
+                </SheetTitle>
+              </SheetHeader>
+
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <PDVV2CategoryBrowser
+                  companyId={company?.id}
+                  pdvOnly={true}
+                  onProductSelect={handleAddToCart}
+                  maxHeightClassName="max-h-full"
+                />
               </div>
 
-              {/* i9 collapsed summary bar */}
-              {isI9 && cartCollapsed && cart.length > 0 && (
+              {/* Floating bar */}
+              {cart.length > 0 && (
                 <div
-                  className="flex items-center justify-between p-2 bg-muted rounded-lg mb-2 cursor-pointer"
-                  onClick={() => setCartCollapsed(false)}
+                  className="shrink-0 border-t bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between cursor-pointer active:opacity-90"
+                  onClick={() => setI9CartOpen(true)}
                 >
-                  <span className="text-xs font-medium">{cart.reduce((s, i) => s + i.quantity, 0)} itens</span>
-                  <span className="text-xs font-bold">R$ {cartTotal.toFixed(2)} ▲</span>
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="w-5 h-5" />
+                    <span className="font-bold text-sm">
+                      {cart.reduce((s, i) => s + i.quantity, 0)} {cart.reduce((s, i) => s + i.quantity, 0) === 1 ? 'item' : 'itens'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold">R$ {cartTotal.toFixed(2).replace('.', ',')}</span>
+                    <Badge variant="secondary" className="text-xs">Ver carrinho</Badge>
+                  </div>
                 </div>
               )}
+            </SheetContent>
+          </Sheet>
 
-              <ScrollArea className={`flex-1 min-h-0 ${isI9 && cartCollapsed ? 'hidden' : ''}`}>
-                <div className="space-y-2 pr-4">
+          {/* i9: Cart Sheet */}
+          <Sheet open={i9CartOpen} onOpenChange={setI9CartOpen}>
+            <SheetContent side="bottom" className="h-[85dvh] flex flex-col p-0 rounded-t-2xl">
+              <SheetHeader className="p-4 pb-2 shrink-0 border-b">
+                <SheetTitle className="text-base">Revisar pedido</SheetTitle>
+              </SheetHeader>
+
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="space-y-2 p-4">
                   {cart.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">
-                      Toque em um produto para adicionar
-                    </p>
+                    <p className="text-sm text-muted-foreground text-center py-8">Carrinho vazio</p>
                   ) : (
                     cart.map((item) => (
-                      <div key={item.productId} className={`bg-muted rounded-lg space-y-2 ${isI9 ? 'p-3' : 'p-2'}`}>
+                      <div key={item.productId} className="bg-muted rounded-lg p-3 space-y-2">
                         <div className="flex items-center justify-between">
-                          <p className="text-xs sm:text-sm font-medium truncate flex-1">{item.productName}</p>
-                          {isI9 ? (
-                            <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0" onClick={() => handleRemoveFromCart(item.productId)}>
-                              <Trash2 className="w-5 h-5" />
-                            </Button>
-                          ) : (
-                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleRemoveFromCart(item.productId)}>
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          )}
+                          <p className="text-sm font-bold truncate flex-1">{item.productName}</p>
+                          <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0" onClick={() => handleRemoveFromCart(item.productId)}>
+                            <Trash2 className="w-5 h-5" />
+                          </Button>
                         </div>
                         <div className="flex items-center justify-between">
-                          {isI9 ? (
-                            <div className="flex items-center gap-3">
-                              <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => handleUpdateCartQuantity(item.productId, -1)}>
-                                <Minus className="w-5 h-5" />
-                              </Button>
-                              <span className="w-8 text-center text-base font-bold">{item.quantity}</span>
-                              <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => handleUpdateCartQuantity(item.productId, 1)}>
-                                <Plus className="w-5 h-5" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1">
-                              <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => handleUpdateCartQuantity(item.productId, -1)}>
-                                <Minus className="w-3 h-3" />
-                              </Button>
-                              <span className="w-6 text-center text-xs sm:text-sm">{item.quantity}</span>
-                              <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => handleUpdateCartQuantity(item.productId, 1)}>
-                                <Plus className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          )}
-                          <span className="text-xs sm:text-sm font-bold">
-                            R$ {(item.quantity * item.unitPrice).toFixed(2)}
+                          <div className="flex items-center gap-3">
+                            <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => handleUpdateCartQuantity(item.productId, -1)}>
+                              <Minus className="w-5 h-5" />
+                            </Button>
+                            <span className="w-8 text-center text-base font-bold">{item.quantity}</span>
+                            <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => handleUpdateCartQuantity(item.productId, 1)}>
+                              <Plus className="w-5 h-5" />
+                            </Button>
+                          </div>
+                          <span className="text-sm font-bold">
+                            R$ {(item.quantity * item.unitPrice).toFixed(2).replace('.', ',')}
                           </span>
                         </div>
-                        {isI9 ? (
-                          item.notes || expandedNotes.has(item.productId) ? (
-                            expandedNotes.has(item.productId) ? (
-                              <Textarea
-                                placeholder="Observação do item..."
-                                value={item.notes}
-                                onChange={(e) => handleUpdateCartNotes(item.productId, e.target.value)}
-                                onBlur={() => { if (!item.notes) setExpandedNotes(prev => { const n = new Set(prev); n.delete(item.productId); return n; }); }}
-                                className="min-h-[48px] text-xs resize-none"
-                                rows={2}
-                                autoFocus
-                              />
-                            ) : (
-                              <button className="flex items-center gap-1 text-xs text-muted-foreground italic hover:text-foreground" onClick={() => setExpandedNotes(prev => new Set(prev).add(item.productId))}>
-                                <Pencil className="w-3 h-3" />
-                                {item.notes}
-                              </button>
-                            )
+                        {/* Compact notes */}
+                        {item.notes || expandedNotes.has(item.productId) ? (
+                          expandedNotes.has(item.productId) ? (
+                            <Textarea
+                              placeholder="Observação do item..."
+                              value={item.notes}
+                              onChange={(e) => handleUpdateCartNotes(item.productId, e.target.value)}
+                              onBlur={() => { if (!item.notes) setExpandedNotes(prev => { const n = new Set(prev); n.delete(item.productId); return n; }); }}
+                              className="min-h-[48px] text-xs resize-none"
+                              rows={2}
+                              autoFocus
+                            />
                           ) : (
-                            <button className="flex items-center gap-1 text-xs text-primary hover:underline" onClick={() => setExpandedNotes(prev => new Set(prev).add(item.productId))}>
-                              <MessageSquare className="w-3 h-3" />
-                              + Observação
+                            <button className="flex items-center gap-1 text-xs text-muted-foreground italic hover:text-foreground" onClick={() => setExpandedNotes(prev => new Set(prev).add(item.productId))}>
+                              <Pencil className="w-3 h-3" />
+                              {item.notes}
                             </button>
                           )
                         ) : (
-                          <Textarea
-                            placeholder="Observação do item..."
-                            value={item.notes}
-                            onChange={(e) => handleUpdateCartNotes(item.productId, e.target.value)}
-                            className="min-h-[48px] text-xs resize-none"
-                            rows={2}
-                          />
+                          <button className="flex items-center gap-1 text-xs text-primary hover:underline" onClick={() => setExpandedNotes(prev => new Set(prev).add(item.productId))}>
+                            <MessageSquare className="w-3 h-3" />
+                            + Observação
+                          </button>
                         )}
                       </div>
                     ))
@@ -820,33 +765,177 @@ export default function Waiter() {
               </ScrollArea>
 
               {cart.length > 0 && (
-                <div className="border-t pt-3 mt-2 md:mt-4 space-y-2">
-                  <div className="flex justify-between font-bold text-sm md:text-base">
+                <div className="shrink-0 border-t p-4 space-y-3">
+                  <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span>R$ {cartTotal.toFixed(2)}</span>
+                    <span>R$ {cartTotal.toFixed(2).replace('.', ',')}</span>
                   </div>
-                  <Button 
-                    className={`w-full gap-1 ${isI9 ? 'min-h-[60px] text-lg font-bold px-4' : ''}`}
-                    onClick={() => handleConfirmItems(true)}
-                    disabled={isProcessing}
-                    size={isI9 ? 'lg' : 'sm'}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className={`animate-spin ${isI9 ? 'w-6 h-6' : 'w-4 h-4'}`} />
-                        {isI9 && <span>Enviando pedido...</span>}
-                      </>
-                    ) : (
-                      <Printer className={isI9 ? 'w-6 h-6' : 'w-4 h-4'} />
-                    )}
-                    {!isProcessing && 'Finalizar e Imprimir'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1 min-h-[52px] text-sm font-semibold"
+                      onClick={() => setI9CartOpen(false)}
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Adicionar mais
+                    </Button>
+                    <Button
+                      className="flex-1 min-h-[60px] text-lg font-bold gap-2"
+                      onClick={() => handleConfirmItems(true)}
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="w-6 h-6 animate-spin" />
+                          <span>Enviando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Printer className="w-6 h-6" />
+                          Finalizar
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               )}
+            </SheetContent>
+          </Sheet>
+        </>
+      ) : (
+        <Dialog open={addItemDialogOpen} onOpenChange={setAddItemDialogOpen}>
+          <DialogContent className="max-w-4xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col p-0">
+            <DialogHeader className="p-4 pb-0 shrink-0">
+              <DialogTitle className="flex items-center gap-2">
+                Adicionar Itens
+                {selectedTab && (
+                  <Badge variant="secondary">Comanda #{selectedTab.tab_number}</Badge>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden p-4 min-h-0">
+              {/* Products List */}
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div className="flex flex-col sm:flex-row gap-2 mb-4 shrink-0">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar produto..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="Categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {categories.filter(c => c.active).map((cat) => (
+                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pr-2 pb-4">
+                    {filteredProducts.map((product) => (
+                      <Card 
+                        key={product.id} 
+                        className="cursor-pointer hover:shadow-md transition-shadow active:scale-95"
+                        onClick={() => handleAddToCart(product)}
+                      >
+                        <CardContent className="p-2 sm:p-3">
+                          <p className="font-medium text-xs sm:text-sm truncate">{product.name}</p>
+                          <p className="text-xs sm:text-sm font-bold text-primary">
+                            R$ {product.price.toFixed(2)}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cart */}
+              <div className="w-full md:w-72 border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-4 flex flex-col min-h-0 max-h-[40vh] md:max-h-none">
+                <div className="flex items-center gap-2 mb-2 md:mb-4">
+                  <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
+                  <h3 className="font-semibold text-sm md:text-base flex-1">Carrinho ({cart.length})</h3>
+                </div>
+
+                <ScrollArea className="flex-1 min-h-0">
+                  <div className="space-y-2 pr-4">
+                    {cart.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">
+                        Toque em um produto para adicionar
+                      </p>
+                    ) : (
+                      cart.map((item) => (
+                        <div key={item.productId} className="bg-muted rounded-lg space-y-2 p-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs sm:text-sm font-medium truncate flex-1">{item.productName}</p>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleRemoveFromCart(item.productId)}>
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => handleUpdateCartQuantity(item.productId, -1)}>
+                                <Minus className="w-3 h-3" />
+                              </Button>
+                              <span className="w-6 text-center text-xs sm:text-sm">{item.quantity}</span>
+                              <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => handleUpdateCartQuantity(item.productId, 1)}>
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            <span className="text-xs sm:text-sm font-bold">
+                              R$ {(item.quantity * item.unitPrice).toFixed(2)}
+                            </span>
+                          </div>
+                          <Textarea
+                            placeholder="Observação do item..."
+                            value={item.notes}
+                            onChange={(e) => handleUpdateCartNotes(item.productId, e.target.value)}
+                            className="min-h-[48px] text-xs resize-none"
+                            rows={2}
+                          />
+                        </div>
+                      ))
+                    )}
+                    <div ref={cartEndRef} />
+                  </div>
+                </ScrollArea>
+
+                {cart.length > 0 && (
+                  <div className="border-t pt-3 mt-2 md:mt-4 space-y-2">
+                    <div className="flex justify-between font-bold text-sm md:text-base">
+                      <span>Total</span>
+                      <span>R$ {cartTotal.toFixed(2)}</span>
+                    </div>
+                    <Button 
+                      className="w-full gap-1"
+                      onClick={() => handleConfirmItems(true)}
+                      disabled={isProcessing}
+                      size="sm"
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="animate-spin w-4 h-4" />
+                      ) : (
+                        <Printer className="w-4 h-4" />
+                      )}
+                      {!isProcessing && 'Finalizar e Imprimir'}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Optionals Dialog */}
       {optionalsDialogProduct && (
