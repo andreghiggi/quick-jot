@@ -219,8 +219,14 @@ export default function Waiter() {
       return;
     }
 
+    if (isI9) {
+      // i9: always open dialog, even without optionals (for notes/qty)
+      setOptionalsDialogProduct(product);
+      setOptionalsDialogGroups([]);
+      return;
+    }
+
     addSimpleToCart(product.id, product.name, product.price);
-    if (isI9) setI9PostAddOpen(true);
   };
 
   const addSimpleToCart = (productId: string, productName: string, unitPrice: number) => {
