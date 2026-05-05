@@ -658,7 +658,7 @@ export default function Waiter() {
         <>
           {/* i9: Full-screen menu Sheet */}
           <Sheet open={addItemDialogOpen} onOpenChange={(open) => { setAddItemDialogOpen(open); if (!open) setI9CartOpen(false); }}>
-            <SheetContent side="bottom" className="h-[100dvh] flex flex-col p-0 rounded-none">
+            <SheetContent side="bottom" className="h-[100dvh] flex flex-col p-0 rounded-none" onOpenAutoFocus={(e) => e.preventDefault()}>
               <SheetHeader className="p-4 pb-2 shrink-0 border-b">
                 <SheetTitle className="flex items-center gap-2 text-base">
                   <ClipboardList className="w-5 h-5" />
