@@ -122,6 +122,7 @@ export default function PDVV2() {
   const [closedTabsOpen, setClosedTabsOpen] = useState(false);
   const [i9PartialItemIds, setI9PartialItemIds] = useState<string[]>([]);
   const [i9SplitInfo, setI9SplitInfo] = useState<{ perPerson: number; remaining: number; total: number } | null>(null);
+  const [i9OriginalTabId, setI9OriginalTabId] = useState<string | null>(null);
   // NFC-e pós-venda (mesmo padrão do PDV V1: polling visível + ação do operador)
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
@@ -582,7 +583,42 @@ export default function PDVV2() {
       toast.error('Caixa precisa estar aberto');
       return;
     }
-    const fullTab = openTabs.find((t) => t.id === importingTab.id);
+    const resolvedTabId = i9OriginalTabId || importingTab.id;
+    const fullTab = openTabs.find((t) => t.id === resolvedTabId);
+
+    // Split mode first — doesn't need fullTab items
+    if (i9SplitInfo) {
+      const customer = fullTab?.customer_name ||
+        (fullTab?.table?.number ? `Mesa ${fullTab.table.number}` : importingTab.tableNumber ? `Mesa ${importingTab.tableNumber}` : `Comanda ${importingTab.tabNumber}`);
+      const tabNumber = fullTab?.tab_number || importingTab.tabNumber || '?';
+      const personIndex = i9SplitInfo.total - i9SplitInfo.remaining + 1;
+      const items = [{
+        product_id: null as string | null,
+        product_name: `Divisão ${personIndex}/${i9SplitInfo.total} — ${customer}`,
+        quantity: 1,
+        unit_price: i9SplitInfo.perPerson,
+      }];
+      const saleId = await addSale(items, params.paymentMethodId, user.id, 0, customer,
+        `Comanda #${tabNumber} | Divisão ${personIndex}/${i9SplitInfo.total}: ${params.paymentName}`);
+      if (saleId) {
+        const newRemaining = i9SplitInfo.remaining - 1;
+        if (newRemaining <= 0) {
+          await closeTab(resolvedTabId);
+          toast.success('Última pessoa cobrada — comanda fechada!');
+          setI9SplitInfo(null);
+          setI9OriginalTabId(null);
+          setImportingTab(null);
+        } else {
+          toast.success(`Pessoa ${personIndex} cobrada. Faltam ${newRemaining}.`);
+          setI9SplitInfo({ ...i9SplitInfo, remaining: newRemaining });
+          const savedTab = { ...importingTab, id: resolvedTabId };
+          setImportingTab(null);
+          setTimeout(() => setImportingTab({ ...savedTab, total: i9SplitInfo.perPerson }), 100);
+        }
+      }
+      return;
+    }
+
     if (!fullTab?.items?.length) {
       toast.error('Comanda sem itens');
       return;
@@ -614,34 +650,6 @@ export default function PDVV2() {
       }
       setI9PartialItemIds([]);
       setImportingTab(null);
-      return;
-    }
-
-    if (i9SplitInfo) {
-      const personIndex = i9SplitInfo.total - i9SplitInfo.remaining + 1;
-      const items = [{
-        product_id: null as string | null,
-        product_name: `Divisão ${personIndex}/${i9SplitInfo.total} — ${customer}`,
-        quantity: 1,
-        unit_price: i9SplitInfo.perPerson,
-      }];
-      const saleId = await addSale(items, params.paymentMethodId, user.id, 0, customer,
-        `Comanda #${fullTab.tab_number} | Divisão ${personIndex}/${i9SplitInfo.total}: ${params.paymentName}`);
-      if (saleId) {
-        const newRemaining = i9SplitInfo.remaining - 1;
-        if (newRemaining <= 0) {
-          await closeTab(fullTab.id);
-          toast.success('Última pessoa cobrada — comanda fechada!');
-          setI9SplitInfo(null);
-          setImportingTab(null);
-        } else {
-          toast.success(`Pessoa ${personIndex} cobrada. Faltam ${newRemaining}.`);
-          setI9SplitInfo({ ...i9SplitInfo, remaining: newRemaining });
-          const savedTab = { ...importingTab };
-          setImportingTab(null);
-          setTimeout(() => setImportingTab({ ...savedTab, total: i9SplitInfo.perPerson }), 100);
-        }
-      }
       return;
     }
 
@@ -890,6 +898,7 @@ export default function PDVV2() {
             setImportingTab(null);
             setI9PartialItemIds([]);
             setI9SplitInfo(null);
+            setI9OriginalTabId(null);
           }
         }}
         companyId={companyId}
@@ -905,7 +914,7 @@ export default function PDVV2() {
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
-        checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === importingTab.id)?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, id: i.id, paid: !!(i as any).paid })) : undefined}
+        checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, id: i.id, paid: !!(i as any).paid })) : undefined}
         onItemsPaid={isI9 ? async (itemIds) => {
           if (!importingTab) return;
           await supabase.from('tab_items').update({ paid: true } as any).in('id', itemIds);
@@ -923,6 +932,7 @@ export default function PDVV2() {
         onSplitPaid={isI9 ? async (perPerson, totalPeople) => {
           if (!importingTab) return;
           if (!i9SplitInfo) {
+            setI9OriginalTabId(importingTab.id);
             setI9SplitInfo({ perPerson, remaining: totalPeople - 1, total: totalPeople });
             const saved = { ...importingTab };
             setImportingTab(null);
@@ -932,18 +942,20 @@ export default function PDVV2() {
               const fullTab = openTabs.find(t => t.id === saved.id);
               if (fullTab) await closeTab(fullTab.id);
               toast.success('Comanda fechada!');
+              setI9OriginalTabId(null);
             }
           } else {
             const newRemaining = i9SplitInfo.remaining - 1;
             if (newRemaining <= 0) {
-              await closeTab(importingTab.id);
+              await closeTab(i9OriginalTabId || importingTab.id);
               toast.success('Última pessoa cobrada — comanda fechada!');
               setI9SplitInfo(null);
+              setI9OriginalTabId(null);
               setImportingTab(null);
             } else {
               toast.success(`Pessoa cobrada. Faltam ${newRemaining}.`);
               setI9SplitInfo({ ...i9SplitInfo, remaining: newRemaining });
-              const saved = { ...importingTab };
+              const saved = { ...importingTab, id: i9OriginalTabId || importingTab.id };
               setImportingTab(null);
               setTimeout(() => setImportingTab({ ...saved, total: perPerson }), 100);
             }
