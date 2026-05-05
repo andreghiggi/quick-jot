@@ -166,7 +166,7 @@ export function PDVOptionalsDialog({
       if (!o) resetState();
       onOpenChange(o);
     }}>
-      <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-md max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-3 border-b">
           <DialogTitle className="text-lg">{product.name}</DialogTitle>
           <p className="text-primary font-bold">{formatCurrency(product.price)}</p>
