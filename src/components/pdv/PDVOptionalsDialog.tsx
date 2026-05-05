@@ -212,12 +212,12 @@ export function PDVOptionalsDialog({
                           )}
                           {useQtyControls && (
                             <div className="flex items-center gap-1">
-                              <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => changeGroupItemQty(group.id, item.id, -1, group.maxSelect, group.maxQuantityPerItem)}>
-                                <Minus className="w-3 h-3" />
+                              <Button type="button" size="icon" variant="outline" className="h-12 w-12" onClick={() => changeGroupItemQty(group.id, item.id, -1, group.maxSelect, group.maxQuantityPerItem)}>
+                                <Minus className="w-5 h-5" />
                               </Button>
-                              <span className="w-5 text-center text-xs tabular-nums">{qty}</span>
-                              <Button type="button" size="icon" variant="outline" className="h-6 w-6" onClick={() => changeGroupItemQty(group.id, item.id, 1, group.maxSelect, group.maxQuantityPerItem)}>
-                                <Plus className="w-3 h-3" />
+                              <span className="w-8 text-center text-sm font-bold tabular-nums">{qty}</span>
+                              <Button type="button" size="icon" variant="outline" className="h-12 w-12" onClick={() => changeGroupItemQty(group.id, item.id, 1, group.maxSelect, group.maxQuantityPerItem)}>
+                                <Plus className="w-5 h-5" />
                               </Button>
                             </div>
                           )}
