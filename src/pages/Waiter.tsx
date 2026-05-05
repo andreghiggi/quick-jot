@@ -764,7 +764,8 @@ export default function Waiter() {
                 </div>
               </ScrollArea>
 
-              <div className="shrink-0 border-t p-4 space-y-3">
+              {cart.length > 0 && (
+                <div className="shrink-0 border-t p-4 space-y-3">
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
                   <span>R$ {cartTotal.toFixed(2).replace('.', ',')}</span>
@@ -781,7 +782,7 @@ export default function Waiter() {
                   <Button
                     className="flex-1 min-h-[60px] text-lg font-bold gap-2"
                     onClick={() => handleConfirmItems(true)}
-                    disabled={isProcessing || cart.length === 0}
+                    disabled={isProcessing}
                   >
                     {isProcessing ? (
                       <>
@@ -796,7 +797,8 @@ export default function Waiter() {
                     )}
                   </Button>
                 </div>
-              </div>
+                </div>
+              )}
             </SheetContent>
           </Sheet>
 
