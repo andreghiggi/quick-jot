@@ -981,12 +981,48 @@ export default function PDVV2() {
           currentPerson: i9SplitInfo.total - i9SplitInfo.remaining + 1,
         } : undefined}
         checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, id: i.id, paid: !!(i as any).paid })) : undefined}
-        onItemsPaid={isI9 ? async (itemIds) => {
+        onItemsPaid={isI9 ? async (paidItems) => {
           if (!importingTab) return;
-          await supabase.from('tab_items').update({ paid: true } as any).in('id', itemIds);
-          const fullTab = openTabs.find(t => t.id === importingTab.id);
+          const fullTab = openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id));
+          const fullPayIds: string[] = [];
+          const partialPays: Array<{ id: string; paidQty: number }> = [];
+          for (const pi of paidItems) {
+            const tabItem = fullTab?.items?.find(i => i.id === pi.id);
+            if (!tabItem) continue;
+            if (pi.paidQty >= tabItem.quantity) {
+              fullPayIds.push(pi.id);
+            } else {
+              partialPays.push(pi);
+            }
+          }
+          if (fullPayIds.length > 0) {
+            await supabase.from('tab_items').update({ paid: true } as any).in('id', fullPayIds);
+          }
+          for (const pp of partialPays) {
+            const tabItem = fullTab?.items?.find(i => i.id === pp.id);
+            if (!tabItem) continue;
+            const remainingQty = tabItem.quantity - pp.paidQty;
+            await supabase.from('tab_items').update({
+              quantity: remainingQty,
+              total_price: remainingQty * tabItem.unit_price,
+            } as any).eq('id', pp.id);
+            await supabase.from('tab_items').insert({
+              tab_id: tabItem.tab_id,
+              product_id: tabItem.product_id,
+              product_name: tabItem.product_name,
+              unit_price: tabItem.unit_price,
+              quantity: pp.paidQty,
+              total_price: pp.paidQty * tabItem.unit_price,
+              created_by: tabItem.created_by,
+              notes: tabItem.notes,
+              paid: true,
+            } as any);
+          }
           if (!fullTab?.items) return;
-          const allPaid = fullTab.items.every(i => (i as any).paid || itemIds.includes(i.id));
+          const paidItemIds = paidItems.map(p => p.id);
+          const allPaid = fullTab.items.every(i =>
+            (i as any).paid || paidItemIds.includes(i.id)
+          );
           if (allPaid) {
             await closeTab(fullTab.id);
             toast.success('Todos os itens pagos — comanda fechada!');
