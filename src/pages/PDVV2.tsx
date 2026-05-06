@@ -894,12 +894,22 @@ export default function PDVV2() {
       <PDVV2PaymentDialog
         open={!!importingTab}
         onOpenChange={(o) => {
+          if (!o && isI9 && i9SplitInfo) {
+            return;
+          }
           if (!o) {
             setImportingTab(null);
             setI9PartialItemIds([]);
             setI9SplitInfo(null);
             setI9OriginalTabId(null);
           }
+        }}
+        lockClose={isI9 && !!i9SplitInfo}
+        splitInfo={i9SplitInfo}
+        onCancelSplit={() => {
+          setI9SplitInfo(null);
+          setI9OriginalTabId(null);
+          setImportingTab(null);
         }}
         companyId={companyId}
         total={importingTab?.total || 0}

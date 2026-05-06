@@ -1,5 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +19,7 @@ import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput, LANCHERIA_I9_COMPANY_ID } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
-import { Plug, Loader2, Users, ListChecks, Printer } from 'lucide-react';
+import { Plug, Loader2, Users, ListChecks, Printer, XCircle } from 'lucide-react';
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
@@ -43,6 +53,12 @@ interface PDVV2PaymentDialogProps {
    * cobrar primeiro e só responder NFC-e/impressão após aprovação.
    */
   chargeTefBeforePopups?: boolean;
+  /** Quando true, bloqueia fechamento por clique fora, Escape e X */
+  lockClose?: boolean;
+  /** Info da divisão ativa (para exibir botão "Cancelar divisão") */
+  splitInfo?: { perPerson: number; remaining: number; total: number } | null;
+  /** Callback para cancelar a divisão em andamento */
+  onCancelSplit?: () => void;
   onConfirm: (params: {
     paymentMethodId: string;
     paymentName: string;
@@ -85,6 +101,9 @@ export function PDVV2PaymentDialog({
   cashOnly = false,
   tefStatus,
   chargeTefBeforePopups = false,
+  lockClose = false,
+  splitInfo,
+  onCancelSplit,
   onConfirm,
 }: PDVV2PaymentDialogProps) {
   // I9: modo de cobrança avançado (itens selecionados ou divisão por pessoas)
@@ -138,6 +157,8 @@ export function PDVV2PaymentDialog({
   } | null>(null);
   const [internalTefStatus, setInternalTefStatus] = useState('');
   const [chargingTef, setChargingTef] = useState(false);
+
+  const [cancelSplitOpen, setCancelSplitOpen] = useState(false);
 
   // Detecta se o método selecionado é TEF — força NFC-e (mesma regra do V1)
   const selectedMethod = activePaymentMethods.find((m) => m.id === paymentMethodId);
@@ -336,11 +357,31 @@ export function PDVV2PaymentDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+    <>
+    <Dialog open={open} onOpenChange={(o) => {
+      if (!o && lockClose) return;
+      onOpenChange(o);
+    }}>
+      <DialogContent
+        className={`max-h-[90vh] overflow-y-auto ${lockClose ? '[&>button.absolute]:hidden' : ''}`}
+        onInteractOutside={(e) => { if (lockClose) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (lockClose) e.preventDefault(); }}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
+
+        {lockClose && splitInfo && onCancelSplit && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
+            onClick={() => setCancelSplitOpen(true)}
+          >
+            <XCircle className="h-4 w-4 mr-2" />
+            Cancelar divisão
+          </Button>
+        )}
 
         {(tefStatus || internalTefStatus) && (
           <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 flex items-center gap-3">
@@ -900,6 +941,32 @@ export function PDVV2PaymentDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* AlertDialog de confirmação de cancelamento de divisão */}
+      <AlertDialog open={cancelSplitOpen} onOpenChange={setCancelSplitOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar divisão?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {splitInfo
+                ? `${splitInfo.total - splitInfo.remaining} de ${splitInfo.total} pessoa(s) já pagou. Se cancelar, a comanda permanece aberta mas o progresso será perdido.`
+                : 'Se cancelar, a comanda permanece aberta mas o progresso será perdido.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                setCancelSplitOpen(false);
+                onCancelSplit?.();
+              }}
+            >
+              Cancelar divisão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
+    </>
   );
 }
