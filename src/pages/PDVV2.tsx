@@ -894,6 +894,9 @@ export default function PDVV2() {
       <PDVV2PaymentDialog
         open={!!importingTab}
         onOpenChange={(o) => {
+          if (!o && isI9 && i9SplitInfo) {
+            return;
+          }
           if (!o) {
             setImportingTab(null);
             setI9PartialItemIds([]);
