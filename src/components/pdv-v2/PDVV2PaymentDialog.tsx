@@ -357,6 +357,7 @@ export function PDVV2PaymentDialog({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(o) => {
       if (!o && lockClose) return;
       onOpenChange(o);
@@ -966,5 +967,6 @@ export function PDVV2PaymentDialog({
         </AlertDialogContent>
       </AlertDialog>
     </Dialog>
+    </>
   );
 }
