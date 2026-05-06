@@ -576,6 +576,7 @@ export default function PDVV2() {
   const isI9 = companyId === LANCHERIA_I9_COMPANY_ID;
 
   function handleImportClick(tab: OccupiedTab) {
+    console.log('[ROUTE-DEBUG] isI9=', isI9, 'companyId=', companyId, 'expected=', LANCHERIA_I9_COMPANY_ID);
     if (!cashOpen) {
       toast.error('Abra o caixa para cobrar');
       return;
@@ -983,7 +984,7 @@ export default function PDVV2() {
         showDocumentMode
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
-        onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
+        onConfirm={isI9 ? (p: any) => { console.log('[ROUTE-DEBUG] onConfirm → confirmImportTabI9'); return confirmImportTabI9(p); } : (p: any) => { console.log('[ROUTE-DEBUG] onConfirm → confirmImportTab (NOT i9)'); return confirmImportTab(p); }}
         checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, id: i.id, paid: !!(i as any).paid })) : undefined}
         onItemsPaid={isI9 ? async (itemIds) => {
           if (!importingTab) return;
