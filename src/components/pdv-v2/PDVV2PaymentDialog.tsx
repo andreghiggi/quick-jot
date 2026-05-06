@@ -36,6 +36,10 @@ interface PDVV2PaymentDialogProps {
   cashOnly?: boolean;
   /** Mensagem de status do processamento TEF (mostrada como banner topo). Vazio = oculto. */
   tefStatus?: string;
+  /** When a split is already in progress (person 2+), the dialog auto-selects
+   *  split mode with these pre-set values. The user cannot change the number
+   *  of people or the per-person amount. */
+  activeSplit?: { perPerson: number; totalPeople: number; currentPerson: number };
   /**
    * Quando true (e for I9), o TEF é executado AQUI — antes dos pop-ups de
    * CPF/Imprimir. Se a cobrança não for aprovada, nada é confirmado e o
@@ -89,10 +93,18 @@ export function PDVV2PaymentDialog({
   chargeTefBeforePopups = false,
   onConfirm,
 }: PDVV2PaymentDialogProps) {
-  // I9: modo de cobrança avançado (itens selecionados ou divisão por pessoas)
+  // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
   const [selectedItemIdxs, setSelectedItemIdxs] = useState<Set<number>>(new Set());
   const [splitPeople, setSplitPeople] = useState(2);
+
+  // When activeSplit is provided (person 2+), force split mode on open
+  useEffect(() => {
+    if (open && activeSplit) {
+      setI9Mode('split');
+      setSplitPeople(activeSplit.totalPeople);
+    }
+  }, [open, activeSplit]);
 
   const { activePaymentMethods: rawActivePaymentMethods } = usePaymentMethods({ companyId, channel });
   // Fallback: se não houver métodos cadastrados no canal PDV, lista TODOS os métodos
