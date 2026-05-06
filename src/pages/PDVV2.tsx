@@ -984,7 +984,12 @@ export default function PDVV2() {
         showDocumentMode
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
-        onConfirm={isI9 ? (p: any) => { console.log('[ROUTE-DEBUG] onConfirm → confirmImportTabI9'); return confirmImportTabI9(p); } : (p: any) => { console.log('[ROUTE-DEBUG] onConfirm → confirmImportTab (NOT i9)'); return confirmImportTab(p); }}
+        onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
+        activeSplit={i9SplitInfo ? {
+          perPerson: i9SplitInfo.perPerson,
+          totalPeople: i9SplitInfo.total,
+          currentPerson: i9SplitInfo.total - i9SplitInfo.remaining + 1,
+        } : undefined}
         checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, id: i.id, paid: !!(i as any).paid })) : undefined}
         onItemsPaid={isI9 ? async (itemIds) => {
           if (!importingTab) return;
