@@ -901,6 +901,13 @@ export default function PDVV2() {
             setI9OriginalTabId(null);
           }
         }}
+        lockClose={isI9 && !!i9SplitInfo}
+        splitInfo={i9SplitInfo}
+        onCancelSplit={() => {
+          setI9SplitInfo(null);
+          setI9OriginalTabId(null);
+          setImportingTab(null);
+        }}
         companyId={companyId}
         total={importingTab?.total || 0}
         title={
