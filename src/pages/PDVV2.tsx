@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useOrderContext } from '@/contexts/OrderContext';
@@ -119,7 +118,7 @@ export default function PDVV2() {
   const [openingAmount, setOpeningAmount] = useState('');
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
-  const [importingTab, setImportingTab] = useState<OccupiedTab | null>(null);
+  const [importingTab, setImportingTab] = useState<(OccupiedTab & { _splitPerson?: number; _splitTotal?: number; _splitPerPerson?: number }) | null>(null);
   const [closedTabsOpen, setClosedTabsOpen] = useState(false);
   const [i9PartialItemIds, setI9PartialItemIds] = useState<string[]>([]);
   const [i9SplitInfo, setI9SplitInfo] = useState<{ perPerson: number; remaining: number; total: number } | null>(null);
@@ -588,21 +587,28 @@ export default function PDVV2() {
     const fullTab = openTabs.find((t) => t.id === resolvedTabId);
 
     // Split mode first — doesn't need fullTab items
-    if (i9SplitInfo) {
+    const splitData = i9SplitInfo ?? (
+      importingTab?._splitPerson !== undefined
+        ? { perPerson: importingTab._splitPerPerson!, remaining: importingTab._splitTotal! - importingTab._splitPerson!, total: importingTab._splitTotal! }
+        : null
+    );
+    if (splitData) {
+      // Sync i9SplitInfo if it was resolved from importingTab fallback
+      if (!i9SplitInfo) setI9SplitInfo(splitData);
       const customer = fullTab?.customer_name ||
         (fullTab?.table?.number ? `Mesa ${fullTab.table.number}` : importingTab.tableNumber ? `Mesa ${importingTab.tableNumber}` : `Comanda ${importingTab.tabNumber}`);
       const tabNumber = fullTab?.tab_number || importingTab.tabNumber || '?';
-      const personIndex = i9SplitInfo.total - i9SplitInfo.remaining + 1;
+      const personIndex = splitData.total - splitData.remaining + 1;
       const items = [{
         product_id: null as string | null,
-        product_name: `Divisão ${personIndex}/${i9SplitInfo.total} — ${customer}`,
+        product_name: `Divisão ${personIndex}/${splitData.total} — ${customer}`,
         quantity: 1,
-        unit_price: i9SplitInfo.perPerson,
+        unit_price: splitData.perPerson,
       }];
       const saleId = await addSale(items, params.paymentMethodId, user.id, 0, customer,
-        `Comanda #${tabNumber} | Divisão ${personIndex}/${i9SplitInfo.total}: ${params.paymentName}`);
+        `Comanda #${tabNumber} | Divisão ${personIndex}/${splitData.total}: ${params.paymentName}`);
       if (saleId) {
-        const newRemaining = i9SplitInfo.remaining - 1;
+        const newRemaining = splitData.remaining - 1;
         if (newRemaining <= 0) {
           await closeTab(resolvedTabId);
           toast.success('Última pessoa cobrada — comanda fechada!');
@@ -611,10 +617,10 @@ export default function PDVV2() {
           setImportingTab(null);
         } else {
           toast.success(`Pessoa ${personIndex} cobrada. Faltam ${newRemaining}.`);
-          setI9SplitInfo({ ...i9SplitInfo, remaining: newRemaining });
+          setI9SplitInfo({ ...splitData, remaining: newRemaining });
           const savedTab = { ...importingTab, id: resolvedTabId };
           setImportingTab(null);
-          setTimeout(() => setImportingTab({ ...savedTab, total: i9SplitInfo.perPerson }), 100);
+          setTimeout(() => setImportingTab({ ...savedTab, total: splitData.perPerson }), 100);
         }
       }
       return;
@@ -938,7 +944,7 @@ export default function PDVV2() {
             const saved = { ...importingTab };
             setImportingTab(null);
             if (totalPeople - 1 > 0) {
-              setTimeout(() => setImportingTab({ ...saved, total: perPerson }), 100);
+              setTimeout(() => setImportingTab({ ...saved, total: perPerson, _splitPerson: 1, _splitTotal: totalPeople, _splitPerPerson: perPerson }), 100);
             } else {
               const fullTab = openTabs.find(t => t.id === saved.id);
               if (fullTab) await closeTab(fullTab.id);
