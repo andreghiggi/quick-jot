@@ -585,6 +585,11 @@ export default function OptionalGroups() {
                 <Switch checked={editingGroup.active} onCheckedChange={(v) => setEditingGroup({ ...editingGroup, active: v })} />
                 <Label>Ativo</Label>
               </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={editingGroup.waiterOnly ?? false} onCheckedChange={(v) => setEditingGroup({ ...editingGroup, waiterOnly: v })} />
+                <Label>Somente garçom</Label>
+                <p className="text-xs text-muted-foreground">Este grupo não aparecerá no cardápio online nem no pedido express</p>
+              </div>
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Layout no cardápio</Label>
                 <div className="flex gap-2">
