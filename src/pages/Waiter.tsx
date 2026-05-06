@@ -644,7 +644,7 @@ export default function Waiter() {
                                 toast.error('Produto não encontrado no cardápio');
                                 return;
                               }
-                              setSelectedTab(null);
+                             setAddItemDialogOpen(true);
                               handleAddToCart(product);
                             }}
                           >
