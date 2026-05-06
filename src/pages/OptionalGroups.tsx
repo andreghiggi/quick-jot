@@ -97,6 +97,7 @@ export default function OptionalGroups() {
       layout: editingGroup.layout,
     };
     if (isI9) updateData.maxQuantityPerItem = (editingGroup as any).maxQuantityPerItem ?? 1;
+    updateData.waiterOnly = editingGroup.waiterOnly ?? false;
     await updateGroup(editingGroup.id, updateData);
     setEditingGroup(null);
   }
@@ -402,6 +403,7 @@ export default function OptionalGroups() {
                 <div className="flex items-center gap-3 flex-1 text-left">
                   <span className="font-semibold">{group.name}</span>
                    {!group.active && <Badge variant="secondary">Inativo</Badge>}
+                   {group.waiterOnly && <Badge variant="outline" className="text-xs">Somente garçom</Badge>}
                    <Badge variant="outline" className="text-xs">
                      {group.items.length} {group.items.length === 1 ? 'item' : 'itens'}
                    </Badge>
@@ -584,6 +586,11 @@ export default function OptionalGroups() {
               <div className="flex items-center gap-2">
                 <Switch checked={editingGroup.active} onCheckedChange={(v) => setEditingGroup({ ...editingGroup, active: v })} />
                 <Label>Ativo</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={editingGroup.waiterOnly ?? false} onCheckedChange={(v) => setEditingGroup({ ...editingGroup, waiterOnly: v })} />
+                <Label>Somente garçom</Label>
+                <p className="text-xs text-muted-foreground">Este grupo não aparecerá no cardápio online nem no pedido express</p>
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Layout no cardápio</Label>

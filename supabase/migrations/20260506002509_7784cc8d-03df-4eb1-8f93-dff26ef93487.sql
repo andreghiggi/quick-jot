@@ -1,0 +1,1 @@
+ALTER TABLE public.optional_groups ADD COLUMN waiter_only boolean NOT NULL DEFAULT false;
