@@ -9,7 +9,7 @@ import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput, LANCHERIA_I9_COMPANY_ID } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
-import { Plug, Loader2, Users, ListChecks } from 'lucide-react';
+import { Plug, Loader2, Users, ListChecks, Printer } from 'lucide-react';
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
@@ -353,7 +353,7 @@ export function PDVV2PaymentDialog({
         )}
 
         <div className="space-y-4 py-2">
-          <div className="rounded-md border p-3 bg-muted/40">
+          {!isLancheriaI9 && <div className="rounded-md border p-3 bg-muted/40">
             <p className="text-sm text-muted-foreground">Total</p>
             <p className="text-2xl font-bold tabular-nums">{formatPrice(finalTotal)}</p>
             {(discountValue > 0 || extrasTotal > 0) && (
@@ -363,7 +363,7 @@ export function PDVV2PaymentDialog({
                 {discountValue > 0 && ` − Desconto: ${formatPrice(discountValue)}`}
               </p>
             )}
-          </div>
+          </div>}
 
           {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && (
             <div className="space-y-1">
@@ -387,6 +387,33 @@ export function PDVV2PaymentDialog({
               items={extraItems}
               onChange={setExtraItems}
             />
+          )}
+
+          {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={async () => {
+                if (!checkoutItems?.length) return;
+                const { printOnlyReceipt } = await import('@/utils/pdvV2Print');
+                await printOnlyReceipt({
+                  companyId: companyId || '',
+                  orderCode: title || 'Comanda',
+                  dailyNumber: 0,
+                  customerName: title || 'Comanda',
+                  items: checkoutItems.map(i => ({
+                    name: i.name,
+                    quantity: i.quantity,
+                    price: i.unit_price,
+                  })),
+                  total: total,
+                });
+                toast.success('Comanda enviada para impressão!');
+              }}
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimir comanda
+            </Button>
           )}
 
           {/* I9: opções de cobrança avançada */}
@@ -495,6 +522,18 @@ export function PDVV2PaymentDialog({
               />
             </div>
           )}
+
+          {isLancheriaI9 && <div className="rounded-md border p-3 bg-muted/40">
+            <p className="text-sm text-muted-foreground">Total</p>
+            <p className="text-2xl font-bold tabular-nums">{formatPrice(finalTotal)}</p>
+            {(discountValue > 0 || extrasTotal > 0) && (
+              <p className="text-xs text-muted-foreground">
+                Subtotal: {formatPrice(total)}
+                {extrasTotal > 0 && ` + Itens: ${formatPrice(extrasTotal)}`}
+                {discountValue > 0 && ` − Desconto: ${formatPrice(discountValue)}`}
+              </p>
+            )}
+          </div>}
 
           <div className="space-y-2">
             <Label>Forma de pagamento</Label>
