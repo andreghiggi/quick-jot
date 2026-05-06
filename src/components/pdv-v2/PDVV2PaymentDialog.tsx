@@ -902,5 +902,6 @@ export function PDVV2PaymentDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </Dialog>
   );
 }
