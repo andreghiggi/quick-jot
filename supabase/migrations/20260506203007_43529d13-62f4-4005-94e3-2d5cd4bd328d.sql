@@ -1,2 +1,0 @@
-ALTER TABLE public.pdv_sales DROP CONSTRAINT pdv_sales_payment_method_id_fkey;
-ALTER TABLE public.pdv_sales ADD CONSTRAINT pdv_sales_payment_method_id_fkey FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) ON DELETE SET NULL;
