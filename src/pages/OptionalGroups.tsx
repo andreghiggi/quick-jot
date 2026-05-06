@@ -97,6 +97,7 @@ export default function OptionalGroups() {
       layout: editingGroup.layout,
     };
     if (isI9) updateData.maxQuantityPerItem = (editingGroup as any).maxQuantityPerItem ?? 1;
+    updateData.waiterOnly = editingGroup.waiterOnly ?? false;
     await updateGroup(editingGroup.id, updateData);
     setEditingGroup(null);
   }
