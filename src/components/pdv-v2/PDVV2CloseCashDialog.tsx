@@ -278,7 +278,7 @@ export function PDVV2CloseCashDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Fechar Caixa</DialogTitle>
           </DialogHeader>
@@ -288,7 +288,7 @@ export function PDVV2CloseCashDialog({
               {mainBody}
             </div>
           ) : (
-            <ScrollArea className="flex-1 pr-3">
+             <ScrollArea className="flex-1 min-h-0 pr-3">
               {mainBody}
             </ScrollArea>
           )}
