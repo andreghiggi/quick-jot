@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useOrderContext } from '@/contexts/OrderContext';
@@ -123,11 +123,6 @@ export default function PDVV2() {
   const [i9PartialItemIds, setI9PartialItemIds] = useState<string[]>([]);
   const [i9SplitInfo, setI9SplitInfo] = useState<{ perPerson: number; remaining: number; total: number } | null>(null);
   const [i9OriginalTabId, setI9OriginalTabId] = useState<string | null>(null);
-  const i9SplitInfoRef = useRef<{ perPerson: number; remaining: number; total: number } | null>(null);
-  function setI9Split(val: { perPerson: number; remaining: number; total: number } | null) {
-    i9SplitInfoRef.current = val;
-    setI9SplitInfo(val);
-  }
   // NFC-e pós-venda (mesmo padrão do PDV V1: polling visível + ação do operador)
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
@@ -592,34 +587,33 @@ export default function PDVV2() {
     const fullTab = openTabs.find((t) => t.id === resolvedTabId);
 
     // Split mode first — doesn't need fullTab items
-    const splitInfo = i9SplitInfoRef.current;
-    if (splitInfo) {
+    if (i9SplitInfo) {
       const customer = fullTab?.customer_name ||
         (fullTab?.table?.number ? `Mesa ${fullTab.table.number}` : importingTab.tableNumber ? `Mesa ${importingTab.tableNumber}` : `Comanda ${importingTab.tabNumber}`);
       const tabNumber = fullTab?.tab_number || importingTab.tabNumber || '?';
-      const personIndex = splitInfo.total - splitInfo.remaining + 1;
+      const personIndex = i9SplitInfo.total - i9SplitInfo.remaining + 1;
       const items = [{
         product_id: null as string | null,
-        product_name: `Divisão ${personIndex}/${splitInfo.total} — ${customer}`,
+        product_name: `Divisão ${personIndex}/${i9SplitInfo.total} — ${customer}`,
         quantity: 1,
-        unit_price: splitInfo.perPerson,
+        unit_price: i9SplitInfo.perPerson,
       }];
       const saleId = await addSale(items, params.paymentMethodId, user.id, 0, customer,
-        `Comanda #${tabNumber} | Divisão ${personIndex}/${splitInfo.total}: ${params.paymentName}`);
+        `Comanda #${tabNumber} | Divisão ${personIndex}/${i9SplitInfo.total}: ${params.paymentName}`);
       if (saleId) {
-        const newRemaining = splitInfo.remaining - 1;
+        const newRemaining = i9SplitInfo.remaining - 1;
         if (newRemaining <= 0) {
           await closeTab(resolvedTabId);
           toast.success('Última pessoa cobrada — comanda fechada!');
-          setI9Split(null);
+          setI9SplitInfo(null);
           setI9OriginalTabId(null);
           setImportingTab(null);
         } else {
           toast.success(`Pessoa ${personIndex} cobrada. Faltam ${newRemaining}.`);
-          setI9Split({ ...splitInfo, remaining: newRemaining });
+          setI9SplitInfo({ ...i9SplitInfo, remaining: newRemaining });
           const savedTab = { ...importingTab, id: resolvedTabId };
           setImportingTab(null);
-          setTimeout(() => setImportingTab({ ...savedTab, total: splitInfo.perPerson }), 100);
+          setTimeout(() => setImportingTab({ ...savedTab, total: i9SplitInfo.perPerson }), 100);
         }
       }
       return;
@@ -903,7 +897,7 @@ export default function PDVV2() {
           if (!o) {
             setImportingTab(null);
             setI9PartialItemIds([]);
-            setI9Split(null);
+            setI9SplitInfo(null);
             setI9OriginalTabId(null);
           }
         }}
@@ -937,9 +931,9 @@ export default function PDVV2() {
         } : undefined}
         onSplitPaid={isI9 ? async (perPerson, totalPeople) => {
           if (!importingTab) return;
-           if (!i9SplitInfoRef.current) {
+          if (!i9SplitInfo) {
             setI9OriginalTabId(importingTab.id);
-            setI9Split({ perPerson, remaining: totalPeople - 1, total: totalPeople });
+            setI9SplitInfo({ perPerson, remaining: totalPeople - 1, total: totalPeople });
             const saved = { ...importingTab };
             setImportingTab(null);
             if (totalPeople - 1 > 0) {
@@ -951,17 +945,16 @@ export default function PDVV2() {
               setI9OriginalTabId(null);
             }
           } else {
-            const cur = i9SplitInfoRef.current;
-            const newRemaining = cur.remaining - 1;
+            const newRemaining = i9SplitInfo.remaining - 1;
             if (newRemaining <= 0) {
               await closeTab(i9OriginalTabId || importingTab.id);
               toast.success('Última pessoa cobrada — comanda fechada!');
-              setI9Split(null);
+              setI9SplitInfo(null);
               setI9OriginalTabId(null);
               setImportingTab(null);
             } else {
               toast.success(`Pessoa cobrada. Faltam ${newRemaining}.`);
-              setI9Split({ ...cur, remaining: newRemaining });
+              setI9SplitInfo({ ...i9SplitInfo, remaining: newRemaining });
               const saved = { ...importingTab, id: i9OriginalTabId || importingTab.id };
               setImportingTab(null);
               setTimeout(() => setImportingTab({ ...saved, total: perPerson }), 100);
