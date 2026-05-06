@@ -439,7 +439,7 @@ export function PDVV2PaymentDialog({
           )}
 
           {/* I9: opções de cobrança avançada */}
-          {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && (
+          {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && !activeSplit && (
             <div className="space-y-3">
               <p className="text-xs font-medium text-muted-foreground">Modo de cobrança</p>
               <div className="grid grid-cols-2 gap-2">
@@ -526,6 +526,19 @@ export function PDVV2PaymentDialog({
                   </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* I9: active split in progress (person 2+) — read-only summary */}
+          {isLancheriaI9 && activeSplit && (
+            <div className="rounded-md border border-primary/30 bg-primary/10 p-3 space-y-1">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">
+                  Pessoa {activeSplit.currentPerson} de {activeSplit.totalPeople}
+                </span>
+              </div>
+              <p className="text-lg font-bold tabular-nums">{formatPrice(activeSplit.perPerson)}</p>
             </div>
           )}
 
