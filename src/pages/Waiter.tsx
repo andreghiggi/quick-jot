@@ -606,19 +606,7 @@ export default function Waiter() {
                   {selectedTab.items.map((item) => (
                     <div
                       key={item.id}
-                      className={`flex items-center justify-between p-3 bg-muted rounded-lg ${isI9 ? 'cursor-pointer active:bg-muted/70 hover:bg-muted/80 transition-colors' : ''}`}
-                      onClick={isI9 ? async () => {
-                        if (!selectedTab || !user?.id) return;
-                        await addItemToTab(selectedTab.id, {
-                          productId: item.product_id || undefined,
-                          productName: item.product_name,
-                          quantity: 1,
-                          unitPrice: item.unit_price,
-                          notes: item.notes || undefined,
-                          userId: user.id,
-                        });
-                        toast.success(`+1 ${item.product_name.split('(')[0].trim()}`);
-                      } : undefined}
+                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
                     >
                       <div className="flex-1">
                         {isI9 && item.product_name.includes('(') ? (() => {
@@ -645,7 +633,23 @@ export default function Waiter() {
                       <div className="flex items-center gap-2">
                         <span className="font-bold">R$ {item.total_price.toFixed(2)}</span>
                         {isI9 && (
-                          <Plus className="w-4 h-4 text-muted-foreground" />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const product = products.find(p => p.id === item.product_id);
+                              if (!product) {
+                                toast.error('Produto não encontrado no cardápio');
+                                return;
+                              }
+                              setSelectedTab(null);
+                              handleAddToCart(product);
+                            }}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
                         )}
                       </div>
                     </div>
