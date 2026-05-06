@@ -213,6 +213,16 @@ export default function PDVV2() {
     return sales.map((s) => {
       // Determina origem cruzando com orders (quando há order_id)
       let origin: CloseCashSale['origin'] = 'balcao';
+
+      // Extrai sub-tipo TEF das notes (Débito, Crédito à Vista, Parcelado, PIX)
+      let pmName = s.payment_method?.name || 'Sem forma';
+      if (s.notes) {
+        const tefMatch = s.notes.match(/\|\s*(Débito|Crédito à Vista|PIX|\d+x\s*(?:Cartão\s*(?:ADM|Loja)|Crédito))/i);
+        if (tefMatch) {
+          pmName = `${pmName} (${tefMatch[1]})`;
+        }
+      }
+
       const orderId = (s as any).order_id as string | undefined;
       if (orderId) {
         const linked = orders.find((o) => o.id === orderId);
@@ -234,7 +244,7 @@ export default function PDVV2() {
         id: s.id,
         final_total: Number(s.final_total) || 0,
         payment_method_id: s.payment_method_id || null,
-        payment_method_name: s.payment_method?.name || 'Sem forma',
+        payment_method_name: pmName,
         customer_name: s.customer_name || null,
         created_at: s.created_at,
         origin,
