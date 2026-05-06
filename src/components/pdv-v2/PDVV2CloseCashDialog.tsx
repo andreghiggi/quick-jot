@@ -313,8 +313,8 @@ export function PDVV2CloseCashDialog({
             </DialogTitle>
           </DialogHeader>
 
-           <ScrollArea className="flex-1 min-h-0 pr-3">
-            <div className="space-y-2 py-2">
+          <div className="flex-1 min-h-0 overflow-y-auto pr-3">
+            <div className="space-y-2 py-2 pb-4">
               {openOriginSales.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma venda nesta origem.</p>
               ) : (
@@ -371,7 +371,7 @@ export function PDVV2CloseCashDialog({
                 ))
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenOrigin(null)}>
