@@ -160,9 +160,9 @@ export default function PDVV2() {
         tabNumber: t.tab_number,
         tableNumber: t.table?.number ?? null,
         customerName: t.customer_name,
-        total: getTabTotal(t),
+        total: t.items?.reduce((s, i) => s + ((i as any).paid ? 0 : i.total_price), 0) || 0,
       })),
-    [openTabs, getTabTotal]
+    [openTabs]
   );
 
   // Métricas da aba Mesas — todas as comandas finalizadas do caixa aberto atual
