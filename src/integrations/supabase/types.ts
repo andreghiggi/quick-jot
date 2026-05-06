@@ -822,6 +822,7 @@ export type Database = {
           min_select: number
           name: string
           updated_at: string
+          waiter_only: boolean
         }
         Insert: {
           active?: boolean
@@ -835,6 +836,7 @@ export type Database = {
           min_select?: number
           name: string
           updated_at?: string
+          waiter_only?: boolean
         }
         Update: {
           active?: boolean
@@ -848,6 +850,7 @@ export type Database = {
           min_select?: number
           name?: string
           updated_at?: string
+          waiter_only?: boolean
         }
         Relationships: [
           {
