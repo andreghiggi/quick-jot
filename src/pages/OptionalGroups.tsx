@@ -403,6 +403,7 @@ export default function OptionalGroups() {
                 <div className="flex items-center gap-3 flex-1 text-left">
                   <span className="font-semibold">{group.name}</span>
                    {!group.active && <Badge variant="secondary">Inativo</Badge>}
+                   {group.waiterOnly && <Badge variant="outline" className="text-xs">Somente garçom</Badge>}
                    <Badge variant="outline" className="text-xs">
                      {group.items.length} {group.items.length === 1 ? 'item' : 'itens'}
                    </Badge>
