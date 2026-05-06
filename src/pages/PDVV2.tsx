@@ -1071,6 +1071,7 @@ export default function PDVV2() {
           <p className="text-lg font-semibold text-foreground">Emitindo NFC-e…</p>
           <p className="text-sm text-muted-foreground">Aguarde, não feche a tela.</p>
         </div>
+      </div>
     )}
     </>
   );
