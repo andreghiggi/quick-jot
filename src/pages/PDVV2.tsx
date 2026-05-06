@@ -583,7 +583,7 @@ export default function PDVV2() {
     setImportingTab(tab);
   }
 
-  async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0] & { splitInfo?: { perPerson: number; totalPeople: number } }) {
+  async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0] & { splitInfo?: { perPerson: number; totalPeople: number }; itemsInfo?: Array<{ id: string; paidQty: number }> }) {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -685,29 +685,117 @@ export default function PDVV2() {
       fullTab.customer_name ||
       (fullTab.table?.number ? `Mesa ${fullTab.table.number}` : `Comanda ${fullTab.tab_number}`);
 
-    if (i9PartialItemIds.length > 0) {
-      const selectedItems = fullTab.items.filter((i) => i9PartialItemIds.includes(i.id));
-      if (selectedItems.length === 0) { toast.error('Nenhum item selecionado'); return; }
-      const items = selectedItems.map((i) => ({
-        product_id: i.product_id,
-        product_name: i.product_name,
-        quantity: i.quantity,
-        unit_price: i.unit_price,
-      }));
-      const saleId = await addSale(items, params.paymentMethodId, user.id, 0, customer,
-        `Comanda #${fullTab.tab_number} | Pagamento parcial: ${params.paymentName}`);
+    // ===== Items mode: selected items with TEF + NFC-e + loop =====
+    if (params.itemsInfo && params.itemsInfo.length > 0) {
+      const tabNumber = fullTab.tab_number || importingTab.tabNumber || '?';
+
+      // Build sale items from selected tab_items
+      const saleItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[] = [];
+      for (const pi of params.itemsInfo) {
+        const tabItem = fullTab.items.find((i) => i.id === pi.id);
+        if (!tabItem) continue;
+        saleItems.push({
+          product_id: tabItem.product_id,
+          product_name: tabItem.product_name,
+          quantity: pi.paidQty,
+          unit_price: tabItem.unit_price,
+        });
+      }
+      if (saleItems.length === 0) { toast.error('Nenhum item selecionado'); return; }
+
+      // ===== TEF: roda ANTES de criar a venda. Aborta se falhar.
+      let tefData: NFCeTefData | undefined;
+      let tefNotesFragment = '';
+      if (params.tefIntegration && params.tefOptions) {
+        const result = await runTefPayment({
+          companyId,
+          integration: params.tefIntegration,
+          amount: params.finalTotal,
+          options: params.tefOptions,
+          description: `Comanda #${tabNumber} - Itens selecionados`,
+          onStatus: setTefStatus,
+        });
+        setTefStatus('');
+        if (!result.success) return;
+        tefData = result.tefData;
+        tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
+      }
+
+      const saleNotes = `Comanda #${tabNumber} | Pagamento parcial: ${params.paymentName}${tefNotesFragment}`;
+      const saleId = await addSale(saleItems, params.paymentMethodId, user.id, 0, customer, saleNotes);
+
       if (saleId) {
-        await supabase.from('tab_items').update({ paid: true } as any).in('id', i9PartialItemIds);
-        const allPaid = fullTab.items.every((i) => i.paid || i9PartialItemIds.includes(i.id));
+        // DB: mark items as paid (full or partial qty split)
+        const fullPayIds: string[] = [];
+        const partialPays: Array<{ id: string; paidQty: number }> = [];
+        for (const pi of params.itemsInfo) {
+          const tabItem = fullTab.items.find((i) => i.id === pi.id);
+          if (!tabItem) continue;
+          if (pi.paidQty >= tabItem.quantity) {
+            fullPayIds.push(pi.id);
+          } else {
+            partialPays.push(pi);
+          }
+        }
+        if (fullPayIds.length > 0) {
+          await supabase.from('tab_items').update({ paid: true } as any).in('id', fullPayIds);
+        }
+        for (const pp of partialPays) {
+          const tabItem = fullTab.items.find((i) => i.id === pp.id);
+          if (!tabItem) continue;
+          const remainingQty = tabItem.quantity - pp.paidQty;
+          await supabase.from('tab_items').update({
+            quantity: remainingQty,
+            total_price: remainingQty * tabItem.unit_price,
+          } as any).eq('id', pp.id);
+          await supabase.from('tab_items').insert({
+            tab_id: tabItem.tab_id,
+            product_id: tabItem.product_id,
+            product_name: tabItem.product_name,
+            unit_price: tabItem.unit_price,
+            quantity: pp.paidQty,
+            total_price: pp.paidQty * tabItem.unit_price,
+            created_by: tabItem.created_by,
+            notes: tabItem.notes,
+            paid: true,
+          } as any);
+        }
+
+        // NFC-e: TEF força emissão. Caso contrário, segue documentMode.
+        const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
+        if (wantsNfce) {
+          await emitNFCeAndOpenDialog({
+            saleId,
+            items: saleItems,
+            discount: 0,
+            customerName: fullTab.customer_name || null,
+            shouldPrint: params.printDocument !== false,
+            tefData,
+            customerDocument: params.customerDocument,
+          });
+        }
+
+        // Check if all items are now paid
+        const paidItemIds = params.itemsInfo.map((p) => p.id);
+        const allPaid = fullTab.items.every((i) =>
+          (i as any).paid || paidItemIds.includes(i.id)
+        );
         if (allPaid) {
           await closeTab(fullTab.id);
           toast.success('Todos os itens pagos — comanda fechada!');
+          setImportingTab(null);
         } else {
-          toast.success('Pagamento parcial registrado!');
+          toast.success('Pagamento parcial registrado! Selecione os próximos itens.');
+          // Loop back: reopen dialog for remaining items
+          const savedTab = { ...importingTab, id: resolvedTabId };
+          i9SplitTransitionRef.current = true;
+          setImportingTab(null);
+          setTimeout(() => {
+            setImportingTab(savedTab);
+            i9SplitTransitionRef.current = false;
+          }, 100);
         }
       }
-      setI9PartialItemIds([]);
-      setImportingTab(null);
       return;
     }
 
@@ -981,56 +1069,6 @@ export default function PDVV2() {
           currentPerson: i9SplitInfo.total - i9SplitInfo.remaining + 1,
         } : undefined}
         checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, id: i.id, paid: !!(i as any).paid })) : undefined}
-        onItemsPaid={isI9 ? async (paidItems) => {
-          if (!importingTab) return;
-          const fullTab = openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id));
-          const fullPayIds: string[] = [];
-          const partialPays: Array<{ id: string; paidQty: number }> = [];
-          for (const pi of paidItems) {
-            const tabItem = fullTab?.items?.find(i => i.id === pi.id);
-            if (!tabItem) continue;
-            if (pi.paidQty >= tabItem.quantity) {
-              fullPayIds.push(pi.id);
-            } else {
-              partialPays.push(pi);
-            }
-          }
-          if (fullPayIds.length > 0) {
-            await supabase.from('tab_items').update({ paid: true } as any).in('id', fullPayIds);
-          }
-          for (const pp of partialPays) {
-            const tabItem = fullTab?.items?.find(i => i.id === pp.id);
-            if (!tabItem) continue;
-            const remainingQty = tabItem.quantity - pp.paidQty;
-            await supabase.from('tab_items').update({
-              quantity: remainingQty,
-              total_price: remainingQty * tabItem.unit_price,
-            } as any).eq('id', pp.id);
-            await supabase.from('tab_items').insert({
-              tab_id: tabItem.tab_id,
-              product_id: tabItem.product_id,
-              product_name: tabItem.product_name,
-              unit_price: tabItem.unit_price,
-              quantity: pp.paidQty,
-              total_price: pp.paidQty * tabItem.unit_price,
-              created_by: tabItem.created_by,
-              notes: tabItem.notes,
-              paid: true,
-            } as any);
-          }
-          if (!fullTab?.items) return;
-          const paidItemIds = paidItems.map(p => p.id);
-          const allPaid = fullTab.items.every(i =>
-            (i as any).paid || paidItemIds.includes(i.id)
-          );
-          if (allPaid) {
-            await closeTab(fullTab.id);
-            toast.success('Todos os itens pagos — comanda fechada!');
-          } else {
-            toast.success('Pagamento parcial registrado!');
-          }
-          setImportingTab(null);
-        } : undefined}
       />
 
       <PDVV2ClosedTabsDialog

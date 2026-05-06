@@ -73,6 +73,8 @@ interface PDVV2PaymentDialogProps {
     };
     /** I9 split mode: info about the split so confirmImportTabI9 can use it directly */
     splitInfo?: { perPerson: number; totalPeople: number };
+    /** I9 items mode: selected items with partial qty so confirmImportTabI9 can handle TEF/NFC-e/loop */
+    itemsInfo?: Array<{ id: string; paidQty: number }>;
   }) => Promise<void> | void;
 }
 
@@ -263,16 +265,19 @@ export function PDVV2PaymentDialog({
       splitInfo: isLancheriaI9 && i9Mode === 'split'
         ? { perPerson: finalTotal, totalPeople: activeSplit?.totalPeople ?? splitPeople }
         : undefined,
+      itemsInfo: isLancheriaI9 && i9Mode === 'items' && checkoutItems
+        ? (() => {
+            const items: Array<{ id: string; paidQty: number }> = [];
+            selectedItemQtys.forEach((qty, idx) => {
+              const it = checkoutItems[idx];
+              if (it?.id && qty > 0) items.push({ id: it.id, paidQty: qty });
+            });
+            return items.length > 0 ? items : undefined;
+          })()
+        : undefined,
     });
     // I9: callbacks pós-pagamento
-    if (isLancheriaI9 && i9Mode === 'items' && checkoutItems) {
-      const paidItems: Array<{ id: string; paidQty: number }> = [];
-      selectedItemQtys.forEach((qty, idx) => {
-        const it = checkoutItems[idx];
-        if (it?.id && qty > 0) paidItems.push({ id: it.id, paidQty: qty });
-      });
-      if (paidItems.length > 0) onItemsPaid?.(paidItems);
-    }
+    // NOTE: onItemsPaid is no longer called here — confirmImportTabI9 handles DB updates + loop
     setSubmitting(false);
   }
 
