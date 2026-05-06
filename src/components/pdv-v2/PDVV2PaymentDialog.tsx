@@ -23,7 +23,7 @@ interface PDVV2PaymentDialogProps {
   /** Itens para exibição visual no topo (apenas leitura, sem interação) */
   checkoutItems?: Array<{ name: string; quantity: number; unit_price: number; id?: string; paid?: boolean }>;
   /** Callback chamado após pagamento parcial de itens selecionados (I9 apenas) */
-  onItemsPaid?: (itemIds: string[]) => void;
+  onItemsPaid?: (items: Array<{ id: string; paidQty: number }>) => void;
   /** Callback chamado após pagamento por divisão de pessoas (I9 apenas) */
   onSplitPaid?: (perPerson: number, totalPeople: number) => void;
   /** Show "Geração de Documentos" + "Impressão Automática" — habilitar para balcão/retirada/mesa */
@@ -96,7 +96,7 @@ export function PDVV2PaymentDialog({
 }: PDVV2PaymentDialogProps) {
   // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
-  const [selectedItemIdxs, setSelectedItemIdxs] = useState<Set<number>>(new Set());
+  const [selectedItemQtys, setSelectedItemQtys] = useState<Map<number, number>>(new Map());
   const [splitPeople, setSplitPeople] = useState(2);
 
   // When activeSplit is provided (person 2+), force split mode on open
@@ -187,7 +187,7 @@ export function PDVV2PaymentDialog({
       setInternalTefStatus('');
       setChargingTef(false);
       setI9Mode('');
-      setSelectedItemIdxs(new Set());
+      setSelectedItemQtys(new Map());
       setSplitPeople(2);
     }
   }, [open]);
@@ -209,9 +209,9 @@ export function PDVV2PaymentDialog({
   const i9SelectedTotal = (() => {
     if (!isLancheriaI9 || i9Mode !== 'items' || !checkoutItems) return null;
     let sum = 0;
-    selectedItemIdxs.forEach((idx) => {
+    selectedItemQtys.forEach((qty, idx) => {
       const it = checkoutItems[idx];
-      if (it && !it.paid) sum += it.quantity * it.unit_price;
+      if (it && !it.paid && qty > 0) sum += qty * it.unit_price;
     });
     return sum;
   })();
@@ -266,10 +266,12 @@ export function PDVV2PaymentDialog({
     });
     // I9: callbacks pós-pagamento
     if (isLancheriaI9 && i9Mode === 'items' && checkoutItems) {
-      const paidIds = Array.from(selectedItemIdxs)
-        .map((idx) => checkoutItems[idx]?.id)
-        .filter((id): id is string => !!id);
-      if (paidIds.length > 0) onItemsPaid?.(paidIds);
+      const paidItems: Array<{ id: string; paidQty: number }> = [];
+      selectedItemQtys.forEach((qty, idx) => {
+        const it = checkoutItems[idx];
+        if (it?.id && qty > 0) paidItems.push({ id: it.id, paidQty: qty });
+      });
+      if (paidItems.length > 0) onItemsPaid?.(paidItems);
     }
     setSubmitting(false);
   }
@@ -449,7 +451,7 @@ export function PDVV2PaymentDialog({
                   variant={i9Mode === 'items' ? 'default' : 'outline'}
                   onClick={() => {
                     setI9Mode(i9Mode === 'items' ? '' : 'items');
-                    setSelectedItemIdxs(new Set());
+                    setSelectedItemQtys(new Map());
                   }}
                   className="gap-1"
                 >
@@ -476,7 +478,7 @@ export function PDVV2PaymentDialog({
                 <div className="max-h-[8rem] overflow-y-auto space-y-1 border rounded-md p-2">
                   {checkoutItems.map((item, idx) => {
                     const isPaid = !!item.paid;
-                    const isSelected = selectedItemIdxs.has(idx);
+                    const selectedQty = selectedItemQtys.get(idx) || 0;
                     return (
                       <div
                         key={idx}
@@ -484,23 +486,73 @@ export function PDVV2PaymentDialog({
                           isPaid ? 'opacity-60 bg-green-50 dark:bg-green-950/30' : ''
                         }`}
                       >
-                        <Checkbox
-                          checked={isPaid || isSelected}
-                          disabled={isPaid}
-                          onCheckedChange={(c) => {
-                            const next = new Set(selectedItemIdxs);
-                            if (c) next.add(idx);
-                            else next.delete(idx);
-                            setSelectedItemIdxs(next);
-                          }}
-                        />
-                        <span className="truncate flex-1">
-                          {item.quantity}x {item.name}
-                          {isPaid && <span className="ml-1 text-xs text-green-600">(pago)</span>}
-                        </span>
-                        <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
-                          {formatPrice(item.quantity * item.unit_price)}
-                        </span>
+                        {isPaid ? (
+                          <>
+                            <Checkbox checked disabled />
+                            <span className="truncate flex-1">
+                              {item.quantity}x {item.name}
+                              <span className="ml-1 text-xs text-green-600">(pago)</span>
+                            </span>
+                            <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
+                              {formatPrice(item.quantity * item.unit_price)}
+                            </span>
+                          </>
+                        ) : item.quantity === 1 ? (
+                          <>
+                            <Checkbox
+                              checked={selectedQty > 0}
+                              onCheckedChange={(c) => {
+                                const next = new Map(selectedItemQtys);
+                                if (c) next.set(idx, 1);
+                                else next.delete(idx);
+                                setSelectedItemQtys(next);
+                              }}
+                            />
+                            <span className="truncate flex-1">1x {item.name}</span>
+                            <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
+                              {formatPrice(item.unit_price)}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-6 w-6 text-xs"
+                                disabled={selectedQty <= 0}
+                                onClick={() => {
+                                  const next = new Map(selectedItemQtys);
+                                  const nq = selectedQty - 1;
+                                  if (nq <= 0) next.delete(idx);
+                                  else next.set(idx, nq);
+                                  setSelectedItemQtys(next);
+                                }}
+                              >−</Button>
+                              <span className="w-5 text-center font-medium tabular-nums">{selectedQty}</span>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-6 w-6 text-xs"
+                                disabled={selectedQty >= item.quantity}
+                                onClick={() => {
+                                  const next = new Map(selectedItemQtys);
+                                  next.set(idx, Math.min(selectedQty + 1, item.quantity));
+                                  setSelectedItemQtys(next);
+                                }}
+                              >+</Button>
+                            </div>
+                            <span className="truncate flex-1">
+                              {item.name}
+                              <span className="text-xs text-muted-foreground ml-1">({item.quantity} un.)</span>
+                            </span>
+                            <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
+                              {formatPrice(selectedQty * item.unit_price)}
+                            </span>
+                          </>
+                        )}
                       </div>
                     );
                   })}
