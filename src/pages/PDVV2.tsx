@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useOrderContext } from '@/contexts/OrderContext';
@@ -123,6 +123,8 @@ export default function PDVV2() {
   const [i9PartialItemIds, setI9PartialItemIds] = useState<string[]>([]);
   const [i9SplitInfo, setI9SplitInfo] = useState<{ perPerson: number; remaining: number; total: number } | null>(null);
   const [i9OriginalTabId, setI9OriginalTabId] = useState<string | null>(null);
+  const i9SplitTransitionRef = useRef(false);
+  const [isEmittingNfce, setIsEmittingNfce] = useState(false);
   // NFC-e pós-venda (mesmo padrão do PDV V1: polling visível + ação do operador)
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
@@ -295,6 +297,7 @@ export default function PDVV2() {
   }): Promise<boolean> {
     const { saleId, items, discount, customerName, shouldPrint, tefData, customerDocument } = args;
     if (!companyId || !currentRegister) return false;
+    setIsEmittingNfce(true);
     try {
       const nfceItems: NFCeItem[] = items.map((it) => {
         const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
@@ -346,10 +349,12 @@ export default function PDVV2() {
         setNfceAutoPrint(shouldPrint);
         setNfceDialogOpen(true);
       }
+      setIsEmittingNfce(false);
       return true;
     } catch (err: any) {
       console.error('[PDVV2] NFC-e emission error:', err);
       toast.error(`Venda registrada, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
+      setIsEmittingNfce(false);
       return false;
     }
   }
@@ -661,8 +666,12 @@ export default function PDVV2() {
           toast.success(`Pessoa ${personIndex} cobrada. Faltam ${newRemaining}.`);
           setI9SplitInfo({ ...splitData, remaining: newRemaining });
           const savedTab = { ...importingTab, id: resolvedTabId };
+          i9SplitTransitionRef.current = true;
           setImportingTab(null);
-          setTimeout(() => setImportingTab({ ...savedTab, total: splitData.perPerson }), 100);
+          setTimeout(() => {
+            setImportingTab({ ...savedTab, total: splitData.perPerson });
+            i9SplitTransitionRef.current = false;
+          }, 100);
         }
       }
       return;
@@ -946,8 +955,10 @@ export default function PDVV2() {
           if (!o) {
             setImportingTab(null);
             setI9PartialItemIds([]);
-            setI9SplitInfo(null);
-            setI9OriginalTabId(null);
+            if (!i9SplitTransitionRef.current) {
+              setI9SplitInfo(null);
+              setI9OriginalTabId(null);
+            }
           }
         }}
         companyId={companyId}
@@ -1051,5 +1062,16 @@ export default function PDVV2() {
         </DialogContent>
       </Dialog>
     </PDVV2Layout>
+
+    {/* Overlay de bloqueio enquanto NFC-e é emitida */}
+    {isEmittingNfce && (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
+        <div className="bg-card rounded-lg px-8 py-6 shadow-xl flex flex-col items-center gap-3">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+          <p className="text-lg font-semibold text-foreground">Emitindo NFC-e…</p>
+          <p className="text-sm text-muted-foreground">Aguarde, não feche a tela.</p>
+        </div>
+      </div>
+    )}
   );
 }
