@@ -776,9 +776,10 @@ export default function PDVV2() {
         }
 
         // Check if all items are now paid
-        const paidItemIds = params.itemsInfo.map((p) => p.id);
+        // Only consider fully-paid items (not partial qty) as done
+        const fullyPaidIds = new Set(fullPayIds);
         const allPaid = fullTab.items.every((i) =>
-          (i as any).paid || paidItemIds.includes(i.id)
+          (i as any).paid || fullyPaidIds.has(i.id)
         );
         if (allPaid) {
           await closeTab(fullTab.id);
