@@ -36,6 +36,10 @@ interface PDVV2PaymentDialogProps {
   cashOnly?: boolean;
   /** Mensagem de status do processamento TEF (mostrada como banner topo). Vazio = oculto. */
   tefStatus?: string;
+  /** When a split is already in progress (person 2+), the dialog auto-selects
+   *  split mode with these pre-set values. The user cannot change the number
+   *  of people or the per-person amount. */
+  activeSplit?: { perPerson: number; totalPeople: number; currentPerson: number };
   /**
    * Quando true (e for I9), o TEF é executado AQUI — antes dos pop-ups de
    * CPF/Imprimir. Se a cobrança não for aprovada, nada é confirmado e o
@@ -88,11 +92,20 @@ export function PDVV2PaymentDialog({
   tefStatus,
   chargeTefBeforePopups = false,
   onConfirm,
+  activeSplit,
 }: PDVV2PaymentDialogProps) {
-  // I9: modo de cobrança avançado (itens selecionados ou divisão por pessoas)
+  // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
   const [selectedItemIdxs, setSelectedItemIdxs] = useState<Set<number>>(new Set());
   const [splitPeople, setSplitPeople] = useState(2);
+
+  // When activeSplit is provided (person 2+), force split mode on open
+  useEffect(() => {
+    if (open && activeSplit) {
+      setI9Mode('split');
+      setSplitPeople(activeSplit.totalPeople);
+    }
+  }, [open, activeSplit]);
 
   const { activePaymentMethods: rawActivePaymentMethods } = usePaymentMethods({ companyId, channel });
   // Fallback: se não houver métodos cadastrados no canal PDV, lista TODOS os métodos
@@ -204,8 +217,11 @@ export function PDVV2PaymentDialog({
   })();
 
   const i9SplitValue = (() => {
-    if (!isLancheriaI9 || i9Mode !== 'split' || splitPeople < 1) return null;
-    return grossTotal / splitPeople;
+    if (!isLancheriaI9 || i9Mode !== 'split') return null;
+    // When activeSplit is provided (person 2+), use the pre-calculated value
+    if (activeSplit) return activeSplit.perPerson;
+    if (splitPeople < 1) return null;
+    return Math.round((grossTotal / splitPeople) * 100) / 100;
   })();
 
   const finalTotal = (() => {
@@ -232,7 +248,6 @@ export function PDVV2PaymentDialog({
     const cleanDoc = customerDocument.replace(/\D/g, '');
     const isNfce = docMode === 'sale_with_nfce' || isTef;
     setSubmitting(true);
-    console.log('[SPLIT-DEBUG] finalizeConfirm calling onConfirm', { i9Mode, splitInfo: isLancheriaI9 && i9Mode === 'split' ? { perPerson: finalTotal, totalPeople: splitPeople } : undefined, finalTotal, grossTotal });
     await onConfirm({
       paymentMethodId,
       paymentName: method.name,
@@ -245,7 +260,9 @@ export function PDVV2PaymentDialog({
       tefIntegration: isTef ? (integration as 'tef_pinpad' | 'tef_smartpos') : undefined,
       customerDocument: isNfce && (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : undefined,
       prechargedTef: prechargedTef ?? undefined,
-      splitInfo: isLancheriaI9 && i9Mode === 'split' ? { perPerson: finalTotal, totalPeople: splitPeople } : undefined,
+      splitInfo: isLancheriaI9 && i9Mode === 'split'
+        ? { perPerson: finalTotal, totalPeople: activeSplit?.totalPeople ?? splitPeople }
+        : undefined,
     });
     // I9: callbacks pós-pagamento
     if (isLancheriaI9 && i9Mode === 'items' && checkoutItems) {
@@ -422,7 +439,7 @@ export function PDVV2PaymentDialog({
           )}
 
           {/* I9: opções de cobrança avançada */}
-          {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && (
+          {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && !activeSplit && (
             <div className="space-y-3">
               <p className="text-xs font-medium text-muted-foreground">Modo de cobrança</p>
               <div className="grid grid-cols-2 gap-2">
@@ -509,6 +526,19 @@ export function PDVV2PaymentDialog({
                   </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* I9: active split in progress (person 2+) — read-only summary */}
+          {isLancheriaI9 && activeSplit && (
+            <div className="rounded-md border border-primary/30 bg-primary/10 p-3 space-y-1">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">
+                  Pessoa {activeSplit.currentPerson} de {activeSplit.totalPeople}
+                </span>
+              </div>
+              <p className="text-lg font-bold tabular-nums">{formatPrice(activeSplit.perPerson)}</p>
             </div>
           )}
 
