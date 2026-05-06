@@ -217,8 +217,11 @@ export function PDVV2PaymentDialog({
   })();
 
   const i9SplitValue = (() => {
-    if (!isLancheriaI9 || i9Mode !== 'split' || splitPeople < 1) return null;
-    return grossTotal / splitPeople;
+    if (!isLancheriaI9 || i9Mode !== 'split') return null;
+    // When activeSplit is provided (person 2+), use the pre-calculated value
+    if (activeSplit) return activeSplit.perPerson;
+    if (splitPeople < 1) return null;
+    return Math.round((grossTotal / splitPeople) * 100) / 100;
   })();
 
   const finalTotal = (() => {
@@ -245,7 +248,6 @@ export function PDVV2PaymentDialog({
     const cleanDoc = customerDocument.replace(/\D/g, '');
     const isNfce = docMode === 'sale_with_nfce' || isTef;
     setSubmitting(true);
-    console.log('[SPLIT-DEBUG] finalizeConfirm calling onConfirm', { i9Mode, splitInfo: isLancheriaI9 && i9Mode === 'split' ? { perPerson: finalTotal, totalPeople: splitPeople } : undefined, finalTotal, grossTotal });
     await onConfirm({
       paymentMethodId,
       paymentName: method.name,
@@ -258,7 +260,9 @@ export function PDVV2PaymentDialog({
       tefIntegration: isTef ? (integration as 'tef_pinpad' | 'tef_smartpos') : undefined,
       customerDocument: isNfce && (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : undefined,
       prechargedTef: prechargedTef ?? undefined,
-      splitInfo: isLancheriaI9 && i9Mode === 'split' ? { perPerson: finalTotal, totalPeople: splitPeople } : undefined,
+      splitInfo: isLancheriaI9 && i9Mode === 'split'
+        ? { perPerson: finalTotal, totalPeople: activeSplit?.totalPeople ?? splitPeople }
+        : undefined,
     });
     // I9: callbacks pós-pagamento
     if (isLancheriaI9 && i9Mode === 'items' && checkoutItems) {
