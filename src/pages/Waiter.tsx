@@ -581,7 +581,7 @@ export default function Waiter() {
       </Dialog>
 
       {/* Selected Tab Details */}
-      <Dialog open={!!selectedTab} onOpenChange={() => setSelectedTab(null)}>
+      <Dialog open={!!selectedTab && !addItemDialogOpen} onOpenChange={() => setSelectedTab(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
