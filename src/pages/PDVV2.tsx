@@ -1062,7 +1062,6 @@ export default function PDVV2() {
         </DialogContent>
       </Dialog>
     </PDVV2Layout>
-
     {/* Overlay de bloqueio enquanto NFC-e é emitida */}
     {isEmittingNfce && (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
@@ -1071,7 +1070,8 @@ export default function PDVV2() {
           <p className="text-lg font-semibold text-foreground">Emitindo NFC-e…</p>
           <p className="text-sm text-muted-foreground">Aguarde, não feche a tela.</p>
         </div>
-      </div>
+        </div>
     )}
+    </>
   );
 }
