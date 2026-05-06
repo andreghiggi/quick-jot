@@ -735,6 +735,7 @@ export default function PDVV2() {
   }
 
   return (
+    <>
     <PDVV2Layout>
       <div className="flex h-full min-h-0 flex-col">
         <PDVV2TopBar
@@ -1069,7 +1070,6 @@ export default function PDVV2() {
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
           <p className="text-lg font-semibold text-foreground">Emitindo NFC-e…</p>
           <p className="text-sm text-muted-foreground">Aguarde, não feche a tela.</p>
-        </div>
         </div>
     )}
     </>
