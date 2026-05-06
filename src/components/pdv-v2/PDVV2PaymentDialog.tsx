@@ -67,6 +67,8 @@ interface PDVV2PaymentDialogProps {
       tefData?: NFCeTefData;
       notesFragment?: string;
     };
+    /** I9 split mode: info about the split so confirmImportTabI9 can use it directly */
+    splitInfo?: { perPerson: number; totalPeople: number };
   }) => Promise<void> | void;
 }
 
@@ -242,6 +244,7 @@ export function PDVV2PaymentDialog({
       tefIntegration: isTef ? (integration as 'tef_pinpad' | 'tef_smartpos') : undefined,
       customerDocument: isNfce && (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : undefined,
       prechargedTef: prechargedTef ?? undefined,
+      splitInfo: isLancheriaI9 && i9Mode === 'split' ? { perPerson: finalTotal, totalPeople: splitPeople } : undefined,
     });
     // I9: callbacks pós-pagamento
     if (isLancheriaI9 && i9Mode === 'items' && checkoutItems) {
@@ -249,9 +252,6 @@ export function PDVV2PaymentDialog({
         .map((idx) => checkoutItems[idx]?.id)
         .filter((id): id is string => !!id);
       if (paidIds.length > 0) onItemsPaid?.(paidIds);
-    }
-    if (isLancheriaI9 && i9Mode === 'split') {
-      onSplitPaid?.(finalTotal, splitPeople);
     }
     setSubmitting(false);
   }
@@ -336,9 +336,11 @@ export function PDVV2PaymentDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => { if (!submitting && !chargingTef) onOpenChange(o); }}>
       <DialogContent
         className="max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => { if (submitting || chargingTef) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (submitting || chargingTef) e.preventDefault(); }}
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
