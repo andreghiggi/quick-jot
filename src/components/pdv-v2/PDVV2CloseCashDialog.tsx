@@ -306,14 +306,14 @@ export function PDVV2CloseCashDialog({
 
       {/* Sub-dialog: listagem de vendas por origem */}
       <Dialog open={!!openOrigin} onOpenChange={(o) => !o && setOpenOrigin(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>
               {openOrigin ? ORIGIN_LABEL[openOrigin] : ''} ({openOriginSales.length})
             </DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 pr-3">
+           <ScrollArea className="flex-1 min-h-0 pr-3">
             <div className="space-y-2 py-2">
               {openOriginSales.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma venda nesta origem.</p>
