@@ -584,6 +584,13 @@ export default function PDVV2() {
   }
 
   async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0] & { splitInfo?: { perPerson: number; totalPeople: number } }) {
+    console.log('[SPLIT-DEBUG] confirmImportTabI9 called', {
+      'params.splitInfo': params.splitInfo,
+      'i9SplitInfo': i9SplitInfo,
+      'params.finalTotal': params.finalTotal,
+      'importingTab.total': importingTab?.total,
+      'i9OriginalTabId': i9OriginalTabId,
+    });
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -609,6 +616,7 @@ export default function PDVV2() {
     }
 
     if (splitData) {
+      console.log('[SPLIT-DEBUG] Entering split block', { splitData, personIndex: splitData.total - splitData.remaining + 1 });
       const customer = fullTab?.customer_name ||
         (fullTab?.table?.number ? `Mesa ${fullTab.table.number}` : importingTab.tableNumber ? `Mesa ${importingTab.tableNumber}` : `Comanda ${importingTab.tabNumber}`);
       const tabNumber = fullTab?.tab_number || importingTab.tabNumber || '?';
@@ -677,6 +685,7 @@ export default function PDVV2() {
       return;
     }
 
+    console.log('[SPLIT-DEBUG] FALLING THROUGH to confirmImportTab (no split)', { splitData, i9SplitInfo, 'params.splitInfo': params.splitInfo });
     if (!fullTab?.items?.length) {
       toast.error('Comanda sem itens');
       return;
