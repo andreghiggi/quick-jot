@@ -979,9 +979,15 @@ export default function Waiter() {
             <SheetHeader>
               <SheetTitle>Item adicionado!</SheetTitle>
             </SheetHeader>
-            <p className="text-sm text-muted-foreground mt-2">
-              {cart.reduce((s, i) => s + i.quantity, 0)} {cart.reduce((s, i) => s + i.quantity, 0) === 1 ? 'item' : 'itens'} — R$ {cartTotal.toFixed(2).replace('.', ',')}
-            </p>
+            <button
+              onClick={() => {
+                setI9PostAddOpen(false);
+                setI9CartOpen(true);
+              }}
+              className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors mt-2 text-left"
+            >
+              {cart.reduce((s, i) => s + i.quantity, 0)} {cart.reduce((s, i) => s + i.quantity, 0) === 1 ? 'item' : 'itens'} — R$ {cartTotal.toFixed(2).replace('.', ',')} · Ver itens ›
+            </button>
             <div className="flex flex-col gap-3 mt-4">
               <Button
                 variant="outline"
