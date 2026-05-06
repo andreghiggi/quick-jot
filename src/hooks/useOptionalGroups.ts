@@ -34,6 +34,7 @@ export interface OptionalGroup {
   productIds: string[];
   productOverrides: ProductOverride[];
   maxQuantityPerItem: number;
+  waiterOnly: boolean;
 }
 
 interface UseOptionalGroupsOptions {
@@ -77,6 +78,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
         displayOrder: g.display_order ?? 0,
         layout: ((g as any).layout as OptionalGroupLayout) || 'vertical',
         maxQuantityPerItem: (g as any).max_quantity_per_item ?? 1,
+        waiterOnly: (g as any).waiter_only ?? false,
         items: items
           .filter(i => i.group_id === g.id)
           .map(i => ({
@@ -118,6 +120,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     try {
       const insertData: any = { company_id: companyId, name: data.name, min_select: data.minSelect, max_select: data.maxSelect };
       if (data.maxQuantityPerItem !== undefined) insertData.max_quantity_per_item = data.maxQuantityPerItem;
+      if ((data as any).waiterOnly !== undefined) insertData.waiter_only = (data as any).waiterOnly;
       const { data: row, error } = await supabase
         .from('optional_groups')
         .insert(insertData)
@@ -143,6 +146,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
       if (data.active !== undefined) update.active = data.active;
       if (data.layout !== undefined) update.layout = data.layout;
       if ((data as any).maxQuantityPerItem !== undefined) (update as any).max_quantity_per_item = (data as any).maxQuantityPerItem;
+      if ((data as any).waiterOnly !== undefined) update.waiter_only = (data as any).waiterOnly;
 
       const { error } = await supabase.from('optional_groups').update(update).eq('id', id);
       if (error) throw error;
