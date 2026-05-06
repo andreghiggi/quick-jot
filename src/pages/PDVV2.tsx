@@ -578,7 +578,7 @@ export default function PDVV2() {
     setImportingTab(tab);
   }
 
-  async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0]) {
+  async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0] & { splitInfo?: { perPerson: number; totalPeople: number } }) {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -586,15 +586,24 @@ export default function PDVV2() {
     const resolvedTabId = i9OriginalTabId || importingTab.id;
     const fullTab = openTabs.find((t) => t.id === resolvedTabId);
 
-    // Split mode first — doesn't need fullTab items
-    const splitData = i9SplitInfo ?? (
-      importingTab?._splitPerson !== undefined
-        ? { perPerson: importingTab._splitPerPerson!, remaining: importingTab._splitTotal! - importingTab._splitPerson!, total: importingTab._splitTotal! }
-        : null
-    );
+    // Split mode — resolve from params.splitInfo (first person) or i9SplitInfo (subsequent)
+    let splitData = i9SplitInfo;
+    if (!splitData && params.splitInfo) {
+      // First person: initialize from onConfirm params (no timing issue)
+      splitData = {
+        perPerson: params.splitInfo.perPerson,
+        remaining: params.splitInfo.totalPeople,
+        total: params.splitInfo.totalPeople,
+      };
+      setI9OriginalTabId(importingTab.id);
+      setI9SplitInfo(splitData);
+    } else if (!splitData && importingTab?._splitPerson !== undefined) {
+      // Fallback from enriched importingTab
+      splitData = { perPerson: importingTab._splitPerPerson!, remaining: importingTab._splitTotal! - importingTab._splitPerson!, total: importingTab._splitTotal! };
+      setI9SplitInfo(splitData);
+    }
+
     if (splitData) {
-      // Sync i9SplitInfo if it was resolved from importingTab fallback
-      if (!i9SplitInfo) setI9SplitInfo(splitData);
       const customer = fullTab?.customer_name ||
         (fullTab?.table?.number ? `Mesa ${fullTab.table.number}` : importingTab.tableNumber ? `Mesa ${importingTab.tableNumber}` : `Comanda ${importingTab.tabNumber}`);
       const tabNumber = fullTab?.tab_number || importingTab.tabNumber || '?';
@@ -605,9 +614,42 @@ export default function PDVV2() {
         quantity: 1,
         unit_price: splitData.perPerson,
       }];
-      const saleId = await addSale(items, params.paymentMethodId, user.id, 0, customer,
-        `Comanda #${tabNumber} | Divisão ${personIndex}/${splitData.total}: ${params.paymentName}`);
+
+      // ===== TEF: roda ANTES de criar a venda (igual PDV V1). Aborta se falhar.
+      let tefData: NFCeTefData | undefined;
+      let tefNotesFragment = '';
+      if (params.tefIntegration && params.tefOptions) {
+        const result = await runTefPayment({
+          companyId,
+          integration: params.tefIntegration,
+          amount: splitData.perPerson,
+          options: params.tefOptions,
+          description: `Comanda #${tabNumber} - Divisão ${personIndex}/${splitData.total}`,
+          onStatus: setTefStatus,
+        });
+        setTefStatus('');
+        if (!result.success) return;
+        tefData = result.tefData;
+        tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
+      }
+
+      const saleNotes = `Comanda #${tabNumber} | Divisão ${personIndex}/${splitData.total}: ${params.paymentName}${tefNotesFragment}`;
+      const saleId = await addSale(items, params.paymentMethodId, user.id, 0, customer, saleNotes);
       if (saleId) {
+        // NFC-e: TEF força emissão. Caso contrário, segue documentMode.
+        const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
+        if (wantsNfce) {
+          await emitNFCeAndOpenDialog({
+            saleId,
+            items,
+            discount: 0,
+            customerName: fullTab?.customer_name || null,
+            shouldPrint: params.printDocument !== false,
+            tefData,
+            customerDocument: params.customerDocument,
+          });
+        }
+
         const newRemaining = splitData.remaining - 1;
         if (newRemaining <= 0) {
           await closeTab(resolvedTabId);
@@ -935,38 +977,6 @@ export default function PDVV2() {
             toast.success('Pagamento parcial registrado!');
           }
           setImportingTab(null);
-        } : undefined}
-        onSplitPaid={isI9 ? async (perPerson, totalPeople) => {
-          if (!importingTab) return;
-          if (!i9SplitInfo) {
-            setI9OriginalTabId(importingTab.id);
-            setI9SplitInfo({ perPerson, remaining: totalPeople - 1, total: totalPeople });
-            const saved = { ...importingTab };
-            setImportingTab(null);
-            if (totalPeople - 1 > 0) {
-              setTimeout(() => setImportingTab({ ...saved, total: perPerson, _splitPerson: 1, _splitTotal: totalPeople, _splitPerPerson: perPerson }), 100);
-            } else {
-              const fullTab = openTabs.find(t => t.id === saved.id);
-              if (fullTab) await closeTab(fullTab.id);
-              toast.success('Comanda fechada!');
-              setI9OriginalTabId(null);
-            }
-          } else {
-            const newRemaining = i9SplitInfo.remaining - 1;
-            if (newRemaining <= 0) {
-              await closeTab(i9OriginalTabId || importingTab.id);
-              toast.success('Última pessoa cobrada — comanda fechada!');
-              setI9SplitInfo(null);
-              setI9OriginalTabId(null);
-              setImportingTab(null);
-            } else {
-              toast.success(`Pessoa cobrada. Faltam ${newRemaining}.`);
-              setI9SplitInfo({ ...i9SplitInfo, remaining: newRemaining });
-              const saved = { ...importingTab, id: i9OriginalTabId || importingTab.id };
-              setImportingTab(null);
-              setTimeout(() => setImportingTab({ ...saved, total: perPerson }), 100);
-            }
-          }
         } : undefined}
       />
 
