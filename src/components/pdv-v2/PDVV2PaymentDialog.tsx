@@ -232,6 +232,7 @@ export function PDVV2PaymentDialog({
     const cleanDoc = customerDocument.replace(/\D/g, '');
     const isNfce = docMode === 'sale_with_nfce' || isTef;
     setSubmitting(true);
+    console.log('[SPLIT-DEBUG] finalizeConfirm calling onConfirm', { i9Mode, splitInfo: isLancheriaI9 && i9Mode === 'split' ? { perPerson: finalTotal, totalPeople: splitPeople } : undefined, finalTotal, grossTotal });
     await onConfirm({
       paymentMethodId,
       paymentName: method.name,
