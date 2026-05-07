@@ -125,7 +125,6 @@ export default function PDVV2() {
   const [openCashOpen, setOpenCashOpen] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
   const [newOrderOpen, setNewOrderOpen] = useState(false);
-  const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [importingTab, setImportingTab] = useState<(OccupiedTab & { _splitPerson?: number; _splitTotal?: number; _splitPerPerson?: number }) | null>(null);
   const [closedTabsOpen, setClosedTabsOpen] = useState(false);
   const [i9PartialItemIds, setI9PartialItemIds] = useState<string[]>([]);
@@ -271,13 +270,6 @@ export default function PDVV2() {
     if (target) updateOrderStatus(order.id, target);
   }
 
-  function handleChargeFromOrder(order: Order) {
-    if (!cashOpen) {
-      toast.error('Abra o caixa para cobrar');
-      return;
-    }
-    setChargeOrder(order);
-  }
 
   async function handleChangePayment(order: Order, methodName: string) {
     try {
@@ -377,106 +369,6 @@ export default function PDVV2() {
     }
   }
 
-  async function confirmChargeOrder({
-    paymentMethodId,
-    paymentName,
-    discount,
-    finalTotal,
-    documentMode,
-    extraItems,
-    printDocument,
-    tefOptions,
-    tefIntegration,
-    customerDocument,
-  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean; tefOptions?: TefOptions; tefIntegration?: 'tef_pinpad' | 'tef_smartpos'; customerDocument?: string }) {
-    if (!chargeOrder || !user || !currentRegister) {
-      toast.error('Caixa precisa estar aberto');
-      return;
-    }
-    const baseItems = chargeOrder.items.map((i) => ({
-      product_id: i.productId || null,
-      product_name: i.name,
-      quantity: i.quantity,
-      unit_price: i.price,
-    }));
-    const items = [...baseItems, ...extraItems.map(({ product_id, product_name, quantity, unit_price }) => ({ product_id, product_name, quantity, unit_price }))];
-
-    // ===== TEF: roda ANTES de criar a venda (igual PDV V1). Aborta se falhar.
-    let tefData: NFCeTefData | undefined;
-    let tefNotesFragment = '';
-    if (tefIntegration && tefOptions && companyId) {
-      const result = await runTefPayment({
-        companyId,
-        integration: tefIntegration,
-        amount: finalTotal,
-        options: tefOptions,
-        description: chargeOrder.customerName ? `Venda - ${chargeOrder.customerName}` : 'Venda PDV',
-        onStatus: setTefStatus,
-      });
-      setTefStatus('');
-      if (!result.success) return; // toast já exibido pelo helper
-      tefData = result.tefData;
-      tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
-    }
-
-    const saleId = await addSale(
-      items,
-      paymentMethodId,
-      user.id,
-      discount,
-      chargeOrder.customerName,
-      `Pedido #${chargeOrder.dailyNumber} | Pagamento: ${paymentName}${tefNotesFragment}`,
-      chargeOrder.id
-    );
-    if (saleId) {
-      // NFC-e: TEF força emissão (regra V1). Caso contrário, segue documentMode.
-      const wantsNfce = (tefIntegration ? true : documentMode === 'sale_with_nfce') && fiscalEnabled && companyId;
-      if (wantsNfce) {
-        // Marca o pedido como entregue só depois que o operador autorizar o
-        // fechamento do pop-up de NFC-e (autorizada/rejeitada).
-        const orderIdToFinish = chargeOrder.id;
-        setPendingPostSale(() => async () => {
-          await updateOrderStatus(orderIdToFinish, 'delivered');
-          toast.success('Cobrança registrada!');
-        });
-        const ok = await emitNFCeAndOpenDialog({
-          saleId,
-          items,
-          discount,
-          customerName: chargeOrder.customerName,
-          shouldPrint: !!printDocument,
-          tefData,
-          customerDocument,
-        });
-        if (!ok) {
-          // Falhou ao emitir → fecha como venda comum para não travar o caixa
-          await updateOrderStatus(chargeOrder.id, 'delivered');
-          setPendingPostSale(null);
-        }
-        setChargeOrder(null);
-        return;
-      } else if (printDocument && companyId) {
-        const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
-        const printItems = [
-          ...chargeOrder.items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price, notes: i.notes || undefined })),
-          ...extraItems.map((i) => ({ name: i.product_name, quantity: i.quantity, price: i.unit_price })),
-        ];
-        await printOnlyReceipt({
-          companyId,
-          orderCode: chargeOrder.orderCode,
-          dailyNumber: chargeOrder.dailyNumber || 0,
-          customerName: chargeOrder.customerName,
-          items: printItems,
-          total: finalTotal,
-          notes: `Pagamento: ${paymentName}${discount > 0 ? ` | Desconto: R$ ${discount.toFixed(2)}` : ''}${documentMode === 'sale_with_nfce' ? ' | NFC-e' : ''}`,
-          paperSize,
-        });
-      }
-      await updateOrderStatus(chargeOrder.id, 'delivered');
-      toast.success('Cobrança registrada!');
-      setChargeOrder(null);
-    }
-  }
 
   async function confirmImportTab({
     paymentMethodId,
@@ -542,7 +434,7 @@ export default function PDVV2() {
       // Imprime se: I9 escolheu "Imprimir" no pop-up, ou demais lojas (comportamento original)
       const shouldPrint = printDocument !== false;
       if (wantsNfce) {
-        // Mesma regra do confirmChargeOrder: só fecha a comanda depois que o
+        // Só fecha a comanda depois que o
         // operador autorizar o fechamento do pop-up de NFC-e.
         const tabIdToClose = fullTab.id;
         setPendingPostSale(() => async () => {
@@ -1028,18 +920,6 @@ export default function PDVV2() {
         onConfirm={handleCloseCash}
       />
 
-      <PDVV2PaymentDialog
-        open={!!chargeOrder}
-        onOpenChange={(o) => !o && setChargeOrder(null)}
-        companyId={companyId}
-        total={chargeOrder?.total || 0}
-        title={`Cobrar pedido #${chargeOrder?.dailyNumber}`}
-        showDocumentMode
-        showAddItem={!!chargeOrder && !isDelivery(chargeOrder)}
-        tefStatus={tefStatus}
-        onConfirm={confirmChargeOrder}
-        checkoutItems={isI9 ? chargeOrder?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price })) : undefined}
-      />
 
       <PDVV2PaymentDialog
         open={!!importingTab}
