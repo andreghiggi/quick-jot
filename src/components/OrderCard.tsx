@@ -94,7 +94,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   // Lancheria da I9 — cobrança manual de pedidos do cardápio antes de "Entregar".
   // Rollout isolado (mesma loja já validada para NFC-e e Pedido Express).
   
-  const isLancheriaI9 = true;
+   const isLancheriaI9 = company?.id === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const isCardapioOrder = (order.origin || 'cardapio') === 'cardapio';
   const alreadyCharged = !!order.notes?.includes('[COBRADO]');
   const showChargeButton =
