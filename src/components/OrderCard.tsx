@@ -41,8 +41,6 @@ interface OrderCardProps {
   disableAdvanceReason?: string;
   /** Quando true, esconde completamente o botão de avançar status. */
   hideAdvance?: boolean;
-  /** Quando true, esconde o botão de Cobrar interno (usado quando o PDVV2 renderiza seu próprio). */
-  hideCharge?: boolean;
 }
 
 const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textColor: string; borderColor: string; next?: OrderStatus }> = {
@@ -82,7 +80,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
   delivered: '',
 };
 
-export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason, hideAdvance = false, hideCharge = false }: OrderCardProps) {
+export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason, hideAdvance = false }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
   const { company } = useAuthContext();
   
@@ -100,7 +98,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const isCardapioOrder = (order.origin || 'cardapio') === 'cardapio';
   const alreadyCharged = !!order.notes?.includes('[COBRADO]');
   const showChargeButton =
-    !hideCharge && isLancheriaI9 && isCardapioOrder && order.status === 'ready';
+    isLancheriaI9 && isCardapioOrder && order.status === 'ready';
 
   // Detecta se é pagamento TEF e se já foi estornado
   const tefInfo = useMemo(() => parseTefDataFromNotes(order.notes), [order.notes]);

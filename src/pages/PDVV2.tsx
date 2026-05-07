@@ -942,18 +942,7 @@ export default function PDVV2() {
                               disableAdvance={hideBtnAdvance}
                               disableAdvanceReason="Finalize o pagamento em 'Cobrar' antes de entregar"
                               hideAdvance={hideBtnAdvance}
-                              hideCharge={hideBtnAdvance}
                             />
-                            {hideBtnAdvance && (
-                              <Button
-                                size="sm"
-                                className="w-full"
-                                onClick={() => handleChargeFromOrder(o)}
-                              >
-                                <CreditCard className="h-4 w-4 mr-1" />
-                                Cobrar
-                              </Button>
-                            )}
                           </div>
                         );
                     })}
@@ -1015,18 +1004,7 @@ export default function PDVV2() {
                           disableAdvance={hideBtnAdvance}
                           disableAdvanceReason="Finalize o pagamento em 'Cobrar' antes de entregar"
                           hideAdvance={hideBtnAdvance}
-                          hideCharge={hideBtnAdvance}
                          />
-                        {hideBtnAdvance && (
-                          <Button
-                            size="sm"
-                            className="w-full"
-                            onClick={() => handleChargeFromOrder(o)}
-                          >
-                            <CreditCard className="h-4 w-4 mr-1" />
-                            Cobrar
-                          </Button>
-                        )}
                       </div>
                     );
                   })}
