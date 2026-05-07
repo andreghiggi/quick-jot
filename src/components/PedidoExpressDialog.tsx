@@ -674,11 +674,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     customerDocument?: string;
     /** I9: usuário escolheu imprimir o documento gerado neste pop-up */
     printDocument?: boolean;
-    /** TEF já cobrado pelo PaymentDialog (não disparar de novo). */
-    prechargedTef?: {
-      tefData?: NFCeTefData;
-      notesFragment?: string;
-    };
+
   }) {
     if (!override && !canGoNext()) return;
     setIsSubmitting(true);
@@ -860,21 +856,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     // Mesmo padrão do PDV V2: executa runTefPayment ANTES de criar o pedido.
     let overrideTefData: NFCeTefData | undefined;
     let overrideTefNote = '';
-    // Caso 1: TEF já foi cobrado pelo PaymentDialog (chargeTefBeforePopups) →
-    // só reaproveita o resultado, sem disparar nova cobrança.
-    if (override?.prechargedTef) {
-      overrideTefData = override.prechargedTef.tefData;
-      overrideTefNote = override.prechargedTef.notesFragment
-        ? ` | ${override.prechargedTef.notesFragment}`
-        : '';
-    } else if (override?.tefIntegration && override?.tefOptions && company?.id) {
+    if (override?.tefIntegration && override?.tefOptions && company?.id) {
       const result = await runTefPayment({
         companyId: company.id,
         integration: override.tefIntegration,
         amount: override.finalTotal,
         options: override.tefOptions,
         description: customerName ? `Express - ${customerName}` : 'Pedido Express',
+        onStatus: setTefStatus,
       });
+      setTefStatus('');
       if (!result.success) {
         // toast já exibido pelo helper
         setIsSubmitting(false);
@@ -2037,7 +2028,6 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           tefOptions,
           tefIntegration,
           customerDocument,
-          prechargedTef,
         }) => {
           // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
           // e imprime apenas recibo. Caso contrário (Retirada vinda da etapa 4), mantém fluxo original.
@@ -2053,7 +2043,6 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             tefOptions,
             tefIntegration,
             customerDocument,
-            prechargedTef,
           });
           setPickupChargeOpen(false);
         }}
