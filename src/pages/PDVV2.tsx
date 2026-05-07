@@ -125,7 +125,6 @@ export default function PDVV2() {
   const [openCashOpen, setOpenCashOpen] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
   const [newOrderOpen, setNewOrderOpen] = useState(false);
-  const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [importingTab, setImportingTab] = useState<(OccupiedTab & { _splitPerson?: number; _splitTotal?: number; _splitPerPerson?: number }) | null>(null);
   const [closedTabsOpen, setClosedTabsOpen] = useState(false);
   const [i9PartialItemIds, setI9PartialItemIds] = useState<string[]>([]);
