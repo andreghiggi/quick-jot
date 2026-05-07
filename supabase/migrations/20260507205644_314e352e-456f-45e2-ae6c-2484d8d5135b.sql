@@ -1,0 +1,1 @@
+UPDATE store_settings SET value = 'v1', updated_at = now() WHERE id = '8e9a7d94-28b3-4f90-9e76-6356a1b9839e' AND key = 'menu_layout';
