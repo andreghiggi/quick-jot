@@ -135,7 +135,7 @@ export default function Waiter() {
     return products.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-      return matchesSearch && matchesCategory && p.active;
+      return matchesSearch && matchesCategory && p.active && p.waiterItem !== false;
     });
   }, [products, searchTerm, selectedCategory]);
 
