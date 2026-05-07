@@ -2024,15 +2024,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         companyId={company?.id}
         total={total}
         title={isLancheriaI9 && step === 5 ? 'Finalizar Pedido' : 'Cobrar Retirada'}
-        channel="express"
-        // I9: mostra TODAS as formas (incluindo TEF) mesmo com Cliente Loja.
-        // Demais lojas mantêm a restrição original (Cliente Loja → apenas dinheiro).
-        cashOnly={isClienteLoja && !isLancheriaI9}
         showDocumentMode
-        // I9: cobrar TEF antes de perguntar NFC-e/imprimir. Se a cobrança não
-        // for aprovada, nada segue — o lojista pode reprocessar/escolher outra
-        // forma sem ter respondido pop-ups à toa.
-        chargeTefBeforePopups
+        tefStatus={tefStatus}
         checkoutItems={isLancheriaI9 ? cart.map(i => ({ name: i.product.name, quantity: i.quantity, unit_price: i.product.price + (i.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0) })) : undefined}
         onConfirm={async ({
           paymentMethodId,
