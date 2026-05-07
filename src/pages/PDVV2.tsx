@@ -270,13 +270,6 @@ export default function PDVV2() {
     if (target) updateOrderStatus(order.id, target);
   }
 
-  function handleChargeFromOrder(order: Order) {
-    if (!cashOpen) {
-      toast.error('Abra o caixa para cobrar');
-      return;
-    }
-    setChargeOrder(order);
-  }
 
   async function handleChangePayment(order: Order, methodName: string) {
     try {
