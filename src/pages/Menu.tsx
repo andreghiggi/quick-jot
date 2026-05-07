@@ -155,8 +155,8 @@ export default function Menu() {
   const [reorderDismissed, setReorderDismissed] = useState(false);
   
   // Optional group selections state
-  const LANCHERIA_I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-  const isMenuI9 = company?.id === LANCHERIA_I9_ID;
+  
+  const isMenuI9 = true;
   const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Map<string, number>>>({});
 
   const brazilianStates = [

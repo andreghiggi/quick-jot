@@ -583,7 +583,7 @@ export default function PDVV2() {
     }
   }
 
-  const isI9 = companyId === LANCHERIA_I9_COMPANY_ID;
+  const isI9 = true;
 
   function handleImportClick(tab: OccupiedTab) {
     if (!cashOpen) {

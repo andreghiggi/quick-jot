@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Minus, ShoppingCart } from 'lucide-react';
 import { OptionalGroup } from '@/hooks/useOptionalGroups';
 
-const LANCHERIA_I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+
 
 interface PDVOptionalsDialogProps {
   open: boolean;
@@ -38,7 +38,7 @@ export function PDVOptionalsDialog({
   onAddToCart,
   companyId,
 }: PDVOptionalsDialogProps) {
-  const isI9 = companyId === LANCHERIA_I9_COMPANY_ID;
+  const isI9 = true;
   const [selectedItems, setSelectedItems] = useState<Record<string, Map<string, number>>>({});
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');

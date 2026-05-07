@@ -207,7 +207,7 @@ export default function Products() {
       pdvItem: editingProduct.pdvItem,
       menuItem: editingProduct.menuItem,
       subcategoryId: editingProduct.subcategoryId,
-      ...(company?.id === LANCHERIA_I9_COMPANY_ID ? {
+      ...(true ? {
         code: editingProduct.code,
         gtin: editingProduct.gtin,
         unit: editingProduct.unit,
@@ -1053,7 +1053,7 @@ export default function Products() {
                 />
                 <Label>Item de Cardápio</Label>
               </div>
-              {company?.id === LANCHERIA_I9_COMPANY_ID && (
+              {true && (
                 <div className="border-t pt-4 mt-2 space-y-4">
                   <h4 className="font-semibold text-sm">Dados fiscais</h4>
                   <div className="grid grid-cols-2 gap-4">

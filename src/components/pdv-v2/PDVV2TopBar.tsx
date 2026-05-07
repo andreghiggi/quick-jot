@@ -17,7 +17,7 @@ interface PDVV2TopBarProps {
   companyId?: string;
 }
 
-const LANCHERIA_I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+
 
 export function PDVV2TopBar({
   storeName,
@@ -30,7 +30,7 @@ export function PDVV2TopBar({
   onNewOrder,
   companyId,
 }: PDVV2TopBarProps) {
-  const newOrderLabel = companyId === LANCHERIA_I9_ID ? 'Pedido Express' : 'Novo Pedido';
+  const newOrderLabel = 'Pedido Express';
   const newOrderBtn = (
     <Button
       size="sm"

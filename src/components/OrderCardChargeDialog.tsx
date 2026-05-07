@@ -203,7 +203,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         showDocumentMode
         chargeTefBeforePopups
         channel="pdv"
-        checkoutItems={company?.id === LANCHERIA_I9_COMPANY_ID ? order?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price })) : undefined}
+        checkoutItems={order?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price }))}
         onConfirm={handleConfirm}
       />
       {nfceRecord && (

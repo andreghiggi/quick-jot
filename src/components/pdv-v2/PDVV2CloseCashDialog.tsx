@@ -67,7 +67,7 @@ export function PDVV2CloseCashDialog({
   const [reconcile, setReconcile] = useState<Record<string, string>>({});
   const [openOrigin, setOpenOrigin] = useState<CloseCashSale['origin'] | null>(null);
   // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
-  const useCurrencyMask = companyId === LANCHERIA_I9_COMPANY_ID;
+  const useCurrencyMask = true;
 
   // Group: { [origin]: { [paymentName]: total } }
   const grouped = useMemo(() => {

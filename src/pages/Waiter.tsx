@@ -99,7 +99,7 @@ export default function Waiter() {
   const [optionalsDialogGroups, setOptionalsDialogGroups] = useState<OptionalGroup[]>([]);
   const cartEndRef = useRef<HTMLDivElement>(null);
 
-  const isI9 = company?.id === LANCHERIA_I9_COMPANY_ID;
+  const isI9 = true;
 
   // i9: animated badge counter
   const [cartBounce, setCartBounce] = useState(false);

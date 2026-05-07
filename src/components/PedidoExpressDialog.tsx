@@ -80,8 +80,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [searchingCustomer, setSearchingCustomer] = useState(false);
 
   // Lancheria da I9 — atalho otimizado: pula Telefone/Nome/Entrega ao usar "Cliente Loja"
-  const LANCHERIA_I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-  const isLancheriaI9 = company?.id === LANCHERIA_I9_ID;
+  
+  const isLancheriaI9 = true;
 
   // Para a Lancheria I9: usa TODAS as formas ativas (deduplicadas por nome+integração).
   // Demais lojas mantêm apenas as do canal Express.

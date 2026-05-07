@@ -46,7 +46,7 @@ export default function OptionalGroups() {
   const [newGroupMin, setNewGroupMin] = useState(0);
   const [newGroupMax, setNewGroupMax] = useState(0);
   const [newGroupMaxPerItem, setNewGroupMaxPerItem] = useState(1);
-  const isI9 = company?.id === LANCHERIA_I9_COMPANY_ID;
+  const isI9 = true;
 
   // New item form
   const [newItemName, setNewItemName] = useState('');

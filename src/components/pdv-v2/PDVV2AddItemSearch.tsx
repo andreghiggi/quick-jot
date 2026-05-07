@@ -34,7 +34,7 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
   const { products, loading } = useProducts({ companyId });
   const { categories } = useCategories({ companyId });
   const { groups: optionalGroups } = useOptionalGroups({ companyId });
-  const isLancheriaI9 = companyId === LANCHERIA_I9_COMPANY_ID;
+  const isLancheriaI9 = true;
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
