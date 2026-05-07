@@ -49,6 +49,8 @@ export default function PDVV2() {
   // Hide delivered orders from PDV V2 dashboard — currently only for Lancheria da I9
   const HIDE_DELIVERED_COMPANY_IDS = ['8c9e7a0e-dbb6-49b9-8344-c23155a71164'];
   const hideDelivered = companyId ? HIDE_DELIVERED_COMPANY_IDS.includes(companyId) : false;
+  // Hide "Entregar" and show "Cobrar" for pickup orders — currently only for Lancheria da I9
+  const chargeBeforeDeliverEnabled = companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
 
   const { isModuleEnabled } = useCompanyModules({ companyId });
   const tablesEnabled = isModuleEnabled('mesas');
@@ -929,6 +931,7 @@ export default function PDVV2() {
                       const ready = o.status === 'ready';
                       const isDel = isDelivery(o);
                       const showCobrar = ready && !isDel;
+                      const hideBtnAdvance = chargeBeforeDeliverEnabled && showCobrar;
                         return (
                           <div key={o.id} className="space-y-2">
                             <OrderCard
@@ -936,10 +939,11 @@ export default function PDVV2() {
                               paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
                               storeName={company?.name}
                               headerExtra={<PDVV2OrderOriginBadge origin={o.origin} />}
-                              disableAdvance={showCobrar}
+                              disableAdvance={hideBtnAdvance}
                               disableAdvanceReason="Finalize o pagamento em 'Cobrar' antes de entregar"
+                              hideAdvance={hideBtnAdvance}
                             />
-                            {showCobrar && (
+                            {hideBtnAdvance && (
                               <Button
                                 size="sm"
                                 className="w-full"
@@ -999,6 +1003,7 @@ export default function PDVV2() {
                     const ready = o.status === 'ready';
                     const isDel = isDelivery(o);
                     const showCobrar = ready && !isDel;
+                    const hideBtnAdvance = chargeBeforeDeliverEnabled && showCobrar;
                     return (
                       <div key={o.id} className="space-y-2">
                         <OrderCard
@@ -1006,10 +1011,11 @@ export default function PDVV2() {
                           paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
                           storeName={company?.name}
                           headerExtra={<PDVV2OrderOriginBadge origin={o.origin} />}
-                          disableAdvance={showCobrar}
+                          disableAdvance={hideBtnAdvance}
                           disableAdvanceReason="Finalize o pagamento em 'Cobrar' antes de entregar"
-                        />
-                        {showCobrar && (
+                          hideAdvance={hideBtnAdvance}
+                         />
+                        {hideBtnAdvance && (
                           <Button
                             size="sm"
                             className="w-full"

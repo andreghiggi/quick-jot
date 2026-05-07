@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '07/05/2026',
+    version: '1.28.2',
+    type: 'improvement',
+    description: 'PDV V2: para pedidos de retirada, o botão "Entregar" agora é escondido até que a cobrança seja realizada — exibindo apenas o botão "Cobrar". Aplicado inicialmente para a Lancheria da I9.',
+  },
+  {
+    date: '07/05/2026',
     version: '1.28.1',
     type: 'improvement',
     description: 'PDV V2: pedidos com status "Entregue" agora saem automaticamente do dashboard do PDV e ficam visíveis apenas no menu Pedidos. Aplicado inicialmente para a Lancheria da I9.',
