@@ -920,18 +920,6 @@ export default function PDVV2() {
         onConfirm={handleCloseCash}
       />
 
-      <PDVV2PaymentDialog
-        open={!!chargeOrder}
-        onOpenChange={(o) => !o && setChargeOrder(null)}
-        companyId={companyId}
-        total={chargeOrder?.total || 0}
-        title={`Cobrar pedido #${chargeOrder?.dailyNumber}`}
-        showDocumentMode
-        showAddItem={!!chargeOrder && !isDelivery(chargeOrder)}
-        tefStatus={tefStatus}
-        onConfirm={confirmChargeOrder}
-        checkoutItems={isI9 ? chargeOrder?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price })) : undefined}
-      />
 
       <PDVV2PaymentDialog
         open={!!importingTab}
