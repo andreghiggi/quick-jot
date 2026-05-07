@@ -1031,9 +1031,9 @@ export default function Menu() {
               referenceLabel: `PEDIDO #${newOrder.daily_number || newOrder.order_code}`,
               layout: settings.printLayout,
               // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
-              showReadyTime: company?.id === '8c9e7a0e-dbb6-49b9-8344-c23155a71164',
+              showReadyTime: true,
               readyOffsetMinutes:
-                company?.id === '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
+                true
                   ? computeReadyOffsetMinutes(settings.estimatedWaitTime, 30)
                   : undefined,
             });
