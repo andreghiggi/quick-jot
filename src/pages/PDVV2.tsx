@@ -434,7 +434,7 @@ export default function PDVV2() {
       // Imprime se: I9 escolheu "Imprimir" no pop-up, ou demais lojas (comportamento original)
       const shouldPrint = printDocument !== false;
       if (wantsNfce) {
-        // Mesma regra do confirmChargeOrder: só fecha a comanda depois que o
+        // Só fecha a comanda depois que o
         // operador autorizar o fechamento do pop-up de NFC-e.
         const tabIdToClose = fullTab.id;
         setPendingPostSale(() => async () => {
