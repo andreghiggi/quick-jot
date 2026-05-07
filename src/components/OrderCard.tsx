@@ -39,6 +39,8 @@ interface OrderCardProps {
   disableAdvance?: boolean;
   /** Mensagem mostrada via tooltip/title quando o avanço está bloqueado. */
   disableAdvanceReason?: string;
+  /** Quando true, esconde completamente o botão de avançar status. */
+  hideAdvance?: boolean;
 }
 
 const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textColor: string; borderColor: string; next?: OrderStatus }> = {
@@ -78,7 +80,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
   delivered: '',
 };
 
-export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason }: OrderCardProps) {
+export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason, hideAdvance = false }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
   const { company } = useAuthContext();
   
@@ -815,7 +817,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               {confirmed ? 'Confirmado' : 'Confirmar'}
             </Button>
           )}
-          {!isCancelled && config.next && (
+          {!isCancelled && config.next && !hideAdvance && (
             <Button 
               size="sm" 
               onClick={handleAdvanceStatus}

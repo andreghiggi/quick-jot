@@ -938,6 +938,7 @@ export default function PDVV2() {
                               headerExtra={<PDVV2OrderOriginBadge origin={o.origin} />}
                               disableAdvance={showCobrar}
                               disableAdvanceReason="Finalize o pagamento em 'Cobrar' antes de entregar"
+                              hideAdvance={showCobrar}
                             />
                             {showCobrar && (
                               <Button
