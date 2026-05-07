@@ -13,7 +13,7 @@ import {
   brl as formatPrice,
   maskCurrencyInput,
   parseCurrencyInput,
-  LANCHERIA_I9_COMPANY_ID,
+  ,
 } from './_format';
 
 export interface CloseCashSale {

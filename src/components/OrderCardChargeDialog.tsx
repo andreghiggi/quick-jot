@@ -13,8 +13,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Order } from '@/types/order';
 import { emitirNFCe, type NFCeItem, type NFCeRecord, type NFCeTefData } from '@/services/nfceService';
-import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
-
 interface OrderCardChargeDialogProps {
   order: Order;
   open: boolean;

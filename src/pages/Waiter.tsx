@@ -9,7 +9,6 @@ import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
-import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
