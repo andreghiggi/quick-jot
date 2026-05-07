@@ -654,7 +654,7 @@ export default function Products() {
               />
               <Label>Item de Cardápio</Label>
             </div>
-              {isModuleEnabled('tables') && (
+              {isModuleEnabled('mesas') && (
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={newProduct.waiterItem}
@@ -1061,7 +1061,7 @@ export default function Products() {
                 />
                 <Label>Item de Cardápio</Label>
               </div>
-              {isModuleEnabled('tables') && (
+              {isModuleEnabled('mesas') && (
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={editingProduct.waiterItem !== false}
