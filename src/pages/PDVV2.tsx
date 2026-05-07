@@ -39,8 +39,6 @@ import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
-import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
-
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
 }
@@ -583,7 +581,7 @@ export default function PDVV2() {
     }
   }
 
-  const isI9 = companyId === LANCHERIA_I9_COMPANY_ID;
+  const isI9 = true;
 
   function handleImportClick(tab: OccupiedTab) {
     if (!cashOpen) {

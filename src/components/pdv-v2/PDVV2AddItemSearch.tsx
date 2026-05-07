@@ -10,7 +10,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { Product, ProductOptional } from '@/types/product';
-import { brl as formatPrice, LANCHERIA_I9_COMPANY_ID } from './_format';
+import { brl as formatPrice } from './_format';
 import { PDVV2CategoryBrowser } from './PDVV2CategoryBrowser';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -34,7 +34,7 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
   const { products, loading } = useProducts({ companyId });
   const { categories } = useCategories({ companyId });
   const { groups: optionalGroups } = useOptionalGroups({ companyId });
-  const isLancheriaI9 = companyId === LANCHERIA_I9_COMPANY_ID;
+  const isLancheriaI9 = true;
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');

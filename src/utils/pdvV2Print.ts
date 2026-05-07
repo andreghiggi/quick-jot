@@ -78,7 +78,7 @@ function escapeHtml(s: string) {
 }
 
 function buildProductionHtml(payload: PrintPayload, ref: string) {
-  const isLancheriaI9 = payload.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const isLancheriaI9 = true;
   return generateProductionTicketHTML({
     tabNumber: payload.dailyNumber,
     customerName: payload.customerName,

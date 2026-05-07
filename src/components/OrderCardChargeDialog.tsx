@@ -13,8 +13,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Order } from '@/types/order';
 import { emitirNFCe, type NFCeItem, type NFCeRecord, type NFCeTefData } from '@/services/nfceService';
-import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
-
 interface OrderCardChargeDialogProps {
   order: Order;
   open: boolean;
@@ -203,7 +201,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         showDocumentMode
         chargeTefBeforePopups
         channel="pdv"
-        checkoutItems={company?.id === LANCHERIA_I9_COMPANY_ID ? order?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price })) : undefined}
+        checkoutItems={order?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price }))}
         onConfirm={handleConfirm}
       />
       {nfceRecord && (

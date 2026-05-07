@@ -68,7 +68,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         printedAt: (order as any).printed_at ? new Date((order as any).printed_at) : undefined,
         confirmedAt: (order as any).confirmed_at ? new Date((order as any).confirmed_at) : undefined,
         origin: (
-          companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164' &&
+          true &&
           ((order as any).origin === 'cardapio' || !(order as any).origin) &&
           typeof order.notes === 'string' &&
           order.notes.includes('[EXPRESS]')

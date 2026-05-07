@@ -9,7 +9,6 @@ import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
-import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
@@ -99,7 +98,7 @@ export default function Waiter() {
   const [optionalsDialogGroups, setOptionalsDialogGroups] = useState<OptionalGroup[]>([]);
   const cartEndRef = useRef<HTMLDivElement>(null);
 
-  const isI9 = company?.id === LANCHERIA_I9_COMPANY_ID;
+  const isI9 = true;
 
   // i9: animated badge counter
   const [cartBounce, setCartBounce] = useState(false);
@@ -323,9 +322,9 @@ export default function Waiter() {
           paperSize: storeSettings.printerPaperSize,
           layout: storeSettings.printLayout,
           // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
-          showReadyTime: company?.id === '8c9e7a0e-dbb6-49b9-8344-c23155a71164',
+          showReadyTime: true,
           readyOffsetMinutes:
-            company?.id === '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
+            true
               ? computeReadyOffsetMinutes(storeSettings.estimatedWaitTime, 30)
               : undefined,
         });
