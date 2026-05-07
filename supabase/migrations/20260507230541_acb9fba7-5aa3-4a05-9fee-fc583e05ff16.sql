@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN waiter_item boolean NOT NULL DEFAULT true;

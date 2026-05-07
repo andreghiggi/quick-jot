@@ -61,6 +61,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         displayOrder: product.display_order ?? 0,
         pdvItem: product.pdv_item ?? true,
         menuItem: (product as any).menu_item ?? true,
+        waiterItem: (product as any).waiter_item ?? true,
         isNew: (product as any).is_new ?? false,
         subcategoryId: (product as any).subcategory_id || null,
         code: (product as any).code || null,
@@ -136,6 +137,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       if (productData.active !== undefined) updateData.active = productData.active;
       if (productData.pdvItem !== undefined) updateData.pdv_item = productData.pdvItem;
       if (productData.menuItem !== undefined) (updateData as any).menu_item = productData.menuItem;
+      if (productData.waiterItem !== undefined) (updateData as any).waiter_item = productData.waiterItem;
       if (productData.subcategoryId !== undefined) updateData.subcategory_id = productData.subcategoryId || null;
       if ((productData as any).code !== undefined) (updateData as any).code = (productData as any).code || null;
       if ((productData as any).gtin !== undefined) (updateData as any).gtin = (productData as any).gtin || null;

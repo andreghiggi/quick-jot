@@ -1314,6 +1314,7 @@ export type Database = {
           tax_rule_id: string | null
           unit: string
           updated_at: string
+          waiter_item: boolean
         }
         Insert: {
           active?: boolean
@@ -1338,6 +1339,7 @@ export type Database = {
           tax_rule_id?: string | null
           unit?: string
           updated_at?: string
+          waiter_item?: boolean
         }
         Update: {
           active?: boolean
@@ -1362,6 +1364,7 @@ export type Database = {
           tax_rule_id?: string | null
           unit?: string
           updated_at?: string
+          waiter_item?: boolean
         }
         Relationships: [
           {

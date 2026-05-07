@@ -21,6 +21,7 @@ export interface Product {
   displayOrder?: number;
   pdvItem?: boolean;
   menuItem?: boolean;
+  waiterItem?: boolean;
   isNew?: boolean;
   subcategoryId?: string | null;
   code?: string | null;

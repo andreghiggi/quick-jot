@@ -49,7 +49,7 @@ export default function Products() {
   
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, subcategoryId: '' });
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
   
   const [isUploading, setIsUploading] = useState(false);
@@ -147,7 +147,7 @@ export default function Products() {
       active: newProduct.active,
       subcategoryId: newProduct.subcategoryId || null,
     } as any);
-    setNewProduct({ name: '', price: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, subcategoryId: '' });
+    setNewProduct({ name: '', price: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
     setIsProductDialogOpen(false);
   }
 
@@ -204,6 +204,7 @@ export default function Products() {
       active: editingProduct.active,
       pdvItem: editingProduct.pdvItem,
       menuItem: editingProduct.menuItem,
+      waiterItem: editingProduct.waiterItem,
       subcategoryId: editingProduct.subcategoryId,
       ...(true ? {
         code: editingProduct.code,
@@ -653,6 +654,15 @@ export default function Products() {
               />
               <Label>Item de Cardápio</Label>
             </div>
+              {isModuleEnabled('tables') && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={newProduct.waiterItem}
+                    onCheckedChange={(v) => setNewProduct({ ...newProduct, waiterItem: v })}
+                  />
+                  <Label>Item de Mesa/Garçom</Label>
+                </div>
+              )}
             <Button onClick={handleAddProduct} className="w-full">Salvar</Button>
           </div>
         </DialogContent>
@@ -1051,6 +1061,15 @@ export default function Products() {
                 />
                 <Label>Item de Cardápio</Label>
               </div>
+              {isModuleEnabled('tables') && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={editingProduct.waiterItem !== false}
+                    onCheckedChange={(v) => setEditingProduct({ ...editingProduct, waiterItem: v })}
+                  />
+                  <Label>Item de Mesa/Garçom</Label>
+                </div>
+              )}
               {true && (
                 <div className="border-t pt-4 mt-2 space-y-4">
                   <h4 className="font-semibold text-sm">Dados fiscais</h4>
