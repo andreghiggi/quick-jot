@@ -1451,9 +1451,9 @@ export default function Menu() {
                       )}
                       <div className="flex-1 p-3 flex flex-col justify-between">
                         <div>
-                          <h3 className="font-semibold text-foreground line-clamp-1">{product.name}</h3>
+                          <h3 className="font-semibold text-foreground">{product.name}</h3>
                           {product.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                               {product.description}
                             </p>
                           )}
