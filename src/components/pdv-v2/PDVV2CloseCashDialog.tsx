@@ -13,7 +13,6 @@ import {
   brl as formatPrice,
   maskCurrencyInput,
   parseCurrencyInput,
-  ,
 } from './_format';
 
 export interface CloseCashSale {
