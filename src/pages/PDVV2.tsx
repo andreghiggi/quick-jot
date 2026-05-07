@@ -46,10 +46,18 @@ function isDelivery(o: Order) {
 export default function PDVV2() {
   const { company, user } = useAuthContext();
   const companyId = company?.id;
+  // Hide delivered orders from PDV V2 dashboard — currently only for Lancheria da I9
+  const HIDE_DELIVERED_COMPANY_IDS = ['8c9e7a0e-dbb6-49b9-8344-c23155a71164'];
+  const hideDelivered = companyId ? HIDE_DELIVERED_COMPANY_IDS.includes(companyId) : false;
+
   const { isModuleEnabled } = useCompanyModules({ companyId });
   const tablesEnabled = isModuleEnabled('mesas');
 
   const { orders, updateOrderStatus } = useOrderContext();
+  const dashboardOrders = useMemo(
+    () => (hideDelivered ? orders.filter((o) => o.status !== 'delivered') : orders),
+    [orders, hideDelivered]
+  );
   const {
     currentRegister,
     totalSales,
@@ -133,22 +141,22 @@ export default function PDVV2() {
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = {
-      all: orders.length,
+      all: dashboardOrders.length,
       pending: 0,
       preparing: 0,
       ready: 0,
       delivered: 0,
     };
-    for (const o of orders) c[o.status as OrderStatus]++;
+    for (const o of dashboardOrders) c[o.status as OrderStatus]++;
     return c;
-  }, [orders]);
+  }, [dashboardOrders]);
 
   // Faturamento real = vendas pagas no caixa atual (pdv_sales)
   const revenue = totalSales;
 
   const filteredOrders = useMemo(
-    () => (filter === 'all' ? orders : orders.filter((o) => o.status === filter)),
-    [orders, filter]
+    () => (filter === 'all' ? dashboardOrders : dashboardOrders.filter((o) => o.status === filter)),
+    [dashboardOrders, filter]
   );
 
   const occupiedTabs: OccupiedTab[] = useMemo(
