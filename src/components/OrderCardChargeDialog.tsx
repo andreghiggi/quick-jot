@@ -3,7 +3,7 @@ import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import type { DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import type { ExtraItem } from '@/components/pdv-v2/PDVV2AddItemSearch';
-import type { TefOptions } from '@/utils/pdvV2Tef';
+import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { useProducts } from '@/hooks/useProducts';
@@ -48,6 +48,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
+  const [tefStatus, setTefStatus] = useState('');
 
   // Itens do pedido convertidos para o formato esperado pela venda/NFC-e.
   const saleItems = useMemo(
@@ -88,9 +89,26 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         return;
       }
 
-      const tefNote = params.prechargedTef?.notesFragment
-        ? ` | ${params.prechargedTef.notesFragment}`
-        : '';
+      // ===== TEF: executa ANTES de criar a venda (mesmo fluxo de Mesa) =====
+      let tefData: NFCeTefData | undefined;
+      let tefNote = '';
+      if (params.tefIntegration && params.tefOptions) {
+        const result = await runTefPayment({
+          companyId: company.id,
+          integration: params.tefIntegration,
+          amount: params.finalTotal,
+          options: params.tefOptions,
+          description: order.customerName ? `Cardápio - ${order.customerName}` : 'Pedido Cardápio',
+          onStatus: setTefStatus,
+        });
+        setTefStatus('');
+        if (!result.success) {
+          return;
+        }
+        tefData = result.tefData;
+        tefNote = result.notesFragment ? ` | ${result.notesFragment}` : '';
+      }
+
       const saleNotes = `[CARDAPIO #${order.orderCode || order.dailyNumber}] Pagamento: ${params.paymentName}${tefNote}`;
 
       // 1) Registra a venda no caixa, vinculada ao pedido
@@ -156,7 +174,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
             valor_frete: 0,
             observacoes: order.customerName ? `Cliente: ${order.customerName}` : undefined,
             destinatario,
-            tef: params.prechargedTef?.tefData,
+            tef: tefData,
           } as any);
 
           toast.success('NFC-e enviada para processamento!');
@@ -199,8 +217,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         total={order.total}
         title={`Cobrar pedido #${order.orderCode || order.dailyNumber}`}
         showDocumentMode
-        chargeTefBeforePopups
-        channel="pdv"
+        tefStatus={tefStatus}
         checkoutItems={order?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price }))}
         onConfirm={handleConfirm}
       />
