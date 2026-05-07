@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '07/05/2026',
+    version: '1.28.1',
+    type: 'improvement',
+    description: 'PDV V2: pedidos com status "Entregue" agora saem automaticamente do dashboard do PDV e ficam visíveis apenas no menu Pedidos. Aplicado inicialmente para a Lancheria da I9.',
+  },
+  {
+    date: '07/05/2026',
     version: '1.28.0',
     type: 'feature',
     description: 'Rollout geral: todas as funcionalidades que eram exclusivas da Lancheria da I9 agora estão disponíveis para TODA a base de clientes. Isso inclui: Pedido Express com todas as formas de pagamento e atalho "Cliente Loja", checkout parcial (selecionar itens para pagar), divisão de conta (split por pessoa), máscara de moeda em tempo real nos campos de valor, fluxo fiscal sequencial (CPF → NFC-e → Impressão), cobrança TEF antes dos pop-ups, botão "Cobrar" nos cards de pedidos online, navegador de categorias com fotos no PDV, controle de quantidade nos adicionais (maxQuantityPerItem), campos fiscais extras (Código, GTIN, Unidade) no cadastro de produtos, tempo estimado de preparo nas impressões/garçom, e importação de comanda com valor restante.',
