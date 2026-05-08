@@ -575,6 +575,36 @@ export default function MesaQR() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Item adicionado — escolher próximo passo */}
+      <Dialog open={!!addedDialog} onOpenChange={open => { if (!open) setAddedDialog(null); }}>
+        <DialogContent className="max-w-sm p-0 gap-0 overflow-hidden">
+          <div className="bg-primary/10 px-6 pt-6 pb-4 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/20 mb-2">
+              <CheckCircle className="h-7 w-7 text-primary" />
+            </div>
+            <h3 className="text-lg font-bold">Item adicionado!</h3>
+            {addedDialog?.name && (
+              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{addedDialog.name}</p>
+            )}
+          </div>
+          <div className="px-6 py-4 flex flex-col gap-2">
+            <Button
+              variant="outline"
+              className="w-full h-12 border-primary text-primary hover:bg-primary/10"
+              onClick={() => setAddedDialog(null)}
+            >
+              <Plus className="w-4 h-4 mr-2" /> Adicionar mais itens
+            </Button>
+            <Button
+              className="w-full h-12"
+              onClick={() => { setAddedDialog(null); setCartOpen(true); }}
+            >
+              <ShoppingCart className="w-4 h-4 mr-2" /> Finalizar pedido
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
