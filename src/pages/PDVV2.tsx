@@ -58,7 +58,14 @@ export default function PDVV2() {
   const { orders, updateOrderStatus, refetch: refetchOrders } = useOrderContext();
   const dashboardOrders = useMemo(
     () => {
-      let filtered = orders.filter((o) => !o.notes?.includes('[CANCELADA]'));
+      // Only show today's orders (America/Sao_Paulo)
+      const nowSP = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+      const todayStart = new Date(nowSP.getFullYear(), nowSP.getMonth(), nowSP.getDate());
+      let filtered = orders.filter((o) => {
+        if (o.notes?.includes('[CANCELADA]')) return false;
+        const orderDateSP = new Date(new Date(o.createdAt).toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+        return orderDateSP >= todayStart;
+      });
       if (hideDelivered) filtered = filtered.filter((o) => o.status !== 'delivered');
       return filtered;
     },
