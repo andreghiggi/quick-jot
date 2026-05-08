@@ -219,11 +219,15 @@ export default function Waiter() {
       return;
     }
 
-    addSimpleToCart(product.id, product.name, product.price);
     if (isI9) {
-      // i9: feedback visual ao adicionar direto (sem opcionais)
-      toast.success(`${product.name} adicionado`);
+      // i9: sempre abre o diálogo (mesmo sem opcionais) para escolher qtd/observação,
+      // igual ao cardápio online.
+      setOptionalsDialogProduct(product);
+      setOptionalsDialogGroups([]);
+      return;
     }
+
+    addSimpleToCart(product.id, product.name, product.price);
   };
 
   const addSimpleToCart = (productId: string, productName: string, unitPrice: number) => {
