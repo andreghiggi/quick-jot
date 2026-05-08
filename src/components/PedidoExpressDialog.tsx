@@ -933,6 +933,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           return;
         }
         try {
+          setIsEmittingNfce(true);
           const saleItems = cart.map((item) => ({
             product_id: item.product.id || null,
             product_name: item.product.name,
@@ -1009,6 +1010,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           toast.error(
             `Pedido criado, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`,
           );
+        } finally {
+          setIsEmittingNfce(false);
         }
       }
 
