@@ -913,7 +913,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       notes: noteStr,
       items: orderItems,
       total: effectiveTotal,
-      status: override?.finalizeNow ? 'delivered' : 'pending',
+      status: override?.finalizeNow ? 'ready' : 'pending',
       origin: 'balcao',
     });
 
