@@ -93,10 +93,9 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
   const confirmed = !!order.confirmedAt;
 
-  // Lancheria da I9 — cobrança manual de pedidos do cardápio antes de "Entregar".
-  // Rollout isolado (mesma loja já validada para NFC-e e Pedido Express).
-  
-   const isLancheriaI9 = company?.id === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  // Cobrança manual de pedidos do cardápio antes de "Entregar".
+  // Disponível para qualquer loja com PDV V2 ativo (PDV V2.1 — rollout geral).
+  const isLancheriaI9 = true;
   const isCardapioOrder = (order.origin || 'cardapio') === 'cardapio';
   const isBalcaoOrder = order.origin === 'balcao';
   const isRetirada = !order.deliveryAddress;
