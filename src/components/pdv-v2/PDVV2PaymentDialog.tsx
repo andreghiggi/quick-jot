@@ -99,6 +99,9 @@ export function PDVV2PaymentDialog({
   // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
   const [selectedItemQtys, setSelectedItemQtys] = useState<Map<number, number>>(new Map());
+  // Quantidades selecionadas dos itens adicionados durante o checkout (extras).
+  // Chave = id do ExtraItem.
+  const [selectedExtraQtys, setSelectedExtraQtys] = useState<Map<string, number>>(new Map());
   const [splitPeople, setSplitPeople] = useState(2);
 
   // When activeSplit is provided (person 2+), force split mode on open
@@ -190,6 +193,7 @@ export function PDVV2PaymentDialog({
       setChargingTef(false);
       setI9Mode('');
       setSelectedItemQtys(new Map());
+      setSelectedExtraQtys(new Map());
       setSplitPeople(2);
     }
   }, [open]);
@@ -214,6 +218,10 @@ export function PDVV2PaymentDialog({
     selectedItemQtys.forEach((qty, idx) => {
       const it = checkoutItems[idx];
       if (it && !it.paid && qty > 0) sum += qty * it.unit_price;
+    });
+    selectedExtraQtys.forEach((qty, id) => {
+      const ex = extraItems.find((e) => e.id === id);
+      if (ex && qty > 0) sum += qty * ex.unit_price;
     });
     return sum;
   })();
