@@ -849,7 +849,10 @@ export default function PDVV2() {
                       const ready = o.status === 'ready';
                       const isDel = isDelivery(o);
                       const showCobrar = ready && !isDel;
-                      const alreadyCharged = !!o.notes?.includes('[COBRADO]');
+                      const expressPay = o.notes?.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i)?.[1]?.trim();
+                      const alreadyCharged =
+                        !!o.notes?.includes('[COBRADO]') ||
+                        !!(o.notes?.includes('[EXPRESS]') && expressPay);
                       const hideBtnAdvance = chargeBeforeDeliverEnabled && showCobrar && !alreadyCharged;
                         return (
                           <div key={o.id} className="space-y-2">
@@ -913,7 +916,10 @@ export default function PDVV2() {
                     const ready = o.status === 'ready';
                     const isDel = isDelivery(o);
                     const showCobrar = ready && !isDel;
-                   const alreadyCharged = !!o.notes?.includes('[COBRADO]');
+                   const expressPay = o.notes?.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i)?.[1]?.trim();
+                   const alreadyCharged =
+                     !!o.notes?.includes('[COBRADO]') ||
+                     !!(o.notes?.includes('[EXPRESS]') && expressPay);
                    const hideBtnAdvance = chargeBeforeDeliverEnabled && showCobrar && !alreadyCharged;
                     return (
                       <div key={o.id} className="space-y-2">
