@@ -10,7 +10,7 @@ import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import { ImplementedSuggestionsModal } from "@/components/ImplementedSuggestionsModal";
 import { useCompanyModules } from "@/hooks/useCompanyModules";
 import { detectDomainContext, COMANDATECH_ROOT } from "@/utils/domainRouting";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 
 // Pages
 import Auth from "./pages/Auth";
@@ -73,6 +73,18 @@ function RootRedirect() {
   if (!pdvV2Loading && pdvV2Enabled) return <Navigate to="/pdv-v2" replace />;
 
   return <Index />;
+}
+
+/**
+ * Guard da rota /pdv-v2: bloqueia acesso quando o módulo `pdv_v2` está
+ * desativado, independente de cache local ou bookmark.
+ */
+function PDVV2Guard({ children }: { children: ReactNode }) {
+  const { company } = useAuthContext();
+  const { enabled, loading } = usePdvV2Enabled(company?.id);
+  if (loading) return null;
+  if (!enabled) return <Navigate to="/" replace />;
+  return <>{children}</>;
 }
 
 function AppRoutes() {
@@ -150,7 +162,9 @@ function AppRoutes() {
       {/* PDV V2 - Nova Central Operacional (rota nova, isolada) */}
       <Route path="/pdv-v2" element={
         <ProtectedRoute requireCompany>
-          <PDVV2 />
+          <PDVV2Guard>
+            <PDVV2 />
+          </PDVV2Guard>
         </ProtectedRoute>
       } />
       

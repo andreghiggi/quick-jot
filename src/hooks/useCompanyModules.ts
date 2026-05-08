@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { clearPdvV2Cache } from '@/hooks/usePdvV2Enabled';
 
 export interface CompanyModule {
   id: string;
@@ -73,6 +74,11 @@ export function useCompanyModules(options: UseCompanyModulesOptions = {}) {
       }
 
       await fetchModules();
+      // Invalida o cache do redirect/guard de PDV V2 sempre que algum dos
+      // dois PDVs muda (o trigger no banco também desativa o "outro").
+      if (moduleName === 'pdv_v1' || moduleName === 'pdv_v2') {
+        clearPdvV2Cache(companyId);
+      }
       toast.success(`Módulo ${enabled ? 'habilitado' : 'desabilitado'} com sucesso!`);
       return true;
     } catch (error) {
