@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { clearPdvV2Cache } from '@/hooks/usePdvV2Enabled';
 
 export type AppRole = 'super_admin' | 'reseller' | 'company_admin' | 'company_user' | 'waiter';
 
@@ -239,6 +240,7 @@ export function useAuth() {
     setImpersonatedReseller(null);
     sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
     sessionStorage.removeItem(IMPERSONATED_RESELLER_KEY);
+    clearPdvV2Cache();
   }
 
   function hasRole(role: AppRole): boolean {

@@ -71,3 +71,27 @@ export function usePdvV2Enabled(companyId?: string | null) {
 
   return { enabled: !!enabled, loading };
 }
+
+/**
+ * Limpa o cache local de pdv_v2_enabled. Use no signOut e quando o admin
+ * alternar o módulo, para que o redirect /pdv-v2 reflita o estado real
+ * sem depender de reload completo.
+ */
+export function clearPdvV2Cache(companyId?: string | null) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (companyId) {
+      window.localStorage.removeItem(`pdv_v2_enabled_${companyId}`);
+    } else {
+      // varre todas as chaves do prefixo
+      for (let i = window.localStorage.length - 1; i >= 0; i--) {
+        const k = window.localStorage.key(i);
+        if (k && k.startsWith('pdv_v2_enabled_')) {
+          window.localStorage.removeItem(k);
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}
