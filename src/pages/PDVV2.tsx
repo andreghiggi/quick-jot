@@ -168,8 +168,18 @@ export default function PDVV2() {
     return c;
   }, [dashboardOrders]);
 
-  // Faturamento real = vendas pagas no caixa atual (pdv_sales)
-  const revenue = totalSales;
+  // Faturamento do dia: filtra vendas do caixa para mostrar apenas as de hoje (America/Sao_Paulo)
+  const revenue = useMemo(() => {
+    const nowSP = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const todayStart = new Date(nowSP.getFullYear(), nowSP.getMonth(), nowSP.getDate());
+    return (sales || []).reduce((sum, s) => {
+      const saleDateSP = new Date(new Date(s.created_at).toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+      if (saleDateSP >= todayStart) {
+        return sum + (Number(s.final_total) || 0);
+      }
+      return sum;
+    }, 0);
+  }, [sales]);
 
   const filteredOrders = useMemo(
     () => (filter === 'all' ? visibleOrders : visibleOrders.filter((o) => o.status === filter)),
