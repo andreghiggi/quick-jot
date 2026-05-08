@@ -2063,6 +2063,17 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         initialRecord={nfceRecord}
         autoPrint={nfceAutoPrint}
       />
+
+      {/* Overlay de bloqueio enquanto NFC-e é emitida */}
+      {isEmittingNfce && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
+          <div className="bg-card rounded-lg px-8 py-6 shadow-xl flex flex-col items-center gap-3">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+            <p className="text-lg font-semibold text-foreground">Emitindo NFC-e…</p>
+            <p className="text-sm text-muted-foreground">Aguarde, não feche a tela.</p>
+          </div>
+        </div>
+      )}
     </>
   );
 }
