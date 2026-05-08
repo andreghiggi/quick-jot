@@ -662,12 +662,13 @@ export default function PDVV2() {
       (fullTab.table?.number ? `Mesa ${fullTab.table.number}` : `Comanda ${fullTab.tab_number}`);
 
     // ===== Items mode: selected items with TEF + NFC-e + loop =====
-    if (params.itemsInfo && params.itemsInfo.length > 0) {
+    const selectedExtraItemsInfo = params.extraItemsInfo || [];
+    if ((params.itemsInfo && params.itemsInfo.length > 0) || selectedExtraItemsInfo.length > 0) {
       const tabNumber = fullTab.tab_number || importingTab.tabNumber || '?';
 
       // Build sale items from selected tab_items
       const saleItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[] = [];
-      for (const pi of params.itemsInfo) {
+      for (const pi of params.itemsInfo || []) {
         const tabItem = fullTab.items.find((i) => i.id === pi.id);
         if (!tabItem) continue;
         saleItems.push({
@@ -675,6 +676,16 @@ export default function PDVV2() {
           product_name: tabItem.product_name,
           quantity: pi.paidQty,
           unit_price: tabItem.unit_price,
+        });
+      }
+      for (const pi of selectedExtraItemsInfo) {
+        const extra = (params.extraItems || []).find((i: any) => i.id === pi.id);
+        if (!extra || pi.paidQty <= 0) continue;
+        saleItems.push({
+          product_id: extra.product_id,
+          product_name: extra.product_name,
+          quantity: Math.min(pi.paidQty, extra.quantity),
+          unit_price: extra.unit_price,
         });
       }
       if (saleItems.length === 0) { toast.error('Nenhum item selecionado'); return; }
