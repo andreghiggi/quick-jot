@@ -286,6 +286,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
+  const [isEmittingNfce, setIsEmittingNfce] = useState(false);
 
   // ===== TEF state (mini seletor inline) =====
   const [tefCardType, setTefCardType] = useState<'credit' | 'debit' | 'pix'>('credit');
