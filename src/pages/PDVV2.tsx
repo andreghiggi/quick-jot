@@ -87,7 +87,7 @@ export default function PDVV2() {
     loading: cashLoading,
     cashOpenKnown,
   } = useCashRegister({ companyId });
-  const { openTabs, getTabTotal, closeTab } = useTabs({ companyId });
+  const { openTabs, closeTab, refetch: refetchTabs } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
   const { products } = useProducts({ companyId });
@@ -616,6 +616,7 @@ export default function PDVV2() {
         } catch (persistErr) {
           console.error('[PDVV2] Erro ao persistir divisão na comanda:', persistErr);
         }
+        await refetchTabs();
 
         // NFC-e: TEF força emissão. Caso contrário, segue documentMode.
         const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
@@ -783,6 +784,7 @@ export default function PDVV2() {
           });
           if (extraRows.length > 0) await supabase.from('tab_items').insert(extraRows as any);
         }
+        await refetchTabs();
 
         // NFC-e: TEF força emissão. Caso contrário, segue documentMode.
         const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
