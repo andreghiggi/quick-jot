@@ -3,16 +3,17 @@ import { OrderCard } from './OrderCard';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { Order, OrderStatus } from '@/types/order';
 import { cn } from '@/lib/utils';
-import { ClipboardList, ChefHat, PackageCheck, Truck } from 'lucide-react';
+import { ClipboardList, ChefHat, PackageCheck, Truck, Ban } from 'lucide-react';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useAuthContext } from '@/contexts/AuthContext';
 
-const allTabs: { value: OrderStatus | 'all'; label: string; icon: React.ElementType }[] = [
+const allTabs: { value: OrderStatus | 'all' | 'cancelled'; label: string; icon: React.ElementType }[] = [
   { value: 'all', label: 'Todos', icon: ClipboardList },
   { value: 'pending', label: 'Pendentes', icon: ClipboardList },
   { value: 'preparing', label: 'Preparando', icon: ChefHat },
   { value: 'ready', label: 'Prontos', icon: PackageCheck },
   { value: 'delivered', label: 'Entregues', icon: Truck },
+  { value: 'cancelled', label: 'Cancelados', icon: Ban },
 ];
 
 interface OrderTabsProps {
@@ -29,12 +30,14 @@ export function OrderTabs({ filteredOrders, hideAllTab = false }: OrderTabsProps
   const tabs = hideAllTab ? allTabs.filter(t => t.value !== 'all') : allTabs;
   const defaultTab = hideAllTab ? 'pending' : 'all';
 
-  function getOrders(filter: OrderStatus | 'all') {
-    if (filter === 'all') return displayOrders;
-    return displayOrders.filter((order) => order.status === filter);
+  function getOrders(filter: OrderStatus | 'all' | 'cancelled') {
+    if (filter === 'cancelled') return displayOrders.filter((o) => !!o.notes?.includes('[CANCELADA]'));
+    const nonCancelled = displayOrders.filter((o) => !o.notes?.includes('[CANCELADA]'));
+    if (filter === 'all') return nonCancelled;
+    return nonCancelled.filter((order) => order.status === filter);
   }
 
-  function getCount(filter: OrderStatus | 'all') {
+  function getCount(filter: OrderStatus | 'all' | 'cancelled') {
     return getOrders(filter).length;
   }
 
