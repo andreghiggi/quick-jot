@@ -57,7 +57,11 @@ export default function PDVV2() {
 
   const { orders, updateOrderStatus, refetch: refetchOrders } = useOrderContext();
   const dashboardOrders = useMemo(
-    () => (hideDelivered ? orders.filter((o) => o.status !== 'delivered') : orders),
+    () => {
+      let filtered = orders.filter((o) => !o.notes?.includes('[CANCELADA]'));
+      if (hideDelivered) filtered = filtered.filter((o) => o.status !== 'delivered');
+      return filtered;
+    },
     [orders, hideDelivered]
   );
   const {
