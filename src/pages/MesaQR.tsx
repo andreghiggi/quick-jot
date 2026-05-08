@@ -63,6 +63,7 @@ export default function MesaQR() {
   const [cartOpen, setCartOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [successInfo, setSuccessInfo] = useState<{ tabNumber: number; tableNumber: number } | null>(null);
+  const [addedDialog, setAddedDialog] = useState<{ name: string } | null>(null);
 
   const refreshBoot = useCallback(async () => {
     if (!slug) return;
@@ -190,11 +191,13 @@ export default function MesaQR() {
       notes: itemNotes || undefined,
     };
     setCart(prev => [...prev, item]);
-    toast.success(`${selectedProduct.name} adicionado!`);
+    toast.success(`${selectedProduct.name} adicionado!`, { duration: 1500 });
+    const addedName = selectedProduct.name;
     setSelectedProduct(null);
     setSelectedOptionals([]);
     setSelectedGroupItems({});
     setItemNotes('');
+    setAddedDialog({ name: addedName });
   }
 
   function cartItemTotal(it: CartItem): number {
