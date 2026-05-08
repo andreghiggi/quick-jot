@@ -27,12 +27,41 @@ import {
   Users, 
   Loader2,
   Table as TableIcon,
-  Settings
+  Settings,
+  QrCode,
+  Copy,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { QRCodeCanvas } from 'qrcode.react';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 
 export default function TablesConfig() {
   const { company } = useAuthContext();
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const cardapioMesaEnabled = isModuleEnabled('cardapio_mesa');
+  const mesaUrl = company?.slug ? `${window.location.origin}/mesa/${company.slug}` : '';
+
+  const handleCopyLink = async () => {
+    if (!mesaUrl) return;
+    try {
+      await navigator.clipboard.writeText(mesaUrl);
+      toast.success('Link copiado!');
+    } catch {
+      toast.error('Não foi possível copiar o link');
+    }
+  };
+
+  const handleDownloadQR = () => {
+    const canvas = document.getElementById('mesa-qr-canvas') as HTMLCanvasElement | null;
+    if (!canvas) return;
+    const url = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cardapio-mesa-${company?.slug || 'loja'}.png`;
+    link.click();
+  };
+
   const { 
     tables, 
     loading, 
