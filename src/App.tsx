@@ -10,7 +10,7 @@ import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import { ImplementedSuggestionsModal } from "@/components/ImplementedSuggestionsModal";
 import { useCompanyModules } from "@/hooks/useCompanyModules";
 import { detectDomainContext, COMANDATECH_ROOT } from "@/utils/domainRouting";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 
 // Pages
 import Auth from "./pages/Auth";
@@ -79,7 +79,7 @@ function RootRedirect() {
  * Guard da rota /pdv-v2: bloqueia acesso quando o módulo `pdv_v2` está
  * desativado, independente de cache local ou bookmark.
  */
-function PDVV2Guard({ children }: { children: React.ReactNode }) {
+function PDVV2Guard({ children }: { children: ReactNode }) {
   const { company } = useAuthContext();
   const { enabled, loading } = usePdvV2Enabled(company?.id);
   if (loading) return null;
