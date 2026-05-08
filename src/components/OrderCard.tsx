@@ -41,6 +41,8 @@ interface OrderCardProps {
   disableAdvanceReason?: string;
   /** Quando true, esconde completamente o botão de avançar status. */
   hideAdvance?: boolean;
+  /** Callback disparado após cobrança bem-sucedida (para refetch imediato). */
+  onCharged?: () => void;
 }
 
 const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textColor: string; borderColor: string; next?: OrderStatus }> = {
@@ -870,6 +872,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           order={order}
           open={chargeDialogOpen}
           onOpenChange={setChargeDialogOpen}
+          onCharged={onCharged}
         />
       )}
     </div>
