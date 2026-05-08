@@ -114,9 +114,13 @@ export function PDVV2OrderCard({
   // - status === 'ready' AND (balcao OR (cardapio AND retirada) OR mesa)
   // - i.e. NOT delivery
   const showCharge =
-    order.status === 'ready' && !delivery && !!onCharge;
+    order.status === 'ready' && !delivery && !!onCharge && !alreadyCharged;
 
-  // For delivery: when delivered already, show nothing; when ready, show "Saiu p/ entrega" via advance.
+  // Show "Entregar" for ready non-delivery orders that are already charged (Express finalizado or [COBRADO])
+  const showDeliver =
+    order.status === 'ready' && !delivery && alreadyCharged && !!onAdvance;
+
+  // For delivery: when delivered already, show nothing; when ready, show "Saiu p/ entrega" via advance. 
   // After "saiu" (status delivered), no further action.
 
   return (
@@ -244,6 +248,16 @@ export function PDVV2OrderCard({
             <Button size="sm" className="flex-1" onClick={() => onCharge!(order)}>
               <CreditCard className="h-3 w-3 mr-1" />
               Cobrar
+            </Button>
+          )}
+          {showDeliver && (
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={() => onAdvance!(order)}
+            >
+              <ArrowRight className="h-3 w-3 mr-1" />
+              Entregar
             </Button>
           )}
         </div>
