@@ -87,7 +87,7 @@ export default function PDVV2() {
     loading: cashLoading,
     cashOpenKnown,
   } = useCashRegister({ companyId });
-  const { openTabs, getTabTotal, closeTab } = useTabs({ companyId });
+  const { openTabs, closeTab, refetch: refetchTabs } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
   const { products } = useProducts({ companyId });
@@ -519,7 +519,7 @@ export default function PDVV2() {
     setImportingTab(tab);
   }
 
-  async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0] & { splitInfo?: { perPerson: number; totalPeople: number }; itemsInfo?: Array<{ id: string; paidQty: number }> }) {
+  async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0] & { splitInfo?: { perPerson: number; totalPeople: number }; itemsInfo?: Array<{ id: string; paidQty: number }>; extraItemsInfo?: Array<{ id: string; paidQty: number }> }) {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -591,6 +591,7 @@ export default function PDVV2() {
               unit_price: ex.unit_price,
               quantity: ex.quantity,
               total_price: ex.unit_price * ex.quantity,
+              notes: (ex as any).notes || null,
               created_by: user.id,
               paid: false,
             }));
@@ -609,6 +610,7 @@ export default function PDVV2() {
         } catch (persistErr) {
           console.error('[PDVV2] Erro ao persistir divisão na comanda:', persistErr);
         }
+        await refetchTabs();
 
         // NFC-e: TEF força emissão. Caso contrário, segue documentMode.
         const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
@@ -655,12 +657,13 @@ export default function PDVV2() {
       (fullTab.table?.number ? `Mesa ${fullTab.table.number}` : `Comanda ${fullTab.tab_number}`);
 
     // ===== Items mode: selected items with TEF + NFC-e + loop =====
-    if (params.itemsInfo && params.itemsInfo.length > 0) {
+    const selectedExtraItemsInfo = params.extraItemsInfo || [];
+    if ((params.itemsInfo && params.itemsInfo.length > 0) || selectedExtraItemsInfo.length > 0) {
       const tabNumber = fullTab.tab_number || importingTab.tabNumber || '?';
 
       // Build sale items from selected tab_items
       const saleItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[] = [];
-      for (const pi of params.itemsInfo) {
+      for (const pi of params.itemsInfo || []) {
         const tabItem = fullTab.items.find((i) => i.id === pi.id);
         if (!tabItem) continue;
         saleItems.push({
@@ -668,6 +671,16 @@ export default function PDVV2() {
           product_name: tabItem.product_name,
           quantity: pi.paidQty,
           unit_price: tabItem.unit_price,
+        });
+      }
+      for (const pi of selectedExtraItemsInfo) {
+        const extra = (params.extraItems || []).find((i: any) => i.id === pi.id);
+        if (!extra || pi.paidQty <= 0) continue;
+        saleItems.push({
+          product_id: extra.product_id,
+          product_name: extra.product_name,
+          quantity: Math.min(pi.paidQty, extra.quantity),
+          unit_price: extra.unit_price,
         });
       }
       if (saleItems.length === 0) { toast.error('Nenhum item selecionado'); return; }
@@ -697,7 +710,7 @@ export default function PDVV2() {
         // DB: mark items as paid (full or partial qty split)
         const fullPayIds: string[] = [];
         const partialPays: Array<{ id: string; paidQty: number }> = [];
-        for (const pi of params.itemsInfo) {
+        for (const pi of params.itemsInfo || []) {
           const tabItem = fullTab.items.find((i) => i.id === pi.id);
           if (!tabItem) continue;
           if (pi.paidQty >= tabItem.quantity) {
@@ -729,6 +742,43 @@ export default function PDVV2() {
             paid: true,
           } as any);
         }
+        if (params.extraItems?.length) {
+          const selectedExtraQtyById = new Map(selectedExtraItemsInfo.map((i) => [i.id, i.paidQty]));
+          const extraRows = params.extraItems.flatMap((ex: any) => {
+            const paidQty = Math.min(selectedExtraQtyById.get(ex.id) || 0, ex.quantity);
+            const rows = [] as any[];
+            if (paidQty > 0) {
+              rows.push({
+                tab_id: fullTab.id,
+                product_id: ex.product_id,
+                product_name: ex.product_name,
+                unit_price: ex.unit_price,
+                quantity: paidQty,
+                total_price: paidQty * ex.unit_price,
+                notes: ex.notes || null,
+                created_by: user.id,
+                paid: true,
+              });
+            }
+            const remainingQty = ex.quantity - paidQty;
+            if (remainingQty > 0) {
+              rows.push({
+                tab_id: fullTab.id,
+                product_id: ex.product_id,
+                product_name: ex.product_name,
+                unit_price: ex.unit_price,
+                quantity: remainingQty,
+                total_price: remainingQty * ex.unit_price,
+                notes: ex.notes || null,
+                created_by: user.id,
+                paid: false,
+              });
+            }
+            return rows;
+          });
+          if (extraRows.length > 0) await supabase.from('tab_items').insert(extraRows as any);
+        }
+        await refetchTabs();
 
         // NFC-e: TEF força emissão. Caso contrário, segue documentMode.
         const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
@@ -747,9 +797,13 @@ export default function PDVV2() {
         // Check if all items are now paid
         // Only consider fully-paid items (not partial qty) as done
         const fullyPaidIds = new Set(fullPayIds);
+        const hasUnpaidExtraRemainder = (params.extraItems || []).some((ex: any) => {
+          const paidQty = selectedExtraItemsInfo.find((i) => i.id === ex.id)?.paidQty || 0;
+          return paidQty < ex.quantity;
+        });
         const allPaid = fullTab.items.every((i) =>
           (i as any).paid || fullyPaidIds.has(i.id)
-        );
+        ) && !hasUnpaidExtraRemainder;
         if (allPaid) {
           await closeTab(fullTab.id);
           toast.success('Todos os itens pagos — comanda fechada!');

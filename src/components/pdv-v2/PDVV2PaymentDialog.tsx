@@ -75,6 +75,8 @@ interface PDVV2PaymentDialogProps {
     splitInfo?: { perPerson: number; totalPeople: number };
     /** I9 items mode: selected items with partial qty so confirmImportTabI9 can handle TEF/NFC-e/loop */
     itemsInfo?: Array<{ id: string; paidQty: number }>;
+    /** I9 items mode: selected extra checkout items and quantities */
+    extraItemsInfo?: Array<{ id: string; paidQty: number }>;
   }) => Promise<void> | void;
 }
 
@@ -293,6 +295,15 @@ export function PDVV2PaymentDialog({
             selectedItemQtys.forEach((qty, idx) => {
               const it = checkoutItems[idx];
               if (it?.id && qty > 0) items.push({ id: it.id, paidQty: qty });
+            });
+            return items.length > 0 ? items : undefined;
+          })()
+        : undefined,
+      extraItemsInfo: isLancheriaI9 && i9Mode === 'items' && extraItems.length > 0
+        ? (() => {
+            const items: Array<{ id: string; paidQty: number }> = [];
+            selectedExtraQtys.forEach((qty, id) => {
+              if (qty > 0) items.push({ id, paidQty: qty });
             });
             return items.length > 0 ? items : undefined;
           })()
