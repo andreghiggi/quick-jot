@@ -824,9 +824,9 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               {confirmed ? 'Confirmado' : 'Confirmar'}
             </Button>
           )}
-          {!isCancelled && config.next && !hideAdvance && (
+          {!isCancelled && config.next && !hideAdvance &&
            /* Se o pedido precisa ser cobrado primeiro, só mostra "Entregar" após cobrança */
-           !(showChargeButton && !alreadyCharged) &&
+           !(showChargeButton && !alreadyCharged) && (
             <Button 
               size="sm" 
               onClick={handleAdvanceStatus}
