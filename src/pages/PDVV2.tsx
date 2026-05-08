@@ -66,10 +66,15 @@ export default function PDVV2() {
         const orderDateSP = new Date(new Date(o.createdAt).toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
         return orderDateSP >= todayStart;
       });
-      if (hideDelivered) filtered = filtered.filter((o) => o.status !== 'delivered');
       return filtered;
     },
-    [orders, hideDelivered]
+    [orders]
+  );
+
+  // Orders visible in the grid (respects hideDelivered toggle)
+  const visibleOrders = useMemo(
+    () => hideDelivered ? dashboardOrders.filter((o) => o.status !== 'delivered') : dashboardOrders,
+    [dashboardOrders, hideDelivered]
   );
   const {
     currentRegister,
@@ -167,8 +172,8 @@ export default function PDVV2() {
   const revenue = totalSales;
 
   const filteredOrders = useMemo(
-    () => (filter === 'all' ? dashboardOrders : dashboardOrders.filter((o) => o.status === filter)),
-    [dashboardOrders, filter]
+    () => (filter === 'all' ? visibleOrders : visibleOrders.filter((o) => o.status === filter)),
+    [visibleOrders, filter]
   );
 
   const occupiedTabs: OccupiedTab[] = useMemo(
