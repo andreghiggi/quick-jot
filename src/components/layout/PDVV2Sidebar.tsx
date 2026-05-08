@@ -19,6 +19,7 @@ import {
   Settings2,
   Users,
   UtensilsCrossed,
+  Table as TableIcon,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -59,7 +60,7 @@ export function PDVV2Sidebar() {
   const tables = isModuleEnabled('mesas')
     ? [
         { title: 'Garçom', icon: UtensilsCrossed, href: '/garcom' },
-        { title: 'Mesas', icon: TableIconShim, href: '/configuracoes/mesas' },
+        { title: 'Mesas', icon: TableIcon, href: '/configuracoes/mesas' },
         { title: 'Garçons', icon: Users, href: '/configuracoes/garcons' },
       ]
     : [];
