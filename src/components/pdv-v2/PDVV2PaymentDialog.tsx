@@ -583,6 +583,76 @@ export function PDVV2PaymentDialog({
                       </div>
                     );
                   })}
+                  {extraItems.map((ex) => {
+                    const selectedQty = selectedExtraQtys.get(ex.id) || 0;
+                    return (
+                      <div
+                        key={`extra-${ex.id}`}
+                        className="flex items-center gap-2 text-sm px-1 py-0.5 rounded"
+                      >
+                        {ex.quantity === 1 ? (
+                          <>
+                            <Checkbox
+                              checked={selectedQty > 0}
+                              onCheckedChange={(c) => {
+                                const next = new Map(selectedExtraQtys);
+                                if (c) next.set(ex.id, 1);
+                                else next.delete(ex.id);
+                                setSelectedExtraQtys(next);
+                              }}
+                            />
+                            <span className="truncate flex-1">
+                              1x {ex.product_name}
+                              <span className="ml-1 text-[10px] text-primary">(adicional)</span>
+                            </span>
+                            <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
+                              {formatPrice(ex.unit_price)}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-6 w-6 text-xs"
+                                disabled={selectedQty <= 0}
+                                onClick={() => {
+                                  const next = new Map(selectedExtraQtys);
+                                  const nq = selectedQty - 1;
+                                  if (nq <= 0) next.delete(ex.id);
+                                  else next.set(ex.id, nq);
+                                  setSelectedExtraQtys(next);
+                                }}
+                              >−</Button>
+                              <span className="w-5 text-center font-medium tabular-nums">{selectedQty}</span>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-6 w-6 text-xs"
+                                disabled={selectedQty >= ex.quantity}
+                                onClick={() => {
+                                  const next = new Map(selectedExtraQtys);
+                                  next.set(ex.id, Math.min(selectedQty + 1, ex.quantity));
+                                  setSelectedExtraQtys(next);
+                                }}
+                              >+</Button>
+                            </div>
+                            <span className="truncate flex-1">
+                              {ex.product_name}
+                              <span className="text-xs text-muted-foreground ml-1">({ex.quantity} un.)</span>
+                              <span className="ml-1 text-[10px] text-primary">(adicional)</span>
+                            </span>
+                            <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
+                              {formatPrice(selectedQty * ex.unit_price)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
