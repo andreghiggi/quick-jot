@@ -519,7 +519,7 @@ export default function PDVV2() {
     setImportingTab(tab);
   }
 
-  async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0] & { splitInfo?: { perPerson: number; totalPeople: number }; itemsInfo?: Array<{ id: string; paidQty: number }> }) {
+  async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0] & { splitInfo?: { perPerson: number; totalPeople: number }; itemsInfo?: Array<{ id: string; paidQty: number }>; extraItemsInfo?: Array<{ id: string; paidQty: number }> }) {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -583,14 +583,21 @@ export default function PDVV2() {
         //  - um item de crédito (valor negativo) registra o quanto já foi pago
         try {
           const isFirstSplitPerson = !!params.splitInfo;
-          if (isFirstSplitPerson && params.extraItems?.length) {
-            const extraRows = params.extraItems.map((ex) => ({
+          const existingExtraKeys = new Set(
+            (fullTab?.items || []).map((i) => `${i.product_id || ''}|${i.product_name}|${i.unit_price}|${i.notes || ''}`)
+          );
+          const newExtraItems = (params.extraItems || []).filter(
+            (ex) => !existingExtraKeys.has(`${ex.product_id || ''}|${ex.product_name}|${ex.unit_price}|${(ex as any).notes || ''}`)
+          );
+          if (isFirstSplitPerson && newExtraItems.length) {
+            const extraRows = newExtraItems.map((ex) => ({
               tab_id: resolvedTabId,
               product_id: ex.product_id,
               product_name: ex.product_name,
               unit_price: ex.unit_price,
               quantity: ex.quantity,
               total_price: ex.unit_price * ex.quantity,
+              notes: (ex as any).notes || null,
               created_by: user.id,
               paid: false,
             }));
