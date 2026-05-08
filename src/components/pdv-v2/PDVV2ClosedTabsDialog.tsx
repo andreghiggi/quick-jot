@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Printer, Ban, FileX, Loader2, Receipt, FileText } from 'lucide-react';
@@ -194,8 +193,8 @@ export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, pa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl h-[85dvh] max-h-[85dvh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5" />
             Comandas Finalizadas
@@ -205,7 +204,7 @@ export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, pa
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(85vh-120px)] -mx-6 px-6">
+        <div className="-mx-6 flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pr-4">
           {sorted.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground text-sm">
@@ -317,7 +316,7 @@ export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, pa
               })}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
