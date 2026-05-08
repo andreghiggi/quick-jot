@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCategories } from '@/hooks/useCategories';
+import { useSubcategories } from '@/hooks/useSubcategories';
 import { useOptionalGroups } from '@/hooks/useOptionalGroups';
 import { Product, ProductOptional, CartItem } from '@/types/product';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Plus, Minus, Trash2, CheckCircle, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
+import { MenuV2 } from '@/components/menu/MenuV2';
 import { formatPrice, cn } from '@/lib/utils';
 
 interface MesaInfo {
@@ -41,12 +43,24 @@ export default function MesaQR() {
   const { products } = useProducts({ companyId: companyId || undefined });
   const { settings } = useStoreSettings({ companyId: companyId || undefined });
   const { categories: allCategories } = useCategories({ companyId: companyId || undefined });
+  const { subcategories } = useSubcategories({ companyId: companyId || undefined });
   const { groups: optionalGroups } = useOptionalGroups({ companyId: companyId || undefined });
 
   const categories = useMemo(() => allCategories.filter(c => c.active), [allCategories]);
   const categoryIdByName = useMemo(() => {
     const m: Record<string, string> = {};
     categories.forEach(c => { m[c.name] = c.id; });
+    return m;
+  }, [categories]);
+
+  const categoryEmojiMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    categories.forEach(c => { if (c.emoji) m[c.name] = c.emoji; });
+    return m;
+  }, [categories]);
+  const categoryImageMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    categories.forEach(c => { if (c.imageUrl) m[c.name] = c.imageUrl; });
     return m;
   }, [categories]);
 
