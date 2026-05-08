@@ -205,7 +205,7 @@ export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, pa
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+        <ScrollArea className="max-h-[calc(85vh-120px)] -mx-6 px-6">
           {sorted.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground text-sm">
