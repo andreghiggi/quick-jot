@@ -577,6 +577,39 @@ export default function PDVV2() {
       const saleNotes = `Comanda #${tabNumber} | Divisão ${personIndex}/${splitData.total}: ${params.paymentName}${tefNotesFragment}`;
       const saleId = await addSale(items, params.paymentMethodId, user.id, 0, customer, saleNotes);
       if (saleId) {
+        // Persiste no tab para que o residual fique correto se a comanda
+        // for reimportada antes de todas as pessoas pagarem:
+        //  - extras adicionados durante o checkout passam a fazer parte da comanda
+        //  - um item de crédito (valor negativo) registra o quanto já foi pago
+        try {
+          const isFirstSplitPerson = !!params.splitInfo;
+          if (isFirstSplitPerson && params.extraItems?.length) {
+            const extraRows = params.extraItems.map((ex) => ({
+              tab_id: resolvedTabId,
+              product_id: ex.product_id,
+              product_name: ex.product_name,
+              unit_price: ex.unit_price,
+              quantity: ex.quantity,
+              total_price: ex.unit_price * ex.quantity,
+              created_by: user.id,
+              paid: false,
+            }));
+            await supabase.from('tab_items').insert(extraRows as any);
+          }
+          await supabase.from('tab_items').insert({
+            tab_id: resolvedTabId,
+            product_id: null,
+            product_name: `[Pago: Pessoa ${personIndex}/${splitData.total}]`,
+            unit_price: -splitData.perPerson,
+            quantity: 1,
+            total_price: -splitData.perPerson,
+            created_by: user.id,
+            paid: false,
+          } as any);
+        } catch (persistErr) {
+          console.error('[PDVV2] Erro ao persistir divisão na comanda:', persistErr);
+        }
+
         // NFC-e: TEF força emissão. Caso contrário, segue documentMode.
         const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
         if (wantsNfce) {
