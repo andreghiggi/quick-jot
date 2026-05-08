@@ -172,8 +172,8 @@ export default function PDVV2() {
   const revenue = totalSales;
 
   const filteredOrders = useMemo(
-    () => (filter === 'all' ? dashboardOrders : dashboardOrders.filter((o) => o.status === filter)),
-    [dashboardOrders, filter]
+    () => (filter === 'all' ? visibleOrders : visibleOrders.filter((o) => o.status === filter)),
+    [visibleOrders, filter]
   );
 
   const occupiedTabs: OccupiedTab[] = useMemo(
