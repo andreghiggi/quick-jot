@@ -214,10 +214,10 @@ serve(async (req) => {
       const conteudo = buildConteudo(fields);
       console.log('[TEF-WS] CRT CONTEUDO:', conteudo);
 
-      // ATV pré-CRT: o 023-000/001-000 do ATV deve ser estritamente
-      // numérico (até 10 bytes). Mantido aqui apenas para I9 e usando
-      // somente dígitos (sem sufixo "-atv" que invalidava o header).
-      if (isI9(params.companyId) && Number(paymentType) === 1) {
+      // ATV pré-CRT (correção homologação Multiplus v1.2 — universal):
+      // o 023-000/001-000 do ATV deve ser estritamente numérico (até 10
+      // bytes). Aplica-se a qualquer loja com TEF ativo no PDV V2.
+      if (Number(paymentType) === 1) {
         try {
           const numericIdent = String(ident).replace(/\D/g, '').slice(-10) || String(Date.now()).slice(-10);
           const atvConteudo = buildConteudo({
@@ -410,8 +410,8 @@ serve(async (req) => {
       // Para a Lancheria da i9: validar que identificacao foi passada
       // e nunca gerar um novo ID.
       // ============================================================
-      if (isI9(params.companyId) && !identificacao) {
-        console.error('[TEF-WS] CNF rejeitado: identificacao ausente (i9 v1.2)');
+      if (!identificacao) {
+        console.error('[TEF-WS] CNF rejeitado: identificacao ausente (v1.2 universal)');
         return new Response(
           JSON.stringify({
             success: false,
@@ -618,13 +618,11 @@ serve(async (req) => {
       const ident = params.identificacao || String(Date.now());
       // ============================================================
       // RPR (Reimpressão do último comprovante)
-      // Multiplus rejeitou 800-001 = 8 (valores válidos: 0..7).
-      // Para a Lancheria da i9 (homologação v1.2): enviar como ADM
-      // sem o campo 800-001 — o gerenciador padrão da Multiplus
-      // tratará a reimpressão pelo menu administrativo do PinPad.
-      // Demais lojas seguem o fluxo legado até a homologação confirmar.
+      // Correção homologação Multiplus v1.2 (universal): enviar como ADM
+      // sem o campo 800-001 — o gerenciador padrão da Multiplus tratará
+      // a reimpressão pelo menu administrativo do PinPad.
       // ============================================================
-      const useAdmForRpr = isI9(params.companyId);
+      const useAdmForRpr = true;
       const fields: Record<string, string> = useAdmForRpr
         ? {
             '000-000': 'ADM',
