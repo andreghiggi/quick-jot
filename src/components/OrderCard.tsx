@@ -96,9 +96,14 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   
    const isLancheriaI9 = company?.id === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const isCardapioOrder = (order.origin || 'cardapio') === 'cardapio';
+  const isBalcaoOrder = order.origin === 'balcao';
+  const isRetirada = !order.deliveryAddress;
   const alreadyCharged = !!order.notes?.includes('[COBRADO]');
   const showChargeButton =
-    isLancheriaI9 && isCardapioOrder && order.status === 'ready';
+    isLancheriaI9 &&
+    (isCardapioOrder || isBalcaoOrder) &&
+    isRetirada &&
+    order.status === 'ready';
 
   // Detecta se é pagamento TEF e se já foi estornado
   const tefInfo = useMemo(() => parseTefDataFromNotes(order.notes), [order.notes]);
