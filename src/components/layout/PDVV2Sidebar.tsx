@@ -17,6 +17,9 @@ import {
   ChefHat,
   Monitor,
   Settings2,
+  Users,
+  UtensilsCrossed,
+  Table as TableIcon,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -53,6 +56,14 @@ export function PDVV2Sidebar() {
 
   const home = [{ title: 'PDV', icon: Monitor, href: '/pdv-v2' }];
   const operations = [{ title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' }];
+
+  const tables = isModuleEnabled('mesas')
+    ? [
+        { title: 'Garçom', icon: UtensilsCrossed, href: '/garcom' },
+        { title: 'Mesas', icon: TableIcon, href: '/configuracoes/mesas' },
+        { title: 'Garçons', icon: Users, href: '/configuracoes/garcons' },
+      ]
+    : [];
 
   const catalog = [
     { title: 'Categorias', icon: FolderOpen, href: '/categorias' },
@@ -130,6 +141,7 @@ export function PDVV2Sidebar() {
 
       <SidebarContent>
         {renderGroup('Operação', [...home, ...operations])}
+        {renderGroup('Mesas', tables)}
         {renderGroup('Catálogo', catalog)}
         {renderGroup('Financeiro', finance)}
         {renderGroup('Fiscal', fiscal)}
