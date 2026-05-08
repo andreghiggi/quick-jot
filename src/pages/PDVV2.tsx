@@ -823,7 +823,8 @@ export default function PDVV2() {
                       const ready = o.status === 'ready';
                       const isDel = isDelivery(o);
                       const showCobrar = ready && !isDel;
-                      const hideBtnAdvance = chargeBeforeDeliverEnabled && showCobrar;
+                      const alreadyCharged = !!o.notes?.includes('[COBRADO]');
+                      const hideBtnAdvance = chargeBeforeDeliverEnabled && showCobrar && !alreadyCharged;
                         return (
                           <div key={o.id} className="space-y-2">
                             <OrderCard
@@ -886,7 +887,8 @@ export default function PDVV2() {
                     const ready = o.status === 'ready';
                     const isDel = isDelivery(o);
                     const showCobrar = ready && !isDel;
-                    const hideBtnAdvance = chargeBeforeDeliverEnabled && showCobrar;
+                   const alreadyCharged = !!o.notes?.includes('[COBRADO]');
+                   const hideBtnAdvance = chargeBeforeDeliverEnabled && showCobrar && !alreadyCharged;
                     return (
                       <div key={o.id} className="space-y-2">
                         <OrderCard
