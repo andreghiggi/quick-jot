@@ -75,6 +75,18 @@ function RootRedirect() {
   return <Index />;
 }
 
+/**
+ * Guard da rota /pdv-v2: bloqueia acesso quando o módulo `pdv_v2` está
+ * desativado, independente de cache local ou bookmark.
+ */
+function PDVV2Guard({ children }: { children: React.ReactNode }) {
+  const { company } = useAuthContext();
+  const { enabled, loading } = usePdvV2Enabled(company?.id);
+  if (loading) return null;
+  if (!enabled) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   // Detecta o contexto de domínio uma vez por render
   const domainCtx = detectDomainContext();
@@ -150,7 +162,9 @@ function AppRoutes() {
       {/* PDV V2 - Nova Central Operacional (rota nova, isolada) */}
       <Route path="/pdv-v2" element={
         <ProtectedRoute requireCompany>
-          <PDVV2 />
+          <PDVV2Guard>
+            <PDVV2 />
+          </PDVV2Guard>
         </ProtectedRoute>
       } />
       
