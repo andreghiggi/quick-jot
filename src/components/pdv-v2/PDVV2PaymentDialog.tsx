@@ -203,6 +203,20 @@ export function PDVV2PaymentDialog({
     setAmountReceived('');
   }, [paymentMethodId]);
 
+  // Mantém os extras selecionados em sincronia com a lista de extraItems:
+  // novos itens entram pré-selecionados (quantidade total) e itens removidos
+  // são limpos do mapa de seleção.
+  useEffect(() => {
+    setSelectedExtraQtys((prev) => {
+      const next = new Map<string, number>();
+      extraItems.forEach((ex) => {
+        const current = prev.get(ex.id);
+        next.set(ex.id, current === undefined ? ex.quantity : Math.min(current, ex.quantity));
+      });
+      return next;
+    });
+  }, [extraItems]);
+
   const extrasTotal = extraItems.reduce((s, it) => s + it.unit_price * it.quantity, 0);
   const grossTotal = total + extrasTotal;
   const discountValue = isLancheriaI9
