@@ -710,7 +710,7 @@ export default function PDVV2() {
         // DB: mark items as paid (full or partial qty split)
         const fullPayIds: string[] = [];
         const partialPays: Array<{ id: string; paidQty: number }> = [];
-        for (const pi of params.itemsInfo) {
+        for (const pi of params.itemsInfo || []) {
           const tabItem = fullTab.items.find((i) => i.id === pi.id);
           if (!tabItem) continue;
           if (pi.paidQty >= tabItem.quantity) {
