@@ -378,98 +378,50 @@ export default function MesaQR() {
   }
 
   // Step 2: cardápio
-  const orderedCategories = Array.from(new Set(waiterProducts.map(p => p.category)));
-  const categoriesWithProducts = categories
-    .filter(c => orderedCategories.includes(c.name))
-    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+  const orderedCategoryNames = useMemo(() => {
+    const names = Array.from(new Set(waiterProducts.map(p => p.category)));
+    return categories
+      .filter(c => names.includes(c.name))
+      .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+      .map(c => c.name);
+  }, [waiterProducts, categories]);
 
   return (
-    <div className="min-h-screen bg-background pb-28">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-card border-b shadow-sm">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm text-muted-foreground">Mesa</p>
-            <h1 className="text-lg font-bold truncate">
-              Mesa {selectedMesa.number}
-              {selectedMesa.hasOpenTab && (
-                <Badge variant="outline" className="ml-2 text-xs">Comanda aberta</Badge>
-              )}
-            </h1>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => setSelectedMesa(null)}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> Trocar mesa
-          </Button>
-        </div>
-        {selectedMesa.hasOpenTab && (
-          <div className="bg-primary/5 border-t border-primary/20 px-4 py-2 text-xs text-center text-primary">
-            Adicionando itens à comanda #{selectedMesa.tabNumber} desta mesa
-          </div>
-        )}
+    <div className="min-h-screen bg-background">
+      {/* Faixa identificando a mesa */}
+      <div className="bg-primary text-primary-foreground px-4 py-2 text-xs flex items-center justify-between gap-2">
+        <span className="font-semibold truncate">
+          Mesa {selectedMesa.number}
+          {selectedMesa.hasOpenTab && ` · Comanda #${selectedMesa.tabNumber}`}
+        </span>
+        <button
+          onClick={() => setSelectedMesa(null)}
+          className="underline underline-offset-2 hover:opacity-80"
+        >
+          Trocar mesa
+        </button>
       </div>
 
-      <main className="container mx-auto px-4 py-4 space-y-6">
-        {categoriesWithProducts.length === 0 && (
-          <Card><CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Nenhum produto disponível</p>
-          </CardContent></Card>
-        )}
-        {categoriesWithProducts.map(cat => {
-          const items = waiterProducts
-            .filter(p => p.category === cat.name)
-            .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-          if (items.length === 0) return null;
-          return (
-            <section key={cat.id} className="space-y-2">
-              <h2 className="text-base font-bold flex items-center gap-2">
-                {cat.emoji && <span>{cat.emoji}</span>}
-                {cat.name}
-              </h2>
-              <div className="space-y-2">
-                {items.map(p => (
-                  <Card
-                    key={p.id}
-                    className="cursor-pointer hover:border-primary transition-colors overflow-hidden"
-                    onClick={() => setSelectedProduct(p)}
-                  >
-                    <CardContent className="p-0">
-                      <div className="flex">
-                        {p.imageUrl ? (
-                          <img src={p.imageUrl} alt={p.name} className="w-24 h-24 object-cover flex-shrink-0" loading="lazy" />
-                        ) : (
-                          <div className="w-24 h-24 bg-muted flex-shrink-0" />
-                        )}
-                        <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
-                          <div>
-                            <h3 className="font-semibold text-sm line-clamp-2">{p.name}</h3>
-                            {p.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{p.description}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-green-600 font-bold text-sm">R$ {formatPrice(p.price)}</span>
-                            <Button size="sm" className="h-8 px-2"><Plus className="w-4 h-4" /></Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          );
-        })}
-      </main>
-
-      {/* Floating cart */}
-      {cart.length > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 z-30">
-          <Button className="w-full py-6 shadow-lg" size="lg" onClick={() => setCartOpen(true)}>
-            <ShoppingCart className="w-5 h-5 mr-2" />
-            Ver carrinho ({cartCount}) — R$ {formatPrice(cartTotal)}
-          </Button>
-        </div>
-      )}
+      <MenuV2
+        company={{ id: companyId, name: companyName, slug: slug || '', phone: null, address: null }}
+        settings={{ ...settings, storeName: companyName }}
+        activeProducts={waiterProducts}
+        newProducts={[]}
+        allOrderedCategories={orderedCategoryNames}
+        categoryEmojiMap={categoryEmojiMap}
+        categoryImageMap={categoryImageMap}
+        categoryIdMap={categoryIdByName}
+        subcategories={subcategories}
+        floatingPhoto={(settings as any)?.floatingPhoto}
+        cartItemsCount={cartCount}
+        cartTotal={cartTotal}
+        isOpen={true}
+        formattedHours=""
+        schedulingEnabled={false}
+        onProductSelect={(p) => setSelectedProduct(p)}
+        onCartOpen={() => setCartOpen(true)}
+        onNavigateBack={() => setSelectedMesa(null)}
+      />
 
       {/* Product dialog */}
       <Dialog open={!!selectedProduct} onOpenChange={open => {
