@@ -27,12 +27,41 @@ import {
   Users, 
   Loader2,
   Table as TableIcon,
-  Settings
+  Settings,
+  QrCode,
+  Copy,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { QRCodeCanvas } from 'qrcode.react';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 
 export default function TablesConfig() {
   const { company } = useAuthContext();
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const cardapioMesaEnabled = isModuleEnabled('cardapio_mesa');
+  const mesaUrl = company?.slug ? `${window.location.origin}/mesa/${company.slug}` : '';
+
+  const handleCopyLink = async () => {
+    if (!mesaUrl) return;
+    try {
+      await navigator.clipboard.writeText(mesaUrl);
+      toast.success('Link copiado!');
+    } catch {
+      toast.error('Não foi possível copiar o link');
+    }
+  };
+
+  const handleDownloadQR = () => {
+    const canvas = document.getElementById('mesa-qr-canvas') as HTMLCanvasElement | null;
+    if (!canvas) return;
+    const url = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cardapio-mesa-${company?.slug || 'loja'}.png`;
+    link.click();
+  };
+
   const { 
     tables, 
     loading, 
@@ -127,6 +156,56 @@ export default function TablesConfig() {
       }
     >
       <div className="space-y-6">
+        {/* Cardápio de Mesa (QR Code) */}
+        {cardapioMesaEnabled && mesaUrl && (
+          <Card className="border-primary/40 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <QrCode className="w-5 h-5" />
+                Cardápio de Mesa (QR Code)
+              </CardTitle>
+              <CardDescription>
+                Imprima o QR Code abaixo e cole nas mesas. O cliente escaneia, informa o número da mesa e faz o pedido direto pelo celular. Aparece em todos os pedidos como "Mesa X".
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-6 items-start">
+                <div className="bg-white p-3 rounded-lg border">
+                  <QRCodeCanvas
+                    id="mesa-qr-canvas"
+                    value={mesaUrl}
+                    size={180}
+                    includeMargin={false}
+                    level="M"
+                  />
+                </div>
+                <div className="flex-1 space-y-3 w-full">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Link público</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input value={mesaUrl} readOnly className="font-mono text-sm" />
+                      <Button variant="outline" size="icon" onClick={handleCopyLink}>
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={handleCopyLink} className="gap-2">
+                      <Copy className="w-4 h-4" /> Copiar link
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleDownloadQR} className="gap-2">
+                      <Download className="w-4 h-4" /> Baixar QR Code
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Apenas produtos marcados como <strong>"Item de mesa/garçom"</strong> aparecem no cardápio. Mesas indisponíveis (com comanda já aberta por outro fluxo) ainda aceitam novos itens — eles são adicionados à comanda existente.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>

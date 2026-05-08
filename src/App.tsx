@@ -45,6 +45,7 @@ import CustomerReport from "./pages/CustomerReport";
 import ABCReport from "./pages/ABCReport";
 import SalesCampaigns from "./pages/SalesCampaigns";
 import PDVV2 from "./pages/PDVV2";
+import MesaQR from "./pages/MesaQR";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 
 // Admin Pages
@@ -106,6 +107,7 @@ function AppRoutes() {
         <Route path="/auth" element={<Auth />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/cardapio/:slug" element={<Menu />} />
+        <Route path="/mesa/:slug" element={<MesaQR />} />
         {/* Rota raiz do subdomínio → cardápio da loja */}
         <Route path="/" element={<Menu />} />
         <Route path="*" element={<Menu />} />
@@ -124,6 +126,7 @@ function AppRoutes() {
       <Route path="/auth" element={<Auth />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/cardapio/:slug" element={<Menu />} />
+      <Route path="/mesa/:slug" element={<MesaQR />} />
       
       {/* Root with redirect logic */}
       <Route path="/" element={<RootRedirect />} />

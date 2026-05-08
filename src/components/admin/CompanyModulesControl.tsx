@@ -42,6 +42,11 @@ const AVAILABLE_MODULES = [
     name: 'sales_campaigns',
     label: 'Campanhas de Vendas',
     description: 'Envio em massa de mensagens promocionais para a base de clientes via WhatsApp'
+  },
+  {
+    name: 'cardapio_mesa',
+    label: 'Cardápio de Mesa (QR)',
+    description: 'Cardápio público para QR Code nas mesas. Cliente informa o número da mesa e faz o pedido (apenas itens marcados como item de mesa). Requer o módulo Controle de Mesas ativo.'
   }
 ];
 
