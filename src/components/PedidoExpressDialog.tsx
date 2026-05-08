@@ -879,6 +879,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     const noteParts = ['[EXPRESS]', `Pagamento: ${paymentName}`, deliveryTypeLabel];
     if (tefNote) noteParts.push(tefNote);
     if (overrideTefNote) noteParts.push(overrideTefNote.replace(/^ \| /, ''));
+    // Marca como já cobrado APENAS quando o pagamento foi efetivamente processado
+    // ("Finalizar Pedido" do I9 ou TEF concluído). "Enviar pra Cozinha" segue
+    // o fluxo normal e exige clique em "Cobrar" depois de Pronto.
+    if (override?.finalizeNow || tefNote || overrideTefNote) {
+      noteParts.push('[COBRADO]');
+    }
     const noteStr = noteParts.join(' | ');
 
     const orderItems: OrderItem[] = cart.map(item => {

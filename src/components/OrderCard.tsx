@@ -100,13 +100,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const isCardapioOrder = (order.origin || 'cardapio') === 'cardapio';
   const isBalcaoOrder = order.origin === 'balcao';
   const isRetirada = !order.deliveryAddress;
-  // Pedido Express finaliza o pagamento na criação (tag [EXPRESS] + "Pagamento: …"),
-  // então também conta como já cobrado para liberar o botão "Entregar".
-  const expressPaymentMatch = order.notes?.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i);
-  const expressPaymentName = expressPaymentMatch?.[1]?.trim();
-  const alreadyCharged =
-    !!order.notes?.includes('[COBRADO]') ||
-    !!(order.notes?.includes('[EXPRESS]') && expressPaymentName);
+  // Pedido considerado cobrado quando o pagamento foi efetivamente processado.
+  // No Express isso só acontece em "Finalizar Pedido" (ou TEF concluído), que
+  // adiciona o marcador [COBRADO] nas notas. "Enviar pra Cozinha" segue o
+  // fluxo normal e exige clique em "Cobrar" depois de Pronto.
+  const alreadyCharged = !!order.notes?.includes('[COBRADO]');
   const showChargeButton =
     isLancheriaI9 &&
     (isCardapioOrder || isBalcaoOrder) &&

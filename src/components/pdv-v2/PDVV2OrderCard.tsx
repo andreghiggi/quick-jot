@@ -90,8 +90,9 @@ export function PDVV2OrderCard({
   const paymentMatch = order.notes?.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i);
   const paymentName = paymentMatch?.[1]?.trim();
 
-  // Order already charged? (Express with payment or manually charged via OrderCardChargeDialog)
-  const alreadyCharged = !!(order.notes?.includes('[COBRADO]') || (order.notes?.includes('[EXPRESS]') && paymentName));
+  // Order already charged? Marker [COBRADO] é adicionado por OrderCardChargeDialog
+  // ou pelo Pedido Express quando "Finalizar Pedido" / TEF concluído.
+  const alreadyCharged = !!order.notes?.includes('[COBRADO]');
 
   // Define the next button label based on flow
   // - Delivery (cardápio): pending → preparing → ready → "Saiu para entrega" → "Entregue"
