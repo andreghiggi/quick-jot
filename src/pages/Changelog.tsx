@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '08/05/2026',
+    version: '1.29.0',
+    type: 'feature',
+    description: 'Novo módulo "Cardápio de Mesa (QR Code)". Permite gerar um QR Code único para a loja que, ao ser escaneado pelo cliente, abre um cardápio enxuto com apenas os produtos marcados como "Item de mesa/garçom". O cliente informa o número da mesa, monta o pedido e envia direto para a cozinha — entra automaticamente no Garçom/PDV V2 como pedido de mesa, com nome "Mesa X". Se a mesa já estiver com comanda aberta, os itens são adicionados à comanda existente. Não exige cadastro nem login do cliente. Habilitável por loja via toggle "Cardápio de Mesa (QR)" no painel Super Admin → Módulos. Em testes inicialmente na Lancheria da I9. Após habilitar, o link e QR Code para impressão aparecem em Configurações → Mesas.',
+  },
+  {
     date: '07/05/2026',
     version: '1.28.2',
     type: 'improvement',
