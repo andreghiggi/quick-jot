@@ -286,6 +286,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
+  const [isEmittingNfce, setIsEmittingNfce] = useState(false);
 
   // ===== TEF state (mini seletor inline) =====
   const [tefCardType, setTefCardType] = useState<'credit' | 'debit' | 'pix'>('credit');
@@ -932,6 +933,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           return;
         }
         try {
+          setIsEmittingNfce(true);
           const saleItems = cart.map((item) => ({
             product_id: item.product.id || null,
             product_name: item.product.name,
@@ -1008,6 +1010,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           toast.error(
             `Pedido criado, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`,
           );
+        } finally {
+          setIsEmittingNfce(false);
         }
       }
 
@@ -2059,6 +2063,17 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         initialRecord={nfceRecord}
         autoPrint={nfceAutoPrint}
       />
+
+      {/* Overlay de bloqueio enquanto NFC-e é emitida */}
+      {isEmittingNfce && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
+          <div className="bg-card rounded-lg px-8 py-6 shadow-xl flex flex-col items-center gap-3">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+            <p className="text-lg font-semibold text-foreground">Emitindo NFC-e…</p>
+            <p className="text-sm text-muted-foreground">Aguarde, não feche a tela.</p>
+          </div>
+        </div>
+      )}
     </>
   );
 }
