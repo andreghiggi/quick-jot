@@ -99,6 +99,9 @@ export function PDVV2PaymentDialog({
   // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
   const [selectedItemQtys, setSelectedItemQtys] = useState<Map<number, number>>(new Map());
+  // Quantidades selecionadas dos itens adicionados durante o checkout (extras).
+  // Chave = id do ExtraItem.
+  const [selectedExtraQtys, setSelectedExtraQtys] = useState<Map<string, number>>(new Map());
   const [splitPeople, setSplitPeople] = useState(2);
 
   // When activeSplit is provided (person 2+), force split mode on open
@@ -190,6 +193,7 @@ export function PDVV2PaymentDialog({
       setChargingTef(false);
       setI9Mode('');
       setSelectedItemQtys(new Map());
+      setSelectedExtraQtys(new Map());
       setSplitPeople(2);
     }
   }, [open]);
@@ -198,6 +202,20 @@ export function PDVV2PaymentDialog({
   useEffect(() => {
     setAmountReceived('');
   }, [paymentMethodId]);
+
+  // Mantém os extras selecionados em sincronia com a lista de extraItems:
+  // novos itens entram pré-selecionados (quantidade total) e itens removidos
+  // são limpos do mapa de seleção.
+  useEffect(() => {
+    setSelectedExtraQtys((prev) => {
+      const next = new Map<string, number>();
+      extraItems.forEach((ex) => {
+        const current = prev.get(ex.id);
+        next.set(ex.id, current === undefined ? ex.quantity : Math.min(current, ex.quantity));
+      });
+      return next;
+    });
+  }, [extraItems]);
 
   const extrasTotal = extraItems.reduce((s, it) => s + it.unit_price * it.quantity, 0);
   const grossTotal = total + extrasTotal;
@@ -214,6 +232,10 @@ export function PDVV2PaymentDialog({
     selectedItemQtys.forEach((qty, idx) => {
       const it = checkoutItems[idx];
       if (it && !it.paid && qty > 0) sum += qty * it.unit_price;
+    });
+    selectedExtraQtys.forEach((qty, id) => {
+      const ex = extraItems.find((e) => e.id === id);
+      if (ex && qty > 0) sum += qty * ex.unit_price;
     });
     return sum;
   })();
@@ -555,6 +577,76 @@ export function PDVV2PaymentDialog({
                             </span>
                             <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
                               {formatPrice(selectedQty * item.unit_price)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {extraItems.map((ex) => {
+                    const selectedQty = selectedExtraQtys.get(ex.id) || 0;
+                    return (
+                      <div
+                        key={`extra-${ex.id}`}
+                        className="flex items-center gap-2 text-sm px-1 py-0.5 rounded"
+                      >
+                        {ex.quantity === 1 ? (
+                          <>
+                            <Checkbox
+                              checked={selectedQty > 0}
+                              onCheckedChange={(c) => {
+                                const next = new Map(selectedExtraQtys);
+                                if (c) next.set(ex.id, 1);
+                                else next.delete(ex.id);
+                                setSelectedExtraQtys(next);
+                              }}
+                            />
+                            <span className="truncate flex-1">
+                              1x {ex.product_name}
+                              <span className="ml-1 text-[10px] text-primary">(adicional)</span>
+                            </span>
+                            <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
+                              {formatPrice(ex.unit_price)}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-6 w-6 text-xs"
+                                disabled={selectedQty <= 0}
+                                onClick={() => {
+                                  const next = new Map(selectedExtraQtys);
+                                  const nq = selectedQty - 1;
+                                  if (nq <= 0) next.delete(ex.id);
+                                  else next.set(ex.id, nq);
+                                  setSelectedExtraQtys(next);
+                                }}
+                              >−</Button>
+                              <span className="w-5 text-center font-medium tabular-nums">{selectedQty}</span>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-6 w-6 text-xs"
+                                disabled={selectedQty >= ex.quantity}
+                                onClick={() => {
+                                  const next = new Map(selectedExtraQtys);
+                                  next.set(ex.id, Math.min(selectedQty + 1, ex.quantity));
+                                  setSelectedExtraQtys(next);
+                                }}
+                              >+</Button>
+                            </div>
+                            <span className="truncate flex-1">
+                              {ex.product_name}
+                              <span className="text-xs text-muted-foreground ml-1">({ex.quantity} un.)</span>
+                              <span className="ml-1 text-[10px] text-primary">(adicional)</span>
+                            </span>
+                            <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
+                              {formatPrice(selectedQty * ex.unit_price)}
                             </span>
                           </>
                         )}
