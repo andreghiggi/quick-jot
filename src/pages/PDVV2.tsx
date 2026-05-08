@@ -55,7 +55,7 @@ export default function PDVV2() {
   const { isModuleEnabled } = useCompanyModules({ companyId });
   const tablesEnabled = isModuleEnabled('mesas');
 
-  const { orders, updateOrderStatus } = useOrderContext();
+  const { orders, updateOrderStatus, refetch: refetchOrders } = useOrderContext();
   const dashboardOrders = useMemo(
     () => (hideDelivered ? orders.filter((o) => o.status !== 'delivered') : orders),
     [orders, hideDelivered]
@@ -834,6 +834,7 @@ export default function PDVV2() {
                               disableAdvance={hideBtnAdvance}
                               disableAdvanceReason="Finalize o pagamento em 'Cobrar' antes de entregar"
                               hideAdvance={hideBtnAdvance}
+                              onCharged={refetchOrders}
                             />
                           </div>
                         );
@@ -896,6 +897,7 @@ export default function PDVV2() {
                           disableAdvance={hideBtnAdvance}
                           disableAdvanceReason="Finalize o pagamento em 'Cobrar' antes de entregar"
                           hideAdvance={hideBtnAdvance}
+                          onCharged={refetchOrders}
                          />
                       </div>
                     );

@@ -41,6 +41,8 @@ interface OrderCardProps {
   disableAdvanceReason?: string;
   /** Quando true, esconde completamente o botão de avançar status. */
   hideAdvance?: boolean;
+  /** Callback disparado após cobrança bem-sucedida (para refetch imediato). */
+  onCharged?: () => void;
 }
 
 const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textColor: string; borderColor: string; next?: OrderStatus }> = {
@@ -80,7 +82,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
   delivered: '',
 };
 
-export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason, hideAdvance = false }: OrderCardProps) {
+export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason, hideAdvance = false, onCharged }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
   const { company } = useAuthContext();
   
@@ -870,6 +872,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           order={order}
           open={chargeDialogOpen}
           onOpenChange={setChargeDialogOpen}
+          onCharged={onCharged}
         />
       )}
     </div>
