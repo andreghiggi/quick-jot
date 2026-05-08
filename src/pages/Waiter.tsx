@@ -219,14 +219,11 @@ export default function Waiter() {
       return;
     }
 
-    if (isI9) {
-      // i9: always open dialog, even without optionals (for notes/qty)
-      setOptionalsDialogProduct(product);
-      setOptionalsDialogGroups([]);
-      return;
-    }
-
     addSimpleToCart(product.id, product.name, product.price);
+    if (isI9) {
+      // i9: feedback visual ao adicionar direto (sem opcionais)
+      toast.success(`${product.name} adicionado`);
+    }
   };
 
   const addSimpleToCart = (productId: string, productName: string, unitPrice: number) => {
