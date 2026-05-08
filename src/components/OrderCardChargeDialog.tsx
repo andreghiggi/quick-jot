@@ -49,6 +49,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
   const [tefStatus, setTefStatus] = useState('');
+  const [isEmittingNfce, setIsEmittingNfce] = useState(false);
 
   // Itens do pedido convertidos para o formato esperado pela venda/NFC-e.
   const saleItems = useMemo(
@@ -136,6 +137,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       // 3) Emite NFC-e quando solicitado
       if (params.documentMode === 'sale_with_nfce' && fiscalEnabled) {
         try {
+          setIsEmittingNfce(true);
           const nfceItems: NFCeItem[] = saleItems.map((it) => {
             const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
             const taxRule = product?.taxRuleId
@@ -195,6 +197,8 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
           toast.error(
             `Cobrança registrada, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`,
           );
+        } finally {
+          setIsEmittingNfce(false);
         }
       } else {
         toast.success(`Pedido #${order.orderCode || order.dailyNumber} cobrado!`);
@@ -210,6 +214,15 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
 
   return (
     <>
+      {isEmittingNfce && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
+          <div className="bg-card rounded-lg px-8 py-6 shadow-xl flex flex-col items-center gap-3">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+            <p className="text-lg font-semibold text-foreground">Emitindo NFC-e…</p>
+            <p className="text-sm text-muted-foreground">Aguarde, não feche a tela.</p>
+          </div>
+        </div>
+      )}
       <PDVV2PaymentDialog
         open={open}
         onOpenChange={onOpenChange}
