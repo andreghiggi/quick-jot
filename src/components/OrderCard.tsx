@@ -94,8 +94,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const confirmed = !!order.confirmedAt;
 
   // Cobrança manual de pedidos do cardápio antes de "Entregar".
-  // Disponível para qualquer loja com PDV V2 ativo (PDV V2.1 — rollout geral).
-  const isLancheriaI9 = true;
+  // Disponível para qualquer loja com PDV V2 ativo (PDV V2.1 — rollout geral),
+  // exceto Rei do Açaí que solicitou remoção do botão "Cobrar" no Dashboard.
+  const REI_DO_ACAI_COMPANY_ID = 'b2f97590-ff21-4951-95dc-e3e2b19d4ccb';
+  const isReiDoAcai = company?.id === REI_DO_ACAI_COMPANY_ID;
+  const chargeButtonEnabled = !isReiDoAcai;
   const isCardapioOrder = (order.origin || 'cardapio') === 'cardapio';
   const isBalcaoOrder = order.origin === 'balcao';
   const isRetirada = !order.deliveryAddress;
@@ -105,7 +108,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   // fluxo normal e exige clique em "Cobrar" depois de Pronto.
   const alreadyCharged = !!order.notes?.includes('[COBRADO]');
   const showChargeButton =
-    isLancheriaI9 &&
+    chargeButtonEnabled &&
     (isCardapioOrder || isBalcaoOrder) &&
     isRetirada &&
     order.status === 'ready';
