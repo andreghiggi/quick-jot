@@ -376,6 +376,62 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {(mesasMenuItems.length > 0 || mesasConfigItems.length > 0) && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Salão</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {mesasMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === item.href}
+                    >
+                      <Link to={item.href}>
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+                {mesasConfigItems.length > 0 && (
+                  <Collapsible
+                    defaultOpen={mesasConfigItems.some(i => location.pathname === i.href)}
+                    className="group/salao-config"
+                  >
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton>
+                          <Settings className="w-4 h-4" />
+                          <span>Configurações</span>
+                          <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/salao-config:rotate-180" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {mesasConfigItems.map((item) => (
+                            <SidebarMenuSubItem key={item.href}>
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={location.pathname === item.href}
+                              >
+                                <Link to={item.href}>
+                                  <item.icon className="w-4 h-4" />
+                                  <span>{item.title}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {(financeMenuItems.length > 0 || paymentMethodsMenuItem.length > 0) && (
           <SidebarGroup>
             <SidebarGroupLabel>Financeiro</SidebarGroupLabel>
