@@ -28,6 +28,7 @@ import {
   UserCheck,
   Megaphone,
   Settings2,
+  ChevronDown,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -44,7 +45,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import logoIcon from '@/assets/logo-icon.png';
