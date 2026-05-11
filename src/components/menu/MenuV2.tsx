@@ -297,7 +297,7 @@ export function MenuV2({
                       )}
                     </div>
                     <div className="flex items-center justify-between mt-2">
-                      <p className="text-green-600 font-bold">R$ {formatPrice(product.price)}</p>
+                      <p className="text-green-600 font-bold whitespace-nowrap tabular-nums">R$ {formatPrice(product.price)}</p>
                       <Button size="sm" className="h-8 px-3">
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -439,7 +439,7 @@ export function MenuV2({
                       <h3 className="font-semibold text-foreground line-clamp-2 break-words">{product.name}</h3>
                       <p className="text-xs text-muted-foreground">{product.category}</p>
                     </div>
-                    <p className="text-green-600 font-bold">R$ {formatPrice(product.price)}</p>
+                    <p className="text-green-600 font-bold whitespace-nowrap tabular-nums">R$ {formatPrice(product.price)}</p>
                   </div>
                 </div>
               </CardContent>
