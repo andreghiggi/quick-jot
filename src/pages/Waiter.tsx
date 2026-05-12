@@ -55,12 +55,13 @@ import {
   ChevronUp,
   ChevronDown,
   Pencil,
-  MessageSquare
+  MessageSquare,
+  ArrowLeftRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Waiter() {
-  const { company, user } = useAuthContext();
+  const { company, user, profile } = useAuthContext();
   const { tables, updateTableStatus } = useTables({ companyId: company?.id });
   const { 
     openTabs, 
@@ -106,6 +107,59 @@ export default function Waiter() {
 
   // i9: separate cart sheet
   const [i9CartOpen, setI9CartOpen] = useState(false);
+
+  // Trocar de mesa
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [transferTargetTableId, setTransferTargetTableId] = useState<string>('');
+  const [transferring, setTransferring] = useState(false);
+
+  async function handleTransferTable() {
+    if (!selectedTab || !transferTargetTableId) return;
+    const fromTableId = selectedTab.table_id;
+    const fromTableNumber = selectedTab.table?.number;
+    const toTable = tables.find(t => t.id === transferTargetTableId);
+    if (!toTable) {
+      toast.error('Mesa destino não encontrada');
+      return;
+    }
+    setTransferring(true);
+    try {
+      const stamp = new Date().toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const who = profile?.full_name || profile?.email || 'garçom';
+      const logLine = `[Transferida Mesa ${fromTableNumber ?? '?'} → Mesa ${toTable.number} em ${stamp} por ${who}]`;
+      const newNotes = selectedTab.notes ? `${selectedTab.notes}\n${logLine}` : logLine;
+
+      // 1. tabs: muda table_id e adiciona log em notes
+      const { error: tabErr } = await supabase
+        .from('tabs')
+        .update({ table_id: transferTargetTableId, notes: newNotes })
+        .eq('id', selectedTab.id);
+      if (tabErr) throw tabErr;
+
+      // 2. mesa origem -> available
+      if (fromTableId) {
+        await supabase.from('tables').update({ status: 'available' }).eq('id', fromTableId);
+      }
+      // 3. mesa destino -> occupied
+      await supabase.from('tables').update({ status: 'occupied' }).eq('id', transferTargetTableId);
+
+      toast.success(`Comanda movida para Mesa ${toTable.number}`);
+      setTransferDialogOpen(false);
+      setTransferTargetTableId('');
+      setSelectedTab(null);
+    } catch (err: any) {
+      console.error('Erro ao transferir mesa:', err);
+      toast.error(err?.message || 'Erro ao transferir mesa');
+    } finally {
+      setTransferring(false);
+    }
+  }
 
   useEffect(() => {
     if (isI9 && cart.length > prevCartLength.current) {
@@ -677,6 +731,16 @@ export default function Waiter() {
                 <Plus className="w-4 h-4" />
                 Adicionar Itens
               </Button>
+              {selectedTab?.table_id && selectedTab?.status === 'open' && (
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => { setTransferTargetTableId(''); setTransferDialogOpen(true); }}
+                >
+                  <ArrowLeftRight className="w-4 h-4" />
+                  Trocar de mesa
+                </Button>
+              )}
             </div>
           </div>
         </DialogContent>
@@ -1041,6 +1105,74 @@ export default function Waiter() {
           companyId={company?.id}
         />
       )}
+
+      {/* Trocar de mesa Dialog */}
+      <Dialog open={transferDialogOpen} onOpenChange={(o) => { if (!transferring) setTransferDialogOpen(o); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowLeftRight className="w-5 h-5" />
+              Trocar de mesa
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTab && (
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                Mover <strong>Comanda #{selectedTab.tab_number}</strong> da{' '}
+                <strong>Mesa {selectedTab.table?.number ?? '?'}</strong> para:
+              </div>
+              {(() => {
+                const occupiedIds = new Set(openTabs.map(t => t.table_id).filter(Boolean) as string[]);
+                const free = tables
+                  .filter(t => t.id !== selectedTab.table_id && !occupiedIds.has(t.id))
+                  .sort((a, b) => a.number - b.number);
+                if (free.length === 0) {
+                  return (
+                    <div className="text-sm text-center py-6 text-muted-foreground">
+                      Nenhuma mesa livre disponível
+                    </div>
+                  );
+                }
+                return (
+                  <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+                    {free.map(t => (
+                      <Button
+                        key={t.id}
+                        type="button"
+                        variant={transferTargetTableId === t.id ? 'default' : 'outline'}
+                        className="h-14 flex flex-col gap-0"
+                        onClick={() => setTransferTargetTableId(t.id)}
+                      >
+                        <span className="text-xs">Mesa</span>
+                        <span className="text-base font-bold">{t.number}</span>
+                      </Button>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setTransferDialogOpen(false)}
+              disabled={transferring}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleTransferTable}
+              disabled={!transferTargetTableId || transferring}
+            >
+              {transferring ? (
+                <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Movendo...</>
+              ) : (
+                'Confirmar transferência'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
