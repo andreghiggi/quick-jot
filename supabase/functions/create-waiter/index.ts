@@ -57,14 +57,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { email, password, name, phone } = await req.json();
+    const body = await req.json();
+    const { name, phone } = body;
+    const cpfRaw: string = (body.cpf ?? "").toString();
+    const pinRaw: string = (body.pin ?? "").toString();
+    const cpfDigits = cpfRaw.replace(/\D/g, "");
+    const pinDigits = pinRaw.replace(/\D/g, "");
 
-    if (!email || !password || !name) {
+    if (!name || !cpfDigits || !pinDigits) {
       return new Response(
-        JSON.stringify({ error: "Email, password and name are required" }),
+        JSON.stringify({ error: "Nome, CPF e PIN são obrigatórios" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    if (cpfDigits.length !== 11) {
+      return new Response(
+        JSON.stringify({ error: "CPF deve ter 11 dígitos" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (pinDigits.length !== 4) {
+      return new Response(
+        JSON.stringify({ error: "PIN deve ter 4 dígitos numéricos" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Internal credential derivation (must match frontend login flow)
+    const email = `wtr.${cpfDigits}@waiter.comandatech.app`;
+    const password = `WTR-${pinDigits}-${cpfDigits}`;
 
     // Use service role to create user without affecting current session
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
