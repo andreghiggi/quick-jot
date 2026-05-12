@@ -19,6 +19,8 @@ import { toast } from 'sonner';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
 import { MenuV2 } from '@/components/menu/MenuV2';
 import { formatPrice, cn } from '@/lib/utils';
+import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
+import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 
 interface MesaInfo {
   number: number;
@@ -294,12 +296,79 @@ export default function MesaQR() {
           notes: it.notes || null,
         };
       });
+
+      // Comanda de produção (mesma lógica do garçom/cardápio público):
+      // só monta o HTML quando o toggle "Impressão Automática > Comanda
+      // de Produção" estiver ligado. Se faltar algo, o submit segue normal
+      // — a edge function só insere em print_queue se houver HTML.
+      let productionTicketHtml: string | null = null;
+      let ticketLabel: string | null = null;
+      if (settings.autoPrintProductionTicket && selectedMesa) {
+        try {
+          const productionItems = cart.map((item) => {
+            const additionalNames: string[] = [];
+            if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+              for (const entry of item.groupedOptionalNames) {
+                const afterColon = entry.includes(':')
+                  ? entry.split(':').slice(1).join(':')
+                  : entry;
+                const parts = afterColon
+                  .split(',')
+                  .map((s) => s.replace(/\s*R\$\s*[\d.,]+\s*$/i, '').trim())
+                  .filter(Boolean);
+                additionalNames.push(...parts);
+              }
+            } else if (item.selectedOptionals.length > 0) {
+              additionalNames.push(...item.selectedOptionals.map((o) => o.name));
+            }
+
+            const notesParts: string[] = [];
+            if (additionalNames.length > 0) {
+              notesParts.push(`Adicionais: ${additionalNames.join(', ')}`);
+            }
+            if (item.notes) notesParts.push(item.notes);
+
+            let description: string | undefined;
+            if (item.product.description) {
+              const cat = categories.find((c) => c.name === item.product.category);
+              if (cat?.printDescription) description = item.product.description;
+            }
+
+            return {
+              productName: item.product.name,
+              quantity: item.quantity,
+              notes: notesParts.length > 0 ? notesParts.join(' | ') : undefined,
+              description,
+            };
+          });
+
+          productionTicketHtml = generateProductionTicketHTML({
+            tabNumber: 0,
+            tableNumber: selectedMesa.number,
+            items: productionItems,
+            createdAt: new Date(),
+            paperSize: settings.printerPaperSize,
+            referenceLabel: `MESA ${selectedMesa.number} (QR)`,
+            layout: settings.printLayout,
+            showReadyTime: true,
+            readyOffsetMinutes: computeReadyOffsetMinutes(settings.estimatedWaitTime, 30),
+          });
+          ticketLabel = `Mesa ${selectedMesa.number} (QR)`;
+        } catch (e) {
+          console.error('MesaQR production ticket build error:', e);
+          productionTicketHtml = null;
+          ticketLabel = null;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('mesa-public', {
         body: {
           action: 'submit-order',
           companyId,
           tableNumber: selectedMesa.number,
           items,
+          productionTicketHtml,
+          ticketLabel,
         },
       });
       if (error) throw error;
