@@ -87,6 +87,7 @@ export function PDVV2Sidebar() {
 
   const reports = [
     { title: 'Relatório de Vendas', icon: Wallet, href: '/relatorios/vendas' },
+    { title: 'Relatório de Caixa', icon: CircleDollarSign, href: '/relatorios/caixa' },
     { title: 'Relatório de Clientes', icon: BarChart3, href: '/relatorios/clientes' },
     { title: 'Curva ABC', icon: BarChart3, href: '/relatorios/curva-abc' },
     { title: 'Relatório TEF', icon: CreditCard, href: '/relatorios/tef' },
