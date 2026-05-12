@@ -51,7 +51,7 @@ function fmtDate(iso: string) {
 export default function CashReport() {
   const { company } = useAuthContext();
   const companyId = company?.id;
-  const { settings } = useStoreSettings();
+  const { settings } = useStoreSettings({ companyId });
 
   // Rollout isolado — apenas Lancheria da I9 por enquanto.
   const isAllowed = companyId === LANCHERIA_I9_COMPANY_ID;
