@@ -473,7 +473,7 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
-              {company?.id === LANCHERIA_I9_COMPANY_ID && (
+              {isModuleEnabled('pdv_v2') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
