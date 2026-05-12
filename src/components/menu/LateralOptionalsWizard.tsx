@@ -170,7 +170,7 @@ export function LateralOptionalsWizard({
                           {item.name}
                         </p>
                         {item.price > 0 && (
-                          <p className="text-[10px] text-green-600 font-medium text-center">
+                          <p className="text-[10px] text-green-600 font-medium text-center whitespace-nowrap">
                             +R$ {formatPrice(item.price)}
                           </p>
                         )}
@@ -224,9 +224,9 @@ export function LateralOptionalsWizard({
                         )}
                         <span className="font-medium">{item.name}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         {item.price > 0 && (
-                          <span className="text-green-600 font-semibold">+R$ {formatPrice(item.price)}</span>
+                          <span className="text-green-600 font-semibold whitespace-nowrap">+R$ {formatPrice(item.price)}</span>
                         )}
                         {useQtyControls && (
                           <div className="flex items-center gap-1">
