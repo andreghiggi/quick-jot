@@ -458,7 +458,7 @@ export default function MesaQR() {
       <Dialog open={!!selectedProduct} onOpenChange={open => {
         if (!open) { setSelectedProduct(null); setSelectedOptionals([]); setSelectedGroupItems({}); setItemNotes(''); }
       }}>
-        <DialogContent className="max-h-[85dvh] flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={e => e.preventDefault()}>
+        <DialogContent className="h-[85dvh] flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={e => e.preventDefault()}>
           <DialogHeader className="px-6 pt-6 pb-3 border-b">
             <DialogTitle>{selectedProduct?.name}</DialogTitle>
           </DialogHeader>
