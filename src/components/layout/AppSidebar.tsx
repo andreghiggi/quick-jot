@@ -33,6 +33,7 @@ import {
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
+import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
 import { cn } from '@/lib/utils';
 import {
   Sidebar,
@@ -468,6 +469,19 @@ export function AppSidebar() {
                     <Link to="/relatorios/vendas">
                       <Wallet className="w-4 h-4" />
                       <span>Relatório de Vendas</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {company?.id === LANCHERIA_I9_COMPANY_ID && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/relatorios/caixa'}
+                  >
+                    <Link to="/relatorios/caixa">
+                      <CircleDollarSign className="w-4 h-4" />
+                      <span>Relatório de Caixa</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
