@@ -69,6 +69,14 @@ export default function MesaQR() {
     [products],
   );
 
+  const orderedCategoryNames = useMemo(() => {
+    const names = Array.from(new Set(waiterProducts.map(p => p.category)));
+    return categories
+      .filter(c => names.includes(c.name))
+      .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+      .map(c => c.name);
+  }, [waiterProducts, categories]);
+
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedOptionals, setSelectedOptionals] = useState<ProductOptional[]>([]);
   const [selectedGroupItems, setSelectedGroupItems] = useState<Record<string, Map<string, number>>>({});
@@ -378,14 +386,6 @@ export default function MesaQR() {
   }
 
   // Step 2: cardápio
-  const orderedCategoryNames = useMemo(() => {
-    const names = Array.from(new Set(waiterProducts.map(p => p.category)));
-    return categories
-      .filter(c => names.includes(c.name))
-      .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
-      .map(c => c.name);
-  }, [waiterProducts, categories]);
-
   return (
     <div className="min-h-screen bg-background">
       {/* Faixa identificando a mesa */}
