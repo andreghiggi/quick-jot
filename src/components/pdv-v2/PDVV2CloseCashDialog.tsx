@@ -36,6 +36,8 @@ interface PDVV2CloseCashDialogProps {
   expectedAmount: number;
   sales: CloseCashSale[];
   paymentMethods?: CloseCashPaymentMethod[];
+  /** Formas de pagamento do cardápio online (channel='menu'). Usadas no select de Deliveries quando informadas. */
+  deliveryPaymentMethods?: CloseCashPaymentMethod[];
   onChangeSalePaymentMethod?: (saleId: string, paymentMethodId: string) => Promise<void> | void;
   onConfirm: (closingAmount: number, notes: string) => Promise<void>;
   /** Quando informado, habilita comportamentos isolados por empresa (ex.: máscara monetária). */
@@ -56,6 +58,7 @@ export function PDVV2CloseCashDialog({
   expectedAmount,
   sales,
   paymentMethods = [],
+  deliveryPaymentMethods,
   onChangeSalePaymentMethod,
   onConfirm,
   companyId,
@@ -349,7 +352,10 @@ export function PDVV2CloseCashDialog({
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                              {paymentMethods.map((pm) => (
+                              {(isDeliveryOrigin && deliveryPaymentMethods && deliveryPaymentMethods.length > 0
+                                ? deliveryPaymentMethods
+                                : paymentMethods
+                              ).map((pm) => (
                                 <SelectItem key={pm.id} value={pm.id}>
                                   {pm.name}
                                 </SelectItem>

@@ -91,6 +91,7 @@ export default function PDVV2() {
   const { openTabs, closeTab, refetch: refetchTabs } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
+  const { activePaymentMethods: menuPaymentMethods } = usePaymentMethods({ companyId, channel: 'menu' });
   const { products } = useProducts({ companyId });
   const { taxRules } = useTaxRules({ companyId });
   const fiscalEnabled = isModuleEnabled('fiscal');
@@ -1034,6 +1035,7 @@ export default function PDVV2() {
         expectedAmount={cashAmount}
         sales={closeCashSales}
         paymentMethods={activePaymentMethods.map((p) => ({ id: p.id, name: p.name }))}
+        deliveryPaymentMethods={menuPaymentMethods.map((p) => ({ id: p.id, name: p.name }))}
         onChangeSalePaymentMethod={handleChangeSalePaymentMethod}
         onConfirm={handleCloseCash}
       />
