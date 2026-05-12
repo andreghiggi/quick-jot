@@ -45,7 +45,6 @@ export default function OptionalGroups() {
   const [newGroupMin, setNewGroupMin] = useState(0);
   const [newGroupMax, setNewGroupMax] = useState(0);
   const [newGroupMaxPerItem, setNewGroupMaxPerItem] = useState(1);
-  const isI9 = true;
 
   // New item form
   const [newItemName, setNewItemName] = useState('');
@@ -77,7 +76,7 @@ export default function OptionalGroups() {
       return;
     }
     const groupData: any = { name: newGroupName.trim(), minSelect: newGroupMin, maxSelect: newGroupMax };
-    if (isI9) groupData.maxQuantityPerItem = newGroupMaxPerItem;
+    groupData.maxQuantityPerItem = newGroupMaxPerItem;
     await addGroup(groupData);
     setNewGroupName('');
     setNewGroupMin(0);
@@ -95,7 +94,7 @@ export default function OptionalGroups() {
       active: editingGroup.active,
       layout: editingGroup.layout,
     };
-    if (isI9) updateData.maxQuantityPerItem = (editingGroup as any).maxQuantityPerItem ?? 1;
+    updateData.maxQuantityPerItem = (editingGroup as any).maxQuantityPerItem ?? 1;
     updateData.waiterOnly = editingGroup.waiterOnly ?? false;
     await updateGroup(editingGroup.id, updateData);
     setEditingGroup(null);
@@ -543,13 +542,11 @@ export default function OptionalGroups() {
                 <p className="text-xs text-muted-foreground mt-1">0 = sem limite</p>
               </div>
             </div>
-            {isI9 && (
-              <div>
+            <div>
                 <Label>Máx. por item</Label>
                 <Input type="number" min={1} value={newGroupMaxPerItem} onChange={(e) => setNewGroupMaxPerItem(Math.max(1, parseInt(e.target.value) || 1))} />
                 <p className="text-xs text-muted-foreground mt-1">Quantas vezes o mesmo adicional pode ser selecionado (1 = checkbox)</p>
-              </div>
-            )}
+            </div>
             <Button onClick={handleCreateGroup} className="w-full">Criar Grupo</Button>
           </div>
         </DialogContent>
@@ -575,13 +572,11 @@ export default function OptionalGroups() {
                   <Input type="number" min={0} value={editingGroup.maxSelect} onChange={(e) => setEditingGroup({ ...editingGroup, maxSelect: parseInt(e.target.value) || 0 })} />
                 </div>
               </div>
-              {isI9 && (
-                <div>
+              <div>
                   <Label>Máx. por item</Label>
                   <Input type="number" min={1} value={editingGroup.maxQuantityPerItem ?? 1} onChange={(e) => setEditingGroup({ ...editingGroup, maxQuantityPerItem: Math.max(1, parseInt(e.target.value) || 1) })} />
                   <p className="text-xs text-muted-foreground mt-1">Quantas vezes o mesmo adicional pode ser selecionado (1 = checkbox)</p>
-                </div>
-              )}
+              </div>
               <div className="flex items-center gap-2">
                 <Switch checked={editingGroup.active} onCheckedChange={(v) => setEditingGroup({ ...editingGroup, active: v })} />
                 <Label>Ativo</Label>
