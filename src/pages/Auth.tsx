@@ -234,6 +234,65 @@ export default function Auth() {
             </TabsList>
             
             <TabsContent value="login">
+              <div className="grid grid-cols-2 gap-2 mt-4 p-1 bg-muted rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => { setLoginMode('manager'); setErrors({}); }}
+                  className={`text-sm font-medium py-2 rounded-md transition ${loginMode === 'manager' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
+                >
+                  Gerente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setLoginMode('waiter'); setErrors({}); }}
+                  className={`text-sm font-medium py-2 rounded-md transition ${loginMode === 'waiter' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
+                >
+                  Garçom
+                </button>
+              </div>
+
+              {loginMode === 'waiter' ? (
+                <form onSubmit={handleLogin} className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="waiter-cpf">CPF</Label>
+                    <Input
+                      id="waiter-cpf"
+                      inputMode="numeric"
+                      autoComplete="username"
+                      placeholder="000.000.000-00"
+                      value={waiterCpf}
+                      onChange={(e) => setWaiterCpf(formatCpfInput(onlyDigits(e.target.value).slice(0, 11)))}
+                      maxLength={14}
+                      disabled={isLoading}
+                      className="text-lg h-12"
+                    />
+                    {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="waiter-pin">PIN (4 dígitos)</Label>
+                    <Input
+                      id="waiter-pin"
+                      inputMode="numeric"
+                      type="password"
+                      autoComplete="current-password"
+                      placeholder="••••"
+                      value={waiterPin}
+                      onChange={(e) => setWaiterPin(onlyDigits(e.target.value).slice(0, 4))}
+                      maxLength={4}
+                      disabled={isLoading}
+                      className="text-2xl h-14 tracking-[0.6em] text-center"
+                    />
+                    {errors.pin && <p className="text-sm text-destructive">{errors.pin}</p>}
+                  </div>
+                  <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Entrar
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground">
+                    Esqueceu seu PIN? Peça ao gerente para resetar.
+                  </p>
+                </form>
+              ) : (
               <form onSubmit={handleLogin} className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
@@ -271,6 +330,7 @@ export default function Auth() {
                   Entrar
                 </Button>
               </form>
+              )}
             </TabsContent>
             
             <TabsContent value="signup">
