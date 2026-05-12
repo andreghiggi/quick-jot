@@ -1807,7 +1807,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       {/* Product Detail Dialog — identical to the online catalog */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) { setSelectedProduct(null); setSelectedOptionals([]); setSelectedGroupItems({}); setItemNotes(''); } }}>
         <DialogContent
-          className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden"
+          className="h-[85dvh] flex flex-col p-0 gap-0 overflow-hidden"
           onOpenAutoFocus={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
           onFocusOutside={(e) => e.preventDefault()}
