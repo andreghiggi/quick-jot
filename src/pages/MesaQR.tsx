@@ -87,6 +87,33 @@ export default function MesaQR() {
   const [successInfo, setSuccessInfo] = useState<{ tabNumber: number; tableNumber: number } | null>(null);
   const [addedDialog, setAddedDialog] = useState<{ name: string } | null>(null);
 
+  // Detecta se há um garçom/admin logado pertencente à mesma loja.
+  // Usado APENAS para exibir o botão "Trocar mesa". Não altera nenhum outro fluxo.
+  const [isStaff, setIsStaff] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    async function checkStaff() {
+      if (!companyId) { if (!cancelled) setIsStaff(false); return; }
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id;
+        if (!userId) { if (!cancelled) setIsStaff(false); return; }
+        const [{ data: roles }, { data: belongs }] = await Promise.all([
+          supabase.from('user_roles').select('role').eq('user_id', userId),
+          supabase.from('company_users').select('company_id').eq('user_id', userId).eq('company_id', companyId).maybeSingle(),
+        ]);
+        const roleNames = (roles || []).map((r: any) => r.role);
+        const hasStaffRole = roleNames.includes('waiter') || roleNames.includes('company_admin') || roleNames.includes('super_admin');
+        if (cancelled) return;
+        setIsStaff(hasStaffRole && !!belongs);
+      } catch {
+        if (!cancelled) setIsStaff(false);
+      }
+    }
+    checkStaff();
+    return () => { cancelled = true; };
+  }, [companyId]);
+
   const refreshBoot = useCallback(async () => {
     if (!slug) return;
     setBootLoading(true);
@@ -331,9 +358,11 @@ export default function MesaQR() {
           <p className="text-xs text-muted-foreground">Em breve seu pedido será preparado. Bom apetite!</p>
           <div className="flex flex-col gap-2 pt-4">
             <Button onClick={() => setSuccessInfo(null)}>Adicionar mais itens</Button>
-            <Button variant="outline" onClick={() => { setSuccessInfo(null); setSelectedMesa(null); setTableInput(''); }}>
-              Trocar de mesa
-            </Button>
+            {isStaff && (
+              <Button variant="outline" onClick={() => { setSuccessInfo(null); setSelectedMesa(null); setTableInput(''); }}>
+                Trocar de mesa
+              </Button>
+            )}
           </div>
         </CardContent></Card>
       </div>
@@ -394,12 +423,14 @@ export default function MesaQR() {
           Mesa {selectedMesa.number}
           {selectedMesa.hasOpenTab && ` · Comanda #${selectedMesa.tabNumber}`}
         </span>
-        <button
-          onClick={() => setSelectedMesa(null)}
-          className="underline underline-offset-2 hover:opacity-80"
-        >
-          Trocar mesa
-        </button>
+        {isStaff && (
+          <button
+            onClick={() => setSelectedMesa(null)}
+            className="underline underline-offset-2 hover:opacity-80"
+          >
+            Trocar mesa
+          </button>
+        )}
       </div>
 
       <MenuV2
