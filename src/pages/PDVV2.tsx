@@ -91,6 +91,7 @@ export default function PDVV2() {
   const { openTabs, closeTab, refetch: refetchTabs } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
+  const { activePaymentMethods: menuPaymentMethods } = usePaymentMethods({ companyId, channel: 'menu' });
   const { products } = useProducts({ companyId });
   const { taxRules } = useTaxRules({ companyId });
   const fiscalEnabled = isModuleEnabled('fiscal');
