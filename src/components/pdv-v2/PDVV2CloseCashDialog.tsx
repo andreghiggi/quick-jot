@@ -13,7 +13,6 @@ import {
   brl as formatPrice,
   maskCurrencyInput,
   parseCurrencyInput,
-  LANCHERIA_I9_COMPANY_ID,
 } from './_format';
 import { printCashClosingDetailed } from '@/utils/cashClosingPrint';
 
@@ -155,8 +154,8 @@ export function PDVV2CloseCashDialog({
   const openOriginSales = openOrigin ? salesByOrigin[openOrigin] || [] : [];
   const isDeliveryOrigin = openOrigin === 'cardapio_delivery';
 
-  // Rollout isolado: relatório detalhado de fechamento apenas para a Lancheria da I9.
-  const showDetailedPrint = companyId === LANCHERIA_I9_COMPANY_ID;
+  // Disponível para qualquer loja com PDV V2 (este dialog só é montado no PDV V2).
+  const showDetailedPrint = true;
 
   function printDetailedClosing() {
     printCashClosingDetailed({
