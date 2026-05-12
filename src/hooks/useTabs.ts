@@ -106,7 +106,7 @@ export function useTabs(options: UseTabsOptions = {}) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTabs((data || []) as Tab[]);
+      setTabs(((data || []) as unknown) as Tab[]);
     } catch (error) {
       console.error('Error fetching tabs:', error);
     } finally {
