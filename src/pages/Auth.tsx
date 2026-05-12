@@ -18,6 +18,20 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
 });
 
+const waiterLoginSchema = z.object({
+  cpf: z.string().refine((v) => v.replace(/\D/g, '').length === 11, 'CPF deve ter 11 dígitos'),
+  pin: z.string().refine((v) => /^\d{4}$/.test(v), 'PIN deve ter 4 dígitos'),
+});
+
+function onlyDigits(v: string) {
+  return (v || '').replace(/\D/g, '');
+}
+function formatCpfInput(d: string) {
+  const x = d.padEnd(11, ' ').slice(0, 11).trim();
+  if (x.length !== 11) return d;
+  return `${x.slice(0,3)}.${x.slice(3,6)}.${x.slice(6,9)}-${x.slice(9,11)}`;
+}
+
 const signupSchema = z.object({
   companyName: z.string().min(2, 'Nome da empresa deve ter pelo menos 2 caracteres'),
   cnpj: z.string().optional(),
@@ -44,6 +58,9 @@ export default function Auth() {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [loginMode, setLoginMode] = useState<'manager' | 'waiter'>('manager');
+  const [waiterCpf, setWaiterCpf] = useState('');
+  const [waiterPin, setWaiterPin] = useState('');
   
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
@@ -78,7 +95,32 @@ export default function Auth() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setErrors({});
-    
+
+    if (loginMode === 'waiter') {
+      try {
+        waiterLoginSchema.parse({ cpf: waiterCpf, pin: waiterPin });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const fieldErrors: Record<string, string> = {};
+          error.errors.forEach((err) => {
+            if (err.path[0]) fieldErrors[err.path[0].toString()] = err.message;
+          });
+          setErrors(fieldErrors);
+          return;
+        }
+      }
+      const cpfDigits = onlyDigits(waiterCpf);
+      const internalEmail = `wtr.${cpfDigits}@waiter.comandatech.app`;
+      const internalPassword = `WTR-${waiterPin}-${cpfDigits}`;
+      setIsLoading(true);
+      const { error } = await signIn(internalEmail, internalPassword);
+      setIsLoading(false);
+      if (error) {
+        toast.error('CPF ou PIN incorretos');
+      }
+      return;
+    }
+
     try {
       loginSchema.parse({ email: loginEmail, password: loginPassword });
     } catch (error) {
