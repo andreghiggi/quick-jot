@@ -12,6 +12,7 @@ export interface Waiter {
   created_at: string;
   updated_at: string;
   email?: string;
+  cpf?: string | null;
 }
 
 interface UseWaitersProps {
@@ -67,9 +68,9 @@ export function useWaiters({ companyId }: UseWaitersProps) {
   }
 
   async function createWaiter(data: {
-    email: string;
-    password: string;
     name: string;
+    cpf: string;
+    pin: string;
     phone?: string;
   }): Promise<boolean> {
     if (!companyId) {
@@ -81,9 +82,9 @@ export function useWaiters({ companyId }: UseWaitersProps) {
       // Call edge function to create waiter without losing current session
       const { data: result, error } = await supabase.functions.invoke('create-waiter', {
         body: {
-          email: data.email,
-          password: data.password,
           name: data.name,
+          cpf: data.cpf,
+          pin: data.pin,
           phone: data.phone,
         },
       });
@@ -110,6 +111,27 @@ export function useWaiters({ companyId }: UseWaitersProps) {
     } catch (error: any) {
       console.error('Error creating waiter:', error);
       toast.error(`Erro inesperado: ${error.message}`);
+      return false;
+    }
+  }
+
+  async function resetWaiterPin(waiterId: string, pin: string): Promise<boolean> {
+    try {
+      const { data: result, error } = await supabase.functions.invoke('reset-waiter-pin', {
+        body: { waiter_id: waiterId, pin },
+      });
+      if (error) {
+        toast.error(`Erro ao resetar PIN: ${error.message}`);
+        return false;
+      }
+      if (result?.error) {
+        toast.error(result.error);
+        return false;
+      }
+      toast.success('PIN redefinido com sucesso!');
+      return true;
+    } catch (e: any) {
+      toast.error(`Erro inesperado: ${e.message}`);
       return false;
     }
   }
@@ -172,6 +194,7 @@ export function useWaiters({ companyId }: UseWaitersProps) {
     createWaiter,
     updateWaiter,
     deleteWaiter,
+    resetWaiterPin,
     refetch: fetchWaiters,
   };
 }
