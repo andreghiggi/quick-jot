@@ -1,61 +1,71 @@
+## Objetivo
 
-## Plano: Corrigir duplicação de mensagens WhatsApp e identidade visual
+Adicionar botão **"Trocar de mesa"** dentro do diálogo de detalhes da comanda, na tela do **Garçom** (`src/pages/Waiter.tsx`), permitindo mover uma comanda aberta de uma mesa para **outra mesa livre**, sem alterar nenhum fluxo existente.
 
-### Problemas identificados
+**Rollout:** apenas **Lancheria da I9** nesta v1 (mesmo gating do `isI9` já usado na página).
 
-1. **Mensagens duplicadas (race condition)**: Quando o cliente envia "oi" e "boa noite" em sequência rápida (milissegundos de diferença), as duas chamadas do webhook chegam quase simultaneamente. Ambas consultam o cooldown antes de qualquer uma inserir o registro, então ambas passam e enviam a saudação.
+## Decisões confirmadas
 
-2. **"tudo bem" dispara saudação no meio da conversa**: O regex atual inclui `tudo bem|td bem` como saudação, mas isso é comum no meio de uma conversa, gerando resposta automática indesejada.
+1. **Mesa destino:** apenas mesas **livres** (sem comanda aberta). Mesa ocupada não aparece na lista.
+2. **Escopo:** transfere a comanda **inteira** (todos os itens, incluindo já enviados à cozinha). Histórico fica íntegro pois apenas o `table_id` da `tabs` muda.
+3. **Permissão:** qualquer **garçom logado** (ou admin) pode mover qualquer comanda aberta da empresa.
+4. **Cozinha:** **não reimprime nada**. Mudança é administrativa.
+5. **Auditoria:** registra no campo `notes` da comanda uma linha tipo `[Transferida Mesa 3 → Mesa 7 em 12/05 21:50 por João]`. Sem nova coluna no banco.
 
-3. **Ícone da Lovable no link**: Se a `store_settings.site_url` não estiver configurada, o fallback pode usar a URL do preview Lovable, que mostra o ícone/favicon da Lovable ao invés da identidade Comanda Tech.
+## Mudanças
 
-### Solução
+### 1. `src/pages/Waiter.tsx` (única alteração relevante)
 
-#### 1. Eliminar race condition com lock via banco de dados
+- Importar `Sheet`/`Dialog` simples de seleção de mesa (reutilizar `Dialog` já em uso).
+- Dentro do diálogo de detalhes da comanda aberta, **adicionar um botão secundário** "Trocar de mesa" ao lado de "+ Adicionar Itens", visível apenas quando:
+  - `isI9 === true` (mesmo gating já existente)
+  - comanda tem `table_id` (ou seja, está vinculada a uma mesa)
+  - comanda está `open`
+- Ao clicar:
+  1. Abre dialog "Selecionar nova mesa"
+  2. Lista as mesas da empresa filtrando: `status === 'available'` **e** sem comanda aberta vinculada
+  3. Garçom seleciona → confirmação rápida ("Mover comanda #N da Mesa X para Mesa Y?")
+  4. Executa transferência
 
-Criar uma tabela `whatsapp_auto_reply_locks` com constraint unique em `(company_id, phone)` e usar `INSERT ... ON CONFLICT DO NOTHING` como mecanismo de lock atômico. Se o insert falhar (conflito), significa que outra instância já está processando -- skip. Um cleanup automático remove locks antigos.
+### 2. Função de transferência (frontend, sem hook novo)
 
-**Migração SQL:**
-```sql
-CREATE TABLE public.whatsapp_auto_reply_locks (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id uuid NOT NULL,
-  phone text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(company_id, phone)
-);
-ALTER TABLE public.whatsapp_auto_reply_locks ENABLE ROW LEVEL SECURITY;
-```
-
-No webhook, antes de enviar, tentar inserir na tabela de locks. Se o insert retornar `error` (conflict), abortar -- outra execução já está tratando. Após enviar e inserir em `whatsapp_messages`, deletar o lock (o cooldown de 24h em `whatsapp_messages` continua funcionando normalmente para as próximas saudações).
-
-#### 2. Refinar detecção de saudações
-
-Remover `tudo bem`, `td bem`, `blz`, `beleza`, `como vai` dos padrões de saudação, pois são frases comuns em conversas em andamento. Manter apenas saudações iniciais claras: `oi`, `olá`, `bom dia`, `boa tarde`, `boa noite`, `hey`, `salve`, `opa`, `eae`, etc.
-
-#### 3. Garantir URL com identidade Comanda Tech
-
-No `whatsapp-webhook`, garantir que o fallback final da URL seja sempre `https://appcomandatech.agilizeerp.com.br` (já está), e **nunca** use URLs do preview Lovable. Verificar se algum `store_settings.site_url` de alguma empresa está apontando para domínio Lovable e documentar que o lojista deve configurar a URL correta nas configurações.
-
-### Arquivos a modificar
-
-| Arquivo | Alteração |
-|---|---|
-| `supabase/functions/whatsapp-webhook/index.ts` | Adicionar lock atômico anti-race-condition, refinar regex de saudações, garantir fallback de URL correto |
-| Nova migração SQL | Criar tabela `whatsapp_auto_reply_locks` |
-
-### Fluxo corrigido
+Função local em `Waiter.tsx`, chamando Supabase diretamente (segue o padrão da página). Operações sequenciais:
 
 ```text
-Mensagem recebida
-  → fromMe? skip
-  → É saudação? (regex refinado, sem "tudo bem")
-    → Não: skip
-    → Sim:
-      → INSERT lock (company_id, phone) ON CONFLICT DO NOTHING
-        → Conflito: skip (outra execução já processando)
-        → Sucesso:
-          → Checar cooldown 24h em whatsapp_messages
-            → Cooldown ativo: deletar lock, skip
-            → Sem cooldown: enviar mensagem, registrar, deletar lock
+1. UPDATE tables  SET status='available' WHERE id = mesa_origem
+2. UPDATE tables  SET status='occupied'  WHERE id = mesa_destino
+3. UPDATE tabs    SET table_id = mesa_destino,
+                      notes    = COALESCE(notes,'') || E'\n[Transferida ...]'
+                  WHERE id = comanda_id
+4. refetch
 ```
+
+Toast de sucesso e fecha o sub-dialog. Em caso de erro, toast destrutivo (sem rollback complexo: a próxima ação corrige).
+
+### 3. Não mexer
+
+- **Nada** em `useTabs.ts`, `MesaQR.tsx`, PDV V1/V2, hooks de pedidos, impressão, TEF, WhatsApp.
+- Nenhum item de menu novo, nenhum módulo novo, nenhuma migration.
+- Nenhuma alteração de RLS — as policies atuais de `tabs`/`tables` já permitem `update` por usuários da empresa.
+
+## Detalhes técnicos
+
+- **Gating Lancheria I9:** mesma constante/condição `isI9` já usada na página para mostrar `PDVV2CategoryBrowser`.
+- **Lista de mesas livres:** `useTables({ companyId })` já existe; cruzar com `openTabs` (de `useTabs`) para excluir mesas com comanda aberta.
+- **Auditoria simples** no `notes` evita migration. Formato:
+  `[Transferida Mesa {origem} → Mesa {destino} em {dd/MM HH:mm} por {profile.full_name || email}]` (timezone America/Sao_Paulo).
+- **Sem reimpressão:** nenhuma chamada para `printProductionTicket` ou afins.
+- **UX:** botão `variant="outline"`, ícone `ArrowLeftRight` do `lucide-react`. Tamanho idêntico ao "+ Adicionar Itens" para alinhar.
+
+## Changelog
+
+Adicionar entrada em **Novidades** (regra do projeto):
+> "Garçom (Lancheria I9): novo botão **Trocar de mesa** dentro da comanda — move a comanda inteira para outra mesa livre, com registro automático nas observações."
+
+## Fora de escopo (v1)
+
+- Mesclar comandas ao mover para mesa ocupada.
+- Coluna dedicada de auditoria (`transfer_log` jsonb).
+- Limitar transferência por dono da comanda.
+- Reimpressão na cozinha.
+- Liberar para outras lojas (só após validação na I9).
