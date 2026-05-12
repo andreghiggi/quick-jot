@@ -19,6 +19,8 @@ import { toast } from 'sonner';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
 import { MenuV2 } from '@/components/menu/MenuV2';
 import { formatPrice, cn } from '@/lib/utils';
+import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
+import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 
 interface MesaInfo {
   number: number;
