@@ -378,7 +378,7 @@ export default function WaitersConfig() {
             <DialogHeader>
               <DialogTitle>Novo Garçom</DialogTitle>
               <DialogDescription>
-                Cadastre um novo garçom. Ele poderá acessar o sistema com o email e senha definidos.
+                Cadastre um novo garçom. Ele entrará no sistema com o CPF e o PIN de 4 dígitos.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -393,37 +393,34 @@ export default function WaitersConfig() {
                 {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="cpf">CPF *</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
-                  placeholder="email@exemplo.com"
+                  id="cpf"
+                  inputMode="numeric"
+                  value={formCpf}
+                  onChange={(e) => setFormCpf(formatCpf(onlyDigits(e.target.value).slice(0, 11)))}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
                 />
-                {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Senha *</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formPassword}
-                    onChange={(e) => setFormPassword(e.target.value)}
-                    placeholder="••••••••"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-                {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+                <Label htmlFor="pin">PIN (4 dígitos) *</Label>
+                <Input
+                  id="pin"
+                  inputMode="numeric"
+                  type="password"
+                  autoComplete="new-password"
+                  value={formPin}
+                  onChange={(e) => setFormPin(onlyDigits(e.target.value).slice(0, 4))}
+                  placeholder="••••"
+                  maxLength={4}
+                  className="tracking-[0.5em] text-center text-lg"
+                />
+                {errors.pin && <p className="text-sm text-destructive">{errors.pin}</p>}
+                <p className="text-xs text-muted-foreground">
+                  O garçom usará este PIN para fazer login no sistema.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefone</Label>
