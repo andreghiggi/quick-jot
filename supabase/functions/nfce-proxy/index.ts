@@ -410,7 +410,12 @@ Deno.serve(async (req) => {
           }
 
           // Ambiente
-          if (d.ambiente || d.environment) updateData.ambiente = d.ambiente || d.environment
+          if (d.ambiente || d.environment) {
+            updateData.ambiente = d.ambiente || d.environment
+          } else {
+            const fromXml = ambienteFromXml(pickXmlField(d))
+            if (fromXml) updateData.ambiente = fromXml
+          }
 
           // Valor total
           if (d.valor_total || d.total || d.vNF) updateData.valor_total = d.valor_total || d.total || d.vNF
