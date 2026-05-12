@@ -330,14 +330,14 @@ export function LateralOptionalsWizard({
           <Button
             variant="outline"
             onClick={() => setCurrentStep((s) => s - 1)}
-            className="flex-1"
+            className="flex-shrink-0 px-4"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Voltar
           </Button>
         )}
         {isLast ? (
-          <Button onClick={onAddToCart} className="flex-1" size="lg">
+          <Button onClick={onAddToCart} className="flex-1 whitespace-nowrap" size="lg">
             <ShoppingCart className="h-4 w-4 mr-2" />
             Adicionar — R$ {formatPrice(totalPrice)}
           </Button>
