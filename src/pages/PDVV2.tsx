@@ -46,9 +46,10 @@ function isDelivery(o: Order) {
 export default function PDVV2() {
   const { company, user } = useAuthContext();
   const companyId = company?.id;
-  // Hide delivered orders from PDV V2 dashboard — currently only for Lancheria da I9
-  const HIDE_DELIVERED_COMPANY_IDS = ['8c9e7a0e-dbb6-49b9-8344-c23155a71164'];
-  const hideDelivered = companyId ? HIDE_DELIVERED_COMPANY_IDS.includes(companyId) : false;
+  // Hide delivered orders from PDV V2 dashboard — aplicado a todas as lojas com PDV V2 ativo.
+  // Pedidos entregues continuam disponíveis em Pedidos / Relatórios; aqui apenas saem do grid
+  // para manter o painel operacional limpo.
+  const hideDelivered = true;
   // Hide "Entregar" and show "Cobrar" for pickup orders — currently only for Lancheria da I9
   const chargeBeforeDeliverEnabled = companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
 
