@@ -511,6 +511,41 @@ export default function WaitersConfig() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Reset PIN Dialog */}
+        <Dialog open={isResetPinDialogOpen} onOpenChange={setIsResetPinDialogOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Resetar PIN</DialogTitle>
+              <DialogDescription>
+                Defina um novo PIN de 4 dígitos para <strong>{selectedWaiter?.name}</strong>.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 py-2">
+              <Label htmlFor="reset-pin">Novo PIN</Label>
+              <Input
+                id="reset-pin"
+                inputMode="numeric"
+                type="password"
+                value={resetPinValue}
+                onChange={(e) => setResetPinValue(onlyDigits(e.target.value).slice(0, 4))}
+                placeholder="••••"
+                maxLength={4}
+                className="tracking-[0.5em] text-center text-lg"
+              />
+              {errors.resetPin && <p className="text-sm text-destructive">{errors.resetPin}</p>}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsResetPinDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleResetPin} disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Salvar novo PIN
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
