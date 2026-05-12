@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '12/05/2026',
+    version: '1.30.0',
+    type: 'feature',
+    description: 'Novo "Relatório de Caixa" no menu Relatórios. Lista todos os caixas agrupados por dia, com horário de abertura/fechamento, operador, valor de abertura, esperado, fechado e diferença. Ao expandir, exibe o mesmo detalhamento do fechamento de caixa (vendas por origem × forma de pagamento e totais consolidados por forma) e permite reimprimir o relatório detalhado em 58/80mm. Filtro por período. Em rollout inicial na Lancheria da I9.',
+  },
+  {
     date: '08/05/2026',
     version: '1.29.0',
     type: 'feature',
