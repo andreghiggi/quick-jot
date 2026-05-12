@@ -460,14 +460,35 @@ export function PDVV2PaymentDialog({
             <div className="space-y-1">
               <p className="text-xs font-medium text-muted-foreground">Itens</p>
               <div className="max-h-[6.5rem] overflow-y-auto space-y-0.5">
-                {checkoutItems.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-sm px-1">
-                    <span className="truncate mr-2">{item.quantity}x {item.name}</span>
-                    <span className="tabular-nums text-muted-foreground whitespace-nowrap">
-                      {formatPrice(item.quantity * item.unit_price)}
-                    </span>
-                  </div>
-                ))}
+                {checkoutItems.map((item, idx) => {
+                  // Extrai opcionais entre [ ] do nome (formato salvo no banco) para
+                  // exibir abaixo do produto, igual à impressão de produção.
+                  // Não altera item.name original — apenas leitura visual.
+                  const match = item.name.match(/^(.*?)\s*\[(.+)\]\s*$/);
+                  const baseName = match ? match[1].trim() : item.name;
+                  const optionals = match
+                    ? match[2].split('|').map((s) => s.trim()).filter(Boolean)
+                    : [];
+                  return (
+                    <div key={idx} className="text-sm px-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 min-w-0">
+                        <span className="break-words min-w-0 flex-1">
+                          {item.quantity}x {baseName}
+                        </span>
+                        <span className="tabular-nums text-muted-foreground whitespace-nowrap">
+                          {formatPrice(item.quantity * item.unit_price)}
+                        </span>
+                      </div>
+                      {optionals.length > 0 && (
+                        <ul className="text-xs text-muted-foreground pl-4 mt-0.5 space-y-0.5">
+                          {optionals.map((opt, i) => (
+                            <li key={i} className="break-words">· {opt}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
