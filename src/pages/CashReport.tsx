@@ -215,6 +215,7 @@ export default function CashReport() {
   }, [registers]);
 
   if (!companyId) return null;
+  if (modulesLoading) return null;
   if (!isAllowed) return <Navigate to="/relatorios/vendas" replace />;
 
   return (
