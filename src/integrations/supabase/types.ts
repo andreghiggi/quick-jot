@@ -2067,6 +2067,7 @@ export type Database = {
           status: string
           tab_number: number
           table_id: string | null
+          transfer_log: Json
           updated_at: string | null
         }
         Insert: {
@@ -2080,6 +2081,7 @@ export type Database = {
           status?: string
           tab_number: number
           table_id?: string | null
+          transfer_log?: Json
           updated_at?: string | null
         }
         Update: {
@@ -2093,6 +2095,7 @@ export type Database = {
           status?: string
           tab_number?: number
           table_id?: string | null
+          transfer_log?: Json
           updated_at?: string | null
         }
         Relationships: [
