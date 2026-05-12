@@ -1032,6 +1032,8 @@ export default function PDVV2() {
         open={closeOpen}
         onOpenChange={setCloseOpen}
         companyId={companyId}
+        companyName={company?.name}
+        paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
         expectedAmount={cashAmount}
         sales={closeCashSales}
         paymentMethods={activePaymentMethods.map((p) => ({ id: p.id, name: p.name }))}
