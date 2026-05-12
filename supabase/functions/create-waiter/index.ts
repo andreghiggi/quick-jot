@@ -92,6 +92,20 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    // Pre-check: CPF already cadastrado nesta loja?
+    const { data: cpfExists } = await supabaseAdmin
+      .from("waiters")
+      .select("id")
+      .eq("company_id", companyUser.company_id)
+      .eq("cpf", cpfDigits)
+      .maybeSingle();
+    if (cpfExists) {
+      return new Response(
+        JSON.stringify({ error: "Já existe um garçom com este CPF nesta loja." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Create the auth user
     let { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -131,7 +145,7 @@ Deno.serve(async (req) => {
       );
       if (!existing) {
         return new Response(
-          JSON.stringify({ error: "Este email já está cadastrado no sistema." }),
+          JSON.stringify({ error: "Este CPF já está cadastrado no sistema." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -145,7 +159,7 @@ Deno.serve(async (req) => {
 
       if (existingWaiter) {
         return new Response(
-          JSON.stringify({ error: "Este email já está cadastrado como garçom em outra loja." }),
+          JSON.stringify({ error: "Este CPF já está cadastrado como garçom em outra loja." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -159,7 +173,7 @@ Deno.serve(async (req) => {
 
       if (existingCompanyLink && existingCompanyLink.company_id !== companyUser.company_id) {
         return new Response(
-          JSON.stringify({ error: "Este email já está vinculado a outra empresa." }),
+          JSON.stringify({ error: "Este CPF já está vinculado a outra empresa." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -217,6 +231,7 @@ Deno.serve(async (req) => {
       user_id: newUserId,
       company_id: companyUser.company_id,
       name,
+      cpf: cpfDigits,
       phone: phone || null,
       active: true,
     });
