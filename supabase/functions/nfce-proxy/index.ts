@@ -314,6 +314,11 @@ Deno.serve(async (req) => {
         if (emitData && (emitData.id || emitData.nfce_id)) {
           const chave = emitData.chave_acesso || emitData.chave || emitData.access_key || null
           const fromChave = chave ? extractFromChave(chave) : { numero: null, serie: null }
+          const ambienteResolved =
+            emitData.ambiente ||
+            emitData.environment ||
+            ambienteFromXml(pickXmlField(emitData)) ||
+            'homologacao'
           const nfceRecord = {
             company_id: companyId,
             sale_id: saleId || null,
@@ -322,11 +327,11 @@ Deno.serve(async (req) => {
             numero: emitData.numero || emitData.number || fromChave.numero || null,
             serie: emitData.serie || emitData.series || fromChave.serie || null,
             status: emitData.status || 'pendente',
-            ambiente: emitData.ambiente || emitData.environment || 'homologacao',
+            ambiente: ambienteResolved,
             valor_total: emitData.valor_total || emitData.total || (payload?.itens ? payload.itens.reduce((sum: number, item: any) => sum + (Number(item.quantidade || 1) * Number(item.valor_unitario || 0)), 0) : 0),
             chave_acesso: chave,
             protocolo: emitData.protocolo || emitData.protocol || null,
-            qrcode_url: emitData.qrcode_url || emitData.qr_code_url || emitData.url_qrcode || emitData.qrcode || (chave ? buildQrcodeUrl(chave, emitData.ambiente || emitData.environment || 'homologacao') : null),
+            qrcode_url: emitData.qrcode_url || emitData.qr_code_url || emitData.url_qrcode || emitData.qrcode || (chave ? buildQrcodeUrl(chave, ambienteResolved) : null),
             xml_url: emitData.xml_url || emitData.url_xml || null,
             motivo_rejeicao: emitData.motivo_rejeicao || emitData.motivo || null,
             request_payload: payload,
