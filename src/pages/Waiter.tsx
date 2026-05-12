@@ -367,11 +367,23 @@ export default function Waiter() {
           tabNumber: selectedTab.tab_number,
           tableNumber: selectedTab.table?.number,
           customerName: selectedTab.customer_name,
-          items: cart.map(item => ({
-            productName: item.productName,
-            quantity: item.quantity,
-            notes: item.notes
-          })),
+          items: cart.map(item => {
+            // Fix v2 print: PDVOptionalsDialog appends "[obs]" into productName.
+            // Extract trailing [xxx] and move it to notes so the v2 layout
+            // renders the observation with inverted (black bg / white text) style.
+            // Only affects the printed HTML — DB / cart / screens stay untouched.
+            const m = item.productName.match(/^(.*?)\s*\[(.+)\]\s*$/);
+            const cleanName = m ? m[1].trim() : item.productName;
+            const extractedObs = m ? m[2].trim() : '';
+            const mergedNotes = [item.notes, extractedObs]
+              .filter(Boolean)
+              .join(' | ') || undefined;
+            return {
+              productName: cleanName,
+              quantity: item.quantity,
+              notes: mergedNotes,
+            };
+          }),
           createdAt: new Date(),
           paperSize: storeSettings.printerPaperSize,
           layout: storeSettings.printLayout,
