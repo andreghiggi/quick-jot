@@ -38,7 +38,6 @@ export function PDVOptionalsDialog({
   onAddToCart,
   companyId,
 }: PDVOptionalsDialogProps) {
-  const isI9 = true;
   const [selectedItems, setSelectedItems] = useState<Record<string, Map<string, number>>>({});
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
@@ -175,7 +174,7 @@ export function PDVOptionalsDialog({
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <div className="space-y-4">
             {groups.map(group => {
-              const useQtyControls = isI9 && group.maxQuantityPerItem > 1;
+              const useQtyControls = group.maxQuantityPerItem > 1;
               return (
               <div key={group.id} className="space-y-2">
                 <div className="flex items-center justify-between">
