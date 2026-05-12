@@ -352,7 +352,10 @@ export function PDVV2CloseCashDialog({
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                              {paymentMethods.map((pm) => (
+                              {(isDeliveryOrigin && deliveryPaymentMethods && deliveryPaymentMethods.length > 0
+                                ? deliveryPaymentMethods
+                                : paymentMethods
+                              ).map((pm) => (
                                 <SelectItem key={pm.id} value={pm.id}>
                                   {pm.name}
                                 </SelectItem>
