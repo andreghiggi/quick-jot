@@ -104,7 +104,7 @@ export function LateralOptionalsWizard({
   const totalPrice = product.price + groupOptionalsPrices + oldOptionalsPrices;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Progress bar */}
       <div className="flex gap-1 mb-4">
         {steps.map((_, i) => (
@@ -119,12 +119,12 @@ export function LateralOptionalsWizard({
       </div>
 
       {/* Step content */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
         {step.type === 'group' && step.group && (() => {
           const g = step.group!;
           const useQtyControls = isI9 && (g.maxQuantityPerItem || 1) > 1 && !!onChangeGroupItemQty;
           return (
-          <div key={g.id} className="space-y-3 animate-in slide-in-from-right-4 duration-200">
+          <div key={g.id} className="space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
               <Label className="text-lg font-bold">{g.name}</Label>
               <Badge variant="outline" className="text-xs">
@@ -250,7 +250,7 @@ export function LateralOptionalsWizard({
         })()}
 
         {step.type === 'oldOptionals' && (
-          <div className="space-y-3 animate-in slide-in-from-right-4 duration-200">
+          <div className="space-y-3">
             <Label className="text-lg font-bold">Adicionais</Label>
             {oldStyleOptionals
               .filter((o) => o.active)
@@ -282,7 +282,7 @@ export function LateralOptionalsWizard({
         )}
 
         {step.type === 'confirm' && (
-          <div className="space-y-4 animate-in slide-in-from-right-4 duration-200">
+          <div className="space-y-4">
             <div>
               <Label>Observações (opcional)</Label>
               <Input
