@@ -337,8 +337,8 @@ export function LateralOptionalsWizard({
           </Button>
         )}
         {isLast ? (
-          <Button onClick={onAddToCart} className="flex-1 whitespace-nowrap" size="lg">
-            <ShoppingCart className="h-4 w-4 mr-2" />
+          <Button onClick={onAddToCart} className="min-w-0 flex-1 whitespace-nowrap px-3 text-sm sm:px-8 sm:text-base" size="lg">
+            <ShoppingCart className="h-4 w-4 mr-1" />
             Adicionar — R$ {formatPrice(totalPrice)}
           </Button>
         ) : (
