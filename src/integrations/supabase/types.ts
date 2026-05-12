@@ -2214,6 +2214,7 @@ export type Database = {
         Row: {
           active: boolean | null
           company_id: string
+          cpf: string | null
           created_at: string | null
           id: string
           name: string
@@ -2224,6 +2225,7 @@ export type Database = {
         Insert: {
           active?: boolean | null
           company_id: string
+          cpf?: string | null
           created_at?: string | null
           id?: string
           name: string
@@ -2234,6 +2236,7 @@ export type Database = {
         Update: {
           active?: boolean | null
           company_id?: string
+          cpf?: string | null
           created_at?: string | null
           id?: string
           name?: string
