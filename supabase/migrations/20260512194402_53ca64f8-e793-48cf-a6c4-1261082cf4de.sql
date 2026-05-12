@@ -1,0 +1,1 @@
+ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS waiter_item BOOLEAN NOT NULL DEFAULT true;
