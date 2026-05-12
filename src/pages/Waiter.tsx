@@ -55,12 +55,13 @@ import {
   ChevronUp,
   ChevronDown,
   Pencil,
-  MessageSquare
+  MessageSquare,
+  ArrowLeftRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Waiter() {
-  const { company, user } = useAuthContext();
+  const { company, user, profile } = useAuthContext();
   const { tables, updateTableStatus } = useTables({ companyId: company?.id });
   const { 
     openTabs, 
@@ -106,6 +107,59 @@ export default function Waiter() {
 
   // i9: separate cart sheet
   const [i9CartOpen, setI9CartOpen] = useState(false);
+
+  // Trocar de mesa
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [transferTargetTableId, setTransferTargetTableId] = useState<string>('');
+  const [transferring, setTransferring] = useState(false);
+
+  async function handleTransferTable() {
+    if (!selectedTab || !transferTargetTableId) return;
+    const fromTableId = selectedTab.table_id;
+    const fromTableNumber = selectedTab.table?.number;
+    const toTable = tables.find(t => t.id === transferTargetTableId);
+    if (!toTable) {
+      toast.error('Mesa destino não encontrada');
+      return;
+    }
+    setTransferring(true);
+    try {
+      const stamp = new Date().toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const who = profile?.full_name || profile?.email || 'garçom';
+      const logLine = `[Transferida Mesa ${fromTableNumber ?? '?'} → Mesa ${toTable.number} em ${stamp} por ${who}]`;
+      const newNotes = selectedTab.notes ? `${selectedTab.notes}\n${logLine}` : logLine;
+
+      // 1. tabs: muda table_id e adiciona log em notes
+      const { error: tabErr } = await supabase
+        .from('tabs')
+        .update({ table_id: transferTargetTableId, notes: newNotes })
+        .eq('id', selectedTab.id);
+      if (tabErr) throw tabErr;
+
+      // 2. mesa origem -> available
+      if (fromTableId) {
+        await supabase.from('tables').update({ status: 'available' }).eq('id', fromTableId);
+      }
+      // 3. mesa destino -> occupied
+      await supabase.from('tables').update({ status: 'occupied' }).eq('id', transferTargetTableId);
+
+      toast.success(`Comanda movida para Mesa ${toTable.number}`);
+      setTransferDialogOpen(false);
+      setTransferTargetTableId('');
+      setSelectedTab(null);
+    } catch (err: any) {
+      console.error('Erro ao transferir mesa:', err);
+      toast.error(err?.message || 'Erro ao transferir mesa');
+    } finally {
+      setTransferring(false);
+    }
+  }
 
   useEffect(() => {
     if (isI9 && cart.length > prevCartLength.current) {
