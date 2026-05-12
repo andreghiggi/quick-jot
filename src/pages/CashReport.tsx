@@ -10,8 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Printer, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { LANCHERIA_I9_COMPANY_ID, brl } from '@/components/pdv-v2/_format';
+import { brl } from '@/components/pdv-v2/_format';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { printCashClosingDetailed } from '@/utils/cashClosingPrint';
 import type { CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
 import { toast } from 'sonner';
@@ -52,9 +53,10 @@ export default function CashReport() {
   const { company } = useAuthContext();
   const companyId = company?.id;
   const { settings } = useStoreSettings({ companyId });
+  const { isModuleEnabled, loading: modulesLoading } = useCompanyModules({ companyId });
 
-  // Rollout isolado — apenas Lancheria da I9 por enquanto.
-  const isAllowed = companyId === LANCHERIA_I9_COMPANY_ID;
+  // Disponível para qualquer loja com PDV V2 ativo.
+  const isAllowed = isModuleEnabled('pdv_v2');
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const [from, setFrom] = useState(today);
