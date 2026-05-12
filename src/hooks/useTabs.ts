@@ -180,7 +180,7 @@ export function useTabs(options: UseTabsOptions = {}) {
 
       await fetchTabs();
       toast.success(`Comanda #${tabNumber} criada!`);
-      return newTab as Tab;
+      return (newTab as unknown) as Tab;
     } catch (error) {
       console.error('Error creating tab:', error);
       toast.error('Erro ao criar comanda');
