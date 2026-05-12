@@ -9,7 +9,7 @@ import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
-import { Plug, Loader2, Users, ListChecks, Printer } from 'lucide-react';
+import { Plug, Loader2, Users, ListChecks, Printer, ArrowLeftRight } from 'lucide-react';
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
@@ -40,6 +40,8 @@ interface PDVV2PaymentDialogProps {
    *  split mode with these pre-set values. The user cannot change the number
    *  of people or the per-person amount. */
   activeSplit?: { perPerson: number; totalPeople: number; currentPerson: number };
+  /** Histórico de transferências da comanda (apenas exibição, sem efeito em fluxo). */
+  transferLog?: Array<{ from_table_number: number | null; to_table_number: number; at: string; by_name: string }>;
   /**
    * Quando true (e for I9), o TEF é executado AQUI — antes dos pop-ups de
    * CPF/Imprimir. Se a cobrança não for aprovada, nada é confirmado e o
@@ -97,6 +99,7 @@ export function PDVV2PaymentDialog({
   chargeTefBeforePopups = false,
   onConfirm,
   activeSplit,
+  transferLog,
 }: PDVV2PaymentDialogProps) {
   // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
