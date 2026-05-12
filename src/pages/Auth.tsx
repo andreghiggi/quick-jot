@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -58,7 +59,7 @@ export default function Auth() {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
-  const [loginMode, setLoginMode] = useState<'manager' | 'waiter'>('manager');
+  const [isWaiterLogin, setIsWaiterLogin] = useState(false);
   const [waiterCpf, setWaiterCpf] = useState('');
   const [waiterPin, setWaiterPin] = useState('');
   
@@ -96,7 +97,7 @@ export default function Auth() {
     e.preventDefault();
     setErrors({});
 
-    if (loginMode === 'waiter') {
+    if (isWaiterLogin) {
       try {
         waiterLoginSchema.parse({ cpf: waiterCpf, pin: waiterPin });
       } catch (error) {
@@ -234,24 +235,18 @@ export default function Auth() {
             </TabsList>
             
             <TabsContent value="login">
-              <div className="grid grid-cols-2 gap-2 mt-4 p-1 bg-muted rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => { setLoginMode('manager'); setErrors({}); }}
-                  className={`text-sm font-medium py-2 rounded-md transition ${loginMode === 'manager' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
-                >
-                  Gerente
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setLoginMode('waiter'); setErrors({}); }}
-                  className={`text-sm font-medium py-2 rounded-md transition ${loginMode === 'waiter' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
-                >
-                  Garçom
-                </button>
+              <div className="flex items-center justify-end gap-2 mt-4">
+                <Label htmlFor="waiter-toggle" className="text-sm text-muted-foreground cursor-pointer">
+                  Sou garçom
+                </Label>
+                <Switch
+                  id="waiter-toggle"
+                  checked={isWaiterLogin}
+                  onCheckedChange={(v) => { setIsWaiterLogin(v); setErrors({}); }}
+                />
               </div>
 
-              {loginMode === 'waiter' ? (
+              {isWaiterLogin ? (
                 <form onSubmit={handleLogin} className="space-y-4 mt-4">
                   <div className="space-y-2">
                     <Label htmlFor="waiter-cpf">CPF</Label>
