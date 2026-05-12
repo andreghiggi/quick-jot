@@ -731,6 +731,16 @@ export default function Waiter() {
                 <Plus className="w-4 h-4" />
                 Adicionar Itens
               </Button>
+              {selectedTab?.table_id && selectedTab?.status === 'open' && (
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => { setTransferTargetTableId(''); setTransferDialogOpen(true); }}
+                >
+                  <ArrowLeftRight className="w-4 h-4" />
+                  Trocar de mesa
+                </Button>
+              )}
             </div>
           </div>
         </DialogContent>
