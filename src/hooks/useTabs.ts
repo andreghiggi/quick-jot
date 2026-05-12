@@ -28,10 +28,18 @@ export interface Tab {
   updated_at: string;
   closed_at: string | null;
   created_by: string;
+  transfer_log?: TransferLogEntry[] | null;
   items?: TabItem[];
   table?: {
     number: number;
   };
+}
+
+export interface TransferLogEntry {
+  from_table_number: number | null;
+  to_table_number: number;
+  at: string;
+  by_name: string;
 }
 
 interface UseTabsOptions {
