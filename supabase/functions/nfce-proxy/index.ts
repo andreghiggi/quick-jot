@@ -128,6 +128,28 @@ Deno.serve(async (req) => {
       return `${baseUrl}?p=${chave}|${ambienteCode}|2`
     }
 
+    // Extract tpAmb from XML returned by Fiscal Flow (base64-encoded).
+    // Fiscal Flow does NOT include `ambiente`/`environment` in the JSON body,
+    // so we must parse the authorized XML to know if the NFC-e is in
+    // production (tpAmb=1) or homologation (tpAmb=2).
+    function ambienteFromXml(xmlBase64: any): string | null {
+      if (!xmlBase64 || typeof xmlBase64 !== 'string') return null
+      try {
+        const xml = atob(xmlBase64)
+        const m = xml.match(/<tpAmb>(\d)<\/tpAmb>/)
+        if (!m) return null
+        return m[1] === '1' ? 'producao' : 'homologacao'
+      } catch {
+        return null
+      }
+    }
+
+    // Try multiple known field names for the returned XML payload.
+    function pickXmlField(d: any): any {
+      if (!d) return null
+      return d.xml_retorno || d.xml || d.xml_autorizado || d.xmlNFe || d.xml_proc || null
+    }
+
     switch (action) {
 
       case 'emitir': {
@@ -292,6 +314,11 @@ Deno.serve(async (req) => {
         if (emitData && (emitData.id || emitData.nfce_id)) {
           const chave = emitData.chave_acesso || emitData.chave || emitData.access_key || null
           const fromChave = chave ? extractFromChave(chave) : { numero: null, serie: null }
+          const ambienteResolved =
+            emitData.ambiente ||
+            emitData.environment ||
+            ambienteFromXml(pickXmlField(emitData)) ||
+            'homologacao'
           const nfceRecord = {
             company_id: companyId,
             sale_id: saleId || null,
@@ -300,11 +327,11 @@ Deno.serve(async (req) => {
             numero: emitData.numero || emitData.number || fromChave.numero || null,
             serie: emitData.serie || emitData.series || fromChave.serie || null,
             status: emitData.status || 'pendente',
-            ambiente: emitData.ambiente || emitData.environment || 'homologacao',
+            ambiente: ambienteResolved,
             valor_total: emitData.valor_total || emitData.total || (payload?.itens ? payload.itens.reduce((sum: number, item: any) => sum + (Number(item.quantidade || 1) * Number(item.valor_unitario || 0)), 0) : 0),
             chave_acesso: chave,
             protocolo: emitData.protocolo || emitData.protocol || null,
-            qrcode_url: emitData.qrcode_url || emitData.qr_code_url || emitData.url_qrcode || emitData.qrcode || (chave ? buildQrcodeUrl(chave, emitData.ambiente || emitData.environment || 'homologacao') : null),
+            qrcode_url: emitData.qrcode_url || emitData.qr_code_url || emitData.url_qrcode || emitData.qrcode || (chave ? buildQrcodeUrl(chave, ambienteResolved) : null),
             xml_url: emitData.xml_url || emitData.url_xml || null,
             motivo_rejeicao: emitData.motivo_rejeicao || emitData.motivo || null,
             request_payload: payload,
@@ -383,7 +410,12 @@ Deno.serve(async (req) => {
           }
 
           // Ambiente
-          if (d.ambiente || d.environment) updateData.ambiente = d.ambiente || d.environment
+          if (d.ambiente || d.environment) {
+            updateData.ambiente = d.ambiente || d.environment
+          } else {
+            const fromXml = ambienteFromXml(pickXmlField(d))
+            if (fromXml) updateData.ambiente = fromXml
+          }
 
           // Valor total
           if (d.valor_total || d.total || d.vNF) updateData.valor_total = d.valor_total || d.total || d.vNF
