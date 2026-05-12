@@ -653,6 +653,33 @@ export default function Waiter() {
 
           <div className="flex-1 overflow-y-auto -mx-6 px-6">
             <div className="space-y-4 py-4">
+              {/* Histórico de transferências de mesa */}
+              {Array.isArray(selectedTab?.transfer_log) && selectedTab.transfer_log.length > 0 && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 dark:text-amber-300">
+                    <ArrowLeftRight className="w-3.5 h-3.5" />
+                    Histórico de mesas
+                  </div>
+                  <ul className="text-xs text-amber-900 dark:text-amber-200 space-y-0.5">
+                    {selectedTab.transfer_log.map((entry, idx) => {
+                      const when = new Date(entry.at).toLocaleString('pt-BR', {
+                        timeZone: 'America/Sao_Paulo',
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      });
+                      return (
+                        <li key={idx}>
+                          Mesa {entry.from_table_number ?? '?'} → Mesa {entry.to_table_number}
+                          <span className="text-amber-700/80 dark:text-amber-300/70"> · {when} · {entry.by_name}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
               {/* Items List */}
               {selectedTab?.items && selectedTab.items.length > 0 ? (
                 <div className="space-y-2">
