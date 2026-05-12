@@ -28,10 +28,18 @@ export interface Tab {
   updated_at: string;
   closed_at: string | null;
   created_by: string;
+  transfer_log?: TransferLogEntry[] | null;
   items?: TabItem[];
   table?: {
     number: number;
   };
+}
+
+export interface TransferLogEntry {
+  from_table_number: number | null;
+  to_table_number: number;
+  at: string;
+  by_name: string;
 }
 
 interface UseTabsOptions {
@@ -98,7 +106,7 @@ export function useTabs(options: UseTabsOptions = {}) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTabs((data || []) as Tab[]);
+      setTabs(((data || []) as unknown) as Tab[]);
     } catch (error) {
       console.error('Error fetching tabs:', error);
     } finally {
@@ -172,7 +180,7 @@ export function useTabs(options: UseTabsOptions = {}) {
 
       await fetchTabs();
       toast.success(`Comanda #${tabNumber} criada!`);
-      return newTab as Tab;
+      return (newTab as unknown) as Tab;
     } catch (error) {
       console.error('Error creating tab:', error);
       toast.error('Erro ao criar comanda');

@@ -9,7 +9,7 @@ import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
-import { Plug, Loader2, Users, ListChecks, Printer } from 'lucide-react';
+import { Plug, Loader2, Users, ListChecks, Printer, ArrowLeftRight } from 'lucide-react';
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
@@ -40,6 +40,8 @@ interface PDVV2PaymentDialogProps {
    *  split mode with these pre-set values. The user cannot change the number
    *  of people or the per-person amount. */
   activeSplit?: { perPerson: number; totalPeople: number; currentPerson: number };
+  /** Histórico de transferências da comanda (apenas exibição, sem efeito em fluxo). */
+  transferLog?: Array<{ from_table_number: number | null; to_table_number: number; at: string; by_name: string }>;
   /**
    * Quando true (e for I9), o TEF é executado AQUI — antes dos pop-ups de
    * CPF/Imprimir. Se a cobrança não for aprovada, nada é confirmado e o
@@ -97,6 +99,7 @@ export function PDVV2PaymentDialog({
   chargeTefBeforePopups = false,
   onConfirm,
   activeSplit,
+  transferLog,
 }: PDVV2PaymentDialogProps) {
   // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
@@ -411,6 +414,32 @@ export function PDVV2PaymentDialog({
               <p className="font-medium text-sm">{tefStatus || internalTefStatus}</p>
               <p className="text-xs text-muted-foreground">Operação TEF em andamento. Aguarde a confirmação na maquininha.</p>
             </div>
+          </div>
+        )}
+
+        {transferLog && transferLog.length > 0 && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2.5 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
+              <ArrowLeftRight className="w-3.5 h-3.5" />
+              Comanda transferida de mesa
+            </div>
+            <ul className="text-xs text-amber-900 dark:text-amber-200 space-y-0.5">
+              {transferLog.map((entry, idx) => {
+                const when = new Date(entry.at).toLocaleString('pt-BR', {
+                  timeZone: 'America/Sao_Paulo',
+                  day: '2-digit',
+                  month: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
+                return (
+                  <li key={idx}>
+                    Mesa {entry.from_table_number ?? '?'} → Mesa {entry.to_table_number}
+                    <span className="text-amber-700/80 dark:text-amber-300/70"> · {when} · {entry.by_name}</span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         )}
 
