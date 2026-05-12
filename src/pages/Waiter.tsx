@@ -124,21 +124,20 @@ export default function Waiter() {
     }
     setTransferring(true);
     try {
-      const stamp = new Date().toLocaleString('pt-BR', {
-        timeZone: 'America/Sao_Paulo',
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
       const who = profile?.full_name || profile?.email || 'garçom';
-      const logLine = `[Transferida Mesa ${fromTableNumber ?? '?'} → Mesa ${toTable.number} em ${stamp} por ${who}]`;
-      const newNotes = selectedTab.notes ? `${selectedTab.notes}\n${logLine}` : logLine;
+      const newEntry = {
+        from_table_number: fromTableNumber ?? null,
+        to_table_number: toTable.number,
+        at: new Date().toISOString(),
+        by_name: who,
+      };
+      const existingLog = Array.isArray(selectedTab.transfer_log) ? selectedTab.transfer_log : [];
+      const newLog = [...existingLog, newEntry];
 
-      // 1. tabs: muda table_id e adiciona log em notes
+      // 1. tabs: muda table_id e adiciona entrada no transfer_log (mantém notes intocado)
       const { error: tabErr } = await supabase
         .from('tabs')
-        .update({ table_id: transferTargetTableId, notes: newNotes })
+        .update({ table_id: transferTargetTableId, transfer_log: newLog as any })
         .eq('id', selectedTab.id);
       if (tabErr) throw tabErr;
 
