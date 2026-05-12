@@ -44,6 +44,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         animated: (cat as any).animated ?? false,
         menuItem: (cat as any).menu_item ?? true,
         pdvItem: (cat as any).pdv_item ?? true,
+        waiterItem: (cat as any).waiter_item ?? true,
         printDescription: (cat as any).print_description ?? false,
       }));
 
@@ -183,6 +184,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
       if (data.animated !== undefined) updateData.animated = data.animated;
       if (data.menuItem !== undefined) updateData.menu_item = data.menuItem;
       if (data.pdvItem !== undefined) updateData.pdv_item = data.pdvItem;
+      if (data.waiterItem !== undefined) updateData.waiter_item = data.waiterItem;
       if (data.printDescription !== undefined) (updateData as any).print_description = data.printDescription;
 
       const { error } = await supabase

@@ -47,5 +47,6 @@ export interface Category {
   animated?: boolean;
   menuItem?: boolean;
   pdvItem?: boolean;
+  waiterItem?: boolean;
   printDescription?: boolean;
 }

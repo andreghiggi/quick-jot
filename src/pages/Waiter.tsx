@@ -185,12 +185,21 @@ export default function Waiter() {
   }, [cart.length]);
 
   const filteredProducts = useMemo(() => {
+    const hiddenWaiterCategoryNames = new Set(
+      categories.filter(c => c.waiterItem === false).map(c => c.name)
+    );
     return products.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-      return matchesSearch && matchesCategory && p.active && p.waiterItem !== false;
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        p.active &&
+        p.waiterItem !== false &&
+        !hiddenWaiterCategoryNames.has(p.category)
+      );
     });
-  }, [products, searchTerm, selectedCategory]);
+  }, [products, searchTerm, selectedCategory, categories]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -975,7 +984,7 @@ export default function Waiter() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas</SelectItem>
-                      {categories.filter(c => c.active).map((cat) => (
+                      {categories.filter(c => c.active && c.waiterItem !== false).map((cat) => (
                         <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                       ))}
                     </SelectContent>
