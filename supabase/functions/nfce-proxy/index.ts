@@ -128,6 +128,28 @@ Deno.serve(async (req) => {
       return `${baseUrl}?p=${chave}|${ambienteCode}|2`
     }
 
+    // Extract tpAmb from XML returned by Fiscal Flow (base64-encoded).
+    // Fiscal Flow does NOT include `ambiente`/`environment` in the JSON body,
+    // so we must parse the authorized XML to know if the NFC-e is in
+    // production (tpAmb=1) or homologation (tpAmb=2).
+    function ambienteFromXml(xmlBase64: any): string | null {
+      if (!xmlBase64 || typeof xmlBase64 !== 'string') return null
+      try {
+        const xml = atob(xmlBase64)
+        const m = xml.match(/<tpAmb>(\d)<\/tpAmb>/)
+        if (!m) return null
+        return m[1] === '1' ? 'producao' : 'homologacao'
+      } catch {
+        return null
+      }
+    }
+
+    // Try multiple known field names for the returned XML payload.
+    function pickXmlField(d: any): any {
+      if (!d) return null
+      return d.xml_retorno || d.xml || d.xml_autorizado || d.xmlNFe || d.xml_proc || null
+    }
+
     switch (action) {
 
       case 'emitir': {
