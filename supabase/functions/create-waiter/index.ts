@@ -57,19 +57,54 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { email, password, name, phone } = await req.json();
+    const body = await req.json();
+    const { name, phone } = body;
+    const cpfRaw: string = (body.cpf ?? "").toString();
+    const pinRaw: string = (body.pin ?? "").toString();
+    const cpfDigits = cpfRaw.replace(/\D/g, "");
+    const pinDigits = pinRaw.replace(/\D/g, "");
 
-    if (!email || !password || !name) {
+    if (!name || !cpfDigits || !pinDigits) {
       return new Response(
-        JSON.stringify({ error: "Email, password and name are required" }),
+        JSON.stringify({ error: "Nome, CPF e PIN são obrigatórios" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    if (cpfDigits.length !== 11) {
+      return new Response(
+        JSON.stringify({ error: "CPF deve ter 11 dígitos" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (pinDigits.length !== 4) {
+      return new Response(
+        JSON.stringify({ error: "PIN deve ter 4 dígitos numéricos" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Internal credential derivation (must match frontend login flow)
+    const email = `wtr.${cpfDigits}@waiter.comandatech.app`;
+    const password = `WTR-${pinDigits}-${cpfDigits}`;
 
     // Use service role to create user without affecting current session
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+
+    // Pre-check: CPF already cadastrado nesta loja?
+    const { data: cpfExists } = await supabaseAdmin
+      .from("waiters")
+      .select("id")
+      .eq("company_id", companyUser.company_id)
+      .eq("cpf", cpfDigits)
+      .maybeSingle();
+    if (cpfExists) {
+      return new Response(
+        JSON.stringify({ error: "Já existe um garçom com este CPF nesta loja." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Create the auth user
     let { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -110,7 +145,7 @@ Deno.serve(async (req) => {
       );
       if (!existing) {
         return new Response(
-          JSON.stringify({ error: "Este email já está cadastrado no sistema." }),
+          JSON.stringify({ error: "Este CPF já está cadastrado no sistema." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -124,7 +159,7 @@ Deno.serve(async (req) => {
 
       if (existingWaiter) {
         return new Response(
-          JSON.stringify({ error: "Este email já está cadastrado como garçom em outra loja." }),
+          JSON.stringify({ error: "Este CPF já está cadastrado como garçom em outra loja." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -138,7 +173,7 @@ Deno.serve(async (req) => {
 
       if (existingCompanyLink && existingCompanyLink.company_id !== companyUser.company_id) {
         return new Response(
-          JSON.stringify({ error: "Este email já está vinculado a outra empresa." }),
+          JSON.stringify({ error: "Este CPF já está vinculado a outra empresa." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -196,6 +231,7 @@ Deno.serve(async (req) => {
       user_id: newUserId,
       company_id: companyUser.company_id,
       name,
+      cpf: cpfDigits,
       phone: phone || null,
       active: true,
     });

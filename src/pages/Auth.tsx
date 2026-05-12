@@ -18,6 +18,20 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
 });
 
+const waiterLoginSchema = z.object({
+  cpf: z.string().refine((v) => v.replace(/\D/g, '').length === 11, 'CPF deve ter 11 dígitos'),
+  pin: z.string().refine((v) => /^\d{4}$/.test(v), 'PIN deve ter 4 dígitos'),
+});
+
+function onlyDigits(v: string) {
+  return (v || '').replace(/\D/g, '');
+}
+function formatCpfInput(d: string) {
+  const x = d.padEnd(11, ' ').slice(0, 11).trim();
+  if (x.length !== 11) return d;
+  return `${x.slice(0,3)}.${x.slice(3,6)}.${x.slice(6,9)}-${x.slice(9,11)}`;
+}
+
 const signupSchema = z.object({
   companyName: z.string().min(2, 'Nome da empresa deve ter pelo menos 2 caracteres'),
   cnpj: z.string().optional(),
@@ -44,6 +58,9 @@ export default function Auth() {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [loginMode, setLoginMode] = useState<'manager' | 'waiter'>('manager');
+  const [waiterCpf, setWaiterCpf] = useState('');
+  const [waiterPin, setWaiterPin] = useState('');
   
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
@@ -78,7 +95,32 @@ export default function Auth() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setErrors({});
-    
+
+    if (loginMode === 'waiter') {
+      try {
+        waiterLoginSchema.parse({ cpf: waiterCpf, pin: waiterPin });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const fieldErrors: Record<string, string> = {};
+          error.errors.forEach((err) => {
+            if (err.path[0]) fieldErrors[err.path[0].toString()] = err.message;
+          });
+          setErrors(fieldErrors);
+          return;
+        }
+      }
+      const cpfDigits = onlyDigits(waiterCpf);
+      const internalEmail = `wtr.${cpfDigits}@waiter.comandatech.app`;
+      const internalPassword = `WTR-${waiterPin}-${cpfDigits}`;
+      setIsLoading(true);
+      const { error } = await signIn(internalEmail, internalPassword);
+      setIsLoading(false);
+      if (error) {
+        toast.error('CPF ou PIN incorretos');
+      }
+      return;
+    }
+
     try {
       loginSchema.parse({ email: loginEmail, password: loginPassword });
     } catch (error) {
@@ -192,6 +234,65 @@ export default function Auth() {
             </TabsList>
             
             <TabsContent value="login">
+              <div className="grid grid-cols-2 gap-2 mt-4 p-1 bg-muted rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => { setLoginMode('manager'); setErrors({}); }}
+                  className={`text-sm font-medium py-2 rounded-md transition ${loginMode === 'manager' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
+                >
+                  Gerente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setLoginMode('waiter'); setErrors({}); }}
+                  className={`text-sm font-medium py-2 rounded-md transition ${loginMode === 'waiter' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
+                >
+                  Garçom
+                </button>
+              </div>
+
+              {loginMode === 'waiter' ? (
+                <form onSubmit={handleLogin} className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="waiter-cpf">CPF</Label>
+                    <Input
+                      id="waiter-cpf"
+                      inputMode="numeric"
+                      autoComplete="username"
+                      placeholder="000.000.000-00"
+                      value={waiterCpf}
+                      onChange={(e) => setWaiterCpf(formatCpfInput(onlyDigits(e.target.value).slice(0, 11)))}
+                      maxLength={14}
+                      disabled={isLoading}
+                      className="text-lg h-12"
+                    />
+                    {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="waiter-pin">PIN (4 dígitos)</Label>
+                    <Input
+                      id="waiter-pin"
+                      inputMode="numeric"
+                      type="password"
+                      autoComplete="current-password"
+                      placeholder="••••"
+                      value={waiterPin}
+                      onChange={(e) => setWaiterPin(onlyDigits(e.target.value).slice(0, 4))}
+                      maxLength={4}
+                      disabled={isLoading}
+                      className="text-2xl h-14 tracking-[0.6em] text-center"
+                    />
+                    {errors.pin && <p className="text-sm text-destructive">{errors.pin}</p>}
+                  </div>
+                  <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Entrar
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground">
+                    Esqueceu seu PIN? Peça ao gerente para resetar.
+                  </p>
+                </form>
+              ) : (
               <form onSubmit={handleLogin} className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
@@ -229,6 +330,7 @@ export default function Auth() {
                   Entrar
                 </Button>
               </form>
+              )}
             </TabsContent>
             
             <TabsContent value="signup">
