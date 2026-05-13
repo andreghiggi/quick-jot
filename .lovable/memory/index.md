@@ -29,3 +29,4 @@ Updated: now
 - [Print RLS](mem://technical/printer-rls-configuration) — Anonymous public policy for local script access
 - [Multi-tenancy](mem://technical/multi-tenancy-isolation) — Strict `company_id` filters on all Supabase queries
 - [Onboarding](mem://features/onboarding-e-planos) — Auto-creation of company, owner, plan, and user_roles
+- [Rachar Item Comanda I9](mem://features/rachar-item-comanda-i9) — Ícone Split no PDV V2 fraciona item de comanda; tab_items/pdv_sale_items.quantity virou numeric(10,3); NFC-e preserva NCM real. Só Lancheria da I9.
