@@ -209,7 +209,7 @@ export function PDVV2PaymentDialog({
       setSplitPeople(2);
       setSplitItemEditingIdx(null);
       setSplitItemPeople(2);
-      setSplitItemFractions(1);
+      setSplitItemAmount(0);
     }
   }, [open]);
 
@@ -578,9 +578,10 @@ export function PDVV2PaymentDialog({
                     const isPaid = !!item.paid;
                     const selectedQty = selectedItemQtys.get(idx) || 0;
                     const isEditingSplit = splitItemEditingIdx === idx;
-                    const splitFracValue =
-                      splitItemPeople > 0 && splitItemFractions > 0
-                        ? splitItemFractions / splitItemPeople
+                    const itemTotal = item.unit_price * item.quantity;
+                    const splitSuggested =
+                      splitItemPeople > 0
+                        ? Math.round((itemTotal / splitItemPeople) * 100) / 100
                         : 0;
                     return (
                       <div key={idx}>
@@ -631,7 +632,10 @@ export function PDVV2PaymentDialog({
                                 } else {
                                   setSplitItemEditingIdx(idx);
                                   setSplitItemPeople(2);
-                                  setSplitItemFractions(1);
+                                  // Default: 1 fração de 2 = metade do total
+                                  setSplitItemAmount(
+                                    Math.round((item.unit_price * item.quantity / 2) * 100) / 100,
+                                  );
                                 }
                               }}
                             >
