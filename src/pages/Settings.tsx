@@ -1170,6 +1170,63 @@ pause
 
         {/* Tab Impressão */}
         <TabsContent value="impressao" className="space-y-6">
+          {/* TEF Auto Print v1 — visível somente para a Lancheria da I9 */}
+          {company?.id === '8c9e7a0e-dbb6-49b9-8344-c23155a71164' && (
+            <Card className="border-primary/40">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Printer className="w-5 h-5" />
+                  Impressão automática do comprovante TEF
+                  <Badge variant="secondary" className="ml-2">Beta — Lancheria I9</Badge>
+                </CardTitle>
+                <CardDescription>
+                  Após cada venda TEF aprovada (PinPad), imprime o comprovante automaticamente.
+                  A reimpressão manual (2ª via) continua disponível nos cards de pedido.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={(storeSettings as any).tefAutoPrintVias || 'ambas'}
+                  onValueChange={async (value: 'none' | 'estabelecimento' | 'ambas') => {
+                    await updateSetting('tef_auto_print_vias', value);
+                    toast({
+                      title: 'Configuração salva',
+                      description:
+                        value === 'none'
+                          ? 'Impressão automática desativada'
+                          : value === 'estabelecimento'
+                            ? 'Imprime apenas a via do estabelecimento'
+                            : 'Imprime via estabelecimento + via cliente',
+                    });
+                  }}
+                  className="space-y-3"
+                >
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="ambas" id="tef-vias-ambas" />
+                    <div className="flex-1">
+                      <Label htmlFor="tef-vias-ambas" className="font-medium cursor-pointer">Ambas as vias (Estabelecimento + Cliente)</Label>
+                      <p className="text-sm text-muted-foreground">Padrão. Imprime 2 vias logo após a aprovação.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="estabelecimento" id="tef-vias-estab" />
+                    <div className="flex-1">
+                      <Label htmlFor="tef-vias-estab" className="font-medium cursor-pointer">Somente via do Estabelecimento</Label>
+                      <p className="text-sm text-muted-foreground">Imprime apenas 1 via para arquivo no caixa.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="none" id="tef-vias-none" />
+                    <div className="flex-1">
+                      <Label htmlFor="tef-vias-none" className="font-medium cursor-pointer">Não imprimir automaticamente</Label>
+                      <p className="text-sm text-muted-foreground">Mantém apenas a reimpressão manual via card do pedido.</p>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Paper Size Setting */}
           <Card>
             <CardHeader>
