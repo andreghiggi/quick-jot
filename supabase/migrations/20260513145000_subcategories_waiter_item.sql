@@ -1,0 +1,2 @@
+ALTER TABLE public.subcategories
+  ADD COLUMN IF NOT EXISTS waiter_item boolean NOT NULL DEFAULT true;
