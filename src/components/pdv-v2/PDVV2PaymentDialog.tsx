@@ -604,10 +604,32 @@ export function PDVV2PaymentDialog({
                                 setSelectedItemQtys(next);
                               }}
                             />
-                            <span className="truncate flex-1">1x {item.name}</span>
-                            <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
-                              {formatPrice(item.unit_price)}
+                            <span className="truncate flex-1">
+                              {selectedQty > 0 && selectedQty < 1
+                                ? `${selectedQty.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} × ${item.name}`
+                                : `1x ${item.name}`}
                             </span>
+                            <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
+                              {formatPrice((selectedQty > 0 && selectedQty < 1 ? selectedQty : 1) * item.unit_price)}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 shrink-0"
+                              title="Rachar este item entre pessoas"
+                              onClick={() => {
+                                if (splitItemEditingIdx === idx) {
+                                  setSplitItemEditingIdx(null);
+                                } else {
+                                  setSplitItemEditingIdx(idx);
+                                  setSplitItemPeople(2);
+                                  setSplitItemFractions(1);
+                                }
+                              }}
+                            >
+                              <Split className="h-3.5 w-3.5" />
+                            </Button>
                           </>
                         ) : (
                           <>
