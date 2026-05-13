@@ -145,6 +145,7 @@ function buildQrcodeUrlFromChave(chave: string, ambiente?: string | null): strin
 
 export async function generateDanfeHtml(record: NFCeRecord & { request_payload?: any }): Promise<string> {
   const items = record.request_payload?.itens || [];
+  const observacoes: string = (record.request_payload?.observacoes || record.request_payload?.infCpl || '').toString().trim();
   // Use qrcode_url from DB, or build from chave_acesso as fallback
   const qrcodeUrl = record.qrcode_url || buildQrcodeUrlFromChave(record.chave_acesso || '', record.ambiente) || '';
   const chaveAcesso = record.chave_acesso || '';
@@ -215,6 +216,8 @@ export async function generateDanfeHtml(record: NFCeRecord & { request_payload?:
     <span>R$ ${Number(record.valor_total).toFixed(2)}</span>
   </div>
   <div class="separator"></div>
+
+  ${observacoes ? `<div class="small" style="padding:2px 4px;"><span class="bold">Observações:</span> ${observacoes.replace(/[<>]/g, '')}</div><div class="separator"></div>` : ''}
 
   <div class="qrcode">
     ${qrCodeImg}
