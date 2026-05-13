@@ -1877,6 +1877,7 @@ export type Database = {
           menu_item: boolean
           name: string
           pdv_item: boolean
+          waiter_item: boolean
         }
         Insert: {
           active?: boolean
@@ -1889,6 +1890,7 @@ export type Database = {
           menu_item?: boolean
           name: string
           pdv_item?: boolean
+          waiter_item?: boolean
         }
         Update: {
           active?: boolean
@@ -1901,6 +1903,7 @@ export type Database = {
           menu_item?: boolean
           name?: string
           pdv_item?: boolean
+          waiter_item?: boolean
         }
         Relationships: [
           {
