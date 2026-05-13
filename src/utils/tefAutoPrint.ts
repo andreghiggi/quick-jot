@@ -1,21 +1,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// TEF Auto Print v1 — impressão AUTOMÁTICA do comprovante TEF logo após
-// aprovação da venda (1ª via).
+// TEF Auto Print v1.1 — após aprovação do TEF, abre um MODAL rápido perguntando
+// quais vias imprimir. Não imprime mais sozinho.
 //
 // IMPORTANTE: este arquivo é INDEPENDENTE de:
 //   - src/utils/tefOrderActions.ts (reimpressão MANUAL — congelado)
 //   - src/services/pinpadService.ts (TEF v1.0/1.1/1.2 beta — congelado)
 //   - supabase/functions/tef-webservice/* (homologação Multiplus — congelado)
 //
-// Não altera o fluxo TEF; é chamado APÓS o `confirmPinpadTransaction` aprovado,
-// recebendo apenas as `receiptLines` já retornadas pelo gerenciador.
-//
-// Allow-list: por enquanto SOMENTE Lancheria da I9. Para liberar a outra
-// loja, basta acrescentar o `company_id` em `TEF_AUTO_PRINT_ALLOWED`.
-// Comportamento configurável via `store_settings.tef_auto_print_vias`:
-//   - 'none'             → não imprime nada automaticamente
-//   - 'estabelecimento'  → imprime 1 via (Estabelecimento)
-//   - 'ambas' (padrão)   → imprime 2 vias (Estabelecimento + Cliente)
+// Allow-list: SOMENTE Lancheria da I9.
+// Setting `store_settings.tef_auto_print_vias` define a opção pré-selecionada
+// no modal: 'none' | 'estabelecimento' | 'ambas' (default 'ambas').
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { supabase } from '@/integrations/supabase/client';
@@ -103,29 +97,17 @@ export interface ImprimirComprovanteTefAutomaticoArgs {
   orderCode?: string;
 }
 
-/**
- * Dispara a impressão automática do comprovante TEF (1ª via).
- * Silencioso: não exibe toasts em caso de bloqueador de pop-up — não pode
- * interromper o fluxo de venda. Para reimpressão manual, segue valendo
- * `reimprimirComprovanteTef` (que marca como 2ª VIA).
- */
-export async function imprimirComprovanteTefAutomatico(
-  args: ImprimirComprovanteTefAutomaticoArgs,
+/** Executa a impressão real, sem perguntar. */
+export async function executarImpressaoTefVias(
+  receiptLines: string[],
+  mode: Exclude<TefAutoPrintMode, 'none'>,
+  orderCode?: string,
 ): Promise<void> {
-  const { companyId, receiptLines, orderCode } = args;
-  if (!isTefAutoPrintAllowed(companyId)) return;
-  if (!receiptLines || receiptLines.length === 0) return;
-
-  const mode = await fetchAutoPrintMode(companyId);
-  if (mode === 'none') return;
-
   const vias =
     mode === 'ambas'
       ? ['VIA ESTABELECIMENTO', 'VIA CLIENTE']
       : ['VIA ESTABELECIMENTO'];
-
   const receiptText = normalizeReceipt(receiptLines);
-
   for (let i = 0; i < vias.length; i++) {
     try {
       const w = window.open('', '_blank');
@@ -135,12 +117,46 @@ export async function imprimirComprovanteTefAutomatico(
       }
       w.document.write(buildHtml(receiptText, vias[i], orderCode));
       w.document.close();
-      // pequena pausa entre janelas para o navegador não unificar a fila
       if (i < vias.length - 1) {
         await new Promise((r) => setTimeout(r, 400));
       }
     } catch (e) {
       console.error('[tefAutoPrint] falha ao imprimir via', vias[i], e);
     }
+  }
+}
+
+// ── Bus simples para acionar o modal global ─────────────────────────────────
+export interface TefPrintPromptPayload {
+  receiptLines: string[];
+  orderCode?: string;
+  defaultMode: TefAutoPrintMode;
+}
+
+export const TEF_PRINT_PROMPT_EVENT = 'tef-auto-print-prompt';
+
+/**
+ * Após TEF aprovado, dispara o modal perguntando quais vias imprimir.
+ * Mantém o nome antigo para preservar os call-sites em pdvV2Tef e
+ * PedidoExpressDialog. Se a empresa não estiver na allow-list ou não houver
+ * receiptLines, é no-op.
+ */
+export async function imprimirComprovanteTefAutomatico(
+  args: ImprimirComprovanteTefAutomaticoArgs,
+): Promise<void> {
+  const { companyId, receiptLines, orderCode } = args;
+  if (!isTefAutoPrintAllowed(companyId)) return;
+  if (!receiptLines || receiptLines.length === 0) return;
+
+  const defaultMode = await fetchAutoPrintMode(companyId);
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent<TefPrintPromptPayload>(TEF_PRINT_PROMPT_EVENT, {
+        detail: { receiptLines, orderCode, defaultMode },
+      }),
+    );
+  } catch (e) {
+    console.error('[tefAutoPrint] falha ao abrir prompt:', e);
   }
 }
