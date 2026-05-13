@@ -474,7 +474,7 @@ export function PDVV2PaymentDialog({
           {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && (
             <div className="space-y-1">
               <p className="text-xs font-medium text-muted-foreground">Itens</p>
-              <div className="max-h-[6.5rem] overflow-y-auto space-y-0.5">
+              <div className="max-h-[6.5rem] overflow-y-auto overflow-x-hidden space-y-0.5">
                 {checkoutItems.map((item, idx) => {
                   // Extrai opcionais entre [ ] do nome (formato salvo no banco) para
                   // exibir abaixo do produto, igual à impressão de produção.
