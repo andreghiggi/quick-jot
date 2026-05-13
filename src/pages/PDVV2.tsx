@@ -332,8 +332,9 @@ export default function PDVV2() {
     shouldPrint: boolean;
     tefData?: NFCeTefData;
     customerDocument?: string;
+    extraObservacoes?: string;
   }): Promise<boolean> {
-    const { saleId, items, discount, customerName, shouldPrint, tefData, customerDocument } = args;
+    const { saleId, items, discount, customerName, shouldPrint, tefData, customerDocument, extraObservacoes } = args;
     if (!companyId || !currentRegister) return false;
     setIsEmittingNfce(true);
     try {
@@ -364,12 +365,16 @@ export default function PDVV2() {
         : cleanDoc.length === 14
           ? { cnpj: cleanDoc, nome: customerName || undefined }
           : undefined;
+      const obsParts: string[] = [];
+      if (customerName) obsParts.push(`Cliente: ${customerName}`);
+      if (extraObservacoes) obsParts.push(extraObservacoes);
+      const observacoes = obsParts.length ? obsParts.join(' | ') : undefined;
       await emitirNFCe(companyId, saleId, {
         external_id: externalId,
         itens: nfceItems,
         valor_desconto: discount || 0,
         valor_frete: 0,
-        observacoes: customerName ? `Cliente: ${customerName}` : undefined,
+        observacoes,
         destinatario,
         tef: tefData,
       } as any);
