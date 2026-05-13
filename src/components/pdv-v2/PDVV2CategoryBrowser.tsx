@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { ArrowLeft, Search, Plus, Package } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,7 @@ interface Props {
  * Reutilizado no Pedido Express (etapa 1) e no popup "Adicionar Item" do PDV V2,
  * inicialmente apenas para a Lancheria I9.
  */
-export function PDVV2CategoryBrowser({
+function PDVV2CategoryBrowserComponent({
   companyId,
   pdvOnly = true,
   waiterOnly = false,
@@ -165,7 +165,7 @@ export function PDVV2CategoryBrowser({
   // ===== Subcategoria selection =====
   if (selectedCategory && categorySubcategories.length > 0 && !selectedSubcategoryId && !searchQuery.trim()) {
     return (
-      <div className={cn('overflow-y-auto', maxHeightClassName)}>
+      <div className={cn('overflow-y-auto overflow-x-hidden', maxHeightClassName)} style={{ scrollbarGutter: 'stable' }}>
         {header}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 px-1">
           {categorySubcategories.map((sub, index) => (
@@ -201,7 +201,7 @@ export function PDVV2CategoryBrowser({
   // ===== Produtos (categoria selecionada OU busca) =====
   if (selectedCategory || isSearching) {
     return (
-      <div className={cn('overflow-y-auto', maxHeightClassName)}>
+      <div className={cn('overflow-y-auto overflow-x-hidden', maxHeightClassName)} style={{ scrollbarGutter: 'stable' }}>
         {header}
         <div className="space-y-2 px-1">
           {filteredProducts.length === 0 ? (
@@ -256,7 +256,7 @@ export function PDVV2CategoryBrowser({
 
   // ===== Grid principal de categorias =====
   return (
-    <div className={cn('overflow-y-auto', maxHeightClassName)}>
+    <div className={cn('overflow-y-auto overflow-x-hidden', maxHeightClassName)} style={{ scrollbarGutter: 'stable' }}>
       {header}
       {orderedCategories.length === 0 ? (
         <Card>
@@ -303,3 +303,5 @@ export function PDVV2CategoryBrowser({
     </div>
   );
 }
+
+export const PDVV2CategoryBrowser = memo(PDVV2CategoryBrowserComponent);
