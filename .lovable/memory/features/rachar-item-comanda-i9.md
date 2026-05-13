@@ -1,10 +1,10 @@
 ---
-name: Rachar Item da Comanda (I9)
-description: Ícone de divisão por linha em "Itens selecionados" do PDV V2 fraciona um item da comanda entre N pessoas, preservando NCM real na NFC-e. Apenas Lancheria da I9.
+name: Rachar Item da Comanda (PDV V2)
+description: Ícone de divisão por linha em "Itens selecionados" do PDV V2 fraciona um item da comanda entre N pessoas, preservando NCM real na NFC-e. Disponível para todas as lojas com PDV V2.
 type: feature
 ---
 
-Disponível apenas para `company_id = 8c9e7a0e-dbb6-49b9-8344-c23155a71164` (Lancheria da I9).
+Disponível para todas as lojas que usam o PDV V2 (a flag `isLancheriaI9` em `PDVV2PaymentDialog.tsx` está fixa em `true`; o gating efetivo é estar dentro do módulo PDV V2). Validado em produção na Lancheria da I9 — SEFAZ aceita `qCom` fracionário (até 4 casas) e a NFC-e foi autorizada normalmente, sem rejeição.
 
 ## UX
 No `PDVV2PaymentDialog.tsx`, modo `i9Mode === 'items'`, cada item não-pago com `quantity === 1` ganha um ícone `Split` (lucide-react). Clicar abre editor inline pedindo "em quantas pessoas" (2-10) e "quantas frações cobrar agora" (1..N). Aplicado, `selectedItemQtys.set(idx, fractions/people)` — `paidQty` vira fracionário (ex.: `0.5`).
