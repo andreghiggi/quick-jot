@@ -60,7 +60,7 @@ function extractReceipt(parsed: Record<string, string>): string[] {
   return lines;
 }
 
-serve(async (req) => {
+async function handleTef(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -680,4 +680,111 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
+}
+
+// ============================================================
+// LOG WRAPPER (additive, non-blocking) — TEF v1.x audit trail
+// Persists every tef-webservice call to public.tef_webservice_logs.
+// Fire-and-forget: NEVER affects the original response/flow.
+// ============================================================
+async function logTefCall(
+  reqBody: any,
+  resBody: any,
+  httpStatus: number,
+  durationMs: number,
+) {
+  try {
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!SUPABASE_URL || !SERVICE_KEY) return;
+
+    const action = reqBody?.action ?? null;
+    const companyId = reqBody?.companyId ?? reqBody?.company_id ?? null;
+    const cnpj = reqBody?.cnpj ?? null;
+    const pdv = reqBody?.pdv ?? null;
+    const identifier =
+      reqBody?.identificacao ?? reqBody?.identifier ?? null;
+    const amount = reqBody?.amount ?? null;
+
+    // Sanitize request to never leak the TEF token
+    const safeReq = { ...(reqBody || {}) };
+    if (safeReq.token) safeReq.token = '[REDACTED]';
+
+    const parsed = resBody?.parsed || null;
+    const success = resBody?.success ?? null;
+    const approved = resBody?.approved ?? null;
+    const nsu = resBody?.nsu ?? parsed?.['012-000'] ?? null;
+    const autorizacao =
+      resBody?.autorizacao ?? parsed?.['013-000'] ?? null;
+    const bandeira =
+      resBody?.bandeira ?? parsed?.['010-000'] ?? null;
+    const errorMessage = resBody?.errorMessage ?? null;
+
+    const row = {
+      company_id: companyId,
+      action,
+      identifier,
+      cnpj,
+      pdv,
+      request_payload: safeReq,
+      response_payload: resBody,
+      parsed_response: parsed,
+      http_status: httpStatus,
+      success,
+      approved,
+      nsu,
+      autorizacao,
+      bandeira,
+      valor: typeof amount === 'number' ? amount : null,
+      error_message: errorMessage,
+      duration_ms: durationMs,
+    };
+
+    await fetch(`${SUPABASE_URL}/rest/v1/tef_webservice_logs`, {
+      method: 'POST',
+      headers: {
+        'apikey': SERVICE_KEY,
+        'Authorization': `Bearer ${SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify(row),
+    });
+  } catch (e) {
+    console.error('[TEF-WS] log insert failed (non-blocking):', e);
+  }
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const startedAt = Date.now();
+  let reqBodyForLog: any = null;
+  try {
+    reqBodyForLog = await req.clone().json();
+  } catch {
+    // ignore parse errors here — handleTef will produce the proper error response
+  }
+
+  const response = await handleTef(req);
+
+  // Read response body for logging without consuming the original
+  let resBodyForLog: any = null;
+  try {
+    resBodyForLog = await response.clone().json();
+  } catch {
+    // non-JSON body — skip
+  }
+
+  // Fire-and-forget; never await, never throw
+  logTefCall(
+    reqBodyForLog,
+    resBodyForLog,
+    response.status,
+    Date.now() - startedAt,
+  ).catch(() => {});
+
+  return response;
 });
