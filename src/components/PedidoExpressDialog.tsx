@@ -31,6 +31,7 @@ import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
+import { imprimirComprovanteTefAutomatico } from '@/utils/tefAutoPrint';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import {
   sendPinpadPayment,
@@ -755,6 +756,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 nsu: statusResult.nsu,
                 finalizacao: statusResult.finalizacao,
               });
+
+              // Auto-print v1 (allow-list interna; respeita store_settings.tef_auto_print_vias)
+              imprimirComprovanteTefAutomatico({
+                companyId: company!.id,
+                receiptLines: statusResult.receiptLines,
+              }).catch((e) => console.error('[PedidoExpress] auto-print TEF falhou:', e));
 
               const installLabel = tefPaymentType === 'debit'
                 ? ' | Débito'
