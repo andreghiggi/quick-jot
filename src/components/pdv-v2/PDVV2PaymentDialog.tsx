@@ -115,6 +115,10 @@ export function PDVV2PaymentDialog({
   // Valor a cobrar agora (em R$). Default = totalDoItem / pessoas, mas é editável
   // para casos como "um paga R$ 10 e os outros 2 dividem o restante".
   const [splitItemAmount, setSplitItemAmount] = useState(0);
+  // Memória da fração aplicada por idx — preserva o valor rachado mesmo se o
+  // operador desmarcar/remarcar o checkbox da linha (sem isto, o re-check
+  // resetava silenciosamente a fração para 1, cobrando o item inteiro).
+  const [splitMemory, setSplitMemory] = useState<Map<number, number>>(new Map());
 
   // When activeSplit is provided (person 2+), force split mode on open
   useEffect(() => {
@@ -210,6 +214,7 @@ export function PDVV2PaymentDialog({
       setSplitItemEditingIdx(null);
       setSplitItemPeople(2);
       setSplitItemAmount(0);
+      setSplitMemory(new Map());
     }
   }, [open]);
 
