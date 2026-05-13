@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '13/05/2026',
+    version: '1.32.1',
+    type: 'improvement',
+    description: 'TEF — A impressão automática do comprovante agora pergunta antes. Após cada venda TEF aprovada, abre um modal rápido com 3 opções: "Ambas as vias (Estabelecimento + Cliente)", "Só via do Estabelecimento" e "Não imprimir agora". A opção pré-marcada vem da configuração definida em Configurações → Impressão. A reimpressão manual pelo card do pedido continua disponível normalmente. Ajuste exclusivo da Lancheria da I9.',
+  },
+  {
+    date: '13/05/2026',
     version: '1.32.0',
     type: 'feature',
     description: 'TEF — Impressão automática do comprovante (1ª via). Logo após cada venda TEF aprovada (PinPad) no PDV V2 ou Pedido Express, o comprovante é impresso automaticamente. Em Configurações → Impressão, há um seletor com 3 opções: "Ambas as vias (Estabelecimento + Cliente)" — padrão, imprime 2 vias; "Somente via do Estabelecimento" — imprime 1 via para arquivo no caixa; "Não imprimir automaticamente" — mantém apenas a reimpressão manual. A reimpressão manual (2ª via) continua funcionando exatamente como antes nos cards de pedido. Em rollout inicial APENAS na Lancheria da I9 — para liberar em outras lojas, validamos primeiro e expandimos a allow-list.',
