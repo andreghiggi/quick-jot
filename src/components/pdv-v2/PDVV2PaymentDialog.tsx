@@ -115,6 +115,10 @@ export function PDVV2PaymentDialog({
   // Valor a cobrar agora (em R$). Default = totalDoItem / pessoas, mas é editável
   // para casos como "um paga R$ 10 e os outros 2 dividem o restante".
   const [splitItemAmount, setSplitItemAmount] = useState(0);
+  // Memória da fração aplicada por idx — preserva o valor rachado mesmo se o
+  // operador desmarcar/remarcar o checkbox da linha (sem isto, o re-check
+  // resetava silenciosamente a fração para 1, cobrando o item inteiro).
+  const [splitMemory, setSplitMemory] = useState<Map<number, number>>(new Map());
 
   // When activeSplit is provided (person 2+), force split mode on open
   useEffect(() => {
@@ -210,6 +214,7 @@ export function PDVV2PaymentDialog({
       setSplitItemEditingIdx(null);
       setSplitItemPeople(2);
       setSplitItemAmount(0);
+      setSplitMemory(new Map());
     }
   }, [open]);
 
@@ -550,6 +555,7 @@ export function PDVV2PaymentDialog({
                   onClick={() => {
                     setI9Mode(i9Mode === 'items' ? '' : 'items');
                     setSelectedItemQtys(new Map());
+                    setSplitMemory(new Map());
                   }}
                   className="gap-1"
                 >
@@ -607,15 +613,42 @@ export function PDVV2PaymentDialog({
                               checked={selectedQty > 0}
                               onCheckedChange={(c) => {
                                 const next = new Map(selectedItemQtys);
-                                if (c) next.set(idx, 1);
-                                else next.delete(idx);
+                                if (c) {
+                                  // Se há fração rachada memorizada, restaura ela
+                                  // (em vez de cobrar o item inteiro por engano).
+                                  const remembered = splitMemory.get(idx);
+                                  next.set(idx, remembered && remembered > 0 ? remembered : 1);
+                                } else {
+                                  next.delete(idx);
+                                }
                                 setSelectedItemQtys(next);
                               }}
                             />
                             <span className="truncate flex-1">
-                              {selectedQty > 0 && selectedQty < 1
-                                ? `${selectedQty.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} × ${item.name}`
-                                : `1x ${item.name}`}
+                              {selectedQty > 0 && selectedQty < 1 ? (
+                                <>
+                                  <span className="font-medium">{item.name}</span>
+                                  <span className="ml-1 inline-flex items-center gap-1 rounded bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 text-[10px] font-medium">
+                                    Rachado: {formatPrice(selectedQty * item.unit_price)}
+                                    <button
+                                      type="button"
+                                      className="hover:text-destructive"
+                                      title="Remover divisão"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const next = new Map(selectedItemQtys);
+                                        next.delete(idx);
+                                        setSelectedItemQtys(next);
+                                        const mem = new Map(splitMemory);
+                                        mem.delete(idx);
+                                        setSplitMemory(mem);
+                                      }}
+                                    >×</button>
+                                  </span>
+                                </>
+                              ) : (
+                                `1x ${item.name}`
+                              )}
                             </span>
                             <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
                               {formatPrice((selectedQty > 0 && selectedQty < 1 ? selectedQty : 1) * item.unit_price)}
@@ -756,6 +789,10 @@ export function PDVV2PaymentDialog({
                                   const next = new Map(selectedItemQtys);
                                   next.set(idx, paidQty);
                                   setSelectedItemQtys(next);
+                                  // Memoriza para sobreviver a toggles do checkbox
+                                  const mem = new Map(splitMemory);
+                                  mem.set(idx, paidQty);
+                                  setSplitMemory(mem);
                                   setSplitItemEditingIdx(null);
                                 }}
                               >
