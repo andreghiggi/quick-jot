@@ -823,6 +823,7 @@ export default function Waiter() {
                 <PDVV2CategoryBrowser
                   companyId={company?.id}
                   pdvOnly={true}
+                  waiterOnly={true}
                   onProductSelect={handleAddToCart}
                   maxHeightClassName="max-h-full"
                 />
