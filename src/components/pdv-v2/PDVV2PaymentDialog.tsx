@@ -414,7 +414,7 @@ export function PDVV2PaymentDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!submitting && !chargingTef) onOpenChange(o); }}>
       <DialogContent
-        className="max-h-[90vh] overflow-y-auto"
+        className="max-h-[90vh] overflow-y-auto overflow-x-hidden"
         onInteractOutside={(e) => { if (submitting || chargingTef) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (submitting || chargingTef) e.preventDefault(); }}
       >
@@ -547,7 +547,7 @@ export function PDVV2PaymentDialog({
           {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && !activeSplit && (
             <div className="space-y-3">
               <p className="text-xs font-medium text-muted-foreground">Modo de cobrança</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Button
                   type="button"
                   size="sm"
@@ -557,10 +557,10 @@ export function PDVV2PaymentDialog({
                     setSelectedItemQtys(new Map());
                     setSplitMemory(new Map());
                   }}
-                  className="gap-1"
+                  className="gap-1 min-w-0"
                 >
                   <ListChecks className="w-4 h-4" />
-                  Itens selecionados
+                  <span className="truncate">Itens selecionados</span>
                 </Button>
                 <Button
                   type="button"
@@ -570,10 +570,10 @@ export function PDVV2PaymentDialog({
                     setI9Mode(i9Mode === 'split' ? '' : 'split');
                     setSplitPeople(2);
                   }}
-                  className="gap-1"
+                  className="gap-1 min-w-0"
                 >
                   <Users className="w-4 h-4" />
-                  Dividir por pessoas
+                  <span className="truncate">Dividir por pessoas</span>
                 </Button>
               </div>
 
@@ -1103,7 +1103,8 @@ export function PDVV2PaymentDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={submitting || chargingTef || !paymentMethodId || activePaymentMethods.length === 0}
+            disabled={submitting || chargingTef || !paymentMethodId || activePaymentMethods.length === 0 || splitItemEditingIdx !== null}
+            title={splitItemEditingIdx !== null ? 'Aplique ou cancele a divisão do item antes de cobrar' : undefined}
           >
             {chargingTef ? 'Cobrando…' : 'Confirmar Pagamento'}
           </Button>
