@@ -112,7 +112,9 @@ export function PDVV2PaymentDialog({
   // splitItemPeople = em quantas pessoas, splitItemFractions = quantas frações cobrar agora.
   const [splitItemEditingIdx, setSplitItemEditingIdx] = useState<number | null>(null);
   const [splitItemPeople, setSplitItemPeople] = useState(2);
-  const [splitItemFractions, setSplitItemFractions] = useState(1);
+  // Valor a cobrar agora (em R$). Default = totalDoItem / pessoas, mas é editável
+  // para casos como "um paga R$ 10 e os outros 2 dividem o restante".
+  const [splitItemAmount, setSplitItemAmount] = useState(0);
 
   // When activeSplit is provided (person 2+), force split mode on open
   useEffect(() => {
@@ -207,7 +209,7 @@ export function PDVV2PaymentDialog({
       setSplitPeople(2);
       setSplitItemEditingIdx(null);
       setSplitItemPeople(2);
-      setSplitItemFractions(1);
+      setSplitItemAmount(0);
     }
   }, [open]);
 
@@ -576,9 +578,10 @@ export function PDVV2PaymentDialog({
                     const isPaid = !!item.paid;
                     const selectedQty = selectedItemQtys.get(idx) || 0;
                     const isEditingSplit = splitItemEditingIdx === idx;
-                    const splitFracValue =
-                      splitItemPeople > 0 && splitItemFractions > 0
-                        ? splitItemFractions / splitItemPeople
+                    const itemTotal = item.unit_price * item.quantity;
+                    const splitSuggested =
+                      splitItemPeople > 0
+                        ? Math.round((itemTotal / splitItemPeople) * 100) / 100
                         : 0;
                     return (
                       <div key={idx}>
@@ -629,7 +632,10 @@ export function PDVV2PaymentDialog({
                                 } else {
                                   setSplitItemEditingIdx(idx);
                                   setSplitItemPeople(2);
-                                  setSplitItemFractions(1);
+                                  // Default: 1 fração de 2 = metade do total
+                                  setSplitItemAmount(
+                                    Math.round((item.unit_price * item.quantity / 2) * 100) / 100,
+                                  );
                                 }
                               }}
                             >
@@ -692,32 +698,40 @@ export function PDVV2PaymentDialog({
                                   onChange={(e) => {
                                     const n = Math.max(2, Math.min(10, parseInt(e.target.value) || 2));
                                     setSplitItemPeople(n);
-                                    if (splitItemFractions > n) setSplitItemFractions(n);
+                                    // Ao mudar pessoas, sugere novamente a divisão igual
+                                    setSplitItemAmount(
+                                      Math.round((itemTotal / n) * 100) / 100,
+                                    );
                                   }}
                                   className="h-8"
                                 />
                               </div>
                               <div>
-                                <Label className="text-[10px] text-muted-foreground">Cobrar quantas frações?</Label>
+                                <Label className="text-[10px] text-muted-foreground">Valor a cobrar agora</Label>
                                 <Input
-                                  type="number"
-                                  inputMode="numeric"
-                                  min={1}
-                                  max={splitItemPeople}
-                                  value={splitItemFractions}
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={splitItemAmount > 0 ? maskCurrencyInput(String(Math.round(splitItemAmount * 100))) : ''}
+                                  placeholder={formatPrice(splitSuggested)}
                                   onChange={(e) => {
-                                    const n = Math.max(1, Math.min(splitItemPeople, parseInt(e.target.value) || 1));
-                                    setSplitItemFractions(n);
+                                    const v = parseCurrencyInput(e.target.value);
+                                    // Limita ao total do item (não pode cobrar mais do que vale)
+                                    setSplitItemAmount(Math.min(v, itemTotal));
                                   }}
                                   className="h-8"
                                 />
                               </div>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              {formatPrice(item.unit_price / splitItemPeople)} cada × {splitItemFractions} ={' '}
-                              <span className="font-semibold text-foreground tabular-nums">
-                                {formatPrice((item.unit_price / splitItemPeople) * splitItemFractions)}
-                              </span>
+                              Sugestão igual: {formatPrice(splitSuggested)} por pessoa.
+                              {splitItemAmount > 0 && splitItemAmount < itemTotal && (
+                                <>
+                                  {' '}Restante: <span className="font-semibold text-foreground tabular-nums">{formatPrice(itemTotal - splitItemAmount)}</span>
+                                  {splitItemPeople > 1 && (
+                                    <> ({formatPrice((itemTotal - splitItemAmount) / (splitItemPeople - 1))} para os outros {splitItemPeople - 1})</>
+                                  )}
+                                </>
+                              )}
                             </p>
                             <div className="flex justify-end gap-2">
                               <Button
@@ -731,10 +745,14 @@ export function PDVV2PaymentDialog({
                               <Button
                                 type="button"
                                 size="sm"
+                                disabled={splitItemAmount <= 0 || splitItemAmount > itemTotal}
                                 onClick={() => {
-                                  // paidQty = fractions/people (parcela do item, em "unidades")
-                                  // Ex.: 1/2 = 0.5 unidade do item.
-                                  const paidQty = Math.round(splitFracValue * 1000) / 1000;
+                                  // paidQty = valorCobrado / unit_price (em "unidades" do item).
+                                  // Ex.: item R$ 22 unit_price 22, valor R$ 10 → 0.4545 unidade.
+                                  const paidQty = Math.min(
+                                    item.quantity,
+                                    Math.round((splitItemAmount / item.unit_price) * 1000) / 1000,
+                                  );
                                   const next = new Map(selectedItemQtys);
                                   next.set(idx, paidQty);
                                   setSelectedItemQtys(next);
