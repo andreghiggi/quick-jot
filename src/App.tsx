@@ -8,6 +8,7 @@ import { OrderProvider } from "@/contexts/OrderContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import { ImplementedSuggestionsModal } from "@/components/ImplementedSuggestionsModal";
+import { TefPrintPromptDialog } from "@/components/TefPrintPromptDialog";
 import { useCompanyModules } from "@/hooks/useCompanyModules";
 import { detectDomainContext, COMANDATECH_ROOT } from "@/utils/domainRouting";
 import { useEffect, type ReactNode } from "react";
@@ -377,6 +378,7 @@ function AppWithProviders() {
     <OrderProvider>
       <ImpersonationBanner />
       <ImplementedSuggestionsModal />
+      <TefPrintPromptDialog />
       {/* Add padding when impersonation banner is shown */}
       <div className={isImpersonating ? 'pt-12' : ''}>
         <AppRoutes />
