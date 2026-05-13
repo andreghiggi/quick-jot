@@ -2195,6 +2195,72 @@ export type Database = {
           },
         ]
       }
+      tef_webservice_logs: {
+        Row: {
+          action: string
+          approved: boolean | null
+          autorizacao: string | null
+          bandeira: string | null
+          cnpj: string | null
+          company_id: string | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          http_status: number | null
+          id: string
+          identifier: string | null
+          nsu: string | null
+          parsed_response: Json | null
+          pdv: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          success: boolean | null
+          valor: number | null
+        }
+        Insert: {
+          action: string
+          approved?: boolean | null
+          autorizacao?: string | null
+          bandeira?: string | null
+          cnpj?: string | null
+          company_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          http_status?: number | null
+          id?: string
+          identifier?: string | null
+          nsu?: string | null
+          parsed_response?: Json | null
+          pdv?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          success?: boolean | null
+          valor?: number | null
+        }
+        Update: {
+          action?: string
+          approved?: boolean | null
+          autorizacao?: string | null
+          bandeira?: string | null
+          cnpj?: string | null
+          company_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          http_status?: number | null
+          id?: string
+          identifier?: string | null
+          nsu?: string | null
+          parsed_response?: Json | null
+          pdv?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          success?: boolean | null
+          valor?: number | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
