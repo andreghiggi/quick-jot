@@ -98,7 +98,7 @@ function PDVV2CategoryBrowserComponent({
   }, [categories]);
 
   const categorySubcategories = selectedCategory && categoryIdMap[selectedCategory]
-    ? subcategories.filter((s) => s.categoryId === categoryIdMap[selectedCategory] && s.active && (!pdvOnly || s.pdvItem !== false))
+    ? subcategories.filter((s) => s.categoryId === categoryIdMap[selectedCategory] && s.active && (!pdvOnly || s.pdvItem !== false) && (!waiterOnly || (s as any).waiterItem !== false))
     : [];
 
   const filteredProducts = activeProducts.filter((product) => {

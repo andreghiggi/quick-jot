@@ -12,6 +12,7 @@ export interface Subcategory {
   displayOrder: number;
   menuItem?: boolean;
   pdvItem?: boolean;
+  waiterItem?: boolean;
 }
 
 interface UseSubcategoriesOptions {
@@ -49,6 +50,7 @@ export function useSubcategories(options: UseSubcategoriesOptions = {}) {
         displayOrder: s.display_order ?? 0,
         menuItem: s.menu_item ?? true,
         pdvItem: s.pdv_item ?? true,
+        waiterItem: s.waiter_item ?? true,
       }));
 
       setSubcategories(mapped);
@@ -95,7 +97,7 @@ export function useSubcategories(options: UseSubcategoriesOptions = {}) {
     }
   }
 
-  async function updateSubcategory(id: string, data: Partial<Pick<Subcategory, 'name' | 'imageUrl' | 'active' | 'displayOrder' | 'menuItem' | 'pdvItem'>>): Promise<boolean> {
+  async function updateSubcategory(id: string, data: Partial<Pick<Subcategory, 'name' | 'imageUrl' | 'active' | 'displayOrder' | 'menuItem' | 'pdvItem' | 'waiterItem'>>): Promise<boolean> {
     try {
       const updateData: Record<string, unknown> = {};
       if (data.name !== undefined) updateData.name = data.name;
@@ -104,6 +106,7 @@ export function useSubcategories(options: UseSubcategoriesOptions = {}) {
       if (data.displayOrder !== undefined) updateData.display_order = data.displayOrder;
       if (data.menuItem !== undefined) updateData.menu_item = data.menuItem;
       if (data.pdvItem !== undefined) updateData.pdv_item = data.pdvItem;
+      if (data.waiterItem !== undefined) updateData.waiter_item = data.waiterItem;
 
       const { error } = await supabase
         .from('subcategories')
@@ -116,6 +119,7 @@ export function useSubcategories(options: UseSubcategoriesOptions = {}) {
       const productUpdate: Record<string, unknown> = {};
       if (data.menuItem !== undefined) productUpdate.menu_item = data.menuItem;
       if (data.pdvItem !== undefined) productUpdate.pdv_item = data.pdvItem;
+      if (data.waiterItem !== undefined) productUpdate.waiter_item = data.waiterItem;
       if (Object.keys(productUpdate).length > 0) {
         const { error: prodError } = await supabase
           .from('products')
