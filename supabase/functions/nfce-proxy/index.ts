@@ -158,6 +158,23 @@ Deno.serve(async (req) => {
         // If TEF data is present, add payment group to payload
         const emitPayload = { ...payload }
 
+        // Mapeia "observacoes" (vindo do front) para os campos que a Fiscal Flow
+        // aceita como informações complementares (infCpl no XML). Mantemos
+        // ambos os nomes para compatibilidade com versões antigas da API.
+        if (payload.observacoes && typeof payload.observacoes === 'string') {
+          const obs = payload.observacoes.trim()
+          if (obs) {
+            emitPayload.infCpl = emitPayload.infCpl ? `${emitPayload.infCpl} | ${obs}` : obs
+            emitPayload.informacoes_complementares = emitPayload.informacoes_complementares
+              ? `${emitPayload.informacoes_complementares} | ${obs}`
+              : obs
+            emitPayload.informacoesAdicionais = emitPayload.informacoesAdicionais
+              ? `${emitPayload.informacoesAdicionais} | ${obs}`
+              : obs
+            console.log('[nfce-proxy] Observacao mapeada para infCpl:', obs)
+          }
+        }
+
         // Normalização dos itens: garante valor_total por item, valores numéricos
         // arredondados a 2 casas e CST PIS/COFINS coerentes para evitar XML inválido
         // ("vProd vazio" / "PISOutr Missing child element") na Fiscal Flow.
