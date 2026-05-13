@@ -622,6 +622,14 @@ export default function PDVV2() {
         // NFC-e: TEF força emissão. Caso contrário, segue documentMode.
         const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
         if (wantsNfce) {
+          // Observação automática para NFC-e parcial de comanda (Lancheria I9 v1)
+          const I9_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+          const isLast = (splitData.remaining - 1) <= 0;
+          const partialObs = companyId === I9_ID
+            ? (isLast
+                ? `Pagamento final da Comanda #${tabNumber} (divisao ${personIndex}/${splitData.total}). Comanda quitada.`
+                : `Pagamento parcial da Comanda #${tabNumber} - divisao ${personIndex} de ${splitData.total} pessoas. Saldo restante segue em aberto na comanda.`)
+            : undefined;
           await emitNFCeAndOpenDialog({
             saleId,
             items,
@@ -630,6 +638,7 @@ export default function PDVV2() {
             shouldPrint: params.printDocument !== false,
             tefData,
             customerDocument: params.customerDocument,
+            extraObservacoes: partialObs,
           });
         }
 
