@@ -39,6 +39,8 @@ interface Props {
   companyId?: string;
   /** Filtra apenas itens visíveis no PDV (pdvItem !== false) */
   pdvOnly?: boolean;
+  /** Filtra apenas itens visíveis para Mesa/Garçom (waiterItem !== false) */
+  waiterOnly?: boolean;
   onProductSelect: (product: Product) => void;
   /** Altura máxima da área de rolagem (default: 60vh) */
   maxHeightClassName?: string;
@@ -54,6 +56,7 @@ interface Props {
 export function PDVV2CategoryBrowser({
   companyId,
   pdvOnly = true,
+  waiterOnly = false,
   onProductSelect,
   maxHeightClassName = 'max-h-[60vh]',
 }: Props) {
@@ -66,17 +69,17 @@ export function PDVV2CategoryBrowser({
   const [searchQuery, setSearchQuery] = useState('');
 
   const activeProducts = useMemo(
-    () => products.filter((p) => p.active && (!pdvOnly || p.pdvItem !== false)),
-    [products, pdvOnly],
+    () => products.filter((p) => p.active && (!pdvOnly || p.pdvItem !== false) && (!waiterOnly || p.waiterItem !== false)),
+    [products, pdvOnly, waiterOnly],
   );
 
   const orderedCategories = useMemo(() => {
     const visibleCategoryNames = new Set(activeProducts.map((p) => p.category));
     return categories
-      .filter((c) => c.active !== false && (!pdvOnly || (c as any).pdvItem !== false) && visibleCategoryNames.has(c.name))
+      .filter((c) => c.active !== false && (!pdvOnly || (c as any).pdvItem !== false) && (!waiterOnly || (c as any).waiterItem !== false) && visibleCategoryNames.has(c.name))
       .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
       .map((c) => c.name);
-  }, [categories, activeProducts, pdvOnly]);
+  }, [categories, activeProducts, pdvOnly, waiterOnly]);
 
   const categoryEmojiMap = useMemo(() => {
     const map: Record<string, string> = {};
