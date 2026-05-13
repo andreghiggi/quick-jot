@@ -727,18 +727,23 @@ export default function PDVV2() {
         for (const pp of partialPays) {
           const tabItem = fullTab.items.find((i) => i.id === pp.id);
           if (!tabItem) continue;
-          const remainingQty = tabItem.quantity - pp.paidQty;
+          // Frações (rachar item): arredondar quantidades em 3 casas e totais em 2
+          // para evitar dízimas em colunas numeric.
+          const remainingQty = Math.round((tabItem.quantity - pp.paidQty) * 1000) / 1000;
+          const remainingTotal = Math.round(remainingQty * tabItem.unit_price * 100) / 100;
+          const paidQtyRounded = Math.round(pp.paidQty * 1000) / 1000;
+          const paidTotal = Math.round(paidQtyRounded * tabItem.unit_price * 100) / 100;
           await supabase.from('tab_items').update({
             quantity: remainingQty,
-            total_price: remainingQty * tabItem.unit_price,
+            total_price: remainingTotal,
           } as any).eq('id', pp.id);
           await supabase.from('tab_items').insert({
             tab_id: tabItem.tab_id,
             product_id: tabItem.product_id,
             product_name: tabItem.product_name,
             unit_price: tabItem.unit_price,
-            quantity: pp.paidQty,
-            total_price: pp.paidQty * tabItem.unit_price,
+            quantity: paidQtyRounded,
+            total_price: paidTotal,
             created_by: tabItem.created_by,
             notes: tabItem.notes,
             paid: true,
