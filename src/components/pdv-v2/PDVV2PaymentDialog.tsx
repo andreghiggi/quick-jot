@@ -579,7 +579,7 @@ export function PDVV2PaymentDialog({
 
               {/* Opção A — selecionar itens */}
               {i9Mode === 'items' && (
-                <div className="max-h-[8rem] overflow-y-auto space-y-1 border rounded-md p-2">
+                <div className="max-h-[8rem] overflow-y-auto overflow-x-hidden space-y-1 border rounded-md p-2">
                   {checkoutItems.map((item, idx) => {
                     const isPaid = !!item.paid;
                     const selectedQty = selectedItemQtys.get(idx) || 0;
@@ -590,16 +590,16 @@ export function PDVV2PaymentDialog({
                         ? Math.round((itemTotal / splitItemPeople) * 100) / 100
                         : 0;
                     return (
-                      <div key={idx}>
+                      <div key={idx} className="min-w-0">
                         <div
-                          className={`flex items-center gap-2 text-sm px-1 py-0.5 rounded ${
+                          className={`flex items-center gap-2 text-sm px-1 py-0.5 rounded min-w-0 ${
                             isPaid ? 'opacity-60 bg-green-50 dark:bg-green-950/30' : ''
                           }`}
                         >
                         {isPaid ? (
                           <>
                             <Checkbox checked disabled />
-                            <span className="truncate flex-1">
+                            <span className="truncate flex-1 min-w-0">
                               {item.quantity}x {item.name}
                               <span className="ml-1 text-xs text-green-600">(pago)</span>
                             </span>
@@ -624,7 +624,7 @@ export function PDVV2PaymentDialog({
                                 setSelectedItemQtys(next);
                               }}
                             />
-                            <span className="truncate flex-1">
+                            <span className="truncate flex-1 min-w-0">
                               {selectedQty > 0 && selectedQty < 1 ? (
                                 <>
                                   <span className="font-medium">{item.name}</span>
@@ -706,7 +706,7 @@ export function PDVV2PaymentDialog({
                                 }}
                               >+</Button>
                             </div>
-                            <span className="truncate flex-1">
+                            <span className="truncate flex-1 min-w-0">
                               {item.name}
                               <span className="text-xs text-muted-foreground ml-1">({item.quantity} un.)</span>
                             </span>
