@@ -1538,7 +1538,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 {/* Lancheria I9: forma de pagamento é definida no pop-up de cobrança
                     ("Finalizar Pedido"). Para "Enviar para Cozinha" a cobrança ocorre
                     apenas quando o status virar "Pronto". */}
-                {!isLancheriaI9 && (
+                {(deliveryType === 'entrega' || !isLancheriaI9) && (
                   <>
                     <Label className="font-bold">Forma de pagamento *</Label>
                     {paymentLoading ? (
@@ -1790,8 +1790,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 <Button
                   className="flex-1 gap-2"
                   onClick={() => handleSubmit()}
-                  disabled={!canGoNext() || isSubmitting || tefProcessing}
-                  title="Cria pedido pendente e imprime comanda de produção (pagamento depois)"
+                  disabled={!canGoNext() || isSubmitting || tefProcessing || (deliveryType === 'entrega' && !paymentMethod)}
+                  title={deliveryType === 'entrega' && !paymentMethod
+                    ? 'Selecione a forma de pagamento antes de enviar para a cozinha'
+                    : 'Cria pedido pendente e imprime comanda de produção (pagamento depois)'}
                 >
                   {isSubmitting
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
