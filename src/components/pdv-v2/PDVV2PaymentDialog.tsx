@@ -414,7 +414,7 @@ export function PDVV2PaymentDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!submitting && !chargingTef) onOpenChange(o); }}>
       <DialogContent
-        className="w-[95vw] sm:max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden"
+        className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden"
         onInteractOutside={(e) => { if (submitting || chargingTef) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (submitting || chargingTef) e.preventDefault(); }}
       >
