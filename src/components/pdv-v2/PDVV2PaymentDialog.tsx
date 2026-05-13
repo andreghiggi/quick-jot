@@ -9,7 +9,7 @@ import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
-import { Plug, Loader2, Users, ListChecks, Printer, ArrowLeftRight } from 'lucide-react';
+import { Plug, Loader2, Users, ListChecks, Printer, ArrowLeftRight, Split } from 'lucide-react';
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
@@ -108,6 +108,11 @@ export function PDVV2PaymentDialog({
   // Chave = id do ExtraItem.
   const [selectedExtraQtys, setSelectedExtraQtys] = useState<Map<string, number>>(new Map());
   const [splitPeople, setSplitPeople] = useState(2);
+  // I9 — Rachar item: editor inline aberto para qual índice de checkoutItems.
+  // splitItemPeople = em quantas pessoas, splitItemFractions = quantas frações cobrar agora.
+  const [splitItemEditingIdx, setSplitItemEditingIdx] = useState<number | null>(null);
+  const [splitItemPeople, setSplitItemPeople] = useState(2);
+  const [splitItemFractions, setSplitItemFractions] = useState(1);
 
   // When activeSplit is provided (person 2+), force split mode on open
   useEffect(() => {
@@ -200,6 +205,9 @@ export function PDVV2PaymentDialog({
       setSelectedItemQtys(new Map());
       setSelectedExtraQtys(new Map());
       setSplitPeople(2);
+      setSplitItemEditingIdx(null);
+      setSplitItemPeople(2);
+      setSplitItemFractions(1);
     }
   }, [open]);
 
@@ -567,13 +575,18 @@ export function PDVV2PaymentDialog({
                   {checkoutItems.map((item, idx) => {
                     const isPaid = !!item.paid;
                     const selectedQty = selectedItemQtys.get(idx) || 0;
+                    const isEditingSplit = splitItemEditingIdx === idx;
+                    const splitFracValue =
+                      splitItemPeople > 0 && splitItemFractions > 0
+                        ? splitItemFractions / splitItemPeople
+                        : 0;
                     return (
-                      <div
-                        key={idx}
-                        className={`flex items-center gap-2 text-sm px-1 py-0.5 rounded ${
-                          isPaid ? 'opacity-60 bg-green-50 dark:bg-green-950/30' : ''
-                        }`}
-                      >
+                      <div key={idx}>
+                        <div
+                          className={`flex items-center gap-2 text-sm px-1 py-0.5 rounded ${
+                            isPaid ? 'opacity-60 bg-green-50 dark:bg-green-950/30' : ''
+                          }`}
+                        >
                         {isPaid ? (
                           <>
                             <Checkbox checked disabled />
@@ -596,10 +609,32 @@ export function PDVV2PaymentDialog({
                                 setSelectedItemQtys(next);
                               }}
                             />
-                            <span className="truncate flex-1">1x {item.name}</span>
-                            <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
-                              {formatPrice(item.unit_price)}
+                            <span className="truncate flex-1">
+                              {selectedQty > 0 && selectedQty < 1
+                                ? `${selectedQty.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} × ${item.name}`
+                                : `1x ${item.name}`}
                             </span>
+                            <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
+                              {formatPrice((selectedQty > 0 && selectedQty < 1 ? selectedQty : 1) * item.unit_price)}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 shrink-0"
+                              title="Rachar este item entre pessoas"
+                              onClick={() => {
+                                if (splitItemEditingIdx === idx) {
+                                  setSplitItemEditingIdx(null);
+                                } else {
+                                  setSplitItemEditingIdx(idx);
+                                  setSplitItemPeople(2);
+                                  setSplitItemFractions(1);
+                                }
+                              }}
+                            >
+                              <Split className="h-3.5 w-3.5" />
+                            </Button>
                           </>
                         ) : (
                           <>
@@ -640,6 +675,76 @@ export function PDVV2PaymentDialog({
                               {formatPrice(selectedQty * item.unit_price)}
                             </span>
                           </>
+                        )}
+                        </div>
+                        {isEditingSplit && item.quantity === 1 && !isPaid && (
+                          <div className="ml-7 mt-1 mb-2 p-2 border rounded-md bg-muted/40 space-y-2">
+                            <p className="text-xs font-medium">Rachar &quot;{item.name}&quot;</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-[10px] text-muted-foreground">Em quantas pessoas?</Label>
+                                <Input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min={2}
+                                  max={10}
+                                  value={splitItemPeople}
+                                  onChange={(e) => {
+                                    const n = Math.max(2, Math.min(10, parseInt(e.target.value) || 2));
+                                    setSplitItemPeople(n);
+                                    if (splitItemFractions > n) setSplitItemFractions(n);
+                                  }}
+                                  className="h-8"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-[10px] text-muted-foreground">Cobrar quantas frações?</Label>
+                                <Input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min={1}
+                                  max={splitItemPeople}
+                                  value={splitItemFractions}
+                                  onChange={(e) => {
+                                    const n = Math.max(1, Math.min(splitItemPeople, parseInt(e.target.value) || 1));
+                                    setSplitItemFractions(n);
+                                  }}
+                                  className="h-8"
+                                />
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {formatPrice(item.unit_price / splitItemPeople)} cada × {splitItemFractions} ={' '}
+                              <span className="font-semibold text-foreground tabular-nums">
+                                {formatPrice((item.unit_price / splitItemPeople) * splitItemFractions)}
+                              </span>
+                            </p>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setSplitItemEditingIdx(null)}
+                              >
+                                Cancelar
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => {
+                                  // paidQty = fractions/people (parcela do item, em "unidades")
+                                  // Ex.: 1/2 = 0.5 unidade do item.
+                                  const paidQty = Math.round(splitFracValue * 1000) / 1000;
+                                  const next = new Map(selectedItemQtys);
+                                  next.set(idx, paidQty);
+                                  setSelectedItemQtys(next);
+                                  setSplitItemEditingIdx(null);
+                                }}
+                              >
+                                Aplicar
+                              </Button>
+                            </div>
+                          </div>
                         )}
                       </div>
                     );

@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '13/05/2026',
+    version: '1.31.0',
+    type: 'feature',
+    description: 'PDV V2 — Rachar item entre pessoas no checkout. No modo "Itens selecionados" (cobrança parcial de comanda), agora aparece um ícone de divisão (⎇) ao lado de cada item para rachar aquele item entre N pessoas e cobrar M frações na hora. Exemplo: refrigerante de R$ 15,00 dividido entre 2 pessoas → cobra-se R$ 7,50 do primeiro pagador, e a outra metade fica disponível para o próximo. Na NFC-e, a fração sai como o produto real (com NCM/CFOP/CSOSN próprios), apenas com quantidade fracionária — sem item sintético. Disponível inicialmente apenas na Lancheria da I9.',
+  },
+  {
     date: '12/05/2026',
     version: '1.30.0',
     type: 'feature',
