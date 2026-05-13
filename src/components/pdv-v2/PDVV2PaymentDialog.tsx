@@ -9,7 +9,7 @@ import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
-import { Plug, Loader2, Users, ListChecks, Printer, ArrowLeftRight } from 'lucide-react';
+import { Plug, Loader2, Users, ListChecks, Printer, ArrowLeftRight, Split } from 'lucide-react';
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
@@ -108,6 +108,11 @@ export function PDVV2PaymentDialog({
   // Chave = id do ExtraItem.
   const [selectedExtraQtys, setSelectedExtraQtys] = useState<Map<string, number>>(new Map());
   const [splitPeople, setSplitPeople] = useState(2);
+  // I9 — Rachar item: editor inline aberto para qual índice de checkoutItems.
+  // splitItemPeople = em quantas pessoas, splitItemFractions = quantas frações cobrar agora.
+  const [splitItemEditingIdx, setSplitItemEditingIdx] = useState<number | null>(null);
+  const [splitItemPeople, setSplitItemPeople] = useState(2);
+  const [splitItemFractions, setSplitItemFractions] = useState(1);
 
   // When activeSplit is provided (person 2+), force split mode on open
   useEffect(() => {
@@ -200,6 +205,9 @@ export function PDVV2PaymentDialog({
       setSelectedItemQtys(new Map());
       setSelectedExtraQtys(new Map());
       setSplitPeople(2);
+      setSplitItemEditingIdx(null);
+      setSplitItemPeople(2);
+      setSplitItemFractions(1);
     }
   }, [open]);
 
