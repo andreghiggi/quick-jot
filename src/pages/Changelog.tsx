@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '13/05/2026',
+    version: '1.32.0',
+    type: 'feature',
+    description: 'TEF — Impressão automática do comprovante (1ª via). Logo após cada venda TEF aprovada (PinPad) no PDV V2 ou Pedido Express, o comprovante é impresso automaticamente. Em Configurações → Impressão, há um seletor com 3 opções: "Ambas as vias (Estabelecimento + Cliente)" — padrão, imprime 2 vias; "Somente via do Estabelecimento" — imprime 1 via para arquivo no caixa; "Não imprimir automaticamente" — mantém apenas a reimpressão manual. A reimpressão manual (2ª via) continua funcionando exatamente como antes nos cards de pedido. Em rollout inicial APENAS na Lancheria da I9 — para liberar em outras lojas, validamos primeiro e expandimos a allow-list.',
+  },
+  {
+    date: '13/05/2026',
     version: '1.31.0',
     type: 'feature',
     description: 'PDV V2 — Rachar item entre pessoas no checkout. No modo "Itens selecionados" (cobrança parcial de comanda), agora aparece um ícone de divisão (⎇) ao lado de cada item para rachar aquele item entre N pessoas e cobrar M frações na hora. Exemplo: refrigerante de R$ 15,00 dividido entre 2 pessoas → cobra-se R$ 7,50 do primeiro pagador, e a outra metade fica disponível para o próximo. Na NFC-e, a fração sai como o produto real (com NCM/CFOP/CSOSN próprios), apenas com quantidade fracionária — sem item sintético. Disponível inicialmente apenas na Lancheria da I9.',

@@ -1,11 +1,7 @@
-# Memory: index.md
-Updated: now
-
 # Project Memory
 
 ## Core
-- System: Comanda Tech ('Anota Aí' style MVP). URL principal: https://app.comandatech.com.br (lojas em {slug}.comandatech.com.br). Domínio antigo appcomandatech.agilizeerp.com.br ainda redireciona via Nginx (quando DNS antigo apontar pra VPS).
-- Hospedagem: VPS própria (153.75.244.221) com Nginx + SSL wildcard Let's Encrypt. Deploy automático via GitHub Actions on push to main (workflow .github/workflows/deploy-vps.yml). Backend continua sendo Lovable Cloud (Supabase) — nada migrado.
+- System: Comanda Tech ('Anota Aí' style MVP). URL: https://appcomandatech.agilizeerp.com.br
 - Stack: Lovable Cloud, Supabase. Strict multi-tenancy isolation via `company_id` and RLS.
 - Timezone: Always use 'America/Sao_Paulo' across frontend, edge functions, and python scripts.
 - Visuals: Primary default #ef4444. Prices in green with comma. 85dvh for mobile viewports.
@@ -28,5 +24,73 @@ Updated: now
 - [Print Logic](mem://features/automatic-printing-logic) — 5s polling, HTML/CSS layout, `printed` flags
 - [Print RLS](mem://technical/printer-rls-configuration) — Anonymous public policy for local script access
 - [Multi-tenancy](mem://technical/multi-tenancy-isolation) — Strict `company_id` filters on all Supabase queries
-- [Onboarding](mem://features/onboarding-e-planos) — Auto-creation of company, owner, plan, and user_roles
-- [Rachar Item Comanda I9](mem://features/rachar-item-comanda-i9) — Ícone Split no PDV V2 fraciona item de comanda; tab_items/pdv_sale_items.quantity virou numeric(10,3); NFC-e preserva NCM real. Só Lancheria da I9.
+- [Onboarding](mem://features/onboarding-e-planos) — Auto company creation, plan activation tracking
+- [Business Hours](mem://features/horarios-atendimento) — Always open toggle, scheduled orders
+- [Smart POS Terminal](mem://features/modulo-pos-smart-terminal) — Capacitor offline-first Android module
+- [Pickup Location](mem://features/delivery-pickup-location) — Physical address display on pickup orders
+- [Sales Report](mem://features/sales-report-module) — Consolidated PDV and online sales view
+- [Waiter Tables](mem://features/waiter-table-management) — Mobile-first table tracking, 58mm kitchen tickets
+- [Fiscal Module](mem://features/fiscal-module) — NFC-e 2s polling, local sum, base64 QR generation
+- [Ticket Formats](mem://features/production-ticket-formatting) — Bold caps, regex extraction for 58/80mm receipts
+- [Double Submit](mem://features/order-duplicate-prevention) — Checkout locking via `isSubmitting`
+- [Demo Env](mem://project/demo-environment) — 'Lancheria da i9' fallback and demo testing rules
+- [Changelog Rules](mem://features/changelog-system) — Requirement to record updates in Novidades menu
+- [Navigation Stability](mem://design/navigation-stability) — Memoizing and stringify checks to prevent flickering
+- [WhatsApp Ordering](mem://features/customer-whatsapp-ordering) — Public catalog cart flow sending to WhatsApp
+- [Payment Methods](mem://features/payment-methods) — PIX copy button, Cash change requirement
+- [Banner Config](mem://features/store-banner-customization) — Object-contain upload preview in Geral tab
+- [Customer Autofill](mem://features/customer-auto-fill) — `(company_id, phone)` uniqueness for fast checkout
+- [POS Integrations](mem://features/pos-payment-integrations) — Stone, Vero, Sicredi acquirer mappings
+- [WhatsApp Automations](mem://features/whatsapp-automation-module) — Evolution webhook, lock tables, 24h cooldown
+- [Printer Config](mem://features/printer-configuration) — 58/80mm UI toggle adjusting layouts
+- [Audio Alerts](mem://features/order-audio-alerts) — Web Audio API bell for incoming orders
+- [AI Import](mem://features/ai-menu-import) — Gemini Flash parsing, fuzzy mapping, grid editor
+- [Suggestions Tracker](mem://features/suggestions-management) — Delivered features celebratory modals
+- [Feature Toggles](mem://technical/modular-feature-architecture) — Dynamic route unlocking by active modules
+- [Tax Management](mem://features/product-tax-management) — Mass assignment of NCM/CFOP logic
+- [Social Branding](mem://design/branding-social-meta) — Open Graph `og-image.png` rules
+- [API Security](mem://technical/evolution-api-security) — Evolution API keys stored in Supabase Secrets only
+- [Store Notifications](mem://features/store-whatsapp-notifications) — Edge Function sending store checkout summary
+- [Checkout Validation](mem://features/checkout-flow-validation) — Form colors (destructive border, primary fills)
+- [Cart UI Flow](mem://features/public-menu-cart-flow) — Outline vs Solid buttons in public catalog
+- [Image Processing](mem://technical/image-processing-optimization) — Client WebP compression, lazy loading
+- [Settings Load](mem://technical/store-settings-loading) — `company_id` blocking logic before store_settings fetch
+- [WhatsApp Templates](mem://features/whatsapp-communication-suite) — Evolution variables, normalization of \n
+- [PDV Visibility](mem://features/pdv-item-visibility) — Specific toggle to hide items from internal POS
+- [Fulfillment Settings](mem://features/fulfillment-modalities) — Delivery vs Pickup toggles dynamic rendering
+- [Mobile UX](mem://constraints/mobile-viewport-ux) — Max-h, disabled auto-focus, scrollable actions
+- [Template Variables](mem://ui/template-variable-protection) — ContentEditable false badges for text inputs
+- [Animated Images](mem://features/animated-catalog-images) — `kenburns-animate` toggle and keyframes
+- [WhatsApp Followup](mem://features/whatsapp-followup-control) — 30m post-delivery message opt-out
+- [Admin Banner](mem://features/public-menu-admin-banner) — Dark top bar for logged managers on public links
+- [Theme Customizer](mem://features/dynamic-theme-branding) — Primary color extraction, confirmation saving
+- [Menu Styling](mem://features/menu-ui-localization-and-style) — UI choices for h-28 covers, highlights
+- [Company Data](mem://features/company-data-structure) — Structured addresses, `store_name` fallback
+- [Catalog Hierarchy](mem://features/catalog-navigation-hierarchy) — Categories > Subcategories > Products layout
+- [Checkout Names](mem://features/customer-checkout-requirements) — 2-word, 2-char minimal validations
+- [Highlight Section](mem://features/featured-section-customization) — Slideshow title syncing via radio buttons
+- [Menu Header UX](mem://features/public-menu-layouts) — Blur bg, inline flex-between mobile header styling
+- [Order Card Regex](mem://features/order-card-details) — Detail extraction, nested grouped optionals logic
+- [Status Click Protect](mem://features/order-status-workflow) — `advancing` loader locking redundant updates
+- [Express Order](mem://features/pedido-express) — 5-step manual PDV, Cliente Loja fast-path override
+- [Tooltip Design](mem://features/product-management-ux) — CSS group-hover localized tooltips
+- [WhatsApp Formatting](mem://features/whatsapp-order-summary-formatting) — Indentation, bolding, and markdown structure
+- [Customer Notifications](mem://features/customer-automatic-notifications) — Silent backend status messages via Edge
+- [Customer Lifetime](mem://features/customer-reports) — Customers list, lifetime metrics, historical order modal
+- [TEF Integrations](mem://features/tef-multiplus-integrations) — Multiplus PinPad WebService, XML CRT parsing
+- [ABC Curve](mem://features/abc-curve-report) — Deep regex extraction parsing for ABC item sales
+- [Dashboard KPIs](mem://features/dashboard-and-order-analytics) — Row stats, active items only, double-width masked revenue
+- [Orders Filter](mem://features/orders-management-page) — America/Sao_Paulo strict local timezone bound querying
+- [Reseller Billing](mem://features/reseller-system) — MRR calculations, prorated invoices, impersonation
+- [Subcategory Grids](mem://features/catalog-subcategories) — Nested structure requiring public grid selections
+- [Reorder Prompts](mem://features/reorder-banner) — Localstorage matching for returning carts
+- [Admin Billing](mem://features/admin-platform-settings) — `admin_settings` for franqueadora master details
+- [Safe print rollout](mem://preferences/safe-print-rollout) — Printing changes must be isolated per store until validated.
+- [WhatsApp Reset v1](mem://features/whatsapp-reset-v1) — Botão "Resetar Conexão" (delete+recreate da instância Evolution) com allow-list por company_id; atualmente só Rei do Açaí.
+- [Sales Campaigns](mem://features/sales-campaigns) — Módulo `sales_campaigns` com envio em massa via WhatsApp, cron 1min, A/B, janela 08-20h, ativo na Lancheria da I9.
+- [TEF v1.0 Beta Fechada](mem://features/tef-v1-beta-frozen) — Integração Multiplus homologada e congelada; não mexer em pinpadService, tef-webservice, TefAdm, TefReport ou itens de menu sem autorização.
+- [TEF v1.1](mem://features/tef-v1-1) — TEF restaurado no PDV V2, reimpressão/via cancelada do TEF, Pedido Express com todas as formas de pagamento na Lancheria I9 e cancelamento de venda com estorno PinPad automático.
+- [TEF v1.2 Beta](mem://features/tef-v1-2-beta) — 5 correções da homologação Multiplus aplicadas (CNF pós-CNC, 023-000 ecoado, ATV numérico, 800-003 só em parcelado, 003-000 sem vírgula). Enviado para re-análise — CONGELADO até retorno.
+- [WhatsApp Cleanup Cron](mem://features/whatsapp-messages-cleanup) — Cron diário 03:00 BRT que apaga logs WhatsApp > 90 dias via função SQL.
+- [Cardápio Mesa QR](mem://features/cardapio-mesa-qr) — Módulo `cardapio_mesa` com rota pública `/mesa/:slug`, cliente informa mesa e pedido entra como `origin='mesa_qr'`. Inicialmente só Lancheria da I9.
+- [TEF Auto Print v1](mem://features/tef-auto-print-v1) — Impressão automática do comprovante TEF (1ª via) após PinPad aprovado, módulo isolado em `src/utils/tefAutoPrint.ts`, allow-list só I9, setting `tef_auto_print_vias` (none/estabelecimento/ambas, default ambas).

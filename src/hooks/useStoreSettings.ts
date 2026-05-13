@@ -32,6 +32,7 @@ interface StoreSettings {
   pixCity: string;
   autoPrintProductionTicket: boolean;
   printLayout: 'v1' | 'v2';
+  tefAutoPrintVias: 'none' | 'estabelecimento' | 'ambas';
 }
 
 interface UseStoreSettingsOptions {
@@ -70,6 +71,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     pixCity: '',
     autoPrintProductionTicket: false,
     printLayout: 'v1',
+    tefAutoPrintVias: 'ambas',
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
@@ -123,6 +125,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         pixCity: settingsMap['pix_city'] || '',
         autoPrintProductionTicket: settingsMap['auto_print_production_ticket'] === 'true',
         printLayout: (settingsMap['print_layout'] as 'v1' | 'v2') || 'v1',
+        tefAutoPrintVias: ((settingsMap['tef_auto_print_vias'] as 'none' | 'estabelecimento' | 'ambas') || 'ambas'),
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);
