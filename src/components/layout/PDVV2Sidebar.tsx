@@ -74,7 +74,6 @@ export function PDVV2Sidebar() {
   ];
 
   const finance = [
-    { title: 'Caixa', icon: CircleDollarSign, href: '/financeiro/caixa' },
     { title: 'Formas de Pagamento', icon: CreditCard, href: '/formas-pagamento' },
   ];
 
