@@ -1186,7 +1186,7 @@ pause
               </CardHeader>
               <CardContent>
                 <RadioGroup
-                  value={(storeSettings as any).tefAutoPrintVias || 'ambas'}
+                  value={storeSettings.tefAutoPrintVias}
                   onValueChange={async (value: 'none' | 'estabelecimento' | 'ambas') => {
                     await updateSetting('tef_auto_print_vias', value);
                     toast({
