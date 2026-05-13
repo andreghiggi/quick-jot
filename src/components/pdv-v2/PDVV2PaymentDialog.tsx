@@ -112,7 +112,9 @@ export function PDVV2PaymentDialog({
   // splitItemPeople = em quantas pessoas, splitItemFractions = quantas frações cobrar agora.
   const [splitItemEditingIdx, setSplitItemEditingIdx] = useState<number | null>(null);
   const [splitItemPeople, setSplitItemPeople] = useState(2);
-  const [splitItemFractions, setSplitItemFractions] = useState(1);
+  // Valor a cobrar agora (em R$). Default = totalDoItem / pessoas, mas é editável
+  // para casos como "um paga R$ 10 e os outros 2 dividem o restante".
+  const [splitItemAmount, setSplitItemAmount] = useState(0);
 
   // When activeSplit is provided (person 2+), force split mode on open
   useEffect(() => {
