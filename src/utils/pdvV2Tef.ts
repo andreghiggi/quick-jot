@@ -15,6 +15,7 @@ import {
   abortMultiplusCardSale,
 } from '@/services/multiplusCardService';
 import type { NFCeTefData } from '@/services/nfceService';
+import { imprimirComprovanteTefAutomatico } from '@/utils/tefAutoPrint';
 
 export type TefIntegration = 'tef_pinpad' | 'tef_smartpos';
 
@@ -104,6 +105,12 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
             nsu: statusResult.nsu,
             finalizacao: statusResult.finalizacao,
           });
+
+          // Auto-print v1 (allow-list interna; respeita store_settings.tef_auto_print_vias)
+          imprimirComprovanteTefAutomatico({
+            companyId,
+            receiptLines: statusResult.receiptLines,
+          }).catch((e) => console.error('[pdvV2Tef] auto-print falhou:', e));
 
           const installTypeLabel = installmentType === 'adm' ? ' ADM' : ' Loja';
           const installLabel =
