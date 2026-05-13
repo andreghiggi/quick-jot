@@ -24,7 +24,6 @@ import { PDVV2TopBar } from '@/components/pdv-v2/PDVV2TopBar';
 import { PDVV2SummaryCards } from '@/components/pdv-v2/PDVV2SummaryCards';
 import { PDVV2StatusFilters, StatusFilter } from '@/components/pdv-v2/PDVV2StatusFilters';
 import { OrderCard } from '@/components/OrderCard';
-import { PDVV2OrderOriginBadge } from '@/components/pdv-v2/PDVV2OrderOriginBadge';
 import { OccupiedTab } from '@/components/pdv-v2/PDVV2TablesPanel';
 import { PDVV2TablesGrid } from '@/components/pdv-v2/PDVV2TablesGrid';
 import { PDVV2TablesSummaryCards } from '@/components/pdv-v2/PDVV2TablesSummaryCards';
@@ -983,7 +982,6 @@ export default function PDVV2() {
                               order={o}
                               paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
                               storeName={company?.name}
-                              headerExtra={<PDVV2OrderOriginBadge origin={o.origin} />}
                               disableAdvance={hideBtnAdvance}
                               disableAdvanceReason="Finalize o pagamento em 'Cobrar' antes de entregar"
                               hideAdvance={hideBtnAdvance}
@@ -1047,7 +1045,6 @@ export default function PDVV2() {
                           order={o}
                           paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
                           storeName={company?.name}
-                          headerExtra={<PDVV2OrderOriginBadge origin={o.origin} />}
                           disableAdvance={hideBtnAdvance}
                           disableAdvanceReason="Finalize o pagamento em 'Cobrar' antes de entregar"
                           hideAdvance={hideBtnAdvance}
