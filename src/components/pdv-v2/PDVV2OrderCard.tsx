@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Order, OrderStatus } from '@/types/order';
 import { brl as formatPrice } from './_format';
+import { extractPaymentName } from '@/utils/orderNotesDisplay';
 import {
   Clock,
   Store,
@@ -86,9 +87,8 @@ export function PDVV2OrderCard({
   const delivery = isDelivery(order);
   const isCardapio = (order.origin || 'cardapio') === 'cardapio';
 
-  // Extract payment method from notes
-  const paymentMatch = order.notes?.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i);
-  const paymentName = paymentMatch?.[1]?.trim();
+  // Extract payment method from notes (prefere [COBRADO] e ignora vazios)
+  const paymentName = extractPaymentName(order.notes);
 
   // Order already charged? Marker [COBRADO] é adicionado por OrderCardChargeDialog
   // ou pelo Pedido Express quando "Finalizar Pedido" / TEF concluído.
