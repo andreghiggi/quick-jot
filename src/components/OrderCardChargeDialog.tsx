@@ -213,7 +213,11 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
           if (rec) {
             setNfceRecord(rec as unknown as NFCeRecord);
             setNfceAutoPrint(!!params.printDocument);
-            setNfceDialogOpen(true);
+            if (isI9Company && tefPromptOpen) {
+              setPendingNfceOpen(true);
+            } else {
+              setNfceDialogOpen(true);
+            }
           }
         } catch (err: any) {
           console.error('[OrderCardCharge] NFC-e emission error:', err);
