@@ -240,21 +240,44 @@ export function OrderEditDialog({
     addedOrSwapped: WorkingItem[],
     removedSwaps: { from: string; to: string }[],
   ): string {
+    // Reformata o nome composto "Produto (Adicionais: a, b)" para alimentar o
+    // parser do layout v2 (que renderiza ">> ADICIONAL"), e injeta a tag
+    // [ADICIONADO] / [TROCADO de: X] como observação destacada.
     const items = addedOrSwapped.map((it) => {
-      const note = it.swappedFrom ? `TROCADO de: ${it.swappedFrom}` : 'ITEM ADICIONADO';
+      const cleanName = cleanProductName(it.name);
+      const adicionaisRaw = it.name.includes('(') && it.name.endsWith(')')
+        ? it.name.substring(it.name.indexOf('(') + 1, it.name.length - 1).trim()
+        : '';
+      const obsTag = it.swappedFrom
+        ? `TROCADO de: ${it.swappedFrom}`
+        : 'ITEM ADICIONADO';
+      // Layout v2 espera "Adicionais: a, b, c | obs"
+      const noteParts: string[] = [];
+      if (adicionaisRaw) {
+        if (/^Adicionais?:/i.test(adicionaisRaw)) {
+          noteParts.push(adicionaisRaw);
+        } else {
+          noteParts.push(`Adicionais: ${adicionaisRaw}`);
+        }
+      }
+      noteParts.push(obsTag);
       return {
-        productName: cleanProductName(it.name),
+        productName: cleanName,
         quantity: it.quantity,
-        notes: note,
+        notes: noteParts.join(' | '),
       };
     });
+    const readyOffset = computeReadyOffsetMinutes(storeSettings.estimatedWaitTime);
     return generateProductionTicketHTML({
-      tabNumber: 0,
+      tabNumber: order.dailyNumber,
       customerName: order.customerName,
       items,
       createdAt: new Date(),
       paperSize,
       referenceLabel: `ALTERAÇÃO PEDIDO #${order.orderCode || order.dailyNumber}`,
+      layout: storeSettings.printLayout,
+      showReadyTime: storeSettings.printLayout === 'v2',
+      readyOffsetMinutes: readyOffset,
     });
   }
 
