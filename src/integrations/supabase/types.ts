@@ -227,6 +227,7 @@ export type Database = {
           name: string
           pdv_item: boolean
           print_description: boolean
+          swappable_in_order: boolean
           waiter_item: boolean
         }
         Insert: {
@@ -242,6 +243,7 @@ export type Database = {
           name: string
           pdv_item?: boolean
           print_description?: boolean
+          swappable_in_order?: boolean
           waiter_item?: boolean
         }
         Update: {
@@ -257,6 +259,7 @@ export type Database = {
           name?: string
           pdv_item?: boolean
           print_description?: boolean
+          swappable_in_order?: boolean
           waiter_item?: boolean
         }
         Relationships: [
@@ -1886,6 +1889,7 @@ export type Database = {
           menu_item: boolean
           name: string
           pdv_item: boolean
+          swappable_in_order: boolean
           waiter_item: boolean
         }
         Insert: {
@@ -1899,6 +1903,7 @@ export type Database = {
           menu_item?: boolean
           name: string
           pdv_item?: boolean
+          swappable_in_order?: boolean
           waiter_item?: boolean
         }
         Update: {
@@ -1912,6 +1917,7 @@ export type Database = {
           menu_item?: boolean
           name?: string
           pdv_item?: boolean
+          swappable_in_order?: boolean
           waiter_item?: boolean
         }
         Relationships: [

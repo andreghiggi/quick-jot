@@ -1,0 +1,2 @@
+ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS swappable_in_order boolean NOT NULL DEFAULT false;
+ALTER TABLE public.subcategories ADD COLUMN IF NOT EXISTS swappable_in_order boolean NOT NULL DEFAULT false;
