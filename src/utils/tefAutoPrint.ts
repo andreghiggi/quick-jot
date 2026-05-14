@@ -7,21 +7,36 @@
 //   - src/services/pinpadService.ts (TEF v1.0/1.1/1.2 beta — congelado)
 //   - supabase/functions/tef-webservice/* (homologação Multiplus — congelado)
 //
-// Allow-list: SOMENTE Lancheria da I9.
+// Disponível para TODAS as lojas que tenham o módulo PDV V2 habilitado
+// (company_modules.module_name = 'pdv_v2', enabled = true).
 // Setting `store_settings.tef_auto_print_vias` define a opção pré-selecionada
 // no modal: 'none' | 'estabelecimento' | 'ambas' (default 'ambas').
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { supabase } from '@/integrations/supabase/client';
 
-const TEF_AUTO_PRINT_ALLOWED = new Set<string>([
-  '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da I9
-]);
-
 export type TefAutoPrintMode = 'none' | 'estabelecimento' | 'ambas';
 
-export function isTefAutoPrintAllowed(companyId?: string | null): boolean {
-  return !!companyId && TEF_AUTO_PRINT_ALLOWED.has(companyId);
+/**
+ * Auto-print TEF é permitido para qualquer empresa com o módulo PDV V2
+ * habilitado em `company_modules`. Consulta assíncrona para refletir o
+ * estado real do toggle por loja.
+ */
+export async function isTefAutoPrintAllowed(
+  companyId?: string | null,
+): Promise<boolean> {
+  if (!companyId) return false;
+  try {
+    const { data } = await supabase
+      .from('company_modules')
+      .select('enabled')
+      .eq('company_id', companyId)
+      .eq('module_name', 'pdv_v2')
+      .maybeSingle();
+    return !!data?.enabled;
+  } catch {
+    return false;
+  }
 }
 
 async function fetchAutoPrintMode(companyId: string): Promise<TefAutoPrintMode> {
@@ -186,8 +201,9 @@ export async function imprimirComprovanteTefAutomatico(
   args: ImprimirComprovanteTefAutomaticoArgs,
 ): Promise<void> {
   const { companyId, receiptLines, orderCode } = args;
-  if (!isTefAutoPrintAllowed(companyId)) return;
   if (!receiptLines || receiptLines.length === 0) return;
+  const allowed = await isTefAutoPrintAllowed(companyId);
+  if (!allowed) return;
 
   const defaultMode = await fetchAutoPrintMode(companyId);
 
