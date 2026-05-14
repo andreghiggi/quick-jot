@@ -74,7 +74,7 @@ export function TefPrintPromptDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !busy && !v && handleChoice('cancel')}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md z-[10001]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Printer className="h-5 w-5" />
