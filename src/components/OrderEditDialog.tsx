@@ -282,64 +282,185 @@ export function OrderEditDialog({
   }
 
   function buildUpdatedReceiptHtml(items: WorkingItem[]): string {
+    // Mirror do template do auto_printer.py (formatar_recibo_html), com o
+    // mesmo HTML/markup esperado pelo GDI: <!--BOX_START-->/<!--BOX_END-->,
+    // .item-name, .additionals/.add-line, .obs, .delivery-badge,
+    // payment block, "Obrigado pela preferencia!".
     const subtotal = items.reduce((s, it) => s + it.price * it.quantity, 0);
     const total = subtotal + deliveryFee;
+    const fontSize = paperSize === '80mm' ? '11pt' : '10pt';
     const dt = new Date().toLocaleString('pt-BR', {
       timeZone: 'America/Sao_Paulo',
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
-    const paymentLabel = extractPaymentName(order.notes) || '—';
-    const itemsHtml = items
-      .map((it) => {
-        const cleanName = cleanProductName(it.name);
-        const tag = it.isNew
-          ? ' <b>[ADICIONADO]</b>'
-          : it.swappedFrom
-            ? ` <b>[TROCADO de: ${it.swappedFrom}]</b>`
-            : '';
-        const lineTotal = (it.price * it.quantity).toFixed(2).replace('.', ',');
-        return `<div class="row"><span>${it.quantity}x ${cleanName}${tag}</span><span>R$ ${lineTotal}</span></div>`;
-      })
-      .join('');
+    const orderNum = order.orderCode || order.dailyNumber;
+
+    // Origem do pedido — mesmo critério do auto_printer.py
+    const notesRaw = order.notes || '';
+    const isExpressNote = notesRaw.includes('[EXPRESS]');
+    const source = (order as any).source || '';
+    let origemLabel = '📱 CARDÁPIO ONLINE';
+    if (source === 'express' || isExpressNote) origemLabel = '⚡ PEDIDO EXPRESS';
+    else if (source === 'waiter') origemLabel = '🍽️ PEDIDO GARÇOM';
+    origemLabel += ' — EDITADO';
+
+    // Pagamento / troco / pix a partir das notes
+    let paymentHtml = '';
+    if (notesRaw) {
+      const payMatch = notesRaw.match(/Pagamento:\s*([^(|]+)/i);
+      const trocoMatch = notesRaw.match(/Troco para R\$\s*([^)]+)/i);
+      const pixMatch = notesRaw.match(/Chave PIX:\s*([^)]+)\)/i);
+      if (payMatch) paymentHtml += `<p><span class="label">PAGAMENTO:</span> ${payMatch[1].trim()}</p>`;
+      if (trocoMatch) paymentHtml += `<p><span class="label">TROCO PARA:</span> R$ ${trocoMatch[1].trim()}</p>`;
+      if (pixMatch) paymentHtml += `<p><span class="label">CHAVE PIX:</span> ${pixMatch[1].trim()}</p>`;
+    }
+    if (!paymentHtml) {
+      const fallback = extractPaymentName(order.notes);
+      if (fallback) paymentHtml = `<p><span class="label">PAGAMENTO:</span> ${fallback}</p>`;
+    }
+
+    // Bloco entrega / retirada
+    const deliverySection = order.deliveryAddress
+      ? `<div class="delivery-badge">ENTREGA</div>
+         <div class="section"><p>${order.deliveryAddress}</p></div>`
+      : '<div class="delivery-badge">RETIRADA NO LOCAL</div>';
+
+    // Itens — usando mesmo markup do auto_printer.py
+    const itemsHtml = items.map((it, idx) => {
+      const qtd = it.quantity;
+      const cleanName = cleanProductName(it.name);
+      // Extrai adicionais do nome composto "Produto (Adicionais: a, b)"
+      let adicionais: string[] = [];
+      if (it.name.includes('(') && it.name.endsWith(')')) {
+        const inside = it.name.substring(it.name.indexOf('(') + 1, it.name.length - 1).trim();
+        const m = inside.match(/^Adicionais?:\s*(.+)$/i);
+        if (m) {
+          adicionais = m[1].split(',').map(s => s.trim()).filter(Boolean);
+        } else {
+          // Formato com grupos "Grupo: a, b | Grupo2: c"
+          const grupos = inside.split('|').map(s => s.trim()).filter(Boolean);
+          for (const g of grupos) {
+            const after = g.includes(':') ? g.split(':').slice(1).join(':') : g;
+            after.split(',').map(p => p.trim()).filter(Boolean).forEach(p => adicionais.push(p));
+          }
+        }
+      }
+
+      // Tag de edição vai como observação invertida
+      const obsTag = it.isNew
+        ? 'ITEM ADICIONADO'
+        : it.swappedFrom
+          ? `TROCADO de: ${it.swappedFrom}`
+          : '';
+
+      const lineTotal = (it.price * qtd).toFixed(2).replace('.', ',');
+      let block = '<div class="item">\n';
+      block += `  <div class="item-name">${qtd}x ${cleanName}</div>\n`;
+      if (adicionais.length > 0) {
+        block += '  <div class="additionals">\n';
+        for (const ad of adicionais) {
+          const adClean = ad.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
+          if (adClean) block += `    <div class="add-line">+ ${adClean.toUpperCase()}</div>\n`;
+        }
+        block += '  </div>\n';
+      }
+      if (obsTag) {
+        block += `  <div class="obs-block"><span class="obs">${obsTag}</span></div>\n`;
+      }
+      block += `  <div class="item-detail">R$ ${lineTotal}</div>\n`;
+      block += '</div>\n';
+      if (idx < items.length - 1) {
+        block += '<div class="item-sep">................................</div>\n';
+      }
+      return block;
+    }).join('');
+
+    const subtotalStr = subtotal.toFixed(2).replace('.', ',');
+    const totalStr = total.toFixed(2).replace('.', ',');
+    const deliveryFeeHtml = deliveryFee > 0
+      ? `<div class="total-line"><span>Entrega:</span><span>R$ ${deliveryFee.toFixed(2).replace('.', ',')}</span></div>`
+      : '';
+    const phoneHtml = order.customerPhone
+      ? `<p><span class="label">Tel:</span> ${order.customerPhone}</p>`
+      : '';
+
     return `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Pedido EDITADO #${order.orderCode || order.dailyNumber}</title>
-<style>
-  @page { margin: 0; size: ${paperSize} auto; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Courier New', monospace; font-size: ${paperSize === '80mm' ? '11pt' : '10pt'}; font-weight: bold; width: ${paperSize}; max-width: ${paperSize}; padding: 2mm; line-height: 1.3; -webkit-print-color-adjust: exact; }
-  .center { text-align: center; }
-  .header { text-align: center; margin-bottom: 2mm; }
-  .store-name { font-size: 12pt; font-weight: bold; }
-  .order-num { font-size: 14pt; font-weight: bold; margin: 1mm 0; }
-  .label-tag { font-size: 10pt; }
-  .divider { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
-  .row { display: flex; justify-content: space-between; gap: 4mm; font-size: 10pt; margin: 0.5mm 0; }
-  .grand-total { display: flex; justify-content: space-between; font-size: 13pt; font-weight: bold; margin: 1mm 0; }
-  .info { font-size: 9pt; margin: 0.5mm 0; }
-  .footer { text-align: center; font-size: 8pt; margin-top: 2mm; }
-  .label { font-weight: bold; }
-</style></head><body>
-  <div class="header">
-    <div class="store-name">${storeName.toUpperCase()}</div>
-    <div class="label-tag">RECIBO DO PEDIDO - EDITADO</div>
-    <div class="order-num">#${order.orderCode || order.dailyNumber}</div>
-    <div class="info">${dt}</div>
-  </div>
-  <hr class="divider">
-  <div class="info"><span class="label">Cliente:</span> ${order.customerName}</div>
-  ${order.customerPhone ? `<div class="info"><span class="label">Tel:</span> ${order.customerPhone}</div>` : ''}
-  <hr class="divider">
-  ${itemsHtml}
-  <hr class="divider">
-  <div class="row"><span>Subtotal</span><span>R$ ${subtotal.toFixed(2).replace('.', ',')}</span></div>
-  ${deliveryFee > 0 ? `<div class="row"><span>Entrega</span><span>R$ ${deliveryFee.toFixed(2).replace('.', ',')}</span></div>` : ''}
-  <div class="grand-total"><span>TOTAL</span><span>R$ ${total.toFixed(2).replace('.', ',')}</span></div>
-  <hr class="divider">
-  <div class="info"><span class="label">Pagamento:</span> ${paymentLabel}</div>
-  <hr class="divider">
-  <div class="footer">Pedido editado pelo PDV</div>
-</body></html>`;
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Pedido EDITADO #${orderNum}</title>
+    <style>
+        @page { margin: 0; size: ${paperSize} auto; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', 'Lucida Console', monospace;
+            font-size: ${fontSize};
+            font-weight: bold;
+            width: ${paperSize};
+            max-width: ${paperSize};
+            padding: 2mm;
+            line-height: 1.3;
+            -webkit-print-color-adjust: exact;
+        }
+        .center { text-align: center; }
+        .header { text-align: center; margin-bottom: 2mm; }
+        .store-name { font-size: 12pt; font-weight: bold; }
+        .order-num { font-size: 16pt; font-weight: bold; margin: 1mm 0; }
+        .origem { font-size: 9pt; font-weight: bold; margin: 0.5mm 0; }
+        .date { font-size: 8pt; }
+        .divider { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
+        .label { font-size: 9pt; font-weight: bold; }
+        .section { margin: 1mm 0; }
+        .section p { margin: 0.5mm 0; font-size: 10pt; }
+        .item { margin: 1.5mm 0; }
+        .item-name { font-size: 11pt; font-weight: bold; text-transform: uppercase; }
+        .item-detail { font-size: 9pt; margin-left: 2mm; }
+        .item-sep { font-size: 10pt; line-height: 1; margin: 1mm 0; }
+        .additionals { margin: 1mm 0 0 2mm; }
+        .add-line { font-size: 11pt; font-weight: 900; line-height: 1.4; word-break: break-word; text-transform: uppercase; }
+        .obs-block { margin: 1mm 0 0 2mm; }
+        .obs { display: inline-block; background: #000 !important; color: #fff !important; padding: 0.5mm 2mm; font-weight: bold; font-size: 10pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .total-line { display: flex; justify-content: space-between; font-size: 10pt; margin: 0.5mm 0; }
+        .grand-total { display: flex; justify-content: space-between; font-size: 13pt; font-weight: bold; margin: 1mm 0; }
+        .footer { text-align: center; font-size: 8pt; margin-top: 2mm; }
+        .delivery-badge { text-align: center; font-size: 11pt; font-weight: bold; padding: 1mm; margin: 1mm 0; border: 1px solid #000; }
+    </style>
+</head>
+<body>
+    <!--BOX_START-->
+    <div class="header">
+        <div class="store-name">${storeName.toUpperCase()}</div>
+        <div class="order-num">PEDIDO #${orderNum}</div>
+        <div class="origem">${origemLabel}</div>
+        <div class="date">${dt}</div>
+    </div>
+    <hr class="divider">
+    <div class="section">
+        <p><span class="label">Cliente:</span> ${order.customerName}</p>
+        ${phoneHtml}
+        ${paymentHtml}
+    </div>
+    <!--BOX_END-->
+    ${deliverySection}
+    <hr class="divider">
+    <div class="section">
+        ${itemsHtml}
+    </div>
+    <hr class="divider">
+    <div class="total-line">
+        <span>Subtotal:</span>
+        <span>R$ ${subtotalStr}</span>
+    </div>
+    ${deliveryFeeHtml}
+    <div class="grand-total">
+        <span>TOTAL:</span>
+        <span>R$ ${totalStr}</span>
+    </div>
+    <hr class="divider">
+    <p class="footer">Obrigado pela preferencia!</p>
+</body>
+</html>`;
   }
 
   async function sendWhatsAppNotification(items: WorkingItem[]): Promise<void> {
