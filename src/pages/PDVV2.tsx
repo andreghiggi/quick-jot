@@ -1219,7 +1219,15 @@ export default function PDVV2() {
       </Dialog>
     </PDVV2Layout>
     {/* Overlay de bloqueio enquanto NFC-e é emitida */}
-    {isEmittingNfce && (
+    {/* Na Lancheria I9 trocamos o overlay bloqueante por um indicador
+        discreto no canto, para não sobrepor o prompt de impressão TEF. */}
+    {isEmittingNfce && isI9Company && (
+      <div className="fixed bottom-4 right-4 z-40 bg-card border rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 pointer-events-none">
+        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+        <p className="text-sm font-medium text-foreground">Emitindo NFC-e…</p>
+      </div>
+    )}
+    {isEmittingNfce && !isI9Company && (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
         <div className="bg-card rounded-lg px-8 py-6 shadow-xl flex flex-col items-center gap-3">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
