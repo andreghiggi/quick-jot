@@ -49,4 +49,6 @@ export interface Category {
   pdvItem?: boolean;
   waiterItem?: boolean;
   printDescription?: boolean;
+  /** Editar Pedido (PDV V2): itens desta categoria podem ser trocados em pedidos enviados. */
+  swappableInOrder?: boolean;
 }
