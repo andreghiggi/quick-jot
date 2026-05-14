@@ -46,6 +46,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         pdvItem: (cat as any).pdv_item ?? true,
         waiterItem: (cat as any).waiter_item ?? true,
         printDescription: (cat as any).print_description ?? false,
+        swappableInOrder: (cat as any).swappable_in_order ?? false,
       }));
 
       setCategories(mapped);
@@ -186,6 +187,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
       if (data.pdvItem !== undefined) updateData.pdv_item = data.pdvItem;
       if (data.waiterItem !== undefined) updateData.waiter_item = data.waiterItem;
       if (data.printDescription !== undefined) (updateData as any).print_description = data.printDescription;
+      if (data.swappableInOrder !== undefined) (updateData as any).swappable_in_order = data.swappableInOrder;
 
       const { error } = await supabase
         .from('categories')
@@ -193,6 +195,28 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         .eq('id', id);
 
       if (error) throw error;
+
+      // Cascata PDV V2: ao alterar swappable_in_order na categoria,
+      // propaga para subcategorias e produtos da mesma categoria.
+      if (data.swappableInOrder !== undefined && companyId) {
+        const cat = categories.find(c => c.id === id);
+        if (cat) {
+          const [{ error: subErr }, { error: prodErr }] = await Promise.all([
+            supabase
+              .from('subcategories')
+              .update({ swappable_in_order: data.swappableInOrder } as any)
+              .eq('category_id', id)
+              .eq('company_id', companyId),
+            supabase
+              .from('products')
+              .update({ swappable_in_order: data.swappableInOrder } as any)
+              .eq('category', cat.name)
+              .eq('company_id', companyId),
+          ]);
+          if (subErr) console.error('Cascade swappable to subcategories error:', subErr);
+          if (prodErr) console.error('Cascade swappable to products error:', prodErr);
+        }
+      }
 
       // If category was renamed, update all products referencing the old name
       if (oldName && data.name && companyId) {
