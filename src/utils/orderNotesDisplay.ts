@@ -46,3 +46,28 @@ export function stripDescMarkers(notes: string | null | undefined): string {
     .replace(/\s*\|\s*$/, '')
     .trim();
 }
+
+/**
+ * Extrai a forma de pagamento das `notes` de um pedido.
+ *
+ * O Pedido Express grava `Pagamento: ` (vazio) quando criado sem forma
+ * definida (ex.: retirada cobrada depois). Quando o operador clica em
+ * "Cobrar", o `OrderCardChargeDialog` apenas anexa
+ * `[COBRADO] Pagamento: <forma>` ao final, sem limpar o vazio inicial.
+ *
+ * Esta função prefere o `Pagamento:` que vem depois de `[COBRADO]` e,
+ * caso não exista, retorna a última ocorrência **não vazia** de
+ * `Pagamento: <X>`. Mantém compatibilidade total com pedidos antigos.
+ */
+export function extractPaymentName(notes: string | null | undefined): string | null {
+  if (!notes) return null;
+  // 1) Preferir o pagamento gravado pelo fluxo de Cobrar ([COBRADO])
+  const cobradoMatch = notes.match(/\[COBRADO\][^|]*?Pagamento:\s*([^|()\n]+)/i);
+  const cobradoName = cobradoMatch?.[1]?.trim();
+  if (cobradoName) return cobradoName;
+  // 2) Caso contrário, última ocorrência não vazia de "Pagamento: X"
+  const all = Array.from(notes.matchAll(/Pagamento:\s*([^|()\n]*)/gi))
+    .map((m) => m[1]?.trim())
+    .filter((v): v is string => !!v);
+  return all.length > 0 ? all[all.length - 1] : null;
+}
