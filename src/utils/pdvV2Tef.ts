@@ -107,10 +107,16 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
           });
 
           // Auto-print v1 (allow-list interna; respeita store_settings.tef_auto_print_vias)
-          imprimirComprovanteTefAutomatico({
-            companyId,
-            receiptLines: statusResult.receiptLines,
-          }).catch((e) => console.error('[pdvV2Tef] auto-print falhou:', e));
+          // Awaited para garantir que o prompt TEF seja despachado ANTES do dialog de NFC-e
+          // abrir por cima, permitindo que o guard `tefPromptOpenRef` funcione corretamente.
+          try {
+            await imprimirComprovanteTefAutomatico({
+              companyId,
+              receiptLines: statusResult.receiptLines,
+            });
+          } catch (e) {
+            console.error('[pdvV2Tef] auto-print falhou:', e);
+          }
 
           const installTypeLabel = installmentType === 'adm' ? ' ADM' : ' Loja';
           const installLabel =
