@@ -257,6 +257,7 @@ Deno.serve(async (req) => {
             'MASTERCARD': '02',
             'AMEX': '03',
             'AMERICAN EXPRESS': '03',
+            'MAESTRO': '02',
             'SOROCRED': '04',
             'DINERS': '05',
             'ELO': '06',
@@ -295,6 +296,14 @@ Deno.serve(async (req) => {
               NSU: tef.nsu,
             }
           }
+          const formaPagamentoObj = {
+            forma_pagamento: pagamentoObj.tPag,
+            valor_pagamento: Number(tef.valor || 0),
+            tipo_integracao: 1,
+            cnpj_credenciadora: cnpjAdquirente,
+            bandeira_operadora: tBandMap[bandeiraNorm] || '99',
+            numero_autorizacao: tef.autorizacao,
+          }
           const detPagObj = {
             indPag: '0',
             tPag: pagamentoObj.tPag,
@@ -318,6 +327,8 @@ Deno.serve(async (req) => {
           // gerou <tPag>01</tPag>. Enviamos também o grupo fiscal literal `pag.detPag`, que é o
           // nome do bloco NFe 4.00 no XML. Isolado por loja até validar.
           if (isI9) {
+            emitPayload.pagamento = { ...pagamentoObj, ...formaPagamentoObj }
+            emitPayload.formas_pagamento = [formaPagamentoObj]
             emitPayload.pagamentos = [pagamentoObj]
             emitPayload.pag = { detPag: [detPagObj] }
             emitPayload.detPag = [detPagObj]
@@ -339,6 +350,7 @@ Deno.serve(async (req) => {
           delete emitPayload.tef
           console.log('[nfce-proxy] TEF payment data added:', JSON.stringify(emitPayload.pagamento))
           if (isI9) {
+            console.log('[nfce-proxy][I9] formas_pagamento:', JSON.stringify(emitPayload.formas_pagamento))
             console.log('[nfce-proxy][I9] pagamentos array:', JSON.stringify(emitPayload.pagamentos))
             console.log('[nfce-proxy][I9] pag.detPag:', JSON.stringify(emitPayload.pag))
           }
@@ -382,7 +394,7 @@ Deno.serve(async (req) => {
             qrcode_url: emitData.qrcode_url || emitData.qr_code_url || emitData.url_qrcode || emitData.qrcode || (chave ? buildQrcodeUrl(chave, ambienteResolved) : null),
             xml_url: emitData.xml_url || emitData.url_xml || null,
             motivo_rejeicao: emitData.motivo_rejeicao || emitData.motivo || null,
-            request_payload: payload,
+            request_payload: isI9 ? emitPayload : payload,
             response_payload: result,
           }
           console.log('[nfce-proxy] Inserting record:', JSON.stringify(nfceRecord))

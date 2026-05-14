@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '13/05/2026',
+    version: '1.32.2',
+    type: 'fix',
+    description: 'Fiscal/NFC-e — Ajuste piloto na Lancheria da I9 para enviar a forma de pagamento TEF também no formato fiscal `formas_pagamento`, evitando que notas de débito/crédito/PIX sejam geradas como Dinheiro no portal da SEFAZ. O fluxo TEF/PinPad não foi alterado; a mudança fica isolada na emissão da NFC-e da loja piloto até validação.',
+  },
+  {
+    date: '13/05/2026',
     version: '1.32.1',
     type: 'improvement',
     description: 'TEF — A impressão automática do comprovante agora pergunta antes. Após cada venda TEF aprovada, abre um modal rápido com 3 opções: "Ambas as vias (Estabelecimento + Cliente)", "Só via do Estabelecimento" e "Não imprimir agora". A opção pré-marcada vem da configuração definida em Configurações → Impressão. A reimpressão manual pelo card do pedido continua disponível normalmente. Ajuste exclusivo da Lancheria da I9.',
