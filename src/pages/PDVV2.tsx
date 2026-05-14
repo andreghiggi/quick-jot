@@ -163,7 +163,7 @@ export default function PDVV2() {
   // emissão deixa de ser bloqueante e o pop-up pós-venda da NFC-e só abre
   // depois que o operador fecha o prompt de impressão TEF.
   const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-  const isI9 = companyId === I9_COMPANY_ID;
+  const isI9Company = companyId === I9_COMPANY_ID;
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
   const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
 
