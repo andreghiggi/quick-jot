@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Order, OrderStatus } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt, FileText, CreditCard } from 'lucide-react';
+import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt, FileText, CreditCard, Pencil } from 'lucide-react';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -29,6 +29,8 @@ import {
 } from '@/utils/tefOrderActions';
 import { getNFCeRecordByOrderId, printDanfeFromRecord, type NFCeRecord } from '@/services/nfceService';
 import { OrderCardChargeDialog } from '@/components/OrderCardChargeDialog';
+import { OrderEditDialog } from '@/components/OrderEditDialog';
+import { isOrderEditAllowed } from '@/utils/orderEditAllowList';
 
 interface OrderCardProps {
   order: Order;
@@ -91,6 +93,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const [advancing, setAdvancing] = useState(false);
   const [tefEstornoLoading, setTefEstornoLoading] = useState(false);
   const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const confirmed = !!order.confirmedAt;
 
   // Cobrança manual de pedidos do cardápio antes de "Entregar".
@@ -513,6 +516,19 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   // Detecta se o pedido foi cancelado/estornado (qualquer pagamento — TEF, PIX etc.)
   const isCancelled = !!order.notes?.includes('[CANCELADA]');
 
+  // Editar Pedido (allow-list i9): pendente/preparando, cardápio/balcão,
+  // sem cobrança/NFC-e/TEF, não cancelado.
+  const editFeatureAllowed = isOrderEditAllowed(company?.id);
+  const orderOrigin = order.origin || 'cardapio';
+  const showEditButton =
+    editFeatureAllowed &&
+    !isCancelled &&
+    (orderOrigin === 'cardapio' || orderOrigin === 'balcao') &&
+    (order.status === 'pending' || order.status === 'preparing') &&
+    !alreadyCharged &&
+    !tefInfo &&
+    !(nfceRecord && (nfceRecord.chave_acesso || nfceRecord.qrcode_url));
+
   return (
     <div className={cn(
       "bg-card rounded-xl p-4 shadow-card border-2 animate-slide-up relative",
@@ -536,6 +552,23 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               "text-lg font-bold",
               isCancelled ? "text-destructive line-through" : "text-primary"
             )}>#{order.orderCode || order.dailyNumber}</span>
+            {showEditButton && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setEditDialogOpen(true)}
+                      className="inline-flex items-center justify-center h-6 w-6 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                      aria-label="Editar pedido"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Editar pedido</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             {isCancelled ? (
               <Badge variant="destructive" className="text-xs">Cancelada</Badge>
             ) : (
@@ -900,6 +933,17 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           open={chargeDialogOpen}
           onOpenChange={setChargeDialogOpen}
           onCharged={onCharged}
+        />
+      )}
+      {showEditButton && company?.id && (
+        <OrderEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          order={order}
+          companyId={company.id}
+          storeName={storeName}
+          paperSize={paperSize}
+          onSaved={onCharged}
         />
       )}
     </div>

@@ -867,6 +867,7 @@ export type Database = {
       }
       order_items: {
         Row: {
+          added_after: boolean
           company_id: string | null
           created_at: string
           id: string
@@ -876,8 +877,10 @@ export type Database = {
           price: number
           product_id: string | null
           quantity: number
+          swapped_from: string | null
         }
         Insert: {
+          added_after?: boolean
           company_id?: string | null
           created_at?: string
           id?: string
@@ -887,8 +890,10 @@ export type Database = {
           price: number
           product_id?: string | null
           quantity?: number
+          swapped_from?: string | null
         }
         Update: {
+          added_after?: boolean
           company_id?: string | null
           created_at?: string
           id?: string
@@ -898,6 +903,7 @@ export type Database = {
           price?: number
           product_id?: string | null
           quantity?: number
+          swapped_from?: string | null
         }
         Relationships: [
           {
@@ -1314,6 +1320,7 @@ export type Database = {
           pdv_item: boolean
           price: number
           subcategory_id: string | null
+          swappable_in_order: boolean
           tax_rule_id: string | null
           unit: string
           updated_at: string
@@ -1339,6 +1346,7 @@ export type Database = {
           pdv_item?: boolean
           price: number
           subcategory_id?: string | null
+          swappable_in_order?: boolean
           tax_rule_id?: string | null
           unit?: string
           updated_at?: string
@@ -1364,6 +1372,7 @@ export type Database = {
           pdv_item?: boolean
           price?: number
           subcategory_id?: string | null
+          swappable_in_order?: boolean
           tax_rule_id?: string | null
           unit?: string
           updated_at?: string

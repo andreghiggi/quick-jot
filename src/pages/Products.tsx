@@ -23,6 +23,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { isOrderEditAllowed } from '@/utils/orderEditAllowList';
 
 interface ExtractedProduct {
   name: string;
@@ -206,6 +207,7 @@ export default function Products() {
       menuItem: editingProduct.menuItem,
       waiterItem: editingProduct.waiterItem,
       subcategoryId: editingProduct.subcategoryId,
+      ...(isOrderEditAllowed(company?.id) ? { swappableInOrder: (editingProduct as any).swappableInOrder } : {}),
       ...(true ? {
         code: editingProduct.code,
         gtin: editingProduct.gtin,
@@ -1068,6 +1070,15 @@ export default function Products() {
                     onCheckedChange={(v) => setEditingProduct({ ...editingProduct, waiterItem: v })}
                   />
                   <Label>Item de Mesa/Garçom</Label>
+                </div>
+              )}
+              {isOrderEditAllowed(company?.id) && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={(editingProduct as any).swappableInOrder === true}
+                    onCheckedChange={(v) => setEditingProduct({ ...(editingProduct as any), swappableInOrder: v } as any)}
+                  />
+                  <Label>Item pode ser trocado no pedido pelo PDV</Label>
                 </div>
               )}
               {true && (

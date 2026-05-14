@@ -30,6 +30,8 @@ export interface Product {
   icmsOrigin?: string;
   netWeight?: number | null;
   grossWeight?: number | null;
+  /** Editar Pedido (allow-list i9): item pode ser trocado em pedidos já enviados. */
+  swappableInOrder?: boolean;
 }
 
 export interface CartItem {
