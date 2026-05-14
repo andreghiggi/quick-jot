@@ -36,7 +36,6 @@ const statusColors: Record<string, string> = {
 
 function parseOrderNotes(notes: string | null) {
   if (!notes) return {};
-  const paymentMatch = notes.match(/Pagamento:\s*([^(|\n]+)/i);
   const trocoMatch = notes.match(/Troco para R\$\s*([^)|\n]+)/i);
   const cpfMatch = notes.match(/CPF:\s*([^\n|]+)/i);
   const cidadeMatch = notes.match(/Cidade:\s*([^\n|]+)/i);
@@ -49,7 +48,7 @@ function parseOrderNotes(notes: string | null) {
   cleanNotes = cleanNotes.replace(/\n{2,}/g, '\n').trim();
 
   return {
-    paymentMethod: paymentMatch?.[1]?.trim() || null,
+    paymentMethod: extractPaymentName(notes),
     troco: trocoMatch?.[1]?.trim() || null,
     cpf: cpfMatch?.[1]?.trim() || null,
     cidade: cidadeMatch?.[1]?.trim() || null,
