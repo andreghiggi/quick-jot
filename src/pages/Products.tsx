@@ -1072,6 +1072,15 @@ export default function Products() {
                   <Label>Item de Mesa/Garçom</Label>
                 </div>
               )}
+              {isOrderEditAllowed(company?.id) && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={(editingProduct as any).swappableInOrder === true}
+                    onCheckedChange={(v) => setEditingProduct({ ...(editingProduct as any), swappableInOrder: v } as any)}
+                  />
+                  <Label>Item pode ser trocado no pedido pelo PDV</Label>
+                </div>
+              )}
               {true && (
                 <div className="border-t pt-4 mt-2 space-y-4">
                   <h4 className="font-semibold text-sm">Dados fiscais</h4>
