@@ -93,4 +93,5 @@
 - [TEF v1.2 Beta](mem://features/tef-v1-2-beta) — 5 correções da homologação Multiplus aplicadas (CNF pós-CNC, 023-000 ecoado, ATV numérico, 800-003 só em parcelado, 003-000 sem vírgula). Enviado para re-análise — CONGELADO até retorno.
 - [WhatsApp Cleanup Cron](mem://features/whatsapp-messages-cleanup) — Cron diário 03:00 BRT que apaga logs WhatsApp > 90 dias via função SQL.
 - [Cardápio Mesa QR](mem://features/cardapio-mesa-qr) — Módulo `cardapio_mesa` com rota pública `/mesa/:slug`, cliente informa mesa e pedido entra como `origin='mesa_qr'`. Inicialmente só Lancheria da I9.
+- [PDV V2 TEF/NFC-e Overlay](mem://features/pdvv2-tef-nfce-overlay) — I9: overlay "Emitindo NFC-e" não bloqueante e PostSaleDialog adia abertura até prompt TEF fechar.
 - [TEF Auto Print v1](mem://features/tef-auto-print-v1) — Impressão automática do comprovante TEF (1ª via) após PinPad aprovado, módulo isolado em `src/utils/tefAutoPrint.ts`, allow-list só I9, setting `tef_auto_print_vias` (none/estabelecimento/ambas, default ambas).
