@@ -295,13 +295,32 @@ Deno.serve(async (req) => {
               NSU: tef.nsu,
             }
           }
+          const detPagObj = {
+            indPag: '0',
+            tPag: pagamentoObj.tPag,
+            vPag: Number(tef.valor || 0).toFixed(2),
+            tpIntegra: '1',
+            card: {
+              tpIntegra: '1',
+              CNPJ: cnpjAdquirente,
+              tBand: tBandMap[bandeiraNorm] || '99',
+              cAut: tef.autorizacao,
+              NSU: tef.nsu,
+            },
+            CNPJ: cnpjAdquirente,
+            tBand: tBandMap[bandeiraNorm] || '99',
+            cAut: tef.autorizacao,
+            NSU: tef.nsu,
+          }
           // Mantém `pagamento` (singular) para todas as lojas — comportamento legado.
           emitPayload.pagamento = pagamentoObj
-          // Lancheria da i9 (homologação): envia também `pagamentos` (array) — layout NFe 4.00
-          // que a NFC.io espera para preencher <detPag> com tPag correto (03/04/17) em vez do
-          // fallback 01 (dinheiro). Isolado por loja até validar.
+          // Lancheria da i9 (homologação): a Fiscal Flow ignorou `pagamentos` sozinho e ainda
+          // gerou <tPag>01</tPag>. Enviamos também o grupo fiscal literal `pag.detPag`, que é o
+          // nome do bloco NFe 4.00 no XML. Isolado por loja até validar.
           if (isI9) {
             emitPayload.pagamentos = [pagamentoObj]
+            emitPayload.pag = { detPag: [detPagObj] }
+            emitPayload.detPag = [detPagObj]
           }
 
           // Fallback: include NSU in infAdFisco in case the API doesn't accept it in the card group
@@ -321,6 +340,7 @@ Deno.serve(async (req) => {
           console.log('[nfce-proxy] TEF payment data added:', JSON.stringify(emitPayload.pagamento))
           if (isI9) {
             console.log('[nfce-proxy][I9] pagamentos array:', JSON.stringify(emitPayload.pagamentos))
+            console.log('[nfce-proxy][I9] pag.detPag:', JSON.stringify(emitPayload.pag))
           }
           console.log('[nfce-proxy] infAdFisco fallback:', emitPayload.infAdFisco)
         }
