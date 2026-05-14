@@ -154,8 +154,8 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
 
       // 2) Marca o pedido como cobrado (sufixo no notes para identificação visual)
       const newNotes = order.notes
-        ? `${order.notes} | [COBRADO] Pagamento: ${params.paymentName}`
-        : `[COBRADO] Pagamento: ${params.paymentName}`;
+        ? `${order.notes} | [COBRADO] Pagamento: ${params.paymentName}${tefNote}`
+        : `[COBRADO] Pagamento: ${params.paymentName}${tefNote}`;
       await supabase.from('orders').update({ notes: newNotes }).eq('id', order.id);
 
       // 3) Emite NFC-e quando solicitado
