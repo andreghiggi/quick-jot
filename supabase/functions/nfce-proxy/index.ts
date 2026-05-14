@@ -319,6 +319,9 @@ Deno.serve(async (req) => {
 
           delete emitPayload.tef
           console.log('[nfce-proxy] TEF payment data added:', JSON.stringify(emitPayload.pagamento))
+          if (isI9) {
+            console.log('[nfce-proxy][I9] pagamentos array:', JSON.stringify(emitPayload.pagamentos))
+          }
           console.log('[nfce-proxy] infAdFisco fallback:', emitPayload.infAdFisco)
         }
 
