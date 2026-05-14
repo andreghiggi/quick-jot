@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '14/05/2026',
+    version: '1.32.3',
+    type: 'fix',
+    description: 'PDV V2 / TEF — Corrigido conflito visual em que o overlay "Emitindo NFC-e…" cobria o pop-up de impressão do comprovante TEF, impedindo que o operador clicasse nas opções de via. Agora, na Lancheria da I9: o aviso de emissão da NFC-e vira um indicador discreto no canto inferior direito (não bloqueia mais a tela), e o pop-up pós-venda da NFC-e só abre depois que o operador escolhe imprimir/cancelar o comprovante TEF. Nenhum fluxo TEF/NFC-e foi alterado — apenas a ordem de exibição.',
+  },
+  {
     date: '13/05/2026',
     version: '1.32.2',
     type: 'fix',
