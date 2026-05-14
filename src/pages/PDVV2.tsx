@@ -38,6 +38,7 @@ import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
+import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog';
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
 }
@@ -156,6 +157,34 @@ export default function PDVV2() {
   const [pendingPostSale, setPendingPostSale] = useState<null | (() => void | Promise<void>)>(null);
   // Status do processamento TEF (banner no topo do diálogo de cobrança)
   const [tefStatus, setTefStatus] = useState('');
+
+  // ---- Lancheria I9: serializa NFC-e ↔ prompt TEF -----------------------
+  // Isolado por companyId para não impactar outras lojas. O overlay de
+  // emissão deixa de ser bloqueante e o pop-up pós-venda da NFC-e só abre
+  // depois que o operador fecha o prompt de impressão TEF.
+  const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const isI9Company = companyId === I9_COMPANY_ID;
+  const [tefPromptOpen, setTefPromptOpen] = useState(false);
+  const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
+
+  useEffect(() => {
+    function onOpened() { setTefPromptOpen(true); }
+    function onClosed() { setTefPromptOpen(false); }
+    window.addEventListener('tef-auto-print-prompt-opened', onOpened as EventListener);
+    window.addEventListener(TEF_PRINT_PROMPT_CLOSED_EVENT, onClosed as EventListener);
+    return () => {
+      window.removeEventListener('tef-auto-print-prompt-opened', onOpened as EventListener);
+      window.removeEventListener(TEF_PRINT_PROMPT_CLOSED_EVENT, onClosed as EventListener);
+    };
+  }, []);
+
+  // Quando o prompt TEF fecha, libera a abertura adiada do diálogo NFC-e.
+  useEffect(() => {
+    if (!tefPromptOpen && pendingNfceOpen && nfceRecord) {
+      setNfceDialogOpen(true);
+      setPendingNfceOpen(false);
+    }
+  }, [tefPromptOpen, pendingNfceOpen, nfceRecord]);
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = {
@@ -389,7 +418,14 @@ export default function PDVV2() {
       if (rec) {
         setNfceRecord(rec as unknown as NFCeRecord);
         setNfceAutoPrint(shouldPrint);
-        setNfceDialogOpen(true);
+        // Na Lancheria I9, se o prompt TEF estiver aberto, adia a abertura do
+        // diálogo pós-venda da NFC-e até o operador fechar o prompt — evita
+        // que o overlay/dialog cubra os botões de impressão TEF.
+        if (isI9Company && tefPromptOpen) {
+          setPendingNfceOpen(true);
+        } else {
+          setNfceDialogOpen(true);
+        }
       }
       setIsEmittingNfce(false);
       return true;
@@ -1183,7 +1219,15 @@ export default function PDVV2() {
       </Dialog>
     </PDVV2Layout>
     {/* Overlay de bloqueio enquanto NFC-e é emitida */}
-    {isEmittingNfce && (
+    {/* Na Lancheria I9 trocamos o overlay bloqueante por um indicador
+        discreto no canto, para não sobrepor o prompt de impressão TEF. */}
+    {isEmittingNfce && isI9Company && (
+      <div className="fixed bottom-4 right-4 z-40 bg-card border rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 pointer-events-none">
+        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+        <p className="text-sm font-medium text-foreground">Emitindo NFC-e…</p>
+      </div>
+    )}
+    {isEmittingNfce && !isI9Company && (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
         <div className="bg-card rounded-lg px-8 py-6 shadow-xl flex flex-col items-center gap-3">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />

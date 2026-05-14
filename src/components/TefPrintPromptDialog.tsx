@@ -17,6 +17,13 @@ import {
 } from '@/utils/tefAutoPrint';
 
 /**
+ * Evento disparado quando o prompt TEF é fechado (por confirmação ou cancelamento).
+ * Usado para serializar a abertura do diálogo pós-venda da NFC-e (Lancheria I9),
+ * evitando que o overlay da NFC-e cubra os botões de impressão TEF.
+ */
+export const TEF_PRINT_PROMPT_CLOSED_EVENT = 'tef-auto-print-prompt-closed';
+
+/**
  * Modal global de confirmação de impressão TEF.
  * Escuta o evento `tef-auto-print-prompt` disparado por
  * `imprimirComprovanteTefAutomatico` e pergunta ao operador quais vias
@@ -34,6 +41,7 @@ export function TefPrintPromptDialog() {
       if (!ce.detail) return;
       setPayload(ce.detail);
       setOpen(true);
+      window.dispatchEvent(new CustomEvent('tef-auto-print-prompt-opened'));
     }
     window.addEventListener(TEF_PRINT_PROMPT_EVENT, handler as EventListener);
     return () => window.removeEventListener(TEF_PRINT_PROMPT_EVENT, handler as EventListener);
@@ -42,11 +50,13 @@ export function TefPrintPromptDialog() {
   async function handleChoice(choice: Exclude<TefAutoPrintMode, 'none'> | 'cancel') {
     if (!payload) {
       setOpen(false);
+      window.dispatchEvent(new CustomEvent(TEF_PRINT_PROMPT_CLOSED_EVENT));
       return;
     }
     if (choice === 'cancel') {
       setOpen(false);
       setPayload(null);
+      window.dispatchEvent(new CustomEvent(TEF_PRINT_PROMPT_CLOSED_EVENT));
       return;
     }
     setBusy(true);
@@ -56,6 +66,7 @@ export function TefPrintPromptDialog() {
       setBusy(false);
       setOpen(false);
       setPayload(null);
+      window.dispatchEvent(new CustomEvent(TEF_PRINT_PROMPT_CLOSED_EVENT));
     }
   }
 
