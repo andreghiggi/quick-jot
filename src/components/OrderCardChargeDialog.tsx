@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import type { DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
@@ -54,11 +54,12 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const isI9Company = company?.id === I9_COMPANY_ID;
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
+  const tefPromptOpenRef = useRef(false);
   const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
 
   useEffect(() => {
-    function onOpened() { setTefPromptOpen(true); }
-    function onClosed() { setTefPromptOpen(false); }
+    function onOpened() { tefPromptOpenRef.current = true; setTefPromptOpen(true); }
+    function onClosed() { tefPromptOpenRef.current = false; setTefPromptOpen(false); }
     window.addEventListener('tef-auto-print-prompt-opened', onOpened as EventListener);
     window.addEventListener(TEF_PRINT_PROMPT_CLOSED_EVENT, onClosed as EventListener);
     return () => {
@@ -213,7 +214,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
           if (rec) {
             setNfceRecord(rec as unknown as NFCeRecord);
             setNfceAutoPrint(!!params.printDocument);
-            if (isI9Company && tefPromptOpen) {
+            if (isI9Company && tefPromptOpenRef.current) {
               setPendingNfceOpen(true);
             } else {
               setNfceDialogOpen(true);
