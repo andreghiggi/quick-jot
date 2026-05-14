@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
           const adquirenteNorm = (tef.adquirente || '').toUpperCase()
           const cnpjAdquirente = cnpjAdquirenteMap[adquirenteNorm] || tef.cnpj_adquirente || null
 
-          emitPayload.pagamento = {
+          const pagamentoObj = {
             tPag: tPagMap[tef.tipo_pagamento] || '99',
             vPag: tef.valor,
             tpIntegra: 1,
@@ -294,6 +294,14 @@ Deno.serve(async (req) => {
               cAut: tef.autorizacao,
               NSU: tef.nsu,
             }
+          }
+          // Mantém `pagamento` (singular) para todas as lojas — comportamento legado.
+          emitPayload.pagamento = pagamentoObj
+          // Lancheria da i9 (homologação): envia também `pagamentos` (array) — layout NFe 4.00
+          // que a NFC.io espera para preencher <detPag> com tPag correto (03/04/17) em vez do
+          // fallback 01 (dinheiro). Isolado por loja até validar.
+          if (isI9) {
+            emitPayload.pagamentos = [pagamentoObj]
           }
 
           // Fallback: include NSU in infAdFisco in case the API doesn't accept it in the card group
@@ -311,6 +319,9 @@ Deno.serve(async (req) => {
 
           delete emitPayload.tef
           console.log('[nfce-proxy] TEF payment data added:', JSON.stringify(emitPayload.pagamento))
+          if (isI9) {
+            console.log('[nfce-proxy][I9] pagamentos array:', JSON.stringify(emitPayload.pagamentos))
+          }
           console.log('[nfce-proxy] infAdFisco fallback:', emitPayload.infAdFisco)
         }
 
