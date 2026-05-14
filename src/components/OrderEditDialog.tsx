@@ -11,9 +11,11 @@ import { toast } from 'sonner';
 import { useProducts } from '@/hooks/useProducts';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useCategories } from '@/hooks/useCategories';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
+import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { stripDescMarkers, extractPaymentName } from '@/utils/orderNotesDisplay';
 import { cn } from '@/lib/utils';
 
@@ -57,6 +59,7 @@ export function OrderEditDialog({
   const { products } = useProducts({ companyId });
   const { groups: optionalGroups } = useOptionalGroups({ companyId });
   const { categories } = useCategories({ companyId });
+  const { settings: storeSettings } = useStoreSettings({ companyId });
   const [working, setWorking] = useState<WorkingItem[]>([]);
   const [originalIds, setOriginalIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
