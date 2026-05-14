@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { stripDescMarkers, parseItemNotes } from '@/utils/orderNotesDisplay';
+import { stripDescMarkers, parseItemNotes, extractPaymentName } from '@/utils/orderNotesDisplay';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -303,8 +303,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       });
       const subtotal = order.items.reduce((s, it) => s + it.price * it.quantity, 0);
       const deliveryFee = order.total - subtotal > 0 ? order.total - subtotal : 0;
-      const paymentMatch = order.notes?.match(/Pagamento:\s*([^|()\n]+)/i);
-      const paymentLabel = paymentMatch?.[1]?.trim() || '—';
+      const paymentLabel = extractPaymentName(order.notes) || '—';
       const itemsHtml = order.items.map((it) => {
         // Remove parênteses de adicionais para um cupom mais limpo
         const cleanName = it.name.includes('(') ? it.name.substring(0, it.name.indexOf('(')).trim() : it.name;
@@ -450,10 +449,10 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               extraInfo += `<p><span class="label">LOCAL:</span> ${[city, state].filter(Boolean).join(' - ')}</p>`;
             }
             // Extract payment method and change info
-            const pagamentoMatch = notes.match(/Pagamento:\s*([^(|]+)/i);
+            const pagamentoName = extractPaymentName(notes);
             const trocoMatch = notes.match(/Troco para R\$\s*([^\)]+)/i);
             const pixKeyMatch = notes.match(/Chave PIX:\s*([^)]+)\)/i);
-            if (pagamentoMatch) extraInfo += `<p><span class="label">PAGAMENTO:</span> ${pagamentoMatch[1].trim()}</p>`;
+            if (pagamentoName) extraInfo += `<p><span class="label">PAGAMENTO:</span> ${pagamentoName}</p>`;
             if (trocoMatch) extraInfo += `<p><span class="label">TROCO PARA:</span> R$ ${trocoMatch[1].trim()}</p>`;
             if (pixKeyMatch) extraInfo += `<p><span class="label">CHAVE PIX:</span> ${pixKeyMatch[1].trim()}</p>`;
             return extraInfo;
@@ -701,14 +700,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
 
         {/* Payment method, delivery type & troco extracted from notes */}
         {order.notes && (() => {
-          const paymentMatch = order.notes?.match(/Pagamento:\s*([^|()\n]+)/i);
+          const paymentLabel = extractPaymentName(order.notes);
           const trocoMatch = order.notes?.match(/Troco para R\$\s*([^)|\n]+)/i) || null;
           const isDelivery = !!order.deliveryAddress;
-          const paymentLabel = paymentMatch?.[1].trim();
           const isTefPayment = !!tefInfo;
           return (
             <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
-              {paymentMatch && (
+              {paymentLabel && (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span>💳 Pagamento: {paymentLabel}</span>
                   {isTefPayment && hasTefReceipt && (
