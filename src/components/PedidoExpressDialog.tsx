@@ -32,6 +32,7 @@ import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { imprimirComprovanteTefAutomatico } from '@/utils/tefAutoPrint';
+import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import {
   sendPinpadPayment,
@@ -71,6 +72,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const fiscalEnabled = isModuleEnabled('fiscal');
+  const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const isI9Company = company?.id === I9_COMPANY_ID;
   const activeNeighborhoods = getActiveNeighborhoods();
   const useNeighborhoodDeliveryMode = settings.deliveryMode === 'neighborhood' && activeNeighborhoods.length > 0;
 
@@ -288,6 +291,27 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
   const [isEmittingNfce, setIsEmittingNfce] = useState(false);
+  const [tefPromptOpen, setTefPromptOpen] = useState(false);
+  const tefPromptOpenRef = useRef(false);
+  const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
+
+  useEffect(() => {
+    function onOpened() { tefPromptOpenRef.current = true; setTefPromptOpen(true); }
+    function onClosed() { tefPromptOpenRef.current = false; setTefPromptOpen(false); }
+    window.addEventListener('tef-auto-print-prompt-opened', onOpened as EventListener);
+    window.addEventListener(TEF_PRINT_PROMPT_CLOSED_EVENT, onClosed as EventListener);
+    return () => {
+      window.removeEventListener('tef-auto-print-prompt-opened', onOpened as EventListener);
+      window.removeEventListener(TEF_PRINT_PROMPT_CLOSED_EVENT, onClosed as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!tefPromptOpen && pendingNfceOpen && nfceRecord) {
+      setNfceDialogOpen(true);
+      setPendingNfceOpen(false);
+    }
+  }, [tefPromptOpen, pendingNfceOpen, nfceRecord]);
 
   // ===== TEF state (mini seletor inline) =====
   const [tefCardType, setTefCardType] = useState<'credit' | 'debit' | 'pix'>('credit');
@@ -1015,7 +1039,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             if (rec) {
               setNfceRecord(rec as unknown as NFCeRecord);
               setNfceAutoPrint(!!override?.printDocument);
-              setNfceDialogOpen(true);
+              if (isI9Company && tefPromptOpenRef.current) {
+                setPendingNfceOpen(true);
+              } else {
+                setNfceDialogOpen(true);
+              }
             }
           }
         } catch (err: any) {
@@ -2080,7 +2108,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       />
 
       {/* Overlay de bloqueio enquanto NFC-e é emitida */}
-      {isEmittingNfce && (
+      {isEmittingNfce && isI9Company && (
+        <div className="fixed bottom-4 right-4 z-40 bg-card border rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 pointer-events-none">
+          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+          <p className="text-sm font-medium text-foreground">Emitindo NFC-e…</p>
+        </div>
+      )}
+      {isEmittingNfce && !isI9Company && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
           <div className="bg-card rounded-lg px-8 py-6 shadow-xl flex flex-col items-center gap-3">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />

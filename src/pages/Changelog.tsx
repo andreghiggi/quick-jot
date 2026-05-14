@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '14/05/2026',
+    version: '1.32.4',
+    type: 'fix',
+    description: 'PDV V2 / TEF — Estendida a correção do conflito visual entre o comprovante TEF e o aviso "Emitindo NFC-e…" para os fluxos de Pedido Express e Cobrança de pedido do cardápio, além do fluxo de comanda. Na Lancheria da I9, o prompt de impressão TEF agora fica acima de qualquer camada de NFC-e e os avisos de emissão não bloqueiam cliques nos botões do comprovante.',
+  },
+  {
+    date: '14/05/2026',
     version: '1.32.3',
     type: 'fix',
     description: 'PDV V2 / TEF — Corrigido conflito visual em que o overlay "Emitindo NFC-e…" cobria o pop-up de impressão do comprovante TEF, impedindo que o operador clicasse nas opções de via. Agora, na Lancheria da I9: o aviso de emissão da NFC-e vira um indicador discreto no canto inferior direito (não bloqueia mais a tela), e o pop-up pós-venda da NFC-e só abre depois que o operador escolhe imprimir/cancelar o comprovante TEF. Nenhum fluxo TEF/NFC-e foi alterado — apenas a ordem de exibição.',

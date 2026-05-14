@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import type { DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import type { ExtraItem } from '@/components/pdv-v2/PDVV2AddItemSearch';
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
+import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { useProducts } from '@/hooks/useProducts';
@@ -50,6 +51,29 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
   const [tefStatus, setTefStatus] = useState('');
   const [isEmittingNfce, setIsEmittingNfce] = useState(false);
+  const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const isI9Company = company?.id === I9_COMPANY_ID;
+  const [tefPromptOpen, setTefPromptOpen] = useState(false);
+  const tefPromptOpenRef = useRef(false);
+  const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
+
+  useEffect(() => {
+    function onOpened() { tefPromptOpenRef.current = true; setTefPromptOpen(true); }
+    function onClosed() { tefPromptOpenRef.current = false; setTefPromptOpen(false); }
+    window.addEventListener('tef-auto-print-prompt-opened', onOpened as EventListener);
+    window.addEventListener(TEF_PRINT_PROMPT_CLOSED_EVENT, onClosed as EventListener);
+    return () => {
+      window.removeEventListener('tef-auto-print-prompt-opened', onOpened as EventListener);
+      window.removeEventListener(TEF_PRINT_PROMPT_CLOSED_EVENT, onClosed as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!tefPromptOpen && pendingNfceOpen && nfceRecord) {
+      setNfceDialogOpen(true);
+      setPendingNfceOpen(false);
+    }
+  }, [tefPromptOpen, pendingNfceOpen, nfceRecord]);
 
   // Itens do pedido convertidos para o formato esperado pela venda/NFC-e.
   const saleItems = useMemo(
@@ -190,7 +214,11 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
           if (rec) {
             setNfceRecord(rec as unknown as NFCeRecord);
             setNfceAutoPrint(!!params.printDocument);
-            setNfceDialogOpen(true);
+            if (isI9Company && tefPromptOpenRef.current) {
+              setPendingNfceOpen(true);
+            } else {
+              setNfceDialogOpen(true);
+            }
           }
         } catch (err: any) {
           console.error('[OrderCardCharge] NFC-e emission error:', err);
@@ -214,7 +242,13 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
 
   return (
     <>
-      {isEmittingNfce && (
+      {isEmittingNfce && isI9Company && (
+        <div className="fixed bottom-4 right-4 z-40 bg-card border rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 pointer-events-none">
+          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+          <p className="text-sm font-medium text-foreground">Emitindo NFC-e…</p>
+        </div>
+      )}
+      {isEmittingNfce && !isI9Company && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
           <div className="bg-card rounded-lg px-8 py-6 shadow-xl flex flex-col items-center gap-3">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
