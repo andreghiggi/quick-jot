@@ -9,15 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen, Pencil, Check, X, Eye, EyeOff, FileText, UtensilsCrossed } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen, Pencil, Check, X, Eye, EyeOff, FileText, UtensilsCrossed, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadCompressedImage } from '@/utils/imageUtils';
+import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 
 export default function Categories() {
   const { company } = useAuthContext();
   const showPrintDescriptionToggle = true;
+  const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const {
     categories,
     loading,
@@ -289,6 +291,21 @@ export default function Categories() {
                         </Button>
                         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                           {cat.printDescription ? 'Imprime descrição na comanda' : 'Não imprime descrição'}
+                        </span>
+                      </div>
+                    )}
+                    {pdvV2Enabled && (
+                      <div className="relative group">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={cn("h-8 w-8 p-0", !cat.swappableInOrder && "text-muted-foreground/40")}
+                          onClick={() => updateCategory(cat.id, { swappableInOrder: !cat.swappableInOrder })}
+                        >
+                          <Repeat className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                          {cat.swappableInOrder ? 'Itens podem ser trocados no pedido pelo PDV (aplica em subcategorias e produtos)' : 'Itens não podem ser trocados no pedido pelo PDV'}
                         </span>
                       </div>
                     )}
