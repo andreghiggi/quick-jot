@@ -73,7 +73,7 @@ export function TefPrintPromptDialog() {
   const def = payload?.defaultMode ?? 'ambas';
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !busy && !v && handleChoice('cancel')}>
+    <Dialog open={open} onOpenChange={() => { /* fechamento apenas via botões explícitos */ }}>
       <DialogContent className="sm:max-w-md z-[10001]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
