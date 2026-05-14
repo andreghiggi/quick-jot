@@ -9,6 +9,10 @@ import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useProducts } from '@/hooks/useProducts';
+import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
+import { useCategories } from '@/hooks/useCategories';
+import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
+import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { stripDescMarkers, extractPaymentName } from '@/utils/orderNotesDisplay';
 import { cn } from '@/lib/utils';
@@ -51,6 +55,8 @@ export function OrderEditDialog({
   onSaved,
 }: OrderEditDialogProps) {
   const { products } = useProducts({ companyId });
+  const { groups: optionalGroups } = useOptionalGroups({ companyId });
+  const { categories } = useCategories({ companyId });
   const [working, setWorking] = useState<WorkingItem[]>([]);
   const [originalIds, setOriginalIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -58,6 +64,8 @@ export function OrderEditDialog({
   // Picker state
   const [pickerMode, setPickerMode] = useState<null | { type: 'add' } | { type: 'swap'; targetIndex: number }>(null);
   const [search, setSearch] = useState('');
+  // Produto escolhido no browser (fluxo "Adicionar item") aguardando seleção de adicionais.
+  const [optionalsProduct, setOptionalsProduct] = useState<Product | null>(null);
 
   // Hidrata estado de trabalho ao abrir
   useEffect(() => {
@@ -67,6 +75,7 @@ export function OrderEditDialog({
     setOriginalIds(new Set(order.items.map((i) => i.id)));
     setPickerMode(null);
     setSearch('');
+    setOptionalsProduct(null);
   }, [open, order.items]);
 
   const newTotal = useMemo(
@@ -84,6 +93,36 @@ export function OrderEditDialog({
 
   const swappableProducts = useMemo(() => products.filter((p) => p.active && p.swappableInOrder), [products]);
   const allActiveProducts = useMemo(() => products.filter((p) => p.active), [products]);
+
+  // Mapa Nome de Categoria -> id, para resolver grupos do produto (mesmo padrão do Pedido Express).
+  const categoryIdByName = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach((c) => { map[c.name] = c.id; });
+    return map;
+  }, [categories]);
+
+  function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
+    const catId = categoryIdByName[productCategory];
+    return optionalGroups
+      .filter((g) => {
+        if (!g.active) return false;
+        if (g.waiterOnly) return false;
+        if (g.productIds.includes(productId)) return true;
+        if (catId && g.categoryIds.includes(catId)) return true;
+        return false;
+      })
+      .map((g) => {
+        const override = g.productOverrides?.find((o) => o.productId === productId);
+        if (override && (override.minSelectOverride !== null || override.maxSelectOverride !== null)) {
+          return {
+            ...g,
+            minSelect: override.minSelectOverride ?? g.minSelect,
+            maxSelect: override.maxSelectOverride ?? g.maxSelect,
+          };
+        }
+        return g;
+      });
+  }
 
   // Lista filtrada do picker
   const pickerProducts = useMemo(() => {
@@ -118,6 +157,44 @@ export function OrderEditDialog({
         pendingProductId: product.id,
       },
     ]);
+    setPickerMode(null);
+    setSearch('');
+  }
+
+  /**
+   * Handler para o browser de categorias (mesmo padrão do Pedido Express):
+   * se o produto tem grupos de adicionais → abre PDVOptionalsDialog;
+   * caso contrário → adiciona direto como nova linha.
+   */
+  function handleProductFromBrowser(product: Product) {
+    const groups = getGroupsForProduct(product.id, product.category);
+    if (groups.length > 0) {
+      setOptionalsProduct(product);
+      return;
+    }
+    handleAddItem(product);
+  }
+
+  /** Recebe os itens montados pelo PDVOptionalsDialog (já com nome composto + preço unitário). */
+  function handleAddFromOptionals(items: Array<{ product_id: string | null; product_name: string; quantity: number; unit_price: number; }>) {
+    if (!items.length) return;
+    setWorking((prev) => {
+      const next = [...prev];
+      for (const it of items) {
+        next.push({
+          id: `new-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          productId: it.product_id || '',
+          name: it.product_name,
+          quantity: it.quantity,
+          price: it.unit_price,
+          notes: undefined,
+          isNew: true,
+          pendingProductId: it.product_id || undefined,
+        });
+      }
+      return next;
+    });
+    setOptionalsProduct(null);
     setPickerMode(null);
     setSearch('');
   }
@@ -408,6 +485,7 @@ export function OrderEditDialog({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85dvh] flex flex-col">
         <DialogHeader>
@@ -417,12 +495,30 @@ export function OrderEditDialog({
         </DialogHeader>
 
         {pickerMode ? (
+          pickerMode.type === 'add' ? (
+            <div className="flex-1 flex flex-col gap-3 min-h-0">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Adicionar item ao pedido</span>
+                <Button variant="ghost" size="sm" onClick={() => { setPickerMode(null); setSearch(''); }}>
+                  Cancelar
+                </Button>
+              </div>
+              <div className="flex-1 min-h-0 border rounded-md p-2">
+                <PDVV2CategoryBrowser
+                  companyId={companyId}
+                  pdvOnly={true}
+                  onProductSelect={handleProductFromBrowser}
+                  maxHeightClassName="max-h-[60vh]"
+                />
+              </div>
+            </div>
+          ) : (
           <div className="flex-1 flex flex-col gap-3 min-h-0">
             <div className="flex items-center gap-2">
               <Search className="w-4 h-4 text-muted-foreground" />
               <Input
                 autoFocus
-                placeholder={pickerMode.type === 'swap' ? 'Buscar item para trocar (mesma categoria)...' : 'Buscar item para adicionar...'}
+                placeholder={'Buscar item para trocar (mesma categoria)...'}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -434,16 +530,14 @@ export function OrderEditDialog({
               <div className="p-2 space-y-1">
                 {pickerProducts.length === 0 && (
                   <p className="text-sm text-muted-foreground p-3">
-                    {pickerMode.type === 'swap'
-                      ? 'Nenhum produto trocável encontrado nesta categoria.'
-                      : 'Nenhum produto encontrado.'}
+                    Nenhum produto trocável encontrado nesta categoria.
                   </p>
                 )}
                 {pickerProducts.map((p) => (
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => pickerMode.type === 'swap' ? handleSwapItem(p) : handleAddItem(p)}
+                    onClick={() => handleSwapItem(p)}
                     className="w-full flex items-center justify-between p-2 rounded hover:bg-accent text-left"
                   >
                     <span className="text-sm">{p.name}</span>
@@ -455,6 +549,7 @@ export function OrderEditDialog({
               </div>
             </ScrollArea>
           </div>
+          )
         ) : (
           <div className="flex-1 flex flex-col gap-3 min-h-0">
             <ScrollArea className="flex-1 min-h-0 border rounded-md">
@@ -549,5 +644,23 @@ export function OrderEditDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {optionalsProduct && (
+      <PDVOptionalsDialog
+        open={!!optionalsProduct}
+        onOpenChange={(o) => { if (!o) setOptionalsProduct(null); }}
+        product={{
+          id: optionalsProduct.id,
+          name: optionalsProduct.name,
+          price: optionalsProduct.price,
+          imageUrl: optionalsProduct.imageUrl,
+          category: optionalsProduct.category,
+        }}
+        groups={getGroupsForProduct(optionalsProduct.id, optionalsProduct.category)}
+        onAddToCart={handleAddFromOptionals}
+        companyId={companyId}
+      />
+    )}
+    </>
   );
 }
