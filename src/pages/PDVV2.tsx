@@ -418,7 +418,14 @@ export default function PDVV2() {
       if (rec) {
         setNfceRecord(rec as unknown as NFCeRecord);
         setNfceAutoPrint(shouldPrint);
-        setNfceDialogOpen(true);
+        // Na Lancheria I9, se o prompt TEF estiver aberto, adia a abertura do
+        // diálogo pós-venda da NFC-e até o operador fechar o prompt — evita
+        // que o overlay/dialog cubra os botões de impressão TEF.
+        if (isI9Company && tefPromptOpen) {
+          setPendingNfceOpen(true);
+        } else {
+          setNfceDialogOpen(true);
+        }
       }
       setIsEmittingNfce(false);
       return true;
