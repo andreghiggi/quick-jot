@@ -30,7 +30,7 @@ import {
 import { getNFCeRecordByOrderId, printDanfeFromRecord, type NFCeRecord } from '@/services/nfceService';
 import { OrderCardChargeDialog } from '@/components/OrderCardChargeDialog';
 import { OrderEditDialog } from '@/components/OrderEditDialog';
-import { isOrderEditAllowed } from '@/utils/orderEditAllowList';
+import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 
 interface OrderCardProps {
   order: Order;
