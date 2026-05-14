@@ -643,5 +643,23 @@ export function OrderEditDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {optionalsProduct && (
+      <PDVOptionalsDialog
+        open={!!optionalsProduct}
+        onOpenChange={(o) => { if (!o) setOptionalsProduct(null); }}
+        product={{
+          id: optionalsProduct.id,
+          name: optionalsProduct.name,
+          price: optionalsProduct.price,
+          imageUrl: optionalsProduct.imageUrl,
+          category: optionalsProduct.category,
+        }}
+        groups={getGroupsForProduct(optionalsProduct.id, optionalsProduct.category)}
+        onAddToCart={handleAddFromOptionals}
+        companyId={companyId}
+      />
+    )}
+    </>
   );
 }
