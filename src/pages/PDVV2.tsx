@@ -165,11 +165,12 @@ export default function PDVV2() {
   const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const isI9Company = companyId === I9_COMPANY_ID;
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
+  const tefPromptOpenRef = useRef(false);
   const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
 
   useEffect(() => {
-    function onOpened() { setTefPromptOpen(true); }
-    function onClosed() { setTefPromptOpen(false); }
+    function onOpened() { tefPromptOpenRef.current = true; setTefPromptOpen(true); }
+    function onClosed() { tefPromptOpenRef.current = false; setTefPromptOpen(false); }
     window.addEventListener('tef-auto-print-prompt-opened', onOpened as EventListener);
     window.addEventListener(TEF_PRINT_PROMPT_CLOSED_EVENT, onClosed as EventListener);
     return () => {
@@ -421,7 +422,7 @@ export default function PDVV2() {
         // Na Lancheria I9, se o prompt TEF estiver aberto, adia a abertura do
         // diálogo pós-venda da NFC-e até o operador fechar o prompt — evita
         // que o overlay/dialog cubra os botões de impressão TEF.
-        if (isI9Company && tefPromptOpen) {
+        if (isI9Company && tefPromptOpenRef.current) {
           setPendingNfceOpen(true);
         } else {
           setNfceDialogOpen(true);
