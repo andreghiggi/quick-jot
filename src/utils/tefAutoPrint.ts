@@ -91,6 +91,32 @@ function normalizeReceipt(lines: string[]): string {
     .join('\n');
 }
 
+/**
+ * Multiplus retorna em `receiptLines` o cupom inteiro contendo as DUAS vias
+ * (Estabelecimento + Cliente) num único bloco. Para imprimir só uma via,
+ * precisamos cortar o texto na marca de início da via do cliente.
+ *
+ * Marcadores comuns observados: "VIA DO CLIENTE", "VIA CLIENTE", "2ª VIA",
+ * "2.VIA", "SEGUNDA VIA". Tudo case-insensitive.
+ */
+function splitVias(fullText: string): { estabelecimento: string; cliente: string | null } {
+  const lines = fullText.split('\n');
+  const reCliente = /^\s*[-=*\s]*(2[ªa\.\s]*\s*VIA|VIA\s+(DO\s+)?CLIENTE|SEGUNDA\s+VIA)\b/i;
+  let cutIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (reCliente.test(lines[i])) {
+      cutIndex = i;
+      break;
+    }
+  }
+  if (cutIndex === -1) {
+    return { estabelecimento: fullText, cliente: null };
+  }
+  const estabelecimento = lines.slice(0, cutIndex).join('\n').replace(/\n+$/g, '');
+  const cliente = lines.slice(cutIndex).join('\n').replace(/^\n+/g, '');
+  return { estabelecimento, cliente };
+}
+
 export interface ImprimirComprovanteTefAutomaticoArgs {
   companyId: string;
   receiptLines?: string[] | null;
@@ -103,25 +129,40 @@ export async function executarImpressaoTefVias(
   mode: Exclude<TefAutoPrintMode, 'none'>,
   orderCode?: string,
 ): Promise<void> {
-  const vias =
-    mode === 'ambas'
-      ? ['VIA ESTABELECIMENTO', 'VIA CLIENTE']
-      : ['VIA ESTABELECIMENTO'];
-  const receiptText = normalizeReceipt(receiptLines);
-  for (let i = 0; i < vias.length; i++) {
+  const fullText = normalizeReceipt(receiptLines);
+  const { estabelecimento, cliente } = splitVias(fullText);
+
+  // Monta a lista de impressões: cada item = { rótulo, conteúdo }.
+  const jobs: Array<{ label: string; body: string }> = [];
+  if (mode === 'ambas') {
+    // Se Multiplus já mandou as duas vias no mesmo bloco, imprime UMA vez
+    // o bloco inteiro (que já contém Estabelecimento + Cliente).
+    if (cliente) {
+      jobs.push({ label: 'VIAS ESTABELECIMENTO + CLIENTE', body: fullText });
+    } else {
+      // Fallback: bloco veio só com uma via — duplica para garantir as duas.
+      jobs.push({ label: 'VIA ESTABELECIMENTO', body: estabelecimento });
+      jobs.push({ label: 'VIA CLIENTE', body: estabelecimento });
+    }
+  } else {
+    // Só estabelecimento — corta a via do cliente.
+    jobs.push({ label: 'VIA ESTABELECIMENTO', body: estabelecimento });
+  }
+
+  for (let i = 0; i < jobs.length; i++) {
     try {
       const w = window.open('', '_blank');
       if (!w) {
         console.warn('[tefAutoPrint] pop-up bloqueado — usar reimpressão manual');
         return;
       }
-      w.document.write(buildHtml(receiptText, vias[i], orderCode));
+      w.document.write(buildHtml(jobs[i].body, jobs[i].label, orderCode));
       w.document.close();
-      if (i < vias.length - 1) {
+      if (i < jobs.length - 1) {
         await new Promise((r) => setTimeout(r, 400));
       }
     } catch (e) {
-      console.error('[tefAutoPrint] falha ao imprimir via', vias[i], e);
+      console.error('[tefAutoPrint] falha ao imprimir via', jobs[i].label, e);
     }
   }
 }
