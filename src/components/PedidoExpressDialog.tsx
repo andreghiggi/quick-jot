@@ -292,11 +292,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
   const [isEmittingNfce, setIsEmittingNfce] = useState(false);
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
+  const tefPromptOpenRef = useRef(false);
   const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
 
   useEffect(() => {
-    function onOpened() { setTefPromptOpen(true); }
-    function onClosed() { setTefPromptOpen(false); }
+    function onOpened() { tefPromptOpenRef.current = true; setTefPromptOpen(true); }
+    function onClosed() { tefPromptOpenRef.current = false; setTefPromptOpen(false); }
     window.addEventListener('tef-auto-print-prompt-opened', onOpened as EventListener);
     window.addEventListener(TEF_PRINT_PROMPT_CLOSED_EVENT, onClosed as EventListener);
     return () => {
@@ -1038,7 +1039,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             if (rec) {
               setNfceRecord(rec as unknown as NFCeRecord);
               setNfceAutoPrint(!!override?.printDocument);
-              if (isI9Company && tefPromptOpen) {
+              if (isI9Company && tefPromptOpenRef.current) {
                 setPendingNfceOpen(true);
               } else {
                 setNfceDialogOpen(true);
