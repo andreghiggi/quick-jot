@@ -23,7 +23,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { isOrderEditAllowed } from '@/utils/orderEditAllowList';
+import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 
 interface ExtractedProduct {
   name: string;
@@ -41,6 +41,7 @@ export default function Products() {
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, duplicateProduct, toggleNewProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { categories, addCategory, refetch: refetchCategories } = useCategories({ companyId: company?.id });
   const { subcategories, getSubcategoriesByCategoryId } = useSubcategories({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
@@ -207,7 +208,7 @@ export default function Products() {
       menuItem: editingProduct.menuItem,
       waiterItem: editingProduct.waiterItem,
       subcategoryId: editingProduct.subcategoryId,
-      ...(isOrderEditAllowed(company?.id) ? { swappableInOrder: (editingProduct as any).swappableInOrder } : {}),
+      ...(pdvV2Enabled ? { swappableInOrder: (editingProduct as any).swappableInOrder } : {}),
       ...(true ? {
         code: editingProduct.code,
         gtin: editingProduct.gtin,
@@ -1072,7 +1073,7 @@ export default function Products() {
                   <Label>Item de Mesa/Garçom</Label>
                 </div>
               )}
-              {isOrderEditAllowed(company?.id) && (
+              {pdvV2Enabled && (
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={(editingProduct as any).swappableInOrder === true}

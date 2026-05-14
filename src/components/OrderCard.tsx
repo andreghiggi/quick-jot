@@ -30,7 +30,7 @@ import {
 import { getNFCeRecordByOrderId, printDanfeFromRecord, type NFCeRecord } from '@/services/nfceService';
 import { OrderCardChargeDialog } from '@/components/OrderCardChargeDialog';
 import { OrderEditDialog } from '@/components/OrderEditDialog';
-import { isOrderEditAllowed } from '@/utils/orderEditAllowList';
+import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 
 interface OrderCardProps {
   order: Order;
@@ -87,6 +87,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
 export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason, hideAdvance = false, onCharged }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
   const { company } = useAuthContext();
+  const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   
   const config = statusConfig[order.status];
   const [confirming, setConfirming] = useState(false);
@@ -516,9 +517,10 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   // Detecta se o pedido foi cancelado/estornado (qualquer pagamento — TEF, PIX etc.)
   const isCancelled = !!order.notes?.includes('[CANCELADA]');
 
-  // Editar Pedido (allow-list i9): pendente/preparando, cardápio/balcão,
-  // sem cobrança/NFC-e/TEF, não cancelado.
-  const editFeatureAllowed = isOrderEditAllowed(company?.id);
+  // Editar Pedido (rollout PDV V2): pendente/preparando, cardápio/balcão,
+  // sem cobrança/NFC-e/TEF, não cancelado. Disponível para qualquer loja
+  // com o módulo PDV V2 ativo.
+  const editFeatureAllowed = pdvV2Enabled;
   const orderOrigin = order.origin || 'cardapio';
   const showEditButton =
     editFeatureAllowed &&
