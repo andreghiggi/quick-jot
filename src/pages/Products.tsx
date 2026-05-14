@@ -23,7 +23,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { isOrderEditAllowed } from '@/utils/orderEditAllowList';
+import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 
 interface ExtractedProduct {
   name: string;
