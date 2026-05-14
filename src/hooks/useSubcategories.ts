@@ -13,6 +13,7 @@ export interface Subcategory {
   menuItem?: boolean;
   pdvItem?: boolean;
   waiterItem?: boolean;
+  swappableInOrder?: boolean;
 }
 
 interface UseSubcategoriesOptions {
@@ -51,6 +52,7 @@ export function useSubcategories(options: UseSubcategoriesOptions = {}) {
         menuItem: s.menu_item ?? true,
         pdvItem: s.pdv_item ?? true,
         waiterItem: s.waiter_item ?? true,
+        swappableInOrder: (s as any).swappable_in_order ?? false,
       }));
 
       setSubcategories(mapped);
@@ -97,7 +99,7 @@ export function useSubcategories(options: UseSubcategoriesOptions = {}) {
     }
   }
 
-  async function updateSubcategory(id: string, data: Partial<Pick<Subcategory, 'name' | 'imageUrl' | 'active' | 'displayOrder' | 'menuItem' | 'pdvItem' | 'waiterItem'>>): Promise<boolean> {
+  async function updateSubcategory(id: string, data: Partial<Pick<Subcategory, 'name' | 'imageUrl' | 'active' | 'displayOrder' | 'menuItem' | 'pdvItem' | 'waiterItem' | 'swappableInOrder'>>): Promise<boolean> {
     try {
       const updateData: Record<string, unknown> = {};
       if (data.name !== undefined) updateData.name = data.name;
@@ -107,6 +109,7 @@ export function useSubcategories(options: UseSubcategoriesOptions = {}) {
       if (data.menuItem !== undefined) updateData.menu_item = data.menuItem;
       if (data.pdvItem !== undefined) updateData.pdv_item = data.pdvItem;
       if (data.waiterItem !== undefined) updateData.waiter_item = data.waiterItem;
+      if (data.swappableInOrder !== undefined) updateData.swappable_in_order = data.swappableInOrder;
 
       const { error } = await supabase
         .from('subcategories')
@@ -120,6 +123,7 @@ export function useSubcategories(options: UseSubcategoriesOptions = {}) {
       if (data.menuItem !== undefined) productUpdate.menu_item = data.menuItem;
       if (data.pdvItem !== undefined) productUpdate.pdv_item = data.pdvItem;
       if (data.waiterItem !== undefined) productUpdate.waiter_item = data.waiterItem;
+      if (data.swappableInOrder !== undefined) productUpdate.swappable_in_order = data.swappableInOrder;
       if (Object.keys(productUpdate).length > 0) {
         const { error: prodError } = await supabase
           .from('products')

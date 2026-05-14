@@ -10,14 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, ChevronUp, ChevronDown, Pencil, Check, X, Layers, Image, Upload, Eye, EyeOff, UtensilsCrossed } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, Pencil, Check, X, Layers, Image, Upload, Eye, EyeOff, UtensilsCrossed, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadCompressedImage } from '@/utils/imageUtils';
+import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 
 export default function Subcategories() {
   const { company } = useAuthContext();
+  const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { categories } = useCategories({ companyId: company?.id });
   const {
     subcategories,
@@ -283,6 +285,21 @@ export default function Subcategories() {
                               {sub.waiterItem === false ? 'Oculta no Garçom/Mesa' : 'Visível no Garçom/Mesa'}
                             </span>
                           </div>
+                          {pdvV2Enabled && (
+                            <div className="relative group">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={cn("h-8 w-8 p-0", !sub.swappableInOrder && "text-muted-foreground/40")}
+                                onClick={() => updateSubcategory(sub.id, { swappableInOrder: !sub.swappableInOrder })}
+                              >
+                                <Repeat className="h-3.5 w-3.5" />
+                              </Button>
+                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                {sub.swappableInOrder ? 'Itens desta subcategoria podem ser trocados pelo PDV (aplica nos produtos)' : 'Itens não podem ser trocados pelo PDV'}
+                              </span>
+                            </div>
+                          )}
                           <div className="relative group">
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => moveSubcategory(sub.id, 'up', cat.id)} disabled={idx === 0}>
                               <ChevronUp className="h-4 w-4" />
