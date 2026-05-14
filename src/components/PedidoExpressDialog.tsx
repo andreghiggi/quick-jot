@@ -1038,7 +1038,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             if (rec) {
               setNfceRecord(rec as unknown as NFCeRecord);
               setNfceAutoPrint(!!override?.printDocument);
-              setNfceDialogOpen(true);
+              if (isI9Company && tefPromptOpen) {
+                setPendingNfceOpen(true);
+              } else {
+                setNfceDialogOpen(true);
+              }
             }
           }
         } catch (err: any) {
