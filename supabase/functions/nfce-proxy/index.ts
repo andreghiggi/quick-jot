@@ -257,6 +257,7 @@ Deno.serve(async (req) => {
             'MASTERCARD': '02',
             'AMEX': '03',
             'AMERICAN EXPRESS': '03',
+            'MAESTRO': '02',
             'SOROCRED': '04',
             'DINERS': '05',
             'ELO': '06',
@@ -298,6 +299,7 @@ Deno.serve(async (req) => {
           const formaPagamentoObj = {
             forma_pagamento: pagamentoObj.tPag,
             valor_pagamento: Number(tef.valor || 0),
+            tipo_integracao: 1,
             cnpj_credenciadora: cnpjAdquirente,
             bandeira_operadora: tBandMap[bandeiraNorm] || '99',
             numero_autorizacao: tef.autorizacao,
