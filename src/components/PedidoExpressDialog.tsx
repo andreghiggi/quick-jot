@@ -940,6 +940,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
 
     const noteParts = ['[EXPRESS]', `Pagamento: ${paymentName}`, deliveryTypeLabel];
+    if (pdvV2Enabled && isCashSelected && changeFor.trim()) {
+      noteParts.push(`Troco para: R$ ${changeFor.trim()}`);
+    }
     if (tefNote) noteParts.push(tefNote);
     if (overrideTefNote) noteParts.push(overrideTefNote.replace(/^ \| /, ''));
     // Marca como já cobrado APENAS quando o pagamento foi efetivamente processado
