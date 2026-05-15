@@ -239,6 +239,16 @@ function ChannelManager({ channel }: ChannelManagerProps) {
                           {method.integration_type === 'tef_pinpad' ? 'TEF PinPad' : method.integration_type === 'tef_smartpos' ? 'TEF SmartPOS' : method.integration_type}
                         </p>
                       )}
+                      {showModalitySplit && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                          <span className={`flex items-center gap-1 ${(method as any).show_for_delivery ? 'text-foreground' : 'opacity-40 line-through'}`}>
+                            <Bike className="w-3 h-3" /> Entrega
+                          </span>
+                          <span className={`flex items-center gap-1 ${(method as any).show_for_pickup ? 'text-foreground' : 'opacity-40 line-through'}`}>
+                            <Store className="w-3 h-3" /> Retirada
+                          </span>
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
