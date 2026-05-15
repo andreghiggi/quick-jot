@@ -872,35 +872,100 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             </Tooltip>
           </TooltipProvider>
           
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                title="Excluir pedido"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Excluir pedido?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  O pedido #{order.orderCode || order.dailyNumber} de {order.customerName} será excluído permanentemente. Esta ação não pode ser desfeita.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          {/* Cancelar pedido — sempre disponível enquanto não cancelado.
+              Para TEF aprovado, usar o botão de Estorno (já existente);
+              cancelamento direto fica bloqueado para evitar bypass do estorno.
+              Em pedidos entregues, exige motivo e é restrito a admin/super_admin. */}
+          {!isCancelled && !(isTefPayment && tefInfo?.type === 'pinpad' && !tefAlreadyCancelled) && (
+            (() => {
+              const isDelivered = order.status === 'delivered';
+              const canCancel = isDelivered ? (isCompanyAdmin() || isSuperAdmin()) : true;
+              if (!canCancel) return null;
+              const hasNfce = !!nfceRecord && (!!nfceRecord.chave_acesso || !!nfceRecord.qrcode_url);
+              return (
+                <AlertDialog open={cancelDialogOpen} onOpenChange={(o) => { setCancelDialogOpen(o); if (!o) setCancelReason(''); }}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                      title="Cancelar pedido"
+                    >
+                      <Ban className="w-4 h-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancelar pedido?</AlertDialogTitle>
+                      <AlertDialogDescription asChild>
+                        <div className="space-y-2">
+                          <p>O pedido #{order.orderCode || order.dailyNumber} de {order.customerName} será marcado como <strong>cancelado</strong>. O histórico é preservado.</p>
+                          {hasNfce && (
+                            <p className="text-amber-600 font-medium">⚠ Existe NFC-e emitida vinculada. Cancele a nota também pelo módulo Fiscal dentro do prazo legal (30 min).</p>
+                          )}
+                          {isDelivered && (
+                            <div className="space-y-1 pt-2">
+                              <label className="text-sm font-medium text-foreground">Motivo do cancelamento *</label>
+                              <textarea
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                rows={2}
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
+                                placeholder="Ex: pedido errado, cliente devolveu..."
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={cancelLoading}>Voltar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={(e) => { e.preventDefault(); handleCancelOrder(); }}
+                        disabled={cancelLoading}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {cancelLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cancelar pedido'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              );
+            })()
+          )}
+
+          {/* Excluir definitivamente — apenas Super Admin (suporte). */}
+          {isSuperAdmin() && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                  title="Excluir pedido (super admin)"
                 >
-                  Excluir
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir pedido?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    O pedido #{order.orderCode || order.dailyNumber} de {order.customerName} será excluído permanentemente. Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Voltar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
           {!isCancelled && order.status === 'pending' && (
             <Button
               size="sm"
