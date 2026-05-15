@@ -166,7 +166,6 @@ export default function MesaQR() {
     return optionalGroups
       .filter(g => {
         if (!g.active) return false;
-        if (g.waiterOnly) return false;
         if (g.productIds.includes(selectedProduct.id)) return true;
         if (catId && g.categoryIds.includes(catId)) return true;
         return false;
