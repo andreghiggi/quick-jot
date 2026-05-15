@@ -13,6 +13,8 @@ export interface PaymentMethod {
   pix_key: string | null;
   integration_type: string | null;
   channel: PaymentChannel;
+  show_for_delivery: boolean;
+  show_for_pickup: boolean;
   created_at: string;
   updated_at: string;
 }

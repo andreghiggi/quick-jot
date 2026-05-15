@@ -117,6 +117,9 @@ export default function Menu() {
   const { loading: hoursLoading, isCurrentlyOpen, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentMethodsLoading } = usePaymentMethods({ companyId: company?.id, channel: 'menu' });
+  // Lancheria da I9 — divisão Entrega/Retirada nas formas de pagamento.
+  const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const isI9PaymentSplit = company?.id === I9_COMPANY_ID;
   const isOpen = isCurrentlyOpen();
   const schedulingEnabled = settings.acceptOrderScheduling;
   const canOrder = isOpen || schedulingEnabled;
@@ -2032,8 +2035,16 @@ export default function Menu() {
                   <div>
                     <Label className="font-bold">Forma de pagamento *</Label>
                     <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2">
-                      {activePaymentMethods.length > 0 ? (
-                        activePaymentMethods.map((method) => (
+                      {(() => {
+                        const list = !isI9PaymentSplit
+                          ? activePaymentMethods
+                          : activePaymentMethods.filter((m: any) => {
+                              if (deliveryType === 'pickup') return m.show_for_pickup !== false;
+                              if (deliveryType) return m.show_for_delivery !== false;
+                              return true;
+                            });
+                        return list.length > 0 ? (
+                          list.map((method) => (
                           <div key={method.id} className="flex items-center space-x-2">
                             <RadioGroupItem value={method.name} id={`payment-${method.id}`} />
                             <Label htmlFor={`payment-${method.id}`} className="cursor-pointer">{method.name}</Label>
@@ -2054,7 +2065,8 @@ export default function Menu() {
                             <Label htmlFor="cartao" className="cursor-pointer">Cartão</Label>
                           </div>
                         </>
-                      )}
+                        );
+                      })()}
                     </RadioGroup>
                     {/* Show change field when Dinheiro is selected */}
                     {paymentMethod.toLowerCase() === 'dinheiro' && (

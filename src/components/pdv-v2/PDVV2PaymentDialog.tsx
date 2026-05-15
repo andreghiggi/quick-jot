@@ -34,6 +34,8 @@ interface PDVV2PaymentDialogProps {
   channel?: PaymentChannel;
   /** Restringir a apenas formas em dinheiro (oculta TEF e demais) */
   cashOnly?: boolean;
+  /** I9: filtra formas por modalidade do pedido (delivery/pickup). Ignorado em outras lojas. */
+  deliveryFilter?: 'delivery' | 'pickup';
   /** Mensagem de status do processamento TEF (mostrada como banner topo). Vazio = oculto. */
   tefStatus?: string;
   /** When a split is already in progress (person 2+), the dialog auto-selects
@@ -95,6 +97,7 @@ export function PDVV2PaymentDialog({
   showAddItem = false,
   channel = 'pdv',
   cashOnly = false,
+  deliveryFilter,
   tefStatus,
   chargeTefBeforePopups = false,
   onConfirm,
@@ -135,9 +138,17 @@ export function PDVV2PaymentDialog({
   const { activePaymentMethods: allActivePaymentMethods } = usePaymentMethods({ companyId });
   const baseList =
     rawActivePaymentMethods.length > 0 ? rawActivePaymentMethods : allActivePaymentMethods;
-  const activePaymentMethods = cashOnly
+  const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const isI9PaymentSplit = companyId === I9_COMPANY_ID;
+  const cashFilteredList = cashOnly
     ? baseList.filter((m) => /dinheiro/i.test(m.name))
     : baseList;
+  const activePaymentMethods = !isI9PaymentSplit || !deliveryFilter
+    ? cashFilteredList
+    : cashFilteredList.filter((m: any) => {
+        if (deliveryFilter === 'pickup') return m.show_for_pickup !== false;
+        return m.show_for_delivery !== false;
+      });
   // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
   const useCurrencyMask = true;
   const isLancheriaI9 = true;

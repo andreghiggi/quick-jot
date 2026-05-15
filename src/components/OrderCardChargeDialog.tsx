@@ -265,6 +265,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         title={`Cobrar pedido #${order.orderCode || order.dailyNumber}`}
         showDocumentMode
         tefStatus={tefStatus}
+        deliveryFilter={order.deliveryAddress && order.deliveryAddress.trim().length > 0 ? 'delivery' : 'pickup'}
         checkoutItems={order?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price }))}
         onConfirm={handleConfirm}
       />
