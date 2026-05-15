@@ -236,6 +236,35 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     }
   }
 
+  async function handleCancelOrder() {
+    if (cancelLoading) return;
+    // delivered exige motivo
+    if (order.status === 'delivered') {
+      const reason = cancelReason.trim();
+      if (reason.length < 3) {
+        toast.error('Informe um motivo para cancelar um pedido entregue');
+        return;
+      }
+    }
+    setCancelLoading(true);
+    try {
+      const reasonTag = cancelReason.trim() ? ` motivo: ${cancelReason.trim()}` : '';
+      const newNotes = `[CANCELADA]${reasonTag} ${order.notes || ''}`.trim();
+      const { error } = await supabase
+        .from('orders')
+        .update({ notes: newNotes })
+        .eq('id', order.id);
+      if (error) throw error;
+      toast.success(`Pedido #${order.orderCode || order.dailyNumber} cancelado`);
+      setCancelDialogOpen(false);
+      setCancelReason('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao cancelar pedido');
+    } finally {
+      setCancelLoading(false);
+    }
+  }
+
   async function handleTefEstorno() {
     if (!company?.id || !tefInfo) return;
     if (tefAlreadyCancelled) {
