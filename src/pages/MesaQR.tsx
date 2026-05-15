@@ -18,6 +18,7 @@ import { ShoppingCart, Plus, Minus, Trash2, CheckCircle, Loader2, ArrowLeft } fr
 import { toast } from 'sonner';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
 import { MenuV2 } from '@/components/menu/MenuV2';
+import { parseItemNotes } from '@/utils/orderNotesDisplay';
 import { formatPrice, cn } from '@/lib/utils';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
@@ -521,18 +522,58 @@ export default function MesaQR() {
                 </p>
               ) : (
                 <div className="border rounded-md divide-y max-h-[40vh] overflow-y-auto">
-                  {tabPreview.items.map(it => (
-                    <div key={it.id} className="px-3 py-2 text-sm">
-                      <div className="font-medium">
-                        {it.quantity}x {it.productName}
-                      </div>
-                      {it.notes && (
-                        <div className="text-xs text-muted-foreground whitespace-pre-wrap">
-                          {it.notes}
+                  {tabPreview.items.map(it => {
+                    // Parse grouped optionals from "Name [GroupA: items | GroupB: items]"
+                    let displayName = it.productName;
+                    const groupedOptionals: { groupName: string; items: string }[] = [];
+                    const m = it.productName.match(/^(.*?)\s*\[(.+)\]\s*$/);
+                    if (m) {
+                      displayName = m[1].trim();
+                      const inner = m[2].trim();
+                      if (inner.includes(':')) {
+                        inner.split('|').map(g => g.trim()).filter(Boolean).forEach(groupStr => {
+                          const colonIdx = groupStr.indexOf(':');
+                          if (colonIdx > -1) {
+                            groupedOptionals.push({
+                              groupName: groupStr.substring(0, colonIdx).trim(),
+                              items: groupStr.substring(colonIdx + 1).trim(),
+                            });
+                          } else {
+                            groupedOptionals.push({ groupName: 'Adicionais', items: groupStr });
+                          }
+                        });
+                      } else {
+                        groupedOptionals.push({ groupName: 'Adicionais', items: inner });
+                      }
+                    }
+                    const { description, observation } = parseItemNotes(it.notes);
+                    return (
+                      <div key={it.id} className="px-3 py-2 text-sm">
+                        <div className="font-medium">
+                          {it.quantity}x {displayName}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        {groupedOptionals.length > 0 && (
+                          <div className="ml-4 mt-0.5 space-y-0.5">
+                            {groupedOptionals.map((group, i) => (
+                              <p key={i} className="text-xs text-muted-foreground">
+                                <span className="font-bold">{group.groupName}:</span> {group.items}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                        {description && (
+                          <p className="text-xs text-muted-foreground ml-4">
+                            ↳ <span className="font-bold">Descrição:</span> {description}
+                          </p>
+                        )}
+                        {observation && (
+                          <p className="text-xs text-muted-foreground italic ml-4">
+                            ↳ <span className="font-bold not-italic">Observação:</span> {observation}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
