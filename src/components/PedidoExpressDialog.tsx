@@ -1632,17 +1632,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   </RadioGroup>
                 )}
                 {pdvV2Enabled && isCashSelected && (
-                  <div className="space-y-1">
-                    <Label htmlFor="express-change-for" className="text-sm">Troco para quanto?</Label>
+                  <div className="mt-3 p-3 bg-primary rounded-lg">
+                    <Label htmlFor="express-change-for" className="text-sm font-bold text-primary-foreground">💵 Troco para quanto?</Label>
                     <Input
                       id="express-change-for"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Ex: 50,00 (opcional)"
+                      placeholder="Ex: 50,00 (deixe vazio se não precisa de troco)"
                       value={changeFor}
                       onChange={(e) => setChangeFor(e.target.value)}
+                      className="mt-1 bg-background"
                     />
-                    <p className="text-xs text-muted-foreground">Deixe em branco se não precisar de troco.</p>
                   </div>
                 )}
                 {isClienteLoja && (
