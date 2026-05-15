@@ -510,7 +510,7 @@ export default function MesaQR() {
               </p>
             </div>
             <div className="space-y-2">
-              <Label>Itens já enviados para a cozinha</Label>
+              <Label className="font-bold">Itens nessa comanda</Label>
               {tabPreview.loading ? (
                 <div className="flex items-center justify-center py-6 text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando...
