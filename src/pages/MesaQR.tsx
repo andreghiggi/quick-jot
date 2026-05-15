@@ -47,7 +47,8 @@ export default function MesaQR() {
     loading: boolean;
     items: Array<{ id: string; productName: string; quantity: number; notes: string | null }>;
     tabNumber: number | null;
-  }>({ loading: false, items: [], tabNumber: null });
+    transferLog: Array<{ from_table_number: number | null; to_table_number: number; at: string; by_name: string }>;
+  }>({ loading: false, items: [], tabNumber: null, transferLog: [] });
 
   const { products } = useProducts({ companyId: companyId || undefined });
   const { settings } = useStoreSettings({ companyId: companyId || undefined });
@@ -461,22 +462,23 @@ export default function MesaQR() {
   // Step 1: prompt mesa
   if (!selectedMesa) {
     async function loadTabPreview(mesa: MesaInfo) {
-      setTabPreview({ loading: true, items: [], tabNumber: mesa.tabNumber });
+      setTabPreview({ loading: true, items: [], tabNumber: mesa.tabNumber, transferLog: [] });
       try {
         const { data, error } = await supabase.functions.invoke('mesa-public', {
           body: { action: 'get-tab-items', companyId, tableNumber: mesa.number },
         });
         if (error || !data?.ok) {
-          setTabPreview({ loading: false, items: [], tabNumber: mesa.tabNumber });
+          setTabPreview({ loading: false, items: [], tabNumber: mesa.tabNumber, transferLog: [] });
           return;
         }
         setTabPreview({
           loading: false,
           items: data.items || [],
           tabNumber: data.tabNumber ?? mesa.tabNumber,
+          transferLog: data.transferLog || [],
         });
       } catch {
-        setTabPreview({ loading: false, items: [], tabNumber: mesa.tabNumber });
+        setTabPreview({ loading: false, items: [], tabNumber: mesa.tabNumber, transferLog: [] });
       }
     }
 
@@ -511,6 +513,33 @@ export default function MesaQR() {
               </p>
             </div>
             <div className="space-y-2">
+              {tabPreview.transferLog.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="font-bold">Histórico de trocas de mesa</Label>
+                  <div className="border rounded-md divide-y bg-muted/30 max-h-32 overflow-y-auto">
+                    {tabPreview.transferLog.map((entry, idx) => {
+                      const when = (() => {
+                        try {
+                          return new Date(entry.at).toLocaleString('pt-BR', {
+                            timeZone: 'America/Sao_Paulo',
+                            day: '2-digit', month: '2-digit',
+                            hour: '2-digit', minute: '2-digit',
+                          });
+                        } catch { return ''; }
+                      })();
+                      return (
+                        <div key={idx} className="px-3 py-1.5 text-xs text-muted-foreground">
+                          {entry.from_table_number != null
+                            ? <>Mesa <span className="font-bold">{entry.from_table_number}</span> → <span className="font-bold">{entry.to_table_number}</span></>
+                            : <>Atribuída à mesa <span className="font-bold">{entry.to_table_number}</span></>}
+                          {entry.by_name ? ` · ${entry.by_name}` : ''}
+                          {when ? ` · ${when}` : ''}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <Label className="font-bold">Itens nessa comanda</Label>
               {tabPreview.loading ? (
                 <div className="flex items-center justify-center py-6 text-muted-foreground">
@@ -587,7 +616,7 @@ export default function MesaQR() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => { setPreviewMesa(null); setTabPreview({ loading: false, items: [], tabNumber: null }); }}
+              onClick={() => { setPreviewMesa(null); setTabPreview({ loading: false, items: [], tabNumber: null, transferLog: [] }); }}
             >
               Voltar
             </Button>
