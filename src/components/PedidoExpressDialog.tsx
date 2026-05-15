@@ -679,6 +679,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
   }, [paymentMethod, visiblePaymentMethods]);
 
+  // Helper: identifica se a forma de pagamento selecionada é Dinheiro
+  const selectedPMName = (activePaymentMethods.find(m => m.id === paymentMethod)?.name || '').toLowerCase();
+  const isCashSelected = /dinheiro/.test(selectedPMName);
+
+  // Limpa "Troco para" quando a forma deixa de ser Dinheiro
+  useEffect(() => {
+    if (!isCashSelected && changeFor) setChangeFor('');
+  }, [isCashSelected, changeFor]);
+
   function goNext() {
     if (!canGoNext()) return;
     if (step === 3 && isClienteLoja) {
