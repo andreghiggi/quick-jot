@@ -117,9 +117,12 @@ export default function Menu() {
   const { loading: hoursLoading, isCurrentlyOpen, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentMethodsLoading } = usePaymentMethods({ companyId: company?.id, channel: 'menu' });
-  // Lancheria da I9 — divisão Entrega/Retirada nas formas de pagamento.
-  const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-  const isI9PaymentSplit = company?.id === I9_COMPANY_ID;
+  // Divisão Entrega/Retirada nas formas de pagamento — allow-list isolada.
+  const PAYMENT_SPLIT_ALLOWLIST = [
+    '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da I9
+    '32b71649-461d-4cb6-b26c-12390b090feb', // Lancheria Bon Appetit
+  ];
+  const isI9PaymentSplit = !!company?.id && PAYMENT_SPLIT_ALLOWLIST.includes(company.id);
   const isOpen = isCurrentlyOpen();
   const schedulingEnabled = settings.acceptOrderScheduling;
   const canOrder = isOpen || schedulingEnabled;
