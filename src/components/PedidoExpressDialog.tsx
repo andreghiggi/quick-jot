@@ -74,6 +74,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const fiscalEnabled = isModuleEnabled('fiscal');
   const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const isI9Company = company?.id === I9_COMPANY_ID;
+  // Allow-list ISOLADA apenas para o filtro Entrega/Retirada das formas de pagamento.
+  // NÃO altera nenhum outro comportamento I9-only (Cliente Loja, Finalizar Pedido, TEF, etc.).
+  const PAYMENT_SPLIT_ALLOWLIST = [
+    '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da I9
+    '32b71649-461d-4cb6-b26c-12390b090feb', // Lancheria Bon Appetit
+  ];
+  const isPaymentSplitCompany = !!company?.id && PAYMENT_SPLIT_ALLOWLIST.includes(company.id);
   const activeNeighborhoods = getActiveNeighborhoods();
   const useNeighborhoodDeliveryMode = settings.deliveryMode === 'neighborhood' && activeNeighborhoods.length > 0;
 
@@ -653,7 +660,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const effectiveModalityForFilter: 'entrega' | 'retirada' | '' = isClienteLoja
     ? 'retirada'
     : deliveryType;
-  const visiblePaymentMethods = !isI9Company
+  const visiblePaymentMethods = !isPaymentSplitCompany
     ? baseVisiblePaymentMethods
     : baseVisiblePaymentMethods.filter((pm: any) => {
         if (effectiveModalityForFilter === 'retirada') return pm.show_for_pickup !== false;
