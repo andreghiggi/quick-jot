@@ -1011,6 +1011,8 @@ export type Database = {
           integration_type: string | null
           name: string
           pix_key: string | null
+          show_for_delivery: boolean
+          show_for_pickup: boolean
           updated_at: string | null
         }
         Insert: {
@@ -1023,6 +1025,8 @@ export type Database = {
           integration_type?: string | null
           name: string
           pix_key?: string | null
+          show_for_delivery?: boolean
+          show_for_pickup?: boolean
           updated_at?: string | null
         }
         Update: {
@@ -1035,6 +1039,8 @@ export type Database = {
           integration_type?: string | null
           name?: string
           pix_key?: string | null
+          show_for_delivery?: boolean
+          show_for_pickup?: boolean
           updated_at?: string | null
         }
         Relationships: [
