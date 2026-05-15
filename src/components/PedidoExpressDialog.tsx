@@ -130,6 +130,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [selectedDeliveryFeeType, setSelectedDeliveryFeeType] = useState<'city' | 'interior' | ''>('');
 
   const [paymentMethod, setPaymentMethod] = useState('');
+  // "Troco para quanto" — exibido apenas quando a forma selecionada é Dinheiro
+  // e a empresa tem o módulo PDV V2 ativo.
+  const [changeFor, setChangeFor] = useState('');
+  const pdvV2Enabled = isModuleEnabled('pdv_v2');
   const [documentMode, setDocumentMode] = useState<DocumentMode>(() => {
     const saved = localStorage.getItem('pdv_document_mode');
     return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
@@ -1196,6 +1200,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setDeliveryFee(0);
     setSelectedDeliveryFeeType('');
     setPaymentMethod('');
+    setChangeFor('');
     setPickupChargeOpen(false);
     if (draftKey) {
       try { localStorage.removeItem(draftKey); } catch {}
