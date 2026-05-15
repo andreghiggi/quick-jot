@@ -349,6 +349,20 @@ function ChannelManager({ channel }: ChannelManagerProps) {
                 <p className="text-xs text-muted-foreground">Ao selecionar esta forma no PDV, o TEF será acionado automaticamente</p>
               </div>
             )}
+            {showModalitySplit && (
+              <div className="space-y-2 rounded-lg border p-3">
+                <Label className="text-sm">Disponível em</Label>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm flex items-center gap-2"><Bike className="w-4 h-4" /> Entrega</span>
+                  <Switch checked={newMethodShowDelivery} onCheckedChange={setNewMethodShowDelivery} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm flex items-center gap-2"><Store className="w-4 h-4" /> Retirada</span>
+                  <Switch checked={newMethodShowPickup} onCheckedChange={setNewMethodShowPickup} />
+                </div>
+                <p className="text-xs text-muted-foreground">A forma só aparece nas modalidades marcadas.</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialog(false)}>Cancelar</Button>
@@ -401,6 +415,26 @@ function ChannelManager({ channel }: ChannelManagerProps) {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">Ao selecionar esta forma no PDV, o TEF será acionado automaticamente</p>
+              </div>
+            )}
+            {showModalitySplit && editingMethod && (
+              <div className="space-y-2 rounded-lg border p-3">
+                <Label className="text-sm">Disponível em</Label>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm flex items-center gap-2"><Bike className="w-4 h-4" /> Entrega</span>
+                  <Switch
+                    checked={editingMethod.show_for_delivery}
+                    onCheckedChange={(v) => setEditingMethod(prev => prev ? { ...prev, show_for_delivery: v } : null)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm flex items-center gap-2"><Store className="w-4 h-4" /> Retirada</span>
+                  <Switch
+                    checked={editingMethod.show_for_pickup}
+                    onCheckedChange={(v) => setEditingMethod(prev => prev ? { ...prev, show_for_pickup: v } : null)}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">A forma só aparece nas modalidades marcadas.</p>
               </div>
             )}
           </div>
