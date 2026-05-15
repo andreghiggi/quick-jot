@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { UtensilsCrossed, Download } from 'lucide-react';
+import { UtensilsCrossed, Download, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { brl as formatPrice } from './_format';
 import type { OccupiedTab } from './PDVV2TablesPanel';
 
@@ -51,6 +52,33 @@ export function PDVV2TablesGrid({ tabs, onImport }: Props) {
                 </p>
               </div>
             </div>
+
+            {tab.items && tab.items.length > 0 && (
+              <Collapsible>
+                <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors group">
+                  <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                  Ver itens ({tab.items.reduce((s, i) => s + i.quantity, 0)})
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <ul className="space-y-1 text-sm border rounded-md p-2 bg-muted/30 max-h-48 overflow-y-auto">
+                    {tab.items.map((item) => (
+                      <li key={item.id} className="flex justify-between gap-2">
+                        <span className="min-w-0">
+                          <span className="tabular-nums text-muted-foreground">{item.quantity}x </span>
+                          <span className="truncate">{item.productName}</span>
+                          {item.notes && (
+                            <span className="block text-xs text-muted-foreground italic truncate">
+                              {item.notes}
+                            </span>
+                          )}
+                        </span>
+                        <span className="tabular-nums shrink-0">{formatPrice(item.totalPrice)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
             <Button className="w-full" size="lg" onClick={() => onImport(tab)}>
               <Download className="h-4 w-4 mr-2" />
