@@ -225,6 +225,15 @@ export default function PDVV2() {
         tableNumber: t.table?.number ?? null,
         customerName: t.customer_name,
         total: t.items?.reduce((s, i) => s + ((i as any).paid ? 0 : i.total_price), 0) || 0,
+        items: (t.items || [])
+          .filter((i: any) => !i.paid)
+          .map((i: any) => ({
+            id: i.id,
+            productName: i.product_name,
+            quantity: i.quantity,
+            totalPrice: i.total_price,
+            notes: i.notes,
+          })),
       })),
     [openTabs]
   );

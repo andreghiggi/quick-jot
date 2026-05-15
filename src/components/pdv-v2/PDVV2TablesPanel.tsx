@@ -10,6 +10,13 @@ export interface OccupiedTab {
   tableNumber?: number | null;
   customerName?: string | null;
   total: number;
+  items?: Array<{
+    id: string;
+    productName: string;
+    quantity: number;
+    totalPrice: number;
+    notes?: string | null;
+  }>;
 }
 
 interface PDVV2TablesPanelProps {
