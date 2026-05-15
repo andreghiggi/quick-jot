@@ -1628,6 +1628,20 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                     </div>
                   </RadioGroup>
                 )}
+                {pdvV2Enabled && isCashSelected && (
+                  <div className="space-y-1">
+                    <Label htmlFor="express-change-for" className="text-sm">Troco para quanto?</Label>
+                    <Input
+                      id="express-change-for"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Ex: 50,00 (opcional)"
+                      value={changeFor}
+                      onChange={(e) => setChangeFor(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">Deixe em branco se não precisar de troco.</p>
+                  </div>
+                )}
                 {isClienteLoja && (
                   <p className="text-xs text-muted-foreground">
                     🏪 "Cliente Loja" aceita apenas Dinheiro ou PIX.
