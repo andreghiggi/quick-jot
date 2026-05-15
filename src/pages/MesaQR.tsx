@@ -45,7 +45,13 @@ export default function MesaQR() {
   const { products } = useProducts({ companyId: companyId || undefined });
   const { settings } = useStoreSettings({ companyId: companyId || undefined });
   const { categories: allCategories } = useCategories({ companyId: companyId || undefined });
-  const { subcategories } = useSubcategories({ companyId: companyId || undefined });
+  const { subcategories: allSubcategories } = useSubcategories({ companyId: companyId || undefined });
+  // Hide subcategories disabled for the waiter/mesa module so their tiles
+  // don't appear in the Mesa QR public catalog.
+  const subcategories = useMemo(
+    () => allSubcategories.filter(s => (s as any).waiterItem !== false && s.active !== false),
+    [allSubcategories],
+  );
   const { groups: optionalGroups } = useOptionalGroups({ companyId: companyId || undefined });
 
   const categories = useMemo(() => allCategories.filter(c => c.active), [allCategories]);
