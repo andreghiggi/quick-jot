@@ -876,7 +876,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               Para TEF aprovado, usar o botão de Estorno (já existente);
               cancelamento direto fica bloqueado para evitar bypass do estorno.
               Em pedidos entregues, exige motivo e é restrito a admin/super_admin. */}
-          {!isCancelled && !(isTefPayment && tefInfo?.type === 'pinpad' && !tefAlreadyCancelled) && (
+          {!isCancelled && !(!!tefInfo && tefInfo?.type === 'pinpad' && !tefAlreadyCancelled) && (
             (() => {
               const isDelivered = order.status === 'delivered';
               const canCancel = isDelivered ? (isCompanyAdmin() || isSuperAdmin()) : true;
