@@ -270,7 +270,7 @@ function ChannelManager({ channel }: ChannelManagerProps) {
                 <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
               </div>
             )}
-            {channel === 'pdv' && (
+            {(channel === 'pdv' || channel === 'express') && (
               <div className="space-y-2">
                 <Label className="flex items-center gap-1"><Plug className="w-3 h-3" /> Integração</Label>
                 <Select value={newMethodIntegration} onValueChange={setNewMethodIntegration}>
@@ -324,7 +324,7 @@ function ChannelManager({ channel }: ChannelManagerProps) {
                 <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
               </div>
             )}
-            {channel === 'pdv' && (
+            {(channel === 'pdv' || channel === 'express') && (
               <div className="space-y-2">
                 <Label className="flex items-center gap-1"><Plug className="w-3 h-3" /> Integração</Label>
                 <Select value={editingMethod?.integration_type || 'none'} onValueChange={(v) => setEditingMethod(prev => prev ? { ...prev, integration_type: v } : null)}>
