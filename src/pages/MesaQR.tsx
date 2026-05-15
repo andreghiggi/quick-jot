@@ -67,8 +67,15 @@ export default function MesaQR() {
   }, [categories]);
 
   const waiterProducts = useMemo(
-    () => products.filter(p => p.active && p.waiterItem !== false),
-    [products],
+    () => {
+      const hiddenWaiterCategoryNames = new Set(
+        categories.filter(c => (c as any).waiterItem === false).map(c => c.name)
+      );
+      return products.filter(
+        p => p.active && p.waiterItem !== false && !hiddenWaiterCategoryNames.has(p.category)
+      );
+    },
+    [products, categories],
   );
 
   const orderedCategoryNames = useMemo(() => {
