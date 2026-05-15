@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
 
       const { data: tab } = await admin
         .from("tabs")
-        .select("id, tab_number")
+        .select("id, tab_number, transfer_log")
         .eq("company_id", companyId)
         .eq("table_id", table.id)
         .eq("status", "open")
@@ -277,6 +277,7 @@ Deno.serve(async (req) => {
       return json({
         ok: true,
         tabNumber: tab.tab_number,
+        transferLog: tab.transfer_log || [],
         items: (items || []).map((i) => ({
           id: i.id,
           productName: i.product_name,
