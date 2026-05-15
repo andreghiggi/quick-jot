@@ -693,6 +693,7 @@ export default function MesaQR() {
         onProductSelect={(p) => setSelectedProduct(p)}
         onCartOpen={() => setCartOpen(true)}
         onNavigateBack={() => setSelectedMesa(null)}
+        hideEstimatedWaitTime
       />
 
       {/* Product dialog */}

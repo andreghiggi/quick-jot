@@ -87,6 +87,7 @@ interface MenuV2Props {
   onCartOpen: () => void;
   onNavigateBack: () => void;
   buttonColorStyle?: React.CSSProperties;
+  hideEstimatedWaitTime?: boolean;
 }
 
 export function MenuV2({
@@ -109,6 +110,7 @@ export function MenuV2({
   onCartOpen,
   onNavigateBack,
   buttonColorStyle,
+  hideEstimatedWaitTime = false,
 }: MenuV2Props) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
@@ -358,7 +360,7 @@ export function MenuV2({
                   </span>
                 </div>
               </div>
-              {isOpen && settings.estimatedWaitTime && (
+              {isOpen && settings.estimatedWaitTime && !hideEstimatedWaitTime && (
                 <div className="mt-1">
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-normal bg-[#22C55E]/15 text-[#16a34a] border border-[#22C55E]">
                     🛵 Entrega · 🤲 Retirada: {settings.estimatedWaitTime}
