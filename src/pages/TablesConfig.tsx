@@ -76,6 +76,7 @@ export default function TablesConfig() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedTable, setSelectedTable] = useState<typeof tables[0] | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [capacityInput, setCapacityInput] = useState('');
 
   const handleAddTables = async () => {
     const count = parseInt(tableCount);
@@ -93,6 +94,7 @@ export default function TablesConfig() {
 
   const handleEditTable = (table: typeof tables[0]) => {
     setSelectedTable(table);
+    setCapacityInput(String(table.capacity ?? ''));
     setEditDialogOpen(true);
   };
 
@@ -366,8 +368,16 @@ export default function TablesConfig() {
                 <Input
                   type="number"
                   min="1"
-                  value={selectedTable.capacity}
-                  onChange={(e) => handleUpdateCapacity(parseInt(e.target.value) || 4)}
+                  value={capacityInput}
+                  onChange={(e) => setCapacityInput(e.target.value)}
+                  onBlur={() => {
+                    const n = parseInt(capacityInput);
+                    if (!isNaN(n) && n >= 1 && n !== selectedTable.capacity) {
+                      handleUpdateCapacity(n);
+                    } else if (isNaN(n) || n < 1) {
+                      setCapacityInput(String(selectedTable.capacity ?? ''));
+                    }
+                  }}
                 />
               </div>
 
