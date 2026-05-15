@@ -244,6 +244,48 @@ Deno.serve(async (req) => {
       return json({ ok: true, tabId, tabNumber, tableNumber: table.number });
     }
 
+    if (action === "get-tab-items") {
+      const companyId = String(payload?.companyId || "");
+      const tableNumber = Number(payload?.tableNumber);
+      if (!companyId || !Number.isFinite(tableNumber)) {
+        return json({ error: "invalid_payload" }, 400);
+      }
+
+      const { data: table } = await admin
+        .from("tables")
+        .select("id, number")
+        .eq("company_id", companyId)
+        .eq("number", tableNumber)
+        .maybeSingle();
+      if (!table) return json({ ok: true, items: [], tabNumber: null });
+
+      const { data: tab } = await admin
+        .from("tabs")
+        .select("id, tab_number")
+        .eq("company_id", companyId)
+        .eq("table_id", table.id)
+        .eq("status", "open")
+        .maybeSingle();
+      if (!tab) return json({ ok: true, items: [], tabNumber: null });
+
+      const { data: items } = await admin
+        .from("tab_items")
+        .select("id, product_name, quantity, notes, created_at")
+        .eq("tab_id", tab.id)
+        .order("created_at", { ascending: true });
+
+      return json({
+        ok: true,
+        tabNumber: tab.tab_number,
+        items: (items || []).map((i) => ({
+          id: i.id,
+          productName: i.product_name,
+          quantity: i.quantity,
+          notes: i.notes,
+        })),
+      });
+    }
+
     return json({ error: "unknown_action" }, 400);
   } catch (err) {
     console.error("mesa-public error", err);
