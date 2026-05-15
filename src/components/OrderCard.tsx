@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Order, OrderStatus } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt, FileText, CreditCard, Pencil } from 'lucide-react';
+import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt, FileText, CreditCard, Pencil, Ban } from 'lucide-react';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -86,7 +86,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
 
 export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason, hideAdvance = false, onCharged }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
-  const { company } = useAuthContext();
+  const { company, isSuperAdmin, isCompanyAdmin } = useAuthContext();
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   
   const config = statusConfig[order.status];
@@ -95,6 +95,9 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const [tefEstornoLoading, setTefEstornoLoading] = useState(false);
   const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const confirmed = !!order.confirmedAt;
 
   // Cobrança manual de pedidos do cardápio antes de "Entregar".
