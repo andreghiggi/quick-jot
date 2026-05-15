@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Order, OrderStatus } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt, FileText, CreditCard, Pencil } from 'lucide-react';
+import { Clock, Phone, MapPin, ChevronRight, Trash2, Printer, CheckCircle2, Check, Loader2, RotateCcw, Receipt, FileText, CreditCard, Pencil, Ban } from 'lucide-react';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -86,7 +86,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
 
 export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason, hideAdvance = false, onCharged }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
-  const { company } = useAuthContext();
+  const { company, isSuperAdmin, isCompanyAdmin } = useAuthContext();
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   
   const config = statusConfig[order.status];
@@ -95,6 +95,9 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const [tefEstornoLoading, setTefEstornoLoading] = useState(false);
   const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const confirmed = !!order.confirmedAt;
 
   // Cobrança manual de pedidos do cardápio antes de "Entregar".
@@ -230,6 +233,35 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     const ok = await deleteOrder(order.id);
     if (ok) {
       toast.success(`Pedido #${order.orderCode || order.dailyNumber} excluído`);
+    }
+  }
+
+  async function handleCancelOrder() {
+    if (cancelLoading) return;
+    // delivered exige motivo
+    if (order.status === 'delivered') {
+      const reason = cancelReason.trim();
+      if (reason.length < 3) {
+        toast.error('Informe um motivo para cancelar um pedido entregue');
+        return;
+      }
+    }
+    setCancelLoading(true);
+    try {
+      const reasonTag = cancelReason.trim() ? ` motivo: ${cancelReason.trim()}` : '';
+      const newNotes = `[CANCELADA]${reasonTag} ${order.notes || ''}`.trim();
+      const { error } = await supabase
+        .from('orders')
+        .update({ notes: newNotes })
+        .eq('id', order.id);
+      if (error) throw error;
+      toast.success(`Pedido #${order.orderCode || order.dailyNumber} cancelado`);
+      setCancelDialogOpen(false);
+      setCancelReason('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao cancelar pedido');
+    } finally {
+      setCancelLoading(false);
     }
   }
 
@@ -840,35 +872,100 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             </Tooltip>
           </TooltipProvider>
           
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                title="Excluir pedido"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Excluir pedido?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  O pedido #{order.orderCode || order.dailyNumber} de {order.customerName} será excluído permanentemente. Esta ação não pode ser desfeita.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          {/* Cancelar pedido — sempre disponível enquanto não cancelado.
+              Para TEF aprovado, usar o botão de Estorno (já existente);
+              cancelamento direto fica bloqueado para evitar bypass do estorno.
+              Em pedidos entregues, exige motivo e é restrito a admin/super_admin. */}
+          {!isCancelled && !(!!tefInfo && tefInfo?.type === 'pinpad' && !tefAlreadyCancelled) && (
+            (() => {
+              const isDelivered = order.status === 'delivered';
+              const canCancel = isDelivered ? (isCompanyAdmin() || isSuperAdmin()) : true;
+              if (!canCancel) return null;
+              const hasNfce = !!nfceRecord && (!!nfceRecord.chave_acesso || !!nfceRecord.qrcode_url);
+              return (
+                <AlertDialog open={cancelDialogOpen} onOpenChange={(o) => { setCancelDialogOpen(o); if (!o) setCancelReason(''); }}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                      title="Cancelar pedido"
+                    >
+                      <Ban className="w-4 h-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancelar pedido?</AlertDialogTitle>
+                      <AlertDialogDescription asChild>
+                        <div className="space-y-2">
+                          <p>O pedido #{order.orderCode || order.dailyNumber} de {order.customerName} será marcado como <strong>cancelado</strong>. O histórico é preservado.</p>
+                          {hasNfce && (
+                            <p className="text-amber-600 font-medium">⚠ Existe NFC-e emitida vinculada. Cancele a nota também pelo módulo Fiscal dentro do prazo legal (30 min).</p>
+                          )}
+                          {isDelivered && (
+                            <div className="space-y-1 pt-2">
+                              <label className="text-sm font-medium text-foreground">Motivo do cancelamento *</label>
+                              <textarea
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                rows={2}
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
+                                placeholder="Ex: pedido errado, cliente devolveu..."
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={cancelLoading}>Voltar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={(e) => { e.preventDefault(); handleCancelOrder(); }}
+                        disabled={cancelLoading}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {cancelLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cancelar pedido'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              );
+            })()
+          )}
+
+          {/* Excluir definitivamente — apenas Super Admin (suporte). */}
+          {isSuperAdmin() && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                  title="Excluir pedido (super admin)"
                 >
-                  Excluir
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir pedido?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    O pedido #{order.orderCode || order.dailyNumber} de {order.customerName} será excluído permanentemente. Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Voltar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
           {!isCancelled && order.status === 'pending' && (
             <Button
               size="sm"
