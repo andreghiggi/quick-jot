@@ -41,6 +41,12 @@ export default function MesaQR() {
 
   const [tableInput, setTableInput] = useState('');
   const [selectedMesa, setSelectedMesa] = useState<MesaInfo | null>(null);
+  const [previewMesa, setPreviewMesa] = useState<MesaInfo | null>(null);
+  const [tabPreview, setTabPreview] = useState<{
+    loading: boolean;
+    items: Array<{ id: string; productName: string; quantity: number; notes: string | null }>;
+    tabNumber: number | null;
+  }>({ loading: false, items: [], tabNumber: null });
 
   const { products } = useProducts({ companyId: companyId || undefined });
   const { settings } = useStoreSettings({ companyId: companyId || undefined });
