@@ -571,12 +571,15 @@ export default function Menu() {
   // Use the sorted categories from useCategories hook, fallback to product categories
   const orderedCategoryNames = categories.map(c => c.name);
   const productCategorySet = new Set(activeProducts.map((p) => p.category));
-  
+
   // Filter to only categories that have active products, maintaining the configured order
   const productCategories = orderedCategoryNames.filter(catName => productCategorySet.has(catName));
-  
-  // Also include any product categories not in the categories table (edge case)
-  const unconfiguredCategories = [...productCategorySet].filter(cat => !orderedCategoryNames.includes(cat));
+
+  // Also include any product categories not in the categories table at all (edge case).
+  // IMPORTANT: compare against allCategories (unfiltered) so categories hidden from the
+  // public menu (menu_item=false) are NOT re-added as "unconfigured".
+  const knownCategoryNames = new Set(allCategories.map(c => c.name));
+  const unconfiguredCategories = [...productCategorySet].filter(cat => !knownCategoryNames.has(cat));
   const allOrderedCategories = [...productCategories, ...unconfiguredCategories];
   
   // Filter products based on selected category and search
