@@ -365,20 +365,35 @@ export default function TablesConfig() {
 
               <div className="space-y-2">
                 <Label>Capacidade (lugares)</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={capacityInput}
-                  onChange={(e) => setCapacityInput(e.target.value)}
-                  onBlur={() => {
-                    const n = parseInt(capacityInput);
-                    if (!isNaN(n) && n >= 1 && n !== selectedTable.capacity) {
-                      handleUpdateCapacity(n);
-                    } else if (isNaN(n) || n < 1) {
-                      setCapacityInput(String(selectedTable.capacity ?? ''));
-                    }
-                  }}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    value={capacityInput}
+                    onChange={(e) => setCapacityInput(e.target.value)}
+                  />
+                  <Button
+                    onClick={async () => {
+                      const n = parseInt(capacityInput);
+                      if (isNaN(n) || n < 1) {
+                        toast.error('Informe uma capacidade válida');
+                        setCapacityInput(String(selectedTable.capacity ?? ''));
+                        return;
+                      }
+                      if (n === selectedTable.capacity) {
+                        toast.info('Nenhuma alteração');
+                        return;
+                      }
+                      setIsProcessing(true);
+                      const ok = await updateTableCapacity(selectedTable.id, n);
+                      setIsProcessing(false);
+                      if (ok) toast.success('Capacidade atualizada!');
+                    }}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+                  </Button>
+                </div>
               </div>
 
               <div className="pt-4 border-t">
