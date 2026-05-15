@@ -459,6 +459,26 @@ export default function MesaQR() {
 
   // Step 1: prompt mesa
   if (!selectedMesa) {
+    async function loadTabPreview(mesa: MesaInfo) {
+      setTabPreview({ loading: true, items: [], tabNumber: mesa.tabNumber });
+      try {
+        const { data, error } = await supabase.functions.invoke('mesa-public', {
+          body: { action: 'get-tab-items', companyId, tableNumber: mesa.number },
+        });
+        if (error || !data?.ok) {
+          setTabPreview({ loading: false, items: [], tabNumber: mesa.tabNumber });
+          return;
+        }
+        setTabPreview({
+          loading: false,
+          items: data.items || [],
+          tabNumber: data.tabNumber ?? mesa.tabNumber,
+        });
+      } catch {
+        setTabPreview({ loading: false, items: [], tabNumber: mesa.tabNumber });
+      }
+    }
+
     function trySelect() {
       const n = parseInt(tableInput, 10);
       if (!Number.isFinite(n) || n <= 0) {
@@ -470,8 +490,71 @@ export default function MesaQR() {
         toast.error(`Mesa ${n} não encontrada`);
         return;
       }
-      setSelectedMesa(mesa);
+      if (mesa.hasOpenTab) {
+        setPreviewMesa(mesa);
+        loadTabPreview(mesa);
+      } else {
+        setSelectedMesa(mesa);
+      }
     }
+
+    if (previewMesa) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+          <Card className="max-w-md w-full"><CardContent className="py-8 space-y-4">
+            <div className="text-center space-y-1">
+              <h1 className="text-xl font-bold">{companyName}</h1>
+              <p className="text-sm text-muted-foreground">
+                Mesa {previewMesa.number}
+                {tabPreview.tabNumber ? ` · Comanda #${tabPreview.tabNumber}` : ''}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Itens já enviados para a cozinha</Label>
+              {tabPreview.loading ? (
+                <div className="flex items-center justify-center py-6 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando...
+                </div>
+              ) : tabPreview.items.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhum item enviado ainda.
+                </p>
+              ) : (
+                <div className="border rounded-md divide-y max-h-[40vh] overflow-y-auto">
+                  {tabPreview.items.map(it => (
+                    <div key={it.id} className="px-3 py-2 text-sm">
+                      <div className="font-medium">
+                        {it.quantity}x {it.productName}
+                      </div>
+                      {it.notes && (
+                        <div className="text-xs text-muted-foreground whitespace-pre-wrap">
+                          {it.notes}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Button
+              className="w-full h-12"
+              onClick={() => { setSelectedMesa(previewMesa); setPreviewMesa(null); }}
+              disabled={tabPreview.loading}
+            >
+              Acessar cardápio
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => { setPreviewMesa(null); setTabPreview({ loading: false, items: [], tabNumber: null }); }}
+            >
+              Voltar
+            </Button>
+          </CardContent></Card>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
         <Card className="max-w-md w-full"><CardContent className="py-8 space-y-4">
