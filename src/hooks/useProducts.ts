@@ -98,6 +98,27 @@ export function useProducts(options: UseProductsOptions = {}) {
 
   async function addProduct(productData: Omit<Product, 'id' | 'optionals'>): Promise<string | null> {
     try {
+      const targetCompanyId = productData.companyId || companyId || null;
+
+      // Auto-generate SKU code (P0001, P0002, ...) per company when not provided
+      let codeToUse: string | null = (productData as any).code || null;
+      if (!codeToUse && targetCompanyId) {
+        const { data: existing } = await supabase
+          .from('products')
+          .select('code')
+          .eq('company_id', targetCompanyId)
+          .like('code', 'P%');
+        let maxNum = 0;
+        (existing || []).forEach((row: any) => {
+          const m = /^P(\d+)$/.exec(row.code || '');
+          if (m) {
+            const n = parseInt(m[1], 10);
+            if (n > maxNum) maxNum = n;
+          }
+        });
+        codeToUse = 'P' + String(maxNum + 1).padStart(4, '0');
+      }
+
       const { data, error } = await supabase
         .from('products')
         .insert({
@@ -107,10 +128,11 @@ export function useProducts(options: UseProductsOptions = {}) {
           description: productData.description || null,
           image_url: productData.imageUrl || null,
           active: productData.active,
-          company_id: productData.companyId || companyId || null,
+          company_id: targetCompanyId,
           subcategory_id: (productData as any).subcategoryId || null,
           pdv_item: productData.pdvItem ?? true,
           menu_item: productData.menuItem ?? true,
+          code: codeToUse,
         } as any)
         .select()
         .single();
