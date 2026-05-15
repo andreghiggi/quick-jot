@@ -641,13 +641,25 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const isClienteLoja = customerName === 'Cliente Loja';
 
   // Cliente Loja: aceita apenas Dinheiro ou PIX (não pode TEF/Máquina/Crédito/Débito)
-  const visiblePaymentMethods = isClienteLoja
+  const baseVisiblePaymentMethods = isClienteLoja
     ? activePaymentMethods.filter((pm: any) => {
         const integ = pm?.integration_type;
         if (integ === 'tef_pinpad' || integ === 'tef_smartpos') return false;
         return /dinheiro|pix/i.test(pm.name);
       })
     : activePaymentMethods;
+  // Lancheria da I9 — divisão Entrega/Retirada nas formas de pagamento.
+  // Cliente Loja é sempre retirada na prática; demais seguem o deliveryType escolhido.
+  const effectiveModalityForFilter: 'entrega' | 'retirada' | '' = isClienteLoja
+    ? 'retirada'
+    : deliveryType;
+  const visiblePaymentMethods = !isI9Company
+    ? baseVisiblePaymentMethods
+    : baseVisiblePaymentMethods.filter((pm: any) => {
+        if (effectiveModalityForFilter === 'retirada') return pm.show_for_pickup !== false;
+        if (effectiveModalityForFilter === 'entrega') return pm.show_for_delivery !== false;
+        return true;
+      });
 
   // Se a forma selecionada não estiver mais visível (ex.: trocou para Cliente Loja após escolher TEF), limpa
   useEffect(() => {
