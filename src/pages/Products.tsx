@@ -641,15 +641,13 @@ export default function Products() {
               />
               <Label>Ativo</Label>
             </div>
-            {isModuleEnabled('pdv') && (
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={newProduct.pdvItem}
-                  onCheckedChange={(v) => setNewProduct({ ...newProduct, pdvItem: v })}
-                />
-                <Label>Item de PDV</Label>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={newProduct.pdvItem}
+                onCheckedChange={(v) => setNewProduct({ ...newProduct, pdvItem: v })}
+              />
+              <Label>Item de PDV</Label>
+            </div>
             <div className="flex items-center gap-2">
               <Switch
                 checked={newProduct.menuItem}
@@ -657,15 +655,13 @@ export default function Products() {
               />
               <Label>Item de Cardápio</Label>
             </div>
-              {isModuleEnabled('mesas') && (
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={newProduct.waiterItem}
-                    onCheckedChange={(v) => setNewProduct({ ...newProduct, waiterItem: v })}
-                  />
-                  <Label>Item de Mesa/Garçom</Label>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={newProduct.waiterItem}
+                  onCheckedChange={(v) => setNewProduct({ ...newProduct, waiterItem: v })}
+                />
+                <Label>Item de Mesa/Garçom</Label>
+              </div>
             <Button onClick={handleAddProduct} className="w-full">Salvar</Button>
           </div>
         </DialogContent>
@@ -1048,15 +1044,13 @@ export default function Products() {
                 />
                 <Label>Ativo</Label>
               </div>
-              {isModuleEnabled('pdv') && (
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={editingProduct.pdvItem !== false}
-                    onCheckedChange={(v) => setEditingProduct({ ...editingProduct, pdvItem: v })}
-                  />
-                  <Label>Item de PDV</Label>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={editingProduct.pdvItem !== false}
+                  onCheckedChange={(v) => setEditingProduct({ ...editingProduct, pdvItem: v })}
+                />
+                <Label>Item de PDV</Label>
+              </div>
               <div className="flex items-center gap-2">
                 <Switch
                   checked={editingProduct.menuItem !== false}
@@ -1064,15 +1058,13 @@ export default function Products() {
                 />
                 <Label>Item de Cardápio</Label>
               </div>
-              {isModuleEnabled('mesas') && (
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={editingProduct.waiterItem !== false}
-                    onCheckedChange={(v) => setEditingProduct({ ...editingProduct, waiterItem: v })}
-                  />
-                  <Label>Item de Mesa/Garçom</Label>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={editingProduct.waiterItem !== false}
+                  onCheckedChange={(v) => setEditingProduct({ ...editingProduct, waiterItem: v })}
+                />
+                <Label>Item de Mesa/Garçom</Label>
+              </div>
               {pdvV2Enabled && (
                 <div className="flex items-center gap-2">
                   <Switch
