@@ -130,6 +130,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [selectedDeliveryFeeType, setSelectedDeliveryFeeType] = useState<'city' | 'interior' | ''>('');
 
   const [paymentMethod, setPaymentMethod] = useState('');
+  // "Troco para quanto" — exibido apenas quando a forma selecionada é Dinheiro
+  // e a empresa tem o módulo PDV V2 ativo.
+  const [changeFor, setChangeFor] = useState('');
+  const pdvV2Enabled = isModuleEnabled('pdv_v2');
   const [documentMode, setDocumentMode] = useState<DocumentMode>(() => {
     const saved = localStorage.getItem('pdv_document_mode');
     return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
@@ -675,6 +679,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
   }, [paymentMethod, visiblePaymentMethods]);
 
+  // Helper: identifica se a forma de pagamento selecionada é Dinheiro
+  const selectedPMName = (activePaymentMethods.find(m => m.id === paymentMethod)?.name || '').toLowerCase();
+  const isCashSelected = /dinheiro/.test(selectedPMName);
+
+  // Limpa "Troco para" quando a forma deixa de ser Dinheiro
+  useEffect(() => {
+    if (!isCashSelected && changeFor) setChangeFor('');
+  }, [isCashSelected, changeFor]);
+
   function goNext() {
     if (!canGoNext()) return;
     if (step === 3 && isClienteLoja) {
@@ -927,6 +940,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
 
     const noteParts = ['[EXPRESS]', `Pagamento: ${paymentName}`, deliveryTypeLabel];
+    if (pdvV2Enabled && isCashSelected && changeFor.trim()) {
+      noteParts.push(`Troco para: R$ ${changeFor.trim()}`);
+    }
     if (tefNote) noteParts.push(tefNote);
     if (overrideTefNote) noteParts.push(overrideTefNote.replace(/^ \| /, ''));
     // Marca como já cobrado APENAS quando o pagamento foi efetivamente processado
@@ -1196,6 +1212,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setDeliveryFee(0);
     setSelectedDeliveryFeeType('');
     setPaymentMethod('');
+    setChangeFor('');
     setPickupChargeOpen(false);
     if (draftKey) {
       try { localStorage.removeItem(draftKey); } catch {}
@@ -1613,6 +1630,20 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                         ))}
                     </div>
                   </RadioGroup>
+                )}
+                {pdvV2Enabled && isCashSelected && (
+                  <div className="space-y-1">
+                    <Label htmlFor="express-change-for" className="text-sm">Troco para quanto?</Label>
+                    <Input
+                      id="express-change-for"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Ex: 50,00 (opcional)"
+                      value={changeFor}
+                      onChange={(e) => setChangeFor(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">Deixe em branco se não precisar de troco.</p>
+                  </div>
                 )}
                 {isClienteLoja && (
                   <p className="text-xs text-muted-foreground">
