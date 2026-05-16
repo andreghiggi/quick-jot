@@ -105,7 +105,10 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   // exceto Rei do Açaí que solicitou remoção do botão "Cobrar" no Dashboard.
   const REI_DO_ACAI_COMPANY_ID = 'b2f97590-ff21-4951-95dc-e3e2b19d4ccb';
   const isReiDoAcai = company?.id === REI_DO_ACAI_COMPANY_ID;
-  const chargeButtonEnabled = !isReiDoAcai;
+  // Gating real: só lojas com PDV V2 ativo veem o fluxo de cobrança/NFC-e
+  // direto do Dashboard. Lojas sem PDV V2 (ou só com PDV V1) não devem ver
+  // botão "Cobrar", diálogo de NFC-e, reimpressão de DANFE etc.
+  const chargeButtonEnabled = pdvV2Enabled && !isReiDoAcai;
   const isCardapioOrder = (order.origin || 'cardapio') === 'cardapio';
   const isBalcaoOrder = order.origin === 'balcao';
   const isRetirada = !order.deliveryAddress;
