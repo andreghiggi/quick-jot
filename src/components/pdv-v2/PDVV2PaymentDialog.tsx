@@ -910,6 +910,39 @@ export function PDVV2PaymentDialog({
                   <p className="text-sm text-muted-foreground">
                     Valor por pessoa: <span className="font-semibold text-foreground">{formatPrice(grossTotal / Math.max(1, splitPeople))}</span>
                   </p>
+                  <p className="text-xs text-muted-foreground">
+                    Vamos distribuir cada item da comanda em {splitPeople} partes iguais. Você poderá ajustar o valor de cada pessoa item a item (ex.: um paga mais, outro paga menos) usando o botão de rachar em cada linha.
+                  </p>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={splitPeople < 2 || !checkoutItems?.length}
+                      onClick={() => {
+                        if (!checkoutItems?.length || splitPeople < 2) return;
+                        const nextSel = new Map<number, number>();
+                        const nextMem = new Map<number, number>();
+                        checkoutItems.forEach((it, idx) => {
+                          if (it.paid) return;
+                          // Cada pessoa fica com 1/N da quantidade total do item.
+                          // Para itens com quantity === 1, isso vira fração (ex.: 0.5).
+                          // Para itens com quantity > 1, distribui proporcionalmente.
+                          const perPersonQty =
+                            Math.round((it.quantity / splitPeople) * 1000) / 1000;
+                          if (perPersonQty > 0) {
+                            nextSel.set(idx, perPersonQty);
+                            // Memoriza fração para sobreviver a toggles do checkbox.
+                            if (it.quantity === 1) nextMem.set(idx, perPersonQty);
+                          }
+                        });
+                        setSelectedItemQtys(nextSel);
+                        setSplitMemory(nextMem);
+                        setI9Mode('items');
+                      }}
+                    >
+                      Distribuir entre os itens
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
