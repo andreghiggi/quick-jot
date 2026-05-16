@@ -1152,8 +1152,14 @@ export function PDVV2PaymentDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={submitting || chargingTef || !paymentMethodId || activePaymentMethods.length === 0 || splitItemEditingIdx !== null}
-            title={splitItemEditingIdx !== null ? 'Aplique ou cancele a divisão do item antes de cobrar' : undefined}
+            disabled={submitting || chargingTef || !paymentMethodId || activePaymentMethods.length === 0 || splitItemEditingIdx !== null || (isLancheriaI9 && i9Mode === 'split' && !activeSplit)}
+            title={
+              splitItemEditingIdx !== null
+                ? 'Aplique ou cancele a divisão do item antes de cobrar'
+                : (isLancheriaI9 && i9Mode === 'split' && !activeSplit)
+                ? 'Clique em "Distribuir entre os itens" para continuar'
+                : undefined
+            }
           >
             {chargingTef ? 'Cobrando…' : 'Confirmar Pagamento'}
           </Button>
