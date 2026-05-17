@@ -119,16 +119,23 @@ export default function CashReport() {
       if (error) throw error;
 
       const orderIds = Array.from(new Set((sales || []).map((s: any) => s.order_id).filter(Boolean)));
-      let ordersMap = new Map<string, { origin: string; delivery_address: string | null }>();
+      let ordersMap = new Map<string, { origin: string; delivery_address: string | null; notes: string | null }>();
       if (orderIds.length) {
         const { data: ord } = await supabase
           .from('orders')
-          .select('id, origin, delivery_address')
+          .select('id, origin, delivery_address, notes')
           .in('id', orderIds);
-        ordersMap = new Map((ord || []).map((o: any) => [o.id, { origin: o.origin, delivery_address: o.delivery_address }]));
+        ordersMap = new Map((ord || []).map((o: any) => [o.id, { origin: o.origin, delivery_address: o.delivery_address, notes: o.notes }]));
       }
 
-      const mapped: CloseCashSale[] = (sales || []).map((s: any) => {
+      const mapped: CloseCashSale[] = (sales || []).flatMap((s: any) => {
+        // Exclui vendas canceladas — elas ficam no histórico mas não devem
+        // somar no relatório/fechamento de caixa.
+        const saleCancelled = !!s.notes?.includes('[CANCELADA]');
+        const linkedOrder = s.order_id ? ordersMap.get(s.order_id) : undefined;
+        if (saleCancelled || linkedOrder?.notes?.includes('[CANCELADA]')) {
+          return [];
+        }
         let origin: CloseCashSale['origin'] = 'balcao';
         let pmName = s.payment_method?.name || 'Sem forma';
         if (s.notes) {
@@ -136,11 +143,10 @@ export default function CashReport() {
           if (tefMatch) pmName = `${pmName} (${tefMatch[1]})`;
         }
         if (s.order_id) {
-          const linked = ordersMap.get(s.order_id);
-          if (linked) {
-            if (linked.origin === 'mesa') origin = 'mesa';
-            else if (linked.origin === 'balcao') origin = 'balcao';
-            else origin = (linked.delivery_address && linked.delivery_address.trim().length > 0)
+          if (linkedOrder) {
+            if (linkedOrder.origin === 'mesa') origin = 'mesa';
+            else if (linkedOrder.origin === 'balcao') origin = 'balcao';
+            else origin = (linkedOrder.delivery_address && linkedOrder.delivery_address.trim().length > 0)
               ? 'cardapio_delivery' : 'cardapio_retirada';
           } else {
             origin = 'outros';
@@ -149,7 +155,7 @@ export default function CashReport() {
           if (s.notes?.toLowerCase().includes('comanda')) origin = 'mesa';
           else origin = 'balcao';
         }
-        return {
+        return [{
           id: s.id,
           final_total: Number(s.final_total) || 0,
           payment_method_id: s.payment_method_id || null,
@@ -157,7 +163,7 @@ export default function CashReport() {
           customer_name: s.customer_name || null,
           created_at: s.created_at,
           origin,
-        };
+        }];
       });
 
       setSalesByRegister((prev) => ({ ...prev, [registerId]: mapped }));
