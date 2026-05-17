@@ -271,7 +271,24 @@ export default function PDVV2() {
       }));
   }, [sales]);
 
-  const cashAmount = (currentRegister?.opening_amount || 0) + totalSales;
+  // Soma das vendas canceladas (venda com [CANCELADA] nas notes OU
+  // pedido vinculado marcado como [CANCELADA]). Essas vendas não devem
+  // contar no valor esperado em caixa nem no fechamento, mas continuam
+  // visíveis nos registros (histórico/Comandas Finalizadas).
+  const cancelledSalesTotal = useMemo(() => {
+    return sales.reduce((acc, s) => {
+      const saleCancelled = !!s.notes?.includes('[CANCELADA]');
+      let orderCancelled = false;
+      const orderId = (s as any).order_id as string | undefined;
+      if (orderId) {
+        const linked = orders.find((o) => o.id === orderId);
+        if (linked?.notes?.includes('[CANCELADA]')) orderCancelled = true;
+      }
+      return saleCancelled || orderCancelled ? acc + (Number(s.final_total) || 0) : acc;
+    }, 0);
+  }, [sales, orders]);
+
+  const cashAmount = (currentRegister?.opening_amount || 0) + totalSales - cancelledSalesTotal;
   const cashOpen = !!currentRegister;
   // Estado a ser exibido na UI: prefere o cache otimista enquanto a query
   // inicial não retornou, evitando o flash de "Caixa Fechado".
@@ -283,7 +300,16 @@ export default function PDVV2() {
 
   // Mapeia vendas do caixa atual em estrutura para o fechamento
   const closeCashSales: CloseCashSale[] = useMemo(() => {
-    return sales.map((s) => {
+    return sales.flatMap((s) => {
+      // Exclui vendas canceladas do fechamento de caixa — elas continuam
+      // existindo na base e visíveis em outras telas (Comandas Finalizadas,
+      // histórico), mas não somam no valor esperado de fechamento.
+      const saleCancelled = !!s.notes?.includes('[CANCELADA]');
+      const orderId = (s as any).order_id as string | undefined;
+      const linkedOrder = orderId ? orders.find((o) => o.id === orderId) : undefined;
+      if (saleCancelled || linkedOrder?.notes?.includes('[CANCELADA]')) {
+        return [];
+      }
       // Determina origem cruzando com orders (quando há order_id)
       let origin: CloseCashSale['origin'] = 'balcao';
 
@@ -296,13 +322,11 @@ export default function PDVV2() {
         }
       }
 
-      const orderId = (s as any).order_id as string | undefined;
       if (orderId) {
-        const linked = orders.find((o) => o.id === orderId);
-        if (linked) {
-          if (linked.origin === 'mesa') origin = 'mesa';
-          else if (linked.origin === 'balcao') origin = 'balcao';
-          else origin = isDelivery(linked) ? 'cardapio_delivery' : 'cardapio_retirada';
+        if (linkedOrder) {
+          if (linkedOrder.origin === 'mesa') origin = 'mesa';
+          else if (linkedOrder.origin === 'balcao') origin = 'balcao';
+          else origin = isDelivery(linkedOrder) ? 'cardapio_delivery' : 'cardapio_retirada';
         } else {
           origin = 'outros';
         }
@@ -313,7 +337,7 @@ export default function PDVV2() {
         else origin = 'balcao';
       }
 
-      return {
+      return [{
         id: s.id,
         final_total: Number(s.final_total) || 0,
         payment_method_id: s.payment_method_id || null,
@@ -321,7 +345,7 @@ export default function PDVV2() {
         customer_name: s.customer_name || null,
         created_at: s.created_at,
         origin,
-      };
+      }];
     });
   }, [sales, orders]);
 
