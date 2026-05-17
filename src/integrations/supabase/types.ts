@@ -2044,6 +2044,39 @@ export type Database = {
           },
         ]
       }
+      table_removal_logs: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          reason: string
+          removed_by: string | null
+          removed_by_name: string | null
+          table_capacity: number | null
+          table_number: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          reason: string
+          removed_by?: string | null
+          removed_by_name?: string | null
+          table_capacity?: number | null
+          table_number: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          removed_by?: string | null
+          removed_by_name?: string | null
+          table_capacity?: number | null
+          table_number?: number
+        }
+        Relationships: []
+      }
       tables: {
         Row: {
           capacity: number | null

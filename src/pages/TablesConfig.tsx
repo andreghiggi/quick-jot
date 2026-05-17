@@ -35,6 +35,8 @@ import {
 import { toast } from 'sonner';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
+import { Textarea } from '@/components/ui/textarea';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function TablesConfig() {
   const { company } = useAuthContext();
@@ -77,6 +79,8 @@ export default function TablesConfig() {
   const [selectedTable, setSelectedTable] = useState<typeof tables[0] | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [capacityInput, setCapacityInput] = useState('');
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [removeReason, setRemoveReason] = useState('');
 
   const handleAddTables = async () => {
     const count = parseInt(tableCount);
@@ -113,10 +117,37 @@ export default function TablesConfig() {
 
   const handleDeleteTable = async () => {
     if (!selectedTable) return;
+    const reason = removeReason.trim();
+    if (reason.length < 3) {
+      toast.error('Informe a justificativa (mín. 3 caracteres)');
+      return;
+    }
     setIsProcessing(true);
-    await deleteTable(selectedTable.id);
-    setIsProcessing(false);
-    setEditDialogOpen(false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error: logError } = await supabase.from('table_removal_logs').insert({
+        company_id: company?.id,
+        table_number: selectedTable.number,
+        table_capacity: selectedTable.capacity,
+        reason,
+        removed_by: user?.id ?? null,
+        removed_by_name: user?.email ?? null,
+      });
+      if (logError) {
+        console.error('Erro ao registrar histórico de remoção:', logError);
+        toast.error('Não foi possível registrar a justificativa. Remoção cancelada.');
+        setIsProcessing(false);
+        return;
+      }
+      const ok = await deleteTable(selectedTable.id);
+      if (ok) {
+        setRemoveDialogOpen(false);
+        setEditDialogOpen(false);
+        setRemoveReason('');
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -400,7 +431,7 @@ export default function TablesConfig() {
                 <Button 
                   variant="destructive" 
                   className="w-full gap-2"
-                  onClick={handleDeleteTable}
+                  onClick={() => { setRemoveReason(''); setRemoveDialogOpen(true); }}
                   disabled={isProcessing}
                 >
                   {isProcessing ? (
@@ -413,6 +444,47 @@ export default function TablesConfig() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Table Confirmation Dialog */}
+      <Dialog open={removeDialogOpen} onOpenChange={(o) => { if (!isProcessing) setRemoveDialogOpen(o); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              Remover Mesa {selectedTable?.number}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              Essa ação não pode ser desfeita. Informe abaixo o motivo da remoção — ficará registrado no histórico da loja.
+            </p>
+            <div className="space-y-2">
+              <Label>Justificativa <span className="text-destructive">*</span></Label>
+              <Textarea
+                value={removeReason}
+                onChange={(e) => setRemoveReason(e.target.value)}
+                placeholder="Ex: mesa quebrada, retirada do salão, duplicada..."
+                rows={3}
+                maxLength={500}
+                disabled={isProcessing}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveDialogOpen(false)} disabled={isProcessing}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteTable}
+              disabled={isProcessing || removeReason.trim().length < 3}
+            >
+              {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Confirmar remoção
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppLayout>
