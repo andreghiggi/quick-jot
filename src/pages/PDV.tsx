@@ -836,7 +836,7 @@ export default function PDV() {
                 : null;
 
               return {
-                codigo: item.product_id || 'AVULSO',
+                codigo: product?.code || item.product_id || 'AVULSO',
                 descricao: item.product_name,
                 ncm: taxRule?.ncm || '00000000',
                 cfop: taxRule?.cfop || '5102',
@@ -2329,7 +2329,7 @@ export default function PDV() {
                                       ? taxRules.find(tr => tr.id === product.taxRuleId) 
                                       : null;
                                     return {
-                                      codigo: item.product_id || 'AVULSO',
+                                      codigo: product?.code || item.product_id || 'AVULSO',
                                       descricao: item.product_name,
                                       ncm: taxRule?.ncm || '00000000',
                                       cfop: taxRule?.cfop || '5102',

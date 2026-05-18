@@ -404,7 +404,7 @@ export default function PDVV2() {
         const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
         const taxRule = product?.taxRuleId ? taxRules.find((tr) => tr.id === product.taxRuleId) : null;
         return {
-          codigo: it.product_id || 'AVULSO',
+          codigo: product?.code || it.product_id || 'AVULSO',
           descricao: it.product_name,
           ncm: taxRule?.ncm || '00000000',
           cfop: taxRule?.cfop || '5102',
