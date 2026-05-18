@@ -2139,6 +2139,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         total={total}
         title={isLancheriaI9 && step === 5 ? 'Finalizar Pedido' : 'Cobrar Retirada'}
         showDocumentMode
+        showAddItem
         tefStatus={tefStatus}
         checkoutItems={isLancheriaI9 ? cart.map(i => ({ name: i.product.name, quantity: i.quantity, unit_price: i.product.price + (i.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0) })) : undefined}
         onConfirm={async ({
@@ -2151,6 +2152,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           tefOptions,
           tefIntegration,
           customerDocument,
+          extraItems,
         }) => {
           // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
           // e imprime apenas recibo. Caso contrário (Retirada vinda da etapa 4), mantém fluxo original.
@@ -2166,6 +2168,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             tefOptions,
             tefIntegration,
             customerDocument,
+            extraItems,
           });
           setPickupChargeOpen(false);
         }}
