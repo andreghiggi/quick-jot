@@ -114,6 +114,42 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         return;
       }
 
+      // ===== Itens extras adicionados na cobrança =====
+      // Persistidos em order_items (added_after=true), incluídos na venda do caixa
+      // e na NFC-e. Total do pedido é atualizado abaixo.
+      const extras = params.extraItems || [];
+      const extrasTotal = extras.reduce((s, ex) => s + ex.unit_price * ex.quantity, 0);
+      const extrasAsSaleItems = extras.map((ex) => ({
+        product_id: ex.product_id,
+        product_name: ex.product_name.includes('(')
+          ? ex.product_name.substring(0, ex.product_name.indexOf('(')).trim()
+          : ex.product_name,
+        quantity: ex.quantity,
+        unit_price: ex.unit_price,
+      }));
+      const effectiveSaleItems = [...saleItems, ...extrasAsSaleItems];
+
+      if (extras.length > 0 && company?.id) {
+        const insertPayload = extras.map((ex) => ({
+          order_id: order.id,
+          company_id: company.id,
+          product_id: ex.product_id,
+          name: ex.product_name,
+          quantity: ex.quantity,
+          price: ex.unit_price,
+          notes: ex.notes || null,
+          added_after: true,
+        }));
+        const { error: insertErr } = await supabase
+          .from('order_items')
+          .insert(insertPayload as any);
+        if (insertErr) {
+          console.error('[OrderCardCharge] erro ao inserir extras:', insertErr);
+          toast.error('Erro ao adicionar itens extras ao pedido.');
+          return;
+        }
+      }
+
       // ===== TEF: executa ANTES de criar a venda (mesmo fluxo de Mesa) =====
       let tefData: NFCeTefData | undefined;
       let tefNote = '';
@@ -138,7 +174,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
 
       // 1) Registra a venda no caixa, vinculada ao pedido
       const saleId = await addSale(
-        saleItems,
+        effectiveSaleItems,
         params.paymentMethodId,
         authUser.id,
         params.discount || 0,
@@ -153,16 +189,21 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       }
 
       // 2) Marca o pedido como cobrado (sufixo no notes para identificação visual)
+      //    e atualiza o total caso tenham sido adicionados itens extras.
       const newNotes = order.notes
         ? `${order.notes} | [COBRADO] Pagamento: ${params.paymentName}${tefNote}`
         : `[COBRADO] Pagamento: ${params.paymentName}${tefNote}`;
-      await supabase.from('orders').update({ notes: newNotes }).eq('id', order.id);
+      const orderUpdate: { notes: string; total?: number } = { notes: newNotes };
+      if (extrasTotal > 0) {
+        orderUpdate.total = Number((order.total + extrasTotal).toFixed(2));
+      }
+      await supabase.from('orders').update(orderUpdate).eq('id', order.id);
 
       // 3) Emite NFC-e quando solicitado
       if (params.documentMode === 'sale_with_nfce' && fiscalEnabled) {
         try {
           setIsEmittingNfce(true);
-          const nfceItems: NFCeItem[] = saleItems.map((it) => {
+          const nfceItems: NFCeItem[] = effectiveSaleItems.map((it) => {
             const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
             const taxRule = product?.taxRuleId
               ? taxRules.find((tr) => tr.id === product.taxRuleId)
@@ -264,6 +305,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         total={order.total}
         title={`Cobrar pedido #${order.orderCode || order.dailyNumber}`}
         showDocumentMode
+        showAddItem
         tefStatus={tefStatus}
         deliveryFilter={order.deliveryAddress && order.deliveryAddress.trim().length > 0 ? 'delivery' : 'pickup'}
         checkoutItems={order?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price }))}

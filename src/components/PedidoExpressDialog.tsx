@@ -30,6 +30,7 @@ import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDV
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
+import type { ExtraItem } from '@/components/pdv-v2/PDVV2AddItemSearch';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { imprimirComprovanteTefAutomatico } from '@/utils/tefAutoPrint';
 import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog';
@@ -732,7 +733,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     customerDocument?: string;
     /** I9: usuário escolheu imprimir o documento gerado neste pop-up */
     printDocument?: boolean;
-
+    /** Itens extras adicionados na tela de cobrança. */
+    extraItems?: ExtraItem[];
   }) {
     if (!override && !canGoNext()) return;
     setIsSubmitting(true);
@@ -979,6 +981,21 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       };
     });
 
+    // Anexa itens extras adicionados no pop-up de cobrança.
+    const overrideExtras = override?.extraItems || [];
+    if (overrideExtras.length > 0) {
+      overrideExtras.forEach((ex) => {
+        orderItems.push({
+          id: crypto.randomUUID(),
+          productId: ex.product_id || '',
+          name: ex.product_name,
+          quantity: ex.quantity,
+          price: ex.unit_price,
+          notes: ex.notes,
+        });
+      });
+    }
+
     const success = await addOrder({
       customerName: customerName.trim(),
       customerPhone: phoneDigits || undefined,
@@ -1013,6 +1030,17 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             unit_price:
               item.product.price + item.selectedOptionals.reduce((s, o) => s + o.price, 0),
           }));
+          // Inclui extras na venda do caixa e na NFC-e.
+          overrideExtras.forEach((ex) => {
+            saleItems.push({
+              product_id: ex.product_id || null,
+              product_name: ex.product_name.includes('(')
+                ? ex.product_name.substring(0, ex.product_name.indexOf('(')).trim()
+                : ex.product_name,
+              quantity: ex.quantity,
+              unit_price: ex.unit_price,
+            });
+          });
           const { data: { user: authUser } } = await supabase.auth.getUser();
           const saleId = authUser
             ? await addSale(
@@ -2111,6 +2139,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         total={total}
         title={isLancheriaI9 && step === 5 ? 'Finalizar Pedido' : 'Cobrar Retirada'}
         showDocumentMode
+        showAddItem
         tefStatus={tefStatus}
         checkoutItems={isLancheriaI9 ? cart.map(i => ({ name: i.product.name, quantity: i.quantity, unit_price: i.product.price + (i.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0) })) : undefined}
         onConfirm={async ({
@@ -2123,6 +2152,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           tefOptions,
           tefIntegration,
           customerDocument,
+          extraItems,
         }) => {
           // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
           // e imprime apenas recibo. Caso contrário (Retirada vinda da etapa 4), mantém fluxo original.
@@ -2138,6 +2168,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             tefOptions,
             tefIntegration,
             customerDocument,
+            extraItems,
           });
           setPickupChargeOpen(false);
         }}
