@@ -51,7 +51,7 @@ export default function Products() {
   
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', costPrice: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
   
   const [isUploading, setIsUploading] = useState(false);
@@ -148,8 +148,9 @@ export default function Products() {
       imageUrl: newProduct.imageUrl || undefined,
       active: newProduct.active,
       subcategoryId: newProduct.subcategoryId || null,
+      costPrice: newProduct.costPrice ? parseFloat(newProduct.costPrice) : null,
     } as any);
-    setNewProduct({ name: '', price: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
+    setNewProduct({ name: '', price: '', costPrice: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
     setIsProductDialogOpen(false);
   }
 
@@ -208,6 +209,7 @@ export default function Products() {
       menuItem: editingProduct.menuItem,
       waiterItem: editingProduct.waiterItem,
       subcategoryId: editingProduct.subcategoryId,
+      costPrice: (editingProduct as any).costPrice ?? null,
       ...(pdvV2Enabled ? { swappableInOrder: (editingProduct as any).swappableInOrder } : {}),
       ...(true ? {
         code: editingProduct.code,
@@ -548,6 +550,29 @@ export default function Products() {
                 onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
                 placeholder="0.00"
               />
+            </div>
+            <div>
+              <Label>Custo (R$) <span className="text-xs text-muted-foreground">(opcional)</span></Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={newProduct.costPrice}
+                onChange={(e) => setNewProduct({ ...newProduct, costPrice: e.target.value })}
+                placeholder="0.00"
+              />
+              {(() => {
+                const p = parseFloat(newProduct.price);
+                const c = parseFloat(newProduct.costPrice);
+                if (!p || !c || c <= 0) return null;
+                const margin = ((p - c) / p) * 100;
+                const markup = ((p - c) / c) * 100;
+                return (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Margem: <span className={margin >= 0 ? 'text-green-600' : 'text-destructive'}>{margin.toFixed(1)}%</span>
+                    {' · '}Markup: <span className={markup >= 0 ? 'text-green-600' : 'text-destructive'}>{markup.toFixed(1)}%</span>
+                  </p>
+                );
+              })()}
             </div>
             <div>
               <Label>Categoria</Label>
@@ -951,6 +976,29 @@ export default function Products() {
                   onChange={(e) => setEditingProduct({ ...editingProduct, price: parseFloat(e.target.value) || 0 })}
                   placeholder="0.00"
                 />
+              </div>
+              <div>
+                <Label>Custo (R$) <span className="text-xs text-muted-foreground">(opcional)</span></Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={(editingProduct as any).costPrice ?? ''}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, costPrice: e.target.value === '' ? null : parseFloat(e.target.value) } as any)}
+                  placeholder="0.00"
+                />
+                {(() => {
+                  const p = Number(editingProduct.price);
+                  const c = Number((editingProduct as any).costPrice);
+                  if (!p || !c || c <= 0) return null;
+                  const margin = ((p - c) / p) * 100;
+                  const markup = ((p - c) / c) * 100;
+                  return (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Margem: <span className={margin >= 0 ? 'text-green-600' : 'text-destructive'}>{margin.toFixed(1)}%</span>
+                      {' · '}Markup: <span className={markup >= 0 ? 'text-green-600' : 'text-destructive'}>{markup.toFixed(1)}%</span>
+                    </p>
+                  );
+                })()}
               </div>
               <div>
                 <Label>Categoria</Label>
