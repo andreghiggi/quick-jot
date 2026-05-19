@@ -11,7 +11,7 @@ interface WhatsAppMessageTemplatesProps {
   updateSetting: (key: string, value: string) => Promise<boolean>;
 }
 
-const SYSTEM_VARIABLES = ['{{nome}}', '{{num}}', '{{loja}}', '{{tempo}}', '{{endereco}}', '{{link_cardapio}}', '{{chave_pix}}', '{{google_review}}', '{{horario}}'];
+const SYSTEM_VARIABLES = ['{{nome}}', '{{num}}', '{{loja}}', '{{tempo}}', '{{endereco}}', '{{link_cardapio}}', '{{chave_pix}}', '{{google_review}}', '{{horario}}', '{{proximo_dia}}', '{{horario_proximo}}'];
 
 const TEMPLATE_CONFIGS = [
   {
@@ -69,6 +69,13 @@ const TEMPLATE_CONFIGS = [
     color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
     defaultMsg: 'Olá, {{nome}}! Que bom te ver por aqui 😊\n\nNo momento estamos fora do horário de atendimento, mas você já pode deixar seu pedido agendado!\n\n⏰ Nosso horário de atendimento hoje é {{horario}}.\n\nQuando iniciarmos, seu pedido entrará na fila de produção e você será avisado assim que começar o preparo.\n\n👉 Faça seu pedido aqui:\n{{link_cardapio}}',
     hint: 'Enviada quando o cliente manda mensagem fora do horário e o módulo de agendamento está ativo. Use {{horario}} para mostrar o horário do dia.',
+  },
+  {
+    status: 'Auto-resposta (Fechado hoje)',
+    settingKey: 'whatsapp_msg_autoreply_closed_no_hours_today',
+    color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
+    defaultMsg: 'Olá, {{nome}}! 👋\nQue bom ter você por aqui! 😊\nHoje não estamos atendendo.\n\n📅 *Voltamos a atender {{proximo_dia}} a partir {{horario_proximo}}.*\n\nTe esperamos! 😊',
+    hint: 'Enviada quando o cliente manda mensagem em um dia que a loja não tem nenhum período aberto (ou já passou do último horário do dia). Use {{proximo_dia}} para o próximo dia de funcionamento e {{horario_proximo}} para o horário.',
   },
   {
     status: 'Pedido Agendado',
