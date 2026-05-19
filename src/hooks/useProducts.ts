@@ -70,6 +70,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         icmsOrigin: (product as any).icms_origin || '0',
         netWeight: (product as any).net_weight != null ? Number((product as any).net_weight) : null,
         grossWeight: (product as any).gross_weight != null ? Number((product as any).gross_weight) : null,
+        costPrice: (product as any).cost_price != null ? Number((product as any).cost_price) : null,
         swappableInOrder: (product as any).swappable_in_order ?? false,
         optionals: optionalsData
           .filter((opt) => opt.product_id === product.id)
@@ -133,6 +134,7 @@ export function useProducts(options: UseProductsOptions = {}) {
           pdv_item: productData.pdvItem ?? true,
           menu_item: productData.menuItem ?? true,
           code: codeToUse,
+          cost_price: (productData as any).costPrice ?? null,
         } as any)
         .select()
         .single();
@@ -169,6 +171,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       if ((productData as any).netWeight !== undefined) (updateData as any).net_weight = (productData as any).netWeight;
       if ((productData as any).grossWeight !== undefined) (updateData as any).gross_weight = (productData as any).grossWeight;
       if ((productData as any).swappableInOrder !== undefined) (updateData as any).swappable_in_order = (productData as any).swappableInOrder;
+      if ((productData as any).costPrice !== undefined) (updateData as any).cost_price = (productData as any).costPrice;
 
       const { error } = await supabase
         .from('products')
