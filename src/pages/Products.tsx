@@ -51,7 +51,7 @@ export default function Products() {
   
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', costPrice: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
   
   const [isUploading, setIsUploading] = useState(false);
@@ -148,8 +148,9 @@ export default function Products() {
       imageUrl: newProduct.imageUrl || undefined,
       active: newProduct.active,
       subcategoryId: newProduct.subcategoryId || null,
+      costPrice: newProduct.costPrice ? parseFloat(newProduct.costPrice) : null,
     } as any);
-    setNewProduct({ name: '', price: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
+    setNewProduct({ name: '', price: '', costPrice: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
     setIsProductDialogOpen(false);
   }
 
@@ -208,6 +209,7 @@ export default function Products() {
       menuItem: editingProduct.menuItem,
       waiterItem: editingProduct.waiterItem,
       subcategoryId: editingProduct.subcategoryId,
+      costPrice: (editingProduct as any).costPrice ?? null,
       ...(pdvV2Enabled ? { swappableInOrder: (editingProduct as any).swappableInOrder } : {}),
       ...(true ? {
         code: editingProduct.code,
