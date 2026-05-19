@@ -1260,6 +1260,36 @@ export type Database = {
           },
         ]
       }
+      product_cost_history: {
+        Row: {
+          changed_by: string | null
+          company_id: string | null
+          created_at: string
+          id: string
+          new_cost: number | null
+          old_cost: number | null
+          product_id: string
+        }
+        Insert: {
+          changed_by?: string | null
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          new_cost?: number | null
+          old_cost?: number | null
+          product_id: string
+        }
+        Update: {
+          changed_by?: string | null
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          new_cost?: number | null
+          old_cost?: number | null
+          product_id?: string
+        }
+        Relationships: []
+      }
       product_optionals: {
         Row: {
           active: boolean
@@ -1314,6 +1344,7 @@ export type Database = {
           category: string
           code: string | null
           company_id: string | null
+          cost_price: number | null
           created_at: string
           description: string | null
           display_order: number | null
@@ -1340,6 +1371,7 @@ export type Database = {
           category: string
           code?: string | null
           company_id?: string | null
+          cost_price?: number | null
           created_at?: string
           description?: string | null
           display_order?: number | null
@@ -1366,6 +1398,7 @@ export type Database = {
           category?: string
           code?: string | null
           company_id?: string | null
+          cost_price?: number | null
           created_at?: string
           description?: string | null
           display_order?: number | null
