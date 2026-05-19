@@ -552,6 +552,29 @@ export default function Products() {
               />
             </div>
             <div>
+              <Label>Custo (R$) <span className="text-xs text-muted-foreground">(opcional)</span></Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={newProduct.costPrice}
+                onChange={(e) => setNewProduct({ ...newProduct, costPrice: e.target.value })}
+                placeholder="0.00"
+              />
+              {(() => {
+                const p = parseFloat(newProduct.price);
+                const c = parseFloat(newProduct.costPrice);
+                if (!p || !c || c <= 0) return null;
+                const margin = ((p - c) / p) * 100;
+                const markup = ((p - c) / c) * 100;
+                return (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Margem: <span className={margin >= 0 ? 'text-green-600' : 'text-destructive'}>{margin.toFixed(1)}%</span>
+                    {' · '}Markup: <span className={markup >= 0 ? 'text-green-600' : 'text-destructive'}>{markup.toFixed(1)}%</span>
+                  </p>
+                );
+              })()}
+            </div>
+            <div>
               <Label>Categoria</Label>
               <Select value={newProduct.category} onValueChange={(v) => setNewProduct({ ...newProduct, category: v, subcategoryId: '' })}>
                 <SelectTrigger>
