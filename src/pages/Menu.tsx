@@ -114,7 +114,7 @@ export default function Menu() {
   const categories = useMemo(() => allCategories.filter(c => c.menuItem !== false), [allCategories]);
   const subcategories = useMemo(() => allSubcategories.filter(s => s.menuItem !== false), [allSubcategories]);
   const { neighborhoods, loading: neighborhoodsLoading, getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
-  const { loading: hoursLoading, isCurrentlyOpen, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
+  const { loading: hoursLoading, isCurrentlyOpen, willOpenLaterToday, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentMethodsLoading } = usePaymentMethods({ companyId: company?.id, channel: 'menu' });
   // Divisão Entrega/Retirada nas formas de pagamento — allow-list isolada.
@@ -124,7 +124,12 @@ export default function Menu() {
   ];
   const isI9PaymentSplit = !!company?.id && PAYMENT_SPLIT_ALLOWLIST.includes(company.id);
   const isOpen = isCurrentlyOpen();
-  const schedulingEnabled = settings.acceptOrderScheduling;
+  // Scheduling só é oferecido se:
+  //  - a toggle de aceitar agendamento estiver ligada, E
+  //  - existe um período de funcionamento ainda por abrir HOJE.
+  // Se hoje está 100% fechado (ou já passou do último horário), agendamento é bloqueado.
+  // Lojas com alwaysOpen continuam intocadas (isOpen=true cobre o caso).
+  const schedulingEnabled = settings.acceptOrderScheduling && willOpenLaterToday();
   const canOrder = isOpen || schedulingEnabled;
   const formattedHours = getFormattedHours();
 

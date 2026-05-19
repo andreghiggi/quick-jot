@@ -208,6 +208,39 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
     });
   }, [config]);
 
+  // Check if the store has any future open period later today.
+  // Used to decide whether scheduling should be offered when currently closed.
+  // Rule: if alwaysOpen, considered open (no scheduling path). Otherwise,
+  // returns true only if today (in America/Sao_Paulo) has at least one period
+  // configured as open AND whose openTime is still in the future.
+  const willOpenLaterToday = useCallback((): boolean => {
+    if (config.alwaysOpen) return false;
+
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      hour: 'numeric',
+      minute: 'numeric',
+      weekday: 'short',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(now);
+    const hours = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+    const minutes = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+    const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const weekdayStr = parts.find(p => p.type === 'weekday')?.value || '';
+    const dayOfWeek = dayMap[weekdayStr] ?? now.getDay();
+    const currentMinutes = hours * 60 + minutes;
+
+    const todayConfig = config.days.find((d) => d.dayOfWeek === dayOfWeek);
+    if (!todayConfig || !todayConfig.isOpen) return false;
+
+    return todayConfig.periods.some((period) => {
+      const [oH, oM] = period.openTime.split(':').map(Number);
+      return (oH * 60 + oM) > currentMinutes;
+    });
+  }, [config]);
+
   // Get formatted hours for display
   const getFormattedHours = useCallback((): string => {
     if (config.alwaysOpen) return 'Aberto 24h';
@@ -239,6 +272,7 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
     setAlwaysOpen,
     saveBusinessHours,
     isCurrentlyOpen,
+    willOpenLaterToday,
     getFormattedHours,
     refetch: fetchBusinessHours,
     DAY_NAMES,

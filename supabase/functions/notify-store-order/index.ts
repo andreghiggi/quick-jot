@@ -182,7 +182,17 @@ serve(async (req) => {
             });
           }
 
-          if (!isOpen) {
+          // Só envia mensagem de agendamento se a loja AINDA vai abrir hoje.
+          // Se hoje está 100% fechado (ou já passou do último horário), não envia
+          // a mensagem de agendamento — o pedido não deveria nem chegar nesse estado
+          // pois o frontend bloqueia, mas garantimos no backend também.
+          const openHoursToday = hours.filter((h: any) => h.is_open && h.open_time && h.close_time);
+          const willOpenLater = !alwaysOpen && openHoursToday.some((h: any) => {
+            const [oH, oM] = h.open_time.split(':').map(Number);
+            return (oH * 60 + oM) > currentMinutes;
+          });
+
+          if (!isOpen && willOpenLater) {
             // Outside business hours → send scheduled confirmation to customer
             const { data: templateData } = await supabase
               .from('store_settings')
@@ -196,7 +206,7 @@ serve(async (req) => {
             const firstName = order.customer_name.split(' ')[0];
 
             // Format business hours for the message
-            const openHours = hours.filter((h: any) => h.is_open && h.open_time && h.close_time);
+            const openHours = openHoursToday;
             const formattedHours = openHours.length > 0
               ? openHours
                   .sort((a: any, b: any) => (a.period_number || 1) - (b.period_number || 1))
