@@ -30,6 +30,7 @@ function sanitizeBaseUrl(url: string | null): string {
 }
 
 const DAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const DAY_NAMES_FULL = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
 function formatBusinessHours(hours: any[]): string {
   if (!hours || hours.length === 0) return 'não definido';
@@ -42,6 +43,30 @@ function formatBusinessHours(hours: any[]): string {
     .sort((a, b) => (a.period_number || 1) - (b.period_number || 1))
     .map(h => `${h.open_time.slice(0, 5)} às ${h.close_time.slice(0, 5)}`)
     .join(' e ');
+}
+
+// Computes "amanhã (Terça-feira)" / "Terça-feira" for the next open weekday.
+// Returns null if no day in the week is configured as open.
+function getNextOpenDay(
+  allHours: any[],
+  todayDow: number,
+): { dayLabel: string; horario: string } | null {
+  if (!allHours || allHours.length === 0) return null;
+  // Iterate next 7 days starting tomorrow
+  for (let i = 1; i <= 7; i++) {
+    const dow = (todayDow + i) % 7;
+    const dayRows = allHours.filter(
+      (h) => h.day_of_week === dow && h.is_open && h.open_time && h.close_time,
+    );
+    if (dayRows.length === 0) continue;
+    const periods = dayRows
+      .sort((a, b) => (a.period_number || 1) - (b.period_number || 1))
+      .map((h) => `das ${h.open_time.slice(0, 5)} às ${h.close_time.slice(0, 5)}`)
+      .join(' e ');
+    const dayLabel = i === 1 ? `amanhã (${DAY_NAMES_FULL[dow]})` : DAY_NAMES_FULL[dow];
+    return { dayLabel, horario: periods };
+  }
+  return null;
 }
 
 function getSaoPauloTime(): { hours: number; minutes: number; dayOfWeek: number } {
@@ -230,8 +255,8 @@ serve(async (req) => {
       const [companyRes, moduleRes, hoursRes, settingsRes, schedulingModuleRes] = await Promise.all([
         supabase.from('companies').select('name, slug').eq('id', companyId).single(),
         supabase.from('company_modules').select('enabled').eq('company_id', companyId).eq('module_name', 'whatsapp').maybeSingle(),
-        supabase.from('business_hours').select('*').eq('company_id', companyId).eq('day_of_week', dayOfWeek),
-        supabase.from('store_settings').select('key, value').eq('company_id', companyId).in('key', ['site_url', 'whatsapp_msg_autoreply_closed', 'whatsapp_msg_autoreply_closed_scheduling']),
+        supabase.from('business_hours').select('*').eq('company_id', companyId),
+        supabase.from('store_settings').select('key, value').eq('company_id', companyId).in('key', ['site_url', 'whatsapp_msg_autoreply_closed', 'whatsapp_msg_autoreply_closed_scheduling', 'whatsapp_msg_autoreply_closed_no_hours_today']),
         supabase.from('company_modules').select('enabled').eq('company_id', companyId).eq('module_name', 'agendamento').maybeSingle(),
       ]);
 
@@ -243,7 +268,8 @@ serve(async (req) => {
       }
 
       const company = companyRes.data;
-      const businessHours = hoursRes.data || [];
+      const allBusinessHours = hoursRes.data || [];
+      const businessHours = allBusinessHours.filter((h: any) => h.day_of_week === dayOfWeek);
       const hasScheduling = schedulingModuleRes.data?.enabled || false;
 
       // Get settings map
@@ -262,10 +288,53 @@ serve(async (req) => {
       // Check if within business hours
       const withinHours = isWithinBusinessHours(businessHours);
       const hoursText = formatBusinessHours(businessHours);
+      // Detect "closed today with no future period today"
+      const todayHasAnyOpenPeriod = businessHours.some(
+        (h: any) => h.is_open && h.open_time && h.close_time,
+      );
+      const { hours: nowH, minutes: nowM } = getSaoPauloTime();
+      const currentMin = nowH * 60 + nowM;
+      const hasFutureOpenToday = businessHours.some((h: any) => {
+        if (!h.is_open || !h.open_time) return false;
+        const [oH, oM] = h.open_time.split(':').map(Number);
+        return oH * 60 + oM > currentMin;
+      });
+      const closedNoMoreToday = !withinHours && businessHours.length > 0 && !hasFutureOpenToday;
 
       let greetingMessage: string;
 
-      if (!withinHours && businessHours.length > 0) {
+      if (closedNoMoreToday) {
+        // Closed today (no more open periods today) — show next open day
+        const next = getNextOpenDay(allBusinessHours, dayOfWeek);
+        const customTemplate = settingsMap['whatsapp_msg_autoreply_closed_no_hours_today'];
+        const proximoDia = next?.dayLabel || '';
+        const horarioProximo = next?.horario || '';
+
+        if (customTemplate) {
+          let msg = customTemplate
+            .split('{{nome}}').join(firstName)
+            .split('{{loja}}').join(company.name)
+            .split('{{link_cardapio}}').join(menuUrl)
+            .split('{{proximo_dia}}').join(proximoDia)
+            .split('{{horario_proximo}}').join(horarioProximo);
+          // If no future open day, drop the "voltamos a atender" line entirely
+          if (!next) {
+            msg = msg
+              .split('\n')
+              .filter((line) => !line.includes('{{proximo_dia}}') && !line.includes('{{horario_proximo}}') && !/voltamos a atender/i.test(line))
+              .join('\n');
+          }
+          greetingMessage = msg;
+        } else {
+          const baseMsg = `Olá, ${firstName}! 👋\nQue bom ter você por aqui! 😊\nHoje não estamos atendendo.`;
+          const tail = `\n\nTe esperamos! 😊`;
+          if (next) {
+            greetingMessage = `${baseMsg}\n\n📅 *Voltamos a atender ${next.dayLabel} a partir ${next.horario}.*${tail}`;
+          } else {
+            greetingMessage = `${baseMsg}${tail}`;
+          }
+        }
+      } else if (!withinHours && businessHours.length > 0) {
         // Outside business hours - use custom template
         const templateKey = hasScheduling ? 'whatsapp_msg_autoreply_closed_scheduling' : 'whatsapp_msg_autoreply_closed';
         const customTemplate = settingsMap[templateKey];
