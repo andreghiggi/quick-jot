@@ -57,13 +57,6 @@ const TEMPLATE_CONFIGS = [
     hint: 'Enviada quando o pedido é finalizado. Use {{google_review}} para link de avaliação e {{link_cardapio}} para link do cardápio.',
   },
   {
-    status: 'Follow-up (30min após entrega)',
-    settingKey: 'whatsapp_msg_followup',
-    color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
-    defaultMsg: '{{nome}}, que bom ter você como cliente do {{loja}}! 😊\n\nEsperamos que tenha gostado do seu pedido. Quando quiser pedir novamente, é só acessar nosso cardápio:\n\n🛒 {{link_cardapio}}\n\nTe esperamos! 💛',
-    hint: 'Enviada automaticamente 30 minutos após o pedido ser entregue, com link para novo pedido.',
-  },
-  {
     status: 'Auto-resposta (Fora do horário)',
     settingKey: 'whatsapp_msg_autoreply_closed',
     color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
