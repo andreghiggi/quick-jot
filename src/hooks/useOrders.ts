@@ -43,19 +43,39 @@ export function useOrders(options: UseOrdersOptions = {}) {
       
       let itemsData: any[] = [];
       if (orderIds.length > 0) {
-        // Chunk the IN filter to avoid hitting PostgREST URL length limits when
-        // a company has many orders (e.g. Bon Appetit has 600+). 200 UUIDs per
-        // batch keeps the URL well below the ~16KB limit.
-        const CHUNK = 200;
-        for (let i = 0; i < orderIds.length; i += CHUNK) {
-          const slice = orderIds.slice(i, i + CHUNK);
-          const { data, error: itemsError } = await supabase
-            .from('order_items')
-            .select('*')
-            .in('order_id', slice);
+        const BON_APPETIT_COMPANY_ID = '32b71649-461d-4cb6-b26c-12390b090feb';
 
-          if (itemsError) throw itemsError;
-          if (data) itemsData = itemsData.concat(data);
+        if (companyId === BON_APPETIT_COMPANY_ID) {
+          // Bon Appetit has a high historical order volume; fetching items by
+          // company with pagination avoids long IN URLs and the 1000-row limit.
+          const PAGE_SIZE = 1000;
+          for (let from = 0; ; from += PAGE_SIZE) {
+            const { data, error: itemsError } = await supabase
+              .from('order_items')
+              .select('*')
+              .eq('company_id', companyId)
+              .order('created_at', { ascending: false })
+              .range(from, from + PAGE_SIZE - 1);
+
+            if (itemsError) throw itemsError;
+            if (data) itemsData = itemsData.concat(data);
+            if (!data || data.length < PAGE_SIZE) break;
+          }
+        } else {
+          // Chunk the IN filter to avoid hitting PostgREST URL length limits when
+          // a company has many orders. 200 UUIDs per batch keeps the URL well below
+          // the ~16KB limit for the general path.
+          const CHUNK = 200;
+          for (let i = 0; i < orderIds.length; i += CHUNK) {
+            const slice = orderIds.slice(i, i + CHUNK);
+            const { data, error: itemsError } = await supabase
+              .from('order_items')
+              .select('*')
+              .in('order_id', slice);
+
+            if (itemsError) throw itemsError;
+            if (data) itemsData = itemsData.concat(data);
+          }
         }
       }
 
