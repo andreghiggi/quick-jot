@@ -43,13 +43,20 @@ export function useOrders(options: UseOrdersOptions = {}) {
       
       let itemsData: any[] = [];
       if (orderIds.length > 0) {
-        const { data, error: itemsError } = await supabase
-          .from('order_items')
-          .select('*')
-          .in('order_id', orderIds);
+        // Chunk the IN filter to avoid hitting PostgREST URL length limits when
+        // a company has many orders (e.g. Bon Appetit has 600+). 200 UUIDs per
+        // batch keeps the URL well below the ~16KB limit.
+        const CHUNK = 200;
+        for (let i = 0; i < orderIds.length; i += CHUNK) {
+          const slice = orderIds.slice(i, i + CHUNK);
+          const { data, error: itemsError } = await supabase
+            .from('order_items')
+            .select('*')
+            .in('order_id', slice);
 
-        if (itemsError) throw itemsError;
-        itemsData = data || [];
+          if (itemsError) throw itemsError;
+          if (data) itemsData = itemsData.concat(data);
+        }
       }
 
       const mappedOrders: Order[] = (ordersData || []).map((order) => ({
