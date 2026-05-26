@@ -150,6 +150,27 @@ export function useResellerPortal() {
           company_id: newCompany.id,
         });
 
+      // Create auth user + link to company (so the store can actually log in)
+      if (data.login_email && data.initial_password) {
+        try {
+          const { error: userErr } = await supabase.functions.invoke('create-company-user', {
+            body: {
+              company_id: newCompany.id,
+              email: data.login_email,
+              password: data.initial_password,
+              full_name: data.responsible_name || data.name,
+            },
+          });
+          if (userErr) {
+            console.error('create-company-user error:', userErr);
+            toast.error('Loja criada, mas houve erro ao criar o login. Edite a loja e reenvie a senha.');
+          }
+        } catch (e) {
+          console.error('create-company-user invoke failed:', e);
+          toast.error('Loja criada, mas o login não foi ativado automaticamente.');
+        }
+      }
+
       // Trigger backfill for this newly created company so the prorated invoice appears immediately
       try {
         await supabase.functions.invoke('reseller-billing', {
