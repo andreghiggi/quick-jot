@@ -230,11 +230,19 @@ export default function OptionalGroups() {
       if (error) throw error;
 
       if (data?.groups && Array.isArray(data.groups)) {
-        setExtractedGroups(data.groups.map((g: any) => ({
+        const mapped: ExtractedGroup[] = data.groups.map((g: any) => ({
           name: g.name || 'Sem nome',
-          items: (g.items || []).map((i: any) => ({ name: i.name || '', price: parseFloat(i.price) || 0 })),
+          items: (g.items || []).map((i: any) => ({
+            name: i.name || '',
+            price: parseFloat(i.price) || 0,
+            section: i.section && String(i.section).trim() ? String(i.section).trim() : null,
+          })),
           selected: true,
-        })));
+        }));
+        setExtractedGroups(mapped);
+        // Liga "criar com seções" automaticamente se a IA detectou alguma seção
+        const hasAnySection = mapped.some(g => g.items.some(it => !!it.section));
+        setImportWithSections(hasAnySection);
         setImportStep('review');
         toast.success(`${data.groups.length} grupos encontrados!`);
       } else {
