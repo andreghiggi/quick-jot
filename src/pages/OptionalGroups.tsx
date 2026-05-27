@@ -786,6 +786,15 @@ export default function OptionalGroups() {
                 <Label>Preço (R$)</Label>
                 <Input type="number" min={0} step="0.01" value={editingItem.price} onChange={(e) => setEditingItem({ ...editingItem, price: e.target.value })} />
               </div>
+              <div>
+                <Label>Seção (opcional)</Label>
+                <Input
+                  placeholder="Ex: FRUTAS, CREMES, COBERTURAS"
+                  value={editingItem.section}
+                  onChange={(e) => setEditingItem({ ...editingItem, section: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Itens com a mesma seção aparecem agrupados sob um subtítulo.</p>
+              </div>
               <div className="flex items-center gap-2">
                 <Switch checked={editingItem.active} onCheckedChange={(v) => setEditingItem({ ...editingItem, active: v })} />
                 <Label>Ativo</Label>
