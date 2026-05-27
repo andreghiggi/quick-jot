@@ -72,6 +72,7 @@ export default function OptionalGroups() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [extractedGroups, setExtractedGroups] = useState<ExtractedGroup[]>([]);
+  const [importWithSections, setImportWithSections] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
