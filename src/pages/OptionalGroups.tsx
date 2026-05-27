@@ -664,6 +664,25 @@ export default function OptionalGroups() {
               <Label>Preço (R$)</Label>
               <Input type="number" step="0.01" placeholder="0.00" value={newItemPrice} onChange={(e) => setNewItemPrice(e.target.value)} />
             </div>
+            <div>
+              <Label>Seção (opcional)</Label>
+              <Input
+                placeholder="Ex: FRUTAS, CREMES, COBERTURAS"
+                value={newItemSection}
+                onChange={(e) => setNewItemSection(e.target.value)}
+                list={addItemGroupId ? `sections-${addItemGroupId}` : undefined}
+              />
+              {addItemGroupId && (
+                <datalist id={`sections-${addItemGroupId}`}>
+                  {Array.from(new Set(
+                    (groups.find(g => g.id === addItemGroupId)?.items || [])
+                      .map(i => (i.section ?? '').trim())
+                      .filter(s => s.length > 0)
+                  )).map(s => <option key={s} value={s} />)}
+                </datalist>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">Use para sub-dividir o grupo. Deixe vazio para itens sem seção.</p>
+            </div>
             <Button onClick={handleAddItem} className="w-full">Adicionar</Button>
           </div>
         </DialogContent>
