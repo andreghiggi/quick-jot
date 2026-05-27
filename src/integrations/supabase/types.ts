@@ -736,6 +736,7 @@ export type Database = {
           image_url: string | null
           name: string
           price: number
+          section: string | null
         }
         Insert: {
           active?: boolean
@@ -747,6 +748,7 @@ export type Database = {
           image_url?: string | null
           name: string
           price?: number
+          section?: string | null
         }
         Update: {
           active?: boolean
@@ -758,6 +760,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           price?: number
+          section?: string | null
         }
         Relationships: [
           {

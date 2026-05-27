@@ -49,9 +49,10 @@ export default function OptionalGroups() {
   // New item form
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
+  const [newItemSection, setNewItemSection] = useState('');
 
   // Edit item state
-  const [editingItem, setEditingItem] = useState<{ id: string; name: string; price: string; active: boolean } | null>(null);
+  const [editingItem, setEditingItem] = useState<{ id: string; name: string; price: string; active: boolean; section: string } | null>(null);
 
   // Association state
   const [selectedCatIds, setSelectedCatIds] = useState<string[]>([]);
@@ -105,9 +106,14 @@ export default function OptionalGroups() {
       toast.error('Informe o nome do item');
       return;
     }
-    await addItem(addItemGroupId, { name: newItemName.trim(), price: parseFloat(newItemPrice) || 0 });
+    await addItem(addItemGroupId, {
+      name: newItemName.trim(),
+      price: parseFloat(newItemPrice) || 0,
+      section: newItemSection.trim() || null,
+    });
     setNewItemName('');
     setNewItemPrice('');
+    setNewItemSection('');
     setIsAddItemOpen(false);
     setAddItemGroupId(null);
   }
@@ -122,6 +128,7 @@ export default function OptionalGroups() {
       name: editingItem.name.trim(),
       price: parseFloat(editingItem.price) || 0,
       active: editingItem.active,
+      section: editingItem.section.trim() ? editingItem.section.trim() : null,
     });
     setEditingItem(null);
   }
@@ -432,12 +439,34 @@ export default function OptionalGroups() {
               <AccordionContent>
                 <div className="space-y-3 pb-2">
                   {/* Items */}
-                  {group.items.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Nenhum item neste grupo.</p>
-                  ) : (
-                    <div className="space-y-1">
-                     {group.items.map(item => (
-                        <div key={item.id} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50">
+                   {group.items.length === 0 ? (
+                     <p className="text-sm text-muted-foreground">Nenhum item neste grupo.</p>
+                   ) : (
+                     <div className="space-y-1">
+                      {(() => {
+                        // Agrupa itens por seção mantendo ordem alfabética dentro de cada seção
+                        const sections: { name: string | null; items: typeof group.items }[] = [];
+                        group.items.forEach(it => {
+                          const sec = (it.section ?? '').trim() || null;
+                          let entry = sections.find(s => s.name === sec);
+                          if (!entry) { entry = { name: sec, items: [] }; sections.push(entry); }
+                          entry.items.push(it);
+                        });
+                        // Sem seção primeiro, depois seções nomeadas
+                        sections.sort((a, b) => {
+                          if (a.name === null && b.name !== null) return -1;
+                          if (a.name !== null && b.name === null) return 1;
+                          if (a.name === null && b.name === null) return 0;
+                          return (a.name as string).localeCompare(b.name as string, 'pt-BR');
+                        });
+                        return sections.flatMap(sec => [
+                          sec.name ? (
+                            <div key={`sec-${sec.name}`} className="pt-2 pb-1 px-2 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground border-b">
+                              {sec.name}
+                            </div>
+                          ) : null,
+                          ...sec.items.map(item => (
+                         <div key={item.id} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50">
                           <div className="flex items-center gap-2">
                             {item.imageUrl ? (
                               <img src={item.imageUrl} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
@@ -464,8 +493,8 @@ export default function OptionalGroups() {
                               />
                               <ImageIcon className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
                             </label>
-                            <div className="relative group">
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingItem({ id: item.id, name: item.name, price: item.price.toFixed(2), active: item.active })}>
+                             <div className="relative group">
+                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingItem({ id: item.id, name: item.name, price: item.price.toFixed(2), active: item.active, section: item.section ?? '' })}>
                                 <Pencil className="h-3 w-3" />
                               </Button>
                               <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Editar opcional</span>
@@ -478,7 +507,9 @@ export default function OptionalGroups() {
                             </div>
                           </div>
                         </div>
-                      ))}
+                          ))
+                        ]).filter(Boolean);
+                      })()}
                     </div>
                   )}
 
@@ -633,6 +664,25 @@ export default function OptionalGroups() {
               <Label>Preço (R$)</Label>
               <Input type="number" step="0.01" placeholder="0.00" value={newItemPrice} onChange={(e) => setNewItemPrice(e.target.value)} />
             </div>
+            <div>
+              <Label>Seção (opcional)</Label>
+              <Input
+                placeholder="Ex: FRUTAS, CREMES, COBERTURAS"
+                value={newItemSection}
+                onChange={(e) => setNewItemSection(e.target.value)}
+                list={addItemGroupId ? `sections-${addItemGroupId}` : undefined}
+              />
+              {addItemGroupId && (
+                <datalist id={`sections-${addItemGroupId}`}>
+                  {Array.from(new Set(
+                    (groups.find(g => g.id === addItemGroupId)?.items || [])
+                      .map(i => (i.section ?? '').trim())
+                      .filter(s => s.length > 0)
+                  )).map(s => <option key={s} value={s} />)}
+                </datalist>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">Use para sub-dividir o grupo. Deixe vazio para itens sem seção.</p>
+            </div>
             <Button onClick={handleAddItem} className="w-full">Adicionar</Button>
           </div>
         </DialogContent>
@@ -735,6 +785,15 @@ export default function OptionalGroups() {
               <div>
                 <Label>Preço (R$)</Label>
                 <Input type="number" min={0} step="0.01" value={editingItem.price} onChange={(e) => setEditingItem({ ...editingItem, price: e.target.value })} />
+              </div>
+              <div>
+                <Label>Seção (opcional)</Label>
+                <Input
+                  placeholder="Ex: FRUTAS, CREMES, COBERTURAS"
+                  value={editingItem.section}
+                  onChange={(e) => setEditingItem({ ...editingItem, section: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Itens com a mesma seção aparecem agrupados sob um subtítulo.</p>
               </div>
               <div className="flex items-center gap-2">
                 <Switch checked={editingItem.active} onCheckedChange={(v) => setEditingItem({ ...editingItem, active: v })} />

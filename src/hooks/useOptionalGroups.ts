@@ -10,6 +10,7 @@ export interface OptionalGroupItem {
   active: boolean;
   displayOrder: number;
   imageUrl?: string | null;
+  section?: string | null;
 }
 
 export type OptionalGroupLayout = 'vertical' | 'horizontal';
@@ -89,6 +90,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
             active: i.active,
             displayOrder: i.display_order ?? 0,
             imageUrl: (i as any).image_url ?? null,
+            section: ((i as any).section ?? null) as string | null,
           }))
           .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
         categoryIds: catLinks.filter(c => c.group_id === g.id).map(c => c.category_id),
@@ -240,12 +242,14 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  async function addItem(groupId: string, data: { name: string; price: number }): Promise<boolean> {
+  async function addItem(groupId: string, data: { name: string; price: number; section?: string | null }): Promise<boolean> {
     if (!companyId) return false;
     try {
+      const insertRow: any = { group_id: groupId, company_id: companyId, name: data.name, price: data.price };
+      if (data.section !== undefined) insertRow.section = data.section && data.section.trim() ? data.section.trim() : null;
       const { error } = await supabase
         .from('optional_group_items')
-        .insert({ group_id: groupId, company_id: companyId, name: data.name, price: data.price });
+        .insert(insertRow);
       if (error) throw error;
       await fetchGroups();
       toast.success('Item adicionado!');
@@ -273,9 +277,13 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  async function updateItem(id: string, data: Partial<{ name: string; price: number; active: boolean; image_url: string | null }>): Promise<boolean> {
+  async function updateItem(id: string, data: Partial<{ name: string; price: number; active: boolean; image_url: string | null; section: string | null }>): Promise<boolean> {
     try {
-      const { error } = await supabase.from('optional_group_items').update(data as any).eq('id', id);
+      const payload: any = { ...data };
+      if (payload.section !== undefined) {
+        payload.section = payload.section && String(payload.section).trim() ? String(payload.section).trim() : null;
+      }
+      const { error } = await supabase.from('optional_group_items').update(payload).eq('id', id);
       if (error) throw error;
       await fetchGroups();
       return true;

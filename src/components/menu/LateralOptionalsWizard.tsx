@@ -14,6 +14,7 @@ interface OptionalGroupItem {
   price: number;
   active: boolean;
   imageUrl?: string | null;
+  section?: string | null;
 }
 
 interface OptionalGroup {
@@ -198,7 +199,32 @@ export function LateralOptionalsWizard({
               </div>
             ) : (
               <div className="space-y-2">
-                {g.items.filter((i) => i.active).map((item) => {
+                {(() => {
+                  const activeItems = g.items.filter((i) => i.active);
+                  // Agrupa por seção mantendo ordem original
+                  const sections: { name: string | null; items: typeof activeItems }[] = [];
+                  activeItems.forEach((it) => {
+                    const sec = (it.section ?? '').trim() || null;
+                    let entry = sections.find((s) => s.name === sec);
+                    if (!entry) { entry = { name: sec, items: [] }; sections.push(entry); }
+                    entry.items.push(it);
+                  });
+                  sections.sort((a, b) => {
+                    if (a.name === null && b.name !== null) return -1;
+                    if (a.name !== null && b.name === null) return 1;
+                    if (a.name === null && b.name === null) return 0;
+                    return (a.name as string).localeCompare(b.name as string, 'pt-BR');
+                  });
+                  return sections.flatMap((sec) => [
+                    sec.name ? (
+                      <div
+                        key={`sec-${sec.name}`}
+                        className="pt-2 pb-1 text-[11px] font-bold tracking-wider uppercase text-muted-foreground border-b"
+                      >
+                        {sec.name}
+                      </div>
+                    ) : null,
+                    ...sec.items.map((item) => {
                   const qty = selectedGroupItems[g.id]?.get(item.id) || 0;
                   const isSelected = qty > 0;
                   return (
@@ -242,7 +268,9 @@ export function LateralOptionalsWizard({
                       </div>
                     </div>
                   );
-                })}
+                    }),
+                  ]).filter(Boolean);
+                })()}
               </div>
             )}
           </div>
