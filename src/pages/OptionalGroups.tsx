@@ -49,9 +49,10 @@ export default function OptionalGroups() {
   // New item form
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
+  const [newItemSection, setNewItemSection] = useState('');
 
   // Edit item state
-  const [editingItem, setEditingItem] = useState<{ id: string; name: string; price: string; active: boolean } | null>(null);
+  const [editingItem, setEditingItem] = useState<{ id: string; name: string; price: string; active: boolean; section: string } | null>(null);
 
   // Association state
   const [selectedCatIds, setSelectedCatIds] = useState<string[]>([]);
@@ -105,9 +106,14 @@ export default function OptionalGroups() {
       toast.error('Informe o nome do item');
       return;
     }
-    await addItem(addItemGroupId, { name: newItemName.trim(), price: parseFloat(newItemPrice) || 0 });
+    await addItem(addItemGroupId, {
+      name: newItemName.trim(),
+      price: parseFloat(newItemPrice) || 0,
+      section: newItemSection.trim() || null,
+    });
     setNewItemName('');
     setNewItemPrice('');
+    setNewItemSection('');
     setIsAddItemOpen(false);
     setAddItemGroupId(null);
   }
@@ -122,6 +128,7 @@ export default function OptionalGroups() {
       name: editingItem.name.trim(),
       price: parseFloat(editingItem.price) || 0,
       active: editingItem.active,
+      section: editingItem.section.trim() ? editingItem.section.trim() : null,
     });
     setEditingItem(null);
   }
