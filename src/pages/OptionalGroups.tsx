@@ -45,6 +45,12 @@ export default function OptionalGroups() {
   const [newGroupMin, setNewGroupMin] = useState(0);
   const [newGroupMax, setNewGroupMax] = useState(0);
   const [newGroupMaxPerItem, setNewGroupMaxPerItem] = useState(1);
+  // Seções + itens no momento da criação do grupo
+  type DraftItem = { name: string; price: string };
+  type DraftSection = { name: string; items: DraftItem[] };
+  const [newGroupSections, setNewGroupSections] = useState<DraftSection[]>([
+    { name: '', items: [{ name: '', price: '' }] },
+  ]);
 
   // New item form
   const [newItemName, setNewItemName] = useState('');
