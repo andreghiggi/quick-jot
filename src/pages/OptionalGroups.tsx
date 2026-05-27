@@ -22,7 +22,7 @@ import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, 
 
 interface ExtractedGroup {
   name: string;
-  items: { name: string; price: number }[];
+  items: { name: string; price: number; section: string | null }[];
   selected: boolean;
 }
 
