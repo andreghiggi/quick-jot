@@ -510,7 +510,13 @@ export default function OptionalGroups() {
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={resetImport}>Cancelar</Button>
                 <Button onClick={handleImport} disabled={isImporting || extractedGroups.filter(g => g.selected).length === 0}>
-                  {isImporting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Importando...</> : <><Check className="w-4 h-4 mr-2" />Importar {extractedGroups.filter(g => g.selected).length} Grupos</>}
+                  {isImporting ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Importando...</>
+                  ) : mergeIntoSingleGroup ? (
+                    <><Check className="w-4 h-4 mr-2" />Importar como 1 grupo com {extractedGroups.filter(g => g.selected).length} seções</>
+                  ) : (
+                    <><Check className="w-4 h-4 mr-2" />Importar {extractedGroups.filter(g => g.selected).length} Grupos</>
+                  )}
                 </Button>
               </div>
             </CardContent>
