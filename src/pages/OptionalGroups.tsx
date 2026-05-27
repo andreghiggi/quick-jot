@@ -410,6 +410,32 @@ export default function OptionalGroups() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {extractedGroups.length > 1 && (
+                <div className="flex items-start gap-3 p-3 rounded-lg border border-primary/30 bg-primary/5">
+                  <Switch
+                    id="merge-into-one"
+                    checked={mergeIntoSingleGroup}
+                    onCheckedChange={setMergeIntoSingleGroup}
+                  />
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="merge-into-one" className="cursor-pointer font-medium">
+                      Mesclar em 1 grupo (cada grupo vira uma seção)
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Use quando os grupos extraídos (ex.: FRUTAS, CREMES, COBERTURAS) na verdade
+                      pertencem a um único grupo (ex.: "Turbine seu açaí").
+                    </p>
+                    {mergeIntoSingleGroup && (
+                      <Input
+                        placeholder="Nome do grupo único (ex: Turbine seu açaí)"
+                        value={mergedGroupName}
+                        onChange={(e) => setMergedGroupName(e.target.value)}
+                        className="h-9"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
               {extractedGroups.some(g => g.items.some(it => !!it.section)) && (
                 <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/40">
                   <Switch
