@@ -84,11 +84,33 @@ export default function OptionalGroups() {
     }
     const groupData: any = { name: newGroupName.trim(), minSelect: newGroupMin, maxSelect: newGroupMax };
     groupData.maxQuantityPerItem = newGroupMaxPerItem;
-    await addGroup(groupData);
+    const groupId = await addGroup(groupData);
+
+    // Coletar itens das seções (ignorando seções/itens em branco)
+    if (groupId) {
+      const bulkItems: { name: string; price: number; section: string | null }[] = [];
+      newGroupSections.forEach(sec => {
+        const sectionName = sec.name.trim();
+        sec.items.forEach(it => {
+          const itemName = it.name.trim();
+          if (!itemName) return;
+          bulkItems.push({
+            name: itemName,
+            price: parseFloat(it.price) || 0,
+            section: sectionName || null,
+          });
+        });
+      });
+      if (bulkItems.length > 0) {
+        await addItemsBulk(groupId, bulkItems);
+      }
+    }
+
     setNewGroupName('');
     setNewGroupMin(0);
     setNewGroupMax(0);
     setNewGroupMaxPerItem(1);
+    setNewGroupSections([{ name: '', items: [{ name: '', price: '' }] }]);
     setIsNewGroupOpen(false);
   }
 
