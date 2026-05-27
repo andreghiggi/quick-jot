@@ -73,6 +73,8 @@ export default function OptionalGroups() {
   const [isImporting, setIsImporting] = useState(false);
   const [extractedGroups, setExtractedGroups] = useState<ExtractedGroup[]>([]);
   const [importWithSections, setImportWithSections] = useState(true);
+  const [mergeIntoSingleGroup, setMergeIntoSingleGroup] = useState(false);
+  const [mergedGroupName, setMergedGroupName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -243,6 +245,12 @@ export default function OptionalGroups() {
         // Liga "criar com seções" automaticamente se a IA detectou alguma seção
         const hasAnySection = mapped.some(g => g.items.some(it => !!it.section));
         setImportWithSections(hasAnySection);
+        // Se a IA não detectou seções DENTRO dos grupos, mas retornou vários grupos
+        // (ex.: FRUTAS, CREMES, COBERTURAS separados), provavelmente são seções
+        // de um único grupo. Sugere mesclar.
+        const suggestMerge = !hasAnySection && mapped.length > 1;
+        setMergeIntoSingleGroup(suggestMerge);
+        setMergedGroupName(suggestMerge ? 'Turbine seu pedido' : '');
         setImportStep('review');
         toast.success(`${data.groups.length} grupos encontrados!`);
       } else {
@@ -264,18 +272,36 @@ export default function OptionalGroups() {
     }
     setIsImporting(true);
     try {
-      for (const eg of selected) {
-        const groupId = await addGroup({ name: eg.name, minSelect: 0, maxSelect: 0 });
-        if (groupId && eg.items.length > 0) {
-          const itemsToInsert = eg.items.map(it => ({
-            name: it.name,
-            price: it.price,
-            section: importWithSections ? (it.section || null) : null,
-          }));
-          await addItemsBulk(groupId, itemsToInsert);
+      if (mergeIntoSingleGroup) {
+        const finalName = mergedGroupName.trim() || selected[0].name || 'Adicionais';
+        const groupId = await addGroup({ name: finalName, minSelect: 0, maxSelect: 0 });
+        if (groupId) {
+          const itemsToInsert = selected.flatMap(eg =>
+            eg.items.map(it => ({
+              name: it.name,
+              price: it.price,
+              // Usa o nome do "grupo" extraído como seção (ex.: FRUTAS, CREMES)
+              // se o item já tiver seção própria, mantém ela.
+              section: it.section || eg.name || null,
+            }))
+          );
+          if (itemsToInsert.length > 0) await addItemsBulk(groupId, itemsToInsert);
         }
+        toast.success('Grupo único criado com seções!');
+      } else {
+        for (const eg of selected) {
+          const groupId = await addGroup({ name: eg.name, minSelect: 0, maxSelect: 0 });
+          if (groupId && eg.items.length > 0) {
+            const itemsToInsert = eg.items.map(it => ({
+              name: it.name,
+              price: it.price,
+              section: importWithSections ? (it.section || null) : null,
+            }));
+            await addItemsBulk(groupId, itemsToInsert);
+          }
+        }
+        toast.success('Adicionais importados!');
       }
-      toast.success('Adicionais importados!');
       resetImport();
     } catch {
       toast.error('Erro ao importar');
@@ -384,6 +410,32 @@ export default function OptionalGroups() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {extractedGroups.length > 1 && (
+                <div className="flex items-start gap-3 p-3 rounded-lg border border-primary/30 bg-primary/5">
+                  <Switch
+                    id="merge-into-one"
+                    checked={mergeIntoSingleGroup}
+                    onCheckedChange={setMergeIntoSingleGroup}
+                  />
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="merge-into-one" className="cursor-pointer font-medium">
+                      Mesclar em 1 grupo (cada grupo vira uma seção)
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Use quando os grupos extraídos (ex.: FRUTAS, CREMES, COBERTURAS) na verdade
+                      pertencem a um único grupo (ex.: "Turbine seu açaí").
+                    </p>
+                    {mergeIntoSingleGroup && (
+                      <Input
+                        placeholder="Nome do grupo único (ex: Turbine seu açaí)"
+                        value={mergedGroupName}
+                        onChange={(e) => setMergedGroupName(e.target.value)}
+                        className="h-9"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
               {extractedGroups.some(g => g.items.some(it => !!it.section)) && (
                 <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/40">
                   <Switch
@@ -458,7 +510,13 @@ export default function OptionalGroups() {
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={resetImport}>Cancelar</Button>
                 <Button onClick={handleImport} disabled={isImporting || extractedGroups.filter(g => g.selected).length === 0}>
-                  {isImporting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Importando...</> : <><Check className="w-4 h-4 mr-2" />Importar {extractedGroups.filter(g => g.selected).length} Grupos</>}
+                  {isImporting ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Importando...</>
+                  ) : mergeIntoSingleGroup ? (
+                    <><Check className="w-4 h-4 mr-2" />Importar como 1 grupo com {extractedGroups.filter(g => g.selected).length} seções</>
+                  ) : (
+                    <><Check className="w-4 h-4 mr-2" />Importar {extractedGroups.filter(g => g.selected).length} Grupos</>
+                  )}
                 </Button>
               </div>
             </CardContent>
