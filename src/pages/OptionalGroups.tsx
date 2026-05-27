@@ -439,12 +439,34 @@ export default function OptionalGroups() {
               <AccordionContent>
                 <div className="space-y-3 pb-2">
                   {/* Items */}
-                  {group.items.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Nenhum item neste grupo.</p>
-                  ) : (
-                    <div className="space-y-1">
-                     {group.items.map(item => (
-                        <div key={item.id} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50">
+                   {group.items.length === 0 ? (
+                     <p className="text-sm text-muted-foreground">Nenhum item neste grupo.</p>
+                   ) : (
+                     <div className="space-y-1">
+                      {(() => {
+                        // Agrupa itens por seção mantendo ordem alfabética dentro de cada seção
+                        const sections: { name: string | null; items: typeof group.items }[] = [];
+                        group.items.forEach(it => {
+                          const sec = (it.section ?? '').trim() || null;
+                          let entry = sections.find(s => s.name === sec);
+                          if (!entry) { entry = { name: sec, items: [] }; sections.push(entry); }
+                          entry.items.push(it);
+                        });
+                        // Sem seção primeiro, depois seções nomeadas
+                        sections.sort((a, b) => {
+                          if (a.name === null && b.name !== null) return -1;
+                          if (a.name !== null && b.name === null) return 1;
+                          if (a.name === null && b.name === null) return 0;
+                          return (a.name as string).localeCompare(b.name as string, 'pt-BR');
+                        });
+                        return sections.flatMap(sec => [
+                          sec.name ? (
+                            <div key={`sec-${sec.name}`} className="pt-2 pb-1 px-2 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground border-b">
+                              {sec.name}
+                            </div>
+                          ) : null,
+                          ...sec.items.map(item => (
+                         <div key={item.id} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50">
                           <div className="flex items-center gap-2">
                             {item.imageUrl ? (
                               <img src={item.imageUrl} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
@@ -485,7 +507,9 @@ export default function OptionalGroups() {
                             </div>
                           </div>
                         </div>
-                      ))}
+                          ))
+                        ]).filter(Boolean);
+                      })()}
                     </div>
                   )}
 
