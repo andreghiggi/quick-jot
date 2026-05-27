@@ -22,7 +22,7 @@ import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, 
 
 interface ExtractedGroup {
   name: string;
-  items: { name: string; price: number }[];
+  items: { name: string; price: number; section: string | null }[];
   selected: boolean;
 }
 
@@ -72,6 +72,7 @@ export default function OptionalGroups() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [extractedGroups, setExtractedGroups] = useState<ExtractedGroup[]>([]);
+  const [importWithSections, setImportWithSections] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -229,11 +230,19 @@ export default function OptionalGroups() {
       if (error) throw error;
 
       if (data?.groups && Array.isArray(data.groups)) {
-        setExtractedGroups(data.groups.map((g: any) => ({
+        const mapped: ExtractedGroup[] = data.groups.map((g: any) => ({
           name: g.name || 'Sem nome',
-          items: (g.items || []).map((i: any) => ({ name: i.name || '', price: parseFloat(i.price) || 0 })),
+          items: (g.items || []).map((i: any) => ({
+            name: i.name || '',
+            price: parseFloat(i.price) || 0,
+            section: i.section && String(i.section).trim() ? String(i.section).trim() : null,
+          })),
           selected: true,
-        })));
+        }));
+        setExtractedGroups(mapped);
+        // Liga "criar com seções" automaticamente se a IA detectou alguma seção
+        const hasAnySection = mapped.some(g => g.items.some(it => !!it.section));
+        setImportWithSections(hasAnySection);
         setImportStep('review');
         toast.success(`${data.groups.length} grupos encontrados!`);
       } else {
@@ -258,7 +267,12 @@ export default function OptionalGroups() {
       for (const eg of selected) {
         const groupId = await addGroup({ name: eg.name, minSelect: 0, maxSelect: 0 });
         if (groupId && eg.items.length > 0) {
-          await addItemsBulk(groupId, eg.items);
+          const itemsToInsert = eg.items.map(it => ({
+            name: it.name,
+            price: it.price,
+            section: importWithSections ? (it.section || null) : null,
+          }));
+          await addItemsBulk(groupId, itemsToInsert);
         }
       }
       toast.success('Adicionais importados!');
@@ -370,6 +384,24 @@ export default function OptionalGroups() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {extractedGroups.some(g => g.items.some(it => !!it.section)) && (
+                <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/40">
+                  <Switch
+                    id="import-with-sections"
+                    checked={importWithSections}
+                    onCheckedChange={setImportWithSections}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="import-with-sections" className="cursor-pointer font-medium">
+                      Criar grupo com seções
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      A IA identificou seções (ex: FRUTAS, CREMES, COBERTURAS) dentro dos grupos.
+                      Ative para preservar essa subdivisão no cardápio. Desative para importar como lista única.
+                    </p>
+                  </div>
+                </div>
+              )}
               <ScrollArea className="max-h-[50vh]">
                 <div className="space-y-4">
                   {extractedGroups.map((eg, gi) => (
@@ -382,13 +414,42 @@ export default function OptionalGroups() {
                           className="h-8 font-semibold"
                         />
                       </div>
-                      <div className="space-y-1 ml-8">
-                        {eg.items.map((item, ii) => (
-                          <div key={ii} className="flex items-center gap-2 text-sm">
-                            <span className="flex-1">{item.name}</span>
-                            <span className="text-muted-foreground">R$ {item.price.toFixed(2)}</span>
-                          </div>
-                        ))}
+                      <div className="space-y-3 ml-8">
+                        {(() => {
+                          // Agrupa itens por seção quando o toggle estiver ligado
+                          const useSections = importWithSections && eg.items.some(it => !!it.section);
+                          if (!useSections) {
+                            return (
+                              <div className="space-y-1">
+                                {eg.items.map((item, ii) => (
+                                  <div key={ii} className="flex items-center gap-2 text-sm">
+                                    <span className="flex-1">{item.name}</span>
+                                    <span className="text-muted-foreground">R$ {item.price.toFixed(2)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                          const bySection = new Map<string, { item: typeof eg.items[number]; idx: number }[]>();
+                          eg.items.forEach((it, idx) => {
+                            const key = it.section || 'Sem seção';
+                            if (!bySection.has(key)) bySection.set(key, []);
+                            bySection.get(key)!.push({ item: it, idx });
+                          });
+                          return Array.from(bySection.entries()).map(([sectionName, entries]) => (
+                            <div key={sectionName} className="space-y-1">
+                              <Badge variant="secondary" className="text-xs uppercase tracking-wide">{sectionName}</Badge>
+                              <div className="space-y-1 pl-2 border-l-2 border-muted">
+                                {entries.map(({ item, idx }) => (
+                                  <div key={idx} className="flex items-center gap-2 text-sm">
+                                    <span className="flex-1">{item.name}</span>
+                                    <span className="text-muted-foreground">R$ {item.price.toFixed(2)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ));
+                        })()}
                       </div>
                     </div>
                   ))}
