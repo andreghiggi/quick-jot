@@ -267,7 +267,12 @@ export default function OptionalGroups() {
       for (const eg of selected) {
         const groupId = await addGroup({ name: eg.name, minSelect: 0, maxSelect: 0 });
         if (groupId && eg.items.length > 0) {
-          await addItemsBulk(groupId, eg.items);
+          const itemsToInsert = eg.items.map(it => ({
+            name: it.name,
+            price: it.price,
+            section: importWithSections ? (it.section || null) : null,
+          }));
+          await addItemsBulk(groupId, itemsToInsert);
         }
       }
       toast.success('Adicionais importados!');
