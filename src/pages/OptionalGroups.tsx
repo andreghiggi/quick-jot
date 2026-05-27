@@ -45,6 +45,12 @@ export default function OptionalGroups() {
   const [newGroupMin, setNewGroupMin] = useState(0);
   const [newGroupMax, setNewGroupMax] = useState(0);
   const [newGroupMaxPerItem, setNewGroupMaxPerItem] = useState(1);
+  // Seções + itens no momento da criação do grupo
+  type DraftItem = { name: string; price: string };
+  type DraftSection = { name: string; items: DraftItem[] };
+  const [newGroupSections, setNewGroupSections] = useState<DraftSection[]>([
+    { name: '', items: [{ name: '', price: '' }] },
+  ]);
 
   // New item form
   const [newItemName, setNewItemName] = useState('');
@@ -78,11 +84,33 @@ export default function OptionalGroups() {
     }
     const groupData: any = { name: newGroupName.trim(), minSelect: newGroupMin, maxSelect: newGroupMax };
     groupData.maxQuantityPerItem = newGroupMaxPerItem;
-    await addGroup(groupData);
+    const groupId = await addGroup(groupData);
+
+    // Coletar itens das seções (ignorando seções/itens em branco)
+    if (groupId) {
+      const bulkItems: { name: string; price: number; section: string | null }[] = [];
+      newGroupSections.forEach(sec => {
+        const sectionName = sec.name.trim();
+        sec.items.forEach(it => {
+          const itemName = it.name.trim();
+          if (!itemName) return;
+          bulkItems.push({
+            name: itemName,
+            price: parseFloat(it.price) || 0,
+            section: sectionName || null,
+          });
+        });
+      });
+      if (bulkItems.length > 0) {
+        await addItemsBulk(groupId, bulkItems);
+      }
+    }
+
     setNewGroupName('');
     setNewGroupMin(0);
     setNewGroupMax(0);
     setNewGroupMaxPerItem(1);
+    setNewGroupSections([{ name: '', items: [{ name: '', price: '' }] }]);
     setIsNewGroupOpen(false);
   }
 
@@ -554,7 +582,7 @@ export default function OptionalGroups() {
 
       {/* New Group Dialog */}
       <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Novo Grupo de Adicionais</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
@@ -578,6 +606,101 @@ export default function OptionalGroups() {
                 <Input type="number" min={1} value={newGroupMaxPerItem} onChange={(e) => setNewGroupMaxPerItem(Math.max(1, parseInt(e.target.value) || 1))} />
                 <p className="text-xs text-muted-foreground mt-1">Quantas vezes o mesmo adicional pode ser selecionado (1 = checkbox)</p>
             </div>
+
+            {/* Builder de Seções + Itens */}
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base">Seções e itens (opcional)</Label>
+                  <p className="text-xs text-muted-foreground">Deixe o nome da seção em branco para um grupo simples sem subdivisões.</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewGroupSections(prev => [...prev, { name: '', items: [{ name: '', price: '' }] }])}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Seção
+                </Button>
+              </div>
+
+              {newGroupSections.map((sec, si) => (
+                <div key={si} className="border rounded-lg p-3 space-y-2 bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="Nome da seção (ex: FRUTAS, CREMES) — opcional"
+                      value={sec.name}
+                      onChange={(e) => setNewGroupSections(prev => prev.map((s, i) => i === si ? { ...s, name: e.target.value } : s))}
+                      className="flex-1"
+                    />
+                    {newGroupSections.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setNewGroupSections(prev => prev.filter((_, i) => i !== si))}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 pl-2">
+                    {sec.items.map((item, ii) => (
+                      <div key={ii} className="flex items-center gap-2">
+                        <Input
+                          placeholder="Nome do item"
+                          value={item.name}
+                          onChange={(e) => setNewGroupSections(prev => prev.map((s, i) => i === si
+                            ? { ...s, items: s.items.map((it, j) => j === ii ? { ...it, name: e.target.value } : it) }
+                            : s
+                          ))}
+                          className="flex-1 h-9"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          placeholder="0,00"
+                          value={item.price}
+                          onChange={(e) => setNewGroupSections(prev => prev.map((s, i) => i === si
+                            ? { ...s, items: s.items.map((it, j) => j === ii ? { ...it, price: e.target.value } : it) }
+                            : s
+                          ))}
+                          className="w-24 h-9"
+                        />
+                        {sec.items.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9"
+                            onClick={() => setNewGroupSections(prev => prev.map((s, i) => i === si
+                              ? { ...s, items: s.items.filter((_, j) => j !== ii) }
+                              : s
+                            ))}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setNewGroupSections(prev => prev.map((s, i) => i === si
+                        ? { ...s, items: [...s.items, { name: '', price: '' }] }
+                        : s
+                      ))}
+                    >
+                      <Plus className="h-3 w-3 mr-1" /> Adicionar item
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <Button onClick={handleCreateGroup} className="w-full">Criar Grupo</Button>
           </div>
         </DialogContent>

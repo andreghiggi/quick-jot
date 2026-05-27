@@ -261,10 +261,16 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  async function addItemsBulk(groupId: string, items: { name: string; price: number }[]): Promise<boolean> {
+  async function addItemsBulk(groupId: string, items: { name: string; price: number; section?: string | null }[]): Promise<boolean> {
     if (!companyId || items.length === 0) return false;
     try {
-      const rows = items.map(i => ({ group_id: groupId, company_id: companyId, name: i.name, price: i.price }));
+      const rows = items.map(i => ({
+        group_id: groupId,
+        company_id: companyId,
+        name: i.name,
+        price: i.price,
+        section: i.section && String(i.section).trim() ? String(i.section).trim() : null,
+      }));
       const { error } = await supabase.from('optional_group_items').insert(rows);
       if (error) throw error;
       await fetchGroups();
