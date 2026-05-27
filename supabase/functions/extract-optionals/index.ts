@@ -31,18 +31,25 @@ serve(async (req) => {
     const systemPrompt = `Você é um assistente especializado em extrair adicionais/complementos de cardápios de restaurantes.
 Analise a imagem e extraia todos os itens adicionais, complementos, extras, bordas, molhos, acompanhamentos, etc.
 
+IMPORTANTE — Identifique também SEÇÕES dentro de um mesmo grupo:
+Muitos cardápios trazem um grupo principal (ex: "Turbine seu açaí") subdividido em seções
+(ex: FRUTAS, CREMES, COBERTURAS, CALDAS, ACOMPANHAMENTOS). Quando perceber subtítulos,
+letras maiúsculas separando blocos, ou agrupamentos visuais claros DENTRO do mesmo grupo,
+atribua o nome dessa seção a CADA item. Se o item não pertence a nenhuma seção, use null.
+
 Para cada item, retorne:
 - name: nome do adicional
 - price: preço numérico (apenas o número, ex: 3.50). Se não houver preço visível, use 0.
-- group: nome do grupo ao qual pertence (ex: "Molhos", "Bordas", "Proteínas extras", "Acompanhamentos", "Bebidas extras")
+- section: nome da seção dentro do grupo (ex: "FRUTAS", "CREMES", "COBERTURAS") OU null se não houver subdivisão.
 
-Agrupe os itens logicamente. Se a imagem mostrar grupos claros, use esses nomes.
-Se não houver agrupamento visível, agrupe por tipo similar.
+Para cada GRUPO, retorne:
+- name: nome do grupo (ex: "Turbine seu açaí", "Molhos", "Bordas")
+- items: lista de itens conforme acima
 
 Retorne APENAS um JSON válido no formato:
-{"groups": [{"name": "Nome do Grupo", "items": [{"name": "...", "price": 0.00}]}]}
+{"groups": [{"name": "Nome do Grupo", "items": [{"name": "...", "price": 0.00, "section": "FRUTAS" | null}]}]}
 
-Não invente itens que não estão na imagem.`;
+Não invente itens nem seções que não estão na imagem.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
