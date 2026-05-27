@@ -384,6 +384,24 @@ export default function OptionalGroups() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {extractedGroups.some(g => g.items.some(it => !!it.section)) && (
+                <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/40">
+                  <Switch
+                    id="import-with-sections"
+                    checked={importWithSections}
+                    onCheckedChange={setImportWithSections}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="import-with-sections" className="cursor-pointer font-medium">
+                      Criar grupo com seções
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      A IA identificou seções (ex: FRUTAS, CREMES, COBERTURAS) dentro dos grupos.
+                      Ative para preservar essa subdivisão no cardápio. Desative para importar como lista única.
+                    </p>
+                  </div>
+                </div>
+              )}
               <ScrollArea className="max-h-[50vh]">
                 <div className="space-y-4">
                   {extractedGroups.map((eg, gi) => (
@@ -396,13 +414,42 @@ export default function OptionalGroups() {
                           className="h-8 font-semibold"
                         />
                       </div>
-                      <div className="space-y-1 ml-8">
-                        {eg.items.map((item, ii) => (
-                          <div key={ii} className="flex items-center gap-2 text-sm">
-                            <span className="flex-1">{item.name}</span>
-                            <span className="text-muted-foreground">R$ {item.price.toFixed(2)}</span>
-                          </div>
-                        ))}
+                      <div className="space-y-3 ml-8">
+                        {(() => {
+                          // Agrupa itens por seção quando o toggle estiver ligado
+                          const useSections = importWithSections && eg.items.some(it => !!it.section);
+                          if (!useSections) {
+                            return (
+                              <div className="space-y-1">
+                                {eg.items.map((item, ii) => (
+                                  <div key={ii} className="flex items-center gap-2 text-sm">
+                                    <span className="flex-1">{item.name}</span>
+                                    <span className="text-muted-foreground">R$ {item.price.toFixed(2)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                          const bySection = new Map<string, { item: typeof eg.items[number]; idx: number }[]>();
+                          eg.items.forEach((it, idx) => {
+                            const key = it.section || 'Sem seção';
+                            if (!bySection.has(key)) bySection.set(key, []);
+                            bySection.get(key)!.push({ item: it, idx });
+                          });
+                          return Array.from(bySection.entries()).map(([sectionName, entries]) => (
+                            <div key={sectionName} className="space-y-1">
+                              <Badge variant="secondary" className="text-xs uppercase tracking-wide">{sectionName}</Badge>
+                              <div className="space-y-1 pl-2 border-l-2 border-muted">
+                                {entries.map(({ item, idx }) => (
+                                  <div key={idx} className="flex items-center gap-2 text-sm">
+                                    <span className="flex-1">{item.name}</span>
+                                    <span className="text-muted-foreground">R$ {item.price.toFixed(2)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ));
+                        })()}
                       </div>
                     </div>
                   ))}
