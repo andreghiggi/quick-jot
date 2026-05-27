@@ -272,18 +272,36 @@ export default function OptionalGroups() {
     }
     setIsImporting(true);
     try {
-      for (const eg of selected) {
-        const groupId = await addGroup({ name: eg.name, minSelect: 0, maxSelect: 0 });
-        if (groupId && eg.items.length > 0) {
-          const itemsToInsert = eg.items.map(it => ({
-            name: it.name,
-            price: it.price,
-            section: importWithSections ? (it.section || null) : null,
-          }));
-          await addItemsBulk(groupId, itemsToInsert);
+      if (mergeIntoSingleGroup) {
+        const finalName = mergedGroupName.trim() || selected[0].name || 'Adicionais';
+        const groupId = await addGroup({ name: finalName, minSelect: 0, maxSelect: 0 });
+        if (groupId) {
+          const itemsToInsert = selected.flatMap(eg =>
+            eg.items.map(it => ({
+              name: it.name,
+              price: it.price,
+              // Usa o nome do "grupo" extraído como seção (ex.: FRUTAS, CREMES)
+              // se o item já tiver seção própria, mantém ela.
+              section: it.section || eg.name || null,
+            }))
+          );
+          if (itemsToInsert.length > 0) await addItemsBulk(groupId, itemsToInsert);
         }
+        toast.success('Grupo único criado com seções!');
+      } else {
+        for (const eg of selected) {
+          const groupId = await addGroup({ name: eg.name, minSelect: 0, maxSelect: 0 });
+          if (groupId && eg.items.length > 0) {
+            const itemsToInsert = eg.items.map(it => ({
+              name: it.name,
+              price: it.price,
+              section: importWithSections ? (it.section || null) : null,
+            }));
+            await addItemsBulk(groupId, itemsToInsert);
+          }
+        }
+        toast.success('Adicionais importados!');
       }
-      toast.success('Adicionais importados!');
       resetImport();
     } catch {
       toast.error('Erro ao importar');
