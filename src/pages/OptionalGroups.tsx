@@ -245,6 +245,12 @@ export default function OptionalGroups() {
         // Liga "criar com seções" automaticamente se a IA detectou alguma seção
         const hasAnySection = mapped.some(g => g.items.some(it => !!it.section));
         setImportWithSections(hasAnySection);
+        // Se a IA não detectou seções DENTRO dos grupos, mas retornou vários grupos
+        // (ex.: FRUTAS, CREMES, COBERTURAS separados), provavelmente são seções
+        // de um único grupo. Sugere mesclar.
+        const suggestMerge = !hasAnySection && mapped.length > 1;
+        setMergeIntoSingleGroup(suggestMerge);
+        setMergedGroupName(suggestMerge ? 'Turbine seu pedido' : '');
         setImportStep('review');
         toast.success(`${data.groups.length} grupos encontrados!`);
       } else {
