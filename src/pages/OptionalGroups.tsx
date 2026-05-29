@@ -482,8 +482,13 @@ export default function OptionalGroups() {
                             return (
                               <div className="space-y-1">
                                 {eg.items.map((item, ii) => (
-                                  <div key={ii} className="flex items-center gap-2 text-sm">
-                                    <span className="flex-1">{item.name}</span>
+                                  <div key={ii} className="flex items-start gap-2 text-sm">
+                                    <div className="flex-1">
+                                      <div>{item.name}</div>
+                                      {item.description && (
+                                        <div className="text-xs text-muted-foreground leading-tight">{item.description}</div>
+                                      )}
+                                    </div>
                                     <span className="text-muted-foreground">R$ {item.price.toFixed(2)}</span>
                                   </div>
                                 ))}
@@ -501,8 +506,13 @@ export default function OptionalGroups() {
                               <Badge variant="secondary" className="text-xs uppercase tracking-wide">{sectionName}</Badge>
                               <div className="space-y-1 pl-2 border-l-2 border-muted">
                                 {entries.map(({ item, idx }) => (
-                                  <div key={idx} className="flex items-center gap-2 text-sm">
-                                    <span className="flex-1">{item.name}</span>
+                                  <div key={idx} className="flex items-start gap-2 text-sm">
+                                    <div className="flex-1">
+                                      <div>{item.name}</div>
+                                      {item.description && (
+                                        <div className="text-xs text-muted-foreground leading-tight">{item.description}</div>
+                                      )}
+                                    </div>
                                     <span className="text-muted-foreground">R$ {item.price.toFixed(2)}</span>
                                   </div>
                                 ))}
