@@ -37,6 +37,7 @@ export interface OptionalGroup {
   productOverrides: ProductOverride[];
   maxQuantityPerItem: number;
   waiterOnly: boolean;
+  sectionOrder: string[];
 }
 
 interface UseOptionalGroupsOptions {
@@ -81,6 +82,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
         layout: ((g as any).layout as OptionalGroupLayout) || 'vertical',
         maxQuantityPerItem: (g as any).max_quantity_per_item ?? 1,
         waiterOnly: (g as any).waiter_only ?? false,
+        sectionOrder: Array.isArray((g as any).section_order) ? ((g as any).section_order as string[]) : [],
         items: items
           .filter(i => i.group_id === g.id)
           .map(i => ({
