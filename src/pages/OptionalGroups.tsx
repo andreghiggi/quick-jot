@@ -609,7 +609,7 @@ export default function OptionalGroups() {
                    ) : (
                      <div className="space-y-1">
                       {(() => {
-                        // Agrupa itens por seção mantendo ordem alfabética dentro de cada seção
+                        // Agrupa itens por seção
                         const sections: { name: string | null; items: typeof group.items }[] = [];
                         group.items.forEach(it => {
                           const sec = (it.section ?? '').trim() || null;
@@ -617,17 +617,46 @@ export default function OptionalGroups() {
                           if (!entry) { entry = { name: sec, items: [] }; sections.push(entry); }
                           entry.items.push(it);
                         });
-                        // Sem seção primeiro, depois seções nomeadas
-                        sections.sort((a, b) => {
-                          if (a.name === null && b.name !== null) return -1;
-                          if (a.name !== null && b.name === null) return 1;
-                          if (a.name === null && b.name === null) return 0;
-                          return (a.name as string).localeCompare(b.name as string, 'pt-BR');
-                        });
-                        return sections.flatMap(sec => [
+                        // Ordem: sem seção primeiro, depois seções na ordem manual (group.sectionOrder),
+                        // e por fim seções novas em ordem alfabética
+                        const named = sections.filter(s => s.name !== null) as { name: string; items: typeof group.items }[];
+                        const unnamed = sections.filter(s => s.name === null);
+                        const orderedNamed: typeof named = [];
+                        for (const n of group.sectionOrder) {
+                          const found = named.find(s => s.name === n);
+                          if (found && !orderedNamed.includes(found)) orderedNamed.push(found);
+                        }
+                        const rest = named
+                          .filter(s => !orderedNamed.includes(s))
+                          .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+                        const finalSections: { name: string | null; items: typeof group.items }[] = [...unnamed, ...orderedNamed, ...rest];
+                        const namedSequence = [...orderedNamed, ...rest].map(s => s.name);
+                        return finalSections.flatMap((sec, secIdx) => [
                           sec.name ? (
-                            <div key={`sec-${sec.name}`} className="pt-2 pb-1 px-2 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground border-b">
-                              {sec.name}
+                            <div key={`sec-${sec.name}`} className="pt-2 pb-1 px-2 flex items-center justify-between border-b">
+                              <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">{sec.name}</span>
+                              <div className="flex items-center gap-0.5">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  disabled={namedSequence.indexOf(sec.name as string) === 0}
+                                  onClick={() => moveSection(group.id, sec.name as string, 'up')}
+                                  title="Mover seção para cima"
+                                >
+                                  <ChevronUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  disabled={namedSequence.indexOf(sec.name as string) === namedSequence.length - 1}
+                                  onClick={() => moveSection(group.id, sec.name as string, 'down')}
+                                  title="Mover seção para baixo"
+                                >
+                                  <ChevronDown className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
                           ) : null,
                           ...sec.items.map(item => (
