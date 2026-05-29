@@ -22,7 +22,7 @@ import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, 
 
 interface ExtractedGroup {
   name: string;
-  items: { name: string; price: number; section: string | null }[];
+  items: { name: string; price: number; section: string | null; description: string | null }[];
   selected: boolean;
 }
 
@@ -46,19 +46,20 @@ export default function OptionalGroups() {
   const [newGroupMax, setNewGroupMax] = useState(0);
   const [newGroupMaxPerItem, setNewGroupMaxPerItem] = useState(1);
   // Seções + itens no momento da criação do grupo
-  type DraftItem = { name: string; price: string };
+  type DraftItem = { name: string; price: string; description: string };
   type DraftSection = { name: string; items: DraftItem[] };
   const [newGroupSections, setNewGroupSections] = useState<DraftSection[]>([
-    { name: '', items: [{ name: '', price: '' }] },
+    { name: '', items: [{ name: '', price: '', description: '' }] },
   ]);
 
   // New item form
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
   const [newItemSection, setNewItemSection] = useState('');
+  const [newItemDescription, setNewItemDescription] = useState('');
 
   // Edit item state
-  const [editingItem, setEditingItem] = useState<{ id: string; name: string; price: string; active: boolean; section: string } | null>(null);
+  const [editingItem, setEditingItem] = useState<{ id: string; name: string; price: string; active: boolean; section: string; description: string } | null>(null);
 
   // Association state
   const [selectedCatIds, setSelectedCatIds] = useState<string[]>([]);
@@ -91,7 +92,7 @@ export default function OptionalGroups() {
 
     // Coletar itens das seções (ignorando seções/itens em branco)
     if (groupId) {
-      const bulkItems: { name: string; price: number; section: string | null }[] = [];
+      const bulkItems: { name: string; price: number; section: string | null; description: string | null }[] = [];
       newGroupSections.forEach(sec => {
         const sectionName = sec.name.trim();
         sec.items.forEach(it => {
@@ -101,6 +102,7 @@ export default function OptionalGroups() {
             name: itemName,
             price: parseFloat(it.price) || 0,
             section: sectionName || null,
+            description: it.description.trim() || null,
           });
         });
       });
@@ -113,7 +115,7 @@ export default function OptionalGroups() {
     setNewGroupMin(0);
     setNewGroupMax(0);
     setNewGroupMaxPerItem(1);
-    setNewGroupSections([{ name: '', items: [{ name: '', price: '' }] }]);
+    setNewGroupSections([{ name: '', items: [{ name: '', price: '', description: '' }] }]);
     setIsNewGroupOpen(false);
   }
 
@@ -141,10 +143,12 @@ export default function OptionalGroups() {
       name: newItemName.trim(),
       price: parseFloat(newItemPrice) || 0,
       section: newItemSection.trim() || null,
+      description: newItemDescription.trim() || null,
     });
     setNewItemName('');
     setNewItemPrice('');
     setNewItemSection('');
+    setNewItemDescription('');
     setIsAddItemOpen(false);
     setAddItemGroupId(null);
   }
@@ -160,6 +164,7 @@ export default function OptionalGroups() {
       price: parseFloat(editingItem.price) || 0,
       active: editingItem.active,
       section: editingItem.section.trim() ? editingItem.section.trim() : null,
+      description: editingItem.description.trim() ? editingItem.description.trim() : null,
     });
     setEditingItem(null);
   }
@@ -238,6 +243,7 @@ export default function OptionalGroups() {
             name: i.name || '',
             price: parseFloat(i.price) || 0,
             section: i.section && String(i.section).trim() ? String(i.section).trim() : null,
+            description: i.description && String(i.description).trim() ? String(i.description).trim() : null,
           })),
           selected: true,
         }));
@@ -283,6 +289,7 @@ export default function OptionalGroups() {
               // Usa o nome do "grupo" extraído como seção (ex.: FRUTAS, CREMES)
               // se o item já tiver seção própria, mantém ela.
               section: it.section || eg.name || null,
+              description: it.description || null,
             }))
           );
           if (itemsToInsert.length > 0) await addItemsBulk(groupId, itemsToInsert);
@@ -296,6 +303,7 @@ export default function OptionalGroups() {
               name: it.name,
               price: it.price,
               section: importWithSections ? (it.section || null) : null,
+              description: it.description || null,
             }));
             await addItemsBulk(groupId, itemsToInsert);
           }
