@@ -926,6 +926,15 @@ export default function OptionalGroups() {
               <Input type="number" step="0.01" placeholder="0.00" value={newItemPrice} onChange={(e) => setNewItemPrice(e.target.value)} />
             </div>
             <div>
+              <Label>Descrição (opcional)</Label>
+              <Input
+                placeholder="Ex: Camarão refogado, catupiry, mussarela e orégano"
+                value={newItemDescription}
+                onChange={(e) => setNewItemDescription(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Use para sabores/itens que precisam mostrar os ingredientes (ex.: pizzaria).</p>
+            </div>
+            <div>
               <Label>Seção (opcional)</Label>
               <Input
                 placeholder="Ex: FRUTAS, CREMES, COBERTURAS"
