@@ -37,17 +37,25 @@ Muitos cardápios trazem um grupo principal (ex: "Turbine seu açaí") subdividi
 letras maiúsculas separando blocos, ou agrupamentos visuais claros DENTRO do mesmo grupo,
 atribua o nome dessa seção a CADA item. Se o item não pertence a nenhuma seção, use null.
 
+IMPORTANTE — DESCRIÇÃO do item:
+Em pizzarias e cardápios em geral, é comum cada SABOR ou item adicional vir com uma descrição
+listando os ingredientes (ex.: "Camarão — Camarão refogado, catupiry, mussarela e orégano").
+Quando houver um texto descritivo logo abaixo (ou ao lado) do nome do item explicando o que vem
+nele/ingredientes/recheio, extraia esse texto no campo "description". Se não houver descrição
+visível para o item, use null. Não invente descrições.
+
 Para cada item, retorne:
 - name: nome do adicional
 - price: preço numérico (apenas o número, ex: 3.50). Se não houver preço visível, use 0.
 - section: nome da seção dentro do grupo (ex: "FRUTAS", "CREMES", "COBERTURAS") OU null se não houver subdivisão.
+- description: descrição/ingredientes do item OU null se não houver.
 
 Para cada GRUPO, retorne:
 - name: nome do grupo (ex: "Turbine seu açaí", "Molhos", "Bordas")
 - items: lista de itens conforme acima
 
 Retorne APENAS um JSON válido no formato:
-{"groups": [{"name": "Nome do Grupo", "items": [{"name": "...", "price": 0.00, "section": "FRUTAS" | null}]}]}
+{"groups": [{"name": "Nome do Grupo", "items": [{"name": "...", "price": 0.00, "section": "FRUTAS" | null, "description": "ingredientes..." | null}]}]}
 
 Não invente itens nem seções que não estão na imagem.`;
 

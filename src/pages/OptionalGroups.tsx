@@ -22,7 +22,7 @@ import { Plus, Trash2, Pencil, Upload, Loader2, FileImage, Eye, Check, Package, 
 
 interface ExtractedGroup {
   name: string;
-  items: { name: string; price: number; section: string | null }[];
+  items: { name: string; price: number; section: string | null; description: string | null }[];
   selected: boolean;
 }
 
@@ -46,19 +46,20 @@ export default function OptionalGroups() {
   const [newGroupMax, setNewGroupMax] = useState(0);
   const [newGroupMaxPerItem, setNewGroupMaxPerItem] = useState(1);
   // Seções + itens no momento da criação do grupo
-  type DraftItem = { name: string; price: string };
+  type DraftItem = { name: string; price: string; description: string };
   type DraftSection = { name: string; items: DraftItem[] };
   const [newGroupSections, setNewGroupSections] = useState<DraftSection[]>([
-    { name: '', items: [{ name: '', price: '' }] },
+    { name: '', items: [{ name: '', price: '', description: '' }] },
   ]);
 
   // New item form
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
   const [newItemSection, setNewItemSection] = useState('');
+  const [newItemDescription, setNewItemDescription] = useState('');
 
   // Edit item state
-  const [editingItem, setEditingItem] = useState<{ id: string; name: string; price: string; active: boolean; section: string } | null>(null);
+  const [editingItem, setEditingItem] = useState<{ id: string; name: string; price: string; active: boolean; section: string; description: string } | null>(null);
 
   // Association state
   const [selectedCatIds, setSelectedCatIds] = useState<string[]>([]);
@@ -91,7 +92,7 @@ export default function OptionalGroups() {
 
     // Coletar itens das seções (ignorando seções/itens em branco)
     if (groupId) {
-      const bulkItems: { name: string; price: number; section: string | null }[] = [];
+      const bulkItems: { name: string; price: number; section: string | null; description: string | null }[] = [];
       newGroupSections.forEach(sec => {
         const sectionName = sec.name.trim();
         sec.items.forEach(it => {
@@ -101,6 +102,7 @@ export default function OptionalGroups() {
             name: itemName,
             price: parseFloat(it.price) || 0,
             section: sectionName || null,
+            description: it.description.trim() || null,
           });
         });
       });
@@ -113,7 +115,7 @@ export default function OptionalGroups() {
     setNewGroupMin(0);
     setNewGroupMax(0);
     setNewGroupMaxPerItem(1);
-    setNewGroupSections([{ name: '', items: [{ name: '', price: '' }] }]);
+    setNewGroupSections([{ name: '', items: [{ name: '', price: '', description: '' }] }]);
     setIsNewGroupOpen(false);
   }
 
@@ -141,10 +143,12 @@ export default function OptionalGroups() {
       name: newItemName.trim(),
       price: parseFloat(newItemPrice) || 0,
       section: newItemSection.trim() || null,
+      description: newItemDescription.trim() || null,
     });
     setNewItemName('');
     setNewItemPrice('');
     setNewItemSection('');
+    setNewItemDescription('');
     setIsAddItemOpen(false);
     setAddItemGroupId(null);
   }
@@ -160,6 +164,7 @@ export default function OptionalGroups() {
       price: parseFloat(editingItem.price) || 0,
       active: editingItem.active,
       section: editingItem.section.trim() ? editingItem.section.trim() : null,
+      description: editingItem.description.trim() ? editingItem.description.trim() : null,
     });
     setEditingItem(null);
   }
@@ -238,6 +243,7 @@ export default function OptionalGroups() {
             name: i.name || '',
             price: parseFloat(i.price) || 0,
             section: i.section && String(i.section).trim() ? String(i.section).trim() : null,
+            description: i.description && String(i.description).trim() ? String(i.description).trim() : null,
           })),
           selected: true,
         }));
@@ -283,6 +289,7 @@ export default function OptionalGroups() {
               // Usa o nome do "grupo" extraído como seção (ex.: FRUTAS, CREMES)
               // se o item já tiver seção própria, mantém ela.
               section: it.section || eg.name || null,
+              description: it.description || null,
             }))
           );
           if (itemsToInsert.length > 0) await addItemsBulk(groupId, itemsToInsert);
@@ -296,6 +303,7 @@ export default function OptionalGroups() {
               name: it.name,
               price: it.price,
               section: importWithSections ? (it.section || null) : null,
+              description: it.description || null,
             }));
             await addItemsBulk(groupId, itemsToInsert);
           }
@@ -474,8 +482,13 @@ export default function OptionalGroups() {
                             return (
                               <div className="space-y-1">
                                 {eg.items.map((item, ii) => (
-                                  <div key={ii} className="flex items-center gap-2 text-sm">
-                                    <span className="flex-1">{item.name}</span>
+                                  <div key={ii} className="flex items-start gap-2 text-sm">
+                                    <div className="flex-1">
+                                      <div>{item.name}</div>
+                                      {item.description && (
+                                        <div className="text-xs text-muted-foreground leading-tight">{item.description}</div>
+                                      )}
+                                    </div>
                                     <span className="text-muted-foreground">R$ {item.price.toFixed(2)}</span>
                                   </div>
                                 ))}
@@ -493,8 +506,13 @@ export default function OptionalGroups() {
                               <Badge variant="secondary" className="text-xs uppercase tracking-wide">{sectionName}</Badge>
                               <div className="space-y-1 pl-2 border-l-2 border-muted">
                                 {entries.map(({ item, idx }) => (
-                                  <div key={idx} className="flex items-center gap-2 text-sm">
-                                    <span className="flex-1">{item.name}</span>
+                                  <div key={idx} className="flex items-start gap-2 text-sm">
+                                    <div className="flex-1">
+                                      <div>{item.name}</div>
+                                      {item.description && (
+                                        <div className="text-xs text-muted-foreground leading-tight">{item.description}</div>
+                                      )}
+                                    </div>
                                     <span className="text-muted-foreground">R$ {item.price.toFixed(2)}</span>
                                   </div>
                                 ))}
@@ -618,7 +636,12 @@ export default function OptionalGroups() {
                             {item.imageUrl ? (
                               <img src={item.imageUrl} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
                             ) : null}
-                            <span className="text-sm">{item.name}</span>
+                            <div className="flex flex-col">
+                              <span className="text-sm">{item.name}</span>
+                              {item.description && (
+                                <span className="text-xs text-muted-foreground leading-tight">{item.description}</span>
+                              )}
+                            </div>
                             {!item.active && <Badge variant="secondary" className="text-xs">Inativo</Badge>}
                           </div>
                           <div className="flex items-center gap-2">
@@ -641,7 +664,7 @@ export default function OptionalGroups() {
                               <ImageIcon className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
                             </label>
                              <div className="relative group">
-                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingItem({ id: item.id, name: item.name, price: item.price.toFixed(2), active: item.active, section: item.section ?? '' })}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingItem({ id: item.id, name: item.name, price: item.price.toFixed(2), active: item.active, section: item.section ?? '', description: item.description ?? '' })}>
                                 <Pencil className="h-3 w-3" />
                               </Button>
                               <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Editar opcional</span>
@@ -737,7 +760,7 @@ export default function OptionalGroups() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setNewGroupSections(prev => [...prev, { name: '', items: [{ name: '', price: '' }] }])}
+                  onClick={() => setNewGroupSections(prev => [...prev, { name: '', items: [{ name: '', price: '', description: '' }] }])}
                 >
                   <Plus className="h-4 w-4 mr-1" /> Seção
                 </Button>
@@ -766,7 +789,8 @@ export default function OptionalGroups() {
 
                   <div className="space-y-2 pl-2">
                     {sec.items.map((item, ii) => (
-                      <div key={ii} className="flex items-center gap-2">
+                      <div key={ii} className="space-y-1 border-b border-muted/60 pb-2 last:border-0">
+                        <div className="flex items-center gap-2">
                         <Input
                           placeholder="Nome do item"
                           value={item.name}
@@ -802,6 +826,16 @@ export default function OptionalGroups() {
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         )}
+                        </div>
+                        <Input
+                          placeholder="Descrição (opcional — ex: Camarão refogado, catupiry, mussarela, orégano)"
+                          value={item.description}
+                          onChange={(e) => setNewGroupSections(prev => prev.map((s, i) => i === si
+                            ? { ...s, items: s.items.map((it, j) => j === ii ? { ...it, description: e.target.value } : it) }
+                            : s
+                          ))}
+                          className="h-8 text-xs"
+                        />
                       </div>
                     ))}
                     <Button
@@ -809,7 +843,7 @@ export default function OptionalGroups() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setNewGroupSections(prev => prev.map((s, i) => i === si
-                        ? { ...s, items: [...s.items, { name: '', price: '' }] }
+                        ? { ...s, items: [...s.items, { name: '', price: '', description: '' }] }
                         : s
                       ))}
                     >
@@ -905,6 +939,15 @@ export default function OptionalGroups() {
             <div>
               <Label>Preço (R$)</Label>
               <Input type="number" step="0.01" placeholder="0.00" value={newItemPrice} onChange={(e) => setNewItemPrice(e.target.value)} />
+            </div>
+            <div>
+              <Label>Descrição (opcional)</Label>
+              <Input
+                placeholder="Ex: Camarão refogado, catupiry, mussarela e orégano"
+                value={newItemDescription}
+                onChange={(e) => setNewItemDescription(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Use para sabores/itens que precisam mostrar os ingredientes (ex.: pizzaria).</p>
             </div>
             <div>
               <Label>Seção (opcional)</Label>
@@ -1027,6 +1070,15 @@ export default function OptionalGroups() {
               <div>
                 <Label>Preço (R$)</Label>
                 <Input type="number" min={0} step="0.01" value={editingItem.price} onChange={(e) => setEditingItem({ ...editingItem, price: e.target.value })} />
+              </div>
+              <div>
+                <Label>Descrição (opcional)</Label>
+                <Input
+                  placeholder="Ex: Camarão refogado, catupiry, mussarela e orégano"
+                  value={editingItem.description}
+                  onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Aparece como subtítulo do item no cardápio.</p>
               </div>
               <div>
                 <Label>Seção (opcional)</Label>

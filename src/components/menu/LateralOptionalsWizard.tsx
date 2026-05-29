@@ -15,6 +15,7 @@ interface OptionalGroupItem {
   active: boolean;
   imageUrl?: string | null;
   section?: string | null;
+  description?: string | null;
 }
 
 interface OptionalGroup {
@@ -248,7 +249,12 @@ export function LateralOptionalsWizard({
                         {item.imageUrl && (
                           <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
                         )}
-                        <span className="font-medium">{item.name}</span>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{item.name}</span>
+                          {item.description && (
+                            <span className="text-xs text-muted-foreground leading-tight">{item.description}</span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {item.price > 0 && (
