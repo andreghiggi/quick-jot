@@ -626,7 +626,12 @@ export default function OptionalGroups() {
                             {item.imageUrl ? (
                               <img src={item.imageUrl} alt={item.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
                             ) : null}
-                            <span className="text-sm">{item.name}</span>
+                            <div className="flex flex-col">
+                              <span className="text-sm">{item.name}</span>
+                              {item.description && (
+                                <span className="text-xs text-muted-foreground leading-tight">{item.description}</span>
+                              )}
+                            </div>
                             {!item.active && <Badge variant="secondary" className="text-xs">Inativo</Badge>}
                           </div>
                           <div className="flex items-center gap-2">
