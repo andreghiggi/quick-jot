@@ -11,6 +11,7 @@ export interface OptionalGroupItem {
   displayOrder: number;
   imageUrl?: string | null;
   section?: string | null;
+  description?: string | null;
 }
 
 export type OptionalGroupLayout = 'vertical' | 'horizontal';
@@ -91,6 +92,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
             displayOrder: i.display_order ?? 0,
             imageUrl: (i as any).image_url ?? null,
             section: ((i as any).section ?? null) as string | null,
+            description: ((i as any).description ?? null) as string | null,
           }))
           .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
         categoryIds: catLinks.filter(c => c.group_id === g.id).map(c => c.category_id),
@@ -191,6 +193,8 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
           price: i.price,
           active: i.active,
           image_url: i.imageUrl ?? null,
+          section: i.section ?? null,
+          description: i.description ?? null,
         }));
         const { error: iErr } = await supabase.from('optional_group_items').insert(itemRows);
         if (iErr) throw iErr;
@@ -242,11 +246,12 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  async function addItem(groupId: string, data: { name: string; price: number; section?: string | null }): Promise<boolean> {
+  async function addItem(groupId: string, data: { name: string; price: number; section?: string | null; description?: string | null }): Promise<boolean> {
     if (!companyId) return false;
     try {
       const insertRow: any = { group_id: groupId, company_id: companyId, name: data.name, price: data.price };
       if (data.section !== undefined) insertRow.section = data.section && data.section.trim() ? data.section.trim() : null;
+      if (data.description !== undefined) insertRow.description = data.description && data.description.trim() ? data.description.trim() : null;
       const { error } = await supabase
         .from('optional_group_items')
         .insert(insertRow);
@@ -261,7 +266,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  async function addItemsBulk(groupId: string, items: { name: string; price: number; section?: string | null }[]): Promise<boolean> {
+  async function addItemsBulk(groupId: string, items: { name: string; price: number; section?: string | null; description?: string | null }[]): Promise<boolean> {
     if (!companyId || items.length === 0) return false;
     try {
       const rows = items.map(i => ({
@@ -270,6 +275,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
         name: i.name,
         price: i.price,
         section: i.section && String(i.section).trim() ? String(i.section).trim() : null,
+        description: i.description && String(i.description).trim() ? String(i.description).trim() : null,
       }));
       const { error } = await supabase.from('optional_group_items').insert(rows);
       if (error) throw error;
@@ -283,11 +289,14 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
   }
 
-  async function updateItem(id: string, data: Partial<{ name: string; price: number; active: boolean; image_url: string | null; section: string | null }>): Promise<boolean> {
+  async function updateItem(id: string, data: Partial<{ name: string; price: number; active: boolean; image_url: string | null; section: string | null; description: string | null }>): Promise<boolean> {
     try {
       const payload: any = { ...data };
       if (payload.section !== undefined) {
         payload.section = payload.section && String(payload.section).trim() ? String(payload.section).trim() : null;
+      }
+      if (payload.description !== undefined) {
+        payload.description = payload.description && String(payload.description).trim() ? String(payload.description).trim() : null;
       }
       const { error } = await supabase.from('optional_group_items').update(payload).eq('id', id);
       if (error) throw error;
