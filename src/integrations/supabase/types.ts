@@ -833,6 +833,7 @@ export type Database = {
           max_select: number
           min_select: number
           name: string
+          section_order: string[]
           updated_at: string
           waiter_only: boolean
         }
@@ -847,6 +848,7 @@ export type Database = {
           max_select?: number
           min_select?: number
           name: string
+          section_order?: string[]
           updated_at?: string
           waiter_only?: boolean
         }
@@ -861,6 +863,7 @@ export type Database = {
           max_select?: number
           min_select?: number
           name?: string
+          section_order?: string[]
           updated_at?: string
           waiter_only?: boolean
         }

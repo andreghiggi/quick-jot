@@ -26,6 +26,7 @@ interface OptionalGroup {
   layout: string;
   items: OptionalGroupItem[];
   maxQuantityPerItem?: number;
+  sectionOrder?: string[];
 }
 
 interface LateralOptionalsWizardProps {
@@ -210,13 +211,20 @@ export function LateralOptionalsWizard({
                     if (!entry) { entry = { name: sec, items: [] }; sections.push(entry); }
                     entry.items.push(it);
                   });
-                  sections.sort((a, b) => {
-                    if (a.name === null && b.name !== null) return -1;
-                    if (a.name !== null && b.name === null) return 1;
-                    if (a.name === null && b.name === null) return 0;
-                    return (a.name as string).localeCompare(b.name as string, 'pt-BR');
-                  });
-                  return sections.flatMap((sec) => [
+                  // Sem seção primeiro, depois seções na ordem manual, depois novas em alfabética
+                  const namedSecs = sections.filter(s => s.name !== null) as { name: string; items: typeof activeItems }[];
+                  const unnamedSecs = sections.filter(s => s.name === null);
+                  const order = g.sectionOrder ?? [];
+                  const orderedNamed: typeof namedSecs = [];
+                  for (const n of order) {
+                    const f = namedSecs.find(s => s.name === n);
+                    if (f && !orderedNamed.includes(f)) orderedNamed.push(f);
+                  }
+                  const restNamed = namedSecs
+                    .filter(s => !orderedNamed.includes(s))
+                    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+                  const finalSecs: { name: string | null; items: typeof activeItems }[] = [...unnamedSecs, ...orderedNamed, ...restNamed];
+                  return finalSecs.flatMap((sec) => [
                     sec.name ? (
                       <div
                         key={`sec-${sec.name}`}

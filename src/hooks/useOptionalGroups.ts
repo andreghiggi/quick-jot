@@ -37,6 +37,7 @@ export interface OptionalGroup {
   productOverrides: ProductOverride[];
   maxQuantityPerItem: number;
   waiterOnly: boolean;
+  sectionOrder: string[];
 }
 
 interface UseOptionalGroupsOptions {
@@ -81,6 +82,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
         layout: ((g as any).layout as OptionalGroupLayout) || 'vertical',
         maxQuantityPerItem: (g as any).max_quantity_per_item ?? 1,
         waiterOnly: (g as any).waiter_only ?? false,
+        sectionOrder: Array.isArray((g as any).section_order) ? ((g as any).section_order as string[]) : [],
         items: items
           .filter(i => i.group_id === g.id)
           .map(i => ({
@@ -416,6 +418,45 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     return reorderGroups(newOrder);
   }
 
+  async function setSectionOrder(groupId: string, sectionOrder: string[]): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('optional_groups')
+        .update({ section_order: sectionOrder } as any)
+        .eq('id', groupId);
+      if (error) throw error;
+      await fetchGroups();
+      return true;
+    } catch (error) {
+      console.error('Error updating section order:', error);
+      toast.error('Erro ao reordenar seções');
+      return false;
+    }
+  }
+
+  async function moveSection(groupId: string, sectionName: string, direction: 'up' | 'down'): Promise<boolean> {
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return false;
+    // Compute current sections from items, preserving any saved order, with unsaved sections appended alphabetically
+    const present = Array.from(new Set(
+      group.items.map(i => (i.section ?? '').trim()).filter(Boolean)
+    ));
+    const ordered: string[] = [];
+    for (const s of group.sectionOrder) {
+      if (present.includes(s) && !ordered.includes(s)) ordered.push(s);
+    }
+    const rest = present.filter(s => !ordered.includes(s)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const full = [...ordered, ...rest];
+    const idx = full.indexOf(sectionName);
+    if (idx === -1) return false;
+    const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= full.length) return false;
+    const next = [...full];
+    const [removed] = next.splice(idx, 1);
+    next.splice(newIdx, 0, removed);
+    return setSectionOrder(groupId, next);
+  }
+
   return {
     groups,
     loading,
@@ -431,6 +472,8 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     setProductLinks,
     getGroupsForProduct,
     moveGroup,
+    moveSection,
+    setSectionOrder,
     refetch: fetchGroups,
   };
 }
