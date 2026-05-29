@@ -774,7 +774,8 @@ export default function OptionalGroups() {
 
                   <div className="space-y-2 pl-2">
                     {sec.items.map((item, ii) => (
-                      <div key={ii} className="flex items-center gap-2">
+                      <div key={ii} className="space-y-1 border-b border-muted/60 pb-2 last:border-0">
+                        <div className="flex items-center gap-2">
                         <Input
                           placeholder="Nome do item"
                           value={item.name}
@@ -810,6 +811,16 @@ export default function OptionalGroups() {
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         )}
+                        </div>
+                        <Input
+                          placeholder="Descrição (opcional — ex: Camarão refogado, catupiry, mussarela, orégano)"
+                          value={item.description}
+                          onChange={(e) => setNewGroupSections(prev => prev.map((s, i) => i === si
+                            ? { ...s, items: s.items.map((it, j) => j === ii ? { ...it, description: e.target.value } : it) }
+                            : s
+                          ))}
+                          className="h-8 text-xs"
+                        />
                       </div>
                     ))}
                     <Button
