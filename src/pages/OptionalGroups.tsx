@@ -1057,6 +1057,15 @@ export default function OptionalGroups() {
                 <Input type="number" min={0} step="0.01" value={editingItem.price} onChange={(e) => setEditingItem({ ...editingItem, price: e.target.value })} />
               </div>
               <div>
+                <Label>Descrição (opcional)</Label>
+                <Input
+                  placeholder="Ex: Camarão refogado, catupiry, mussarela e orégano"
+                  value={editingItem.description}
+                  onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Aparece como subtítulo do item no cardápio.</p>
+              </div>
+              <div>
                 <Label>Seção (opcional)</Label>
                 <Input
                   placeholder="Ex: FRUTAS, CREMES, COBERTURAS"
