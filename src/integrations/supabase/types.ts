@@ -730,6 +730,7 @@ export type Database = {
           active: boolean
           company_id: string
           created_at: string
+          description: string | null
           display_order: number | null
           group_id: string
           id: string
@@ -742,6 +743,7 @@ export type Database = {
           active?: boolean
           company_id: string
           created_at?: string
+          description?: string | null
           display_order?: number | null
           group_id: string
           id?: string
@@ -754,6 +756,7 @@ export type Database = {
           active?: boolean
           company_id?: string
           created_at?: string
+          description?: string | null
           display_order?: number | null
           group_id?: string
           id?: string
