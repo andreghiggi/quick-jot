@@ -286,7 +286,7 @@ Deno.serve(async (req) => {
 
           const pagamentoObj = {
             tPag: tPagMap[tef.tipo_pagamento] || '99',
-            vPag: tef.valor,
+            vPag: Number(tef.valor || 0).toFixed(2),
             tpIntegra: 1,
             card: {
               tpIntegra: '1',
@@ -388,7 +388,7 @@ Deno.serve(async (req) => {
             serie: emitData.serie || emitData.series || fromChave.serie || null,
             status: emitData.status || 'pendente',
             ambiente: ambienteResolved,
-            valor_total: emitData.valor_total || emitData.total || (payload?.itens ? payload.itens.reduce((sum: number, item: any) => sum + (Number(item.quantidade || 1) * Number(item.valor_unitario || 0)), 0) : 0),
+            valor_total: emitData.valor_total || emitData.total || (emitPayload?.itens ? emitPayload.itens.reduce((sum: number, item: any) => sum + (Number(item.quantidade || 1) * Number(item.valor_unitario || 0)), 0) : 0),
             chave_acesso: chave,
             protocolo: emitData.protocolo || emitData.protocol || null,
             qrcode_url: emitData.qrcode_url || emitData.qr_code_url || emitData.url_qrcode || emitData.qrcode || (chave ? buildQrcodeUrl(chave, ambienteResolved) : null),

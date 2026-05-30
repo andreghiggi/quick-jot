@@ -70,17 +70,11 @@ export function useTabs(options: UseTabsOptions = {}) {
             fetchTabs();
           }
         )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'tab_items'
-          },
-          () => {
-            fetchTabs();
-          }
-        )
+        // tab_items: subscription sem filtro causa tempestades de fetch que
+        // competem com inserts (item adicionado pelo garçom "some" temporariamente).
+        // Usamos atualização otimista local em addItem/removeItem e refetch
+        // disparado pela tabela `tabs`. Para mudanças vindas de outros terminais,
+        // o refetch periódico (ao reabrir comanda) cobre o caso.
         .subscribe();
 
       return () => {
@@ -106,7 +100,19 @@ export function useTabs(options: UseTabsOptions = {}) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTabs(((data || []) as unknown) as Tab[]);
+      // Postgres `numeric` é retornado como string pelo PostgREST. Convertemos
+      // quantity/unit_price/total_price em Number para evitar NaN em multiplicações
+      // (ex.: ao adicionar item ou calcular totais da comanda).
+      const normalized = (data || []).map((tab: any) => ({
+        ...tab,
+        items: (tab.items || []).map((it: any) => ({
+          ...it,
+          quantity: Number(it.quantity) || 0,
+          unit_price: Number(it.unit_price) || 0,
+          total_price: Number(it.total_price) || 0,
+        })),
+      }));
+      setTabs(normalized as Tab[]);
     } catch (error) {
       console.error('Error fetching tabs:', error);
     } finally {
