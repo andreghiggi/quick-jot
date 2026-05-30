@@ -726,7 +726,15 @@ export default function PDVV2() {
           i9SplitTransitionRef.current = true;
           setImportingTab(null);
           setTimeout(() => {
-            setImportingTab({ ...savedTab, total: splitData.perPerson });
+            // Enriquece o importingTab com snapshot do split — fallback caso
+            // i9SplitInfo seja zerado por algum reset entre pagamentos.
+            setImportingTab({
+              ...savedTab,
+              total: splitData.perPerson,
+              _splitPerson: splitData.total - newRemaining,
+              _splitTotal: splitData.total,
+              _splitPerPerson: splitData.perPerson,
+            } as any);
             i9SplitTransitionRef.current = false;
           }, 100);
         }

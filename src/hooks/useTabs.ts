@@ -70,17 +70,11 @@ export function useTabs(options: UseTabsOptions = {}) {
             fetchTabs();
           }
         )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'tab_items'
-          },
-          () => {
-            fetchTabs();
-          }
-        )
+        // tab_items: subscription sem filtro causa tempestades de fetch que
+        // competem com inserts (item adicionado pelo garçom "some" temporariamente).
+        // Usamos atualização otimista local em addItem/removeItem e refetch
+        // disparado pela tabela `tabs`. Para mudanças vindas de outros terminais,
+        // o refetch periódico (ao reabrir comanda) cobre o caso.
         .subscribe();
 
       return () => {
