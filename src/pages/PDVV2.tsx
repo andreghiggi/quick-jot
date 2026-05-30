@@ -403,10 +403,14 @@ export default function PDVV2() {
       const nfceItems: NFCeItem[] = items.map((it) => {
         const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
         const taxRule = product?.taxRuleId ? taxRules.find((tr) => tr.id === product.taxRuleId) : null;
+        // Para itens sintéticos (sem produto/regra fiscal) — ex.: linha "Divisão X/Y"
+        // criada no fluxo de rachar comanda — usar NCM genérico de "outros produtos"
+        // (21069090) em vez de '00000000', que é rejeitado pela SEFAZ (rejeição 814).
+        const fallbackNcm = it.product_id ? '00000000' : '21069090';
         return {
           codigo: product?.code || it.product_id || 'AVULSO',
           descricao: it.product_name,
-          ncm: taxRule?.ncm || '00000000',
+          ncm: taxRule?.ncm || fallbackNcm,
           cfop: taxRule?.cfop || '5102',
           unidade: product?.unit || 'UN',
           quantidade: it.quantity,

@@ -106,7 +106,19 @@ export function useTabs(options: UseTabsOptions = {}) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTabs(((data || []) as unknown) as Tab[]);
+      // Postgres `numeric` é retornado como string pelo PostgREST. Convertemos
+      // quantity/unit_price/total_price em Number para evitar NaN em multiplicações
+      // (ex.: ao adicionar item ou calcular totais da comanda).
+      const normalized = (data || []).map((tab: any) => ({
+        ...tab,
+        items: (tab.items || []).map((it: any) => ({
+          ...it,
+          quantity: Number(it.quantity) || 0,
+          unit_price: Number(it.unit_price) || 0,
+          total_price: Number(it.total_price) || 0,
+        })),
+      }));
+      setTabs(normalized as Tab[]);
     } catch (error) {
       console.error('Error fetching tabs:', error);
     } finally {
