@@ -70,7 +70,8 @@ export default function Waiter() {
     addMultipleItemsToTab,
     removeItemFromTab,
     getTabTotal,
-    addItemToTab
+    addItemToTab,
+    deleteTab
   } = useTabs({ companyId: company?.id });
   const { products, loading: loadingProducts } = useProducts({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
