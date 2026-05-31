@@ -2297,6 +2297,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                           <span className="text-sm font-bold text-primary">R$ {deliveryFee.toFixed(2)}</span>
                         </div>
                       )}
+                      {freeDeliveryRemaining > 0 && (
+                        <p className="text-xs font-medium text-success mt-2">
+                          Faltam R$ {freeDeliveryRemaining.toFixed(2).replace('.', ',')} para frete grátis
+                        </p>
+                      )}
                       {isFreeDelivery && (
                         <div className="bg-success/10 rounded-lg p-3 flex justify-between items-center mt-3">
                           <span className="text-sm font-medium">Taxa de entrega:</span>
@@ -2532,6 +2537,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                           <span>Taxa de entrega</span>
                           <span>R$ {deliveryFee.toFixed(2)}</span>
                         </div>
+                      )}
+                      {freeDeliveryRemaining > 0 && (
+                        <p className="text-xs font-medium text-success">
+                          Faltam R$ {freeDeliveryRemaining.toFixed(2).replace('.', ',')} para frete grátis
+                        </p>
                       )}
                       {deliveryType === 'entrega' && isFreeDelivery && (
                         <div className="flex justify-between text-sm">
