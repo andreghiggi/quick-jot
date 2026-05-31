@@ -6,7 +6,9 @@ import { Order, OrderStatus } from '@/types/order';
 interface OrderContextType {
   orders: Order[];
   loading: boolean;
-  addOrder: (orderData: Omit<Order, 'id' | 'createdAt' | 'dailyNumber' | 'orderCode'>) => Promise<boolean>;
+  addOrder: (
+    orderData: Omit<Order, 'id' | 'createdAt' | 'dailyNumber' | 'orderCode'>
+  ) => Promise<{ id: string; shortCode?: string; orderCode?: string; dailyNumber?: number } | null>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<boolean>;
   sendConfirmationWhatsApp: (orderId: string) => Promise<boolean>;
   deleteOrder: (orderId: string) => Promise<boolean>;
