@@ -2,6 +2,9 @@
 
 export type PrintLayoutVersion = 'v1' | 'v2';
 
+/** Tipo logístico do pedido — usado para destacar na comanda da cozinha. */
+export type OrderTicketType = 'delivery' | 'pickup' | 'table' | 'counter';
+
 interface PrintItem {
   productName: string;
   quantity: number;
@@ -29,6 +32,11 @@ interface PrintTicketData {
   /** Company atual. Usado para rollout isolado do título "PEDIDO <short_code>"
    *  em vez de "Comanda #<tabNumber>" — atualmente APENAS Lancheria I9. */
   companyId?: string;
+  /** Quando informado, renderiza uma faixa de destaque (ENTREGA / RETIRADA /
+   *  PEDIDO MESA / BALCÃO) logo abaixo do título "COMANDA DE PRODUÇÃO" para
+   *  ajudar a logística da cozinha. Quando omitido, o layout permanece
+   *  idêntico ao anterior. */
+  orderType?: OrderTicketType;
 }
 
 // Allow-list ISOLADA: troca de "Comanda #<n>" por referenceLabel no cabeçalho.
