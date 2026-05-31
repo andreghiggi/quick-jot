@@ -14,6 +14,8 @@ import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
 
+type CheckoutItem = { name: string; quantity: number; unit_price: number; id?: string; paid?: boolean; paidQty?: number };
+
 interface PDVV2PaymentDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -21,7 +23,7 @@ interface PDVV2PaymentDialogProps {
   total: number;
   title?: string;
   /** Itens para exibição visual no topo (apenas leitura, sem interação) */
-  checkoutItems?: Array<{ name: string; quantity: number; unit_price: number; id?: string; paid?: boolean }>;
+  checkoutItems?: CheckoutItem[];
   /** Callback chamado após pagamento parcial de itens selecionados (I9 apenas) */
   onItemsPaid?: (items: Array<{ id: string; paidQty: number }>) => void;
   /** Callback chamado após pagamento por divisão de pessoas (I9 apenas) */
