@@ -220,16 +220,20 @@ export default function Waiter() {
   };
 
   const handleTableClick = (table: typeof tables[0]) => {
-    if (table.status === 'available') {
-      // Open new tab for this table
+    // Guard anti-duplicação: SEMPRE checa se já existe comanda aberta
+    // para esta mesa (pode ter sido criada via QR Mesa e o status local
+    // ainda não foi atualizado pelo realtime). Se houver, abre a
+    // comanda existente em vez de oferecer criar nova.
+    const existingTab = openTabs.find(t => t.table_id === table.id);
+    if (existingTab) {
+      setSelectedTab(existingTab);
+      return;
+    }
+
+    if (table.status === 'available' || table.status === 'occupied') {
+      // Sem comanda aberta encontrada — abre diálogo para criar nova
       setSelectedTableId(table.id);
       setNewTabDialogOpen(true);
-    } else if (table.status === 'occupied') {
-      // Find the tab for this table
-      const tab = openTabs.find(t => t.table_id === table.id);
-      if (tab) {
-        setSelectedTab(tab);
-      }
     } else if (table.status === 'reserved') {
       // Ask if want to open or cancel reservation
       setSelectedTableId(table.id);
