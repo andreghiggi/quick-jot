@@ -670,48 +670,6 @@ pause
             </Card>
           )}
 
-          {/* Free Delivery Above Minimum */}
-          {storeSettings.enableDelivery && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Entrega Grátis Acima de um Valor</CardTitle>
-                <CardDescription>
-                  Quando ativado, pedidos com subtotal igual ou maior ao valor mínimo terão taxa de entrega zerada automaticamente.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="freeDeliveryEnabled">Ativar entrega grátis acima de um valor</Label>
-                  <Switch
-                    id="freeDeliveryEnabled"
-                    checked={storeSettings.freeDeliveryEnabled}
-                    onCheckedChange={async (checked) => {
-                      await updateSetting('free_delivery_enabled', checked ? 'true' : 'false');
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="freeDeliveryMinOrder">Valor mínimo do pedido (R$)</Label>
-                  <Input
-                    id="freeDeliveryMinOrder"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    disabled={!storeSettings.freeDeliveryEnabled}
-                    defaultValue={storeSettings.freeDeliveryMinOrder || ''}
-                    onBlur={async (e) => {
-                      const value = parseFloat(e.target.value) || 0;
-                      await updateSetting('free_delivery_min_order', value.toString());
-                    }}
-                    placeholder="Ex: 100.00"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Ex: definindo R$ 100,00, qualquer pedido a partir desse valor terá entrega grátis.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         {/* Tab Horários */}
@@ -948,6 +906,49 @@ pause
                       )}
                     </div>
                   </ScrollArea>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Free Delivery Above Minimum */}
+          {storeSettings.enableDelivery && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Entrega Grátis Acima de um Valor</CardTitle>
+                <CardDescription>
+                  Quando ativado, pedidos com subtotal igual ou maior ao valor mínimo terão taxa de entrega zerada automaticamente.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="freeDeliveryEnabled">Ativar entrega grátis acima de um valor</Label>
+                  <Switch
+                    id="freeDeliveryEnabled"
+                    checked={storeSettings.freeDeliveryEnabled}
+                    onCheckedChange={async (checked) => {
+                      await updateSetting('free_delivery_enabled', checked ? 'true' : 'false');
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="freeDeliveryMinOrder">Valor mínimo do pedido (R$)</Label>
+                  <Input
+                    id="freeDeliveryMinOrder"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    disabled={!storeSettings.freeDeliveryEnabled}
+                    defaultValue={storeSettings.freeDeliveryMinOrder || ''}
+                    onBlur={async (e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      await updateSetting('free_delivery_min_order', value.toString());
+                    }}
+                    placeholder="Ex: 100.00"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Ex: definindo R$ 100,00, qualquer pedido a partir desse valor terá entrega grátis.
+                  </p>
                 </div>
               </CardContent>
             </Card>
