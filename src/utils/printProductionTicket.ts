@@ -171,6 +171,18 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
         .info { font-size: 11pt; font-weight: bold; margin-top: 1mm; }
         .table-info { font-size: 14pt; font-weight: bold; background: #000; color: #fff; padding: 1mm 3mm; display: inline-block; margin-top: 1mm; }
         .datetime { font-size: 8pt; margin-top: 1mm; }
+        .order-type-badge {
+          font-size: 13pt;
+          font-weight: 900;
+          background: #000;
+          color: #fff;
+          padding: 1.5mm 2mm;
+          margin: 1mm 0;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
         .items { margin: 2mm 0; }
         .item { border-bottom: 1px dotted #000; padding: 1.5mm 0; }
         .item:last-child { border-bottom: none; }
@@ -190,6 +202,7 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
       <!--BOX_START-->
       <div class="header">
         <div class="title">COMANDA DE PRODUÇÃO</div>
+        ${renderOrderTypeBadgeHTML(data.orderType)}
         <div class="info">${shouldUseReferenceInHeader(data) ? getTicketReferenceLabel(data) : `Comanda #${data.tabNumber}`}</div>
         ${data.tableNumber ? `<div class="table-info">MESA ${data.tableNumber}</div>` : ''}
         ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
