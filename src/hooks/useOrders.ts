@@ -94,6 +94,10 @@ export function useOrders(options: UseOrdersOptions = {}) {
         printed: (order as any).printed || false,
         printedAt: (order as any).printed_at ? new Date((order as any).printed_at) : undefined,
         confirmedAt: (order as any).confirmed_at ? new Date((order as any).confirmed_at) : undefined,
+        paymentStatus: (order as any).payment_status || undefined,
+        paidAmount: Number((order as any).paid_amount || 0),
+        paidItems: (order as any).paid_items || undefined,
+        splitInfo: (order as any).split_info || undefined,
         origin: (
           true &&
           ((order as any).origin === 'cardapio' || !(order as any).origin) &&
@@ -115,7 +119,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
       }));
 
       // Only update state if data actually changed to prevent unnecessary re-renders
-      const ordersJson = JSON.stringify(mappedOrders.map(o => ({ id: o.id, status: o.status, total: o.total, items: o.items.length, notes: o.notes, confirmedAt: o.confirmedAt?.toISOString() })));
+      const ordersJson = JSON.stringify(mappedOrders.map(o => ({ id: o.id, status: o.status, total: o.total, items: o.items.length, notes: o.notes, confirmedAt: o.confirmedAt?.toISOString(), paymentStatus: o.paymentStatus, paidAmount: o.paidAmount, paidItems: o.paidItems, splitInfo: o.splitInfo })));
       if (ordersJson !== prevOrdersJsonRef.current) {
         prevOrdersJsonRef.current = ordersJson;
         setOrders(mappedOrders);
