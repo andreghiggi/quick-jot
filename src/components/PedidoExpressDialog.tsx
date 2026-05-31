@@ -2794,7 +2794,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         showDocumentMode
         showAddItem
         tefStatus={tefStatus}
-        checkoutItems={isLancheriaI9 ? cart.map((i, idx) => {
+        checkoutItems={cart.length > 0 ? cart.map((i, idx) => {
           const unit = i.product.price + (i.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0);
           const paidQty = expressPaidQtys.get(String(idx)) || 0;
           return {
