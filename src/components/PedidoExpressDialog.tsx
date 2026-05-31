@@ -348,14 +348,19 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     (async () => {
       const { data } = await supabase
         .from('orders')
-        .select('id, order_code, customer_name, total, paid_amount, paid_items, split_info, created_at, notes')
+        .select('id, order_code, customer_name, total, paid_amount, paid_items, split_info, created_at, notes, payment_status')
         .eq('company_id', company.id)
         .eq('payment_status', 'partial')
         .gte('created_at', currentRegister.opened_at || new Date(0).toISOString())
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!cancelled && data) setPartialResumeCandidate(data);
+        .limit(10);
+      const validOpenOrder = (data || []).find((order: any) => {
+        const paidAmount = Number(order.paid_amount || 0);
+        const orderTotal = Number(order.total || 0);
+        const alreadyCharged = typeof order.notes === 'string' && order.notes.includes('[COBRADO]');
+        return !alreadyCharged && paidAmount < orderTotal;
+      });
+      if (!cancelled) setPartialResumeCandidate(validOpenOrder || null);
     })();
     return () => { cancelled = true; };
   }, [open, company?.id, currentRegister, expressOpenOrderId]);
@@ -1826,6 +1831,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           paid_amount: total,
         } as any)
         .eq('id', expressOpenOrderId);
+      setPartialResumeCandidate(null);
     } else {
       await addOrder({
         customerName: customerName.trim(),
