@@ -165,7 +165,7 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
       <!--BOX_START-->
       <div class="header">
         <div class="title">COMANDA DE PRODUÇÃO</div>
-        <div class="info">Comanda #${data.tabNumber}</div>
+        <div class="info">${shouldUseReferenceInHeader(data) ? getTicketReferenceLabel(data) : `Comanda #${data.tabNumber}`}</div>
         ${data.tableNumber ? `<div class="table-info">MESA ${data.tableNumber}</div>` : ''}
         ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
         <div class="datetime">${dateStr} às ${timeStr}</div>
