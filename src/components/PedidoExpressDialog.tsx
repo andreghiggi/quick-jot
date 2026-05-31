@@ -309,6 +309,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Mapa cart-index -> quantidade já paga (modo "itens selecionados")
   const [expressPaidQtys, setExpressPaidQtys] = useState<Map<string, number>>(new Map());
 
+  // ID do pedido em aberto criado na 1ª parcela do split. Em parcelas seguintes
+  // apenas atualizamos a linha em vez de criar um novo `orders`. Na última,
+  // marcamos `payment_status='paid'` em vez de duplicar via addOrder.
+  const [expressOpenOrderId, setExpressOpenOrderId] = useState<string | null>(null);
+  // Pedido parcial em aberto encontrado ao abrir o diálogo (do mesmo caixa).
+  const [partialResumeCandidate, setPartialResumeCandidate] = useState<any | null>(null);
+
   // Pop-up pós-venda da NFC-e (mesmo padrão do PDVV2)
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
@@ -328,6 +335,80 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       window.removeEventListener(TEF_PRINT_PROMPT_CLOSED_EVENT, onClosed as EventListener);
     };
   }, []);
+
+  // Ao abrir o diálogo, busca pedido parcial em aberto deste caixa para oferecer
+  // a retomada. Não altera nenhum fluxo existente — só popula um banner.
+  useEffect(() => {
+    if (!open || !company?.id || !currentRegister) {
+      setPartialResumeCandidate(null);
+      return;
+    }
+    if (expressOpenOrderId) return; // já está continuando um
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('orders')
+        .select('id, order_code, customer_name, total, paid_amount, paid_items, split_info, created_at, notes')
+        .eq('company_id', company.id)
+        .eq('payment_status', 'partial')
+        .gte('created_at', currentRegister.opened_at || new Date(0).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled && data) setPartialResumeCandidate(data);
+    })();
+    return () => { cancelled = true; };
+  }, [open, company?.id, currentRegister, expressOpenOrderId]);
+
+  // Restaura um pedido parcial em aberto no estado local do diálogo.
+  function resumePartialOrder(order: any) {
+    try {
+      const snapshot = order?.paid_items?.cart_snapshot as any[] | undefined;
+      const paidQtys = order?.paid_items?.paid_qtys as Record<string, number> | undefined;
+      if (!Array.isArray(snapshot) || snapshot.length === 0) {
+        toast.error('Não foi possível restaurar o pedido (snapshot indisponível).');
+        return;
+      }
+      const restoredCart: CartItem[] = snapshot.map((s: any) => ({
+        product: {
+          id: s.product_id,
+          name: s.product_name,
+          price: Number(s.product_price || 0),
+          category: '',
+          active: true,
+        } as any,
+        quantity: Number(s.quantity || 1),
+        selectedOptionals: (s.selectedOptionals || []).map((o: any) => ({
+          id: crypto.randomUUID(),
+          name: o.name,
+          price: Number(o.price || 0),
+          type: 'addition',
+          active: true,
+        })) as any,
+        groupedOptionalNames: s.groupedOptionalNames || [],
+        notes: s.notes || '',
+      } as CartItem));
+      setCart(restoredCart);
+      const map = new Map<string, number>();
+      if (paidQtys) Object.entries(paidQtys).forEach(([k, v]) => map.set(k, Number(v)));
+      setExpressPaidQtys(map);
+      if (order.split_info) {
+        setExpressSplitInfo({
+          perPerson: Number(order.split_info.perPerson || 0),
+          total: Number(order.split_info.total || 0),
+          remaining: Number(order.split_info.remaining || 0),
+        });
+      }
+      setCustomerName(order.customer_name || '');
+      setExpressOpenOrderId(order.id);
+      setPartialResumeCandidate(null);
+      setStep(5);
+      toast.success(`Pedido em aberto retomado (já pago: ${formatPrice(Number(order.paid_amount || 0))}).`);
+    } catch (err) {
+      console.error('[Express] resumePartialOrder error:', err);
+      toast.error('Erro ao retomar pedido em aberto.');
+    }
+  }
 
   useEffect(() => {
     if (!tefPromptOpen && pendingNfceOpen && nfceRecord) {
@@ -1232,6 +1313,113 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
 
   /**
+   * Persiste o progresso parcial do Pedido Express na tabela `orders`.
+   * - Na 1ª parcela: INSERT com `payment_status='partial'`, snapshot do carrinho,
+   *   itens, paid_amount e split_info. Retorna o novo id.
+   * - Nas parcelas seguintes: UPDATE somando `paid_amount`, mesclando `paid_items`
+   *   e atualizando `split_info`.
+   * Não toca em TEF/NFC-e nem em outros fluxos — apenas grava o acumulado.
+   */
+  async function persistExpressPartial(opts: {
+    existingOrderId: string | null;
+    paidAmountDelta: number;
+    paidQtys: Map<string, number>;
+    splitInfo: { perPerson: number; total: number; remaining: number } | null;
+    paymentName: string;
+  }): Promise<string | null> {
+    if (!company?.id) return null;
+    try {
+      const cartSnapshot = cart.map((it) => ({
+        product_id: it.product.id,
+        product_name: it.product.name,
+        product_price: it.product.price,
+        quantity: it.quantity,
+        notes: it.notes || null,
+        selectedOptionals: it.selectedOptionals?.map((o) => ({ name: o.name, price: o.price })) || [],
+        groupedOptionalNames: it.groupedOptionalNames || [],
+      }));
+      const paidObj: Record<string, number> = {};
+      opts.paidQtys.forEach((v, k) => { paidObj[k] = v; });
+
+      if (!opts.existingOrderId) {
+        const phoneDigits = customerPhone.replace(/\D/g, '');
+        const fullAddress = deliveryType === 'entrega'
+          ? `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood}${deliveryReference ? ` | Ref: ${deliveryReference}` : ''}`
+          : '';
+        const note = `[EXPRESS] [PARCIAL] Pagamento dividido em andamento (${opts.paymentName})`;
+        const { data: newOrder, error: insErr } = await supabase
+          .from('orders')
+          .insert({
+            customer_name: customerName.trim() || 'Pedido Express',
+            customer_phone: phoneDigits || null,
+            delivery_address: fullAddress || null,
+            notes: note,
+            total,
+            status: 'preparing',
+            company_id: company.id,
+            origin: 'balcao',
+            paid_amount: opts.paidAmountDelta,
+            paid_items: { cart_snapshot: cartSnapshot, paid_qtys: paidObj },
+            split_info: opts.splitInfo,
+            payment_status: 'partial',
+          } as any)
+          .select('id')
+          .single();
+        if (insErr || !newOrder) {
+          console.error('[Express] persistExpressPartial INSERT error:', insErr);
+          return null;
+        }
+        // Insere os itens do pedido (para que apareça nas listagens normais)
+        const orderItems = cart.map((item) => {
+          let optionalsStr = '';
+          if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+            optionalsStr = ` (${item.groupedOptionalNames.join(' | ')})`;
+          } else if (item.selectedOptionals.length > 0) {
+            const optStrs = item.selectedOptionals.map((o) => o.price > 0 ? `${o.name} R$${o.price.toFixed(2)}` : o.name);
+            optionalsStr = ` (Adicionais: ${optStrs.join(', ')})`;
+          }
+          const optPrice = item.selectedOptionals.reduce((s, o) => s + o.price, 0);
+          return {
+            order_id: newOrder.id,
+            product_id: item.product.id || null,
+            name: item.product.name + optionalsStr,
+            quantity: item.quantity,
+            price: item.product.price + optPrice,
+            notes: item.notes || null,
+            company_id: company.id,
+          };
+        });
+        if (orderItems.length > 0) {
+          await supabase.from('order_items').insert(orderItems);
+        }
+        return newOrder.id as string;
+      }
+
+      // UPDATE acumulando o que já foi pago.
+      const { data: existing } = await supabase
+        .from('orders')
+        .select('paid_amount')
+        .eq('id', opts.existingOrderId)
+        .maybeSingle();
+      const currentPaid = Number((existing as any)?.paid_amount || 0);
+      const newPaidAmount = currentPaid + opts.paidAmountDelta;
+      await supabase
+        .from('orders')
+        .update({
+          paid_amount: newPaidAmount,
+          paid_items: { cart_snapshot: cartSnapshot, paid_qtys: paidObj },
+          split_info: opts.splitInfo,
+          payment_status: 'partial',
+        } as any)
+        .eq('id', opts.existingOrderId);
+      return opts.existingOrderId;
+    } catch (err) {
+      console.error('[Express] persistExpressPartial error:', err);
+      return null;
+    }
+  }
+
+  /**
    * Divisão de pagamento no Pedido Express — mesmo padrão do PDV V2
    * "Importar e cobrar mesas" (confirmImportTabI9). Cada parte gera uma
    * pdv_sale + NFC-e própria (com observação de parcial/final). O pedido
@@ -1384,6 +1572,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       }
 
       const newRemaining = splitData.remaining - 1;
+      // Persiste o progresso parcial (split por pessoas) no `orders`.
+      const updatedSplit = { ...splitData, remaining: newRemaining };
+      const persistedId = await persistExpressPartial({
+        existingOrderId: expressOpenOrderId,
+        paidAmountDelta: partialTotal,
+        paidQtys: expressPaidQtys,
+        splitInfo: updatedSplit,
+        paymentName: params.paymentName,
+      });
+      if (persistedId && !expressOpenOrderId) setExpressOpenOrderId(persistedId);
       if (newRemaining <= 0) {
         // Última parte: cria o pedido (uma única vez) com o carrinho completo
         await finalizeExpressSplitOrder(params.paymentName, 'split');
@@ -1391,7 +1589,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         toast.success('Última pessoa cobrada — pedido finalizado!');
         return true;
       }
-      setExpressSplitInfo({ ...splitData, remaining: newRemaining });
+      setExpressSplitInfo(updatedSplit);
       toast.success(`Pessoa ${personIndex} cobrada. Faltam ${newRemaining}.`);
       return false;
     }
@@ -1508,6 +1706,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         return paid >= it.quantity;
       });
 
+      // Persiste o progresso parcial (split por itens) no `orders`.
+      const persistedItemsId = await persistExpressPartial({
+        existingOrderId: expressOpenOrderId,
+        paidAmountDelta: partialTotal,
+        paidQtys: newPaid,
+        splitInfo: null,
+        paymentName: params.paymentName,
+      });
+      if (persistedItemsId && !expressOpenOrderId) setExpressOpenOrderId(persistedItemsId);
+
       // NFC-e parcial
       const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
       if (wantsNfce) {
@@ -1604,16 +1812,32 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         notes: item.notes || undefined,
       };
     });
-    await addOrder({
-      customerName: customerName.trim(),
-      customerPhone: phoneDigitsLocal || undefined,
-      deliveryAddress: fullAddress || undefined,
-      notes: noteParts.join(' | '),
-      items: orderItems,
-      total,
-      status: 'ready',
-      origin: 'balcao',
-    });
+    // Se já existe um pedido parcial em andamento (criado na 1ª parcela),
+    // apenas marcamos como pago — não criamos um novo pedido para evitar
+    // duplicidade na listagem.
+    if (expressOpenOrderId) {
+      await supabase
+        .from('orders')
+        .update({
+          notes: noteParts.join(' | '),
+          total,
+          status: 'ready',
+          payment_status: 'paid',
+          paid_amount: total,
+        } as any)
+        .eq('id', expressOpenOrderId);
+    } else {
+      await addOrder({
+        customerName: customerName.trim(),
+        customerPhone: phoneDigitsLocal || undefined,
+        deliveryAddress: fullAddress || undefined,
+        notes: noteParts.join(' | '),
+        items: orderItems,
+        total,
+        status: 'ready',
+        origin: 'balcao',
+      });
+    }
     resetForm();
     onOpenChange(false);
   }
@@ -1643,6 +1867,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setPickupChargeOpen(false);
     setExpressSplitInfo(null);
     setExpressPaidQtys(new Map());
+    setExpressOpenOrderId(null);
+    setPartialResumeCandidate(null);
     if (draftKey) {
       try { localStorage.removeItem(draftKey); } catch {}
     }
@@ -1675,6 +1901,27 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Pedido Express</DialogTitle>
           </DialogHeader>
+
+          {partialResumeCandidate && !expressOpenOrderId && cart.length === 0 && (
+            <div className="mx-2 mb-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-semibold truncate">
+                  Pedido em aberto: {partialResumeCandidate.customer_name || 'Pedido Express'}
+                </div>
+                <div className="text-xs opacity-80">
+                  Já pago: {formatPrice(Number(partialResumeCandidate.paid_amount || 0))} de {formatPrice(Number(partialResumeCandidate.total || 0))}
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Button size="sm" variant="outline" onClick={() => setPartialResumeCandidate(null)}>
+                  Ignorar
+                </Button>
+                <Button size="sm" onClick={() => resumePartialOrder(partialResumeCandidate)}>
+                  Continuar
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Step indicator */}
           <div className="flex items-center justify-between px-2 py-2">
