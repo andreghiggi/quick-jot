@@ -298,6 +298,17 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Cobrança via PDVV2PaymentDialog (apenas Retirada)
   const [pickupChargeOpen, setPickupChargeOpen] = useState(false);
 
+  // ===== Divisão de pagamento (mesmo padrão do PDV V2 importar e cobrar mesas) =====
+  // Cada parte vira uma pdv_sale + NFC-e própria. Ao final, o pedido (addOrder)
+  // é criado uma única vez com todos os itens. Funciona para TODAS as lojas.
+  const [expressSplitInfo, setExpressSplitInfo] = useState<{
+    perPerson: number;
+    remaining: number;
+    total: number;
+  } | null>(null);
+  // Mapa cart-index -> quantidade já paga (modo "itens selecionados")
+  const [expressPaidQtys, setExpressPaidQtys] = useState<Map<string, number>>(new Map());
+
   // Pop-up pós-venda da NFC-e (mesmo padrão do PDVV2)
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
