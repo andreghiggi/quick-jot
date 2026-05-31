@@ -84,6 +84,14 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       }),
     [order.items, paidQtyByIndex],
   );
+  const pendingExistingTotal = useMemo(
+    () => checkoutItems.reduce((sum, item) => {
+      const pendingQty = Math.max(0, item.quantity - (item.paidQty || 0));
+      return sum + pendingQty * item.unit_price;
+    }, 0),
+    [checkoutItems],
+  );
+  const chargeBaseTotal = hasPartialItemPayments ? pendingExistingTotal : order.total;
 
   const cleanItemName = (name: string) =>
     name.includes('(') ? name.substring(0, name.indexOf('(')).trim() : name;
