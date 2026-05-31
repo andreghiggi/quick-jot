@@ -2425,8 +2425,14 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                       <p className="text-sm font-semibold">Produtos:</p>
                       {cart.map((item, index) => {
                         const itemTotal = calculateItemTotal(item);
+                        const paidQty = expressPaidQtys.get(String(index)) || 0;
+                        const pendingQty = Math.max(0, item.quantity - paidQty);
+                        const fullyPaid = paidQty >= item.quantity;
                         return (
-                          <div key={index} className="flex gap-3 bg-background rounded-lg p-2 border border-border">
+                          <div key={index} className={cn(
+                            "flex gap-3 bg-background rounded-lg p-2 border border-border",
+                            fullyPaid && "opacity-60"
+                          )}>
                             {item.product.imageUrl ? (
                               <img src={item.product.imageUrl} alt={item.product.name} className="w-14 h-14 rounded-md object-cover flex-shrink-0" />
                             ) : (
@@ -2439,6 +2445,17 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                                 <p className="text-sm font-medium">{item.quantity}x {item.product.name}</p>
                                 <p className="text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap ml-2">R$ {itemTotal.toFixed(2)}</p>
                               </div>
+                              {paidQty > 0 && (
+                                <p className="text-xs font-medium mt-1">
+                                  {fullyPaid ? (
+                                    <span className="text-green-700 dark:text-green-400">✓ Pago</span>
+                                  ) : (
+                                    <span className="text-amber-700 dark:text-amber-400">
+                                      {paidQty} pago{paidQty > 1 ? 's' : ''} · {pendingQty} pendente{pendingQty > 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                </p>
+                              )}
                               {item.groupedOptionalNames && item.groupedOptionalNames.length > 0 && (
                                 <div className="mt-1 space-y-0.5">
                                   {item.groupedOptionalNames.map((n, i) => (
@@ -2485,6 +2502,29 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                         <span>Total</span>
                         <span className="text-primary">R$ {total.toFixed(2)}</span>
                       </div>
+                      {(() => {
+                        // Soma o que já foi pago em itens parcialmente cobrados,
+                        // para mostrar o saldo restante no resumo final.
+                        const paidValue = cart.reduce((sum, it, idx) => {
+                          const unit = it.product.price + (it.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0);
+                          const paidQty = expressPaidQtys.get(String(idx)) || 0;
+                          return sum + unit * Math.min(paidQty, it.quantity);
+                        }, 0);
+                        if (paidValue <= 0) return null;
+                        const remaining = Math.max(0, total - paidValue);
+                        return (
+                          <>
+                            <div className="flex justify-between text-sm text-green-700 dark:text-green-400">
+                              <span>Já pago</span>
+                              <span>R$ {paidValue.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm font-semibold text-amber-700 dark:text-amber-400">
+                              <span>Saldo a cobrar</span>
+                              <span>R$ {remaining.toFixed(2)}</span>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
@@ -2784,9 +2824,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         open={pickupChargeOpen}
         onOpenChange={(o) => {
           if (!o && !isSubmitting) {
-            // Reset do estado de divisão se o lojista cancelar no meio
-            setExpressSplitInfo(null);
-            setExpressPaidQtys(new Map());
+            // Preserva o estado de pagamento parcial quando o lojista
+            // fecha o checkout no meio (ex.: pagou 1 de 2 itens e voltou
+            // pro resumo). Assim, ao reabrir o checkout, os itens já
+            // pagos continuam marcados e não são cobrados de novo.
+            // O reset completo só acontece via resetForm() ao concluir
+            // ou cancelar o Pedido Express inteiro.
             setPickupChargeOpen(false);
           }
         }}
