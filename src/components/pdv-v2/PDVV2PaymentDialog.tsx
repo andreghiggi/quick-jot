@@ -749,7 +749,7 @@ export function PDVV2PaymentDialog({
                           </>
                         )}
                         </div>
-                        {isEditingSplit && item.quantity === 1 && !isPaid && (
+                        {isEditingSplit && pendingQty === 1 && !isPaid && (
                           <div className="ml-7 mt-1 mb-2 p-2 border rounded-md bg-muted/40 space-y-2">
                             <p className="text-xs font-medium">Rachar &quot;{item.name}&quot;</p>
                             <div className="grid grid-cols-2 gap-2">
@@ -816,7 +816,7 @@ export function PDVV2PaymentDialog({
                                   // paidQty = valorCobrado / unit_price (em "unidades" do item).
                                   // Ex.: item R$ 22 unit_price 22, valor R$ 10 → 0.4545 unidade.
                                   const paidQty = Math.min(
-                                    item.quantity,
+                                    pendingQty,
                                     Math.round((splitItemAmount / item.unit_price) * 1000) / 1000,
                                   );
                                   const next = new Map(selectedItemQtys);
