@@ -35,7 +35,7 @@ SAFE_MARGIN_COMPANY_IDS = {
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.27"  # ativa margem segura I9 também na fila/comanda de produção
+SCRIPT_VERSION = "v8.28"  # corrige ativação real da margem segura I9 no GDI
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -1263,6 +1263,11 @@ if __name__ == "__main__":
     if not company_id:
         print(f"Empresa '{slug}' não encontrada ou inativa. Verifique o slug.")
         exit(1)
+
+    # IMPORTANTE: imprimir_html() usa o COMPANY_ID global para ativar a margem
+    # segura da allow-list. Sem esta atribuição, a Lancheria I9 nunca entrava
+    # no modo anti-corte, mesmo com SAFE_MARGIN_COMPANY_IDS configurado.
+    COMPANY_ID = company_id
     
     # Busca configuração de papel e layout
     buscar_paper_size(company_id)
