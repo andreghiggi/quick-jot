@@ -1738,16 +1738,32 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         notes: item.notes || undefined,
       };
     });
-    await addOrder({
-      customerName: customerName.trim(),
-      customerPhone: phoneDigitsLocal || undefined,
-      deliveryAddress: fullAddress || undefined,
-      notes: noteParts.join(' | '),
-      items: orderItems,
-      total,
-      status: 'ready',
-      origin: 'balcao',
-    });
+    // Se já existe um pedido parcial em andamento (criado na 1ª parcela),
+    // apenas marcamos como pago — não criamos um novo pedido para evitar
+    // duplicidade na listagem.
+    if (expressOpenOrderId) {
+      await supabase
+        .from('orders')
+        .update({
+          notes: noteParts.join(' | '),
+          total,
+          status: 'ready',
+          payment_status: 'paid',
+          paid_amount: total,
+        } as any)
+        .eq('id', expressOpenOrderId);
+    } else {
+      await addOrder({
+        customerName: customerName.trim(),
+        customerPhone: phoneDigitsLocal || undefined,
+        deliveryAddress: fullAddress || undefined,
+        notes: noteParts.join(' | '),
+        items: orderItems,
+        total,
+        status: 'ready',
+        origin: 'balcao',
+      });
+    }
     resetForm();
     onOpenChange(false);
   }
