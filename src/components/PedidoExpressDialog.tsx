@@ -2534,7 +2534,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       <PDVV2PaymentDialog
         open={pickupChargeOpen}
         onOpenChange={(o) => {
-          if (!o && !isSubmitting) setPickupChargeOpen(false);
+          if (!o && !isSubmitting) {
+            // Reset do estado de divisão se o lojista cancelar no meio
+            setExpressSplitInfo(null);
+            setExpressPaidQtys(new Map());
+            setPickupChargeOpen(false);
+          }
         }}
         companyId={company?.id}
         total={total}
@@ -2542,7 +2547,22 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         showDocumentMode
         showAddItem
         tefStatus={tefStatus}
-        checkoutItems={isLancheriaI9 ? cart.map(i => ({ name: i.product.name, quantity: i.quantity, unit_price: i.product.price + (i.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0) })) : undefined}
+        checkoutItems={isLancheriaI9 ? cart.map((i, idx) => {
+          const unit = i.product.price + (i.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0);
+          const paidQty = expressPaidQtys.get(String(idx)) || 0;
+          return {
+            name: i.product.name,
+            quantity: i.quantity,
+            unit_price: unit,
+            id: String(idx),
+            paid: paidQty >= i.quantity,
+          };
+        }) : undefined}
+        activeSplit={expressSplitInfo ? {
+          perPerson: expressSplitInfo.perPerson,
+          totalPeople: expressSplitInfo.total,
+          currentPerson: expressSplitInfo.total - expressSplitInfo.remaining + 1,
+        } : undefined}
         onConfirm={async ({
           paymentMethodId,
           paymentName,
@@ -2554,7 +2574,33 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           tefIntegration,
           customerDocument,
           extraItems,
-        }) => {
+          splitInfo,
+          itemsInfo,
+          extraItemsInfo,
+        }: any) => {
+          // ===== Divisão de pagamento (todas as lojas) — espelha PDV V2 mesas =====
+          const isSplitMode = !!splitInfo || !!expressSplitInfo;
+          const isItemsMode = (itemsInfo && itemsInfo.length > 0) || (extraItemsInfo && extraItemsInfo.length > 0);
+          if (isSplitMode || isItemsMode) {
+            const done = await handleSubmitSplitPartial({
+              paymentMethodId,
+              paymentName,
+              finalTotal,
+              discount,
+              documentMode: dm,
+              printDocument,
+              tefOptions,
+              tefIntegration,
+              customerDocument,
+              extraItems,
+              splitInfo,
+              itemsInfo,
+              extraItemsInfo,
+            });
+            if (done) setPickupChargeOpen(false);
+            // Caso contrário, mantém o diálogo aberto para cobrar a próxima parte
+            return;
+          }
           // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
           // e imprime apenas recibo. Caso contrário (Retirada vinda da etapa 4), mantém fluxo original.
           const finalizeNow = isLancheriaI9 && step === 5;
