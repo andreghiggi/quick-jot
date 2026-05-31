@@ -381,6 +381,7 @@ export default function Waiter() {
           tabNumber: selectedTab.tab_number,
           tableNumber: selectedTab.table?.number,
           customerName: selectedTab.customer_name,
+          orderType: 'table',
           items: cart.map(item => {
             // Fix v2 print: PDVOptionalsDialog appends "[obs]" into productName.
             // Extract trailing [xxx] and move it to notes so the v2 layout
