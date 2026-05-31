@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '31/05/2026',
+    version: '1.32.7',
+    type: 'improvement',
+    description: 'Impressão automática v8.29 — após validação na Lancheria da I9, a margem segura anti-corte de bordas (margem horizontal maior e redução de colunas) foi liberada para TODAS as lojas. A comanda de produção deixa de cortar caracteres mais largos (M, W, %, acentos) na cabeça térmica em qualquer impressora 58/80mm. Necessário rebaixar o printer.py em Configurações → Impressora → Baixar printer.py. Nenhum outro fluxo foi alterado.',
+  },
+  {
+    date: '31/05/2026',
     version: '1.32.6',
     type: 'fix',
     description: 'Impressão automática v8.28 — corrigida a ativação real da margem segura na Lancheria da I9. A comanda de produção agora passa a reconhecer o ID da loja após resolver o slug, aplicando o modo anti-corte de bordas apenas nessa loja piloto. Demais lojas e fluxos TEF/PinPad permanecem inalterados.',
