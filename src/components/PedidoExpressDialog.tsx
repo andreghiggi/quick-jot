@@ -1253,6 +1253,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setPaymentMethod('');
     setChangeFor('');
     setPickupChargeOpen(false);
+    setExpressSplitInfo(null);
+    setExpressPaidQtys(new Map());
     if (draftKey) {
       try { localStorage.removeItem(draftKey); } catch {}
     }
