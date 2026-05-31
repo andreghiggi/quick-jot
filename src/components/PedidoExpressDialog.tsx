@@ -1093,7 +1093,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       });
     }
 
-    const success = await addOrder({
+    const created = await addOrder({
       customerName: customerName.trim(),
       customerPhone: phoneDigits || undefined,
       deliveryAddress: fullAddress || undefined,
@@ -1104,7 +1104,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       origin: 'balcao',
     });
 
-    if (success) {
+    if (created) {
+      const createdShortCode = created.shortCode;
+      const createdOrderCode = created.orderCode || 'EXPRESS';
+      const createdDailyNumber = created.dailyNumber ?? 0;
       // ===== NFC-e (I9 "Finalizar Pedido" com Venda + NFC-e) =====
       // Cria pdv_sale e dispara emissão. Pop-up de status abre ao final.
       const wantsNfce =
