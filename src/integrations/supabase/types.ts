@@ -955,8 +955,12 @@ export type Database = {
           notes: string | null
           order_code: string
           origin: string
+          paid_amount: number
+          paid_items: Json | null
+          payment_status: string
           printed: boolean | null
           printed_at: string | null
+          split_info: Json | null
           status: Database["public"]["Enums"]["order_status"]
           total: number
           updated_at: string
@@ -974,8 +978,12 @@ export type Database = {
           notes?: string | null
           order_code?: string
           origin?: string
+          paid_amount?: number
+          paid_items?: Json | null
+          payment_status?: string
           printed?: boolean | null
           printed_at?: string | null
+          split_info?: Json | null
           status?: Database["public"]["Enums"]["order_status"]
           total?: number
           updated_at?: string
@@ -993,8 +1001,12 @@ export type Database = {
           notes?: string | null
           order_code?: string
           origin?: string
+          paid_amount?: number
+          paid_items?: Json | null
+          payment_status?: string
           printed?: boolean | null
           printed_at?: string | null
+          split_info?: Json | null
           status?: Database["public"]["Enums"]["order_status"]
           total?: number
           updated_at?: string

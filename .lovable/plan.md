@@ -1,95 +1,89 @@
+
+# Correção: Pagamentos Parciais do Pedido Express
+
+## Problema observado
+No Pedido Express, quando o usuário divide o pagamento (por pessoas ou por itens) e paga apenas parte, fechando o diálogo em seguida:
+- O `orders` **só é criado na última parcela** (em `finalizeExpressSplitOrder`), então não existe registro do pedido em aberto.
+- O progresso (`expressSplitInfo`, `expressPaidQtys`) vive **apenas em React state**, zerando ao fechar/atualizar.
+- Resultado: a venda parcial fica órfã em `pdv_sales`/`nfce_records` e o carrinho aparece inteiro novamente como pendente.
+
 ## Objetivo
+Quando uma parcela for confirmada (com ou sem NFC-e), persistir o pedido em aberto e o progresso de pagamento. Ao reabrir, mostrar quanto já foi pago e quais itens foram quitados — sem mexer em TEF, NFC-e, fluxos de pedido normal, importação de mesa, ou demais módulos.
 
-Permitir, dentro do modo **"Cobrar itens selecionados"** do `PDVV2TabImportDialog`, rachar um item da comanda entre N pessoas via ícone ao lado da linha. Cobra-se a fração (1/N do valor unitário) preservando o produto real (NCM, CFOP, CSOSN) na NFC-e.
+## Escopo (pontual)
+Alteração isolada a:
+- `src/components/PedidoExpressDialog.tsx` (handlers de split já existentes)
+- 1 migration nova adicionando colunas opcionais em `orders` para guardar o progresso
+- 1 ponto de leitura ao abrir o diálogo para hidratar o estado
 
-**Escopo:** apenas Lancheria da I9 (`company_id = 8c9e7a0e-dbb6-49b9-8344-c23155a71164`). Demais lojas mantêm o fluxo atual sem o ícone.
+Nada de TEF, PinPad, `pdv_sales`, `nfce_records`, `tef-webservice`, `PDVV2`, ou fluxo de “Importar e cobrar mesas” será tocado.
 
-**Fora de escopo:** TEF/PinPad (congelado) e o modo "Dividir por pessoas" (continua como está).
+## Mudanças
 
----
+### 1. Schema (migration)
+Adicionar em `public.orders` **colunas opcionais** (nullable, sem afetar pedidos existentes):
+- `paid_amount numeric default 0` — total já recebido
+- `paid_items jsonb` — mapa `{ cartIndex: paidQty }` (ou equivalente) do progresso por item
+- `split_info jsonb` — `{ perPerson, total, remaining }` para split por pessoas
+- `payment_status text default 'unpaid'` — `'unpaid' | 'partial' | 'paid'`
 
-## UX
+Justificativa: usar `orders` (e não tabela nova) mantém a leitura barata e não cria nenhuma dependência adicional. Todas as colunas são nullable e ignoradas pelo fluxo existente.
 
-Tela `mode === 'select_items'` ganha, em cada item não pago, um botão `Split` (lucide) ao lado do preço:
+### 2. `PedidoExpressDialog.tsx` — Criação do pedido na PRIMEIRA parcela
+
+Hoje `addOrder(...)` só roda em `finalizeExpressSplitOrder` no fim. Mudança:
+- Na primeira parcela paga de um split, criar o `orders` com:
+  - status `'preparing'` (ou o atual que já existe), `payment_status='partial'`
+  - `paid_amount` = valor da parcela
+  - `paid_items` = itens cobrados nessa parcela
+  - `split_info` = info se for split por pessoas
+- Salvar o `order.id` retornado em um `useState` local `expressOpenOrderId`.
+- Nas parcelas seguintes: fazer `UPDATE` em `orders` somando `paid_amount` e mesclando `paid_items`/`split_info.remaining`.
+- Na última parcela: marcar `payment_status='paid'` e seguir com `finalizeExpressSplitOrder` (que hoje já faz reset/close).
+
+Os helpers existentes (`runTefPayment`, `addSale`, `emitirNFCe`) **não mudam** — continuam sendo chamados como hoje, na mesma ordem, com os mesmos parâmetros. A única novidade é o registro/atualização do `orders` antes/depois.
+
+### 3. Reabertura: hidratar estado a partir do `orders`
+
+Quando o usuário abre o Pedido Express e existe um pedido com `payment_status='partial'` no caixa atual (ou via um seletor explícito), o diálogo:
+- Carrega `paid_items` e `split_info` para popular `expressPaidQtys` e `expressSplitInfo`
+- Marca visualmente itens já pagos como bloqueados (UI já tem `paidQty` via `checkoutItems`)
+
+Para a primeira entrega, basta um botão simples “Continuar pedido em aberto” na tela inicial do diálogo quando houver um `orders` com `payment_status='partial'` daquele caixa — sem alterar o fluxo de criar pedido novo.
+
+### 4. Salvaguardas
+- Sem mudança em `pdv_sales`, `pdv_sale_items` ou `nfce_records`.
+- Sem mudança em TEF (`runTefPayment`, `pinpadService`, `tef-webservice`).
+- Pedido normal (sem split) continua usando `handleSubmit` original, intocado.
+- Importar e cobrar mesa (PDV V2) intocado.
+- Colunas novas nullable → migrations seguras, sem risco para dados existentes.
+
+## Estrutura técnica resumida
 
 ```text
-☐  1x Refrigerante 2L           R$ 15,00   [⎇]
+PedidoExpressDialog
+ ├─ handleSubmitSplitPartial (existente)
+ │    ├─ runTefPayment        ← inalterado
+ │    ├─ addSale              ← inalterado
+ │    ├─ emitirNFCe           ← inalterado
+ │    └─ NOVO: createOrUpdateOpenOrder(orderId?, partial)
+ │         ├─ se !orderId → INSERT orders {payment_status:'partial', paid_amount, paid_items, split_info}
+ │         └─ se  orderId → UPDATE orders SET paid_amount+=, paid_items=merge, split_info.remaining-=1
+ │
+ ├─ finalizeExpressSplitOrder (existente)
+ │    └─ NOVO: se já existe expressOpenOrderId → UPDATE orders SET payment_status='paid'
+ │         em vez de INSERT duplicado
+ │
+ └─ NOVO ao abrir: detectar orders com payment_status='partial' do caixa
+      e oferecer "Continuar pedido em aberto"
 ```
 
-Ao clicar `[⎇]`, abre um popover/inline:
+## Rollout
+- Aplicar para todas as lojas (a mudança é aditiva e não altera fluxo de pedido normal).
+- Validação manual recomendada: Bon Appetit e Lancheria I9 (que usa TEF), garantindo que (a) split por itens persiste, (b) split por pessoas persiste, (c) pedido sem split continua exatamente igual.
+- Registrar em Novidades após validação.
 
-- "Dividir em quantas pessoas?" (default 2, min 2, max 10)
-- "Quantas frações cobrar agora?" (default 1, max = pessoas)
-- Resumo: "R$ 7,50 cada × 1 = R$ 7,50"
-- Botões "Aplicar" / "Cancelar"
-
-Aplicado, a linha mostra:
-
-```text
-☑  ½ × Refrigerante 2L (1 de 2 frações)   R$ 7,50   [editar] [✕]
-```
-
-O total selecionado soma normalmente. O botão "Cobrar R$ X" segue o fluxo já existente (`onPayPartial` → `confirmImportTabI9`).
-
----
-
-## Mudanças técnicas
-
-### 1. Migrations (database)
-
-`tab_items.quantity` e `pdv_sale_items.quantity` hoje são `integer`. Para suportar frações:
-
-```sql
-ALTER TABLE public.tab_items     ALTER COLUMN quantity TYPE numeric(10,3);
-ALTER TABLE public.pdv_sale_items ALTER COLUMN quantity TYPE numeric(10,3);
-```
-
-Compatível com inteiros existentes; SEFAZ aceita até 4 casas em `qCom`.
-
-### 2. `PDVV2TabImportDialog.tsx`
-
-- Apenas se `companyId === I9_ID` exibe o ícone `Split`.
-- Estado `selectedIds: Set<string>` evolui para:
-  ```ts
-  type Sel = { itemId: string; paidQty: number; totalQty: number; unitPrice: number };
-  const [selections, setSelections] = useState<Map<string, Sel>>(new Map());
-  ```
-- `paidQty` pode ser fracionário (ex.: `0.5`). `selectedTotal` = Σ `paidQty * unit_price`.
-- Ao confirmar: `onPayPartial(itemsInfo)` envia `[{ id, paidQty }]` (já existe — só passa a aceitar frações).
-
-### 3. `PDVV2PaymentDialog.tsx`
-
-- `itemsInfo: Array<{ id; paidQty: number }>` já existe — só atualizar tipo/comentário. Sem mudança lógica.
-
-### 4. `src/pages/PDVV2.tsx` — `confirmImportTabI9`
-
-Já trata `paidQty` em `saleItems` (linha 674) e em `partialPays` (linha 730). **Funciona com frações sem mudança** — basta `tab_items.quantity` aceitar numeric. Apenas garantir arredondamento do `total_price` em 2 casas para evitar dízimas.
-
-### 5. `nfceService` — emissão
-
-`saleItems` vai com `quantity: 0.5, unit_price: 15.00, total: 7.50`. Já é serializado no `request_payload`. Sem mudança no edge `nfce-proxy`.
-
-### 6. Última fração e fechamento
-
-A lógica `allPaid` em `confirmImportTabI9` (linha 806) considera "pago" quando `paid=true`. Como a fração restante vira novo `tab_item` com `paid:false`, a comanda só fecha quando todas as frações forem cobradas — comportamento correto, sem mudança.
-
-### 7. Arredondamento
-
-Quando `15 / 3 = 5,0000` ok. Em `10 / 3 = 3,3333`, a última fração da comanda absorve o centavo na hora de cobrar — calculada como `total_restante - somaDasFraçõesAnteriores`. Implementar helper `computeFractionPrice(unit, n, fractionIndex)`.
-
----
-
-## Validação
-
-1. Fração de item integer existente continua aparecendo sem perda (ex.: 2 → 2.000).
-2. NFC-e emitida com `quantity=0.5` autoriza em homologação.
-3. Comanda só fecha quando soma das frações pagas = quantidade original.
-4. Nada muda para outras lojas (sem ícone, fluxo atual intacto).
-
-## Changelog
-
-Adicionar entrada em "Novidades": "Rachar item da comanda entre pessoas — disponível na Lancheria da I9".
-
-## Memória
-
-Criar `mem://features/rachar-item-comanda-i9` registrando: escopo I9-only, dependência da migração `numeric(10,3)`, integração com NFC-e via item real (NCM preservado), TEF não afetado.
+## Fora do escopo
+- Refatorar `pdv_sales` para amarrar parcelas ao pedido (não necessário para o sintoma relatado).
+- Mexer em qualquer parte do PDV V2 / TEF / NFC-e.
+- Alterar status visuais da lista de pedidos (apenas adicionar badge opcional “parcial” se desejado depois).
