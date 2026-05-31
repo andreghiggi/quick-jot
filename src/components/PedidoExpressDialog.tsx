@@ -502,6 +502,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     settings.freeDeliveryEnabled &&
     settings.freeDeliveryMinOrder > 0 &&
     subtotal >= settings.freeDeliveryMinOrder;
+  const freeDeliveryRemaining =
+    deliveryType === 'entrega' &&
+    settings.freeDeliveryEnabled &&
+    settings.freeDeliveryMinOrder > 0 &&
+    subtotal < settings.freeDeliveryMinOrder
+      ? settings.freeDeliveryMinOrder - subtotal
+      : 0;
   const effectiveDeliveryFee = isFreeDelivery ? 0 : deliveryFee;
   const total = subtotal + (deliveryType === 'entrega' ? effectiveDeliveryFee : 0);
 
