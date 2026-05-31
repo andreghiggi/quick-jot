@@ -336,6 +336,80 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     };
   }, []);
 
+  // Ao abrir o diálogo, busca pedido parcial em aberto deste caixa para oferecer
+  // a retomada. Não altera nenhum fluxo existente — só popula um banner.
+  useEffect(() => {
+    if (!open || !company?.id || !currentRegister) {
+      setPartialResumeCandidate(null);
+      return;
+    }
+    if (expressOpenOrderId) return; // já está continuando um
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('orders')
+        .select('id, order_code, customer_name, total, paid_amount, paid_items, split_info, created_at, notes')
+        .eq('company_id', company.id)
+        .eq('payment_status', 'partial')
+        .gte('created_at', currentRegister.opened_at || new Date(0).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled && data) setPartialResumeCandidate(data);
+    })();
+    return () => { cancelled = true; };
+  }, [open, company?.id, currentRegister, expressOpenOrderId]);
+
+  // Restaura um pedido parcial em aberto no estado local do diálogo.
+  function resumePartialOrder(order: any) {
+    try {
+      const snapshot = order?.paid_items?.cart_snapshot as any[] | undefined;
+      const paidQtys = order?.paid_items?.paid_qtys as Record<string, number> | undefined;
+      if (!Array.isArray(snapshot) || snapshot.length === 0) {
+        toast.error('Não foi possível restaurar o pedido (snapshot indisponível).');
+        return;
+      }
+      const restoredCart: CartItem[] = snapshot.map((s: any) => ({
+        product: {
+          id: s.product_id,
+          name: s.product_name,
+          price: Number(s.product_price || 0),
+          category: '',
+          active: true,
+        } as any,
+        quantity: Number(s.quantity || 1),
+        selectedOptionals: (s.selectedOptionals || []).map((o: any) => ({
+          id: crypto.randomUUID(),
+          name: o.name,
+          price: Number(o.price || 0),
+          type: 'addition',
+          active: true,
+        })) as any,
+        groupedOptionalNames: s.groupedOptionalNames || [],
+        notes: s.notes || '',
+      } as CartItem));
+      setCart(restoredCart);
+      const map = new Map<string, number>();
+      if (paidQtys) Object.entries(paidQtys).forEach(([k, v]) => map.set(k, Number(v)));
+      setExpressPaidQtys(map);
+      if (order.split_info) {
+        setExpressSplitInfo({
+          perPerson: Number(order.split_info.perPerson || 0),
+          total: Number(order.split_info.total || 0),
+          remaining: Number(order.split_info.remaining || 0),
+        });
+      }
+      setCustomerName(order.customer_name || '');
+      setExpressOpenOrderId(order.id);
+      setPartialResumeCandidate(null);
+      setStep(5);
+      toast.success(`Pedido em aberto retomado (já pago: ${formatPrice(Number(order.paid_amount || 0))}).`);
+    } catch (err) {
+      console.error('[Express] resumePartialOrder error:', err);
+      toast.error('Erro ao retomar pedido em aberto.');
+    }
+  }
+
   useEffect(() => {
     if (!tefPromptOpen && pendingNfceOpen && nfceRecord) {
       setNfceDialogOpen(true);
