@@ -159,6 +159,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
           : it.quantity;
         if (qtyToCharge <= 0) return [];
         return [{
+          source_index: idx,
           product_id: it.productId || null,
           product_name: cleanItemName(it.name),
           quantity: qtyToCharge,
@@ -249,27 +250,11 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       );
       const nextPaidQtyByIndex = new Map<string, number>(paidQtyByIndex);
       selectedExistingItems.forEach((it) => {
-        const index = order.items.findIndex((orderItem, idx) =>
-          String(idx) === String(idx) &&
-          cleanItemName(orderItem.name) === it.product_name &&
-          Math.abs(orderItem.price - it.unit_price) < 0.001
-        );
-        if (index >= 0) {
-          const key = String(index);
+        if (it.source_index >= 0) {
+          const key = String(it.source_index);
           nextPaidQtyByIndex.set(key, Math.min(
-            order.items[index].quantity,
+            order.items[it.source_index].quantity,
             (nextPaidQtyByIndex.get(key) || 0) + it.quantity,
-          ));
-        }
-      });
-      (params.itemsInfo || []).forEach((item) => {
-        const idx = parseInt(item.id, 10);
-        const orderItem = order.items[idx];
-        if (!Number.isNaN(idx) && orderItem && item.paidQty > 0) {
-          const key = String(idx);
-          nextPaidQtyByIndex.set(key, Math.min(
-            orderItem.quantity,
-            (paidQtyByIndex.get(key) || 0) + item.paidQty,
           ));
         }
       });
