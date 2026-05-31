@@ -292,6 +292,9 @@ export function PDVV2PaymentDialog({
     return Math.max(0, grossTotal - discountValue);
   })();
 
+  const getPaidQty = (item: CheckoutItem) => Math.min(item.quantity, Math.max(0, item.paidQty ?? (item.paid ? item.quantity : 0)));
+  const getPendingQty = (item: CheckoutItem) => Math.max(0, item.quantity - getPaidQty(item));
+
   const receivedValue = useCurrencyMask
     ? parseCurrencyInput(amountReceived)
     : parseFloat(amountReceived.replace(',', '.')) || 0;
