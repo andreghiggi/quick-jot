@@ -1793,6 +1793,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setPickupChargeOpen(false);
     setExpressSplitInfo(null);
     setExpressPaidQtys(new Map());
+    setExpressOpenOrderId(null);
+    setPartialResumeCandidate(null);
     if (draftKey) {
       try { localStorage.removeItem(draftKey); } catch {}
     }
