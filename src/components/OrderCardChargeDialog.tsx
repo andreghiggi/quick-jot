@@ -106,19 +106,6 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     }
   }, [tefPromptOpen, pendingNfceOpen, nfceRecord]);
 
-  // Itens do pedido convertidos para o formato esperado pela venda/NFC-e.
-  const saleItems = useMemo(
-    () =>
-      order.items.map((it) => ({
-        // Remove sufixo "(Adicionais: ...)" do nome para a venda/NFC-e
-        product_id: it.productId || null,
-        product_name: cleanItemName(it.name),
-        quantity: it.quantity,
-        unit_price: it.price,
-      })),
-    [order.items],
-  );
-
   async function handleConfirm(params: {
     paymentMethodId: string;
     paymentName: string;
