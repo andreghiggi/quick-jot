@@ -26,6 +26,10 @@ export interface Order {
   printedAt?: Date;
   confirmedAt?: Date;
   origin?: 'cardapio' | 'balcao' | 'mesa';
+  paymentStatus?: string;
+  paidAmount?: number;
+  paidItems?: unknown;
+  splitInfo?: unknown;
 }
 
 export interface Product {
