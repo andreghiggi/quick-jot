@@ -1902,6 +1902,27 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             <DialogTitle className="text-xl font-bold">Pedido Express</DialogTitle>
           </DialogHeader>
 
+          {partialResumeCandidate && !expressOpenOrderId && cart.length === 0 && (
+            <div className="mx-2 mb-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-semibold truncate">
+                  Pedido em aberto: {partialResumeCandidate.customer_name || 'Pedido Express'}
+                </div>
+                <div className="text-xs opacity-80">
+                  Já pago: {formatPrice(Number(partialResumeCandidate.paid_amount || 0))} de {formatPrice(Number(partialResumeCandidate.total || 0))}
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Button size="sm" variant="outline" onClick={() => setPartialResumeCandidate(null)}>
+                  Ignorar
+                </Button>
+                <Button size="sm" onClick={() => resumePartialOrder(partialResumeCandidate)}>
+                  Continuar
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Step indicator */}
           <div className="flex items-center justify-between px-2 py-2">
             {stepLabels.map((s, i) => {
