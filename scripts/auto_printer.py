@@ -35,7 +35,7 @@ SAFE_MARGIN_COMPANY_IDS = {
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.26"  # descrição do produto SOMENTE na comanda de produção (removido do recibo)
+SCRIPT_VERSION = "v8.27"  # ativa margem segura I9 também na fila/comanda de produção
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -650,12 +650,18 @@ def imprimir_html(html, order_number):
             colunas = 22 if is_80mm else 18
         else:
             colunas = 24 if is_80mm else 20
-        font_height = int(page_w / colunas * 2.0)
         # MODO COMPACTO V2: economia de papel para qualquer loja no layout v2
         compact_v2 = (PRINT_LAYOUT == 'v2')
         margin_factor = 0.02 if compact_v2 else 0.04  # margem cai pela metade
         margin_x = int(dpi_x * (0.12 if safe_margin else 0.04))  # ~3mm (allow-list) ou ~1mm (padrão)
         margin_y = int(dpi_y * margin_factor)
+        # Importante: a fonte precisa caber na largura útil, descontando as margens.
+        # Antes era calculada sobre page_w inteiro; com margem segura ativa, parte do
+        # texto podia continuar ultrapassando a área imprimível da térmica.
+        usable_page_w = max(1, page_w - (margin_x * 2)) if safe_margin else page_w
+        font_height = int(usable_page_w / colunas * 2.0)
+        if safe_margin:
+            log(f"Margem segura I9 ativa: {colunas} cols, margem {margin_x}px, largura útil {usable_page_w}px", "CONFIG")
 
         font_normal = win32ui.CreateFont({
             'name': 'Courier New',
