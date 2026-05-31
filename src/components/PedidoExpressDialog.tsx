@@ -1498,6 +1498,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       }
 
       const newRemaining = splitData.remaining - 1;
+      // Persiste o progresso parcial (split por pessoas) no `orders`.
+      const updatedSplit = { ...splitData, remaining: newRemaining };
+      const persistedId = await persistExpressPartial({
+        existingOrderId: expressOpenOrderId,
+        paidAmountDelta: partialTotal,
+        paidQtys: expressPaidQtys,
+        splitInfo: updatedSplit,
+        paymentName: params.paymentName,
+      });
+      if (persistedId && !expressOpenOrderId) setExpressOpenOrderId(persistedId);
       if (newRemaining <= 0) {
         // Última parte: cria o pedido (uma única vez) com o carrinho completo
         await finalizeExpressSplitOrder(params.paymentName, 'split');
@@ -1505,7 +1515,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         toast.success('Última pessoa cobrada — pedido finalizado!');
         return true;
       }
-      setExpressSplitInfo({ ...splitData, remaining: newRemaining });
+      setExpressSplitInfo(updatedSplit);
       toast.success(`Pessoa ${personIndex} cobrada. Faltam ${newRemaining}.`);
       return false;
     }
