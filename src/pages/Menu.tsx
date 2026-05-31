@@ -1045,6 +1045,7 @@ export default function Menu() {
               referenceLabel: `PEDIDO ${(newOrder as any).short_code || '#' + (newOrder.daily_number || newOrder.order_code)}`,
               layout: settings.printLayout,
               companyId: company.id,
+              orderType: deliveryType === 'pickup' ? 'pickup' : 'delivery',
               // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
               showReadyTime: true,
               readyOffsetMinutes:
