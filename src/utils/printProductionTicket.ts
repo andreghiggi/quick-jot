@@ -110,6 +110,7 @@ export function generateProductionTicketText(data: PrintTicketData): string {
   const lines = [
     'COMANDA DE PRODUÇÃO',
     '',
+    ...(getOrderTypeLabel(data.orderType) ? [`>> ${getOrderTypeLabel(data.orderType)} <<`, ''] : []),
     getTicketReferenceLabel(data),
     ...(data.customerName ? [data.customerName] : []),
     `${dateStr} às ${timeStr}`,
