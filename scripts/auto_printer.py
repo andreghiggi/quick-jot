@@ -749,6 +749,90 @@ def imprimir_html(html, order_number):
                 linhas_out.append(atual)
             return linhas_out
 
+        # Largura útil em pixels (descontando margens laterais). Usada para
+        # word-wrap baseado em medição real (GetTextExtent) com a fonte
+        # atualmente selecionada no hDC — evita corte em caracteres mais
+        # largos que a média (negrito, números, acentos).
+        usable_text_px = max(1, page_w - margin_x * 2)
+
+        def quebrar_linha_px(texto, max_width_px):
+            """Word-wrap por medição real em pixels usando a fonte selecionada.
+            IMPORTANTE: selecionar a fonte desejada no hDC ANTES de chamar."""
+            if not texto:
+                return ['']
+            if hDC.GetTextExtent(texto)[0] <= max_width_px:
+                return [texto]
+            palavras = texto.split(' ')
+            linhas_out = []
+            atual = ''
+            for palavra in palavras:
+                # palavra sozinha maior que a linha: quebra por caractere
+                if hDC.GetTextExtent(palavra)[0] > max_width_px:
+                    if atual:
+                        linhas_out.append(atual)
+                        atual = ''
+                    buf = ''
+                    for ch in palavra:
+                        if hDC.GetTextExtent(buf + ch)[0] <= max_width_px:
+                            buf += ch
+                        else:
+                            if buf:
+                                linhas_out.append(buf)
+                            buf = ch
+                    atual = buf
+                    continue
+                tentativa = (atual + ' ' + palavra) if atual else palavra
+                if hDC.GetTextExtent(tentativa)[0] <= max_width_px:
+                    atual = tentativa
+                else:
+                    if atual:
+                        linhas_out.append(atual)
+                    atual = palavra
+            if atual:
+                linhas_out.append(atual)
+            return linhas_out or ['']
+
+        def quebrar_nome_com_recuo_px(texto, max_primeira_px, max_demais_px):
+            """Versão pixel-based de quebrar_nome_com_recuo. Selecionar a fonte antes."""
+            if not texto:
+                return ['']
+            palavras = texto.split(' ')
+            linhas_out = []
+            atual = ''
+            max_atual = max(1, max_primeira_px)
+            for palavra in palavras:
+                # quebra forçada por caractere se palavra exceder a largura disponível
+                while hDC.GetTextExtent(palavra)[0] > max_atual:
+                    if atual:
+                        linhas_out.append(atual)
+                        atual = ''
+                        max_atual = max(1, max_demais_px)
+                    buf = ''
+                    rest = palavra
+                    for ch in palavra:
+                        if hDC.GetTextExtent(buf + ch)[0] <= max_atual:
+                            buf += ch
+                            rest = rest[1:]
+                        else:
+                            break
+                    if not buf:
+                        buf = palavra[0]
+                        rest = palavra[1:]
+                    linhas_out.append(buf)
+                    palavra = rest
+                    max_atual = max(1, max_demais_px)
+                tentativa = (atual + ' ' + palavra) if atual else palavra
+                if hDC.GetTextExtent(tentativa)[0] <= max_atual:
+                    atual = tentativa
+                else:
+                    if atual:
+                        linhas_out.append(atual)
+                    atual = palavra
+                    max_atual = max(1, max_demais_px)
+            if atual:
+                linhas_out.append(atual)
+            return linhas_out or ['']
+
         def quebrar_nome_com_recuo(texto, largura_primeira, largura_demais):
             """Quebra nome do produto respeitando o espaço após a quantidade."""
             palavras = texto.split(' ')
@@ -891,9 +975,8 @@ def imprimir_html(html, order_number):
                 except Exception:
                     font_desc = font_regular
                 hDC.SelectObject(font_desc)
-                # quebra com largura levemente maior por causa da fonte menor
-                largura_desc = int(colunas * 1.1)
-                sublinhas_desc = quebrar_linha(texto_desc, largura_desc)
+                # quebra por medição real em pixels (usa font_desc selecionada acima)
+                sublinhas_desc = quebrar_linha_px(texto_desc, usable_text_px)
                 garantir_espaco(line_h * len(sublinhas_desc))
                 hDC.SetTextColor(0x000000)
                 hDC.SetBkMode(win32con.TRANSPARENT)
@@ -923,12 +1006,15 @@ def imprimir_html(html, order_number):
 
                 qty_text = qty or ''
                 gap_px = tm['tmAveCharWidth']
+                # mede qty com font_normal (negrito) usada para qty
+                hDC.SelectObject(font_normal)
                 qty_width_px = hDC.GetTextExtent(qty_text + (' ' if qty_text else ''))[0] if qty_text else 0
                 nome_x = margin_x + qty_width_px + (gap_px if qty_text else 0)
 
-                qty_cols = len(qty_text) + (1 if qty_text else 0)
-                nome_largura_primeira = max(1, colunas - qty_cols - (1 if qty_text else 0))
-                nome_linhas = quebrar_nome_com_recuo(nome, nome_largura_primeira, colunas)
+                # quebra do nome por medição real em pixels (font_regular)
+                hDC.SelectObject(font_regular)
+                nome_largura_primeira_px = max(1, usable_text_px - qty_width_px - (gap_px if qty_text else 0))
+                nome_linhas = quebrar_nome_com_recuo_px(nome, nome_largura_primeira_px, usable_text_px)
                 garantir_espaco(line_h * len(nome_linhas))
 
                 if qty_text:
@@ -951,9 +1037,9 @@ def imprimir_html(html, order_number):
 
             if is_v2 and m_add:
                 texto_add = '>> ' + m_add.group(1).strip().upper()
-                sublinhas_add = quebrar_linha(texto_add, colunas)
-                garantir_espaco(line_h * len(sublinhas_add))
                 hDC.SelectObject(font_bold_big)
+                sublinhas_add = quebrar_linha_px(texto_add, usable_text_px)
+                garantir_espaco(line_h * len(sublinhas_add))
                 hDC.SetTextColor(0x000000)
                 hDC.SetBkMode(win32con.TRANSPARENT)
                 for sub in sublinhas_add:
@@ -967,9 +1053,9 @@ def imprimir_html(html, order_number):
             if m_cliente:
                 conteudo_cli = m_cliente.group(1).strip().upper()
                 hDC.SelectObject(font_obs)
-                sublinhas = quebrar_linha(conteudo_cli, colunas - 2)
                 pad_x = int(dpi_x * 0.02)
                 pad_y = int(dpi_y * 0.015)
+                sublinhas = quebrar_linha_px(conteudo_cli, max(1, usable_text_px - pad_x * 2))
                 garantir_espaco(line_h * len(sublinhas) + pad_y * 2 + int(line_h * 0.3))
                 rect_top = y - pad_y
                 rect_h = line_h * len(sublinhas) + pad_y * 2
@@ -991,9 +1077,9 @@ def imprimir_html(html, order_number):
                 conteudo_obs = re.sub(r'^OBSERVAÇÕES:\s*', '', conteudo_obs, flags=re.IGNORECASE)
                 texto_obs = f'OBSERVAÇÕES: {conteudo_obs}'
                 hDC.SelectObject(font_obs)
-                sublinhas = quebrar_linha(texto_obs, colunas - 2)
                 pad_x = int(dpi_x * 0.02)
                 pad_y = int(dpi_y * 0.015)
+                sublinhas = quebrar_linha_px(texto_obs, max(1, usable_text_px - pad_x * 2))
                 garantir_espaco(line_h * len(sublinhas) + pad_y * 2 + int(line_h * 0.3))
                 rect_top = y - pad_y
                 rect_h = line_h * len(sublinhas) + pad_y * 2
@@ -1015,7 +1101,7 @@ def imprimir_html(html, order_number):
                 hDC.SelectObject(font_regular)
                 hDC.SetTextColor(0x000000)
                 hDC.SetBkMode(win32con.TRANSPARENT)
-                for sub in quebrar_linha(texto_nome, colunas):
+                for sub in quebrar_linha_px(texto_nome, usable_text_px):
                     hDC.TextOut(margin_x, y, sub)
                     y += line_h
                 hDC.SelectObject(font_normal)
@@ -1027,9 +1113,9 @@ def imprimir_html(html, order_number):
             if not stripped_clean:
                 i += 1
                 continue
-            sublinhas_normais = quebrar_linha(stripped_clean, colunas)
-            garantir_espaco(line_h * len(sublinhas_normais))
             hDC.SelectObject(font_normal)
+            sublinhas_normais = quebrar_linha_px(stripped_clean, usable_text_px)
+            garantir_espaco(line_h * len(sublinhas_normais))
             hDC.SetTextColor(0x000000)
             hDC.SetBkMode(win32con.TRANSPARENT)
             for sublinha in sublinhas_normais:
