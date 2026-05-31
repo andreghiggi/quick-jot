@@ -1298,6 +1298,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               ? `PEDIDO ${createdShortCode}`
               : 'PEDIDO EXPRESS',
             layout: settings.printLayout,
+            companyId: company.id,
             // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
             showReadyTime: isLancheriaI9,
             readyOffsetMinutes: isLancheriaI9
