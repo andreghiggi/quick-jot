@@ -818,6 +818,13 @@ export default function Menu() {
     settings.freeDeliveryEnabled &&
     settings.freeDeliveryMinOrder > 0 &&
     cartTotal >= settings.freeDeliveryMinOrder;
+  const freeDeliveryRemaining =
+    deliveryType !== 'pickup' &&
+    settings.freeDeliveryEnabled &&
+    settings.freeDeliveryMinOrder > 0 &&
+    cartTotal < settings.freeDeliveryMinOrder
+      ? settings.freeDeliveryMinOrder - cartTotal
+      : 0;
   const deliveryFee = isFreeDelivery ? 0 : baseDeliveryFee;
   const orderTotal = cartTotal + deliveryFee;
 
@@ -2134,6 +2141,17 @@ export default function Menu() {
                     <div className="flex items-center justify-between text-muted-foreground">
                       <span>Taxa de entrega</span>
                       <span>R$ {formatPrice(deliveryFee)}</span>
+                    </div>
+                  )}
+                  {freeDeliveryRemaining > 0 && (
+                    <p className="text-xs font-medium text-success">
+                      Faltam R$ {formatPrice(freeDeliveryRemaining)} para frete grátis
+                    </p>
+                  )}
+                  {isFreeDelivery && baseDeliveryFee > 0 && (
+                    <div className="flex items-center justify-between text-success font-medium">
+                      <span>Taxa de entrega</span>
+                      <span>Grátis</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between text-lg font-bold">
