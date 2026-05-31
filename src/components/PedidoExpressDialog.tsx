@@ -2502,6 +2502,29 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                         <span>Total</span>
                         <span className="text-primary">R$ {total.toFixed(2)}</span>
                       </div>
+                      {(() => {
+                        // Soma o que já foi pago em itens parcialmente cobrados,
+                        // para mostrar o saldo restante no resumo final.
+                        const paidValue = cart.reduce((sum, it, idx) => {
+                          const unit = it.product.price + (it.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0);
+                          const paidQty = expressPaidQtys.get(String(idx)) || 0;
+                          return sum + unit * Math.min(paidQty, it.quantity);
+                        }, 0);
+                        if (paidValue <= 0) return null;
+                        const remaining = Math.max(0, total - paidValue);
+                        return (
+                          <>
+                            <div className="flex justify-between text-sm text-green-700 dark:text-green-400">
+                              <span>Já pago</span>
+                              <span>R$ {paidValue.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm font-semibold text-amber-700 dark:text-amber-400">
+                              <span>Saldo a cobrar</span>
+                              <span>R$ {remaining.toFixed(2)}</span>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
