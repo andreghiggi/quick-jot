@@ -309,6 +309,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Mapa cart-index -> quantidade já paga (modo "itens selecionados")
   const [expressPaidQtys, setExpressPaidQtys] = useState<Map<string, number>>(new Map());
 
+  // ID do pedido em aberto criado na 1ª parcela do split. Em parcelas seguintes
+  // apenas atualizamos a linha em vez de criar um novo `orders`. Na última,
+  // marcamos `payment_status='paid'` em vez de duplicar via addOrder.
+  const [expressOpenOrderId, setExpressOpenOrderId] = useState<string | null>(null);
+  // Pedido parcial em aberto encontrado ao abrir o diálogo (do mesmo caixa).
+  const [partialResumeCandidate, setPartialResumeCandidate] = useState<any | null>(null);
+
   // Pop-up pós-venda da NFC-e (mesmo padrão do PDVV2)
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
