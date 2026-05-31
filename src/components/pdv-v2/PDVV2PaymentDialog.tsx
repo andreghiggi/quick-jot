@@ -505,8 +505,10 @@ export function PDVV2PaymentDialog({
                   const optionals = match
                     ? match[2].split('|').map((s) => s.trim()).filter(Boolean)
                     : [];
+                  const paidQty = getPaidQty(item);
+                  const pendingQty = getPendingQty(item);
                   return (
-                    <div key={idx} className="text-sm px-1 min-w-0">
+                    <div key={idx} className={`text-sm px-1 min-w-0 ${paidQty >= item.quantity ? 'opacity-60' : ''}`}>
                       <div className="flex items-start justify-between gap-2 min-w-0">
                         <span className="break-words min-w-0 flex-1">
                           {item.quantity}x {baseName}
@@ -515,6 +517,13 @@ export function PDVV2PaymentDialog({
                           {formatPrice(item.quantity * item.unit_price)}
                         </span>
                       </div>
+                      {paidQty > 0 && (
+                        <p className="text-xs font-medium text-green-600 dark:text-green-400">
+                          {paidQty >= item.quantity
+                            ? '✓ Pago'
+                            : `${paidQty} pago${paidQty > 1 ? 's' : ''} · ${pendingQty} pendente${pendingQty > 1 ? 's' : ''}`}
+                        </p>
+                      )}
                       {optionals.length > 0 && (
                         <ul className="text-xs text-muted-foreground pl-4 mt-0.5 space-y-0.5">
                           {optionals.map((opt, i) => (
