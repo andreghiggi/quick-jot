@@ -2284,10 +2284,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                         </div>
                       )}
 
-                      {deliveryFee > 0 && (
+                      {deliveryFee > 0 && !isFreeDelivery && (
                         <div className="bg-primary/5 rounded-lg p-3 flex justify-between items-center mt-3">
                           <span className="text-sm font-medium">Taxa de entrega:</span>
                           <span className="text-sm font-bold text-primary">R$ {deliveryFee.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {isFreeDelivery && (
+                        <div className="bg-success/10 rounded-lg p-3 flex justify-between items-center mt-3">
+                          <span className="text-sm font-medium">Taxa de entrega:</span>
+                          <span className="text-sm font-bold text-success">Grátis</span>
                         </div>
                       )}
                     </div>
