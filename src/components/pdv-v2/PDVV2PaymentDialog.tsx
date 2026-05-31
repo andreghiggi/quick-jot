@@ -133,6 +133,42 @@ export function PDVV2PaymentDialog({
     }
   }, [open, activeSplit]);
 
+  useEffect(() => {
+    if (!open || !checkoutItems) return;
+    setSelectedItemQtys((prev) => {
+      let changed = false;
+      const next = new Map<number, number>();
+      prev.forEach((qty, idx) => {
+        const item = checkoutItems[idx];
+        const pendingQty = item ? getPendingQty(item) : 0;
+        if (!item || pendingQty <= 0) {
+          changed = true;
+          return;
+        }
+        const safeQty = Math.min(qty, pendingQty);
+        if (safeQty !== qty) changed = true;
+        if (safeQty > 0) next.set(idx, safeQty);
+      });
+      return changed ? next : prev;
+    });
+    setSplitMemory((prev) => {
+      let changed = false;
+      const next = new Map<number, number>();
+      prev.forEach((qty, idx) => {
+        const item = checkoutItems[idx];
+        const pendingQty = item ? getPendingQty(item) : 0;
+        if (!item || pendingQty <= 0) {
+          changed = true;
+          return;
+        }
+        const safeQty = Math.min(qty, pendingQty);
+        if (safeQty !== qty) changed = true;
+        if (safeQty > 0) next.set(idx, safeQty);
+      });
+      return changed ? next : prev;
+    });
+  }, [open, checkoutItems]);
+
   const { activePaymentMethods: rawActivePaymentMethods } = usePaymentMethods({ companyId, channel });
   // Fallback: se não houver métodos cadastrados no canal PDV, lista TODOS os métodos
   // ativos da empresa (qualquer canal) para evitar que o operador veja apenas "Dinheiro"
