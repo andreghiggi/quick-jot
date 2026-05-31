@@ -1910,6 +1910,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 </div>
                 <div className="text-xs opacity-80">
                   Já pago: {formatPrice(Number(partialResumeCandidate.paid_amount || 0))} de {formatPrice(Number(partialResumeCandidate.total || 0))}
+                  {' • '}
+                  Saldo: {formatPrice(Math.max(0, Number(partialResumeCandidate.total || 0) - Number(partialResumeCandidate.paid_amount || 0)))}
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">
@@ -2794,7 +2796,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         showDocumentMode
         showAddItem
         tefStatus={tefStatus}
-        checkoutItems={isLancheriaI9 ? cart.map((i, idx) => {
+        checkoutItems={cart.length > 0 ? cart.map((i, idx) => {
           const unit = i.product.price + (i.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0);
           const paidQty = expressPaidQtys.get(String(idx)) || 0;
           return {
