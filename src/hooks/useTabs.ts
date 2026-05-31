@@ -132,6 +132,30 @@ export function useTabs(options: UseTabsOptions = {}) {
     try {
       let tabNumber: number;
 
+      // GUARD anti-duplicação: se já existe comanda aberta para essa mesa
+      // (seja criada via QR ou por outro garçom), reusa em vez de criar
+      // uma segunda comanda paralela na mesma mesa.
+      if (data.tableId) {
+        const { data: existingTableTab } = await supabase
+          .from('tabs')
+          .select('*')
+          .eq('company_id', companyId)
+          .eq('table_id', data.tableId)
+          .eq('status', 'open')
+          .maybeSingle();
+
+        if (existingTableTab) {
+          // Garante que a mesa está marcada como ocupada (corrige desync)
+          await supabase
+            .from('tables')
+            .update({ status: 'occupied' })
+            .eq('id', data.tableId);
+          await fetchTabs();
+          toast.info(`Mesa já possui a comanda #${(existingTableTab as any).tab_number} aberta`);
+          return (existingTableTab as unknown) as Tab;
+        }
+      }
+
       if (data.manualTabNumber && data.manualTabNumber > 0) {
         // Check if manual tab number is already in use for open tabs
         const { data: existingTab } = await supabase
