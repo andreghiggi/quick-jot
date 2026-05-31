@@ -2520,10 +2520,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                         <span>Subtotal</span>
                         <span>R$ {subtotal.toFixed(2)}</span>
                       </div>
-                      {deliveryType === 'entrega' && deliveryFee > 0 && (
+                      {deliveryType === 'entrega' && deliveryFee > 0 && !isFreeDelivery && (
                         <div className="flex justify-between text-sm">
                           <span>Taxa de entrega</span>
                           <span>R$ {deliveryFee.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {deliveryType === 'entrega' && isFreeDelivery && (
+                        <div className="flex justify-between text-sm">
+                          <span>Taxa de entrega</span>
+                          <span className="text-success font-semibold">Grátis</span>
                         </div>
                       )}
                       <div className="flex justify-between font-bold text-lg pt-1">
