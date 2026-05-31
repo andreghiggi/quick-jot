@@ -2502,6 +2502,7 @@ export default function PDV() {
                                   tabNumber: tab.tab_number,
                                   tableNumber: tab.table?.number,
                                   customerName: tab.customer_name,
+                                  orderType: tab.table?.number ? 'table' : 'counter',
                                   items: (tab.items || []).map(item => ({
                                     productName: item.product_name,
                                     quantity: item.quantity,
