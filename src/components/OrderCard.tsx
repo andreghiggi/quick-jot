@@ -117,6 +117,27 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   // adiciona o marcador [COBRADO] nas notas. "Enviar pra Cozinha" segue o
   // fluxo normal e exige clique em "Cobrar" depois de Pronto.
   const alreadyCharged = !!order.notes?.includes('[COBRADO]');
+  const paidQtyByIndex = useMemo(() => {
+    const raw = (order.paidItems as any)?.paid_qtys;
+    const map = new Map<string, number>();
+    if (raw && typeof raw === 'object') {
+      Object.entries(raw).forEach(([key, value]) => {
+        const qty = Number(value);
+        if (Number.isFinite(qty) && qty > 0) map.set(key, qty);
+      });
+    }
+    return map;
+  }, [order.paidItems]);
+  const hasPartialItemPayments = paidQtyByIndex.size > 0;
+  const partialPaidTotal = hasPartialItemPayments
+    ? order.items.reduce((sum, item, idx) => {
+        const paidQty = Math.min(item.quantity, paidQtyByIndex.get(String(idx)) || 0);
+        return sum + paidQty * item.price;
+      }, 0)
+    : 0;
+  const pendingPaymentTotal = hasPartialItemPayments
+    ? Math.max(0, order.total - partialPaidTotal)
+    : order.total;
   const showChargeButton =
     chargeButtonEnabled &&
     (isCardapioOrder || isBalcaoOrder) &&
