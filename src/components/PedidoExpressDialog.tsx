@@ -1265,7 +1265,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         groupedOptionalNames: it.groupedOptionalNames || [],
       }));
       const paidObj: Record<string, number> = {};
-      paidQtys.forEach((v, k) => { paidObj[k] = v; });
+      opts.paidQtys.forEach((v, k) => { paidObj[k] = v; });
 
       if (!opts.existingOrderId) {
         const phoneDigits = customerPhone.replace(/\D/g, '');
