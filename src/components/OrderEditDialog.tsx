@@ -276,6 +276,11 @@ export function OrderEditDialog({
       paperSize,
       referenceLabel: `ALTERAÇÃO PEDIDO ${order.shortCode || '#' + (order.orderCode || order.dailyNumber)}`,
       layout: storeSettings.printLayout,
+      orderType: order.origin === 'mesa'
+        ? 'table'
+        : order.deliveryAddress
+          ? 'delivery'
+          : 'pickup',
       showReadyTime: storeSettings.printLayout === 'v2',
       readyOffsetMinutes: readyOffset,
     });
