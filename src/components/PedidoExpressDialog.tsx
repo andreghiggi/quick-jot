@@ -298,6 +298,17 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Cobrança via PDVV2PaymentDialog (apenas Retirada)
   const [pickupChargeOpen, setPickupChargeOpen] = useState(false);
 
+  // ===== Divisão de pagamento (mesmo padrão do PDV V2 importar e cobrar mesas) =====
+  // Cada parte vira uma pdv_sale + NFC-e própria. Ao final, o pedido (addOrder)
+  // é criado uma única vez com todos os itens. Funciona para TODAS as lojas.
+  const [expressSplitInfo, setExpressSplitInfo] = useState<{
+    perPerson: number;
+    remaining: number;
+    total: number;
+  } | null>(null);
+  // Mapa cart-index -> quantidade já paga (modo "itens selecionados")
+  const [expressPaidQtys, setExpressPaidQtys] = useState<Map<string, number>>(new Map());
+
   // Pop-up pós-venda da NFC-e (mesmo padrão do PDVV2)
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
@@ -1220,6 +1231,394 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   }
 
 
+  /**
+   * Divisão de pagamento no Pedido Express — mesmo padrão do PDV V2
+   * "Importar e cobrar mesas" (confirmImportTabI9). Cada parte gera uma
+   * pdv_sale + NFC-e própria (com observação de parcial/final). O pedido
+   * (addOrder) é criado UMA única vez na última parte com o carrinho completo.
+   *
+   * Não toca em TEF nem em NFC-e existentes — apenas reaproveita os mesmos
+   * helpers (runTefPayment / addSale / emitirNFCe) que já rodam em produção.
+   *
+   * Retorna true quando todas as partes foram pagas (pode fechar o diálogo).
+   */
+  async function handleSubmitSplitPartial(params: {
+    paymentMethodId: string;
+    paymentName: string;
+    finalTotal: number;
+    discount: number;
+    documentMode?: DocumentMode;
+    tefOptions?: TefOptions;
+    tefIntegration?: 'tef_pinpad' | 'tef_smartpos';
+    customerDocument?: string;
+    printDocument?: boolean;
+    extraItems?: ExtraItem[];
+    splitInfo?: { perPerson: number; totalPeople: number };
+    itemsInfo?: Array<{ id: string; paidQty: number }>;
+    extraItemsInfo?: Array<{ id: string; paidQty: number }>;
+  }): Promise<boolean> {
+    if (!company?.id || !currentRegister) {
+      toast.error('Caixa precisa estar aberto');
+      return false;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      toast.error('Usuário não autenticado');
+      return false;
+    }
+
+    const orderLabel = customerName.trim() || 'Pedido Express';
+    const partialTotal = params.finalTotal;
+
+    // ===== Modo "Dividir por pessoas" =====
+    if (params.splitInfo || expressSplitInfo) {
+      let splitData = expressSplitInfo;
+      let isFirst = false;
+      if (!splitData && params.splitInfo) {
+        splitData = {
+          perPerson: params.splitInfo.perPerson,
+          remaining: params.splitInfo.totalPeople,
+          total: params.splitInfo.totalPeople,
+        };
+        setExpressSplitInfo(splitData);
+        isFirst = true;
+      }
+      if (!splitData) return false;
+
+      const personIndex = splitData.total - splitData.remaining + 1;
+
+      // TEF (se aplicável) — mesmo helper do PDV V2
+      let tefData: NFCeTefData | undefined;
+      let tefNotesFragment = '';
+      if (params.tefIntegration && params.tefOptions) {
+        const result = await runTefPayment({
+          companyId: company.id,
+          integration: params.tefIntegration,
+          amount: partialTotal,
+          options: params.tefOptions,
+          description: `Express - Divisão ${personIndex}/${splitData.total} - ${orderLabel}`,
+          onStatus: setTefStatus,
+        });
+        setTefStatus('');
+        if (!result.success) return false;
+        tefData = result.tefData;
+        tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
+      }
+
+      const saleItems = [{
+        product_id: null as string | null,
+        product_name: `Divisão ${personIndex}/${splitData.total} — ${orderLabel}`,
+        quantity: 1,
+        unit_price: partialTotal,
+      }];
+
+      const saleNotes = `[EXPRESS] Divisão ${personIndex}/${splitData.total}: ${params.paymentName}${tefNotesFragment}`;
+      const saleId = await addSale(saleItems, params.paymentMethodId, authUser.id, 0, orderLabel, saleNotes);
+      if (!saleId) {
+        toast.error('Falha ao registrar a venda parcial');
+        return false;
+      }
+
+      // NFC-e: TEF força emissão; caso contrário segue documentMode.
+      const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
+      if (wantsNfce) {
+        const isLast = (splitData.remaining - 1) <= 0;
+        const partialObs = isLast
+          ? `Pagamento final do Pedido Express ${orderLabel} (divisao ${personIndex}/${splitData.total}). Pedido quitado.`
+          : `Pagamento parcial do Pedido Express ${orderLabel} - divisao ${personIndex} de ${splitData.total} pessoas. Saldo restante segue em aberto.`;
+        try {
+          setIsEmittingNfce(true);
+          const cleanDoc = (params.customerDocument || '').replace(/\D/g, '');
+          const destinatario =
+            cleanDoc.length === 11
+              ? { cpf: cleanDoc, nome: customerName || undefined }
+              : cleanDoc.length === 14
+              ? { cnpj: cleanDoc, nome: customerName || undefined }
+              : undefined;
+          const nfceItems: NFCeItem[] = [{
+            codigo: 'DIVISAO',
+            descricao: saleItems[0].product_name,
+            ncm: '00000000',
+            cfop: '5102',
+            unidade: 'UN',
+            quantidade: 1,
+            valor_unitario: partialTotal,
+            csosn: '102',
+            aliquota_icms: 0,
+            cst_pis: '49',
+            aliquota_pis: 0,
+            cst_cofins: '49',
+            aliquota_cofins: 0,
+          }];
+          const externalId = `EXPRESS-SPLIT-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+          await emitirNFCe(company.id, saleId, {
+            external_id: externalId,
+            itens: nfceItems,
+            valor_desconto: 0,
+            valor_frete: 0,
+            observacoes: `${customerName ? `Cliente: ${customerName} | ` : ''}${partialObs}`,
+            destinatario,
+            tef: tefData,
+          } as any);
+          const { data: rec } = await supabase
+            .from('nfce_records')
+            .select('*')
+            .eq('sale_id', saleId)
+            .maybeSingle();
+          if (rec) {
+            setNfceRecord(rec as unknown as NFCeRecord);
+            setNfceAutoPrint(params.printDocument !== false);
+            if (isI9Company && tefPromptOpenRef.current) {
+              setPendingNfceOpen(true);
+            } else {
+              setNfceDialogOpen(true);
+            }
+          }
+        } catch (err: any) {
+          console.error('[Express] Split NFC-e error:', err);
+          toast.error(`Venda registrada, mas erro ao emitir NFC-e parcial: ${err?.message || 'erro desconhecido'}`);
+        } finally {
+          setIsEmittingNfce(false);
+        }
+      }
+
+      const newRemaining = splitData.remaining - 1;
+      if (newRemaining <= 0) {
+        // Última parte: cria o pedido (uma única vez) com o carrinho completo
+        await finalizeExpressSplitOrder(params.paymentName, 'split');
+        setExpressSplitInfo(null);
+        toast.success('Última pessoa cobrada — pedido finalizado!');
+        return true;
+      }
+      setExpressSplitInfo({ ...splitData, remaining: newRemaining });
+      toast.success(`Pessoa ${personIndex} cobrada. Faltam ${newRemaining}.`);
+      return false;
+    }
+
+    // ===== Modo "Itens selecionados" =====
+    if ((params.itemsInfo && params.itemsInfo.length > 0) || (params.extraItemsInfo && params.extraItemsInfo.length > 0)) {
+      // Resolve itens selecionados desta parte a partir do índice do cart
+      const saleItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[] = [];
+      const nfceItems: NFCeItem[] = [];
+      for (const pi of params.itemsInfo || []) {
+        const idx = parseInt(pi.id, 10);
+        if (Number.isNaN(idx)) continue;
+        const cartItem = cart[idx];
+        if (!cartItem) continue;
+        const unitPrice = cartItem.product.price + (cartItem.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0);
+        let optionalsStr = '';
+        if (cartItem.groupedOptionalNames && cartItem.groupedOptionalNames.length > 0) {
+          optionalsStr = ` (${cartItem.groupedOptionalNames.join(' | ')})`;
+        } else if (cartItem.selectedOptionals.length > 0) {
+          optionalsStr = ` (Adicionais: ${cartItem.selectedOptionals.map(o => o.name).join(', ')})`;
+        }
+        const fullName = cartItem.product.name + optionalsStr;
+        saleItems.push({
+          product_id: cartItem.product.id,
+          product_name: fullName,
+          quantity: pi.paidQty,
+          unit_price: unitPrice,
+        });
+        const product = products.find((p) => p.id === cartItem.product.id);
+        const taxRule = product?.taxRuleId ? taxRules.find((tr) => tr.id === product.taxRuleId) : null;
+        nfceItems.push({
+          codigo: product?.code || cartItem.product.id || 'AVULSO',
+          descricao: cartItem.product.name,
+          ncm: taxRule?.ncm || '00000000',
+          cfop: taxRule?.cfop || '5102',
+          unidade: 'UN',
+          quantidade: pi.paidQty,
+          valor_unitario: unitPrice,
+          csosn: taxRule?.csosn || '102',
+          aliquota_icms: taxRule?.icms_aliquot || 0,
+          cst_pis: taxRule?.pis_cst || '49',
+          aliquota_pis: taxRule?.pis_aliquot || 0,
+          cst_cofins: taxRule?.cofins_cst || '49',
+          aliquota_cofins: taxRule?.cofins_aliquot || 0,
+        });
+      }
+      for (const pi of params.extraItemsInfo || []) {
+        const ex = (params.extraItems || []).find((e) => e.id === pi.id);
+        if (!ex) continue;
+        saleItems.push({
+          product_id: ex.product_id || null,
+          product_name: ex.product_name,
+          quantity: pi.paidQty,
+          unit_price: ex.unit_price,
+        });
+        nfceItems.push({
+          codigo: ex.product_id || 'AVULSO',
+          descricao: ex.product_name,
+          ncm: '00000000',
+          cfop: '5102',
+          unidade: 'UN',
+          quantidade: pi.paidQty,
+          valor_unitario: ex.unit_price,
+          csosn: '102',
+          aliquota_icms: 0,
+          cst_pis: '49',
+          aliquota_pis: 0,
+          cst_cofins: '49',
+          aliquota_cofins: 0,
+        });
+      }
+
+      if (saleItems.length === 0) {
+        toast.error('Nenhum item selecionado para cobrança');
+        return false;
+      }
+
+      // TEF (se aplicável)
+      let tefData: NFCeTefData | undefined;
+      let tefNotesFragment = '';
+      if (params.tefIntegration && params.tefOptions) {
+        const result = await runTefPayment({
+          companyId: company.id,
+          integration: params.tefIntegration,
+          amount: partialTotal,
+          options: params.tefOptions,
+          description: `Express - Itens parciais - ${orderLabel}`,
+          onStatus: setTefStatus,
+        });
+        setTefStatus('');
+        if (!result.success) return false;
+        tefData = result.tefData;
+        tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
+      }
+
+      const saleNotes = `[EXPRESS] Itens parciais: ${params.paymentName}${tefNotesFragment}`;
+      const saleId = await addSale(saleItems, params.paymentMethodId, authUser.id, 0, orderLabel, saleNotes);
+      if (!saleId) {
+        toast.error('Falha ao registrar a venda parcial');
+        return false;
+      }
+
+      // Atualiza o mapa de qty paga por índice do cart
+      const newPaid = new Map(expressPaidQtys);
+      for (const pi of params.itemsInfo || []) {
+        const prev = newPaid.get(pi.id) || 0;
+        newPaid.set(pi.id, prev + pi.paidQty);
+      }
+      setExpressPaidQtys(newPaid);
+
+      // Verifica se ainda restam itens a pagar
+      const allCartPaid = cart.every((it, idx) => {
+        const paid = newPaid.get(String(idx)) || 0;
+        return paid >= it.quantity;
+      });
+
+      // NFC-e parcial
+      const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
+      if (wantsNfce) {
+        const partialObs = allCartPaid
+          ? `Pagamento final do Pedido Express ${orderLabel}. Pedido quitado.`
+          : `Pagamento parcial do Pedido Express ${orderLabel} - itens selecionados. Saldo restante segue em aberto.`;
+        try {
+          setIsEmittingNfce(true);
+          const cleanDoc = (params.customerDocument || '').replace(/\D/g, '');
+          const destinatario =
+            cleanDoc.length === 11
+              ? { cpf: cleanDoc, nome: customerName || undefined }
+              : cleanDoc.length === 14
+              ? { cnpj: cleanDoc, nome: customerName || undefined }
+              : undefined;
+          const externalId = `EXPRESS-ITEMS-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+          await emitirNFCe(company.id, saleId, {
+            external_id: externalId,
+            itens: nfceItems,
+            valor_desconto: 0,
+            valor_frete: 0,
+            observacoes: `${customerName ? `Cliente: ${customerName} | ` : ''}${partialObs}`,
+            destinatario,
+            tef: tefData,
+          } as any);
+          const { data: rec } = await supabase
+            .from('nfce_records')
+            .select('*')
+            .eq('sale_id', saleId)
+            .maybeSingle();
+          if (rec) {
+            setNfceRecord(rec as unknown as NFCeRecord);
+            setNfceAutoPrint(params.printDocument !== false);
+            if (isI9Company && tefPromptOpenRef.current) {
+              setPendingNfceOpen(true);
+            } else {
+              setNfceDialogOpen(true);
+            }
+          }
+        } catch (err: any) {
+          console.error('[Express] Items partial NFC-e error:', err);
+          toast.error(`Venda registrada, mas erro ao emitir NFC-e parcial: ${err?.message || 'erro desconhecido'}`);
+        } finally {
+          setIsEmittingNfce(false);
+        }
+      }
+
+      if (allCartPaid) {
+        await finalizeExpressSplitOrder(params.paymentName, 'items');
+        toast.success('Todos os itens cobrados — pedido finalizado!');
+        return true;
+      }
+      toast.success('Itens cobrados. Selecione os próximos para continuar.');
+      return false;
+    }
+
+    return false;
+  }
+
+  /**
+   * Cria o pedido final (uma única vez) ao término da divisão. Não emite
+   * NFC-e nem dispara TEF — cada parcela já fez isso. Apenas registra o
+   * pedido com [COBRADO] e enfileira a comanda de produção quando configurado.
+   */
+  async function finalizeExpressSplitOrder(paymentName: string, mode: 'split' | 'items') {
+    const deliveryTypeLabel = deliveryType === 'entrega' ? 'Entrega' : 'Retirada';
+    const fullAddress = deliveryType === 'entrega'
+      ? `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood}${deliveryReference ? ` | Ref: ${deliveryReference}` : ''}`
+      : '';
+    const phoneDigitsLocal = customerPhone.replace(/\D/g, '');
+    const noteParts = [
+      '[EXPRESS]',
+      `Pagamento dividido (${mode === 'split' ? 'por pessoas' : 'por itens'}): ${paymentName}`,
+      deliveryTypeLabel,
+      '[COBRADO]',
+    ];
+    const orderItems: OrderItem[] = cart.map(item => {
+      let optionalsStr = '';
+      if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+        optionalsStr = ` (${item.groupedOptionalNames.join(' | ')})`;
+      } else if (item.selectedOptionals.length > 0) {
+        const optStrs = item.selectedOptionals.map(o =>
+          o.price > 0 ? `${o.name} R$${o.price.toFixed(2)}` : o.name,
+        );
+        optionalsStr = ` (Adicionais: ${optStrs.join(', ')})`;
+      }
+      const optPrice = item.selectedOptionals.reduce((s, o) => s + o.price, 0);
+      return {
+        id: crypto.randomUUID(),
+        productId: item.product.id,
+        name: item.product.name + optionalsStr,
+        quantity: item.quantity,
+        price: item.product.price + optPrice,
+        notes: item.notes || undefined,
+      };
+    });
+    await addOrder({
+      customerName: customerName.trim(),
+      customerPhone: phoneDigitsLocal || undefined,
+      deliveryAddress: fullAddress || undefined,
+      notes: noteParts.join(' | '),
+      items: orderItems,
+      total,
+      status: 'ready',
+      origin: 'balcao',
+    });
+    resetForm();
+    onOpenChange(false);
+  }
+
+
   function resetForm() {
     setStep(1);
     setCustomerPhone('');
@@ -1242,6 +1641,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setPaymentMethod('');
     setChangeFor('');
     setPickupChargeOpen(false);
+    setExpressSplitInfo(null);
+    setExpressPaidQtys(new Map());
     if (draftKey) {
       try { localStorage.removeItem(draftKey); } catch {}
     }
@@ -2133,7 +2534,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       <PDVV2PaymentDialog
         open={pickupChargeOpen}
         onOpenChange={(o) => {
-          if (!o && !isSubmitting) setPickupChargeOpen(false);
+          if (!o && !isSubmitting) {
+            // Reset do estado de divisão se o lojista cancelar no meio
+            setExpressSplitInfo(null);
+            setExpressPaidQtys(new Map());
+            setPickupChargeOpen(false);
+          }
         }}
         companyId={company?.id}
         total={total}
@@ -2141,7 +2547,22 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         showDocumentMode
         showAddItem
         tefStatus={tefStatus}
-        checkoutItems={isLancheriaI9 ? cart.map(i => ({ name: i.product.name, quantity: i.quantity, unit_price: i.product.price + (i.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0) })) : undefined}
+        checkoutItems={isLancheriaI9 ? cart.map((i, idx) => {
+          const unit = i.product.price + (i.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0);
+          const paidQty = expressPaidQtys.get(String(idx)) || 0;
+          return {
+            name: i.product.name,
+            quantity: i.quantity,
+            unit_price: unit,
+            id: String(idx),
+            paid: paidQty >= i.quantity,
+          };
+        }) : undefined}
+        activeSplit={expressSplitInfo ? {
+          perPerson: expressSplitInfo.perPerson,
+          totalPeople: expressSplitInfo.total,
+          currentPerson: expressSplitInfo.total - expressSplitInfo.remaining + 1,
+        } : undefined}
         onConfirm={async ({
           paymentMethodId,
           paymentName,
@@ -2153,7 +2574,33 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           tefIntegration,
           customerDocument,
           extraItems,
-        }) => {
+          splitInfo,
+          itemsInfo,
+          extraItemsInfo,
+        }: any) => {
+          // ===== Divisão de pagamento (todas as lojas) — espelha PDV V2 mesas =====
+          const isSplitMode = !!splitInfo || !!expressSplitInfo;
+          const isItemsMode = (itemsInfo && itemsInfo.length > 0) || (extraItemsInfo && extraItemsInfo.length > 0);
+          if (isSplitMode || isItemsMode) {
+            const done = await handleSubmitSplitPartial({
+              paymentMethodId,
+              paymentName,
+              finalTotal,
+              discount,
+              documentMode: dm,
+              printDocument,
+              tefOptions,
+              tefIntegration,
+              customerDocument,
+              extraItems,
+              splitInfo,
+              itemsInfo,
+              extraItemsInfo,
+            });
+            if (done) setPickupChargeOpen(false);
+            // Caso contrário, mantém o diálogo aberto para cobrar a próxima parte
+            return;
+          }
           // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
           // e imprime apenas recibo. Caso contrário (Retirada vinda da etapa 4), mantém fluxo original.
           const finalizeNow = isLancheriaI9 && step === 5;
