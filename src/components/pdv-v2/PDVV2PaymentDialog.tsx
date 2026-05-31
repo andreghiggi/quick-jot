@@ -978,16 +978,17 @@ export function PDVV2PaymentDialog({
                         const nextSel = new Map<number, number>();
                         const nextMem = new Map<number, number>();
                         checkoutItems.forEach((it, idx) => {
-                          if (it.paid) return;
+                          const pendingQty = getPendingQty(it);
+                          if (pendingQty <= 0) return;
                           // Cada pessoa fica com 1/N da quantidade total do item.
                           // Para itens com quantity === 1, isso vira fração (ex.: 0.5).
                           // Para itens com quantity > 1, distribui proporcionalmente.
                           const perPersonQty =
-                            Math.round((it.quantity / splitPeople) * 1000) / 1000;
+                            Math.round((pendingQty / splitPeople) * 1000) / 1000;
                           if (perPersonQty > 0) {
                             nextSel.set(idx, perPersonQty);
                             // Memoriza fração para sobreviver a toggles do checkbox.
-                            if (it.quantity === 1) nextMem.set(idx, perPersonQty);
+                            if (pendingQty === 1) nextMem.set(idx, perPersonQty);
                           }
                         });
                         setSelectedItemQtys(nextSel);
