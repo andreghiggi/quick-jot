@@ -240,18 +240,58 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         return;
       }
 
-      // 2) Marca o pedido como cobrado (sufixo no notes para identificação visual)
-      //    e atualiza o total caso tenham sido adicionados itens extras.
+      // 2) Atualiza o progresso da cobrança. Só marca [COBRADO] quando não
+      //    resta saldo de itens, preservando o botão Cobrar para frações pendentes.
+      const currentPaidAmount = Number(order.paidAmount || 0);
+      const chargedAmount = effectiveSaleItems.reduce(
+        (sum, it) => sum + it.quantity * it.unit_price,
+        0,
+      );
+      const nextPaidQtyByIndex = new Map<string, number>(paidQtyByIndex);
+      selectedExistingItems.forEach((it) => {
+        const index = order.items.findIndex((orderItem, idx) =>
+          String(idx) === String(idx) &&
+          cleanItemName(orderItem.name) === it.product_name &&
+          Math.abs(orderItem.price - it.unit_price) < 0.001
+        );
+        if (index >= 0) {
+          const key = String(index);
+          nextPaidQtyByIndex.set(key, Math.min(
+            order.items[index].quantity,
+            (nextPaidQtyByIndex.get(key) || 0) + it.quantity,
+          ));
+        }
+      });
+      (params.itemsInfo || []).forEach((item) => {
+        const idx = parseInt(item.id, 10);
+        const orderItem = order.items[idx];
+        if (!Number.isNaN(idx) && orderItem && item.paidQty > 0) {
+          const key = String(idx);
+          nextPaidQtyByIndex.set(key, Math.min(
+            orderItem.quantity,
+            (paidQtyByIndex.get(key) || 0) + item.paidQty,
+          ));
+        }
+      });
+      const nextPaidItems: Record<string, number> = {};
+      nextPaidQtyByIndex.forEach((qty, key) => {
+        if (qty > 0) nextPaidItems[key] = qty;
+      });
+      const baseTotalAfterExtras = Number((order.total + extrasTotal).toFixed(2));
+      const nextPaidAmount = Number((currentPaidAmount + chargedAmount).toFixed(2));
+      const isFullyPaid = nextPaidAmount >= baseTotalAfterExtras - 0.009;
+      const nextPaymentNote = `${isFullyPaid ? '[COBRADO]' : '[PARCIAL]'} Pagamento: ${params.paymentName}${tefNote}`;
       const newNotes = order.notes
-        ? `${order.notes} | [COBRADO] Pagamento: ${params.paymentName}${tefNote}`
-        : `[COBRADO] Pagamento: ${params.paymentName}${tefNote}`;
+        ? `${order.notes} | ${nextPaymentNote}`
+        : nextPaymentNote;
       const orderUpdate: any = {
         notes: newNotes,
-        payment_status: 'paid',
-        paid_amount: Number((order.total + extrasTotal).toFixed(2)),
+        payment_status: isFullyPaid ? 'paid' : 'partial',
+        paid_amount: isFullyPaid ? baseTotalAfterExtras : nextPaidAmount,
+        paid_items: { ...((order.paidItems as any) || {}), paid_qtys: nextPaidItems },
       };
       if (extrasTotal > 0) {
-        orderUpdate.total = Number((order.total + extrasTotal).toFixed(2));
+        orderUpdate.total = baseTotalAfterExtras;
       }
       await supabase.from('orders').update(orderUpdate).eq('id', order.id);
 
