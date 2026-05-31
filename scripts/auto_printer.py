@@ -200,8 +200,8 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     else:
         origem_label = '📱 CARDÁPIO ONLINE'
     
-    # Número do pedido
-    order_num = pedido.get('order_code') or pedido.get('daily_number', '?')
+    # Número do pedido — prioriza short_code (D-001/R-001/M-001/B-001) quando disponível
+    order_num = pedido.get('short_code') or pedido.get('order_code') or pedido.get('daily_number', '?')
     
     # Data/Hora formatada (convertido para fuso São Paulo UTC-3)
     try:

@@ -182,7 +182,9 @@ export function useOrders(options: UseOrdersOptions = {}) {
     };
   }, [companyId]);
 
-  async function addOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'dailyNumber' | 'orderCode'>): Promise<boolean> {
+  async function addOrder(
+    orderData: Omit<Order, 'id' | 'createdAt' | 'dailyNumber' | 'orderCode'>
+  ): Promise<{ id: string; shortCode?: string; orderCode?: string; dailyNumber?: number } | null> {
     try {
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
@@ -219,11 +221,16 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
       // Immediately update local state for instant feedback
       await fetchOrders();
-      return true;
+      return {
+        id: newOrder.id,
+        shortCode: (newOrder as any).short_code || undefined,
+        orderCode: (newOrder as any).order_code || undefined,
+        dailyNumber: (newOrder as any).daily_number || undefined,
+      };
     } catch (error) {
       console.error('Error adding order:', error);
       toast.error('Erro ao criar pedido');
-      return false;
+      return null;
     }
   }
 

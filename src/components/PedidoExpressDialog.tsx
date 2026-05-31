@@ -1093,7 +1093,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       });
     }
 
-    const success = await addOrder({
+    const created = await addOrder({
       customerName: customerName.trim(),
       customerPhone: phoneDigits || undefined,
       deliveryAddress: fullAddress || undefined,
@@ -1104,7 +1104,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       origin: 'balcao',
     });
 
-    if (success) {
+    if (created) {
+      const createdShortCode = created.shortCode;
+      const createdOrderCode = created.orderCode || 'EXPRESS';
+      const createdDailyNumber = created.dailyNumber ?? 0;
       // ===== NFC-e (I9 "Finalizar Pedido" com Venda + NFC-e) =====
       // Cria pdv_sale e dispara emissão. Pop-up de status abre ao final.
       const wantsNfce =
@@ -1233,8 +1236,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           }));
           await printOnlyReceipt({
             companyId: company.id,
-            orderCode: 'EXPRESS',
-            dailyNumber: 0,
+            orderCode: createdOrderCode,
+            dailyNumber: createdDailyNumber,
+            shortCode: createdShortCode,
             customerName: customerName.trim(),
             items: printItems,
             total: effectiveTotal,
@@ -1285,12 +1289,14 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           });
 
           const html = generateProductionTicketHTML({
-            tabNumber: 0,
+            tabNumber: createdDailyNumber,
             customerName: customerName.trim(),
             items: productionItems,
             createdAt: new Date(),
             paperSize: settings.printerPaperSize,
-            referenceLabel: 'PEDIDO EXPRESS',
+            referenceLabel: createdShortCode
+              ? `PEDIDO ${createdShortCode}`
+              : 'PEDIDO EXPRESS',
             layout: settings.printLayout,
             // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
             showReadyTime: isLancheriaI9,
@@ -1302,7 +1308,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           await supabase.from('print_queue').insert({
             company_id: company.id,
             html_content: html,
-            label: `Express - ${customerName.trim()}`,
+            label: createdShortCode
+              ? `Produção ${createdShortCode}`
+              : `Express - ${customerName.trim()}`,
           });
         } catch (e) {
           console.error('Erro ao enfileirar comanda de produção:', e);
