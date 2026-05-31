@@ -1910,6 +1910,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 </div>
                 <div className="text-xs opacity-80">
                   Já pago: {formatPrice(Number(partialResumeCandidate.paid_amount || 0))} de {formatPrice(Number(partialResumeCandidate.total || 0))}
+                  {' • '}
+                  Saldo: {formatPrice(Math.max(0, Number(partialResumeCandidate.total || 0) - Number(partialResumeCandidate.paid_amount || 0)))}
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">
