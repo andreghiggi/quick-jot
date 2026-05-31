@@ -70,7 +70,8 @@ export default function Waiter() {
     addMultipleItemsToTab,
     removeItemFromTab,
     getTabTotal,
-    addItemToTab
+    addItemToTab,
+    deleteTab
   } = useTabs({ companyId: company?.id });
   const { products, loading: loadingProducts } = useProducts({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
@@ -793,6 +794,21 @@ export default function Waiter() {
                 </Button>
               )}
             </div>
+            {selectedTab && (selectedTab.items?.length || 0) === 0 && getTabTotal(selectedTab) === 0 && (
+              <Button
+                variant="destructive"
+                className="w-full gap-2"
+                onClick={async () => {
+                  if (!selectedTab) return;
+                  if (!window.confirm(`Excluir a Comanda #${selectedTab.tab_number}? Esta ação não pode ser desfeita.`)) return;
+                  const ok = await deleteTab(selectedTab.id);
+                  if (ok) setSelectedTab(null);
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+                Excluir comanda
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

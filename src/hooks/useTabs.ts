@@ -418,6 +418,47 @@ export function useTabs(options: UseTabsOptions = {}) {
     }
   }
 
+  async function deleteTab(tabId: string): Promise<boolean> {
+    try {
+      const tab = tabs.find(t => t.id === tabId);
+      if (!tab) {
+        toast.error('Comanda não encontrada');
+        return false;
+      }
+      // Bloqueio de segurança: só permite excluir comandas zeradas (sem itens
+      // e sem total). Evita perda acidental de pedidos já lançados.
+      const hasItems = (tab.items || []).length > 0;
+      const total = getTabTotal(tab);
+      if (hasItems || total > 0) {
+        toast.error('Só é possível excluir comandas zeradas');
+        return false;
+      }
+
+      const { error } = await supabase
+        .from('tabs')
+        .delete()
+        .eq('id', tabId);
+
+      if (error) throw error;
+
+      // Libera a mesa se estava vinculada
+      if (tab.table_id) {
+        await supabase
+          .from('tables')
+          .update({ status: 'available' })
+          .eq('id', tab.table_id);
+      }
+
+      await fetchTabs();
+      toast.success(`Comanda #${tab.tab_number} excluída!`);
+      return true;
+    } catch (error) {
+      console.error('Error deleting tab:', error);
+      toast.error('Erro ao excluir comanda');
+      return false;
+    }
+  }
+
   async function updateTabNotes(tabId: string, notes: string): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -453,6 +494,7 @@ export function useTabs(options: UseTabsOptions = {}) {
     addMultipleItemsToTab,
     removeItemFromTab,
     closeTab,
+    deleteTab,
     updateTabNotes,
     getTabTotal,
     refetch: fetchTabs
