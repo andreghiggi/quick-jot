@@ -1831,6 +1831,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           paid_amount: total,
         } as any)
         .eq('id', expressOpenOrderId);
+      setPartialResumeCandidate(null);
     } else {
       await addOrder({
         customerName: customerName.trim(),
