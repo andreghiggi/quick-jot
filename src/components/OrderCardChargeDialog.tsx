@@ -131,6 +131,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     tefIntegration?: 'tef_pinpad' | 'tef_smartpos';
     customerDocument?: string;
     prechargedTef?: { tefData?: NFCeTefData; notesFragment?: string };
+    itemsInfo?: Array<{ id: string; paidQty: number }>;
   }) {
     if (!company?.id) return;
     if (!currentRegister) {
@@ -148,6 +149,27 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       // ===== Itens extras adicionados na cobrança =====
       // Persistidos em order_items (added_after=true), incluídos na venda do caixa
       // e na NFC-e. Total do pedido é atualizado abaixo.
+      const selectedQtyByIndex = new Map<number, number>();
+      (params.itemsInfo || []).forEach((item) => {
+        const idx = parseInt(item.id, 10);
+        if (!Number.isNaN(idx) && item.paidQty > 0) {
+          selectedQtyByIndex.set(idx, item.paidQty);
+        }
+      });
+      const selectedExistingItems = order.items.flatMap((it, idx) => {
+        const alreadyPaid = Math.min(it.quantity, paidQtyByIndex.get(String(idx)) || 0);
+        const pendingQty = Math.max(0, it.quantity - alreadyPaid);
+        const qtyToCharge = hasPartialItemPayments
+          ? Math.min(pendingQty, selectedQtyByIndex.get(idx) ?? pendingQty)
+          : it.quantity;
+        if (qtyToCharge <= 0) return [];
+        return [{
+          product_id: it.productId || null,
+          product_name: cleanItemName(it.name),
+          quantity: qtyToCharge,
+          unit_price: it.price,
+        }];
+      });
       const extras = params.extraItems || [];
       const extrasTotal = extras.reduce((s, ex) => s + ex.unit_price * ex.quantity, 0);
       const extrasAsSaleItems = extras.map((ex) => ({
@@ -158,7 +180,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         quantity: ex.quantity,
         unit_price: ex.unit_price,
       }));
-      const effectiveSaleItems = [...saleItems, ...extrasAsSaleItems];
+      const effectiveSaleItems = [...selectedExistingItems, ...extrasAsSaleItems];
 
       if (extras.length > 0 && company?.id) {
         const insertPayload = extras.map((ex) => ({
