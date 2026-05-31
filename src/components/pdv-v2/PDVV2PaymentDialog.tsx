@@ -271,7 +271,8 @@ export function PDVV2PaymentDialog({
     let sum = 0;
     selectedItemQtys.forEach((qty, idx) => {
       const it = checkoutItems[idx];
-      if (it && !it.paid && qty > 0) sum += qty * it.unit_price;
+      const pendingQty = it ? getPendingQty(it) : 0;
+      if (it && pendingQty > 0 && qty > 0) sum += Math.min(qty, pendingQty) * it.unit_price;
     });
     selectedExtraQtys.forEach((qty, id) => {
       const ex = extraItems.find((e) => e.id === id);
@@ -332,7 +333,9 @@ export function PDVV2PaymentDialog({
             const items: Array<{ id: string; paidQty: number }> = [];
             selectedItemQtys.forEach((qty, idx) => {
               const it = checkoutItems[idx];
-              if (it?.id && qty > 0) items.push({ id: it.id, paidQty: qty });
+              const pendingQty = it ? getPendingQty(it) : 0;
+              const qtyToCharge = Math.min(qty, pendingQty);
+              if (it?.id && qtyToCharge > 0) items.push({ id: it.id, paidQty: qtyToCharge });
             });
             return items.length > 0 ? items : undefined;
           })()
