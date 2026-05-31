@@ -26,6 +26,19 @@ interface PrintTicketData {
    *  usar readyOffsetMinutes = 30 (máximo − 10 min). */
   showReadyTime?: boolean;
   readyOffsetMinutes?: number;
+  /** Company atual. Usado para rollout isolado do título "PEDIDO <short_code>"
+   *  em vez de "Comanda #<tabNumber>" — atualmente APENAS Lancheria I9. */
+  companyId?: string;
+}
+
+// Allow-list ISOLADA: troca de "Comanda #<n>" por referenceLabel no cabeçalho.
+// Atualmente liberada APENAS para Lancheria da i9. Não alterar sem autorização.
+const SHORT_CODE_HEADER_ALLOWLIST = new Set<string>([
+  '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da i9
+]);
+
+function shouldUseReferenceInHeader(data: PrintTicketData): boolean {
+  return !!data.companyId && !!data.referenceLabel && SHORT_CODE_HEADER_ALLOWLIST.has(data.companyId);
 }
 
 function getPaperWidth(size?: '58mm' | '80mm'): string {
@@ -152,7 +165,7 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
       <!--BOX_START-->
       <div class="header">
         <div class="title">COMANDA DE PRODUÇÃO</div>
-        <div class="info">Comanda #${data.tabNumber}</div>
+        <div class="info">${shouldUseReferenceInHeader(data) ? getTicketReferenceLabel(data) : `Comanda #${data.tabNumber}`}</div>
         ${data.tableNumber ? `<div class="table-info">MESA ${data.tableNumber}</div>` : ''}
         ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
         <div class="datetime">${dateStr} às ${timeStr}</div>
@@ -305,7 +318,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
       <!--BOX_START-->
       <div class="header">
         <div class="title">COMANDA DE PRODUÇÃO</div>
-        <div class="info">Comanda #${data.tabNumber}</div>
+        <div class="info">${shouldUseReferenceInHeader(data) ? getTicketReferenceLabel(data) : `Comanda #${data.tabNumber}`}</div>
         ${data.tableNumber ? `<div class="table-info">MESA ${data.tableNumber}</div>` : ''}
         ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
         <div class="datetime">${dateStr} às ${timeStr}</div>

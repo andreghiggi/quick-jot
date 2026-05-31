@@ -92,6 +92,7 @@ function buildProductionHtml(payload: PrintPayload, ref: string) {
     createdAt: new Date(),
     paperSize: payload.paperSize || '80mm',
     referenceLabel: ref,
+    companyId: payload.companyId,
     // Lancheria I9: previsão = criação + (máximo do prazo estimado − 10 min).
     // Lê dinamicamente "Prazo estimado de entrega" (Configurações → WhatsApp).
     showReadyTime: isLancheriaI9,
