@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '31/05/2026',
+    version: '1.32.6',
+    type: 'fix',
+    description: 'Impressão automática v8.28 — corrigida a ativação real da margem segura na Lancheria da I9. A comanda de produção agora passa a reconhecer o ID da loja após resolver o slug, aplicando o modo anti-corte de bordas apenas nessa loja piloto. Demais lojas e fluxos TEF/PinPad permanecem inalterados.',
+  },
+  {
+    date: '31/05/2026',
     version: '1.32.5',
     type: 'fix',
     description: 'Pedido Express — Pagamento parcial agora aparece para todas as lojas (antes só funcionava na Lancheria I9). Ao reabrir um pedido em aberto, itens já pagos ficam marcados como "PAGO" e bloqueados para nova cobrança, e o botão de divisão por itens fica disponível. O aviso de retomada do pedido também mostra o saldo restante (Já pago / Saldo). Nenhum fluxo de TEF, NFC-e ou pedido normal foi alterado.',
