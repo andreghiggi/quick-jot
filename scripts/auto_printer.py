@@ -749,6 +749,90 @@ def imprimir_html(html, order_number):
                 linhas_out.append(atual)
             return linhas_out
 
+        # Largura útil em pixels (descontando margens laterais). Usada para
+        # word-wrap baseado em medição real (GetTextExtent) com a fonte
+        # atualmente selecionada no hDC — evita corte em caracteres mais
+        # largos que a média (negrito, números, acentos).
+        usable_text_px = max(1, page_w - margin_x * 2)
+
+        def quebrar_linha_px(texto, max_width_px):
+            """Word-wrap por medição real em pixels usando a fonte selecionada.
+            IMPORTANTE: selecionar a fonte desejada no hDC ANTES de chamar."""
+            if not texto:
+                return ['']
+            if hDC.GetTextExtent(texto)[0] <= max_width_px:
+                return [texto]
+            palavras = texto.split(' ')
+            linhas_out = []
+            atual = ''
+            for palavra in palavras:
+                # palavra sozinha maior que a linha: quebra por caractere
+                if hDC.GetTextExtent(palavra)[0] > max_width_px:
+                    if atual:
+                        linhas_out.append(atual)
+                        atual = ''
+                    buf = ''
+                    for ch in palavra:
+                        if hDC.GetTextExtent(buf + ch)[0] <= max_width_px:
+                            buf += ch
+                        else:
+                            if buf:
+                                linhas_out.append(buf)
+                            buf = ch
+                    atual = buf
+                    continue
+                tentativa = (atual + ' ' + palavra) if atual else palavra
+                if hDC.GetTextExtent(tentativa)[0] <= max_width_px:
+                    atual = tentativa
+                else:
+                    if atual:
+                        linhas_out.append(atual)
+                    atual = palavra
+            if atual:
+                linhas_out.append(atual)
+            return linhas_out or ['']
+
+        def quebrar_nome_com_recuo_px(texto, max_primeira_px, max_demais_px):
+            """Versão pixel-based de quebrar_nome_com_recuo. Selecionar a fonte antes."""
+            if not texto:
+                return ['']
+            palavras = texto.split(' ')
+            linhas_out = []
+            atual = ''
+            max_atual = max(1, max_primeira_px)
+            for palavra in palavras:
+                # quebra forçada por caractere se palavra exceder a largura disponível
+                while hDC.GetTextExtent(palavra)[0] > max_atual:
+                    if atual:
+                        linhas_out.append(atual)
+                        atual = ''
+                        max_atual = max(1, max_demais_px)
+                    buf = ''
+                    rest = palavra
+                    for ch in palavra:
+                        if hDC.GetTextExtent(buf + ch)[0] <= max_atual:
+                            buf += ch
+                            rest = rest[1:]
+                        else:
+                            break
+                    if not buf:
+                        buf = palavra[0]
+                        rest = palavra[1:]
+                    linhas_out.append(buf)
+                    palavra = rest
+                    max_atual = max(1, max_demais_px)
+                tentativa = (atual + ' ' + palavra) if atual else palavra
+                if hDC.GetTextExtent(tentativa)[0] <= max_atual:
+                    atual = tentativa
+                else:
+                    if atual:
+                        linhas_out.append(atual)
+                    atual = palavra
+                    max_atual = max(1, max_demais_px)
+            if atual:
+                linhas_out.append(atual)
+            return linhas_out or ['']
+
         def quebrar_nome_com_recuo(texto, largura_primeira, largura_demais):
             """Quebra nome do produto respeitando o espaço após a quantidade."""
             palavras = texto.split(' ')
