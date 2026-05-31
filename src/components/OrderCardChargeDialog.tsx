@@ -350,13 +350,13 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         open={open}
         onOpenChange={onOpenChange}
         companyId={company?.id}
-        total={order.total}
+        total={chargeBaseTotal}
         title={`Cobrar pedido #${order.orderCode || order.dailyNumber}`}
         showDocumentMode
         showAddItem
         tefStatus={tefStatus}
         deliveryFilter={order.deliveryAddress && order.deliveryAddress.trim().length > 0 ? 'delivery' : 'pickup'}
-        checkoutItems={order?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price }))}
+        checkoutItems={checkoutItems}
         onConfirm={handleConfirm}
       />
       {nfceRecord && (
