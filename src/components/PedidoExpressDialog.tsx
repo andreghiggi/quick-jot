@@ -1239,6 +1239,113 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
 
   /**
+   * Persiste o progresso parcial do Pedido Express na tabela `orders`.
+   * - Na 1ª parcela: INSERT com `payment_status='partial'`, snapshot do carrinho,
+   *   itens, paid_amount e split_info. Retorna o novo id.
+   * - Nas parcelas seguintes: UPDATE somando `paid_amount`, mesclando `paid_items`
+   *   e atualizando `split_info`.
+   * Não toca em TEF/NFC-e nem em outros fluxos — apenas grava o acumulado.
+   */
+  async function persistExpressPartial(opts: {
+    existingOrderId: string | null;
+    paidAmountDelta: number;
+    paidQtys: Map<string, number>;
+    splitInfo: { perPerson: number; total: number; remaining: number } | null;
+    paymentName: string;
+  }): Promise<string | null> {
+    if (!company?.id) return null;
+    try {
+      const cartSnapshot = cart.map((it) => ({
+        product_id: it.product.id,
+        product_name: it.product.name,
+        product_price: it.product.price,
+        quantity: it.quantity,
+        notes: it.notes || null,
+        selectedOptionals: it.selectedOptionals?.map((o) => ({ name: o.name, price: o.price })) || [],
+        groupedOptionalNames: it.groupedOptionalNames || [],
+      }));
+      const paidObj: Record<string, number> = {};
+      paidQtys.forEach((v, k) => { paidObj[k] = v; });
+
+      if (!opts.existingOrderId) {
+        const phoneDigits = customerPhone.replace(/\D/g, '');
+        const fullAddress = deliveryType === 'entrega'
+          ? `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood}${deliveryReference ? ` | Ref: ${deliveryReference}` : ''}`
+          : '';
+        const note = `[EXPRESS] [PARCIAL] Pagamento dividido em andamento (${opts.paymentName})`;
+        const { data: newOrder, error: insErr } = await supabase
+          .from('orders')
+          .insert({
+            customer_name: customerName.trim() || 'Pedido Express',
+            customer_phone: phoneDigits || null,
+            delivery_address: fullAddress || null,
+            notes: note,
+            total,
+            status: 'preparing',
+            company_id: company.id,
+            origin: 'balcao',
+            paid_amount: opts.paidAmountDelta,
+            paid_items: { cart_snapshot: cartSnapshot, paid_qtys: paidObj },
+            split_info: opts.splitInfo,
+            payment_status: 'partial',
+          } as any)
+          .select('id')
+          .single();
+        if (insErr || !newOrder) {
+          console.error('[Express] persistExpressPartial INSERT error:', insErr);
+          return null;
+        }
+        // Insere os itens do pedido (para que apareça nas listagens normais)
+        const orderItems = cart.map((item) => {
+          let optionalsStr = '';
+          if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+            optionalsStr = ` (${item.groupedOptionalNames.join(' | ')})`;
+          } else if (item.selectedOptionals.length > 0) {
+            const optStrs = item.selectedOptionals.map((o) => o.price > 0 ? `${o.name} R$${o.price.toFixed(2)}` : o.name);
+            optionalsStr = ` (Adicionais: ${optStrs.join(', ')})`;
+          }
+          const optPrice = item.selectedOptionals.reduce((s, o) => s + o.price, 0);
+          return {
+            order_id: newOrder.id,
+            product_id: item.product.id || null,
+            name: item.product.name + optionalsStr,
+            quantity: item.quantity,
+            price: item.product.price + optPrice,
+            notes: item.notes || null,
+            company_id: company.id,
+          };
+        });
+        if (orderItems.length > 0) {
+          await supabase.from('order_items').insert(orderItems);
+        }
+        return newOrder.id as string;
+      }
+
+      // UPDATE acumulando o que já foi pago.
+      const { data: existing } = await supabase
+        .from('orders')
+        .select('paid_amount')
+        .eq('id', opts.existingOrderId)
+        .maybeSingle();
+      const currentPaid = Number((existing as any)?.paid_amount || 0);
+      const newPaidAmount = currentPaid + opts.paidAmountDelta;
+      await supabase
+        .from('orders')
+        .update({
+          paid_amount: newPaidAmount,
+          paid_items: { cart_snapshot: cartSnapshot, paid_qtys: paidObj },
+          split_info: opts.splitInfo,
+          payment_status: 'partial',
+        } as any)
+        .eq('id', opts.existingOrderId);
+      return opts.existingOrderId;
+    } catch (err) {
+      console.error('[Express] persistExpressPartial error:', err);
+      return null;
+    }
+  }
+
+  /**
    * Divisão de pagamento no Pedido Express — mesmo padrão do PDV V2
    * "Importar e cobrar mesas" (confirmImportTabI9). Cada parte gera uma
    * pdv_sale + NFC-e própria (com observação de parcial/final). O pedido
