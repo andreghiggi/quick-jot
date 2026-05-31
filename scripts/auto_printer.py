@@ -24,6 +24,14 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 CHECK_INTERVAL = 5  # segundos entre verificações
 STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
+
+# Allow-list ISOLADA para ajuste anti-corte de bordas na impressão automática (GDI).
+# Aumenta margem horizontal e reduz colunas para evitar que caracteres mais largos
+# que a média (M, W, %, acentos) sejam cortados pela cabeça térmica.
+# Atualmente liberado APENAS para Lancheria da i9. Não alterar sem autorização.
+SAFE_MARGIN_COMPANY_IDS = {
+    '8c9e7a0e-dbb6-49b9-8344-c23155a71164',  # Lancheria da i9
+}
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
