@@ -1299,6 +1299,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               : 'PEDIDO EXPRESS',
             layout: settings.printLayout,
             companyId: company.id,
+            orderType: deliveryType === 'entrega' ? 'delivery' : deliveryType === 'retirada' ? 'pickup' : 'counter',
             // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
             showReadyTime: isLancheriaI9,
             readyOffsetMinutes: isLancheriaI9

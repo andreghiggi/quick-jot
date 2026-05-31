@@ -2,6 +2,9 @@
 
 export type PrintLayoutVersion = 'v1' | 'v2';
 
+/** Tipo logístico do pedido — usado para destacar na comanda da cozinha. */
+export type OrderTicketType = 'delivery' | 'pickup' | 'table' | 'counter';
+
 interface PrintItem {
   productName: string;
   quantity: number;
@@ -29,6 +32,11 @@ interface PrintTicketData {
   /** Company atual. Usado para rollout isolado do título "PEDIDO <short_code>"
    *  em vez de "Comanda #<tabNumber>" — atualmente APENAS Lancheria I9. */
   companyId?: string;
+  /** Quando informado, renderiza uma faixa de destaque (ENTREGA / RETIRADA /
+   *  PEDIDO MESA / BALCÃO) logo abaixo do título "COMANDA DE PRODUÇÃO" para
+   *  ajudar a logística da cozinha. Quando omitido, o layout permanece
+   *  idêntico ao anterior. */
+  orderType?: OrderTicketType;
 }
 
 // Allow-list ISOLADA: troca de "Comanda #<n>" por referenceLabel no cabeçalho.
@@ -49,6 +57,22 @@ function getTicketReferenceLabel(data: PrintTicketData): string {
   if (data.referenceLabel) return data.referenceLabel;
   if (data.tableNumber) return `MESA ${data.tableNumber}`;
   return `COMANDA #${data.tabNumber}`;
+}
+
+function getOrderTypeLabel(orderType?: OrderTicketType): string | null {
+  switch (orderType) {
+    case 'delivery': return 'ENTREGA';
+    case 'pickup': return 'RETIRADA';
+    case 'table': return 'PEDIDO MESA';
+    case 'counter': return 'BALCÃO';
+    default: return null;
+  }
+}
+
+function renderOrderTypeBadgeHTML(orderType?: OrderTicketType): string {
+  const label = getOrderTypeLabel(orderType);
+  if (!label) return '';
+  return `<div class="order-type-badge">&gt;&gt; ${label} &lt;&lt;</div>`;
 }
 
 /**
@@ -86,6 +110,7 @@ export function generateProductionTicketText(data: PrintTicketData): string {
   const lines = [
     'COMANDA DE PRODUÇÃO',
     '',
+    ...(getOrderTypeLabel(data.orderType) ? [`>> ${getOrderTypeLabel(data.orderType)} <<`, ''] : []),
     getTicketReferenceLabel(data),
     ...(data.customerName ? [data.customerName] : []),
     `${dateStr} às ${timeStr}`,
@@ -146,6 +171,18 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
         .info { font-size: 11pt; font-weight: bold; margin-top: 1mm; }
         .table-info { font-size: 14pt; font-weight: bold; background: #000; color: #fff; padding: 1mm 3mm; display: inline-block; margin-top: 1mm; }
         .datetime { font-size: 8pt; margin-top: 1mm; }
+        .order-type-badge {
+          font-size: 13pt;
+          font-weight: 900;
+          background: #000;
+          color: #fff;
+          padding: 1.5mm 2mm;
+          margin: 1mm 0;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
         .items { margin: 2mm 0; }
         .item { border-bottom: 1px dotted #000; padding: 1.5mm 0; }
         .item:last-child { border-bottom: none; }
@@ -165,6 +202,7 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
       <!--BOX_START-->
       <div class="header">
         <div class="title">COMANDA DE PRODUÇÃO</div>
+        ${renderOrderTypeBadgeHTML(data.orderType)}
         <div class="info">${shouldUseReferenceInHeader(data) ? getTicketReferenceLabel(data) : `Comanda #${data.tabNumber}`}</div>
         ${data.tableNumber ? `<div class="table-info">MESA ${data.tableNumber}</div>` : ''}
         ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
@@ -254,6 +292,17 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         .info { font-size: 11pt; font-weight: bold; margin-top: 1mm; }
         .table-info { font-size: 14pt; font-weight: bold; border: 2px solid #000; padding: 1mm 3mm; display: inline-block; margin-top: 1mm; }
         .datetime { font-size: 8pt; margin-top: 1mm; }
+        .order-type-badge {
+          font-size: 13pt;
+          font-weight: 900;
+          background: #000 !important;
+          background-color: #000 !important;
+          color: #fff !important;
+          padding: 1.5mm 2mm;
+          margin: 1mm 0;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+        }
         .items { margin: 2mm 0; }
         .item { border-bottom: 1px dotted #000; padding: 1.5mm 0; }
         .item:last-child { border-bottom: none; }
@@ -311,6 +360,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
           .obs { background: #000 !important; background-color: #000 !important; }
           .obs-text { color: #fff !important; }
           .add-line { -webkit-text-stroke: 0.5px #000 !important; }
+          .order-type-badge { background: #000 !important; background-color: #000 !important; color: #fff !important; }
         }
       </style>
     </head>
@@ -318,6 +368,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
       <!--BOX_START-->
       <div class="header">
         <div class="title">COMANDA DE PRODUÇÃO</div>
+        ${renderOrderTypeBadgeHTML(data.orderType)}
         <div class="info">${shouldUseReferenceInHeader(data) ? getTicketReferenceLabel(data) : `Comanda #${data.tabNumber}`}</div>
         ${data.tableNumber ? `<div class="table-info">MESA ${data.tableNumber}</div>` : ''}
         ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
