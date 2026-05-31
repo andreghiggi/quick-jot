@@ -871,6 +871,12 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           <p className="text-lg font-bold text-foreground">
             R$ {order.total.toFixed(2)}
           </p>
+          {hasPartialItemPayments && !alreadyCharged && (
+            <div className="text-xs mt-0.5 space-y-0.5">
+              <p className="text-success">Pago: R$ {partialPaidTotal.toFixed(2)}</p>
+              <p className="text-amber-600 dark:text-amber-400">Saldo: R$ {pendingPaymentTotal.toFixed(2)}</p>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <Button
