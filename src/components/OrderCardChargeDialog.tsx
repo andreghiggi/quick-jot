@@ -56,6 +56,37 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
   const tefPromptOpenRef = useRef(false);
   const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
+  const paidQtyByIndex = useMemo(() => {
+    const raw = (order.paidItems as any)?.paid_qtys;
+    const map = new Map<string, number>();
+    if (raw && typeof raw === 'object') {
+      Object.entries(raw).forEach(([key, value]) => {
+        const qty = Number(value);
+        if (Number.isFinite(qty) && qty > 0) map.set(key, qty);
+      });
+    }
+    return map;
+  }, [order.paidItems]);
+  const hasPartialItemPayments = paidQtyByIndex.size > 0;
+
+  const checkoutItems = useMemo(
+    () =>
+      order.items.map((i, idx) => {
+        const paidQty = Math.min(i.quantity, paidQtyByIndex.get(String(idx)) || 0);
+        return {
+          id: String(idx),
+          name: i.name,
+          quantity: i.quantity,
+          unit_price: i.price,
+          paidQty,
+          paid: paidQty >= i.quantity,
+        };
+      }),
+    [order.items, paidQtyByIndex],
+  );
+
+  const cleanItemName = (name: string) =>
+    name.includes('(') ? name.substring(0, name.indexOf('(')).trim() : name;
 
   useEffect(() => {
     function onOpened() { tefPromptOpenRef.current = true; setTefPromptOpen(true); }
@@ -81,7 +112,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       order.items.map((it) => ({
         // Remove sufixo "(Adicionais: ...)" do nome para a venda/NFC-e
         product_id: it.productId || null,
-        product_name: it.name.includes('(') ? it.name.substring(0, it.name.indexOf('(')).trim() : it.name,
+        product_name: cleanItemName(it.name),
         quantity: it.quantity,
         unit_price: it.price,
       })),
