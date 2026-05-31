@@ -941,6 +941,27 @@ export type Database = {
           },
         ]
       }
+      order_short_code_counters: {
+        Row: {
+          company_id: string
+          next_value: number
+          prefix: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          next_value?: number
+          prefix: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          next_value?: number
+          prefix?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           company_id: string | null
@@ -960,6 +981,7 @@ export type Database = {
           payment_status: string
           printed: boolean | null
           printed_at: string | null
+          short_code: string | null
           split_info: Json | null
           status: Database["public"]["Enums"]["order_status"]
           total: number
@@ -983,6 +1005,7 @@ export type Database = {
           payment_status?: string
           printed?: boolean | null
           printed_at?: string | null
+          short_code?: string | null
           split_info?: Json | null
           status?: Database["public"]["Enums"]["order_status"]
           total?: number
@@ -1006,6 +1029,7 @@ export type Database = {
           payment_status?: string
           printed?: boolean | null
           printed_at?: string | null
+          short_code?: string | null
           split_info?: Json | null
           status?: Database["public"]["Enums"]["order_status"]
           total?: number

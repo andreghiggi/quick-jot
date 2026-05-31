@@ -1042,7 +1042,7 @@ export default function Menu() {
               items: productionItems,
               createdAt: new Date(),
               paperSize: settings.printerPaperSize,
-              referenceLabel: `PEDIDO #${newOrder.daily_number || newOrder.order_code}`,
+              referenceLabel: `PEDIDO ${(newOrder as any).short_code || '#' + (newOrder.daily_number || newOrder.order_code)}`,
               layout: settings.printLayout,
               // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
               showReadyTime: true,

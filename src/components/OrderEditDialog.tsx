@@ -274,7 +274,7 @@ export function OrderEditDialog({
       items,
       createdAt: new Date(),
       paperSize,
-      referenceLabel: `ALTERAÇÃO PEDIDO #${order.orderCode || order.dailyNumber}`,
+      referenceLabel: `ALTERAÇÃO PEDIDO ${order.shortCode || '#' + (order.orderCode || order.dailyNumber)}`,
       layout: storeSettings.printLayout,
       showReadyTime: storeSettings.printLayout === 'v2',
       readyOffsetMinutes: readyOffset,

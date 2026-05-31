@@ -83,6 +83,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         id: order.id,
         dailyNumber: (order as any).daily_number || 0,
         orderCode: (order as any).order_code || '',
+        shortCode: (order as any).short_code || undefined,
         customerName: order.customer_name,
         customerPhone: order.customer_phone || undefined,
         deliveryAddress: order.delivery_address || undefined,

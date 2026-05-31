@@ -13,6 +13,7 @@ export interface Order {
   id: string;
   dailyNumber: number;
   orderCode: string;
+  shortCode?: string;
   customerName: string;
   customerPhone?: string;
   items: OrderItem[];
