@@ -555,7 +555,7 @@ export function PDVV2PaymentDialog({
                         </span>
                       </div>
                       {paidQty > 0 && (
-                        <p className="text-xs font-medium text-green-600 dark:text-green-400">
+                        <p className="text-xs font-medium text-success">
                           {paidQty >= item.quantity
                             ? '✓ Pago'
                             : `${paidQty} pago${paidQty > 1 ? 's' : ''} · ${pendingQty} pendente${pendingQty > 1 ? 's' : ''}`}
@@ -662,7 +662,7 @@ export function PDVV2PaymentDialog({
                       <div key={idx} className="min-w-0">
                         <div
                           className={`flex items-center gap-2 text-sm px-1 py-0.5 rounded min-w-0 ${
-                            isPaid ? 'opacity-60 bg-green-50 dark:bg-green-950/30' : ''
+                            isPaid ? 'opacity-60 bg-success/10' : ''
                           }`}
                         >
                         {isPaid ? (
@@ -670,7 +670,7 @@ export function PDVV2PaymentDialog({
                             <Checkbox checked disabled />
                             <span className="truncate flex-1 min-w-0">
                               {item.quantity}x {item.name}
-                              <span className="ml-1 text-xs text-green-600">(pago)</span>
+                              <span className="ml-1 text-xs text-success">(pago)</span>
                             </span>
                             <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
                               {formatPrice(item.quantity * item.unit_price)}
