@@ -258,7 +258,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     console.log('[OrderCard] Excluindo pedido:', order.id, order.orderCode);
     const ok = await deleteOrder(order.id);
     if (ok) {
-      toast.success(`Pedido #${order.orderCode || order.dailyNumber} excluído`);
+      toast.success(`Pedido #${order.shortCode || order.orderCode || order.dailyNumber} excluído`);
     }
   }
 
@@ -281,7 +281,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
         .update({ notes: newNotes })
         .eq('id', order.id);
       if (error) throw error;
-      toast.success(`Pedido #${order.orderCode || order.dailyNumber} cancelado`);
+      toast.success(`Pedido #${order.shortCode || order.orderCode || order.dailyNumber} cancelado`);
       setCancelDialogOpen(false);
       setCancelReason('');
     } catch (err) {
@@ -374,7 +374,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       }).join('');
 
       const html = `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Cupom de Venda #${order.orderCode || order.dailyNumber}</title>
+<html><head><meta charset="UTF-8"><title>Cupom de Venda #${order.shortCode || order.orderCode || order.dailyNumber}</title>
 <style>
   @page { margin: 0; size: ${paperSize} auto; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -395,7 +395,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   <div class="header">
     <div class="store-name">${storeName.toUpperCase()}</div>
     <div class="label-tag">CUPOM DE VENDA - 2ª VIA</div>
-    <div class="order-num">#${order.orderCode || order.dailyNumber}</div>
+    <div class="order-num">#${order.shortCode || order.orderCode || order.dailyNumber}</div>
     <div class="info">${dt}</div>
   </div>
   <hr class="divider">
@@ -445,7 +445,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Pedido #${order.orderCode || order.dailyNumber}</title>
+        <title>Pedido #${order.shortCode || order.orderCode || order.dailyNumber}</title>
         <style>
           @page { margin: 0; size: ${paperSize} auto; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -490,7 +490,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       <body>
         <div class="header">
           <div class="store-name">${storeName.toUpperCase()}</div>
-          <div class="order-num">PEDIDO #${order.orderCode || order.dailyNumber}</div>
+          <div class="order-num">PEDIDO #${order.shortCode || order.orderCode || order.dailyNumber}</div>
           <div class="date">${formattedDate}</div>
         </div>
         <hr class="divider">
@@ -611,7 +611,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             <span className={cn(
               "text-lg font-bold",
               isCancelled ? "text-destructive line-through" : "text-primary"
-            )}>#{order.orderCode || order.dailyNumber}</span>
+            )}>#{order.shortCode || order.orderCode || order.dailyNumber}</span>
             {showEditButton && (
               <TooltipProvider>
                 <Tooltip>
@@ -944,7 +944,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                       <AlertDialogTitle>Cancelar pedido?</AlertDialogTitle>
                       <AlertDialogDescription asChild>
                         <div className="space-y-2">
-                          <p>O pedido #{order.orderCode || order.dailyNumber} de {order.customerName} será marcado como <strong>cancelado</strong>. O histórico é preservado.</p>
+                          <p>O pedido #{order.shortCode || order.orderCode || order.dailyNumber} de {order.customerName} será marcado como <strong>cancelado</strong>. O histórico é preservado.</p>
                           {hasNfce && (
                             <p className="text-amber-600 font-medium">⚠ Existe NFC-e emitida vinculada. Cancele a nota também pelo módulo Fiscal dentro do prazo legal (30 min).</p>
                           )}
@@ -996,7 +996,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                 <AlertDialogHeader>
                   <AlertDialogTitle>Excluir pedido?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    O pedido #{order.orderCode || order.dailyNumber} de {order.customerName} será excluído permanentemente. Esta ação não pode ser desfeita.
+                    O pedido #{order.shortCode || order.orderCode || order.dailyNumber} de {order.customerName} será excluído permanentemente. Esta ação não pode ser desfeita.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
