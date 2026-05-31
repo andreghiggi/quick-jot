@@ -43,6 +43,8 @@ interface PrintTicketData {
 // Atualmente liberada APENAS para Lancheria da i9. Não alterar sem autorização.
 const SHORT_CODE_HEADER_ALLOWLIST = new Set<string>([
   '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da i9
+  'a0071b86-6f2a-43f5-80d9-26e3ecd4b70c', // Margen Pizzaria
+  '96e53bb2-2b71-4ed3-86cd-0f97858aca73', // Império do Açaí
 ]);
 
 function shouldUseReferenceInHeader(data: PrintTicketData): boolean {
