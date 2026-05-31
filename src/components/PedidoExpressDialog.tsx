@@ -2784,9 +2784,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         open={pickupChargeOpen}
         onOpenChange={(o) => {
           if (!o && !isSubmitting) {
-            // Reset do estado de divisão se o lojista cancelar no meio
-            setExpressSplitInfo(null);
-            setExpressPaidQtys(new Map());
+            // Preserva o estado de pagamento parcial quando o lojista
+            // fecha o checkout no meio (ex.: pagou 1 de 2 itens e voltou
+            // pro resumo). Assim, ao reabrir o checkout, os itens já
+            // pagos continuam marcados e não são cobrados de novo.
+            // O reset completo só acontece via resetForm() ao concluir
+            // ou cancelar o Pedido Express inteiro.
             setPickupChargeOpen(false);
           }
         }}
