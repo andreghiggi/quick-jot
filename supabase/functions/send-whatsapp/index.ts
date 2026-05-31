@@ -27,7 +27,10 @@ serve(async (req) => {
     const cleanPhone = phone.replace(/\D/g, '');
     
     // Add Brazil country code if not present
-    const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+    // BR phone normalization based on LENGTH to avoid DDD-55 ambiguity
+    const fullPhone = (cleanPhone.length === 10 || cleanPhone.length === 11)
+      ? `55${cleanPhone}`
+      : cleanPhone;
 
     // Create WhatsApp message
     const message = encodeURIComponent(

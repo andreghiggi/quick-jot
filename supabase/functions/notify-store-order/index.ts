@@ -91,7 +91,10 @@ serve(async (req) => {
         const firstName = order.customer_name.split(' ')[0];
         const confirmMsg = `${firstName}, seu pedido foi enviado e está aguardando confirmação do estabelecimento.\n\nAssim que seu pedido for confirmado, você será notificado por aqui. 😊`;
         const custPhone = order.customer_phone.replace(/\D/g, '');
-        const custFullPhone = custPhone.startsWith('55') ? custPhone : `55${custPhone}`;
+        // BR phone normalization based on LENGTH to avoid DDD-55 ambiguity
+        const custFullPhone = (custPhone.length === 10 || custPhone.length === 11)
+          ? `55${custPhone}`
+          : custPhone;
 
         const custRes = await fetch(`${baseUrl}/message/sendText/${instanceData.instance_name}`, {
           method: 'POST',
@@ -226,7 +229,9 @@ serve(async (req) => {
             }
 
             const customerPhone = order.customer_phone.replace(/\D/g, '');
-            const customerFullPhone = customerPhone.startsWith('55') ? customerPhone : `55${customerPhone}`;
+            const customerFullPhone = (customerPhone.length === 10 || customerPhone.length === 11)
+              ? `55${customerPhone}`
+              : customerPhone;
 
             const schedRes = await fetch(`${baseUrl}/message/sendText/${instanceData.instance_name}`, {
               method: 'POST',

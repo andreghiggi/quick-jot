@@ -184,7 +184,12 @@ serve(async (req) => {
       case 'send_message': {
         const { instanceName, phone, message, companyId, orderId } = params;
         const cleanPhone = phone.replace(/\D/g, '');
-        const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+        // BR phone normalization based on LENGTH (not prefix), to avoid the DDD-55 ambiguity:
+        // 10/11 digits = DDD+number without country → prefix 55
+        // 12/13 digits = already has country code 55
+        const fullPhone = (cleanPhone.length === 10 || cleanPhone.length === 11)
+          ? `55${cleanPhone}`
+          : cleanPhone;
 
         // Normalize line breaks: convert literal \n text to real newlines, normalize \r\n and \r
         const normalizedMessage = message
