@@ -702,7 +702,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
 
       <div className="border-t border-border pt-3 mb-3">
         <div className="space-y-1.5">
-          {order.items.map((item) => {
+          {order.items.map((item, itemIndex) => {
             // Parse grouped optionals from item name
             let displayName = item.name;
             let groupedOptionals: { groupName: string; items: string }[] = [];
@@ -748,8 +748,14 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               }
             }
 
+            const paidQty = hasPartialItemPayments
+              ? Math.min(item.quantity, paidQtyByIndex.get(String(itemIndex)) || 0)
+              : 0;
+            const pendingQty = Math.max(0, item.quantity - paidQty);
+            const isFullyPaid = hasPartialItemPayments && pendingQty <= 0;
+
             return (
-              <div key={item.id}>
+              <div key={item.id} className={cn(isFullyPaid && 'opacity-60')}>
                 <div className="flex justify-between text-sm">
                   <span className="text-foreground">
                     {item.quantity}x {displayName}
@@ -758,6 +764,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                     R$ {(item.price * item.quantity).toFixed(2)}
                   </span>
                 </div>
+                {paidQty > 0 && (
+                  <p className="text-xs font-medium text-success ml-4">
+                    {isFullyPaid
+                      ? '✓ Pago'
+                      : `${paidQty} pago${paidQty > 1 ? 's' : ''} · ${pendingQty} pendente${pendingQty > 1 ? 's' : ''}`}
+                  </p>
+                )}
                 {groupedOptionals.length > 0 && (
                   <div className="ml-4 mt-0.5 space-y-0.5">
                     {groupedOptionals.map((group, i) => (
