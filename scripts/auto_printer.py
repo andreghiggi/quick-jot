@@ -25,17 +25,15 @@ CHECK_INTERVAL = 5  # segundos entre verificações
 STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 
-# Allow-list ISOLADA para ajuste anti-corte de bordas na impressão automática (GDI).
+# Ajuste anti-corte de bordas na impressão automática (GDI).
 # Aumenta margem horizontal e reduz colunas para evitar que caracteres mais largos
 # que a média (M, W, %, acentos) sejam cortados pela cabeça térmica.
-# Atualmente liberado APENAS para Lancheria da i9. Não alterar sem autorização.
-SAFE_MARGIN_COMPANY_IDS = {
-    '8c9e7a0e-dbb6-49b9-8344-c23155a71164',  # Lancheria da i9
-}
+# Liberado para TODAS as lojas após validação na Lancheria da i9.
+SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
-SCRIPT_VERSION = "v8.28"  # corrige ativação real da margem segura I9 no GDI
+SCRIPT_VERSION = "v8.29"  # libera margem segura anti-corte para TODAS as lojas
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -645,7 +643,7 @@ def imprimir_html(html, order_number):
         #     que a média não estourem a largura física do papel.
         #   - aumenta margem horizontal (~1mm → ~3mm) para sair da zona morta
         #     da cabeça térmica.
-        safe_margin = COMPANY_ID in SAFE_MARGIN_COMPANY_IDS
+        safe_margin = SAFE_MARGIN_COMPANY_IDS is None or COMPANY_ID in SAFE_MARGIN_COMPANY_IDS
         if safe_margin:
             colunas = 22 if is_80mm else 18
         else:
@@ -661,7 +659,7 @@ def imprimir_html(html, order_number):
         usable_page_w = max(1, page_w - (margin_x * 2)) if safe_margin else page_w
         font_height = int(usable_page_w / colunas * 2.0)
         if safe_margin:
-            log(f"Margem segura I9 ativa: {colunas} cols, margem {margin_x}px, largura útil {usable_page_w}px", "CONFIG")
+            log(f"Margem segura ativa: {colunas} cols, margem {margin_x}px, largura útil {usable_page_w}px", "CONFIG")
 
         font_normal = win32ui.CreateFont({
             'name': 'Courier New',
