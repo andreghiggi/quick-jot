@@ -2847,6 +2847,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             quantity: i.quantity,
             unit_price: unit,
             id: String(idx),
+            paidQty,
             paid: paidQty >= i.quantity,
           };
         }) : undefined}

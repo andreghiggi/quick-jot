@@ -14,6 +14,8 @@ import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
 
+type CheckoutItem = { name: string; quantity: number; unit_price: number; id?: string; paid?: boolean; paidQty?: number };
+
 interface PDVV2PaymentDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -21,7 +23,7 @@ interface PDVV2PaymentDialogProps {
   total: number;
   title?: string;
   /** Itens para exibição visual no topo (apenas leitura, sem interação) */
-  checkoutItems?: Array<{ name: string; quantity: number; unit_price: number; id?: string; paid?: boolean }>;
+  checkoutItems?: CheckoutItem[];
   /** Callback chamado após pagamento parcial de itens selecionados (I9 apenas) */
   onItemsPaid?: (items: Array<{ id: string; paidQty: number }>) => void;
   /** Callback chamado após pagamento por divisão de pessoas (I9 apenas) */
@@ -122,6 +124,8 @@ export function PDVV2PaymentDialog({
   // operador desmarcar/remarcar o checkbox da linha (sem isto, o re-check
   // resetava silenciosamente a fração para 1, cobrando o item inteiro).
   const [splitMemory, setSplitMemory] = useState<Map<number, number>>(new Map());
+  const getPaidQty = (item: CheckoutItem) => Math.min(item.quantity, Math.max(0, item.paidQty ?? (item.paid ? item.quantity : 0)));
+  const getPendingQty = (item: CheckoutItem) => Math.max(0, item.quantity - getPaidQty(item));
 
   // When activeSplit is provided (person 2+), force split mode on open
   useEffect(() => {
@@ -130,6 +134,42 @@ export function PDVV2PaymentDialog({
       setSplitPeople(activeSplit.totalPeople);
     }
   }, [open, activeSplit]);
+
+  useEffect(() => {
+    if (!open || !checkoutItems) return;
+    setSelectedItemQtys((prev) => {
+      let changed = false;
+      const next = new Map<number, number>();
+      prev.forEach((qty, idx) => {
+        const item = checkoutItems[idx];
+        const pendingQty = item ? getPendingQty(item) : 0;
+        if (!item || pendingQty <= 0) {
+          changed = true;
+          return;
+        }
+        const safeQty = Math.min(qty, pendingQty);
+        if (safeQty !== qty) changed = true;
+        if (safeQty > 0) next.set(idx, safeQty);
+      });
+      return changed ? next : prev;
+    });
+    setSplitMemory((prev) => {
+      let changed = false;
+      const next = new Map<number, number>();
+      prev.forEach((qty, idx) => {
+        const item = checkoutItems[idx];
+        const pendingQty = item ? getPendingQty(item) : 0;
+        if (!item || pendingQty <= 0) {
+          changed = true;
+          return;
+        }
+        const safeQty = Math.min(qty, pendingQty);
+        if (safeQty !== qty) changed = true;
+        if (safeQty > 0) next.set(idx, safeQty);
+      });
+      return changed ? next : prev;
+    });
+  }, [open, checkoutItems]);
 
   const { activePaymentMethods: rawActivePaymentMethods } = usePaymentMethods({ companyId, channel });
   // Fallback: se não houver métodos cadastrados no canal PDV, lista TODOS os métodos
@@ -260,14 +300,14 @@ export function PDVV2PaymentDialog({
     : useCurrencyMask
     ? parseCurrencyInput(discount)
     : parseFloat(discount.replace(',', '.')) || 0;
-
   // I9: calcular total baseado no modo selecionado
   const i9SelectedTotal = (() => {
     if (!isLancheriaI9 || i9Mode !== 'items' || !checkoutItems) return null;
     let sum = 0;
     selectedItemQtys.forEach((qty, idx) => {
       const it = checkoutItems[idx];
-      if (it && !it.paid && qty > 0) sum += qty * it.unit_price;
+      const pendingQty = it ? getPendingQty(it) : 0;
+      if (it && pendingQty > 0 && qty > 0) sum += Math.min(qty, pendingQty) * it.unit_price;
     });
     selectedExtraQtys.forEach((qty, id) => {
       const ex = extraItems.find((e) => e.id === id);
@@ -328,7 +368,9 @@ export function PDVV2PaymentDialog({
             const items: Array<{ id: string; paidQty: number }> = [];
             selectedItemQtys.forEach((qty, idx) => {
               const it = checkoutItems[idx];
-              if (it?.id && qty > 0) items.push({ id: it.id, paidQty: qty });
+              const pendingQty = it ? getPendingQty(it) : 0;
+              const qtyToCharge = Math.min(qty, pendingQty);
+              if (it?.id && qtyToCharge > 0) items.push({ id: it.id, paidQty: qtyToCharge });
             });
             return items.length > 0 ? items : undefined;
           })()
@@ -500,8 +542,10 @@ export function PDVV2PaymentDialog({
                   const optionals = match
                     ? match[2].split('|').map((s) => s.trim()).filter(Boolean)
                     : [];
+                  const paidQty = getPaidQty(item);
+                  const pendingQty = getPendingQty(item);
                   return (
-                    <div key={idx} className="text-sm px-1 min-w-0">
+                    <div key={idx} className={`text-sm px-1 min-w-0 ${paidQty >= item.quantity ? 'opacity-60' : ''}`}>
                       <div className="flex items-start justify-between gap-2 min-w-0">
                         <span className="break-words min-w-0 flex-1">
                           {item.quantity}x {baseName}
@@ -510,6 +554,13 @@ export function PDVV2PaymentDialog({
                           {formatPrice(item.quantity * item.unit_price)}
                         </span>
                       </div>
+                      {paidQty > 0 && (
+                        <p className="text-xs font-medium text-success">
+                          {paidQty >= item.quantity
+                            ? '✓ Pago'
+                            : `${paidQty} pago${paidQty > 1 ? 's' : ''} · ${pendingQty} pendente${pendingQty > 1 ? 's' : ''}`}
+                        </p>
+                      )}
                       {optionals.length > 0 && (
                         <ul className="text-xs text-muted-foreground pl-4 mt-0.5 space-y-0.5">
                           {optionals.map((opt, i) => (
@@ -597,10 +648,12 @@ export function PDVV2PaymentDialog({
               {i9Mode === 'items' && (
                 <div className="max-h-[8rem] overflow-y-auto overflow-x-hidden space-y-1 border rounded-md p-2">
                   {checkoutItems.map((item, idx) => {
-                    const isPaid = !!item.paid;
+                    const paidQty = getPaidQty(item);
+                    const pendingQty = getPendingQty(item);
+                    const isPaid = pendingQty <= 0;
                     const selectedQty = selectedItemQtys.get(idx) || 0;
                     const isEditingSplit = splitItemEditingIdx === idx;
-                    const itemTotal = item.unit_price * item.quantity;
+                    const itemTotal = item.unit_price * pendingQty;
                     const splitSuggested =
                       splitItemPeople > 0
                         ? Math.round((itemTotal / splitItemPeople) * 100) / 100
@@ -609,7 +662,7 @@ export function PDVV2PaymentDialog({
                       <div key={idx} className="min-w-0">
                         <div
                           className={`flex items-center gap-2 text-sm px-1 py-0.5 rounded min-w-0 ${
-                            isPaid ? 'opacity-60 bg-green-50 dark:bg-green-950/30' : ''
+                            isPaid ? 'opacity-60 bg-success/10' : ''
                           }`}
                         >
                         {isPaid ? (
@@ -617,13 +670,13 @@ export function PDVV2PaymentDialog({
                             <Checkbox checked disabled />
                             <span className="truncate flex-1 min-w-0">
                               {item.quantity}x {item.name}
-                              <span className="ml-1 text-xs text-green-600">(pago)</span>
+                              <span className="ml-1 text-xs text-success">(pago)</span>
                             </span>
                             <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
                               {formatPrice(item.quantity * item.unit_price)}
                             </span>
                           </>
-                        ) : item.quantity === 1 ? (
+                        ) : pendingQty === 1 ? (
                           <>
                             <Checkbox
                               checked={selectedQty > 0}
@@ -663,7 +716,7 @@ export function PDVV2PaymentDialog({
                                   </span>
                                 </>
                               ) : (
-                                `1x ${item.name}`
+                                  `${pendingQty}x ${item.name}`
                               )}
                             </span>
                             <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
@@ -683,7 +736,7 @@ export function PDVV2PaymentDialog({
                                   setSplitItemPeople(2);
                                   // Default: 1 fração de 2 = metade do total
                                   setSplitItemAmount(
-                                    Math.round((item.unit_price * item.quantity / 2) * 100) / 100,
+                                    Math.round((item.unit_price * pendingQty / 2) * 100) / 100,
                                   );
                                 }
                               }}
@@ -714,17 +767,19 @@ export function PDVV2PaymentDialog({
                                 variant="outline"
                                 size="icon"
                                 className="h-6 w-6 text-xs"
-                                disabled={selectedQty >= item.quantity}
+                                disabled={selectedQty >= pendingQty}
                                 onClick={() => {
                                   const next = new Map(selectedItemQtys);
-                                  next.set(idx, Math.min(selectedQty + 1, item.quantity));
+                                  next.set(idx, Math.min(selectedQty + 1, pendingQty));
                                   setSelectedItemQtys(next);
                                 }}
                               >+</Button>
                             </div>
                             <span className="truncate flex-1 min-w-0">
                               {item.name}
-                              <span className="text-xs text-muted-foreground ml-1">({item.quantity} un.)</span>
+                              <span className="text-xs text-muted-foreground ml-1">
+                                ({pendingQty} pendente{pendingQty > 1 ? 's' : ''}{paidQty > 0 ? ` de ${item.quantity}` : ''})
+                              </span>
                             </span>
                             <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
                               {formatPrice(selectedQty * item.unit_price)}
@@ -732,7 +787,7 @@ export function PDVV2PaymentDialog({
                           </>
                         )}
                         </div>
-                        {isEditingSplit && item.quantity === 1 && !isPaid && (
+                        {isEditingSplit && pendingQty === 1 && !isPaid && (
                           <div className="ml-7 mt-1 mb-2 p-2 border rounded-md bg-muted/40 space-y-2">
                             <p className="text-xs font-medium">Rachar &quot;{item.name}&quot;</p>
                             <div className="grid grid-cols-2 gap-2">
@@ -799,7 +854,7 @@ export function PDVV2PaymentDialog({
                                   // paidQty = valorCobrado / unit_price (em "unidades" do item).
                                   // Ex.: item R$ 22 unit_price 22, valor R$ 10 → 0.4545 unidade.
                                   const paidQty = Math.min(
-                                    item.quantity,
+                                    pendingQty,
                                     Math.round((splitItemAmount / item.unit_price) * 1000) / 1000,
                                   );
                                   const next = new Map(selectedItemQtys);
@@ -923,16 +978,17 @@ export function PDVV2PaymentDialog({
                         const nextSel = new Map<number, number>();
                         const nextMem = new Map<number, number>();
                         checkoutItems.forEach((it, idx) => {
-                          if (it.paid) return;
+                          const pendingQty = getPendingQty(it);
+                          if (pendingQty <= 0) return;
                           // Cada pessoa fica com 1/N da quantidade total do item.
                           // Para itens com quantity === 1, isso vira fração (ex.: 0.5).
                           // Para itens com quantity > 1, distribui proporcionalmente.
                           const perPersonQty =
-                            Math.round((it.quantity / splitPeople) * 1000) / 1000;
+                            Math.round((pendingQty / splitPeople) * 1000) / 1000;
                           if (perPersonQty > 0) {
                             nextSel.set(idx, perPersonQty);
                             // Memoriza fração para sobreviver a toggles do checkbox.
-                            if (it.quantity === 1) nextMem.set(idx, perPersonQty);
+                            if (pendingQty === 1) nextMem.set(idx, perPersonQty);
                           }
                         });
                         setSelectedItemQtys(nextSel);
