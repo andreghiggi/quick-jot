@@ -117,6 +117,27 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   // adiciona o marcador [COBRADO] nas notas. "Enviar pra Cozinha" segue o
   // fluxo normal e exige clique em "Cobrar" depois de Pronto.
   const alreadyCharged = !!order.notes?.includes('[COBRADO]');
+  const paidQtyByIndex = useMemo(() => {
+    const raw = (order.paidItems as any)?.paid_qtys;
+    const map = new Map<string, number>();
+    if (raw && typeof raw === 'object') {
+      Object.entries(raw).forEach(([key, value]) => {
+        const qty = Number(value);
+        if (Number.isFinite(qty) && qty > 0) map.set(key, qty);
+      });
+    }
+    return map;
+  }, [order.paidItems]);
+  const hasPartialItemPayments = paidQtyByIndex.size > 0;
+  const partialPaidTotal = hasPartialItemPayments
+    ? order.items.reduce((sum, item, idx) => {
+        const paidQty = Math.min(item.quantity, paidQtyByIndex.get(String(idx)) || 0);
+        return sum + paidQty * item.price;
+      }, 0)
+    : 0;
+  const pendingPaymentTotal = hasPartialItemPayments
+    ? Math.max(0, order.total - partialPaidTotal)
+    : order.total;
   const showChargeButton =
     chargeButtonEnabled &&
     (isCardapioOrder || isBalcaoOrder) &&
@@ -681,7 +702,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
 
       <div className="border-t border-border pt-3 mb-3">
         <div className="space-y-1.5">
-          {order.items.map((item) => {
+          {order.items.map((item, itemIndex) => {
             // Parse grouped optionals from item name
             let displayName = item.name;
             let groupedOptionals: { groupName: string; items: string }[] = [];
@@ -727,8 +748,14 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               }
             }
 
+            const paidQty = hasPartialItemPayments
+              ? Math.min(item.quantity, paidQtyByIndex.get(String(itemIndex)) || 0)
+              : 0;
+            const pendingQty = Math.max(0, item.quantity - paidQty);
+            const isFullyPaid = hasPartialItemPayments && pendingQty <= 0;
+
             return (
-              <div key={item.id}>
+              <div key={item.id} className={cn(isFullyPaid && 'opacity-60')}>
                 <div className="flex justify-between text-sm">
                   <span className="text-foreground">
                     {item.quantity}x {displayName}
@@ -737,6 +764,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
                     R$ {(item.price * item.quantity).toFixed(2)}
                   </span>
                 </div>
+                {paidQty > 0 && (
+                  <p className="text-xs font-medium text-success ml-4">
+                    {isFullyPaid
+                      ? '✓ Pago'
+                      : `${paidQty} pago${paidQty > 1 ? 's' : ''} · ${pendingQty} pendente${pendingQty > 1 ? 's' : ''}`}
+                  </p>
+                )}
                 {groupedOptionals.length > 0 && (
                   <div className="ml-4 mt-0.5 space-y-0.5">
                     {groupedOptionals.map((group, i) => (
@@ -837,6 +871,12 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           <p className="text-lg font-bold text-foreground">
             R$ {order.total.toFixed(2)}
           </p>
+          {hasPartialItemPayments && !alreadyCharged && (
+            <div className="text-xs mt-0.5 space-y-0.5">
+              <p className="text-success">Pago: R$ {partialPaidTotal.toFixed(2)}</p>
+              <p className="text-amber-600 dark:text-amber-400">Saldo: R$ {pendingPaymentTotal.toFixed(2)}</p>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <Button

@@ -56,6 +56,45 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
   const tefPromptOpenRef = useRef(false);
   const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
+  const paidQtyByIndex = useMemo(() => {
+    const raw = (order.paidItems as any)?.paid_qtys;
+    const map = new Map<string, number>();
+    if (raw && typeof raw === 'object') {
+      Object.entries(raw).forEach(([key, value]) => {
+        const qty = Number(value);
+        if (Number.isFinite(qty) && qty > 0) map.set(key, qty);
+      });
+    }
+    return map;
+  }, [order.paidItems]);
+  const hasPartialItemPayments = paidQtyByIndex.size > 0;
+
+  const checkoutItems = useMemo(
+    () =>
+      order.items.map((i, idx) => {
+        const paidQty = Math.min(i.quantity, paidQtyByIndex.get(String(idx)) || 0);
+        return {
+          id: String(idx),
+          name: i.name,
+          quantity: i.quantity,
+          unit_price: i.price,
+          paidQty,
+          paid: paidQty >= i.quantity,
+        };
+      }),
+    [order.items, paidQtyByIndex],
+  );
+  const pendingExistingTotal = useMemo(
+    () => checkoutItems.reduce((sum, item) => {
+      const pendingQty = Math.max(0, item.quantity - (item.paidQty || 0));
+      return sum + pendingQty * item.unit_price;
+    }, 0),
+    [checkoutItems],
+  );
+  const chargeBaseTotal = hasPartialItemPayments ? pendingExistingTotal : order.total;
+
+  const cleanItemName = (name: string) =>
+    name.includes('(') ? name.substring(0, name.indexOf('(')).trim() : name;
 
   useEffect(() => {
     function onOpened() { tefPromptOpenRef.current = true; setTefPromptOpen(true); }
@@ -75,19 +114,6 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     }
   }, [tefPromptOpen, pendingNfceOpen, nfceRecord]);
 
-  // Itens do pedido convertidos para o formato esperado pela venda/NFC-e.
-  const saleItems = useMemo(
-    () =>
-      order.items.map((it) => ({
-        // Remove sufixo "(Adicionais: ...)" do nome para a venda/NFC-e
-        product_id: it.productId || null,
-        product_name: it.name.includes('(') ? it.name.substring(0, it.name.indexOf('(')).trim() : it.name,
-        quantity: it.quantity,
-        unit_price: it.price,
-      })),
-    [order.items],
-  );
-
   async function handleConfirm(params: {
     paymentMethodId: string;
     paymentName: string;
@@ -100,6 +126,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     tefIntegration?: 'tef_pinpad' | 'tef_smartpos';
     customerDocument?: string;
     prechargedTef?: { tefData?: NFCeTefData; notesFragment?: string };
+    itemsInfo?: Array<{ id: string; paidQty: number }>;
   }) {
     if (!company?.id) return;
     if (!currentRegister) {
@@ -117,6 +144,27 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       // ===== Itens extras adicionados na cobrança =====
       // Persistidos em order_items (added_after=true), incluídos na venda do caixa
       // e na NFC-e. Total do pedido é atualizado abaixo.
+      const selectedQtyByIndex = new Map<number, number>();
+      (params.itemsInfo || []).forEach((item) => {
+        const idx = parseInt(item.id, 10);
+        if (!Number.isNaN(idx) && item.paidQty > 0) {
+          selectedQtyByIndex.set(idx, item.paidQty);
+        }
+      });
+      const selectedExistingItems = order.items.flatMap((it, idx) => {
+        const alreadyPaid = Math.min(it.quantity, paidQtyByIndex.get(String(idx)) || 0);
+        const pendingQty = Math.max(0, it.quantity - alreadyPaid);
+        const qtyToCharge = hasPartialItemPayments
+          ? Math.min(pendingQty, selectedQtyByIndex.get(idx) ?? pendingQty)
+          : it.quantity;
+        if (qtyToCharge <= 0) return [];
+        return [{
+          product_id: it.productId || null,
+          product_name: cleanItemName(it.name),
+          quantity: qtyToCharge,
+          unit_price: it.price,
+        }];
+      });
       const extras = params.extraItems || [];
       const extrasTotal = extras.reduce((s, ex) => s + ex.unit_price * ex.quantity, 0);
       const extrasAsSaleItems = extras.map((ex) => ({
@@ -127,7 +175,11 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         quantity: ex.quantity,
         unit_price: ex.unit_price,
       }));
-      const effectiveSaleItems = [...saleItems, ...extrasAsSaleItems];
+      const effectiveSaleItems = [...selectedExistingItems, ...extrasAsSaleItems];
+      if (effectiveSaleItems.length === 0) {
+        toast.info('Não há itens pendentes para cobrar neste pedido.');
+        return;
+      }
 
       if (extras.length > 0 && company?.id) {
         const insertPayload = extras.map((ex) => ({
@@ -193,7 +245,11 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       const newNotes = order.notes
         ? `${order.notes} | [COBRADO] Pagamento: ${params.paymentName}${tefNote}`
         : `[COBRADO] Pagamento: ${params.paymentName}${tefNote}`;
-      const orderUpdate: { notes: string; total?: number } = { notes: newNotes };
+      const orderUpdate: any = {
+        notes: newNotes,
+        payment_status: 'paid',
+        paid_amount: Number((order.total + extrasTotal).toFixed(2)),
+      };
       if (extrasTotal > 0) {
         orderUpdate.total = Number((order.total + extrasTotal).toFixed(2));
       }
@@ -302,13 +358,13 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         open={open}
         onOpenChange={onOpenChange}
         companyId={company?.id}
-        total={order.total}
+        total={chargeBaseTotal}
         title={`Cobrar pedido #${order.orderCode || order.dailyNumber}`}
         showDocumentMode
         showAddItem
         tefStatus={tefStatus}
         deliveryFilter={order.deliveryAddress && order.deliveryAddress.trim().length > 0 ? 'delivery' : 'pickup'}
-        checkoutItems={order?.items?.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.price }))}
+        checkoutItems={checkoutItems}
         onConfirm={handleConfirm}
       />
       {nfceRecord && (
