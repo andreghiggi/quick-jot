@@ -370,6 +370,7 @@ export default function MesaQR() {
             paperSize: settings.printerPaperSize,
             referenceLabel: `MESA ${selectedMesa.number} (QR)`,
             layout: settings.printLayout,
+            orderType: 'table',
             showReadyTime: true,
             readyOffsetMinutes: computeReadyOffsetMinutes(settings.estimatedWaitTime, 30),
           });
