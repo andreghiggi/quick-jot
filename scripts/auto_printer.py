@@ -24,6 +24,14 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 CHECK_INTERVAL = 5  # segundos entre verificações
 STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
+
+# Allow-list ISOLADA para ajuste anti-corte de bordas na impressão automática (GDI).
+# Aumenta margem horizontal e reduz colunas para evitar que caracteres mais largos
+# que a média (M, W, %, acentos) sejam cortados pela cabeça térmica.
+# Atualmente liberado APENAS para Lancheria da i9. Não alterar sem autorização.
+SAFE_MARGIN_COMPANY_IDS = {
+    '8c9e7a0e-dbb6-49b9-8344-c23155a71164',  # Lancheria da i9
+}
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
@@ -632,12 +640,21 @@ def imprimir_html(html, order_number):
 
         # Fonte GRANDE — máximo possível para 80mm (24 colunas) ou 58mm (20 colunas)
         is_80mm = PAPER_SIZE == '80mm'
-        colunas = 24 if is_80mm else 20
+        # Caminho A (anti-corte de bordas) — APENAS lojas na allow-list:
+        #   - reduz colunas (24→22 / 20→18) para que caracteres mais largos
+        #     que a média não estourem a largura física do papel.
+        #   - aumenta margem horizontal (~1mm → ~3mm) para sair da zona morta
+        #     da cabeça térmica.
+        safe_margin = COMPANY_ID in SAFE_MARGIN_COMPANY_IDS
+        if safe_margin:
+            colunas = 22 if is_80mm else 18
+        else:
+            colunas = 24 if is_80mm else 20
         font_height = int(page_w / colunas * 2.0)
         # MODO COMPACTO V2: economia de papel para qualquer loja no layout v2
         compact_v2 = (PRINT_LAYOUT == 'v2')
         margin_factor = 0.02 if compact_v2 else 0.04  # margem cai pela metade
-        margin_x = int(dpi_x * 0.04)  # ~1mm margem mínima
+        margin_x = int(dpi_x * (0.12 if safe_margin else 0.04))  # ~3mm (allow-list) ou ~1mm (padrão)
         margin_y = int(dpi_y * margin_factor)
 
         font_normal = win32ui.CreateFont({
