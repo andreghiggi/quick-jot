@@ -26,6 +26,19 @@ interface PrintTicketData {
    *  usar readyOffsetMinutes = 30 (máximo − 10 min). */
   showReadyTime?: boolean;
   readyOffsetMinutes?: number;
+  /** Company atual. Usado para rollout isolado do título "PEDIDO <short_code>"
+   *  em vez de "Comanda #<tabNumber>" — atualmente APENAS Lancheria I9. */
+  companyId?: string;
+}
+
+// Allow-list ISOLADA: troca de "Comanda #<n>" por referenceLabel no cabeçalho.
+// Atualmente liberada APENAS para Lancheria da i9. Não alterar sem autorização.
+const SHORT_CODE_HEADER_ALLOWLIST = new Set<string>([
+  '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da i9
+]);
+
+function shouldUseReferenceInHeader(data: PrintTicketData): boolean {
+  return !!data.companyId && !!data.referenceLabel && SHORT_CODE_HEADER_ALLOWLIST.has(data.companyId);
 }
 
 function getPaperWidth(size?: '58mm' | '80mm'): string {
