@@ -116,7 +116,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   // No Express isso só acontece em "Finalizar Pedido" (ou TEF concluído), que
   // adiciona o marcador [COBRADO] nas notas. "Enviar pra Cozinha" segue o
   // fluxo normal e exige clique em "Cobrar" depois de Pronto.
-  const alreadyCharged = !!order.notes?.includes('[COBRADO]');
+  const hasChargedMarker = !!order.notes?.includes('[COBRADO]');
   const paidQtyByIndex = useMemo(() => {
     const raw = (order.paidItems as any)?.paid_qtys;
     const map = new Map<string, number>();
@@ -138,6 +138,8 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const pendingPaymentTotal = hasPartialItemPayments
     ? Math.max(0, order.total - partialPaidTotal)
     : order.total;
+  const hasPendingItemPayment = hasPartialItemPayments && pendingPaymentTotal > 0.009;
+  const alreadyCharged = hasChargedMarker && !hasPendingItemPayment;
   const showChargeButton =
     chargeButtonEnabled &&
     (isCardapioOrder || isBalcaoOrder) &&
