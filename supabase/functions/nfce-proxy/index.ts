@@ -374,10 +374,17 @@ Deno.serve(async (req) => {
         if (emitData && (emitData.id || emitData.nfce_id)) {
           const chave = emitData.chave_acesso || emitData.chave || emitData.access_key || null
           const fromChave = chave ? extractFromChave(chave) : { numero: null, serie: null }
+          // Fallback chain: API response → XML tpAmb → request payload (what we
+          // actually sent to SEFAZ) → 'homologacao'. Using emitPayload.ambiente
+          // prevents authorized production NFC-es from being mis-tagged as
+          // homologação when the API response omits the ambiente field.
           const ambienteResolved =
             emitData.ambiente ||
             emitData.environment ||
             ambienteFromXml(pickXmlField(emitData)) ||
+            emitPayload?.ambiente ||
+            emitPayload?.environment ||
+            payload?.ambiente ||
             'homologacao'
           const nfceRecord = {
             company_id: companyId,
