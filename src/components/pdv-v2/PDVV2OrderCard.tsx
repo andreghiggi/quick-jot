@@ -92,7 +92,14 @@ export function PDVV2OrderCard({
 
   // Order already charged? Marker [COBRADO] é adicionado por OrderCardChargeDialog
   // ou pelo Pedido Express quando "Finalizar Pedido" / TEF concluído.
-  const alreadyCharged = !!order.notes?.includes('[COBRADO]');
+  const rawPaidQtys = (order.paidItems as any)?.paid_qtys;
+  const hasPendingPaidItem = rawPaidQtys && typeof rawPaidQtys === 'object'
+    ? order.items.some((item, idx) => {
+        const paidQty = Math.min(item.quantity, Number(rawPaidQtys[String(idx)] || 0));
+        return paidQty > 0 && item.quantity - paidQty > 0.0009;
+      })
+    : false;
+  const alreadyCharged = !!order.notes?.includes('[COBRADO]') && !hasPendingPaidItem;
 
   // Define the next button label based on flow
   // - Delivery (cardápio): pending → preparing → ready → "Saiu para entrega" → "Entregue"
