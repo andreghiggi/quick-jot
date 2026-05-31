@@ -124,6 +124,8 @@ export function PDVV2PaymentDialog({
   // operador desmarcar/remarcar o checkbox da linha (sem isto, o re-check
   // resetava silenciosamente a fração para 1, cobrando o item inteiro).
   const [splitMemory, setSplitMemory] = useState<Map<number, number>>(new Map());
+  const getPaidQty = (item: CheckoutItem) => Math.min(item.quantity, Math.max(0, item.paidQty ?? (item.paid ? item.quantity : 0)));
+  const getPendingQty = (item: CheckoutItem) => Math.max(0, item.quantity - getPaidQty(item));
 
   // When activeSplit is provided (person 2+), force split mode on open
   useEffect(() => {
@@ -298,9 +300,6 @@ export function PDVV2PaymentDialog({
     : useCurrencyMask
     ? parseCurrencyInput(discount)
     : parseFloat(discount.replace(',', '.')) || 0;
-  const getPaidQty = (item: CheckoutItem) => Math.min(item.quantity, Math.max(0, item.paidQty ?? (item.paid ? item.quantity : 0)));
-  const getPendingQty = (item: CheckoutItem) => Math.max(0, item.quantity - getPaidQty(item));
-
   // I9: calcular total baseado no modo selecionado
   const i9SelectedTotal = (() => {
     if (!isLancheriaI9 || i9Mode !== 'items' || !checkoutItems) return null;
