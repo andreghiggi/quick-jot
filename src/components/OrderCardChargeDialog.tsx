@@ -154,8 +154,9 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       const selectedExistingItems = order.items.flatMap((it, idx) => {
         const alreadyPaid = Math.min(it.quantity, paidQtyByIndex.get(String(idx)) || 0);
         const pendingQty = Math.max(0, it.quantity - alreadyPaid);
+        const explicitItemSelection = (params.itemsInfo || []).length > 0;
         const qtyToCharge = hasPartialItemPayments
-          ? Math.min(pendingQty, selectedQtyByIndex.get(idx) ?? pendingQty)
+          ? Math.min(pendingQty, selectedQtyByIndex.get(idx) ?? (explicitItemSelection ? 0 : pendingQty))
           : it.quantity;
         if (qtyToCharge <= 0) return [];
         return [{
