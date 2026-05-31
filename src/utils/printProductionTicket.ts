@@ -360,6 +360,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
           .obs { background: #000 !important; background-color: #000 !important; }
           .obs-text { color: #fff !important; }
           .add-line { -webkit-text-stroke: 0.5px #000 !important; }
+          .order-type-badge { background: #000 !important; background-color: #000 !important; color: #fff !important; }
         }
       </style>
     </head>
