@@ -497,7 +497,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   }
 
   const subtotal = cart.reduce((sum, item) => sum + calculateItemTotal(item), 0);
-  const total = subtotal + (deliveryType === 'entrega' ? deliveryFee : 0);
+  const isFreeDelivery =
+    deliveryType === 'entrega' &&
+    settings.freeDeliveryEnabled &&
+    settings.freeDeliveryMinOrder > 0 &&
+    subtotal >= settings.freeDeliveryMinOrder;
+  const effectiveDeliveryFee = isFreeDelivery ? 0 : deliveryFee;
+  const total = subtotal + (deliveryType === 'entrega' ? effectiveDeliveryFee : 0);
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 11);
