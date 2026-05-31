@@ -611,10 +611,12 @@ export function PDVV2PaymentDialog({
               {i9Mode === 'items' && (
                 <div className="max-h-[8rem] overflow-y-auto overflow-x-hidden space-y-1 border rounded-md p-2">
                   {checkoutItems.map((item, idx) => {
-                    const isPaid = !!item.paid;
+                    const paidQty = getPaidQty(item);
+                    const pendingQty = getPendingQty(item);
+                    const isPaid = pendingQty <= 0;
                     const selectedQty = selectedItemQtys.get(idx) || 0;
                     const isEditingSplit = splitItemEditingIdx === idx;
-                    const itemTotal = item.unit_price * item.quantity;
+                    const itemTotal = item.unit_price * pendingQty;
                     const splitSuggested =
                       splitItemPeople > 0
                         ? Math.round((itemTotal / splitItemPeople) * 100) / 100
@@ -637,7 +639,7 @@ export function PDVV2PaymentDialog({
                               {formatPrice(item.quantity * item.unit_price)}
                             </span>
                           </>
-                        ) : item.quantity === 1 ? (
+                        ) : pendingQty === 1 ? (
                           <>
                             <Checkbox
                               checked={selectedQty > 0}
@@ -677,7 +679,7 @@ export function PDVV2PaymentDialog({
                                   </span>
                                 </>
                               ) : (
-                                `1x ${item.name}`
+                                  `${pendingQty}x ${item.name}`
                               )}
                             </span>
                             <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
@@ -697,7 +699,7 @@ export function PDVV2PaymentDialog({
                                   setSplitItemPeople(2);
                                   // Default: 1 fração de 2 = metade do total
                                   setSplitItemAmount(
-                                    Math.round((item.unit_price * item.quantity / 2) * 100) / 100,
+                                    Math.round((item.unit_price * pendingQty / 2) * 100) / 100,
                                   );
                                 }
                               }}
@@ -728,17 +730,19 @@ export function PDVV2PaymentDialog({
                                 variant="outline"
                                 size="icon"
                                 className="h-6 w-6 text-xs"
-                                disabled={selectedQty >= item.quantity}
+                                disabled={selectedQty >= pendingQty}
                                 onClick={() => {
                                   const next = new Map(selectedItemQtys);
-                                  next.set(idx, Math.min(selectedQty + 1, item.quantity));
+                                  next.set(idx, Math.min(selectedQty + 1, pendingQty));
                                   setSelectedItemQtys(next);
                                 }}
                               >+</Button>
                             </div>
                             <span className="truncate flex-1 min-w-0">
                               {item.name}
-                              <span className="text-xs text-muted-foreground ml-1">({item.quantity} un.)</span>
+                              <span className="text-xs text-muted-foreground ml-1">
+                                ({pendingQty} pendente{pendingQty > 1 ? 's' : ''}{paidQty > 0 ? ` de ${item.quantity}` : ''})
+                              </span>
                             </span>
                             <span className="tabular-nums text-muted-foreground whitespace-nowrap text-xs">
                               {formatPrice(selectedQty * item.unit_price)}
