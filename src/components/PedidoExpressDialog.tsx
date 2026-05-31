@@ -497,7 +497,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   }
 
   const subtotal = cart.reduce((sum, item) => sum + calculateItemTotal(item), 0);
-  const total = subtotal + (deliveryType === 'entrega' ? deliveryFee : 0);
+  const isFreeDelivery =
+    deliveryType === 'entrega' &&
+    settings.freeDeliveryEnabled &&
+    settings.freeDeliveryMinOrder > 0 &&
+    subtotal >= settings.freeDeliveryMinOrder;
+  const effectiveDeliveryFee = isFreeDelivery ? 0 : deliveryFee;
+  const total = subtotal + (deliveryType === 'entrega' ? effectiveDeliveryFee : 0);
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -2278,10 +2284,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                         </div>
                       )}
 
-                      {deliveryFee > 0 && (
+                      {deliveryFee > 0 && !isFreeDelivery && (
                         <div className="bg-primary/5 rounded-lg p-3 flex justify-between items-center mt-3">
                           <span className="text-sm font-medium">Taxa de entrega:</span>
                           <span className="text-sm font-bold text-primary">R$ {deliveryFee.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {isFreeDelivery && (
+                        <div className="bg-success/10 rounded-lg p-3 flex justify-between items-center mt-3">
+                          <span className="text-sm font-medium">Taxa de entrega:</span>
+                          <span className="text-sm font-bold text-success">Grátis</span>
                         </div>
                       )}
                     </div>
@@ -2508,10 +2520,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                         <span>Subtotal</span>
                         <span>R$ {subtotal.toFixed(2)}</span>
                       </div>
-                      {deliveryType === 'entrega' && deliveryFee > 0 && (
+                      {deliveryType === 'entrega' && deliveryFee > 0 && !isFreeDelivery && (
                         <div className="flex justify-between text-sm">
                           <span>Taxa de entrega</span>
                           <span>R$ {deliveryFee.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {deliveryType === 'entrega' && isFreeDelivery && (
+                        <div className="flex justify-between text-sm">
+                          <span>Taxa de entrega</span>
+                          <span className="text-success font-semibold">Grátis</span>
                         </div>
                       )}
                       <div className="flex justify-between font-bold text-lg pt-1">

@@ -33,6 +33,8 @@ interface StoreSettings {
   autoPrintProductionTicket: boolean;
   printLayout: 'v1' | 'v2';
   tefAutoPrintVias: 'none' | 'estabelecimento' | 'ambas';
+  freeDeliveryEnabled: boolean;
+  freeDeliveryMinOrder: number;
 }
 
 interface UseStoreSettingsOptions {
@@ -72,6 +74,8 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     autoPrintProductionTicket: false,
     printLayout: 'v1',
     tefAutoPrintVias: 'ambas',
+    freeDeliveryEnabled: false,
+    freeDeliveryMinOrder: 0,
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
@@ -126,6 +130,8 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         autoPrintProductionTicket: settingsMap['auto_print_production_ticket'] === 'true',
         printLayout: (settingsMap['print_layout'] as 'v1' | 'v2') || 'v1',
         tefAutoPrintVias: ((settingsMap['tef_auto_print_vias'] as 'none' | 'estabelecimento' | 'ambas') || 'ambas'),
+        freeDeliveryEnabled: settingsMap['free_delivery_enabled'] === 'true',
+        freeDeliveryMinOrder: parseFloat(settingsMap['free_delivery_min_order']) || 0,
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);
