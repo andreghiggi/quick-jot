@@ -800,7 +800,7 @@ export default function Menu() {
   }
 
   // Calculate delivery fee based on type
-  const getDeliveryFee = () => {
+  const getBaseDeliveryFee = () => {
     if (deliveryType === 'pickup') return 0;
     if (deliveryType === 'city') return settings.deliveryFeeCity || 0;
     if (deliveryType === 'interior') return settings.deliveryFeeInterior || 0;
@@ -811,8 +811,14 @@ export default function Menu() {
     return 0;
   };
 
-  const deliveryFee = getDeliveryFee();
   const cartTotal = cart.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+  const baseDeliveryFee = getBaseDeliveryFee();
+  const isFreeDelivery =
+    deliveryType !== 'pickup' &&
+    settings.freeDeliveryEnabled &&
+    settings.freeDeliveryMinOrder > 0 &&
+    cartTotal >= settings.freeDeliveryMinOrder;
+  const deliveryFee = isFreeDelivery ? 0 : baseDeliveryFee;
   const orderTotal = cartTotal + deliveryFee;
 
   const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
