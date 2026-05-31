@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { UtensilsCrossed, Download, ChevronDown } from 'lucide-react';
+import { UtensilsCrossed, Download, ChevronDown, Trash2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { brl as formatPrice } from './_format';
 import type { OccupiedTab } from './PDVV2TablesPanel';
@@ -8,13 +8,15 @@ import type { OccupiedTab } from './PDVV2TablesPanel';
 interface Props {
   tabs: OccupiedTab[];
   onImport: (tab: OccupiedTab) => void;
+  /** Exibido apenas para comandas zeradas (total = 0 e sem itens). */
+  onDelete?: (tab: OccupiedTab) => void;
 }
 
 /**
  * Visualização em grid (cards grandes) para a aba "Mesas" do PDV V2.
  * Substitui a coluna lateral em uma exibição mais clicável.
  */
-export function PDVV2TablesGrid({ tabs, onImport }: Props) {
+export function PDVV2TablesGrid({ tabs, onImport, onDelete }: Props) {
   if (tabs.length === 0) {
     return (
       <Card>
@@ -80,10 +82,24 @@ export function PDVV2TablesGrid({ tabs, onImport }: Props) {
               </Collapsible>
             )}
 
-            <Button className="w-full" size="lg" onClick={() => onImport(tab)}>
-              <Download className="h-4 w-4 mr-2" />
-              Importar e Cobrar
-            </Button>
+            <div className="flex gap-2">
+              <Button className="flex-1" size="lg" onClick={() => onImport(tab)}>
+                <Download className="h-4 w-4 mr-2" />
+                Importar e Cobrar
+              </Button>
+              {onDelete && tab.total === 0 && (!tab.items || tab.items.length === 0) && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => onDelete(tab)}
+                  title="Excluir comanda zerada"
+                  aria-label="Excluir comanda zerada"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       ))}
