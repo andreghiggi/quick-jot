@@ -23,6 +23,7 @@ interface PrintPayload {
   companyId: string;
   orderCode: string;
   dailyNumber: number;
+  shortCode?: string;
   customerName: string;
   items: PrintItem[];
   total: number;
@@ -61,7 +62,8 @@ function buildReceiptHTML(payload: PrintPayload): string {
     .total { font-weight:bold; font-size:14px; display:flex; justify-content:space-between; }
   </style></head><body>
     <h2>RECIBO</h2>
-    <div style="font-size:12px;">Pedido #${payload.dailyNumber} (${escapeHtml(payload.orderCode)})</div>
+    <div style="font-size:14px;font-weight:bold;">${payload.shortCode ? escapeHtml(payload.shortCode) : `Pedido #${payload.dailyNumber}`}</div>
+    <div style="font-size:10px;">${escapeHtml(payload.orderCode)}</div>
     <div style="font-size:12px;">Cliente: ${escapeHtml(payload.customerName)}</div>
     <hr/>
     ${itemsHtml}
@@ -100,11 +102,14 @@ function buildProductionHtml(payload: PrintPayload, ref: string) {
 }
 
 export async function printOnlineOrBalcao(payload: PrintPayload) {
-  const productionHtml = buildProductionHtml(payload, `PEDIDO #${payload.dailyNumber}`);
-  await enqueue(payload.companyId, `Produção #${payload.dailyNumber}`, productionHtml);
-  await enqueue(payload.companyId, `Recibo #${payload.dailyNumber}`, buildReceiptHTML(payload));
+  const ref = payload.shortCode ? `PEDIDO ${payload.shortCode}` : `PEDIDO #${payload.dailyNumber}`;
+  const label = payload.shortCode || `#${payload.dailyNumber}`;
+  const productionHtml = buildProductionHtml(payload, ref);
+  await enqueue(payload.companyId, `Produção ${label}`, productionHtml);
+  await enqueue(payload.companyId, `Recibo ${label}`, buildReceiptHTML(payload));
 }
 
 export async function printOnlyReceipt(payload: PrintPayload) {
-  await enqueue(payload.companyId, `Recibo #${payload.dailyNumber}`, buildReceiptHTML(payload));
+  const label = payload.shortCode || `#${payload.dailyNumber}`;
+  await enqueue(payload.companyId, `Recibo ${label}`, buildReceiptHTML(payload));
 }
