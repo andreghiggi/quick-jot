@@ -1632,6 +1632,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         return paid >= it.quantity;
       });
 
+      // Persiste o progresso parcial (split por itens) no `orders`.
+      const persistedItemsId = await persistExpressPartial({
+        existingOrderId: expressOpenOrderId,
+        paidAmountDelta: partialTotal,
+        paidQtys: newPaid,
+        splitInfo: null,
+        paymentName: params.paymentName,
+      });
+      if (persistedItemsId && !expressOpenOrderId) setExpressOpenOrderId(persistedItemsId);
+
       // NFC-e parcial
       const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
       if (wantsNfce) {
