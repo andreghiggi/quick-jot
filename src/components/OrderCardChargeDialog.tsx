@@ -176,6 +176,10 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         unit_price: ex.unit_price,
       }));
       const effectiveSaleItems = [...selectedExistingItems, ...extrasAsSaleItems];
+      if (effectiveSaleItems.length === 0) {
+        toast.info('Não há itens pendentes para cobrar neste pedido.');
+        return;
+      }
 
       if (extras.length > 0 && company?.id) {
         const insertPayload = extras.map((ex) => ({
@@ -241,7 +245,11 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       const newNotes = order.notes
         ? `${order.notes} | [COBRADO] Pagamento: ${params.paymentName}${tefNote}`
         : `[COBRADO] Pagamento: ${params.paymentName}${tefNote}`;
-      const orderUpdate: { notes: string; total?: number } = { notes: newNotes };
+      const orderUpdate: any = {
+        notes: newNotes,
+        payment_status: 'paid',
+        paid_amount: Number((order.total + extrasTotal).toFixed(2)),
+      };
       if (extrasTotal > 0) {
         orderUpdate.total = Number((order.total + extrasTotal).toFixed(2));
       }
