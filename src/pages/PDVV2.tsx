@@ -88,7 +88,7 @@ export default function PDVV2() {
     loading: cashLoading,
     cashOpenKnown,
   } = useCashRegister({ companyId });
-  const { openTabs, closeTab, refetch: refetchTabs } = useTabs({ companyId });
+  const { openTabs, closeTab, deleteTab, refetch: refetchTabs } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
   const { activePaymentMethods: menuPaymentMethods } = usePaymentMethods({ companyId, channel: 'menu' });
@@ -1088,7 +1088,18 @@ export default function PDVV2() {
                 onOpenClosedTabs={() => setClosedTabsOpen(true)}
               />
               <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
-                <PDVV2TablesGrid tabs={occupiedTabs} onImport={handleImportClick} />
+                <PDVV2TablesGrid
+                  tabs={occupiedTabs}
+                  onImport={handleImportClick}
+                  onDelete={async (tab) => {
+                    if (!window.confirm(
+                      tab.tableNumber
+                        ? `Excluir a comanda da Mesa ${tab.tableNumber}? Esta ação não pode ser desfeita.`
+                        : `Excluir a Comanda #${tab.tabNumber}? Esta ação não pode ser desfeita.`
+                    )) return;
+                    await deleteTab(tab.id);
+                  }}
+                />
               </div>
             </TabsContent>
           </Tabs>
