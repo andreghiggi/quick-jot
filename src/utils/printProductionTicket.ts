@@ -59,6 +59,22 @@ function getTicketReferenceLabel(data: PrintTicketData): string {
   return `COMANDA #${data.tabNumber}`;
 }
 
+function getOrderTypeLabel(orderType?: OrderTicketType): string | null {
+  switch (orderType) {
+    case 'delivery': return 'ENTREGA';
+    case 'pickup': return 'RETIRADA';
+    case 'table': return 'PEDIDO MESA';
+    case 'counter': return 'BALCÃO';
+    default: return null;
+  }
+}
+
+function renderOrderTypeBadgeHTML(orderType?: OrderTicketType): string {
+  const label = getOrderTypeLabel(orderType);
+  if (!label) return '';
+  return `<div class="order-type-badge">&gt;&gt; ${label} &lt;&lt;</div>`;
+}
+
 /**
  * Splits notes string into "additionals" (lines starting with "Adicionais:")
  * and "observations" (everything else, e.g. customer notes).
