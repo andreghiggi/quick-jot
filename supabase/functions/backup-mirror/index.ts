@@ -14,6 +14,31 @@ Deno.serve(async (req) => {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+  const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
+
+  // Modo test-notify: só dispara mensagem de teste no WhatsApp, sem tocar no banco.
+  // Não exige secret pois é inofensivo (só envia 1 mensagem fixa para o admin).
+  if (body?.mode === "test-notify") {
+    const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
+    const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      return json({ ok: false, error: "Evolution API não configurada" }, 500);
+    }
+    const nowBrt = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    const text = `🧪 *Teste de notificação*\n` +
+      `Backup Comanda Tech\n` +
+      `Hora: ${nowBrt}\n\n` +
+      `Se você recebeu isso, as notificações diárias do backup vão chegar aqui ✅`;
+    const baseUrl = EVOLUTION_API_URL.replace(/\/$/, "");
+    const resp = await fetch(`${baseUrl}/message/sendText/ct-8c9e7a0e`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: EVOLUTION_API_KEY },
+      body: JSON.stringify({ number: "5554999061836", text }),
+    });
+    const respText = await resp.text();
+    return json({ ok: resp.ok, status: resp.status, response: respText.slice(0, 500) });
+  }
+
   // Auth: header x-backup-secret deve bater com BACKUP_TRIGGER_SECRET
   const provided = req.headers.get("x-backup-secret") ?? "";
   const expected = Deno.env.get("BACKUP_TRIGGER_SECRET") ?? "";
@@ -27,7 +52,6 @@ Deno.serve(async (req) => {
     return json({ error: "missing DB URLs" }, 500);
   }
 
-  const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
   if (body?.mode === "health") {
     const sourceHealth = postgres(sourceUrl, { max: 1, prepare: false, connect_timeout: 10 });
     const targetHealth = postgres(targetUrl, { max: 1, prepare: false, connect_timeout: 10 });
