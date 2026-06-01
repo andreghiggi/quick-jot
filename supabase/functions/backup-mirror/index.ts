@@ -13,6 +13,7 @@ Deno.serve(async (req) => {
   const provided = req.headers.get("x-backup-secret") ?? "";
   const expected = Deno.env.get("BACKUP_TRIGGER_SECRET") ?? "";
   if (!expected || provided !== expected) {
+    console.log(`auth fail — provided len=${provided.length} expected len=${expected.length} provided_first=${provided.slice(0,3)} expected_first=${expected.slice(0,3)}`);
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
