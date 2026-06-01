@@ -195,8 +195,8 @@ export function PDVV2PaymentDialog({
         return m.show_for_delivery !== false;
       });
   // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
-  const useCurrencyMask = companyId === I9_COMPANY_ID;
-  const isLancheriaI9 = companyId === I9_COMPANY_ID;
+  const useCurrencyMask = true;
+  const isLancheriaI9 = true;
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [discount, setDiscount] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
