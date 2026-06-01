@@ -186,6 +186,32 @@ Deno.serve(async (req) => {
     await sourceMeta.end({ timeout: 5 });
   }
 
+  // Notifica admin via WhatsApp (Evolution API, instância Lancheria da i9)
+  try {
+    const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
+    const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
+    if (EVOLUTION_API_URL && EVOLUTION_API_KEY) {
+      const nowBrt = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+      const emoji = status === "success" ? "✅" : status === "partial" ? "⚠️" : "❌";
+      const text = `${emoji} *Backup Comanda Tech*\n` +
+        `Status: ${status}\n` +
+        `Data: ${nowBrt}\n` +
+        `Tabelas: ${tablesProcessed}\n` +
+        `Linhas: ${totalRows.toLocaleString("pt-BR")}\n` +
+        `Duração: ${(durationMs / 1000).toFixed(1)}s` +
+        (errorMessage ? `\nErro: ${errorMessage.slice(0, 200)}` : "");
+
+      const baseUrl = EVOLUTION_API_URL.replace(/\/$/, "");
+      await fetch(`${baseUrl}/message/sendText/ct-8c9e7a0e`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: EVOLUTION_API_KEY },
+        body: JSON.stringify({ number: "5554999061836", text }),
+      });
+    }
+  } catch (_) {
+    // não falhar o backup por causa da notificação
+  }
+
   return json({
       run_id: runId,
       status,
