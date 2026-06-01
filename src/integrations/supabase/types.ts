@@ -80,6 +80,42 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_runs: {
+        Row: {
+          details: Json | null
+          duration_ms: number | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          rows_copied: number
+          started_at: string
+          status: string
+          tables_processed: number
+        }
+        Insert: {
+          details?: Json | null
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          rows_copied?: number
+          started_at?: string
+          status?: string
+          tables_processed?: number
+        }
+        Update: {
+          details?: Json | null
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          rows_copied?: number
+          started_at?: string
+          status?: string
+          tables_processed?: number
+        }
+        Relationships: []
+      }
       business_hours: {
         Row: {
           always_open: boolean
