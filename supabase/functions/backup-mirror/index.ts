@@ -9,10 +9,10 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Auth: exige service_role key no header Authorization
-  const auth = req.headers.get("authorization") ?? "";
-  const expected = `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
-  if (auth !== expected) {
+  // Auth: header x-backup-secret deve bater com BACKUP_TRIGGER_SECRET
+  const provided = req.headers.get("x-backup-secret") ?? "";
+  const expected = Deno.env.get("BACKUP_TRIGGER_SECRET") ?? "";
+  if (!expected || provided !== expected) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
