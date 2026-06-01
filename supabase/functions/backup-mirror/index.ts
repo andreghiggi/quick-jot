@@ -9,29 +9,43 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
   // Auth: header x-backup-secret deve bater com BACKUP_TRIGGER_SECRET
   const provided = req.headers.get("x-backup-secret") ?? "";
   const expected = Deno.env.get("BACKUP_TRIGGER_SECRET") ?? "";
   if (!expected || provided !== expected) {
-    console.log(`auth fail — provided len=${provided.length} expected len=${expected.length} provided_first=${provided.slice(0,3)} expected_first=${expected.slice(0,3)}`);
-    return new Response(JSON.stringify({ error: "unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: "unauthorized" }, 401);
   }
 
   const sourceUrl = Deno.env.get("SUPABASE_DB_URL");
   const targetUrl = Deno.env.get("BACKUP_TARGET_DB_URL");
   if (!sourceUrl || !targetUrl) {
-    return new Response(
-      JSON.stringify({ error: "missing DB URLs" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return json({ error: "missing DB URLs" }, 500);
+  }
+
+  const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
+  if (body?.mode === "health") {
+    const sourceHealth = postgres(sourceUrl, { max: 1, prepare: false, connect_timeout: 10 });
+    const targetHealth = postgres(targetUrl, { max: 1, prepare: false, connect_timeout: 10 });
+    try {
+      await sourceHealth`select 1`;
+      await targetHealth`select 1`;
+      return json({ ok: true, source: "connected", target: "connected" });
+    } catch (e) {
+      return json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 500);
+    } finally {
+      await sourceHealth.end({ timeout: 2 });
+      await targetHealth.end({ timeout: 2 });
+    }
   }
 
   const startedAt = Date.now();
-  const source = postgres(sourceUrl, { max: 2, prepare: false });
-  const target = postgres(targetUrl, { max: 2, prepare: false });
+  const source = postgres(sourceUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
+  const target = postgres(targetUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
 
   // Log: cria registro 'running' (via target, mas vamos guardar no source também)
   const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
@@ -172,15 +186,12 @@ Deno.serve(async (req) => {
     await sourceMeta.end({ timeout: 5 });
   }
 
-  return new Response(
-    JSON.stringify({
+  return json({
       run_id: runId,
       status,
       tables_processed: tablesProcessed,
       rows_copied: totalRows,
       duration_ms: durationMs,
       error_message: errorMessage,
-    }),
-    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-  );
+    });
 });
