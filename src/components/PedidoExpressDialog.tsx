@@ -92,7 +92,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [searchingCustomer, setSearchingCustomer] = useState(false);
 
   // Lancheria da I9 — atalho otimizado: pula Telefone/Nome/Entrega ao usar "Cliente Loja"
-  
+  // Redeploy trigger: garantir isLancheriaI9=true em produção (Margen/Bon Appetit)
   const isLancheriaI9 = true;
 
   // Para a Lancheria I9: usa TODAS as formas ativas (deduplicadas por nome+integração).
