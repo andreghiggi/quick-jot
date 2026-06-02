@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.8.1-beta";
+export const VERSION = "1.8.2-beta";
 export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Layout V3 fiel ao Agilize (beta)";
+export const CODENAME = "Layout V3 ESC/POS Epson (beta)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.8.2-beta",
+    date: "2026-06-02",
+    codename: "Layout V3 ESC/POS Epson (beta)",
+    changes: [
+      "Layout V3 do recibo (PDV V2 / Pedido Express / Cardápio Online) reescrito como template ESC/POS Epson TM-T20/TM-T88 — fonte Courier New única, line-height 1.0, ~40% menos espaçamento entre itens e alinhamento por colunas fixas (42 cols @ 80mm, 32 cols @ 58mm).",
+      "Coluna VALOR sempre alinhada à direita em todas as linhas (descrição, totais e meta) usando padding por caractere.",
+      "Faixa de modalidade (BALCAO/ENTREGA/RETIRADA) agora sai em texto invertido (fundo preto / texto branco), equivalente ao reverse video ESC/POS (GS B 1), substituindo os '#####' do V3 anterior.",
+      "Separadores em ASCII ('-' repetido na largura total) no lugar de <hr> dashed.",
+      "Layouts V1 e V2 permanecem 100% intactos. Rollout V3 continua isolado por loja (atualmente só Lancheria da I9).",
+      "Nenhum fluxo de TEF (v1.0/v1.1/v1.2-beta), NFC-e, Multi-Pagamento, PDV V2 ou auto_printer.py foi alterado — mudança 100% no HTML gerado no lado web.",
+    ],
+  },
   {
     version: "1.8.1-beta",
     date: "2026-06-02",
