@@ -984,7 +984,7 @@ export default function Menu() {
         const cleanPhone = customerPhone.replace(/\D/g, '');
         if (cleanPhone.length >= 10) {
           try {
-            await supabase
+            const { data: upsertedCustomer } = await supabase
               .from('customers')
               .upsert({
                 company_id: company.id,
@@ -1002,7 +1002,58 @@ export default function Menu() {
               }, { 
                 onConflict: 'company_id,phone',
                 ignoreDuplicates: false 
-              });
+              })
+              .select('id')
+              .maybeSingle();
+
+            // Múltiplos endereços (aditivo, best-effort, não bloqueia o fluxo).
+            const resolvedCustomerId = upsertedCustomer?.id ?? customerId;
+            if (resolvedCustomerId && deliveryType === 'entrega' && deliveryAddress.trim()) {
+              try {
+                if (selectedAddressId) {
+                  // Atualiza o endereço selecionado e marca como padrão
+                  await supabase
+                    .from('customer_addresses')
+                    .update({ is_default: false })
+                    .eq('customer_id', resolvedCustomerId);
+                  await supabase
+                    .from('customer_addresses')
+                    .update({
+                      address: deliveryAddress || null,
+                      number: deliveryNumber || null,
+                      complement: deliveryComplement || null,
+                      neighborhood: deliveryNeighborhood || null,
+                      reference: deliveryReference || null,
+                      city: deliveryCity || null,
+                      state: deliveryState || null,
+                      is_default: true,
+                    })
+                    .eq('id', selectedAddressId);
+                } else {
+                  // Insere novo endereço como padrão
+                  await supabase
+                    .from('customer_addresses')
+                    .update({ is_default: false })
+                    .eq('customer_id', resolvedCustomerId);
+                  await supabase
+                    .from('customer_addresses')
+                    .insert({
+                      customer_id: resolvedCustomerId,
+                      company_id: company.id,
+                      address: deliveryAddress || null,
+                      number: deliveryNumber || null,
+                      complement: deliveryComplement || null,
+                      neighborhood: deliveryNeighborhood || null,
+                      reference: deliveryReference || null,
+                      city: deliveryCity || null,
+                      state: deliveryState || null,
+                      is_default: true,
+                    });
+                }
+              } catch (addrErr) {
+                console.error('Error saving customer address (multi):', addrErr);
+              }
+            }
           } catch (customerError) {
             console.error('Error saving customer data:', customerError);
           }
