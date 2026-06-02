@@ -34,6 +34,13 @@ export interface NFCeEmitRequest {
   observacoes?: string;
   tef?: NFCeTefData;
   /**
+   * Pagamento com múltiplas formas. Quando presente, o `nfce-proxy` ignora o
+   * campo `tef` legado e monta vários `detPag` (1 por linha).
+   * `tipo` = 'cash' (Dinheiro / não-TEF) ou 'tef' (cartão/PIX via maquininha).
+   * Para 'tef', `tef` é obrigatório (NSU/Aut/Bandeira/Adquirente).
+   */
+  pagamentos_split?: Array<{ tipo: 'cash' | 'tef'; valor: number; tef?: NFCeTefData }>;
+  /**
    * Destinatário da NFC-e (opcional). Quando omitido, a nota é emitida como
    * "consumidor não identificado" — comportamento padrão para vendas até R$ 10.000.
    */
