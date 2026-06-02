@@ -3173,6 +3173,19 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         autoPrint={nfceAutoPrint}
       />
 
+      {/* Multi-payment (v1.6 beta) — dialog isolado, abre via botão "Dividir formas" */}
+      <PDVV2MultiPaymentDialog
+        open={multiPayOpen}
+        onOpenChange={setMultiPayOpen}
+        companyId={company?.id}
+        total={total}
+        channel="pdv"
+        title="Dividir formas — Pedido Express"
+        processing={multiPayProcessing}
+        processingStatus={multiPayStatus}
+        onConfirm={handleMultiPaymentSubmit}
+      />
+
       {/* Overlay de bloqueio enquanto NFC-e é emitida */}
       {isEmittingNfce && isI9Company && (
         <div className="fixed bottom-4 right-4 z-40 bg-card border rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 pointer-events-none">
