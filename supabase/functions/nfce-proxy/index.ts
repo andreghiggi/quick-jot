@@ -357,6 +357,84 @@ Deno.serve(async (req) => {
           console.log('[nfce-proxy] infAdFisco fallback:', emitPayload.infAdFisco)
         }
 
+        // -----------------------------------------------------------------
+        // MULTI-PAYMENT (pagamentos_split): NFC-e v1.6 — múltiplos detPag.
+        // Bloco isolado: só executa quando o front envia `pagamentos_split`.
+        // Quando presente, sobrescreve o que o bloco TEF acima eventualmente
+        // tenha montado e gera 1 detPag por linha (cash + N TEFs).
+        // Não altera o fluxo single-payment (continua igual quando ausente).
+        // -----------------------------------------------------------------
+        if (Array.isArray(payload.pagamentos_split) && payload.pagamentos_split.length > 0) {
+          const tPagMap: Record<string, string> = {
+            'credit': '03',
+            'debit': '04',
+            'pix': '17',
+          }
+          const tBandMap: Record<string, string> = {
+            'VISA': '01', 'MASTERCARD': '02', 'AMEX': '03', 'AMERICAN EXPRESS': '03',
+            'MAESTRO': '02', 'SOROCRED': '04', 'DINERS': '05', 'ELO': '06',
+            'HIPERCARD': '07', 'AURA': '08', 'CABAL': '09',
+          }
+          const cnpjAdquirenteMap: Record<string, string> = {
+            'GETNET': '10440482000154', 'CIELO': '01027058000191', 'STONE': '16501555000157',
+            'REDE': '01425787000104', 'PAGSEGURO': '08561701000101', 'PAGBANK': '08561701000101',
+            'SAFRAPAY': '58160789000128', 'MERCADOPAGO': '10573521000191', 'SUMUP': '18188384000123',
+            'VERO': '01425787000104', 'BANRISUL': '92702067000196', 'SICREDI': '01181521000155',
+          }
+
+          const pagamentosArr: any[] = []
+          const detPagArr: any[] = []
+          const formasArr: any[] = []
+
+          for (const linha of payload.pagamentos_split) {
+            const valor = Number(linha.valor || 0)
+            const vPagStr = valor.toFixed(2)
+
+            if (linha.tipo === 'tef' && linha.tef) {
+              const t = linha.tef
+              const tPag = tPagMap[t.tipo_pagamento] || '99'
+              const bandeiraNorm = (t.bandeira || '').toUpperCase()
+              const adquirenteNorm = (t.adquirente || '').toUpperCase()
+              const cnpj = cnpjAdquirenteMap[adquirenteNorm] || null
+              const tBand = tBandMap[bandeiraNorm] || '99'
+              pagamentosArr.push({
+                tPag,
+                vPag: vPagStr,
+                tpIntegra: 1,
+                card: { tpIntegra: '1', CNPJ: cnpj, tBand, cAut: t.autorizacao, NSU: t.nsu },
+              })
+              detPagArr.push({
+                indPag: '0', tPag, vPag: vPagStr, tpIntegra: '1',
+                card: { tpIntegra: '1', CNPJ: cnpj, tBand, cAut: t.autorizacao, NSU: t.nsu },
+                CNPJ: cnpj, tBand, cAut: t.autorizacao, NSU: t.nsu,
+              })
+              formasArr.push({
+                forma_pagamento: tPag,
+                valor_pagamento: valor,
+                tipo_integracao: 1,
+                cnpj_credenciadora: cnpj,
+                bandeira_operadora: tBand,
+                numero_autorizacao: t.autorizacao,
+              })
+            } else {
+              // cash / dinheiro
+              pagamentosArr.push({ tPag: '01', vPag: vPagStr })
+              detPagArr.push({ indPag: '0', tPag: '01', vPag: vPagStr })
+              formasArr.push({ forma_pagamento: '01', valor_pagamento: valor })
+            }
+          }
+
+          // Sobrescreve o que o bloco TEF legado eventualmente tenha montado.
+          emitPayload.pagamento = pagamentosArr[0]
+          emitPayload.pagamentos = pagamentosArr
+          emitPayload.formas_pagamento = formasArr
+          emitPayload.pag = { detPag: detPagArr }
+          emitPayload.detPag = detPagArr
+
+          console.log('[nfce-proxy] MULTI pagamentos_split (n=' + pagamentosArr.length + '):',
+            JSON.stringify(pagamentosArr))
+        }
+
         apiResponse = await fetch(NFCE_API_URL, {
           method: 'POST',
           headers: {
