@@ -1285,7 +1285,7 @@ def diagnosticar_impressora():
         log(f"Erro ao listar impressoras: {e}", "DIAG")
     log("=== FIM DO DIAGNÓSTICO ===", "DIAG")
 
-def processar_pedido(pedido, store_name="Comanda Tech"):
+def processar_pedido(pedido, store_name="Comanda Tech", store_info=None):
     """Processa um pedido: busca itens, formata e imprime"""
     order_id = pedido.get("id")
     order_number = pedido.get("daily_number", "?")
@@ -1311,7 +1311,7 @@ def processar_pedido(pedido, store_name="Comanda Tech"):
     # Formata recibo HTML (mesmo layout do painel web)
     log("Gerando recibo HTML...", "INFO")
     if PRINT_LAYOUT == 'v3':
-        html = formatar_recibo_html_v3(pedido, itens, store_name)
+        html = formatar_recibo_html_v3(pedido, itens, store_name, store_info or {})
     else:
         html = formatar_recibo_html(pedido, itens, store_name)
     
