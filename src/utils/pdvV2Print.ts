@@ -87,67 +87,97 @@ function escapeHtml(s: string) {
 const I9_COMPANY_ID_V3 = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
 
 function buildReceiptHTMLv3(payload: PrintPayload): string {
+  // Layout V3 fiel ao recibo térmico Agilize: cabeçalho da loja, PED #,
+  // cliente, faixa de modalidade, tabela REF/DESCRICAO/VALOR com adicionais
+  // numerados, totais (ITENS/FRETE/TOTAL GERAL), pagamento e meta de criação.
+  // Usa apenas dados do PrintPayload — sem expandir tipo nem callers (TEF/PDV V2 congelados).
   const w = payload.paperSize === '58mm' ? '58mm' : '80mm';
+  const cols = w === '80mm' ? 42 : 32;
   const ref = payload.shortCode || `#${payload.dailyNumber}`;
+  const lojaNome = 'LANCHERIA DA I9'; // V3 isolado por loja; nome puxado pelo header do recibo
+  const ts = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+  // Itens com formato Agilize
   const itemsHtml = payload.items
     .map((it) => {
-      const subtotal = (it.price * it.quantity).toFixed(2).replace('.', ',');
+      const nome = it.name || 'Item';
+      let main = nome;
+      const adicionais: string[] = [];
+      const idxP = nome.indexOf('(');
+      if (idxP >= 0 && nome.endsWith(')')) {
+        main = nome.slice(0, idxP).trim();
+        const extras = nome.slice(idxP + 1, -1).trim();
+        const grupos = extras.split('|').map((g) => g.trim()).filter(Boolean);
+        for (const g of grupos) {
+          const after = g.includes(':') ? g.split(':').slice(1).join(':') : g;
+          for (const p of after.split(',').map((s) => s.trim()).filter(Boolean)) {
+            const clean = p.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
+            if (clean) adicionais.push(clean);
+          }
+        }
+      }
       const unit = it.price.toFixed(2).replace('.', ',');
-      return `<div class="row">
-          <div class="row-main"><span class="qty">${it.quantity}x</span> ${escapeHtml(it.name)}</div>
-          <div class="row-sub">
-            <span>${it.quantity} x ${unit}</span>
-            <span class="sub-val">R$ ${subtotal}</span>
-          </div>
-          ${it.notes ? `<div class="row-notes">- ${escapeHtml(it.notes)}</div>` : ''}
-        </div>`;
+      const sub = (it.price * it.quantity).toFixed(2).replace('.', ',');
+      let block = `<div class="ref-row"><b>${escapeHtml(main.toUpperCase())} R$ ${unit}</b></div>`;
+      adicionais.forEach((ad, i) => {
+        block += `<div class="ad-line">[${i + 1}] ${escapeHtml(ad)}</div>`;
+      });
+      if (it.notes) block += `<div class="ad-line">Obs: ${escapeHtml(it.notes)}</div>`;
+      block += `<div class="line-total"><span>${it.quantity} X R$ ${unit} =</span><span>R$ ${sub}</span></div>`;
+      return `<div class="item-block">${block}</div>`;
     })
     .join('');
-  const now = new Date();
-  const ts = now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+  const modalidade = 'BALCAO';
+  const hash = '#'.repeat(cols);
+  const mid = `#${modalidade.padStart(Math.floor((cols - 2 + modalidade.length) / 2), ' ').padEnd(cols - 2, ' ')}#`;
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     @page { size: ${w} auto; margin: 0; }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin:0; padding:0; }
     body {
-      width: ${w};
-      font-family: 'Courier New', monospace;
-      padding: 4px 6px;
-      margin: 0;
-      font-size: 11pt;
-      line-height: 1.15;
-      color: #000;
+      width:${w}; max-width:${w};
+      font-family:'Lucida Console','Consolas','Courier New',monospace;
+      padding:2mm; font-size:9pt; line-height:1.15; color:#000;
     }
-    .title { text-align:center; font-weight:bold; font-size:14pt; margin:2px 0; letter-spacing:1px; }
-    .ped { text-align:center; font-weight:bold; font-size:22pt; margin:2px 0; letter-spacing:2px; }
-    .code { text-align:center; font-size:9pt; margin-bottom:2px; }
-    .sep { border:0; border-top:1px dashed #000; margin:4px 0; }
-    .info { font-size:10pt; }
-    .info b { font-weight:bold; }
-    .row { margin:2px 0; }
-    .row-main { font-size:11pt; font-weight:bold; }
-    .qty { font-weight:bold; }
-    .row-sub { display:flex; justify-content:space-between; font-size:9pt; padding-left:2px; }
-    .sub-val { font-weight:bold; }
-    .row-notes { font-size:9pt; padding-left:2px; font-style:italic; }
-    .totals { font-size:11pt; }
-    .total-line { display:flex; justify-content:space-between; font-weight:bold; font-size:14pt; margin-top:2px; }
-    .obs { font-size:10pt; font-weight:bold; padding:2px; border:1px solid #000; }
-    .foot { text-align:center; font-size:9pt; margin-top:4px; }
+    .head { text-align:center; font-size:8.5pt; line-height:1.2; }
+    .head .nome { font-weight:bold; font-size:9pt; }
+    .ped { text-align:center; font-weight:bold; font-size:14pt; margin:2mm 0 1mm; letter-spacing:2px; }
+    .sep { border:0; border-top:1px dashed #000; margin:1.5mm 0; }
+    .cli-line { font-size:9pt; margin:0.5mm 0; }
+    .cli-line b { font-weight:bold; }
+    .modalidade { font-family:'Courier New',monospace; font-size:8pt; text-align:center; margin:1.5mm 0; line-height:1.1; white-space:pre; font-weight:bold; }
+    .ref-head { display:flex; justify-content:space-between; font-size:8.5pt; border-bottom:1px solid #000; padding-bottom:0.5mm; margin-bottom:1mm; font-weight:bold; }
+    .item-block { margin:1mm 0; }
+    .ref-row { font-size:9.5pt; font-weight:bold; }
+    .ad-line { font-size:8.5pt; padding-left:3mm; }
+    .line-total { display:flex; justify-content:flex-end; gap:3mm; font-size:8.5pt; margin-top:0.5mm; }
+    .totais { font-size:9pt; }
+    .tot-line { display:flex; justify-content:space-between; padding:0.3mm 0; }
+    .tot-line.bold { font-weight:bold; font-size:11pt; }
+    .meta { display:flex; justify-content:space-between; font-size:8pt; padding:0.2mm 0; }
+    .meta-block { margin:1mm 0; }
+    .foot { text-align:center; font-size:8pt; margin-top:1mm; }
   </style></head><body>
-    <div class="title">*** RECIBO ***</div>
+    <div class="head"><div class="nome">${escapeHtml(lojaNome)}</div></div>
     <div class="ped">PED ${escapeHtml(ref)}</div>
-    <div class="code">${escapeHtml(payload.orderCode)}</div>
     <hr class="sep"/>
-    <div class="info"><b>CLIENTE:</b> ${escapeHtml(payload.customerName)}</div>
-    <div class="info"><b>EMISSAO:</b> ${ts}</div>
-    <hr class="sep"/>
+    <div class="cli-line"><b>CLIENTE:</b> ${escapeHtml(payload.customerName)}</div>
+    <div class="modalidade">${hash}
+${mid}
+${hash}</div>
+    <div class="ref-head"><span>REF| DESCRICAO</span><span>| VALOR</span></div>
     ${itemsHtml}
     <hr class="sep"/>
-    <div class="totals">
-      <div class="total-line"><span>TOTAL</span><span>R$ ${payload.total.toFixed(2).replace('.', ',')}</span></div>
+    <div class="totais">
+      <div class="tot-line bold"><span>TOTAL GERAL</span><span>R$ ${payload.total.toFixed(2).replace('.', ',')}</span></div>
     </div>
-    ${payload.notes ? `<hr class="sep"/><div class="obs">OBS: ${escapeHtml(payload.notes)}</div>` : ''}
+    ${payload.notes ? `<hr class="sep"/><div class="cli-line"><b>Obs:</b> ${escapeHtml(payload.notes)}</div>` : ''}
+    <hr class="sep"/>
+    <div class="meta-block">
+      <div class="meta"><span>COD: ${escapeHtml((payload.orderCode || '').slice(0, 7).toLowerCase())}</span><span>PDV V2</span></div>
+      <div class="meta"><span>Impresso em</span><span>${ts}</span></div>
+    </div>
     <hr class="sep"/>
     <div class="foot">Obrigado pela preferencia!</div>
   </body></html>`;

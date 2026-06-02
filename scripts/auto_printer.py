@@ -63,20 +63,20 @@ def log(msg, tipo="INFO"):
         pass
 
 def buscar_empresa_por_slug(slug):
-    """Busca empresa pelo slug e retorna id, nome e endereço"""
+    """Busca empresa pelo slug e retorna id, nome, endereço e dict completo (V3)."""
     try:
         url = f"{SUPABASE_URL}/rest/v1/companies"
         params = {"slug": f"eq.{slug}", "active": "eq.true"}
         r = requests.get(url, headers=HEADERS, params=params)
         if r.ok and r.json():
             empresa = r.json()[0]
-            return empresa.get('id'), empresa.get('name'), empresa.get('address')
+            return empresa.get('id'), empresa.get('name'), empresa.get('address'), empresa
         else:
             log(f"Empresa não encontrada: {slug}", "ERRO")
-            return None, None, None
+            return None, None, None, None
     except Exception as e:
         log(f"Exceção ao buscar empresa: {e}", "ERRO")
-        return None, None, None
+        return None, None, None, None
 
 def buscar_paper_size(company_id):
     """Busca o tamanho do papel configurado para a empresa"""
@@ -472,108 +472,294 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     
     return html
 
-def formatar_recibo_html_v3(pedido, itens, store_name="Comanda Tech"):
-    """Recibo V3 — layout denso inspirado no recibo V3 do frontend (I9).
-    NÃO altera o V1/V2 — função separada acionada apenas quando PRINT_LAYOUT == 'v3'."""
+def formatar_recibo_html_v3(pedido, itens, store_name="Comanda Tech", store_info=None):
+    """Recibo V3 — replica fielmente o layout de impressão térmica do Agilize.
+    Estrutura: cabeçalho da loja → PED #xxx → cliente/endereço → faixa de modalidade
+    → tabela REF/DESCRICAO/VALOR com adicionais entre colchetes → totais → pagamento
+    → COD/criação/impressão → PREVISTO → app/contato. NÃO altera V1/V2."""
+    store_info = store_info or {}
     paper_size = PAPER_SIZE
+    cols = 42 if paper_size == '80mm' else 32
+
+    # --- Cabeçalho da loja ---
+    loja_nome = (store_info.get('name') or store_name or '').strip()
+    rua = (store_info.get('address_street') or '').strip()
+    num = (store_info.get('address_number') or '').strip()
+    compl = (store_info.get('address_complement') or '').strip()
+    bairro_l = (store_info.get('address_neighborhood') or '').strip()
+    cidade = (store_info.get('address_city') or '').strip()
+    uf = (store_info.get('address_state') or '').strip()
+    cnpj = (store_info.get('cnpj') or '').strip()
+    end_partes = []
+    if rua:
+        ln = rua + (f", {num}" if num else '')
+        if compl:
+            ln += f"/{compl}"
+        end_partes.append(ln)
+    cidade_linha = ' - '.join([p for p in [bairro_l, cidade] if p])
+    if cidade_linha and uf:
+        cidade_linha += f" - {uf}"
+    elif uf:
+        cidade_linha = uf
+    if cidade_linha:
+        end_partes.append(cidade_linha)
+    if cnpj:
+        end_partes.append(f"CNPJ: {cnpj}")
+    endereco_html = '<br/>'.join(end_partes)
+
+    # --- Identificação do pedido ---
     order_num = pedido.get('short_code') or pedido.get('order_code') or pedido.get('daily_number', '?')
     order_code = pedido.get('order_code', '') or ''
+    cod_curto = (order_code[:7] if order_code else '').lower()
     try:
         dt_utc = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
         dt_sp = dt_utc.astimezone(timezone(timedelta(hours=-3)))
-        formatted_date = dt_sp.strftime('%d/%m/%Y %H:%M')
+        criado_em = dt_sp.strftime('%d/%m/%Y %H:%M:%S')
     except Exception:
-        formatted_date = pedido.get('created_at', '')[:16]
+        criado_em = pedido.get('created_at', '')[:19]
+    impresso_em = datetime.now(timezone(timedelta(hours=-3))).strftime('%d/%m/%Y %H:%M:%S')
 
-    customer_name = pedido.get('customer_name', '') or ''
-    customer_phone = pedido.get('customer_phone', '') or ''
-    delivery_address = pedido.get('delivery_address', '') or ''
-    notes = (pedido.get('notes') or '').strip()
-    total = float(pedido.get('total', 0))
+    # --- Cliente ---
+    customer_name = (pedido.get('customer_name') or '').strip()
+    customer_phone = (pedido.get('customer_phone') or '').strip()
+    delivery_address = (pedido.get('delivery_address') or '').strip()
 
+    # Parse endereço do cliente: tenta separar "Rua, num/compl - Cidade - UF | Bairro: X | Ref: Y"
+    addr_lines = []
+    bairro_cliente = ''
+    referencia = ''
+    if delivery_address:
+        addr_raw = delivery_address
+        m_bairro = re.search(r'Bairro:\s*([^|]+)', addr_raw, re.IGNORECASE)
+        if m_bairro:
+            bairro_cliente = m_bairro.group(1).strip()
+            addr_raw = re.sub(r'\s*\|\s*Bairro:\s*[^|]+', '', addr_raw, flags=re.IGNORECASE)
+        m_ref = re.search(r'(Refer[eê]ncia|Ref):\s*([^|]+)', addr_raw, re.IGNORECASE)
+        if m_ref:
+            referencia = m_ref.group(2).strip()
+            addr_raw = re.sub(r'\s*\|\s*(Refer[eê]ncia|Ref):\s*[^|]+', '', addr_raw, flags=re.IGNORECASE)
+        # quebra endereço em até 2 linhas (rua,num/compl) e (cidade - uf)
+        addr_raw = addr_raw.strip().rstrip('|').strip()
+        addr_lines = [s.strip() for s in addr_raw.split(' - ') if s.strip()]
+
+    # --- Modalidade (faixa ##### TELE ENTREGA / MOTOBOY #####) ---
+    notes_raw = (pedido.get('notes') or '')
+    is_express = (pedido.get('source') == 'express') or ('[EXPRESS]' in notes_raw)
+    is_waiter = pedido.get('source') == 'waiter'
+    if delivery_address:
+        modalidade = 'TELE ENTREGA / MOTOBOY'
+    elif is_waiter:
+        modalidade = 'MESA'
+    elif is_express:
+        modalidade = 'BALCAO'
+    else:
+        modalidade = 'RETIRADA NO LOCAL'
+    faixa_hash = '#' * cols
+    centered = modalidade.center(cols - 2, ' ')
+    faixa_mid = f"#{centered}#"
+
+    # --- Itens (REF | DESCRICAO | VALOR) ---
     subtotal = 0.0
-    for it in itens:
-        subtotal += float(it.get('price', 0)) * int(it.get('quantity', 1))
-    delivery_fee = total - subtotal if total > subtotal else 0.0
-
     rows_html = ''
     for it in itens:
         qtd = int(it.get('quantity', 1))
         nome = (it.get('name') or 'Item').strip()
         preco_unit = float(it.get('price', 0))
         sub = preco_unit * qtd
+        subtotal += sub
+
+        # separa nome principal e adicionais do formato "Nome (Adicionais: A, B | Grupo: X, Y)"
+        main_name = nome
+        adicionais_lines = []
+        if '(' in nome and nome.endswith(')'):
+            idx = nome.index('(')
+            main_name = nome[:idx].strip()
+            extras = nome[idx + 1:-1].strip()
+            # grupos separados por "|"
+            grupos = [g.strip() for g in extras.split('|') if g.strip()]
+            for grupo in grupos:
+                if ':' in grupo:
+                    _, after = grupo.split(':', 1)
+                    partes = [p.strip() for p in after.split(',') if p.strip()]
+                else:
+                    partes = [p.strip() for p in grupo.split(',') if p.strip()]
+                for p in partes:
+                    # remove preços tipo " R$ 2,00" para listar limpo
+                    p_clean = re.sub(r'\s*R\$\s*[\d.,]+\s*$', '', p).strip()
+                    if p_clean:
+                        adicionais_lines.append(p_clean)
+
         unit_str = f"{preco_unit:.2f}".replace('.', ',')
         sub_str = f"{sub:.2f}".replace('.', ',')
+
+        item_block = f'<div class="ref-row"><b>{main_name.upper()} R$ {unit_str}</b></div>'
+        for idx_ad, ad in enumerate(adicionais_lines, start=1):
+            item_block += f'<div class="ad-line">[{idx_ad}] {ad}</div>'
         item_notes = (it.get('notes') or '').strip()
-        notes_html = f'<div class="row-notes">- {item_notes}</div>' if item_notes else ''
-        rows_html += (
-            f'<div class="row">'
-            f'  <div class="row-main"><span class="qty">{qtd}x</span> {nome.upper()}</div>'
-            f'  <div class="row-sub"><span>{qtd} x {unit_str}</span><span class="sub-val">R$ {sub_str}</span></div>'
-            f'  {notes_html}'
+        if item_notes:
+            # remove marcador [DESC]...[/DESC]
+            item_notes = re.sub(r'\[DESC\].*?\[/DESC\]', '', item_notes, flags=re.DOTALL).strip()
+            if item_notes:
+                item_block += f'<div class="ad-line">Obs: {item_notes}</div>'
+        item_block += (
+            f'<div class="line-total">'
+            f'<span>{qtd} X R$ {unit_str} =</span>'
+            f'<span>R$ {sub_str}</span>'
             f'</div>'
         )
+        rows_html += f'<div class="item-block">{item_block}</div>'
 
-    delivery_badge = (
-        f'<div class="badge-v3">ENTREGA</div><div class="addr-v3">{delivery_address}</div>'
-        if delivery_address else '<div class="badge-v3">RETIRADA NO LOCAL</div>'
-    )
-    delivery_fee_html = ''
-    if delivery_fee > 0:
-        fee_str = f"{delivery_fee:.2f}".replace('.', ',')
-        delivery_fee_html = f'<div class="total-line"><span>Entrega</span><span>R$ {fee_str}</span></div>'
+    total = float(pedido.get('total', 0))
+    delivery_fee = total - subtotal if total > subtotal else 0.0
     subtotal_str = f"{subtotal:.2f}".replace('.', ',')
     total_str = f"{total:.2f}".replace('.', ',')
 
-    phone_html = f'<div class="info"><b>TEL:</b> {customer_phone}</div>' if customer_phone else ''
-    notes_html_block = f'<hr class="sep"/><div class="obs">OBS: {notes}</div>' if notes else ''
+    # --- Pagamento (parse do notes) ---
+    pagamento_label = ''
+    troco_html = ''
+    pago_html = ''
+    if notes_raw:
+        m_pag = re.search(r'Pagamento:\s*([^(|]+)', notes_raw, re.IGNORECASE)
+        m_troco = re.search(r'Troco para R\$\s*([\d.,]+)', notes_raw, re.IGNORECASE)
+        if m_pag:
+            pagamento_label = m_pag.group(1).strip()
+        if m_troco:
+            try:
+                valor_recebido = float(m_troco.group(1).replace('.', '').replace(',', '.'))
+                troco_valor = max(0.0, valor_recebido - total)
+                pago_html = (
+                    f'<div class="pag-line"><span></span>'
+                    f'<span>R$ {valor_recebido:.2f}</span></div>'
+                ).replace('.', ',')
+                troco_html = (
+                    f'<div class="pag-line"><b>TROCO</b>'
+                    f'<span>R$ {troco_valor:.2f}</span></div>'
+                ).replace('.', ',')
+            except Exception:
+                pass
+
+    pag_block = ''
+    if pagamento_label or pago_html:
+        pag_block = '<hr class="sep"/>'
+        pag_block += f'<div class="pag-line"><b>PAGAMENTO:</b><span></span></div>'
+        if pagamento_label:
+            pag_block += f'<div class="pag-line"><span>{pagamento_label} -</span>{pago_html or "<span></span>"}</div>'
+        if troco_html:
+            pag_block += troco_html
+
+    # --- PREVISTO (estimated_wait_time se houver) ---
+    previsto_html = ''
+    wait_min = 30
+    try:
+        # Lê store_settings estimated_wait_time
+        url_s = f"{SUPABASE_URL}/rest/v1/store_settings"
+        params_s = {"company_id": f"eq.{pedido.get('company_id')}", "key": "eq.estimated_wait_time"}
+        rs = requests.get(url_s, headers=HEADERS, params=params_s, timeout=3)
+        if rs.ok and rs.json():
+            val = rs.json()[0].get('value', '')
+            nums = re.findall(r'\d+', val or '')
+            if nums:
+                wait_min = max(int(n) for n in nums)
+    except Exception:
+        pass
+    try:
+        dt_utc2 = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
+        dt_sp2 = dt_utc2.astimezone(timezone(timedelta(hours=-3)))
+        prev_ini = dt_sp2 + timedelta(minutes=max(0, wait_min - 15))
+        prev_fim = dt_sp2 + timedelta(minutes=wait_min)
+        previsto_html = (
+            f'<div class="previsto">PREVISTO = '
+            f'{prev_ini.strftime("%H:%M")}-{prev_fim.strftime("%H:%M")}</div>'
+        )
+    except Exception:
+        pass
+
+    # --- Cliente / endereço blocks ---
+    addr_html = ''
+    if delivery_address:
+        addr_html += '<div class="cli-line">'
+        addr_html += '<br/>'.join(addr_lines) if addr_lines else delivery_address
+        addr_html += '</div>'
+        if bairro_cliente:
+            addr_html += f'<div class="cli-line"><b>Bairro:</b> {bairro_cliente}</div>'
+        if referencia:
+            addr_html += f'<div class="cli-line"><b>Ponto de referencia:</b> {referencia}</div>'
+
+    # --- Header reimpressão (mantém comportamento Agilize) ---
+    reimpresso_faixa = ''
+    if pedido.get('printed_at'):
+        try:
+            dtp = datetime.fromisoformat(pedido['printed_at'].replace('Z', '+00:00')).astimezone(timezone(timedelta(hours=-3)))
+            reimpresso_faixa = f'<div class="reimp">XXXXXX REIMPRESSO {dtp.strftime("%d/%m %H:%M")} XXXXXX</div>'
+        except Exception:
+            pass
 
     return f'''<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>Pedido #{order_num}</title>
 <style>
 @page {{ margin: 0; size: {paper_size} auto; }}
 * {{ box-sizing: border-box; margin:0; padding:0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-body {{ width:{paper_size}; max-width:{paper_size}; font-family:'Courier New','Lucida Console',monospace; padding:4px 6px; font-size:11pt; line-height:1.2; color:#000; font-weight:bold; }}
-.store {{ text-align:center; font-size:12pt; font-weight:900; letter-spacing:1px; }}
-.title {{ text-align:center; font-weight:900; font-size:14pt; margin:2px 0; letter-spacing:2px; }}
-.ped {{ text-align:center; font-weight:900; font-size:22pt; margin:2px 0; letter-spacing:3px; }}
-.code {{ text-align:center; font-size:9pt; margin-bottom:2px; }}
-.sep {{ border:0; border-top:1px dashed #000; margin:4px 0; }}
-.info {{ font-size:10pt; }}
-.info b {{ font-weight:900; }}
-.badge-v3 {{ text-align:center; font-size:11pt; font-weight:900; border:2px solid #000; padding:1.5mm; margin:2mm 0; letter-spacing:1px; }}
-.addr-v3 {{ font-size:10pt; text-align:center; margin-bottom:1mm; }}
-.row {{ margin:2px 0; }}
-.row-main {{ font-size:12pt; font-weight:900; text-transform:uppercase; }}
-.qty {{ font-weight:900; }}
-.row-sub {{ display:flex; justify-content:space-between; font-size:9pt; padding-left:2px; }}
-.sub-val {{ font-weight:900; }}
-.row-notes {{ font-size:9pt; padding-left:2px; font-style:italic; font-weight:normal; }}
-.total-line {{ display:flex; justify-content:space-between; font-size:11pt; margin:1px 0; }}
-.grand-total {{ display:flex; justify-content:space-between; font-weight:900; font-size:15pt; margin-top:2px; border-top:1px solid #000; padding-top:2px; }}
-.obs {{ font-size:10pt; font-weight:900; padding:2mm; border:1px solid #000; }}
-.foot {{ text-align:center; font-size:9pt; margin-top:4px; }}
+body {{
+  width:{paper_size}; max-width:{paper_size};
+  font-family:'Lucida Console','Consolas','Courier New',monospace;
+  padding:2mm 2mm; font-size:9pt; line-height:1.15; color:#000;
+}}
+.reimp {{ text-align:center; font-size:8pt; letter-spacing:1px; margin-bottom:1mm; }}
+.head {{ text-align:center; font-size:8.5pt; line-height:1.2; }}
+.head .nome {{ font-weight:bold; font-size:9pt; }}
+.ped {{ text-align:center; font-weight:bold; font-size:14pt; margin:2mm 0 1mm; letter-spacing:2px; }}
+.sep {{ border:0; border-top:1px dashed #000; margin:1.5mm 0; }}
+.cli-line {{ font-size:9pt; margin:0.5mm 0; }}
+.cli-line b {{ font-weight:bold; }}
+.modalidade {{ font-family:'Courier New',monospace; font-size:8pt; text-align:center; margin:1.5mm 0; line-height:1.1; letter-spacing:0; word-break:break-all; white-space:pre; font-weight:bold; }}
+.ref-head {{ display:flex; justify-content:space-between; font-size:8.5pt; border-bottom:1px solid #000; padding-bottom:0.5mm; margin-bottom:1mm; font-weight:bold; }}
+.item-block {{ margin:1mm 0; }}
+.ref-row {{ font-size:9.5pt; font-weight:bold; }}
+.ad-line {{ font-size:8.5pt; padding-left:3mm; }}
+.line-total {{ display:flex; justify-content:flex-end; gap:3mm; font-size:8.5pt; margin-top:0.5mm; }}
+.totais {{ font-size:9pt; }}
+.tot-line {{ display:flex; justify-content:space-between; padding:0.3mm 0; }}
+.tot-line.bold {{ font-weight:bold; font-size:11pt; }}
+.pag-line {{ display:flex; justify-content:space-between; font-size:9pt; padding:0.3mm 0; }}
+.previsto {{ text-align:center; font-size:11pt; font-weight:bold; margin:2mm 0; letter-spacing:1px; }}
+.meta {{ display:flex; justify-content:space-between; font-size:8pt; padding:0.2mm 0; }}
+.meta-block {{ margin:1mm 0; }}
+.foot {{ text-align:center; font-size:8pt; margin-top:1mm; }}
 </style></head><body>
 <!--BOX_START-->
-<div class="store">{store_name.upper()}</div>
-<div class="title">*** RECIBO ***</div>
+{reimpresso_faixa}
+<div class="head">
+  <div class="nome">{loja_nome.upper()}</div>
+  {endereco_html}
+</div>
 <div class="ped">PED #{order_num}</div>
-<div class="code">{order_code}</div>
 <hr class="sep"/>
-<div class="info"><b>CLIENTE:</b> {customer_name}</div>
-{phone_html}
-<div class="info"><b>EMISSAO:</b> {formatted_date}</div>
+<div class="cli-line"><b>CLIENTE:</b> {customer_name}</div>
+{f'<div class="cli-line"><b>Fones:</b> {customer_phone}</div>' if customer_phone else ''}
+{addr_html}
 <!--BOX_END-->
-{delivery_badge}
-<hr class="sep"/>
+<div class="modalidade">{faixa_hash}
+{faixa_mid}
+{faixa_hash}</div>
+<div class="ref-head"><span>REF| DESCRICAO</span><span>| VALOR</span></div>
 {rows_html}
 <hr class="sep"/>
-<div class="total-line"><span>Subtotal</span><span>R$ {subtotal_str}</span></div>
-{delivery_fee_html}
-<div class="grand-total"><span>TOTAL</span><span>R$ {total_str}</span></div>
-{notes_html_block}
+<div class="totais">
+  <div class="tot-line"><span>TOTAL ITENS</span><span>R$ {subtotal_str}</span></div>
+  {f'<div class="tot-line"><span>FRETE</span><span>R$ {f"{delivery_fee:.2f}".replace(".", ",")}</span></div>' if delivery_fee > 0 else ''}
+  <div class="tot-line bold"><span>TOTAL GERAL</span><span>R$ {total_str}</span></div>
+</div>
+{pag_block}
 <hr class="sep"/>
-<p class="foot">Obrigado pela preferencia!</p>
+<div class="meta-block">
+  <div class="meta"><span>COD: {cod_curto}</span><span>App Pedidos</span></div>
+  <div class="meta"><span>Criado em</span><span>{criado_em}</span></div>
+  <div class="meta"><span>Impresso em</span><span>{impresso_em}</span></div>
+</div>
+{previsto_html}
+<hr class="sep"/>
+<div class="foot">App: appcomandatech.agilizeerp.com.br</div>
+{f'<div class="foot">Contato: {loja_nome} {customer_phone or ""}</div>' if False else ''}
 </body></html>'''
 
 def encontrar_chrome():
@@ -1285,7 +1471,7 @@ def diagnosticar_impressora():
         log(f"Erro ao listar impressoras: {e}", "DIAG")
     log("=== FIM DO DIAGNÓSTICO ===", "DIAG")
 
-def processar_pedido(pedido, store_name="Comanda Tech"):
+def processar_pedido(pedido, store_name="Comanda Tech", store_info=None):
     """Processa um pedido: busca itens, formata e imprime"""
     order_id = pedido.get("id")
     order_number = pedido.get("daily_number", "?")
@@ -1311,7 +1497,7 @@ def processar_pedido(pedido, store_name="Comanda Tech"):
     # Formata recibo HTML (mesmo layout do painel web)
     log("Gerando recibo HTML...", "INFO")
     if PRINT_LAYOUT == 'v3':
-        html = formatar_recibo_html_v3(pedido, itens, store_name)
+        html = formatar_recibo_html_v3(pedido, itens, store_name, store_info or {})
     else:
         html = formatar_recibo_html(pedido, itens, store_name)
     
@@ -1449,7 +1635,8 @@ if __name__ == "__main__":
         exit(1)
     
     log(f"Buscando empresa: {slug}...", "INFO")
-    company_id, company_name, company_address = buscar_empresa_por_slug(slug)
+    company_id, company_name, company_address, company_info = buscar_empresa_por_slug(slug)
+    STORE_INFO = company_info or {}
     
     if not company_id:
         print(f"Empresa '{slug}' não encontrada ou inativa. Verifique o slug.")
@@ -1498,7 +1685,7 @@ if __name__ == "__main__":
             if pedidos:
                 log(f"Encontrados {len(pedidos)} pedido(s) para imprimir!", "INFO")
                 for pedido in pedidos:
-                    ok = processar_pedido(pedido, STORE_NAME)
+                    ok = processar_pedido(pedido, STORE_NAME, STORE_INFO)
                     if not ok:
                         ids_com_falha.add(pedido.get('id'))
                         log(f"Pedido {pedido.get('order_code','')} adicionado à lista de falhas (não tentará novamente)", "AVISO")

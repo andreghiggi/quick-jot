@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '02/06/2026',
+    version: '1.8.1-beta',
+    type: 'improvement',
+    description: 'Layout de Impressão V3 reescrito do zero para replicar fielmente o recibo térmico Agilize: cabeçalho da loja (nome, endereço, CNPJ), PED #xxx, bloco do cliente com Fones/endereço/Bairro/Ponto de referência, faixa de modalidade (TELE ENTREGA/MOTOBOY, RETIRADA, BALCÃO, MESA) em ASCII, tabela REF|DESCRICAO|VALOR com adicionais numerados, totais separados (TOTAL ITENS / FRETE / TOTAL GERAL), bloco PAGAMENTO/TROCO, COD/Criado em/Impresso em e faixa PREVISTO. Fonte mais fina (Lucida Console 8-11pt). Aplicado tanto no auto_printer.py quanto no PDV V2. Layouts V1 e V2 NÃO foram tocados — apenas lojas com V3 ativo enxergam a mudança. Nenhum fluxo TEF/NFC-e/Multi-Pagamento foi alterado.',
+  },
+  {
+    date: '02/06/2026',
     version: '1.8.0-beta',
     type: 'feature',
     description: 'Layout de Impressão V3 (beta) — disponível em Configurações → Impressão → Layout de Impressão (Admin Master). Comanda de produção V3 com cabeçalho PEDIDO gigante, separadores ASCII, faixa de tipo (ENTREGA/RETIRADA/MESA/BALCÃO) em destaque e bloco "Pronto até" com moldura. Recibo V3 no auto_printer.py com PED #, totais destacados e badge de Entrega/Retirada. Os layouts V1 e V2 NÃO foram alterados — lojas que não escolherem V3 manualmente continuam exatamente como estão. Nenhum fluxo de TEF, NFC-e, PDV V2 ou Multi-Pagamento foi alterado.',
