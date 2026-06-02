@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.8.3-beta";
+export const VERSION = "1.8.4-beta";
 export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Layout V3 grade 48 cols (beta)";
+export const CODENAME = "Layout V3 densidade Agilize (beta)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.8.4-beta",
+    date: "2026-06-02",
+    codename: "Layout V3 densidade Agilize (beta)",
+    changes: [
+      "Layout V3 reaproximado da foto de referência: hierarquia única no PED #xxx (13pt bold) — nome da loja e demais textos em 8.5pt uniforme.",
+      "Removida faixa de modalidade em texto invertido; agora usa 3 linhas literais de '#' espelhando o cupom Agilize.",
+      "Densidade aumentada: line-height 0.95, padding 1mm, zero linhas em branco entre seções, cabeçalho da tabela cola direto nos itens.",
+      "Quebra de página suprimida (page-break-inside: avoid) — recibo sai em fluxo contínuo numa única folha térmica.",
+      "V1 e V2 permanecem 100% intactos. Mudança isolada ao V3 da Lancheria I9.",
+    ],
+  },
   {
     version: "1.8.3-beta",
     date: "2026-06-02",
