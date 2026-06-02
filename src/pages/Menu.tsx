@@ -2130,30 +2130,41 @@ export default function Menu() {
                         )}
                         {settings.enableDelivery && (
                         <>
+                        {(() => {
+                          const cityOn = settings.deliveryFeeCityEnabled !== false;
+                          const interiorOn = settings.deliveryFeeInteriorEnabled !== false;
+                          const onlyOne = (cityOn && !interiorOn) || (!cityOn && interiorOn);
+                          return (<>
+                        {cityOn && (
                         <div className={cn(
                           "flex items-center justify-between p-2 rounded-lg transition-all duration-200 ease-in-out",
                           deliveryType === 'city' ? "bg-primary/15 border-2 border-primary" : "bg-background border border-border"
                         )}>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="city" id="city" />
-                            <Label htmlFor="city" className="cursor-pointer">Entrega Cidade</Label>
+                            <Label htmlFor="city" className="cursor-pointer">{onlyOne ? 'Entrega' : 'Entrega Cidade'}</Label>
                           </div>
                           <span className="text-sm font-medium text-green-600">
                             {settings.deliveryFeeCity > 0 ? `R$ ${settings.deliveryFeeCity.toFixed(2)}` : 'Grátis'}
                           </span>
                         </div>
+                        )}
+                        {interiorOn && (
                         <div className={cn(
                           "flex items-center justify-between p-2 rounded-lg transition-all duration-200 ease-in-out",
                           deliveryType === 'interior' ? "bg-primary/15 border-2 border-primary" : "bg-background border border-border"
                         )}>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="interior" id="interior" />
-                            <Label htmlFor="interior" className="cursor-pointer">Entrega Interior</Label>
+                            <Label htmlFor="interior" className="cursor-pointer">{onlyOne ? 'Entrega' : 'Entrega Interior'}</Label>
                           </div>
                           <span className="text-sm font-medium text-green-600">
                             {settings.deliveryFeeInterior > 0 ? `R$ ${settings.deliveryFeeInterior.toFixed(2)}` : 'Grátis'}
                           </span>
                         </div>
+                        )}
+                          </>);
+                        })()}
                         </>
                         )}
                       </RadioGroup>
