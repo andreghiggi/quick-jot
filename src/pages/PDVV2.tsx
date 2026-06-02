@@ -1325,6 +1325,15 @@ export default function PDVV2() {
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
+        onSplitPayments={() => {
+          // Fecha o checkout single-payment e abre o multi-pagamento
+          // mantendo a comanda selecionada. NÃO toca em TEF v1.1 / split I9.
+          if (importingTab) {
+            setMultiPayTab(importingTab);
+            setImportingTab(null);
+            setMultiPayOpen(true);
+          }
+        }}
         activeSplit={i9SplitInfo ? {
           perPerson: i9SplitInfo.perPerson,
           totalPeople: i9SplitInfo.total,
