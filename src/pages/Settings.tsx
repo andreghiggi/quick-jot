@@ -1350,7 +1350,7 @@ pause
               <CardContent>
                 <RadioGroup
                   value={storeSettings.printLayout}
-                  onValueChange={async (value: 'v1' | 'v2') => {
+                  onValueChange={async (value: 'v1' | 'v2' | 'v3') => {
                     await updateSetting('print_layout', value);
                     toast({
                       title: 'Layout salvo',
@@ -1374,6 +1374,15 @@ pause
                       <Label htmlFor="layout-v2" className="font-medium cursor-pointer">Layout V2 (novo)</Label>
                       <p className="text-sm text-muted-foreground">
                         Adicionais empilhados (um por linha) em negrito. Observações destacadas em fundo preto / texto branco.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="v3" id="layout-v3" />
+                    <div className="flex-1">
+                      <Label htmlFor="layout-v3" className="font-medium cursor-pointer">Layout V3 (beta)</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Layout denso com cabeçalho "PEDIDO" gigante, separadores em ASCII e bloco "Pronto até" em destaque. Inspirado no recibo V3 piloto da Lancheria I9.
                       </p>
                     </div>
                   </div>
