@@ -14,6 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Order } from '@/types/order';
 import { emitirNFCe, type NFCeItem, type NFCeRecord, type NFCeTefData } from '@/services/nfceService';
+import { PDVV2MultiPaymentDialog } from '@/components/pdv-v2/PDVV2MultiPaymentDialog';
+import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 interface OrderCardChargeDialogProps {
   order: Order;
   open: boolean;
@@ -51,6 +53,10 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
   const [tefStatus, setTefStatus] = useState('');
   const [isEmittingNfce, setIsEmittingNfce] = useState(false);
+  // Multi-payment (v1.6 beta) — fluxo isolado. NÃO altera handleConfirm.
+  const [multiPayOpen, setMultiPayOpen] = useState(false);
+  const [multiPayProcessing, setMultiPayProcessing] = useState(false);
+  const [multiPayStatus, setMultiPayStatus] = useState('');
   const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const isI9Company = company?.id === I9_COMPANY_ID;
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
