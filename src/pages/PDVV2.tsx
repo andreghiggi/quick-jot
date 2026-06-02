@@ -157,6 +157,12 @@ export default function PDVV2() {
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
   const [pendingPostSale, setPendingPostSale] = useState<null | (() => void | Promise<void>)>(null);
+  // Multi-payment (v1.6 beta) — fluxo isolado para Cobrar Comanda/Mesa.
+  // NÃO altera confirmImportTab/confirmImportTabI9 (TEF v1.1 frozen).
+  const [multiPayOpen, setMultiPayOpen] = useState(false);
+  const [multiPayProcessing, setMultiPayProcessing] = useState(false);
+  const [multiPayStatus, setMultiPayStatus] = useState('');
+  const [multiPayTab, setMultiPayTab] = useState<OccupiedTab | null>(null);
   // Status do processamento TEF (banner no topo do diálogo de cobrança)
   const [tefStatus, setTefStatus] = useState('');
 
