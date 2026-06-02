@@ -115,6 +115,7 @@ export function PDVV2PaymentDialog({
   onConfirm,
   activeSplit,
   transferLog,
+  onSplitPayments,
 }: PDVV2PaymentDialogProps) {
   // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
