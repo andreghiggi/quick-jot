@@ -96,3 +96,4 @@
 - [Product Cost Tracking](mem://features/product-cost-tracking) — `products.cost_price` + `product_cost_history` com trigger automático; UI mostra Margem% e Markup% no cadastro/edição.
 - [PDV V2 TEF/NFC-e Overlay](mem://features/pdvv2-tef-nfce-overlay) — I9: overlay "Emitindo NFC-e" não bloqueante e PostSaleDialog adia abertura até prompt TEF fechar.
 - [TEF Auto Print v1](mem://features/tef-auto-print-v1) — Impressão automática do comprovante TEF (1ª via) após PinPad aprovado, módulo isolado em `src/utils/tefAutoPrint.ts`, allow-list só I9, setting `tef_auto_print_vias` (none/estabelecimento/ambas, default ambas).
+- [Customer Multi-Address](mem://features/customer-multi-address) — Tabela `customer_addresses` + picker no cardápio online. Auto-fill atual de `customers.address` preservado; salvar é aditivo e best-effort.
