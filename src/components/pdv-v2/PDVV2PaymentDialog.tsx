@@ -190,12 +190,8 @@ export function PDVV2PaymentDialog({
   const baseList =
     rawActivePaymentMethods.length > 0 ? rawActivePaymentMethods : allActivePaymentMethods;
   const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-  // Allow-list isolada para o filtro Entrega/Retirada (NÃO confundir com isI9Company de fluxo).
-  const PAYMENT_SPLIT_ALLOWLIST = [
-    '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da I9
-    '32b71649-461d-4cb6-b26c-12390b090feb', // Lancheria Bon Appetit
-  ];
-  const isI9PaymentSplit = !!companyId && PAYMENT_SPLIT_ALLOWLIST.includes(companyId);
+  // Filtro Entrega/Retirada — liberado para todas as lojas (NÃO confundir com isI9Company de fluxo).
+  const isI9PaymentSplit = true;
   const cashFilteredList = cashOnly
     ? baseList.filter((m) => /dinheiro/i.test(m.name))
     : baseList;
