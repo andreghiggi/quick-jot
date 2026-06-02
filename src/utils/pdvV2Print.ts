@@ -87,100 +87,145 @@ function escapeHtml(s: string) {
 const I9_COMPANY_ID_V3 = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
 
 function buildReceiptHTMLv3(payload: PrintPayload): string {
-  // Layout V3 fiel ao recibo térmico Agilize: cabeçalho da loja, PED #,
-  // cliente, faixa de modalidade, tabela REF/DESCRICAO/VALOR com adicionais
-  // numerados, totais (ITENS/FRETE/TOTAL GERAL), pagamento e meta de criação.
-  // Usa apenas dados do PrintPayload — sem expandir tipo nem callers (TEF/PDV V2 congelados).
+  // Layout V3 — template ESC/POS Epson TM-T20/TM-T88 (Font A monoespaçada).
+  // Renderizado como <pre> com colunas fixas (42 cols @ 80mm, 32 cols @ 58mm),
+  // line-height 1.0, Courier New único, faixa de modalidade em texto invertido.
+  // Mantém compatibilidade total com V1/V2 (função isolada por companyId).
   const w = payload.paperSize === '58mm' ? '58mm' : '80mm';
-  const cols = w === '80mm' ? 42 : 32;
-  const ref = payload.shortCode || `#${payload.dailyNumber}`;
-  const lojaNome = 'LANCHERIA DA I9'; // V3 isolado por loja; nome puxado pelo header do recibo
-  const ts = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const COLS = w === '80mm' ? 42 : 32;
+  const VAL_COL = 12; // largura reservada à direita para "R$ 9999,99"
+  const DESC_COL = COLS - VAL_COL;
 
-  // Itens com formato Agilize
-  const itemsHtml = payload.items
-    .map((it) => {
-      const nome = it.name || 'Item';
-      let main = nome;
-      const adicionais: string[] = [];
-      const idxP = nome.indexOf('(');
-      if (idxP >= 0 && nome.endsWith(')')) {
-        main = nome.slice(0, idxP).trim();
-        const extras = nome.slice(idxP + 1, -1).trim();
-        const grupos = extras.split('|').map((g) => g.trim()).filter(Boolean);
-        for (const g of grupos) {
-          const after = g.includes(':') ? g.split(':').slice(1).join(':') : g;
-          for (const p of after.split(',').map((s) => s.trim()).filter(Boolean)) {
-            const clean = p.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
-            if (clean) adicionais.push(clean);
-          }
+  const ref = payload.shortCode || `#${payload.dailyNumber}`;
+  const lojaNome = 'LANCHERIA DA I9';
+  const ts = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const modalidade = 'BALCAO';
+
+  // ----- helpers de coluna (string monoespaçada) -----
+  const money = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`;
+  const line = (ch: string) => ch.repeat(COLS);
+  const center = (s: string) => {
+    const t = s.length > COLS ? s.slice(0, COLS) : s;
+    const pad = Math.max(0, Math.floor((COLS - t.length) / 2));
+    return ' '.repeat(pad) + t;
+  };
+  const twoCol = (left: string, right: string) => {
+    const r = right.slice(0, VAL_COL);
+    const maxLeft = COLS - r.length - 1;
+    const l = left.length > maxLeft ? left.slice(0, maxLeft) : left;
+    return l + ' '.repeat(COLS - l.length - r.length) + r;
+  };
+  const wrap = (s: string, width: number, indent = 0): string[] => {
+    const out: string[] = [];
+    const ind = ' '.repeat(indent);
+    const eff = width - indent;
+    let cur = '';
+    for (const word of s.split(/\s+/)) {
+      if (!word) continue;
+      if ((cur + (cur ? ' ' : '') + word).length > eff) {
+        if (cur) out.push(ind + cur);
+        cur = word;
+      } else {
+        cur = cur ? `${cur} ${word}` : word;
+      }
+    }
+    if (cur) out.push(ind + cur);
+    return out.length ? out : [ind];
+  };
+
+  // ----- bloco de itens -----
+  const itemLines: string[] = [];
+  payload.items.forEach((it) => {
+    const nome = it.name || 'Item';
+    let main = nome;
+    const adicionais: string[] = [];
+    const idxP = nome.indexOf('(');
+    if (idxP >= 0 && nome.endsWith(')')) {
+      main = nome.slice(0, idxP).trim();
+      const extras = nome.slice(idxP + 1, -1).trim();
+      const grupos = extras.split('|').map((g) => g.trim()).filter(Boolean);
+      for (const g of grupos) {
+        const after = g.includes(':') ? g.split(':').slice(1).join(':') : g;
+        for (const p of after.split(',').map((s) => s.trim()).filter(Boolean)) {
+          const clean = p.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
+          if (clean) adicionais.push(clean);
         }
       }
-      const unit = it.price.toFixed(2).replace('.', ',');
-      const sub = (it.price * it.quantity).toFixed(2).replace('.', ',');
-      let block = `<div class="ref-row"><b>${escapeHtml(main.toUpperCase())} R$ ${unit}</b></div>`;
-      adicionais.forEach((ad, i) => {
-        block += `<div class="ad-line">[${i + 1}] ${escapeHtml(ad)}</div>`;
-      });
-      if (it.notes) block += `<div class="ad-line">Obs: ${escapeHtml(it.notes)}</div>`;
-      block += `<div class="line-total"><span>${it.quantity} X R$ ${unit} =</span><span>R$ ${sub}</span></div>`;
-      return `<div class="item-block">${block}</div>`;
+    }
+    const sub = it.price * it.quantity;
+    const header = `${it.quantity} X ${main.toUpperCase()}`;
+    const wrapped = wrap(header, DESC_COL);
+    // primeira linha leva o valor à direita; demais ficam só com a descrição
+    itemLines.push(twoCol(wrapped[0], money(sub)));
+    for (let i = 1; i < wrapped.length; i++) itemLines.push(wrapped[i]);
+    adicionais.forEach((ad, i) => {
+      const txt = `[${i + 1}] ${ad}`;
+      wrap(txt, COLS, 2).forEach((l) => itemLines.push(l));
+    });
+    if (it.notes) {
+      wrap(`Obs: ${it.notes}`, COLS, 2).forEach((l) => itemLines.push(l));
+    }
+  });
+
+  // ----- montagem do recibo (string única, coluna a coluna) -----
+  const out: string[] = [];
+  out.push(center(lojaNome));
+  out.push('');
+  out.push(center(`PED ${ref}`));
+  out.push(line('-'));
+  out.push(`CLIENTE: ${payload.customerName}`);
+  // faixa de modalidade — equivalente ESC/POS reverse video (GS B 1)
+  // marcador especial REV_START/REV_END processado abaixo no render HTML
+  out.push('__REV__' + center(modalidade));
+  out.push(line('-'));
+  out.push(twoCol('DESCRICAO', 'VALOR'));
+  out.push(line('-'));
+  itemLines.forEach((l) => out.push(l));
+  out.push(line('-'));
+  out.push(twoCol('TOTAL GERAL', money(payload.total)));
+  if (payload.notes) {
+    out.push(line('-'));
+    wrap(`Obs: ${payload.notes}`, COLS).forEach((l) => out.push(l));
+  }
+  out.push(line('-'));
+  out.push(twoCol(`COD: ${(payload.orderCode || '').slice(0, 7).toLowerCase()}`, 'PDV V2'));
+  out.push(twoCol('Impresso em', ts));
+  out.push(line('-'));
+  out.push(center('Obrigado pela preferencia!'));
+
+  // ----- render: cada linha vira <div>, faixa invertida usa background preto -----
+  const bodyHtml = out
+    .map((raw) => {
+      if (raw.startsWith('__REV__')) {
+        const txt = raw.slice('__REV__'.length);
+        return `<div class="rev">${escapeHtml(txt)}</div>`;
+      }
+      // espaços preservados; linha vazia mantém altura
+      const safe = escapeHtml(raw).replace(/ /g, '&nbsp;');
+      return `<div class="ln">${safe || '&nbsp;'}</div>`;
     })
     .join('');
 
-  const modalidade = 'BALCAO';
-  const hash = '#'.repeat(cols);
-  const mid = `#${modalidade.padStart(Math.floor((cols - 2 + modalidade.length) / 2), ' ').padEnd(cols - 2, ' ')}#`;
-
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     @page { size: ${w} auto; margin: 0; }
-    * { box-sizing: border-box; margin:0; padding:0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      width:${w}; max-width:${w};
-      font-family:'Lucida Console','Consolas','Courier New',monospace;
-      padding:2mm; font-size:9pt; line-height:1.15; color:#000;
+      width: ${w}; max-width: ${w};
+      font-family: 'Courier New', monospace;
+      font-size: ${w === '80mm' ? '10pt' : '9pt'};
+      line-height: 1.0;
+      color: #000;
+      padding: 2mm;
     }
-    .head { text-align:center; font-size:8.5pt; line-height:1.2; }
-    .head .nome { font-weight:bold; font-size:9pt; }
-    .ped { text-align:center; font-weight:bold; font-size:14pt; margin:2mm 0 1mm; letter-spacing:2px; }
-    .sep { border:0; border-top:1px dashed #000; margin:1.5mm 0; }
-    .cli-line { font-size:9pt; margin:0.5mm 0; }
-    .cli-line b { font-weight:bold; }
-    .modalidade { font-family:'Courier New',monospace; font-size:8pt; text-align:center; margin:1.5mm 0; line-height:1.1; white-space:pre; font-weight:bold; }
-    .ref-head { display:flex; justify-content:space-between; font-size:8.5pt; border-bottom:1px solid #000; padding-bottom:0.5mm; margin-bottom:1mm; font-weight:bold; }
-    .item-block { margin:1mm 0; }
-    .ref-row { font-size:9.5pt; font-weight:bold; }
-    .ad-line { font-size:8.5pt; padding-left:3mm; }
-    .line-total { display:flex; justify-content:flex-end; gap:3mm; font-size:8.5pt; margin-top:0.5mm; }
-    .totais { font-size:9pt; }
-    .tot-line { display:flex; justify-content:space-between; padding:0.3mm 0; }
-    .tot-line.bold { font-weight:bold; font-size:11pt; }
-    .meta { display:flex; justify-content:space-between; font-size:8pt; padding:0.2mm 0; }
-    .meta-block { margin:1mm 0; }
-    .foot { text-align:center; font-size:8pt; margin-top:1mm; }
-  </style></head><body>
-    <div class="head"><div class="nome">${escapeHtml(lojaNome)}</div></div>
-    <div class="ped">PED ${escapeHtml(ref)}</div>
-    <hr class="sep"/>
-    <div class="cli-line"><b>CLIENTE:</b> ${escapeHtml(payload.customerName)}</div>
-    <div class="modalidade">${hash}
-${mid}
-${hash}</div>
-    <div class="ref-head"><span>REF| DESCRICAO</span><span>| VALOR</span></div>
-    ${itemsHtml}
-    <hr class="sep"/>
-    <div class="totais">
-      <div class="tot-line bold"><span>TOTAL GERAL</span><span>R$ ${payload.total.toFixed(2).replace('.', ',')}</span></div>
-    </div>
-    ${payload.notes ? `<hr class="sep"/><div class="cli-line"><b>Obs:</b> ${escapeHtml(payload.notes)}</div>` : ''}
-    <hr class="sep"/>
-    <div class="meta-block">
-      <div class="meta"><span>COD: ${escapeHtml((payload.orderCode || '').slice(0, 7).toLowerCase())}</span><span>PDV V2</span></div>
-      <div class="meta"><span>Impresso em</span><span>${ts}</span></div>
-    </div>
-    <hr class="sep"/>
-    <div class="foot">Obrigado pela preferencia!</div>
-  </body></html>`;
+    .ln { white-space: pre; font-family: 'Courier New', monospace; }
+    .rev {
+      background: #000;
+      color: #fff;
+      font-weight: bold;
+      white-space: pre;
+      font-family: 'Courier New', monospace;
+    }
+  </style></head><body>${bodyHtml}</body></html>`;
 }
 
 function buildReceiptHTMLForCompany(payload: PrintPayload): string {
