@@ -661,14 +661,14 @@ export function PDVV2PaymentDialog({
                     return (
                       <div key={idx} className="min-w-0">
                         <div
-                          className={`flex items-center gap-2 text-sm px-1 py-0.5 rounded min-w-0 ${
+                          className={`flex items-start gap-2 text-sm px-1 py-0.5 rounded min-w-0 ${
                             isPaid ? 'opacity-60 bg-success/10' : ''
                           }`}
                         >
                         {isPaid ? (
                           <>
                             <Checkbox checked disabled />
-                            <span className="truncate flex-1 min-w-0">
+                            <span className="break-words flex-1 min-w-0 leading-snug">
                               {item.quantity}x {item.name}
                               <span className="ml-1 text-xs text-success">(pago)</span>
                             </span>
@@ -693,7 +693,7 @@ export function PDVV2PaymentDialog({
                                 setSelectedItemQtys(next);
                               }}
                             />
-                            <span className="truncate flex-1 min-w-0">
+                            <span className="break-words flex-1 min-w-0 leading-snug">
                               {selectedQty > 0 && selectedQty < 1 ? (
                                 <>
                                   <span className="font-medium">{item.name}</span>
@@ -775,7 +775,7 @@ export function PDVV2PaymentDialog({
                                 }}
                               >+</Button>
                             </div>
-                            <span className="truncate flex-1 min-w-0">
+                            <span className="break-words flex-1 min-w-0 leading-snug">
                               {item.name}
                               <span className="text-xs text-muted-foreground ml-1">
                                 ({pendingQty} pendente{pendingQty > 1 ? 's' : ''}{paidQty > 0 ? ` de ${item.quantity}` : ''})
@@ -880,7 +880,7 @@ export function PDVV2PaymentDialog({
                     return (
                       <div
                         key={`extra-${ex.id}`}
-                        className="flex items-center gap-2 text-sm px-1 py-0.5 rounded"
+                        className="flex items-start gap-2 text-sm px-1 py-0.5 rounded min-w-0"
                       >
                         {ex.quantity === 1 ? (
                           <>
@@ -893,7 +893,7 @@ export function PDVV2PaymentDialog({
                                 setSelectedExtraQtys(next);
                               }}
                             />
-                            <span className="truncate flex-1">
+                            <span className="break-words flex-1 min-w-0 leading-snug">
                               1x {ex.product_name}
                               <span className="ml-1 text-[10px] text-primary">(adicional)</span>
                             </span>
@@ -932,7 +932,7 @@ export function PDVV2PaymentDialog({
                                 }}
                               >+</Button>
                             </div>
-                            <span className="truncate flex-1">
+                            <span className="break-words flex-1 min-w-0 leading-snug">
                               {ex.product_name}
                               <span className="text-xs text-muted-foreground ml-1">({ex.quantity} un.)</span>
                               <span className="ml-1 text-[10px] text-primary">(adicional)</span>
