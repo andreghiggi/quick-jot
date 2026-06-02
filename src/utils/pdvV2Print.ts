@@ -186,30 +186,34 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
     itemLines.push(rightCol('', calc));
   });
 
-  // ---------- montagem ----------
+  // ---------- montagem (compacta, espelhando a foto Agilize) ----------
+  // Regras: zero linhas em branco entre seções; única ênfase visual é PED #xxx
+  // (linha marcada __BIG__). Modalidade vai entre 3 linhas literais de '#'.
   const out: string[] = [];
   out.push(center(lojaNome));
-  out.push('');
-  out.push(center(`PED ${refDisplay}`));
+  out.push(repeat('-'));
+  out.push('__BIG__' + center(`PED ${refDisplay}`));
   out.push(repeat('-'));
   out.push(`CLIENTE: ${payload.customerName}`);
-  out.push('');
-  // Faixa de modalidade — texto invertido (reverse video ESC/POS GS B 1)
-  out.push('__REV__' + center(`*** ${modalidade} ***`));
-  out.push('');
-  // Cabeçalho da tabela
+  // Faixa de modalidade — 3 linhas de '#' literais (como na foto)
+  const modBand = ` ${modalidade} / PDV `;
+  const padHash = Math.max(0, COLS - modBand.length);
+  const left = '#'.repeat(Math.floor(padHash / 2));
+  const right = '#'.repeat(padHash - left.length);
+  out.push(repeat('#'));
+  out.push(`${left}${modBand}${right}`);
+  out.push(repeat('#'));
+  // Cabeçalho da tabela (sem separador, cola direto nos itens)
   out.push(rightCol('REF| DESCRICAO', 'VALOR'));
-  out.push(repeat('-'));
   itemLines.forEach((l) => out.push(l));
   out.push(repeat('='));
-  // Totais
+  // Totais (sem linha em branco entre eles)
   out.push(pipeRow('TOTAL ITENS', money(totalItens)));
   if (Math.abs(payload.total - totalItens) > 0.001) {
     out.push(pipeRow('FRETE', money(payload.total - totalItens)));
   }
   out.push('__BOLD__' + rightCol('TOTAL GERAL', money(payload.total)));
-  out.push('');
-  // Meta
+  // Meta direto, sem espaço
   out.push(pipeRow(`COD: ${(payload.orderCode || '').slice(0, 7).toLowerCase()}`, 'App Pedidos'));
   out.push(pipeRow('Criado em', ts));
   out.push(pipeRow('Impresso em', ts));
@@ -217,8 +221,6 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
     out.push(repeat('-'));
     wrap(`Obs: ${payload.notes}`, COLS).forEach((l) => out.push(l));
   }
-  out.push(repeat('-'));
-  out.push(center('Obrigado pela preferencia!'));
 
   // ---------- render HTML preservando colunas ----------
   const bodyHtml = out
