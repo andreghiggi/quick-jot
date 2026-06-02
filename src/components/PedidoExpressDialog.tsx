@@ -300,6 +300,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Cobrança via PDVV2PaymentDialog (apenas Retirada)
   const [pickupChargeOpen, setPickupChargeOpen] = useState(false);
 
+  // ===== Multi-payment (v1.6 beta) — dialog isolado, NÃO altera fluxo TEF v1.1 =====
+  const [multiPayOpen, setMultiPayOpen] = useState(false);
+  const [multiPayProcessing, setMultiPayProcessing] = useState(false);
+  const [multiPayStatus, setMultiPayStatus] = useState('');
+
   // ===== Divisão de pagamento (mesmo padrão do PDV V2 importar e cobrar mesas) =====
   // Cada parte vira uma pdv_sale + NFC-e própria. Ao final, o pedido (addOrder)
   // é criado uma única vez com todos os itens. Funciona para TODAS as lojas.
