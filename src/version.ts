@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.5.1";
+export const VERSION = "1.5.2";
 export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Quebra de texto no modal de cobrança";
+export const CODENAME = "Correção de cobrança fracionada";
 
 export interface Release {
   version: string;
@@ -19,6 +19,14 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.5.2",
+    date: "2026-06-02",
+    codename: "Correção de cobrança fracionada",
+    changes: [
+      "Cobrar pedido do cardápio (Lancheria I9): ao dividir um item e cobrar apenas uma fração na primeira cobrança, o sistema agora respeita o valor selecionado em vez de marcar o item inteiro como pago. O botão Cobrar continua disponível para o saldo restante.",
+    ],
+  },
   {
     version: "1.5.1",
     date: "2026-06-02",
