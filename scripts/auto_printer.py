@@ -472,6 +472,110 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     
     return html
 
+def formatar_recibo_html_v3(pedido, itens, store_name="Comanda Tech"):
+    """Recibo V3 — layout denso inspirado no recibo V3 do frontend (I9).
+    NÃO altera o V1/V2 — função separada acionada apenas quando PRINT_LAYOUT == 'v3'."""
+    paper_size = PAPER_SIZE
+    order_num = pedido.get('short_code') or pedido.get('order_code') or pedido.get('daily_number', '?')
+    order_code = pedido.get('order_code', '') or ''
+    try:
+        dt_utc = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
+        dt_sp = dt_utc.astimezone(timezone(timedelta(hours=-3)))
+        formatted_date = dt_sp.strftime('%d/%m/%Y %H:%M')
+    except Exception:
+        formatted_date = pedido.get('created_at', '')[:16]
+
+    customer_name = pedido.get('customer_name', '') or ''
+    customer_phone = pedido.get('customer_phone', '') or ''
+    delivery_address = pedido.get('delivery_address', '') or ''
+    notes = (pedido.get('notes') or '').strip()
+    total = float(pedido.get('total', 0))
+
+    subtotal = 0.0
+    for it in itens:
+        subtotal += float(it.get('price', 0)) * int(it.get('quantity', 1))
+    delivery_fee = total - subtotal if total > subtotal else 0.0
+
+    rows_html = ''
+    for it in itens:
+        qtd = int(it.get('quantity', 1))
+        nome = (it.get('name') or 'Item').strip()
+        preco_unit = float(it.get('price', 0))
+        sub = preco_unit * qtd
+        unit_str = f"{preco_unit:.2f}".replace('.', ',')
+        sub_str = f"{sub:.2f}".replace('.', ',')
+        item_notes = (it.get('notes') or '').strip()
+        notes_html = f'<div class="row-notes">- {item_notes}</div>' if item_notes else ''
+        rows_html += (
+            f'<div class="row">'
+            f'  <div class="row-main"><span class="qty">{qtd}x</span> {nome.upper()}</div>'
+            f'  <div class="row-sub"><span>{qtd} x {unit_str}</span><span class="sub-val">R$ {sub_str}</span></div>'
+            f'  {notes_html}'
+            f'</div>'
+        )
+
+    delivery_badge = (
+        f'<div class="badge-v3">ENTREGA</div><div class="addr-v3">{delivery_address}</div>'
+        if delivery_address else '<div class="badge-v3">RETIRADA NO LOCAL</div>'
+    )
+    delivery_fee_html = ''
+    if delivery_fee > 0:
+        fee_str = f"{delivery_fee:.2f}".replace('.', ',')
+        delivery_fee_html = f'<div class="total-line"><span>Entrega</span><span>R$ {fee_str}</span></div>'
+    subtotal_str = f"{subtotal:.2f}".replace('.', ',')
+    total_str = f"{total:.2f}".replace('.', ',')
+
+    phone_html = f'<div class="info"><b>TEL:</b> {customer_phone}</div>' if customer_phone else ''
+    notes_html_block = f'<hr class="sep"/><div class="obs">OBS: {notes}</div>' if notes else ''
+
+    return f'''<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Pedido #{order_num}</title>
+<style>
+@page {{ margin: 0; size: {paper_size} auto; }}
+* {{ box-sizing: border-box; margin:0; padding:0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+body {{ width:{paper_size}; max-width:{paper_size}; font-family:'Courier New','Lucida Console',monospace; padding:4px 6px; font-size:11pt; line-height:1.2; color:#000; font-weight:bold; }}
+.store {{ text-align:center; font-size:12pt; font-weight:900; letter-spacing:1px; }}
+.title {{ text-align:center; font-weight:900; font-size:14pt; margin:2px 0; letter-spacing:2px; }}
+.ped {{ text-align:center; font-weight:900; font-size:22pt; margin:2px 0; letter-spacing:3px; }}
+.code {{ text-align:center; font-size:9pt; margin-bottom:2px; }}
+.sep {{ border:0; border-top:1px dashed #000; margin:4px 0; }}
+.info {{ font-size:10pt; }}
+.info b {{ font-weight:900; }}
+.badge-v3 {{ text-align:center; font-size:11pt; font-weight:900; border:2px solid #000; padding:1.5mm; margin:2mm 0; letter-spacing:1px; }}
+.addr-v3 {{ font-size:10pt; text-align:center; margin-bottom:1mm; }}
+.row {{ margin:2px 0; }}
+.row-main {{ font-size:12pt; font-weight:900; text-transform:uppercase; }}
+.qty {{ font-weight:900; }}
+.row-sub {{ display:flex; justify-content:space-between; font-size:9pt; padding-left:2px; }}
+.sub-val {{ font-weight:900; }}
+.row-notes {{ font-size:9pt; padding-left:2px; font-style:italic; font-weight:normal; }}
+.total-line {{ display:flex; justify-content:space-between; font-size:11pt; margin:1px 0; }}
+.grand-total {{ display:flex; justify-content:space-between; font-weight:900; font-size:15pt; margin-top:2px; border-top:1px solid #000; padding-top:2px; }}
+.obs {{ font-size:10pt; font-weight:900; padding:2mm; border:1px solid #000; }}
+.foot {{ text-align:center; font-size:9pt; margin-top:4px; }}
+</style></head><body>
+<!--BOX_START-->
+<div class="store">{store_name.upper()}</div>
+<div class="title">*** RECIBO ***</div>
+<div class="ped">PED #{order_num}</div>
+<div class="code">{order_code}</div>
+<hr class="sep"/>
+<div class="info"><b>CLIENTE:</b> {customer_name}</div>
+{phone_html}
+<div class="info"><b>EMISSAO:</b> {formatted_date}</div>
+<!--BOX_END-->
+{delivery_badge}
+<hr class="sep"/>
+{rows_html}
+<hr class="sep"/>
+<div class="total-line"><span>Subtotal</span><span>R$ {subtotal_str}</span></div>
+{delivery_fee_html}
+<div class="grand-total"><span>TOTAL</span><span>R$ {total_str}</span></div>
+{notes_html_block}
+<hr class="sep"/>
+<p class="foot">Obrigado pela preferencia!</p>
+</body></html>'''
+
 def encontrar_chrome():
     """Encontra o executável do Chrome ou Edge no Windows"""
     caminhos = [
