@@ -3076,6 +3076,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         showDocumentMode
         showAddItem
         tefStatus={tefStatus}
+        onSplitPayments={() => {
+          // Fecha o checkout single-payment e abre o multi-pagamento.
+          // A orquestração (runMultiPayment + addSale + NFC-e) já existe em
+          // handleMultiPaymentSubmit — nada de TEF v1.x é alterado.
+          setPickupChargeOpen(false);
+          setMultiPayOpen(true);
+        }}
         checkoutItems={cart.length > 0 ? cart.map((i, idx) => {
           const unit = i.product.price + (i.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0);
           const paidQty = expressPaidQtys.get(String(idx)) || 0;
