@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.5.2";
+export const VERSION = "1.5.3";
 export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Correção de cobrança fracionada";
+export const CODENAME = "Cobrança rachada por pessoas";
 
 export interface Release {
   version: string;
@@ -19,6 +19,14 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.5.3",
+    date: "2026-06-02",
+    codename: "Cobrança rachada por pessoas",
+    changes: [
+      "Cobrar pedido do cardápio (Lancheria I9) - divisão por pessoas: a parcela cobrada (ex.: R$ 7 de R$ 30) entra no caixa com o valor real e o pedido fica como 'parcial', mantendo o botão Cobrar disponível para o saldo restante até a quitação total.",
+    ],
+  },
   {
     version: "1.5.2",
     date: "2026-06-02",
