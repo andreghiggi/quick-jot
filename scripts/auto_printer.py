@@ -1449,7 +1449,8 @@ if __name__ == "__main__":
         exit(1)
     
     log(f"Buscando empresa: {slug}...", "INFO")
-    company_id, company_name, company_address = buscar_empresa_por_slug(slug)
+    company_id, company_name, company_address, company_info = buscar_empresa_por_slug(slug)
+    STORE_INFO = company_info or {}
     
     if not company_id:
         print(f"Empresa '{slug}' não encontrada ou inativa. Verifique o slug.")
