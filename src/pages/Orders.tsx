@@ -6,6 +6,14 @@ import { OrderTabs } from '@/components/OrderTabs';
 import { NewOrderDialog } from '@/components/NewOrderDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { OrderDateFilter } from '@/components/OrderDateFilter';
+import {
+  OrderFilters,
+  filterOrders,
+  summarizeOrders,
+  type DeliveryFilter,
+  type OriginFilter,
+  type PaymentFilter,
+} from '@/components/OrderFilters';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -17,6 +25,9 @@ function OrdersContent() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [activePeriod, setActivePeriod] = useState<'today' | '7d' | '15d' | '30d' | 'all'>('today');
+  const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>('all');
+  const [originFilter, setOriginFilter] = useState<OriginFilter>('all');
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all');
 
   const toSPDateString = (date: Date) => {
     return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
@@ -24,7 +35,7 @@ function OrdersContent() {
 
   const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 
-  const filteredOrders = useMemo(() => {
+  const dateFilteredOrders = useMemo(() => {
     // Default (today): show today's orders
     if (!startDate && !endDate) {
       return orders.filter((order) => {
@@ -41,6 +52,15 @@ function OrdersContent() {
       return true;
     });
   }, [orders, startDate, endDate, todayStr]);
+
+  const filteredOrders = useMemo(
+    () => filterOrders(dateFilteredOrders, deliveryFilter, originFilter, paymentFilter),
+    [dateFilteredOrders, deliveryFilter, originFilter, paymentFilter],
+  );
+
+  const summary = useMemo(() => summarizeOrders(filteredOrders), [filteredOrders]);
+  const formatBRL = (v: number) =>
+    v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
     <AppLayout 
@@ -63,6 +83,35 @@ function OrdersContent() {
           activePeriod={activePeriod}
           onPeriodChange={setActivePeriod}
         />
+
+        <OrderFilters
+          orders={dateFilteredOrders}
+          delivery={deliveryFilter}
+          origin={originFilter}
+          payment={paymentFilter}
+          onDeliveryChange={setDeliveryFilter}
+          onOriginChange={setOriginFilter}
+          onPaymentChange={setPaymentFilter}
+        />
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="rounded-lg border bg-card p-3">
+            <p className="text-xs text-muted-foreground">Pedidos</p>
+            <p className="text-lg font-semibold">{summary.count}</p>
+          </div>
+          <div className="rounded-lg border bg-card p-3">
+            <p className="text-xs text-muted-foreground">Faturamento</p>
+            <p className="text-lg font-semibold text-green-600 dark:text-green-400">{formatBRL(summary.total)}</p>
+          </div>
+          <div className="rounded-lg border bg-card p-3">
+            <p className="text-xs text-muted-foreground">Ticket médio</p>
+            <p className="text-lg font-semibold">{formatBRL(summary.avg)}</p>
+          </div>
+          <div className="rounded-lg border bg-card p-3">
+            <p className="text-xs text-muted-foreground">Cancelados</p>
+            <p className="text-lg font-semibold">{summary.cancelled}</p>
+          </div>
+        </div>
 
         <OrderTabs filteredOrders={filteredOrders} />
       </div>
