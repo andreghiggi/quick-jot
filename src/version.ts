@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.6.2-beta";
+export const VERSION = "1.7.0-beta";
 export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Filtros avançados em Pedidos";
+export const CODENAME = "Múltiplos endereços por cliente";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.7.0-beta",
+    date: "2026-06-02",
+    codename: "Múltiplos endereços por cliente",
+    changes: [
+      "Cardápio Online: clientes recorrentes agora podem manter mais de um endereço cadastrado. Ao digitar o telefone, aparece o seletor 'Endereços salvos' com botões 'Novo' (para cadastrar outro) e 'Gerenciar' (para escolher um padrão ou excluir).",
+      "Comportamento atual preservado: o primeiro endereço continua sendo preenchido automaticamente como antes; quem só tem um endereço não vê nenhuma mudança no fluxo.",
+      "Backfill automático: todos os endereços já cadastrados foram migrados para a nova base de múltiplos endereços, marcados como padrão.",
+      "Nenhum fluxo de pedido, cobrança, NFC-e, impressão ou PDV foi alterado.",
+    ],
+  },
   {
     version: "1.6.2-beta",
     date: "2026-06-02",
