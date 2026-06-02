@@ -28,6 +28,7 @@ import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
+import { PDVV2MultiPaymentDialog } from '@/components/pdv-v2/PDVV2MultiPaymentDialog';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import type { ExtraItem } from '@/components/pdv-v2/PDVV2AddItemSearch';
@@ -35,6 +36,7 @@ import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { imprimirComprovanteTefAutomatico } from '@/utils/tefAutoPrint';
 import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
+import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import {
   sendPinpadPayment,
   pollPinpadStatus,
@@ -297,6 +299,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
   // Cobrança via PDVV2PaymentDialog (apenas Retirada)
   const [pickupChargeOpen, setPickupChargeOpen] = useState(false);
+
+  // ===== Multi-payment (v1.6 beta) — dialog isolado, NÃO altera fluxo TEF v1.1 =====
+  const [multiPayOpen, setMultiPayOpen] = useState(false);
+  const [multiPayProcessing, setMultiPayProcessing] = useState(false);
+  const [multiPayStatus, setMultiPayStatus] = useState('');
 
   // ===== Divisão de pagamento (mesmo padrão do PDV V2 importar e cobrar mesas) =====
   // Cada parte vira uma pdv_sale + NFC-e própria. Ao final, o pedido (addOrder)
@@ -1444,6 +1451,185 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     } catch (err) {
       console.error('[Express] persistExpressPartial error:', err);
       return null;
+    }
+  }
+
+  /**
+   * ===== Multi-payment (v1.6 beta) — fluxo isolado =====
+   * NÃO altera handleSubmit, runTefPayment, pinpadService nem TEF v1.1.
+   * Recebe as linhas do PDVV2MultiPaymentDialog, executa runMultiPayment
+   * (tudo-ou-nada com rollback automático), e em caso de sucesso:
+   *  1) cria o pedido (status='ready', [MULTI] [COBRADO] no notes),
+   *  2) registra UMA pdv_sale com a forma de maior valor como principal,
+   *  3) emite NFC-e com `pagamentos_split` (vários detPag).
+   */
+  async function handleMultiPaymentSubmit(lines: MultiPaymentInputLine[]) {
+    if (!company?.id) {
+      toast.error('Loja não carregada.');
+      return;
+    }
+    if (!currentRegister) {
+      toast.error('Caixa precisa estar aberto.');
+      return;
+    }
+    setMultiPayProcessing(true);
+    setMultiPayStatus('Iniciando cobranças…');
+    try {
+      const mp = await runMultiPayment({
+        companyId: company.id,
+        lines,
+        description: customerName ? `Express - ${customerName}` : 'Pedido Express',
+        onStatus: setMultiPayStatus,
+      });
+      if (!mp.ok || !mp.primary || !mp.lines) {
+        const extra = mp.rolledBackCount
+          ? ` (${mp.rolledBackCount} cobrança(s) estornada(s))`
+          : '';
+        toast.error((mp.errorMessage || 'Cobrança recusada') + extra);
+        return;
+      }
+
+      // 1) Cria o pedido (ready + cobrado) — mesma estrutura do handleSubmit.
+      const deliveryTypeLabel = deliveryType === 'entrega' ? 'Entrega' : 'Retirada';
+      const fullAddress = deliveryType === 'entrega'
+        ? `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood}${deliveryReference ? ` | Ref: ${deliveryReference}` : ''}`
+        : '';
+      const noteStr = [
+        '[EXPRESS]',
+        `Pagamento: ${mp.primary.payment_name}`,
+        deliveryTypeLabel,
+        mp.combinedNotesFragment || '',
+        '[COBRADO]',
+      ].filter(Boolean).join(' | ');
+
+      const orderItems: OrderItem[] = cart.map((item) => {
+        let optionalsStr = '';
+        if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+          optionalsStr = ` (${item.groupedOptionalNames.join(' | ')})`;
+        } else if (item.selectedOptionals.length > 0) {
+          const optStrs = item.selectedOptionals.map((o) =>
+            o.price > 0 ? `${o.name} R$${o.price.toFixed(2)}` : o.name,
+          );
+          optionalsStr = ` (Adicionais: ${optStrs.join(', ')})`;
+        }
+        const optPrice = item.selectedOptionals.reduce((s, o) => s + o.price, 0);
+        return {
+          id: crypto.randomUUID(),
+          productId: item.product.id,
+          name: item.product.name + optionalsStr,
+          quantity: item.quantity,
+          price: item.product.price + optPrice,
+          notes: item.notes || undefined,
+        };
+      });
+
+      const created = await addOrder({
+        customerName: customerName.trim(),
+        customerPhone: phoneDigits || undefined,
+        deliveryAddress: fullAddress || undefined,
+        notes: noteStr,
+        items: orderItems,
+        total,
+        status: 'ready',
+        origin: 'balcao',
+      });
+      if (!created) {
+        toast.error('Pedido não foi criado.');
+        return;
+      }
+
+      // 2) Registra a venda (uma única pdv_sale, método = primary).
+      const saleItems = cart.map((item) => ({
+        product_id: item.product.id || null,
+        product_name: item.product.name,
+        quantity: item.quantity,
+        unit_price:
+          item.product.price + item.selectedOptionals.reduce((s, o) => s + o.price, 0),
+      }));
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        toast.error('Usuário não autenticado.');
+        return;
+      }
+      const saleId = await addSale(
+        saleItems,
+        mp.primary.payment_method_id,
+        authUser.id,
+        0,
+        customerName.trim(),
+        `[EXPRESS][MULTI] ${mp.combinedNotesFragment || ''}`,
+      );
+      if (!saleId) {
+        toast.error('Venda não foi registrada.');
+        return;
+      }
+
+      // 3) NFC-e (se módulo fiscal ativo) com pagamentos_split.
+      if (fiscalEnabled) {
+        try {
+          setIsEmittingNfce(true);
+          setMultiPayStatus('Emitindo NFC-e…');
+          const nfceItems: NFCeItem[] = saleItems.map((it) => {
+            const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
+            const taxRule = product?.taxRuleId
+              ? taxRules.find((tr) => tr.id === product.taxRuleId)
+              : null;
+            return {
+              codigo: product?.code || it.product_id || 'AVULSO',
+              descricao: it.product_name,
+              ncm: taxRule?.ncm || '00000000',
+              cfop: taxRule?.cfop || '5102',
+              unidade: 'UN',
+              quantidade: it.quantity,
+              valor_unitario: it.unit_price,
+              csosn: taxRule?.csosn || '102',
+              aliquota_icms: taxRule?.icms_aliquot || 0,
+              cst_pis: taxRule?.pis_cst || '49',
+              aliquota_pis: taxRule?.pis_aliquot || 0,
+              cst_cofins: taxRule?.cofins_cst || '49',
+              aliquota_cofins: taxRule?.cofins_aliquot || 0,
+            };
+          });
+          const externalId = `EXPRESS-MULTI-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+          await emitirNFCe(company.id, saleId, {
+            external_id: externalId,
+            itens: nfceItems,
+            valor_desconto: 0,
+            valor_frete: 0,
+            observacoes: customerName ? `Cliente: ${customerName}` : undefined,
+            pagamentos_split: buildPagamentosSplit(mp.lines),
+          } as any);
+          toast.success('NFC-e enviada para processamento!');
+          const { data: rec } = await supabase
+            .from('nfce_records')
+            .select('*')
+            .eq('sale_id', saleId)
+            .maybeSingle();
+          if (rec) {
+            setNfceRecord(rec as unknown as NFCeRecord);
+            setNfceAutoPrint(false);
+            setNfceDialogOpen(true);
+          }
+        } catch (err: any) {
+          console.error('[Express][MULTI] NFC-e emission error:', err);
+          toast.error(
+            `Venda registrada, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`,
+          );
+        } finally {
+          setIsEmittingNfce(false);
+        }
+      } else {
+        toast.success('Venda registrada!');
+      }
+
+      // Fecha o multi-payment e o Pedido Express inteiro (mesmo padrão do
+      // Finalizar Pedido após sucesso).
+      setMultiPayOpen(false);
+      resetForm();
+      onOpenChange(false);
+    } finally {
+      setMultiPayProcessing(false);
+      setMultiPayStatus('');
     }
   }
 
@@ -2624,6 +2810,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               // Lancheria I9 — Dois botões: enviar p/ cozinha (sem pagamento) ou finalizar (paga + entrega)
               <>
                 <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={() => setMultiPayOpen(true)}
+                  disabled={cart.length === 0 || isSubmitting || tefProcessing}
+                  title="Dividir o pagamento em várias formas (TEF + dinheiro, vários cartões etc.)"
+                >
+                  Dividir formas
+                </Button>
+                <Button
                   variant="outline"
                   className="flex-1 gap-2"
                   onClick={() => setPickupChargeOpen(true)}
@@ -2975,6 +3171,19 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         companyId={company?.id}
         initialRecord={nfceRecord}
         autoPrint={nfceAutoPrint}
+      />
+
+      {/* Multi-payment (v1.6 beta) — dialog isolado, abre via botão "Dividir formas" */}
+      <PDVV2MultiPaymentDialog
+        open={multiPayOpen}
+        onOpenChange={setMultiPayOpen}
+        companyId={company?.id}
+        total={total}
+        channel="pdv"
+        title="Dividir formas — Pedido Express"
+        processing={multiPayProcessing}
+        processingStatus={multiPayStatus}
+        onConfirm={handleMultiPaymentSubmit}
       />
 
       {/* Overlay de bloqueio enquanto NFC-e é emitida */}
