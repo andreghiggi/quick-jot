@@ -28,6 +28,7 @@ import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
+import { PDVV2MultiPaymentDialog } from '@/components/pdv-v2/PDVV2MultiPaymentDialog';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import type { ExtraItem } from '@/components/pdv-v2/PDVV2AddItemSearch';
@@ -35,6 +36,7 @@ import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { imprimirComprovanteTefAutomatico } from '@/utils/tefAutoPrint';
 import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
+import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import {
   sendPinpadPayment,
   pollPinpadStatus,
