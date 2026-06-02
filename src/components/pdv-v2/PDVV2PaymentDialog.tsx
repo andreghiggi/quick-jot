@@ -1070,6 +1070,16 @@ export function PDVV2PaymentDialog({
                 ))}
               </RadioGroup>
             )}
+            {onSplitPayments && i9Mode === '' && !activeSplit && (
+              <button
+                type="button"
+                onClick={onSplitPayments}
+                disabled={submitting || chargingTef}
+                className="text-xs text-primary hover:underline disabled:opacity-50 disabled:no-underline mt-1"
+              >
+                Quer dividir em várias formas de pagamento? Clique aqui
+              </button>
+            )}
           </div>
 
           {isCash && (
