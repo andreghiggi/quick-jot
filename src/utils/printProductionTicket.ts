@@ -1,6 +1,6 @@
 // Utility for printing production tickets on 80mm thermal printers
 
-export type PrintLayoutVersion = 'v1' | 'v2';
+export type PrintLayoutVersion = 'v1' | 'v2' | 'v3';
 
 /** Tipo logístico do pedido — usado para destacar na comanda da cozinha. */
 export type OrderTicketType = 'delivery' | 'pickup' | 'table' | 'counter';
@@ -385,9 +385,156 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
   `;
 }
 
+// ============================================================
+// LAYOUT V3 — dense monospace, big PED header, ASCII separators
+// Inspirado no recibo V3 (I9). NÃO altera V1/V2.
+// ============================================================
+function generateProductionTicketHTMLv3(data: PrintTicketData): string {
+  const paperWidth = getPaperWidth(data.paperSize);
+  const baseSize = data.paperSize === '80mm' ? '12pt' : '11pt';
+  const pedSize = data.paperSize === '80mm' ? '26pt' : '22pt';
+  const qtySize = data.paperSize === '80mm' ? '15pt' : '13pt';
+  const nameSize = data.paperSize === '80mm' ? '13pt' : '12pt';
+  const addSize = data.paperSize === '80mm' ? '13pt' : '12pt';
+  const obsSize = data.paperSize === '80mm' ? '12pt' : '11pt';
+
+  const now = data.createdAt;
+  const dateStr = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const timeStr = now.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+
+  const readyOffset = typeof data.readyOffsetMinutes === 'number' ? data.readyOffsetMinutes : 10;
+  const readyDate = new Date(now.getTime() + readyOffset * 60 * 1000);
+  const readyTimeStr = readyDate.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+  const readyBlockHTML = data.showReadyTime
+    ? `<div class="ready-v3"><strong>PRONTO ATÉ:</strong> ${readyTimeStr}</div>`
+    : '';
+
+  const orderTypeLabel = getOrderTypeLabel(data.orderType);
+  const orderTypeHTML = orderTypeLabel
+    ? `<div class="type-v3">&gt;&gt;&gt; ${orderTypeLabel} &lt;&lt;&lt;</div>`
+    : '';
+
+  const refLabel = shouldUseReferenceInHeader(data)
+    ? getTicketReferenceLabel(data)
+    : `COMANDA #${data.tabNumber}`;
+
+  const itemsHTML = data.items.map((item, index) => {
+    const { additionals, observations } = parseNotes(item.notes);
+    const additionalsHTML = additionals.length > 0
+      ? `<div class="adds-v3">${additionals.map(a => `<div class="add-v3">+ ${a}</div>`).join('')}</div>`
+      : '';
+    const observationsHTML = observations.length > 0
+      ? `<div class="obs-v3-block">${observations.map(o => `<div class="obs-v3">! ${o}</div>`).join('')}</div>`
+      : '';
+    const descriptionHTML = item.description
+      ? `<div class="desc-v3">${item.description}</div>`
+      : '';
+    const sep = index < data.items.length - 1 ? '<div class="sep-v3">- - - - - - - - - - - - - - - -</div>' : '';
+    return `
+      <div class="item-v3">
+        <div class="item-head-v3">
+          <span class="qty-v3">${item.quantity}x</span>
+          <span class="name-v3">${item.productName}</span>
+        </div>
+        ${descriptionHTML}
+        ${additionalsHTML}
+        ${observationsHTML}
+      </div>
+      ${sep}
+    `;
+  }).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Comanda de Produção (v3)</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        body {
+          font-family: 'Courier New', 'Lucida Console', monospace;
+          width: ${paperWidth};
+          max-width: ${paperWidth};
+          padding: 2mm;
+          font-size: ${baseSize};
+          line-height: 1.2;
+          color: #000;
+        }
+        .title-v3 { text-align:center; font-weight:900; font-size:14pt; letter-spacing:2px; }
+        .type-v3 {
+          text-align:center; font-weight:900; font-size:13pt;
+          background:#000 !important; color:#fff !important;
+          padding:1.5mm 2mm; margin:1.5mm 0; letter-spacing:1px;
+        }
+        .ped-v3 {
+          text-align:center; font-weight:900; font-size:${pedSize};
+          letter-spacing:3px; margin:1mm 0;
+        }
+        .info-v3 { text-align:center; font-size:10pt; font-weight:bold; }
+        .datetime-v3 { text-align:center; font-size:9pt; margin:0.5mm 0 1.5mm 0; }
+        .ready-v3 {
+          border:2px solid #000; padding:1.5mm 2mm; margin:1.5mm 0;
+          text-align:center; font-size:12pt; font-weight:900; letter-spacing:1px;
+        }
+        .frame-sep { text-align:center; font-size:10pt; letter-spacing:0; margin:1mm 0; }
+        .items-v3 { margin:1mm 0; }
+        .item-v3 { padding:1mm 0; }
+        .item-head-v3 { display:flex; gap:2mm; align-items:baseline; }
+        .qty-v3 { font-size:${qtySize}; font-weight:900; min-width:9mm; }
+        .name-v3 { font-size:${nameSize}; font-weight:900; text-transform:uppercase; flex:1; word-break:break-word; }
+        .desc-v3 { font-size:9pt; font-style:italic; margin:0.5mm 0 0 9mm; }
+        .adds-v3 { margin:1mm 0 0 9mm; }
+        .add-v3 {
+          font-size:${addSize}; font-weight:900; text-transform:uppercase;
+          line-height:1.4; letter-spacing:0.5px;
+        }
+        .obs-v3-block { margin:1.5mm 0 0 9mm; }
+        .obs-v3 {
+          background:#000 !important; color:#fff !important;
+          padding:1mm 2mm; margin:0.5mm 0;
+          font-weight:900; font-size:${obsSize};
+          text-transform:uppercase; letter-spacing:0.3px;
+        }
+        .sep-v3 { text-align:center; font-size:9pt; margin:1mm 0; letter-spacing:0; }
+        .foot-v3 { text-align:center; font-size:9pt; margin-top:2mm; font-weight:bold; }
+        @media print {
+          html, body, * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          body { width: ${paperWidth}; }
+          @page { margin: 0; size: ${paperWidth} auto; }
+          .type-v3, .obs-v3 { background:#000 !important; color:#fff !important; }
+        }
+      </style>
+    </head>
+    <body>
+      <!--BOX_START-->
+      <div class="title-v3">COMANDA DE PRODUÇÃO</div>
+      ${orderTypeHTML}
+      <div class="frame-sep">================================</div>
+      <div class="ped-v3">${refLabel}</div>
+      ${data.tableNumber ? `<div class="info-v3">MESA ${data.tableNumber}</div>` : ''}
+      ${data.customerName ? `<div class="info-v3">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
+      <div class="datetime-v3">${dateStr} ${timeStr}</div>
+      ${readyBlockHTML}
+      <div class="frame-sep">================================</div>
+      <!--BOX_END-->
+      <div class="items-v3">${itemsHTML}</div>
+      <div class="frame-sep">================================</div>
+      <div class="foot-v3">--- FIM DO PEDIDO ---</div>
+    </body>
+    </html>
+  `;
+}
+
 export function generateProductionTicketHTML(data: PrintTicketData): string {
   const layout = data.layout || 'v1';
-  return layout === 'v2' ? generateProductionTicketHTMLv2(data) : generateProductionTicketHTMLv1(data);
+  if (layout === 'v3') return generateProductionTicketHTMLv3(data);
+  if (layout === 'v2') return generateProductionTicketHTMLv2(data);
+  return generateProductionTicketHTMLv1(data);
 }
 
 export function printProductionTicket(data: PrintTicketData): void {

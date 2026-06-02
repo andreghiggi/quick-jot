@@ -33,7 +33,7 @@ interface StoreSettings {
   pixName: string;
   pixCity: string;
   autoPrintProductionTicket: boolean;
-  printLayout: 'v1' | 'v2';
+  printLayout: 'v1' | 'v2' | 'v3';
   tefAutoPrintVias: 'none' | 'estabelecimento' | 'ambas';
   freeDeliveryEnabled: boolean;
   freeDeliveryMinOrder: number;
@@ -134,7 +134,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         pixName: settingsMap['pix_name'] || '',
         pixCity: settingsMap['pix_city'] || '',
         autoPrintProductionTicket: settingsMap['auto_print_production_ticket'] === 'true',
-        printLayout: (settingsMap['print_layout'] as 'v1' | 'v2') || 'v1',
+        printLayout: (settingsMap['print_layout'] as 'v1' | 'v2' | 'v3') || 'v1',
         tefAutoPrintVias: ((settingsMap['tef_auto_print_vias'] as 'none' | 'estabelecimento' | 'ambas') || 'ambas'),
         freeDeliveryEnabled: settingsMap['free_delivery_enabled'] === 'true',
         freeDeliveryMinOrder: parseFloat(settingsMap['free_delivery_min_order']) || 0,
