@@ -91,7 +91,9 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     }, 0),
     [checkoutItems],
   );
-  const chargeBaseTotal = hasPartialItemPayments ? pendingExistingTotal : order.total;
+  const chargeBaseTotal = hasPartialItemPayments
+    ? pendingExistingTotal
+    : Math.max(0, order.total - Number(order.paidAmount || 0));
 
   const cleanItemName = (name: string) =>
     name.includes('(') ? name.substring(0, name.indexOf('(')).trim() : name;
