@@ -8,6 +8,8 @@ interface StoreSettings {
   storeName: string;
   deliveryFeeCity: number;
   deliveryFeeInterior: number;
+  deliveryFeeCityEnabled: boolean;
+  deliveryFeeInteriorEnabled: boolean;
   deliveryMode: 'simple' | 'neighborhood';
   printerPaperSize: '58mm' | '80mm';
   showCardPendentes: boolean;
