@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.8.2-beta";
+export const VERSION = "1.8.3-beta";
 export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Layout V3 ESC/POS Epson (beta)";
+export const CODENAME = "Layout V3 grade 48 cols (beta)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.8.3-beta",
+    date: "2026-06-02",
+    codename: "Layout V3 grade 48 cols (beta)",
+    changes: [
+      "Layout V3 do recibo agora usa grade FIXA de 48 colunas monoespaçadas (padrão ESC/POS Epson TM-T20/TM-T88 @ 80mm), fonte Courier New 9pt, line-height 1.0.",
+      "Estrutura espelhada da foto de referência: PED #xxx centralizado, faixa de modalidade em texto invertido, tabela 'REF| DESCRICAO ... VALOR', itens com nome + preço unitário, complementos numerados '[N] item' indentados em 3 colunas e linha de subtotal 'Q X R$ X,XX = R$ X,XX' alinhada à direita.",
+      "Totais com pipe a 17 colunas ('TOTAL ITENS | ... R$ X,XX'), TOTAL GERAL em negrito, metadados (COD/Criado em/Impresso em) no mesmo padrão pipe.",
+      "Largura fixa 80mm, altura automática, sem centralização excessiva — apenas nome da loja, PED e modalidade são centralizados.",
+      "Layouts V1 e V2 permanecem 100% intactos. Rollout V3 continua isolado por loja (atualmente só Lancheria da I9).",
+    ],
+  },
   {
     version: "1.8.2-beta",
     date: "2026-06-02",

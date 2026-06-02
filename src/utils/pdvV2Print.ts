@@ -87,33 +87,46 @@ function escapeHtml(s: string) {
 const I9_COMPANY_ID_V3 = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
 
 function buildReceiptHTMLv3(payload: PrintPayload): string {
-  // Layout V3 — template ESC/POS Epson TM-T20/TM-T88 (Font A monoespaçada).
-  // Renderizado como <pre> com colunas fixas (42 cols @ 80mm, 32 cols @ 58mm),
-  // line-height 1.0, Courier New único, faixa de modalidade em texto invertido.
-  // Mantém compatibilidade total com V1/V2 (função isolada por companyId).
-  const w = payload.paperSize === '58mm' ? '58mm' : '80mm';
-  const COLS = w === '80mm' ? 42 : 32;
-  const VAL_COL = 12; // largura reservada à direita para "R$ 9999,99"
-  const DESC_COL = COLS - VAL_COL;
+  // Layout V3 — réplica fiel do cupom térmico Epson TM-T20/TM-T88 (Font A).
+  // Grade FIXA de 48 colunas monoespaçadas (ESC/POS padrão 80mm),
+  // fonte Courier New 9pt, line-height 1.0, alinhamento por padding de caractere.
+  // Estrutura espelhada da foto de referência (Agilize).
+  // Mantém V1/V2 100% intactos (função isolada por companyId).
+  const w = '80mm';
+  const COLS = 48;
 
-  const ref = payload.shortCode || `#${payload.dailyNumber}`;
+  const ref = payload.shortCode || `#${String(payload.dailyNumber).padStart(3, '0')}`;
+  const refDisplay = ref.startsWith('#') ? ref : `#${ref}`;
   const lojaNome = 'LANCHERIA DA I9';
-  const ts = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const now = new Date();
+  const ts = now.toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
   const modalidade = 'BALCAO';
 
-  // ----- helpers de coluna (string monoespaçada) -----
+  // ---------- helpers ESC/POS ----------
   const money = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`;
-  const line = (ch: string) => ch.repeat(COLS);
+  const repeat = (ch: string) => ch.repeat(COLS);
   const center = (s: string) => {
     const t = s.length > COLS ? s.slice(0, COLS) : s;
     const pad = Math.max(0, Math.floor((COLS - t.length) / 2));
     return ' '.repeat(pad) + t;
   };
-  const twoCol = (left: string, right: string) => {
-    const r = right.slice(0, VAL_COL);
-    const maxLeft = COLS - r.length - 1;
+  /** Alinha valor à direita preservando coluna fixa (padStart no total = COLS). */
+  const rightCol = (left: string, right: string) => {
+    const r = right.slice(-COLS);
+    const maxLeft = COLS - r.length;
     const l = left.length > maxLeft ? left.slice(0, maxLeft) : left;
     return l + ' '.repeat(COLS - l.length - r.length) + r;
+  };
+  /** Linha tipo "LABEL          |             VALOR" (com pipe a ~17 cols). */
+  const pipeRow = (label: string, value: string, labelWidth = 17) => {
+    const l = label.length > labelWidth ? label.slice(0, labelWidth) : label.padEnd(labelWidth, ' ');
+    const v = value.slice(-(COLS - labelWidth - 2));
+    const middle = ' '.repeat(Math.max(1, COLS - l.length - 1 - v.length - 1));
+    return `${l}|${middle}${v} `;
   };
   const wrap = (s: string, width: number, indent = 0): string[] => {
     const out: string[] = [];
@@ -133,8 +146,9 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
     return out.length ? out : [ind];
   };
 
-  // ----- bloco de itens -----
+  // ---------- bloco de itens (estilo Agilize) ----------
   const itemLines: string[] = [];
+  let totalItens = 0;
   payload.items.forEach((it) => {
     const nome = it.name || 'Item';
     let main = nome;
@@ -153,54 +167,72 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
       }
     }
     const sub = it.price * it.quantity;
-    const header = `${it.quantity} X ${main.toUpperCase()}`;
-    const wrapped = wrap(header, DESC_COL);
-    // primeira linha leva o valor à direita; demais ficam só com a descrição
-    itemLines.push(twoCol(wrapped[0], money(sub)));
-    for (let i = 1; i < wrapped.length; i++) itemLines.push(wrapped[i]);
+    totalItens += sub;
+
+    // Cabeçalho do item: "NOME R$ XX,XX" (preço unitário ao lado, sem coluna direita)
+    const cab = `${main.toUpperCase()} ${money(it.price)}`;
+    wrap(cab, COLS).forEach((l) => itemLines.push(l));
+
+    // Adicionais numerados "   [N] descricao"
     adicionais.forEach((ad, i) => {
-      const txt = `[${i + 1}] ${ad}`;
-      wrap(txt, COLS, 2).forEach((l) => itemLines.push(l));
+      wrap(`[${i + 1}] ${ad}`, COLS, 3).forEach((l) => itemLines.push(l));
     });
     if (it.notes) {
-      wrap(`Obs: ${it.notes}`, COLS, 2).forEach((l) => itemLines.push(l));
+      wrap(`Obs: ${it.notes}`, COLS, 3).forEach((l) => itemLines.push(l));
     }
+
+    // Linha de subtotal alinhada à direita: "    Q X R$ 26,00 =   R$ 26,00"
+    const calc = `${it.quantity} X ${money(it.price)} =   ${money(sub)}`;
+    itemLines.push(rightCol('', calc));
   });
 
-  // ----- montagem do recibo (string única, coluna a coluna) -----
+  // ---------- montagem ----------
   const out: string[] = [];
   out.push(center(lojaNome));
   out.push('');
-  out.push(center(`PED ${ref}`));
-  out.push(line('-'));
+  out.push(center(`PED ${refDisplay}`));
+  out.push(repeat('-'));
   out.push(`CLIENTE: ${payload.customerName}`);
-  // faixa de modalidade — equivalente ESC/POS reverse video (GS B 1)
-  // marcador especial REV_START/REV_END processado abaixo no render HTML
-  out.push('__REV__' + center(modalidade));
-  out.push(line('-'));
-  out.push(twoCol('DESCRICAO', 'VALOR'));
-  out.push(line('-'));
+  out.push('');
+  // Faixa de modalidade — texto invertido (reverse video ESC/POS GS B 1)
+  out.push('__REV__' + center(`*** ${modalidade} ***`));
+  out.push('');
+  // Cabeçalho da tabela
+  out.push(rightCol('REF| DESCRICAO', 'VALOR'));
+  out.push(repeat('-'));
   itemLines.forEach((l) => out.push(l));
-  out.push(line('-'));
-  out.push(twoCol('TOTAL GERAL', money(payload.total)));
+  out.push(repeat('='));
+  // Totais
+  out.push(pipeRow('TOTAL ITENS', money(totalItens)));
+  if (Math.abs(payload.total - totalItens) > 0.001) {
+    out.push(pipeRow('FRETE', money(payload.total - totalItens)));
+  }
+  out.push('__BOLD__' + rightCol('TOTAL GERAL', money(payload.total)));
+  out.push('');
+  // Meta
+  out.push(pipeRow(`COD: ${(payload.orderCode || '').slice(0, 7).toLowerCase()}`, 'App Pedidos'));
+  out.push(pipeRow('Criado em', ts));
+  out.push(pipeRow('Impresso em', ts));
   if (payload.notes) {
-    out.push(line('-'));
+    out.push(repeat('-'));
     wrap(`Obs: ${payload.notes}`, COLS).forEach((l) => out.push(l));
   }
-  out.push(line('-'));
-  out.push(twoCol(`COD: ${(payload.orderCode || '').slice(0, 7).toLowerCase()}`, 'PDV V2'));
-  out.push(twoCol('Impresso em', ts));
-  out.push(line('-'));
+  out.push(repeat('-'));
   out.push(center('Obrigado pela preferencia!'));
 
-  // ----- render: cada linha vira <div>, faixa invertida usa background preto -----
+  // ---------- render HTML preservando colunas ----------
   const bodyHtml = out
     .map((raw) => {
       if (raw.startsWith('__REV__')) {
         const txt = raw.slice('__REV__'.length);
-        return `<div class="rev">${escapeHtml(txt)}</div>`;
+        const safe = escapeHtml(txt).replace(/ /g, '&nbsp;');
+        return `<div class="rev">${safe}</div>`;
       }
-      // espaços preservados; linha vazia mantém altura
+      if (raw.startsWith('__BOLD__')) {
+        const txt = raw.slice('__BOLD__'.length);
+        const safe = escapeHtml(txt).replace(/ /g, '&nbsp;');
+        return `<div class="ln bold">${safe}</div>`;
+      }
       const safe = escapeHtml(raw).replace(/ /g, '&nbsp;');
       return `<div class="ln">${safe || '&nbsp;'}</div>`;
     })
@@ -211,19 +243,24 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       width: ${w}; max-width: ${w};
-      font-family: 'Courier New', monospace;
-      font-size: ${w === '80mm' ? '10pt' : '9pt'};
+      font-family: 'Courier New', 'Courier', monospace;
+      font-size: 9pt;
       line-height: 1.0;
       color: #000;
-      padding: 2mm;
+      padding: 2mm 1mm;
+      letter-spacing: 0;
     }
-    .ln { white-space: pre; font-family: 'Courier New', monospace; }
+    .ln, .rev {
+      white-space: pre;
+      font-family: 'Courier New', 'Courier', monospace;
+      font-size: 9pt;
+      line-height: 1.05;
+    }
+    .bold { font-weight: bold; }
     .rev {
       background: #000;
       color: #fff;
       font-weight: bold;
-      white-space: pre;
-      font-family: 'Courier New', monospace;
     }
   </style></head><body>${bodyHtml}</body></html>`;
 }
