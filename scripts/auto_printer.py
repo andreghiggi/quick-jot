@@ -32,7 +32,7 @@ COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
 SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
-PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1 ou v2)
+PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
 SCRIPT_VERSION = "v8.29"  # libera margem segura anti-corte para TODAS as lojas
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
@@ -98,7 +98,7 @@ def buscar_paper_size(company_id):
         log(f"Erro ao buscar paper size: {e}", "AVISO")
 
 def buscar_print_layout(company_id):
-    """Busca o layout de impressão configurado para a empresa (v1 ou v2)"""
+    """Busca o layout de impressão configurado para a empresa (v1, v2 ou v3)"""
     global PRINT_LAYOUT
     try:
         url = f"{SUPABASE_URL}/rest/v1/store_settings"
@@ -109,7 +109,7 @@ def buscar_print_layout(company_id):
         r = requests.get(url, headers=HEADERS, params=params)
         if r.ok and r.json():
             valor = r.json()[0].get('value', 'v1')
-            PRINT_LAYOUT = valor if valor in ('v1', 'v2') else 'v1'
+            PRINT_LAYOUT = valor if valor in ('v1', 'v2', 'v3') else 'v1'
             log(f"Layout de impressão: {PRINT_LAYOUT}", "CONFIG")
         else:
             log(f"Usando layout padrão: {PRINT_LAYOUT}", "CONFIG")
