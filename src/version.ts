@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.7.0-beta";
+export const VERSION = "1.7.1-beta";
 export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Múltiplos endereços por cliente";
+export const CODENAME = "Taxas Cidade/Interior opcionais";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.7.1-beta",
+    date: "2026-06-02",
+    codename: "Taxas Cidade/Interior opcionais",
+    changes: [
+      "Configurações → Entrega: cada taxa (Cidade e Interior) agora tem um interruptor próprio. Lojas que não atendem interior podem desativar essa região e o campo de valor fica bloqueado.",
+      "Cardápio Online e Pedido Express: regiões desativadas somem do checkout. Quando só uma região está ativa, o cliente vê apenas 'Entrega' (sem precisar escolher entre Cidade/Interior).",
+      "Padrão preservado: lojas existentes continuam com as duas regiões ativas — nenhuma mudança visível até desligar manualmente.",
+      "Nenhum fluxo de TEF, NFC-e, impressão, PDV V2 ou Multi-Pagamento foi alterado.",
+    ],
+  },
   {
     version: "1.7.0-beta",
     date: "2026-06-02",

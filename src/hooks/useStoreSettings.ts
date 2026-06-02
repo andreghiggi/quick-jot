@@ -8,6 +8,8 @@ interface StoreSettings {
   storeName: string;
   deliveryFeeCity: number;
   deliveryFeeInterior: number;
+  deliveryFeeCityEnabled: boolean;
+  deliveryFeeInteriorEnabled: boolean;
   deliveryMode: 'simple' | 'neighborhood';
   printerPaperSize: '58mm' | '80mm';
   showCardPendentes: boolean;
@@ -49,6 +51,8 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     storeName: '',
     deliveryFeeCity: 0,
     deliveryFeeInterior: 0,
+    deliveryFeeCityEnabled: true,
+    deliveryFeeInteriorEnabled: true,
     deliveryMode: 'simple',
     printerPaperSize: '58mm',
     showCardPendentes: true,
@@ -105,6 +109,8 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         storeName: settingsMap['store_name'] || '',
         deliveryFeeCity: parseFloat(settingsMap['delivery_fee_city']) || 0,
         deliveryFeeInterior: parseFloat(settingsMap['delivery_fee_interior']) || 0,
+        deliveryFeeCityEnabled: settingsMap['delivery_fee_city_enabled'] !== 'false',
+        deliveryFeeInteriorEnabled: settingsMap['delivery_fee_interior_enabled'] !== 'false',
         deliveryMode: (settingsMap['delivery_mode'] as 'simple' | 'neighborhood') || 'simple',
         printerPaperSize: (settingsMap['printer_paper_size'] as '58mm' | '80mm') || '58mm',
         showCardPendentes: settingsMap['show_card_pendentes'] !== 'false',
