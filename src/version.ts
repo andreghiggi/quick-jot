@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.8.0-beta";
+export const VERSION = "1.8.1-beta";
 export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Layout de impressão V3 (beta)";
+export const CODENAME = "Layout V3 fiel ao Agilize (beta)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.8.1-beta",
+    date: "2026-06-02",
+    codename: "Layout V3 fiel ao Agilize (beta)",
+    changes: [
+      "Layout V3 de impressão reescrito do zero para replicar fielmente o recibo térmico Agilize: cabeçalho da loja (nome, endereço, CNPJ), PED #xxx centralizado, bloco cliente com Fones/endereço/Bairro/Ponto de referência, faixa de modalidade (TELE ENTREGA/MOTOBOY, RETIRADA NO LOCAL, BALCÃO, MESA) em ASCII, tabela REF|DESCRICAO|VALOR com adicionais numerados entre colchetes, TOTAL ITENS + FRETE + TOTAL GERAL separados, bloco de PAGAMENTO/TROCO, COD/Criado em/Impresso em, faixa PREVISTO e rodapé com URL do app.",
+      "Fonte alterada para Lucida Console/Consolas com tamanhos compactos (8-11pt), eliminando os títulos gigantes do V3 anterior.",
+      "Reescrita aplicada tanto no auto_printer.py (cardápio online / WhatsApp) quanto em pdvV2Print.ts (PDV V2 / Pedido Express) — versões visualmente idênticas.",
+      "Layouts V1 e V2 permanecem 100% intactos. Nenhuma loja sem 'Layout V3' selecionado teve qualquer alteração.",
+      "Nenhum fluxo de TEF (v1.0/v1.1/v1.2-beta), NFC-e, Multi-Pagamento ou banco de dados foi alterado.",
+    ],
+  },
   {
     version: "1.8.0-beta",
     date: "2026-06-02",
