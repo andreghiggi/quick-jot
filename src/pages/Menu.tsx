@@ -32,6 +32,8 @@ import { MenuV2 } from '@/components/menu/MenuV2';
 import { AddedToCartDialog } from '@/components/menu/AddedToCartDialog';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
 import { detectDomainContext, COMANDATECH_ROOT } from '@/utils/domainRouting';
+import { useCustomerAddresses, CustomerAddress } from '@/hooks/useCustomerAddresses';
+import { CustomerAddressPicker } from '@/components/menu/CustomerAddressPicker';
 
 interface Company {
   id: string;
@@ -164,6 +166,22 @@ export default function Menu() {
   const [lastAddedItem, setLastAddedItem] = useState<CartItem | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [reorderDismissed, setReorderDismissed] = useState(false);
+  // Múltiplos endereços por cliente (aditivo — não altera o auto-fill atual de `customers.address`)
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const {
+    addresses: customerAddresses,
+    setDefault: setCustomerAddressDefault,
+    remove: removeCustomerAddress,
+  } = useCustomerAddresses(customerId, company?.id ?? null);
+
+  // Auto-seleciona o endereço padrão na primeira carga (não força mudança nos campos).
+  useEffect(() => {
+    if (selectedAddressId) return;
+    if (customerAddresses.length === 0) return;
+    const def = customerAddresses.find((a) => a.is_default) ?? customerAddresses[0];
+    if (def) setSelectedAddressId(def.id);
+  }, [customerAddresses, selectedAddressId]);
   
   // Optional group selections state
   
@@ -480,6 +498,8 @@ export default function Menu() {
           .maybeSingle();
 
         if (data && !error) {
+          // Captura o ID do cliente para a feature de múltiplos endereços (aditivo)
+          if (data.id) setCustomerId(data.id);
           // Auto-fill customer data
           if (data.name && !customerName) setCustomerName(data.name);
           if (data.cpf && !customerCpf) setCustomerCpf(data.cpf);
@@ -971,7 +991,7 @@ export default function Menu() {
         const cleanPhone = customerPhone.replace(/\D/g, '');
         if (cleanPhone.length >= 10) {
           try {
-            await supabase
+            const { data: upsertedCustomer } = await supabase
               .from('customers')
               .upsert({
                 company_id: company.id,
@@ -989,7 +1009,58 @@ export default function Menu() {
               }, { 
                 onConflict: 'company_id,phone',
                 ignoreDuplicates: false 
-              });
+              })
+              .select('id')
+              .maybeSingle();
+
+            // Múltiplos endereços (aditivo, best-effort, não bloqueia o fluxo).
+            const resolvedCustomerId = upsertedCustomer?.id ?? customerId;
+            if (resolvedCustomerId && deliveryType !== 'pickup' && deliveryType !== '' && deliveryAddress.trim()) {
+              try {
+                if (selectedAddressId) {
+                  // Atualiza o endereço selecionado e marca como padrão
+                  await supabase
+                    .from('customer_addresses')
+                    .update({ is_default: false })
+                    .eq('customer_id', resolvedCustomerId);
+                  await supabase
+                    .from('customer_addresses')
+                    .update({
+                      address: deliveryAddress || null,
+                      number: deliveryNumber || null,
+                      complement: deliveryComplement || null,
+                      neighborhood: deliveryNeighborhood || null,
+                      reference: deliveryReference || null,
+                      city: deliveryCity || null,
+                      state: deliveryState || null,
+                      is_default: true,
+                    })
+                    .eq('id', selectedAddressId);
+                } else {
+                  // Insere novo endereço como padrão
+                  await supabase
+                    .from('customer_addresses')
+                    .update({ is_default: false })
+                    .eq('customer_id', resolvedCustomerId);
+                  await supabase
+                    .from('customer_addresses')
+                    .insert({
+                      customer_id: resolvedCustomerId,
+                      company_id: company.id,
+                      address: deliveryAddress || null,
+                      number: deliveryNumber || null,
+                      complement: deliveryComplement || null,
+                      neighborhood: deliveryNeighborhood || null,
+                      reference: deliveryReference || null,
+                      city: deliveryCity || null,
+                      state: deliveryState || null,
+                      is_default: true,
+                    });
+                }
+              } catch (addrErr) {
+                console.error('Error saving customer address (multi):', addrErr);
+              }
+            }
           } catch (customerError) {
             console.error('Error saving customer data:', customerError);
           }
@@ -1898,6 +1969,39 @@ export default function Menu() {
                       className={cn('border-primary', fieldErrors.has('customerBirthDate') && 'border-destructive')}
                     />
                   </div>
+                  {customerAddresses.length > 0 && (
+                    <CustomerAddressPicker
+                      addresses={customerAddresses}
+                      selectedId={selectedAddressId}
+                      onSelect={(a: CustomerAddress) => {
+                        setSelectedAddressId(a.id);
+                        setDeliveryAddress(a.address ?? '');
+                        setDeliveryNumber(a.number ?? '');
+                        setDeliveryComplement(a.complement ?? '');
+                        setDeliveryNeighborhood(a.neighborhood ?? '');
+                        setDeliveryReference(a.reference ?? '');
+                        if (a.city) setDeliveryCity(a.city);
+                        if (a.state) setDeliveryState(a.state);
+                      }}
+                      onNew={() => {
+                        setSelectedAddressId(null);
+                        setDeliveryAddress('');
+                        setDeliveryNumber('');
+                        setDeliveryComplement('');
+                        setDeliveryNeighborhood('');
+                        setDeliveryReference('');
+                      }}
+                      onDelete={async (id) => {
+                        await removeCustomerAddress(id);
+                        if (selectedAddressId === id) {
+                          setSelectedAddressId(null);
+                        }
+                      }}
+                      onSetDefault={async (id) => {
+                        await setCustomerAddressDefault(id);
+                      }}
+                    />
+                  )}
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:items-end">
                     <div className="min-w-0">
                       <Label className="block leading-snug whitespace-normal break-words font-bold">Logradouro (rua, avenida, travessa) *</Label>
