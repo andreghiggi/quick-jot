@@ -47,6 +47,16 @@ interface PDVV2PaymentDialogProps {
   /** Histórico de transferências da comanda (apenas exibição, sem efeito em fluxo). */
   transferLog?: Array<{ from_table_number: number | null; to_table_number: number; at: string; by_name: string }>;
   /**
+   * Multi-pagamento (v1.6 beta). Quando informado, exibe um link discreto
+   * abaixo do seletor de forma de pagamento ("Dividir em várias formas").
+   * Ao clicar, o chamador é responsável por abrir o PDVV2MultiPaymentDialog
+   * e orquestrar runMultiPayment + addSale + NFC-e. Este diálogo NÃO executa
+   * nada — apenas dispara o callback (e tipicamente é fechado pelo caller).
+   * NÃO aparece quando o I9 está em modo split-por-pessoas ou split-por-itens
+   * (TEF v1.1 congelado) para evitar conflito de fluxos.
+   */
+  onSplitPayments?: () => void;
+  /**
    * Quando true (e for I9), o TEF é executado AQUI — antes dos pop-ups de
    * CPF/Imprimir. Se a cobrança não for aprovada, nada é confirmado e o
    * fluxo é abortado. Usado pelo Pedido Express, onde o lojista deve
