@@ -49,15 +49,9 @@ function ChannelManager({ channel }: ChannelManagerProps) {
     channel,
   });
 
-  // Rollout isolado: divisão de Entrega/Retirada nas formas de pagamento.
-  // Apenas allow-list e apenas nas abas Cardápio e Pedido Express
-  // (PDV não tem conceito de modalidade no checkout do caixa).
-  const PAYMENT_SPLIT_ALLOWLIST = [
-    '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da I9
-    '32b71649-461d-4cb6-b26c-12390b090feb', // Lancheria Bon Appetit
-  ];
-  const isI9 = !!company?.id && PAYMENT_SPLIT_ALLOWLIST.includes(company.id);
-  const showModalitySplit = isI9 && (channel === 'menu' || channel === 'express');
+  // Divisão Entrega/Retirada nas formas de pagamento — liberado para todas as lojas
+  // nas abas Cardápio Online e Pedido Express (PDV não tem conceito de modalidade).
+  const showModalitySplit = channel === 'menu' || channel === 'express';
 
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
