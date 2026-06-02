@@ -778,13 +778,21 @@ pause
               <CardHeader>
                 <CardTitle>Taxas Cidade e Interior</CardTitle>
                 <CardDescription>
-                  Configure os valores de entrega para cidade e interior
+                  Configure os valores de entrega. Desative as regiões que sua loja não atende — quando só uma estiver ativa, o cliente verá apenas "Entrega" no checkout.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="deliveryFeeCity">Taxa Cidade (R$)</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="deliveryFeeCity">Taxa Cidade (R$)</Label>
+                      <Switch
+                        checked={storeSettings.deliveryFeeCityEnabled}
+                        onCheckedChange={async (v) => {
+                          await updateSetting('delivery_fee_city_enabled', v ? 'true' : 'false');
+                        }}
+                      />
+                    </div>
                     <Input
                       id="deliveryFeeCity"
                       type="number"
@@ -793,10 +801,19 @@ pause
                       value={deliveryFeeCity}
                       onChange={(e) => setDeliveryFeeCity(e.target.value)}
                       placeholder="0.00"
+                      disabled={!storeSettings.deliveryFeeCityEnabled}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="deliveryFeeInterior">Taxa Interior (R$)</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="deliveryFeeInterior">Taxa Interior (R$)</Label>
+                      <Switch
+                        checked={storeSettings.deliveryFeeInteriorEnabled}
+                        onCheckedChange={async (v) => {
+                          await updateSetting('delivery_fee_interior_enabled', v ? 'true' : 'false');
+                        }}
+                      />
+                    </div>
                     <Input
                       id="deliveryFeeInterior"
                       type="number"
@@ -805,6 +822,7 @@ pause
                       value={deliveryFeeInterior}
                       onChange={(e) => setDeliveryFeeInterior(e.target.value)}
                       placeholder="0.00"
+                      disabled={!storeSettings.deliveryFeeInteriorEnabled}
                     />
                   </div>
                 </div>
