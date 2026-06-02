@@ -564,6 +564,20 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         deliveryFilter={order.deliveryAddress && order.deliveryAddress.trim().length > 0 ? 'delivery' : 'pickup'}
         checkoutItems={checkoutItems}
         onConfirm={handleConfirm}
+        onSplitPayments={() => {
+          onOpenChange(false);
+          setMultiPayOpen(true);
+        }}
+      />
+      <PDVV2MultiPaymentDialog
+        open={multiPayOpen}
+        onOpenChange={setMultiPayOpen}
+        companyId={company?.id}
+        total={chargeBaseTotal}
+        title={`Dividir formas — Pedido #${order.orderCode || order.dailyNumber}`}
+        processingStatus={multiPayStatus}
+        processing={multiPayProcessing}
+        onConfirm={handleMultiPaymentSubmit}
       />
       {nfceRecord && (
         <PDVV2NFCePostSaleDialog
