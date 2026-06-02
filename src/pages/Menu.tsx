@@ -1008,7 +1008,7 @@ export default function Menu() {
 
             // Múltiplos endereços (aditivo, best-effort, não bloqueia o fluxo).
             const resolvedCustomerId = upsertedCustomer?.id ?? customerId;
-            if (resolvedCustomerId && deliveryType === 'entrega' && deliveryAddress.trim()) {
+            if (resolvedCustomerId && deliveryType !== 'pickup' && deliveryType !== '' && deliveryAddress.trim()) {
               try {
                 if (selectedAddressId) {
                   // Atualiza o endereço selecionado e marca como padrão
