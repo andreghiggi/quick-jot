@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '02/06/2026',
+    version: '1.8.0-beta',
+    type: 'feature',
+    description: 'Layout de Impressão V3 (beta) — disponível em Configurações → Impressão → Layout de Impressão (Admin Master). Comanda de produção V3 com cabeçalho PEDIDO gigante, separadores ASCII, faixa de tipo (ENTREGA/RETIRADA/MESA/BALCÃO) em destaque e bloco "Pronto até" com moldura. Recibo V3 no auto_printer.py com PED #, totais destacados e badge de Entrega/Retirada. Os layouts V1 e V2 NÃO foram alterados — lojas que não escolherem V3 manualmente continuam exatamente como estão. Nenhum fluxo de TEF, NFC-e, PDV V2 ou Multi-Pagamento foi alterado.',
+  },
+  {
     date: '31/05/2026',
     version: '1.32.7',
     type: 'improvement',
