@@ -127,6 +127,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     customerDocument?: string;
     prechargedTef?: { tefData?: NFCeTefData; notesFragment?: string };
     itemsInfo?: Array<{ id: string; paidQty: number }>;
+    splitInfo?: { perPerson: number; totalPeople: number };
   }) {
     if (!company?.id) return;
     if (!currentRegister) {
@@ -151,7 +152,8 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
           selectedQtyByIndex.set(idx, item.paidQty);
         }
       });
-      const selectedExistingItems = order.items.flatMap((it, idx) => {
+      const isSplitByPeople = !!params.splitInfo && (params.itemsInfo || []).length === 0;
+      const selectedExistingItems = isSplitByPeople ? [] : order.items.flatMap((it, idx) => {
         const alreadyPaid = Math.min(it.quantity, paidQtyByIndex.get(String(idx)) || 0);
         const pendingQty = Math.max(0, it.quantity - alreadyPaid);
         const explicitItemSelection = (params.itemsInfo || []).length > 0;
@@ -177,7 +179,18 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         quantity: ex.quantity,
         unit_price: ex.unit_price,
       }));
-      const effectiveSaleItems = [...selectedExistingItems, ...extrasAsSaleItems];
+      // Quando é divisão por pessoas (sem fração de item explícita), lançamos
+      // a parcela como uma linha sintética no caixa. Nenhum item do pedido é
+      // marcado como pago — apenas o paid_amount é incrementado.
+      const splitSyntheticItem = isSplitByPeople && params.finalTotal > 0
+        ? [{
+            product_id: null,
+            product_name: `Parcela ${(order.paidAmount || 0) > 0 ? 'adicional' : '1'} - rachado`,
+            quantity: 1,
+            unit_price: params.finalTotal,
+          }]
+        : [];
+      const effectiveSaleItems = [...selectedExistingItems, ...extrasAsSaleItems, ...splitSyntheticItem];
       if (effectiveSaleItems.length === 0) {
         toast.info('Não há itens pendentes para cobrar neste pedido.');
         return;
