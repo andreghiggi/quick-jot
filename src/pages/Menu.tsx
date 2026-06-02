@@ -171,7 +171,6 @@ export default function Menu() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const {
     addresses: customerAddresses,
-    create: createCustomerAddress,
     setDefault: setCustomerAddressDefault,
     remove: removeCustomerAddress,
   } = useCustomerAddresses(customerId, company?.id ?? null);
