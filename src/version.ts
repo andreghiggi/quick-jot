@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.7.1-beta";
+export const VERSION = "1.8.0-beta";
 export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Taxas Cidade/Interior opcionais";
+export const CODENAME = "Layout de impressão V3 (beta)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.8.0-beta",
+    date: "2026-06-02",
+    codename: "Layout de impressão V3 (beta)",
+    changes: [
+      "Novo Layout V3 de impressão (beta) disponível em Configurações → Impressão → Layout de Impressão (visível apenas para Admin Master). Pode ser selecionado por loja sem afetar as demais.",
+      "Comanda de produção V3: cabeçalho 'PEDIDO' gigante, separadores em ASCII, faixa de tipo do pedido (ENTREGA/RETIRADA/MESA/BALCÃO) em destaque, bloco 'Pronto até' com moldura e adicionais empilhados em caixa alta.",
+      "Recibo V3 no auto_printer.py: layout denso inspirado no recibo V3 do PDV V2, com PED #, totais destacados e badge de Entrega/Retirada. Reimpressão a partir do Painel mantém o mesmo visual.",
+      "Layouts V1 e V2 permanecem 100% intactos — nenhuma loja que não selecionar V3 manualmente terá qualquer alteração visual.",
+      "Nenhum fluxo de TEF, NFC-e, PDV V2, Multi-Pagamento ou banco de dados foi alterado.",
+    ],
+  },
   {
     version: "1.7.1-beta",
     date: "2026-06-02",
