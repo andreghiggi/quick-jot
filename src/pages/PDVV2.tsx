@@ -597,6 +597,128 @@ export default function PDVV2() {
     }
   }
 
+  /**
+   * ===== Multi-payment (v1.6 beta) — Cobrar Comanda/Mesa em várias formas =====
+   * Fluxo isolado: NÃO altera confirmImportTab nem confirmImportTabI9.
+   * Espelha o padrão do Pedido Express:
+   *  1) runMultiPayment (tudo-ou-nada com rollback automático)
+   *  2) addSale UMA vez (primary)
+   *  3) NFC-e com pagamentos_split (se módulo fiscal)
+   *  4) closeTab
+   * O link "Dividir em várias formas" só aparece quando i9Mode === '' e
+   * sem activeSplit (PDVV2PaymentDialog já cuida disso).
+   */
+  async function handleMultiPaymentImportTab(lines: MultiPaymentInputLine[]) {
+    if (!multiPayTab || !user || !currentRegister || !companyId) {
+      toast.error('Caixa precisa estar aberto.');
+      return;
+    }
+    const fullTab = openTabs.find((t) => t.id === multiPayTab.id);
+    if (!fullTab?.items?.length) {
+      toast.error('Comanda sem itens.');
+      return;
+    }
+    setMultiPayProcessing(true);
+    setMultiPayStatus('Iniciando cobranças…');
+    try {
+      const customer =
+        fullTab.customer_name ||
+        (fullTab.table?.number ? `Mesa ${fullTab.table.number}` : `Comanda ${fullTab.tab_number}`);
+      const mp = await runMultiPayment({
+        companyId,
+        lines,
+        description: `Comanda #${fullTab.tab_number} - ${customer}`,
+        onStatus: setMultiPayStatus,
+      });
+      if (!mp.ok || !mp.primary || !mp.lines) {
+        const extra = mp.rolledBackCount ? ` (${mp.rolledBackCount} cobrança(s) estornada(s))` : '';
+        toast.error((mp.errorMessage || 'Cobrança recusada') + extra);
+        return;
+      }
+
+      const saleItems = fullTab.items.map((i) => ({
+        product_id: i.product_id,
+        product_name: i.product_name,
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+      }));
+      const saleId = await addSale(
+        saleItems,
+        mp.primary.payment_method_id,
+        user.id,
+        0,
+        customer,
+        `Comanda #${fullTab.tab_number}[MULTI] | Pagamento: ${mp.primary.payment_name}${mp.combinedNotesFragment ? ` | ${mp.combinedNotesFragment}` : ''}`,
+      );
+      if (!saleId) return;
+
+      // NFC-e com pagamentos_split (se módulo fiscal ativo)
+      if (fiscalEnabled) {
+        try {
+          setIsEmittingNfce(true);
+          setMultiPayStatus('Emitindo NFC-e…');
+          const nfceItems: NFCeItem[] = saleItems.map((it) => {
+            const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
+            const taxRule = product?.taxRuleId
+              ? taxRules.find((tr) => tr.id === product.taxRuleId)
+              : null;
+            return {
+              codigo: product?.code || it.product_id || 'AVULSO',
+              descricao: it.product_name,
+              ncm: taxRule?.ncm || '00000000',
+              cfop: taxRule?.cfop || '5102',
+              unidade: 'UN',
+              quantidade: it.quantity,
+              valor_unitario: it.unit_price,
+              csosn: taxRule?.csosn || '102',
+              aliquota_icms: taxRule?.icms_aliquot || 0,
+              cst_pis: taxRule?.pis_cst || '49',
+              aliquota_pis: taxRule?.pis_aliquot || 0,
+              cst_cofins: taxRule?.cofins_cst || '49',
+              aliquota_cofins: taxRule?.cofins_aliquot || 0,
+            };
+          });
+          const externalId = `TAB-MULTI-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+          await emitirNFCe(companyId, saleId, {
+            external_id: externalId,
+            itens: nfceItems,
+            valor_desconto: 0,
+            valor_frete: 0,
+            observacoes: fullTab.customer_name ? `Cliente: ${fullTab.customer_name}` : undefined,
+            pagamentos_split: buildPagamentosSplit(mp.lines),
+          } as any);
+          toast.success('NFC-e enviada para processamento!');
+          const { data: rec } = await supabase
+            .from('nfce_records')
+            .select('*')
+            .eq('sale_id', saleId)
+            .maybeSingle();
+          if (rec) {
+            setNfceRecord(rec as unknown as NFCeRecord);
+            setNfceAutoPrint(false);
+            setNfceDialogOpen(true);
+          }
+        } catch (err: any) {
+          console.error('[PDVV2][TAB-MULTI] NFC-e error:', err);
+          toast.error(`Venda registrada, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
+        } finally {
+          setIsEmittingNfce(false);
+        }
+      }
+
+      await closeTab(fullTab.id);
+      toast.success('Comanda cobrada (multi-pagamento) e fechada!');
+      setMultiPayOpen(false);
+      setMultiPayTab(null);
+    } catch (err: any) {
+      console.error('[PDVV2][TAB-MULTI] error:', err);
+      toast.error(err?.message || 'Erro na cobrança em várias formas.');
+    } finally {
+      setMultiPayProcessing(false);
+      setMultiPayStatus('');
+    }
+  }
+
   const isI9 = true;
 
   function handleImportClick(tab: OccupiedTab) {
