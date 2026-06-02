@@ -63,20 +63,20 @@ def log(msg, tipo="INFO"):
         pass
 
 def buscar_empresa_por_slug(slug):
-    """Busca empresa pelo slug e retorna id, nome e endereço"""
+    """Busca empresa pelo slug e retorna id, nome, endereço e dict completo (V3)."""
     try:
         url = f"{SUPABASE_URL}/rest/v1/companies"
         params = {"slug": f"eq.{slug}", "active": "eq.true"}
         r = requests.get(url, headers=HEADERS, params=params)
         if r.ok and r.json():
             empresa = r.json()[0]
-            return empresa.get('id'), empresa.get('name'), empresa.get('address')
+            return empresa.get('id'), empresa.get('name'), empresa.get('address'), empresa
         else:
             log(f"Empresa não encontrada: {slug}", "ERRO")
-            return None, None, None
+            return None, None, None, None
     except Exception as e:
         log(f"Exceção ao buscar empresa: {e}", "ERRO")
-        return None, None, None
+        return None, None, None, None
 
 def buscar_paper_size(company_id):
     """Busca o tamanho do papel configurado para a empresa"""
