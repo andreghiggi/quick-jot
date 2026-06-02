@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.6.1-beta";
+export const VERSION = "1.6.2-beta";
 export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Dividir formas em todos os checkouts (beta)";
+export const CODENAME = "Filtros avançados em Pedidos";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.6.2-beta",
+    date: "2026-06-02",
+    codename: "Filtros avançados em Pedidos",
+    changes: [
+      "Aba Pedidos: novos filtros por Forma de Entrega (Entrega/Retirada), Origem (Cardápio Online, Balcão/Express, Mesa, Mesa via QR) e Forma de Pagamento (lista dinâmica, incluindo 'Múltiplas formas' e 'Sem pagamento').",
+      "Totalizadores reativos abaixo dos filtros: número de pedidos, faturamento, ticket médio e cancelados — recalculam conforme os filtros aplicados.",
+      "Filtros são puramente de visualização: nenhum fluxo de cobrança, TEF, NFC-e, impressão ou banco de dados foi alterado.",
+    ],
+  },
   {
     version: "1.6.1-beta",
     date: "2026-06-02",
