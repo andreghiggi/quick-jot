@@ -1962,6 +1962,39 @@ export default function Menu() {
                       className={cn('border-primary', fieldErrors.has('customerBirthDate') && 'border-destructive')}
                     />
                   </div>
+                  {customerAddresses.length > 0 && (
+                    <CustomerAddressPicker
+                      addresses={customerAddresses}
+                      selectedId={selectedAddressId}
+                      onSelect={(a: CustomerAddress) => {
+                        setSelectedAddressId(a.id);
+                        setDeliveryAddress(a.address ?? '');
+                        setDeliveryNumber(a.number ?? '');
+                        setDeliveryComplement(a.complement ?? '');
+                        setDeliveryNeighborhood(a.neighborhood ?? '');
+                        setDeliveryReference(a.reference ?? '');
+                        if (a.city) setDeliveryCity(a.city);
+                        if (a.state) setDeliveryState(a.state);
+                      }}
+                      onNew={() => {
+                        setSelectedAddressId(null);
+                        setDeliveryAddress('');
+                        setDeliveryNumber('');
+                        setDeliveryComplement('');
+                        setDeliveryNeighborhood('');
+                        setDeliveryReference('');
+                      }}
+                      onDelete={async (id) => {
+                        await removeCustomerAddress(id);
+                        if (selectedAddressId === id) {
+                          setSelectedAddressId(null);
+                        }
+                      }}
+                      onSetDefault={async (id) => {
+                        await setCustomerAddressDefault(id);
+                      }}
+                    />
+                  )}
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:items-end">
                     <div className="min-w-0">
                       <Label className="block leading-snug whitespace-normal break-words font-bold">Logradouro (rua, avenida, travessa) *</Label>
