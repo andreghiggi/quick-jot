@@ -175,6 +175,14 @@ export default function Menu() {
     setDefault: setCustomerAddressDefault,
     remove: removeCustomerAddress,
   } = useCustomerAddresses(customerId, company?.id ?? null);
+
+  // Auto-seleciona o endereço padrão na primeira carga (não força mudança nos campos).
+  useEffect(() => {
+    if (selectedAddressId) return;
+    if (customerAddresses.length === 0) return;
+    const def = customerAddresses.find((a) => a.is_default) ?? customerAddresses[0];
+    if (def) setSelectedAddressId(def.id);
+  }, [customerAddresses, selectedAddressId]);
   
   // Optional group selections state
   
