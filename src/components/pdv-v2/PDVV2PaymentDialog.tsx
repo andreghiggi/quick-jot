@@ -295,9 +295,7 @@ export function PDVV2PaymentDialog({
 
   const extrasTotal = extraItems.reduce((s, it) => s + it.unit_price * it.quantity, 0);
   const grossTotal = total + extrasTotal;
-  const discountValue = isLancheriaI9
-    ? 0
-    : useCurrencyMask
+  const discountValue = useCurrencyMask
     ? parseCurrencyInput(discount)
     : parseFloat(discount.replace(',', '.')) || 0;
   // I9: calcular total baseado no modo selecionado
