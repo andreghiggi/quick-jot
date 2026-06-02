@@ -1343,6 +1343,24 @@ export default function PDVV2() {
         transferLog={importingTab ? (openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.transfer_log as any) || undefined : undefined}
       />
 
+      <PDVV2MultiPaymentDialog
+        open={multiPayOpen}
+        onOpenChange={(o) => {
+          setMultiPayOpen(o);
+          if (!o && !multiPayProcessing) setMultiPayTab(null);
+        }}
+        companyId={companyId}
+        total={multiPayTab?.total || 0}
+        title={
+          multiPayTab?.tableNumber
+            ? `Dividir formas — Mesa ${multiPayTab.tableNumber}`
+            : `Dividir formas — Comanda ${multiPayTab?.tabNumber || ''}`
+        }
+        processingStatus={multiPayStatus}
+        processing={multiPayProcessing}
+        onConfirm={handleMultiPaymentImportTab}
+      />
+
       <PDVV2ClosedTabsDialog
         open={closedTabsOpen}
         onOpenChange={setClosedTabsOpen}
