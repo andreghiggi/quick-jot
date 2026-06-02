@@ -2810,6 +2810,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               // Lancheria I9 — Dois botões: enviar p/ cozinha (sem pagamento) ou finalizar (paga + entrega)
               <>
                 <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={() => setMultiPayOpen(true)}
+                  disabled={cart.length === 0 || isSubmitting || tefProcessing}
+                  title="Dividir o pagamento em várias formas (TEF + dinheiro, vários cartões etc.)"
+                >
+                  Dividir formas
+                </Button>
+                <Button
                   variant="outline"
                   className="flex-1 gap-2"
                   onClick={() => setPickupChargeOpen(true)}
