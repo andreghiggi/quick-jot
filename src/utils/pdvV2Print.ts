@@ -225,10 +225,10 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
   // ---------- render HTML preservando colunas ----------
   const bodyHtml = out
     .map((raw) => {
-      if (raw.startsWith('__REV__')) {
-        const txt = raw.slice('__REV__'.length);
+      if (raw.startsWith('__BIG__')) {
+        const txt = raw.slice('__BIG__'.length);
         const safe = escapeHtml(txt).replace(/ /g, '&nbsp;');
-        return `<div class="rev">${safe}</div>`;
+        return `<div class="ln big">${safe}</div>`;
       }
       if (raw.startsWith('__BOLD__')) {
         const txt = raw.slice('__BOLD__'.length);
@@ -246,24 +246,22 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
     body {
       width: ${w}; max-width: ${w};
       font-family: 'Courier New', 'Courier', monospace;
-      font-size: 9pt;
-      line-height: 1.0;
+      font-size: 8.5pt;
+      line-height: 0.95;
       color: #000;
-      padding: 2mm 1mm;
+      padding: 1mm 1mm;
       letter-spacing: 0;
     }
-    .ln, .rev {
+    .ln {
       white-space: pre;
       font-family: 'Courier New', 'Courier', monospace;
-      font-size: 9pt;
-      line-height: 1.05;
+      font-size: 8.5pt;
+      line-height: 0.95;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .bold { font-weight: bold; }
-    .rev {
-      background: #000;
-      color: #fff;
-      font-weight: bold;
-    }
+    .big { font-size: 13pt; font-weight: bold; line-height: 1.0; }
   </style></head><body>${bodyHtml}</body></html>`;
 }
 
