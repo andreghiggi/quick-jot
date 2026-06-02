@@ -1499,7 +1499,7 @@ if __name__ == "__main__":
             if pedidos:
                 log(f"Encontrados {len(pedidos)} pedido(s) para imprimir!", "INFO")
                 for pedido in pedidos:
-                    ok = processar_pedido(pedido, STORE_NAME)
+                    ok = processar_pedido(pedido, STORE_NAME, STORE_INFO)
                     if not ok:
                         ids_com_falha.add(pedido.get('id'))
                         log(f"Pedido {pedido.get('order_code','')} adicionado à lista de falhas (não tentará novamente)", "AVISO")
