@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.5.0";
-export const RELEASE_DATE = "2026-06-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "TEF v1.1 + Pedido Express + Mesa QR";
+export const VERSION = "1.5.1";
+export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Quebra de texto no modal de cobrança";
 
 export interface Release {
   version: string;
@@ -19,6 +19,14 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.5.1",
+    date: "2026-06-02",
+    codename: "Quebra de texto no modal de cobrança",
+    changes: [
+      "Modal 'Cobrar pedido' (PDV V2): nomes longos de itens com muitos adicionais agora quebram em várias linhas em vez de truncar, evitando o corte visual do modal.",
+    ],
+  },
   {
     version: "1.5.0",
     date: "2026-06-01",
