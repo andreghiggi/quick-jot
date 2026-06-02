@@ -14,6 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Order } from '@/types/order';
 import { emitirNFCe, type NFCeItem, type NFCeRecord, type NFCeTefData } from '@/services/nfceService';
+import { PDVV2MultiPaymentDialog } from '@/components/pdv-v2/PDVV2MultiPaymentDialog';
+import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 interface OrderCardChargeDialogProps {
   order: Order;
   open: boolean;
@@ -51,6 +53,10 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
   const [tefStatus, setTefStatus] = useState('');
   const [isEmittingNfce, setIsEmittingNfce] = useState(false);
+  // Multi-payment (v1.6 beta) — fluxo isolado. NÃO altera handleConfirm.
+  const [multiPayOpen, setMultiPayOpen] = useState(false);
+  const [multiPayProcessing, setMultiPayProcessing] = useState(false);
+  const [multiPayStatus, setMultiPayStatus] = useState('');
   const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const isI9Company = company?.id === I9_COMPANY_ID;
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
@@ -378,6 +384,157 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     }
   }
 
+  /**
+   * ===== Multi-payment (v1.6 beta) — fluxo isolado =====
+   * NÃO altera handleConfirm, runTefPayment, pinpadService nem TEF v1.1.
+   * Espelha PedidoExpress.handleMultiPaymentSubmit:
+   *  1) runMultiPayment (tudo-ou-nada, rollback automático em recusa)
+   *  2) addSale UMA vez (forma = primary)
+   *  3) UPDATE orders → payment_status='paid' + notes '[COBRADO][MULTI]'
+   *  4) NFC-e com pagamentos_split (vários detPag)
+   */
+  async function handleMultiPaymentSubmit(lines: MultiPaymentInputLine[]) {
+    if (!company?.id) return;
+    if (!currentRegister) {
+      toast.error('Caixa precisa estar aberto para cobrar pedidos.');
+      return;
+    }
+    setMultiPayProcessing(true);
+    setMultiPayStatus('Iniciando cobranças…');
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        toast.error('Usuário não autenticado.');
+        return;
+      }
+
+      const mp = await runMultiPayment({
+        companyId: company.id,
+        lines,
+        description: order.customerName ? `Cardápio - ${order.customerName}` : 'Pedido Cardápio',
+        onStatus: setMultiPayStatus,
+      });
+      if (!mp.ok || !mp.primary || !mp.lines) {
+        const extra = mp.rolledBackCount ? ` (${mp.rolledBackCount} cobrança(s) estornada(s))` : '';
+        toast.error((mp.errorMessage || 'Cobrança recusada') + extra);
+        return;
+      }
+
+      // Itens da venda: o que ainda está pendente do pedido.
+      const saleItems = order.items
+        .map((it, idx) => {
+          const paidQty = paidQtyByIndex.get(String(idx)) || 0;
+          const pendingQty = Math.max(0, it.quantity - paidQty);
+          if (pendingQty <= 0) return null;
+          return {
+            product_id: it.productId || null,
+            product_name: cleanItemName(it.name),
+            quantity: pendingQty,
+            unit_price: it.price,
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null);
+
+      if (saleItems.length === 0) {
+        toast.error('Não há itens pendentes para cobrar.');
+        return;
+      }
+
+      const saleNotes = `[CARDAPIO #${order.orderCode || order.dailyNumber}][MULTI] Pagamento: ${mp.primary.payment_name}${mp.combinedNotesFragment ? ` | ${mp.combinedNotesFragment}` : ''}`;
+
+      const saleId = await addSale(
+        saleItems,
+        mp.primary.payment_method_id,
+        authUser.id,
+        0,
+        order.customerName,
+        saleNotes,
+        order.id,
+      );
+      if (!saleId) return;
+
+      // Marca pedido como pago.
+      const chargedAmount = saleItems.reduce((s, it) => s + it.quantity * it.unit_price, 0);
+      const currentPaidAmount = Number(order.paidAmount || 0);
+      const nextPaidAmount = Number((currentPaidAmount + chargedAmount).toFixed(2));
+      const baseTotal = Number(order.total.toFixed(2));
+      const isFullyPaid = nextPaidAmount >= baseTotal - 0.009;
+      const nextPaymentNote = `${isFullyPaid ? '[COBRADO]' : '[PARCIAL]'}[MULTI] Pagamento: ${mp.primary.payment_name}`;
+      const newNotes = order.notes ? `${order.notes} | ${nextPaymentNote}` : nextPaymentNote;
+      await supabase.from('orders').update({
+        notes: newNotes,
+        payment_status: isFullyPaid ? 'paid' : 'partial',
+        paid_amount: isFullyPaid ? baseTotal : nextPaidAmount,
+      }).eq('id', order.id);
+
+      // NFC-e com pagamentos_split
+      if (fiscalEnabled) {
+        try {
+          setIsEmittingNfce(true);
+          setMultiPayStatus('Emitindo NFC-e…');
+          const nfceItems: NFCeItem[] = saleItems.map((it) => {
+            const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
+            const taxRule = product?.taxRuleId
+              ? taxRules.find((tr) => tr.id === product.taxRuleId)
+              : null;
+            return {
+              codigo: product?.code || it.product_id || 'AVULSO',
+              descricao: it.product_name,
+              ncm: taxRule?.ncm || '00000000',
+              cfop: taxRule?.cfop || '5102',
+              unidade: 'UN',
+              quantidade: it.quantity,
+              valor_unitario: it.unit_price,
+              csosn: taxRule?.csosn || '102',
+              aliquota_icms: taxRule?.icms_aliquot || 0,
+              cst_pis: taxRule?.pis_cst || '49',
+              aliquota_pis: taxRule?.pis_aliquot || 0,
+              cst_cofins: taxRule?.cofins_cst || '49',
+              aliquota_cofins: taxRule?.cofins_aliquot || 0,
+            };
+          });
+          const externalId = `CARD-MULTI-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+          await emitirNFCe(company.id, saleId, {
+            external_id: externalId,
+            itens: nfceItems,
+            valor_desconto: 0,
+            valor_frete: 0,
+            observacoes: order.customerName ? `Cliente: ${order.customerName}` : undefined,
+            pagamentos_split: buildPagamentosSplit(mp.lines),
+          } as any);
+          toast.success('NFC-e enviada para processamento!');
+          const { data: rec } = await supabase
+            .from('nfce_records')
+            .select('*')
+            .eq('sale_id', saleId)
+            .maybeSingle();
+          if (rec) {
+            setNfceRecord(rec as unknown as NFCeRecord);
+            setNfceAutoPrint(false);
+            setNfceDialogOpen(true);
+          }
+        } catch (err: any) {
+          console.error('[OrderCardCharge][MULTI] NFC-e error:', err);
+          toast.error(`Cobrança registrada, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
+        } finally {
+          setIsEmittingNfce(false);
+        }
+      } else {
+        toast.success(`Pedido #${order.orderCode || order.dailyNumber} cobrado!`);
+      }
+
+      onCharged?.();
+      setMultiPayOpen(false);
+      onOpenChange(false);
+    } catch (err: any) {
+      console.error('[OrderCardCharge][MULTI] error:', err);
+      toast.error(err?.message || 'Erro ao cobrar pedido.');
+    } finally {
+      setMultiPayProcessing(false);
+      setMultiPayStatus('');
+    }
+  }
+
   return (
     <>
       {isEmittingNfce && isI9Company && (
@@ -407,6 +564,20 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         deliveryFilter={order.deliveryAddress && order.deliveryAddress.trim().length > 0 ? 'delivery' : 'pickup'}
         checkoutItems={checkoutItems}
         onConfirm={handleConfirm}
+        onSplitPayments={() => {
+          onOpenChange(false);
+          setMultiPayOpen(true);
+        }}
+      />
+      <PDVV2MultiPaymentDialog
+        open={multiPayOpen}
+        onOpenChange={setMultiPayOpen}
+        companyId={company?.id}
+        total={chargeBaseTotal}
+        title={`Dividir formas — Pedido #${order.orderCode || order.dailyNumber}`}
+        processingStatus={multiPayStatus}
+        processing={multiPayProcessing}
+        onConfirm={handleMultiPaymentSubmit}
       />
       {nfceRecord && (
         <PDVV2NFCePostSaleDialog

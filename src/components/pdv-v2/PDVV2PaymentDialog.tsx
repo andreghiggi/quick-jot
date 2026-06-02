@@ -47,6 +47,16 @@ interface PDVV2PaymentDialogProps {
   /** Histórico de transferências da comanda (apenas exibição, sem efeito em fluxo). */
   transferLog?: Array<{ from_table_number: number | null; to_table_number: number; at: string; by_name: string }>;
   /**
+   * Multi-pagamento (v1.6 beta). Quando informado, exibe um link discreto
+   * abaixo do seletor de forma de pagamento ("Dividir em várias formas").
+   * Ao clicar, o chamador é responsável por abrir o PDVV2MultiPaymentDialog
+   * e orquestrar runMultiPayment + addSale + NFC-e. Este diálogo NÃO executa
+   * nada — apenas dispara o callback (e tipicamente é fechado pelo caller).
+   * NÃO aparece quando o I9 está em modo split-por-pessoas ou split-por-itens
+   * (TEF v1.1 congelado) para evitar conflito de fluxos.
+   */
+  onSplitPayments?: () => void;
+  /**
    * Quando true (e for I9), o TEF é executado AQUI — antes dos pop-ups de
    * CPF/Imprimir. Se a cobrança não for aprovada, nada é confirmado e o
    * fluxo é abortado. Usado pelo Pedido Express, onde o lojista deve
@@ -105,6 +115,7 @@ export function PDVV2PaymentDialog({
   onConfirm,
   activeSplit,
   transferLog,
+  onSplitPayments,
 }: PDVV2PaymentDialogProps) {
   // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
@@ -1058,6 +1069,16 @@ export function PDVV2PaymentDialog({
                   </div>
                 ))}
               </RadioGroup>
+            )}
+            {onSplitPayments && i9Mode === '' && !activeSplit && (
+              <button
+                type="button"
+                onClick={onSplitPayments}
+                disabled={submitting || chargingTef}
+                className="text-xs text-primary hover:underline disabled:opacity-50 disabled:no-underline mt-1"
+              >
+                Quer dividir em várias formas de pagamento? Clique aqui
+              </button>
             )}
           </div>
 

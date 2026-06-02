@@ -2810,16 +2810,6 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               // Lancheria I9 — Dois botões: enviar p/ cozinha (sem pagamento) ou finalizar (paga + entrega)
               <>
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 text-xs"
-                  onClick={() => setMultiPayOpen(true)}
-                  disabled={cart.length === 0 || isSubmitting || tefProcessing}
-                  title="Dividir o pagamento em várias formas (TEF + dinheiro, vários cartões etc.)"
-                >
-                  Dividir formas
-                </Button>
-                <Button
                   variant="outline"
                   className="flex-1 gap-2"
                   onClick={() => setPickupChargeOpen(true)}
@@ -3086,6 +3076,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         showDocumentMode
         showAddItem
         tefStatus={tefStatus}
+        onSplitPayments={() => {
+          // Fecha o checkout single-payment e abre o multi-pagamento.
+          // A orquestração (runMultiPayment + addSale + NFC-e) já existe em
+          // handleMultiPaymentSubmit — nada de TEF v1.x é alterado.
+          setPickupChargeOpen(false);
+          setMultiPayOpen(true);
+        }}
         checkoutItems={cart.length > 0 ? cart.map((i, idx) => {
           const unit = i.product.price + (i.selectedOptionals?.reduce((s, o) => s + o.price, 0) || 0);
           const paidQty = expressPaidQtys.get(String(idx)) || 0;

@@ -39,6 +39,8 @@ import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceSe
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog';
+import { PDVV2MultiPaymentDialog } from '@/components/pdv-v2/PDVV2MultiPaymentDialog';
+import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
 }
@@ -155,6 +157,12 @@ export default function PDVV2() {
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
   const [pendingPostSale, setPendingPostSale] = useState<null | (() => void | Promise<void>)>(null);
+  // Multi-payment (v1.6 beta) — fluxo isolado para Cobrar Comanda/Mesa.
+  // NÃO altera confirmImportTab/confirmImportTabI9 (TEF v1.1 frozen).
+  const [multiPayOpen, setMultiPayOpen] = useState(false);
+  const [multiPayProcessing, setMultiPayProcessing] = useState(false);
+  const [multiPayStatus, setMultiPayStatus] = useState('');
+  const [multiPayTab, setMultiPayTab] = useState<OccupiedTab | null>(null);
   // Status do processamento TEF (banner no topo do diálogo de cobrança)
   const [tefStatus, setTefStatus] = useState('');
 
@@ -586,6 +594,128 @@ export default function PDVV2() {
       await closeTab(fullTab.id);
       toast.success('Comanda importada e fechada!');
       setImportingTab(null);
+    }
+  }
+
+  /**
+   * ===== Multi-payment (v1.6 beta) — Cobrar Comanda/Mesa em várias formas =====
+   * Fluxo isolado: NÃO altera confirmImportTab nem confirmImportTabI9.
+   * Espelha o padrão do Pedido Express:
+   *  1) runMultiPayment (tudo-ou-nada com rollback automático)
+   *  2) addSale UMA vez (primary)
+   *  3) NFC-e com pagamentos_split (se módulo fiscal)
+   *  4) closeTab
+   * O link "Dividir em várias formas" só aparece quando i9Mode === '' e
+   * sem activeSplit (PDVV2PaymentDialog já cuida disso).
+   */
+  async function handleMultiPaymentImportTab(lines: MultiPaymentInputLine[]) {
+    if (!multiPayTab || !user || !currentRegister || !companyId) {
+      toast.error('Caixa precisa estar aberto.');
+      return;
+    }
+    const fullTab = openTabs.find((t) => t.id === multiPayTab.id);
+    if (!fullTab?.items?.length) {
+      toast.error('Comanda sem itens.');
+      return;
+    }
+    setMultiPayProcessing(true);
+    setMultiPayStatus('Iniciando cobranças…');
+    try {
+      const customer =
+        fullTab.customer_name ||
+        (fullTab.table?.number ? `Mesa ${fullTab.table.number}` : `Comanda ${fullTab.tab_number}`);
+      const mp = await runMultiPayment({
+        companyId,
+        lines,
+        description: `Comanda #${fullTab.tab_number} - ${customer}`,
+        onStatus: setMultiPayStatus,
+      });
+      if (!mp.ok || !mp.primary || !mp.lines) {
+        const extra = mp.rolledBackCount ? ` (${mp.rolledBackCount} cobrança(s) estornada(s))` : '';
+        toast.error((mp.errorMessage || 'Cobrança recusada') + extra);
+        return;
+      }
+
+      const saleItems = fullTab.items.map((i) => ({
+        product_id: i.product_id,
+        product_name: i.product_name,
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+      }));
+      const saleId = await addSale(
+        saleItems,
+        mp.primary.payment_method_id,
+        user.id,
+        0,
+        customer,
+        `Comanda #${fullTab.tab_number}[MULTI] | Pagamento: ${mp.primary.payment_name}${mp.combinedNotesFragment ? ` | ${mp.combinedNotesFragment}` : ''}`,
+      );
+      if (!saleId) return;
+
+      // NFC-e com pagamentos_split (se módulo fiscal ativo)
+      if (fiscalEnabled) {
+        try {
+          setIsEmittingNfce(true);
+          setMultiPayStatus('Emitindo NFC-e…');
+          const nfceItems: NFCeItem[] = saleItems.map((it) => {
+            const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
+            const taxRule = product?.taxRuleId
+              ? taxRules.find((tr) => tr.id === product.taxRuleId)
+              : null;
+            return {
+              codigo: product?.code || it.product_id || 'AVULSO',
+              descricao: it.product_name,
+              ncm: taxRule?.ncm || '00000000',
+              cfop: taxRule?.cfop || '5102',
+              unidade: 'UN',
+              quantidade: it.quantity,
+              valor_unitario: it.unit_price,
+              csosn: taxRule?.csosn || '102',
+              aliquota_icms: taxRule?.icms_aliquot || 0,
+              cst_pis: taxRule?.pis_cst || '49',
+              aliquota_pis: taxRule?.pis_aliquot || 0,
+              cst_cofins: taxRule?.cofins_cst || '49',
+              aliquota_cofins: taxRule?.cofins_aliquot || 0,
+            };
+          });
+          const externalId = `TAB-MULTI-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+          await emitirNFCe(companyId, saleId, {
+            external_id: externalId,
+            itens: nfceItems,
+            valor_desconto: 0,
+            valor_frete: 0,
+            observacoes: fullTab.customer_name ? `Cliente: ${fullTab.customer_name}` : undefined,
+            pagamentos_split: buildPagamentosSplit(mp.lines),
+          } as any);
+          toast.success('NFC-e enviada para processamento!');
+          const { data: rec } = await supabase
+            .from('nfce_records')
+            .select('*')
+            .eq('sale_id', saleId)
+            .maybeSingle();
+          if (rec) {
+            setNfceRecord(rec as unknown as NFCeRecord);
+            setNfceAutoPrint(false);
+            setNfceDialogOpen(true);
+          }
+        } catch (err: any) {
+          console.error('[PDVV2][TAB-MULTI] NFC-e error:', err);
+          toast.error(`Venda registrada, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
+        } finally {
+          setIsEmittingNfce(false);
+        }
+      }
+
+      await closeTab(fullTab.id);
+      toast.success('Comanda cobrada (multi-pagamento) e fechada!');
+      setMultiPayOpen(false);
+      setMultiPayTab(null);
+    } catch (err: any) {
+      console.error('[PDVV2][TAB-MULTI] error:', err);
+      toast.error(err?.message || 'Erro na cobrança em várias formas.');
+    } finally {
+      setMultiPayProcessing(false);
+      setMultiPayStatus('');
     }
   }
 
@@ -1195,6 +1325,15 @@ export default function PDVV2() {
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
+        onSplitPayments={() => {
+          // Fecha o checkout single-payment e abre o multi-pagamento
+          // mantendo a comanda selecionada. NÃO toca em TEF v1.1 / split I9.
+          if (importingTab) {
+            setMultiPayTab(importingTab);
+            setImportingTab(null);
+            setMultiPayOpen(true);
+          }
+        }}
         activeSplit={i9SplitInfo ? {
           perPerson: i9SplitInfo.perPerson,
           totalPeople: i9SplitInfo.total,
@@ -1202,6 +1341,24 @@ export default function PDVV2() {
         } : undefined}
         checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, id: i.id, paid: !!(i as any).paid })) : undefined}
         transferLog={importingTab ? (openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.transfer_log as any) || undefined : undefined}
+      />
+
+      <PDVV2MultiPaymentDialog
+        open={multiPayOpen}
+        onOpenChange={(o) => {
+          setMultiPayOpen(o);
+          if (!o && !multiPayProcessing) setMultiPayTab(null);
+        }}
+        companyId={companyId}
+        total={multiPayTab?.total || 0}
+        title={
+          multiPayTab?.tableNumber
+            ? `Dividir formas — Mesa ${multiPayTab.tableNumber}`
+            : `Dividir formas — Comanda ${multiPayTab?.tabNumber || ''}`
+        }
+        processingStatus={multiPayStatus}
+        processing={multiPayProcessing}
+        onConfirm={handleMultiPaymentImportTab}
       />
 
       <PDVV2ClosedTabsDialog
