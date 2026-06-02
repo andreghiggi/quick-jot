@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.8.4-beta";
+export const VERSION = "1.8.5";
 export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Layout V3 densidade Agilize (beta)";
+export const CODENAME = "Formas Entrega/Retirada para todas as lojas";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.8.5",
+    date: "2026-06-02",
+    codename: "Formas Entrega/Retirada para todas as lojas",
+    changes: [
+      "Divisão de formas de pagamento por modalidade (Entrega/Retirada) liberada para TODAS as lojas — antes era exclusivo da Lancheria I9 e Bon Appetit.",
+      "Em Configurações → Formas de Pagamento, nas abas Cardápio Online e Pedido Express, agora aparecem os toggles 'Mostrar para Entrega' e 'Mostrar para Retirada' em cada forma.",
+      "Cardápio Online e Pedido Express passam a filtrar automaticamente as formas conforme a modalidade escolhida pelo cliente. PDV (caixa) continua sem essa divisão.",
+      "Padrão preservado: lojas existentes já tinham 'show_for_delivery' e 'show_for_pickup' = true por default, portanto nada some sem ação manual.",
+      "Nenhum fluxo de TEF, NFC-e, Multi-Pagamento, impressão ou PDV V2 foi alterado.",
+    ],
+  },
   {
     version: "1.8.4-beta",
     date: "2026-06-02",
