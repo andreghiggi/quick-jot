@@ -2452,26 +2452,30 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                             }}
                           >
                             <div className="grid grid-cols-2 gap-3">
+                              {settings.deliveryFeeCityEnabled !== false && (
                               <label className={cn(
                                 "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
                                 selectedDeliveryFeeType === 'city' ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
                               )}>
                                 <RadioGroupItem value="city" />
                                 <div>
-                                  <span className="font-medium">Cidade</span>
+                                  <span className="font-medium">{settings.deliveryFeeInteriorEnabled === false ? 'Entrega' : 'Cidade'}</span>
                                   <p className="text-xs text-muted-foreground">R$ {settings.deliveryFeeCity.toFixed(2)}</p>
                                 </div>
                               </label>
+                              )}
+                              {settings.deliveryFeeInteriorEnabled !== false && (
                               <label className={cn(
                                 "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
                                 selectedDeliveryFeeType === 'interior' ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
                               )}>
                                 <RadioGroupItem value="interior" />
                                 <div>
-                                  <span className="font-medium">Interior</span>
+                                  <span className="font-medium">{settings.deliveryFeeCityEnabled === false ? 'Entrega' : 'Interior'}</span>
                                   <p className="text-xs text-muted-foreground">R$ {settings.deliveryFeeInterior.toFixed(2)}</p>
                                 </div>
                               </label>
+                              )}
                             </div>
                           </RadioGroup>
                         </div>
