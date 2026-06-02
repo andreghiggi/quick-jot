@@ -1206,7 +1206,10 @@ def processar_pedido(pedido, store_name="Comanda Tech"):
     
     # Formata recibo HTML (mesmo layout do painel web)
     log("Gerando recibo HTML...", "INFO")
-    html = formatar_recibo_html(pedido, itens, store_name)
+    if PRINT_LAYOUT == 'v3':
+        html = formatar_recibo_html_v3(pedido, itens, store_name)
+    else:
+        html = formatar_recibo_html(pedido, itens, store_name)
     
     # Imprime silenciosamente
     log("Iniciando impressão...", "PRINT")
