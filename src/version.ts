@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.5.3";
+export const VERSION = "1.5.4";
 export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Cobrança rachada por pessoas";
+export const CODENAME = "Desconto restaurado na cobrança";
 
 export interface Release {
   version: string;
@@ -19,6 +19,14 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.5.4",
+    date: "2026-06-02",
+    codename: "Desconto restaurado na cobrança",
+    changes: [
+      "Campo 'Desconto (R$)' restaurado no diálogo de pagamento — aparece novamente em Cobrar Pedido do Cardápio, Importar e Cobrar Mesa, Pedido Express e Finalizar Venda do PDV V2.",
+    ],
+  },
   {
     version: "1.5.3",
     date: "2026-06-02",
