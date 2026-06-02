@@ -32,6 +32,8 @@ import { MenuV2 } from '@/components/menu/MenuV2';
 import { AddedToCartDialog } from '@/components/menu/AddedToCartDialog';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
 import { detectDomainContext, COMANDATECH_ROOT } from '@/utils/domainRouting';
+import { useCustomerAddresses, CustomerAddress } from '@/hooks/useCustomerAddresses';
+import { CustomerAddressPicker } from '@/components/menu/CustomerAddressPicker';
 
 interface Company {
   id: string;
@@ -164,6 +166,15 @@ export default function Menu() {
   const [lastAddedItem, setLastAddedItem] = useState<CartItem | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [reorderDismissed, setReorderDismissed] = useState(false);
+  // Múltiplos endereços por cliente (aditivo — não altera o auto-fill atual de `customers.address`)
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const {
+    addresses: customerAddresses,
+    create: createCustomerAddress,
+    setDefault: setCustomerAddressDefault,
+    remove: removeCustomerAddress,
+  } = useCustomerAddresses(customerId, company?.id ?? null);
   
   // Optional group selections state
   
@@ -480,6 +491,8 @@ export default function Menu() {
           .maybeSingle();
 
         if (data && !error) {
+          // Captura o ID do cliente para a feature de múltiplos endereços (aditivo)
+          if (data.id) setCustomerId(data.id);
           // Auto-fill customer data
           if (data.name && !customerName) setCustomerName(data.name);
           if (data.cpf && !customerCpf) setCustomerCpf(data.cpf);
