@@ -281,7 +281,7 @@ export function OrderEditDialog({
         : order.deliveryAddress
           ? 'delivery'
           : 'pickup',
-      showReadyTime: storeSettings.printLayout === 'v2',
+      showReadyTime: storeSettings.printLayout === 'v2' || storeSettings.printLayout === 'v3',
       readyOffsetMinutes: readyOffset,
     });
   }
