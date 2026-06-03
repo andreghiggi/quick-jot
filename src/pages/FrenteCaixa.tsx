@@ -26,6 +26,7 @@ import { useCashRegister } from '@/hooks/useCashRegister';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { brl as formatPrice } from '@/components/pdv-v2/_format';
 import type { Product } from '@/types/product';
+import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 
 interface CartLine {
   id: string; // local uuid
@@ -284,6 +285,23 @@ export default function FrenteCaixa() {
       `Venda Frente de Caixa (${params.paymentName})`,
     );
     if (saleId) {
+      // Baixa automática de estoque (no-op para produtos sem track_stock).
+      // Fire-and-forget: não bloqueia o fluxo de venda nem mostra erro ao operador
+      // se algum item falhar — a venda já foi registrada.
+      (async () => {
+        for (const l of lines) {
+          if (!l.product_id) continue;
+          await applyStockMovementOnce({
+            productId: l.product_id,
+            quantity: -l.quantity,
+            type: 'sale',
+            referenceType: 'pdv_sale',
+            referenceId: saleId,
+            notes: `Frente de Caixa (${params.paymentName})`,
+          });
+        }
+      })();
+
       setLines([]);
       setQuery('');
       setPaymentOpen(false);
