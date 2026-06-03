@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Plus, Search, ArrowLeft } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { Subcategory } from '@/hooks/useSubcategories';
+import { CouponBanner } from '@/components/menu/CouponBanner';
+import type { Coupon } from '@/hooks/useCoupons';
 
 // Category fallback images/emojis
 const categoryEmojis: Record<string, string> = {
@@ -88,6 +90,7 @@ interface MenuV2Props {
   onNavigateBack: () => void;
   buttonColorStyle?: React.CSSProperties;
   hideEstimatedWaitTime?: boolean;
+  publicCoupons?: Coupon[];
 }
 
 export function MenuV2({
@@ -111,6 +114,7 @@ export function MenuV2({
   onNavigateBack,
   buttonColorStyle,
   hideEstimatedWaitTime = false,
+  publicCoupons = [],
 }: MenuV2Props) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
@@ -399,6 +403,9 @@ export function MenuV2({
       {newProducts.length > 0 && (
         <NovidadesSlideshow products={newProducts} onProductSelect={onProductSelect} sectionTitle={settings.featuredSectionName} />
       )}
+
+      {/* Coupon Banner */}
+      {publicCoupons.length > 0 && <CouponBanner coupons={publicCoupons} />}
 
       {/* Search */}
       <div className="container mx-auto px-4 mt-4">
