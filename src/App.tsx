@@ -50,6 +50,7 @@ import SalesCampaigns from "./pages/SalesCampaigns";
 import PDVV2 from "./pages/PDVV2";
 import MesaQR from "./pages/MesaQR";
 import FrenteCaixa from "./pages/FrenteCaixa";
+import EstoqueRelatorio from "./pages/EstoqueRelatorio";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 
 // Admin Pages
@@ -181,7 +182,14 @@ function AppRoutes() {
           <FrenteCaixa />
         </ProtectedRoute>
       } />
-      
+
+      {/* Estoque (módulo mercado) — guard interno via useMercadoEnabled */}
+      <Route path="/estoque" element={
+        <ProtectedRoute requireCompany>
+          <EstoqueRelatorio />
+        </ProtectedRoute>
+      } />
+
       <Route path="/formas-pagamento" element={
         <ProtectedRoute requireCompany>
           <PaymentMethods />

@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.9.0-beta";
+export const VERSION = "1.10.0-beta";
 export const RELEASE_DATE = "2026-06-03"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa (mercado) — beta";
+export const CODENAME = "Controle de Estoque (mercado) — beta";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.10.0-beta",
+    date: "2026-06-03",
+    codename: "Controle de Estoque (mercado) — beta",
+    changes: [
+      "Fase 3 do módulo Mercado: produtos agora podem ter controle de estoque individual. Em Produtos, ao editar um item, aparece a seção 'Controle de estoque' (apenas para lojas com módulo Mercado ativo) com saldo atual e estoque mínimo.",
+      "Baixa automática no Frente de Caixa: cada venda dispara automaticamente o débito do estoque dos produtos com 'Controle de estoque' ativado, registrando o movimento no histórico. Produtos sem rastreio continuam vendendo normalmente, sem qualquer mudança de comportamento.",
+      "Nova tela 'Estoque' (rota /estoque) no menu Catálogo, visível só com módulo Mercado: lista todos os produtos rastreados com saldo atual, alerta de mínimo (vermelho = zerado, amarelo = abaixo do mínimo, verde = OK), filtros por categoria/busca e exportação CSV.",
+      "Ações por produto: Entrada manual (nota fiscal de fornecedor), Saída manual (perda/quebra), Ajuste de inventário (define um saldo novo direto) e Histórico completo de movimentos com data, tipo, quantidade, saldo resultante e observação.",
+      "Nova tabela 'stock_movements' grava todo o histórico (vendas, entradas, saídas, ajustes). Função SQL 'apply_stock_movement' faz a baixa atomicamente — se o produto não tem rastreio ativo, é no-op silencioso.",
+      "Não regressivo: lojas sem módulo Mercado não veem nada novo. Pedido Express, PDV V2, TEF v1.0/v1.1/v1.2-beta, Multi-Pagamento, NFC-e e impressão NÃO foram tocados. A baixa só ocorre via Frente de Caixa nesta fase — Pedido Express ainda não dá baixa (será fase seguinte se validado em piloto).",
+    ],
+  },
   {
     version: "1.9.0-beta",
     date: "2026-06-03",

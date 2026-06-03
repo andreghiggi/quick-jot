@@ -1495,13 +1495,16 @@ export type Database = {
           image_url: string | null
           is_new: boolean
           menu_item: boolean
+          min_stock: number
           name: string
           net_weight: number | null
           pdv_item: boolean
           price: number
+          stock_quantity: number
           subcategory_id: string | null
           swappable_in_order: boolean
           tax_rule_id: string | null
+          track_stock: boolean
           unit: string
           updated_at: string
           waiter_item: boolean
@@ -1522,13 +1525,16 @@ export type Database = {
           image_url?: string | null
           is_new?: boolean
           menu_item?: boolean
+          min_stock?: number
           name: string
           net_weight?: number | null
           pdv_item?: boolean
           price: number
+          stock_quantity?: number
           subcategory_id?: string | null
           swappable_in_order?: boolean
           tax_rule_id?: string | null
+          track_stock?: boolean
           unit?: string
           updated_at?: string
           waiter_item?: boolean
@@ -1549,13 +1555,16 @@ export type Database = {
           image_url?: string | null
           is_new?: boolean
           menu_item?: boolean
+          min_stock?: number
           name?: string
           net_weight?: number | null
           pdv_item?: boolean
           price?: number
+          stock_quantity?: number
           subcategory_id?: string | null
           swappable_in_order?: boolean
           tax_rule_id?: string | null
+          track_stock?: boolean
           unit?: string
           updated_at?: string
           waiter_item?: boolean
@@ -2020,6 +2029,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stock_movements: {
+        Row: {
+          balance_after: number
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          product_id: string
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+          type: string
+        }
+        Insert: {
+          balance_after: number
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          product_id: string
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
+          type: string
+        }
+        Update: {
+          balance_after?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          product_id?: string
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          type?: string
+        }
+        Relationships: []
       }
       store_settings: {
         Row: {
@@ -2665,6 +2716,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_stock_movement: {
+        Args: {
+          _notes?: string
+          _product_id: string
+          _qty: number
+          _reference_id?: string
+          _reference_type?: string
+          _type: string
+        }
+        Returns: number
+      }
       assign_unique_subdomain: {
         Args: { _company_id: string; _name: string }
         Returns: string

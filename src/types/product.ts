@@ -34,6 +34,12 @@ export interface Product {
   costPrice?: number | null;
   /** Editar Pedido (allow-list i9): item pode ser trocado em pedidos já enviados. */
   swappableInOrder?: boolean;
+  /** Controle de estoque (módulo `mercado`). Quando false, vendas não fazem baixa. */
+  trackStock?: boolean;
+  /** Saldo atual em estoque. Atualizado pela função apply_stock_movement. */
+  stockQuantity?: number;
+  /** Estoque mínimo (alerta). */
+  minStock?: number;
 }
 
 export interface CartItem {
