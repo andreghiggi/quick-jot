@@ -61,7 +61,7 @@ export function CouponBanner({ coupons }: CouponBannerProps) {
               <Ticket className="h-5 w-5 text-primary" /> Cupons disponíveis
             </DialogTitle>
             <DialogDescription>
-              O cupom é aplicado automaticamente ao fechar o pedido quando você atinge as condições.
+              Cupons automáticos são aplicados sozinhos no carrinho quando você atinge as condições. Cupons marcados como "Copiar e colar" precisam ser digitados no fechamento do pedido.
             </DialogDescription>
           </DialogHeader>
 
@@ -73,6 +73,9 @@ export function CouponBanner({ coupons }: CouponBannerProps) {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono font-bold text-lg text-foreground">{c.code}</span>
                       <Badge className="bg-green-600 hover:bg-green-600 text-white">{discountLabel(c)}</Badge>
+                      {c.auto_apply === false && (
+                        <Badge variant="outline" className="text-[10px]">Copiar e colar</Badge>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{ruleLabel(c)}</p>
                     {c.max_discount != null && (

@@ -22,6 +22,7 @@ function emptyForm(): CouponInput {
     min_order_value: null,
     max_discount: null,
     is_secret: false,
+    auto_apply: true,
     active: true,
     valid_from: null,
     valid_until: null,
@@ -54,6 +55,7 @@ export default function CouponsPage() {
       min_order_value: c.min_order_value,
       max_discount: c.max_discount,
       is_secret: c.is_secret,
+      auto_apply: c.auto_apply,
       active: c.active,
       valid_from: c.valid_from,
       valid_until: c.valid_until,
@@ -288,6 +290,18 @@ export default function CouponsPage() {
                 id="is_secret"
                 checked={form.is_secret}
                 onCheckedChange={(v) => setForm({ ...form, is_secret: v })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <Label htmlFor="auto_apply" className="cursor-pointer">Aplicar automaticamente</Label>
+                <p className="text-xs text-muted-foreground">Quando ligado, o cupom é aplicado sozinho no carrinho ao atingir as condições. Quando desligado, o cliente precisa copiar o código no banner e colar no fechamento do pedido.</p>
+              </div>
+              <Switch
+                id="auto_apply"
+                checked={form.auto_apply}
+                onCheckedChange={(v) => setForm({ ...form, auto_apply: v })}
               />
             </div>
 

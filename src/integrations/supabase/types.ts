@@ -559,6 +559,7 @@ export type Database = {
       coupons: {
         Row: {
           active: boolean
+          auto_apply: boolean
           code: string
           company_id: string
           created_at: string
@@ -576,6 +577,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          auto_apply?: boolean
           code: string
           company_id: string
           created_at?: string
@@ -593,6 +595,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          auto_apply?: boolean
           code?: string
           company_id?: string
           created_at?: string
