@@ -29,6 +29,7 @@ import {
   Megaphone,
   Settings2,
   ChevronDown,
+  Ticket,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -109,6 +110,11 @@ export function AppSidebar() {
       title: 'Adicionais',
       icon: Layers,
       href: '/adicionais',
+    },
+    {
+      title: 'Cupons',
+      icon: Ticket,
+      href: '/cupons',
     },
     {
       title: 'Ver cardápio',
