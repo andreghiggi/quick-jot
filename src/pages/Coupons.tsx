@@ -295,6 +295,18 @@ export default function CouponsPage() {
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
+                <Label htmlFor="auto_apply" className="cursor-pointer">Aplicar automaticamente</Label>
+                <p className="text-xs text-muted-foreground">Quando ligado, o cupom é aplicado sozinho no carrinho ao atingir as condições. Quando desligado, o cliente precisa copiar o código no banner e colar no fechamento do pedido.</p>
+              </div>
+              <Switch
+                id="auto_apply"
+                checked={form.auto_apply}
+                onCheckedChange={(v) => setForm({ ...form, auto_apply: v })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
                 <Label htmlFor="active" className="cursor-pointer">Ativo</Label>
                 <p className="text-xs text-muted-foreground">Cupons inativos não aparecem no cardápio nem podem ser aplicados.</p>
               </div>
