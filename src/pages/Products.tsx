@@ -157,7 +157,12 @@ export default function Products() {
       subcategoryId: newProduct.subcategoryId || null,
       costPrice: newProduct.costPrice ? parseFloat(newProduct.costPrice) : null,
     } as any);
-    setNewProduct({ name: '', price: '', costPrice: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
+    setNewProduct({
+      name: '', price: '', costPrice: '', category: categories[0]?.name || '', description: '',
+      active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '',
+      gtin: '', code: '', unit: 'UN', taxRuleId: '',
+      trackStock: false, stockQuantity: '', minStock: '',
+    });
     setIsProductDialogOpen(false);
   }
 
