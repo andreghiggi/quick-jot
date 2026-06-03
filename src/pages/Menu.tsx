@@ -1401,6 +1401,7 @@ export default function Menu() {
         onCartOpen={() => setIsCartOpen(true)}
         onNavigateBack={() => navigate(-1)}
         buttonColorStyle={buttonColorStyle}
+        publicCoupons={publicCoupons}
       />
     ) : (
     <div className="min-h-screen bg-background pb-24" style={buttonColorStyle}>
