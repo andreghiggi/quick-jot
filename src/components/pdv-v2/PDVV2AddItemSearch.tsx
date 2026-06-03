@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Search, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { brl as formatPrice } from './_format';
 import { PDVV2CategoryBrowser } from './PDVV2CategoryBrowser';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 
 export interface ExtraItem {
   id: string;
@@ -35,6 +36,7 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
   const { categories } = useCategories({ companyId });
   const { groups: optionalGroups } = useOptionalGroups({ companyId });
   const isLancheriaI9 = true;
+  const { enabled: mercadoEnabled } = useMercadoEnabled(companyId);
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -57,9 +59,32 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
     const q = query.trim().toLowerCase();
     if (!q) return activeProducts.slice(0, 8);
     return activeProducts
-      .filter((p) => p.name.toLowerCase().includes(q))
+      .filter((p) => {
+        if (p.name.toLowerCase().includes(q)) return true;
+        if (mercadoEnabled) {
+          const gtin = ((p as any).gtin || '').toString().toLowerCase();
+          const code = ((p as any).code || '').toString().toLowerCase();
+          if (gtin && gtin.includes(q)) return true;
+          if (code && code.includes(q)) return true;
+        }
+        return false;
+      })
       .slice(0, 12);
-  }, [activeProducts, query]);
+  }, [activeProducts, query, mercadoEnabled]);
+
+  // Auto-adiciona quando o GTIN bipado bate exato com um produto
+  // (somente com módulo mercado ativo). Não toca no fluxo sem o módulo.
+  useEffect(() => {
+    if (!mercadoEnabled) return;
+    if (selectedProduct) return;
+    const q = query.trim();
+    if (!q || !/^\d{6,14}$/.test(q)) return;
+    const matches = activeProducts.filter((p) => ((p as any).gtin || '') === q);
+    if (matches.length === 1) {
+      pickProduct(matches[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, mercadoEnabled, activeProducts]);
 
   function getGroupsFor(p: Product): OptionalGroup[] {
     const catId = categoryIdByName[p.category];

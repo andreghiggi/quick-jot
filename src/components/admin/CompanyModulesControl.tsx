@@ -47,6 +47,11 @@ const AVAILABLE_MODULES = [
     name: 'cardapio_mesa',
     label: 'Cardápio de Mesa (QR)',
     description: 'Cardápio público para QR Code nas mesas. Cliente informa o número da mesa e faz o pedido (apenas itens marcados como item de mesa). Requer o módulo Controle de Mesas ativo.'
+  },
+  {
+    name: 'mercado',
+    label: 'Mercado / Frente de Caixa',
+    description: 'Habilita recursos para mini mercados: busca por código de barras (GTIN) e SKU no PDV, leitura de etiquetas EAN-13 pesáveis e (em breve) Frente de Caixa dedicado. Não altera nada do fluxo atual — só adiciona.'
   }
 ];
 
