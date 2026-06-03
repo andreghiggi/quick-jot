@@ -24,6 +24,7 @@ import { uploadCompressedImage } from '@/utils/imageUtils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
+import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 
 interface ExtractedProduct {
   name: string;
@@ -51,7 +52,13 @@ export default function Products() {
   
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', costPrice: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
+  const [newProduct, setNewProduct] = useState({
+    name: '', price: '', costPrice: '', category: '', description: '',
+    active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '',
+    // Campos do módulo Mercado — só aparecem na UI quando `mercado` está ativo.
+    gtin: '', code: '', unit: 'UN', taxRuleId: '',
+    trackStock: false, stockQuantity: '', minStock: '',
+  });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
   
   const [isUploading, setIsUploading] = useState(false);
