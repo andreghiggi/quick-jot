@@ -1265,9 +1265,6 @@ export default function Menu() {
     if (deliveryFee > 0) {
       message += `*Taxa de entrega: R$ ${deliveryFee.toFixed(2)}*\n`;
     }
-    if (couponFreeShipping && baseFee > 0) {
-      message += `*Frete grátis (cupom)*\n`;
-    }
     message += `*TOTAL: R$ ${orderTotal.toFixed(2)}*\n`;
     message += `───────────────────`;
 
@@ -2318,7 +2315,6 @@ export default function Menu() {
                           <p className="text-sm font-mono font-bold text-foreground">{appliedCoupon.code}</p>
                           <p className="text-xs text-green-600">
                             {discountAmount > 0 && `-R$ ${formatPrice(discountAmount)}`}
-                            {couponFreeShipping && (discountAmount > 0 ? ' + frete grátis' : 'Frete grátis')}
                           </p>
                         </div>
                         <Button type="button" variant="ghost" size="sm" onClick={handleRemoveCoupon}>
@@ -2352,12 +2348,6 @@ export default function Menu() {
                     <div className="flex items-center justify-between text-muted-foreground">
                       <span>Taxa de entrega</span>
                       <span>R$ {formatPrice(deliveryFee)}</span>
-                    </div>
-                  )}
-                  {couponFreeShipping && baseFee > 0 && (
-                    <div className="flex items-center justify-between text-success font-medium">
-                      <span>Taxa de entrega</span>
-                      <span>Grátis (cupom)</span>
                     </div>
                   )}
                   {freeDeliveryRemaining > 0 && (
