@@ -147,7 +147,13 @@ export default function Products() {
       toast.error('Selecione uma subcategoria');
       return;
     }
-    await addProduct({
+    const mercadoOn = isModuleEnabled('mercado');
+    const initialQty =
+      mercadoOn && newProduct.trackStock && newProduct.stockQuantity !== ''
+        ? Number(newProduct.stockQuantity)
+        : 0;
+
+    const newId = await addProduct({
       name: newProduct.name,
       price: parseFloat(newProduct.price),
       category: newProduct.category,
@@ -156,7 +162,28 @@ export default function Products() {
       active: newProduct.active,
       subcategoryId: newProduct.subcategoryId || null,
       costPrice: newProduct.costPrice ? parseFloat(newProduct.costPrice) : null,
+      ...(mercadoOn
+        ? {
+            gtin: newProduct.gtin.trim() || null,
+            code: newProduct.code.trim() || null,
+            unit: newProduct.unit || 'UN',
+            taxRuleId: newProduct.taxRuleId || null,
+            trackStock: newProduct.trackStock,
+            minStock:
+              newProduct.minStock !== '' ? Number(newProduct.minStock) : 0,
+          }
+        : {}),
     } as any);
+
+    // Estoque inicial só faz sentido quando mercado + trackStock + qty > 0
+    if (newId && mercadoOn && newProduct.trackStock && initialQty > 0) {
+      await applyStockMovementOnce({
+        productId: newId,
+        quantity: initialQty,
+        type: 'initial',
+        notes: 'Estoque inicial no cadastro',
+      });
+    }
     setNewProduct({
       name: '', price: '', costPrice: '', category: categories[0]?.name || '', description: '',
       active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '',
