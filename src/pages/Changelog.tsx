@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '03/06/2026',
+    version: '1.10.1-beta',
+    type: 'feature',
+    description: 'Cadastro de produto para Mercado (fase 3.1) — o diálogo "Novo Produto" agora exibe o bloco "Dados de mercado" (GTIN/código de barras, SKU interno, unidade de medida, regra de tributação e controle de estoque com saldo inicial + estoque mínimo) APENAS quando o módulo Mercado está ativo. Quando "Controlar estoque" é marcado com saldo > 0, o sistema registra automaticamente um movimento do tipo "initial" em stock_movements — o produto já aparece em /estoque com saldo correto. Lojas sem o módulo Mercado não enxergam nenhuma diferença no cadastro. Nenhum fluxo de PDV V2, Pedido Express, TEF (v1.0/v1.1/v1.2-beta), Multi-Pagamento, NFC-e ou impressão foi alterado.',
+  },
+  {
+    date: '03/06/2026',
     version: '1.10.0-beta',
     type: 'feature',
     description: 'Controle de Estoque (fase 3 do módulo Mercado) — produtos podem ter "Controle de estoque" ativado individualmente em Produtos → editar. Quando ativo, cada venda no Frente de Caixa faz baixa automática e registra o movimento. Nova tela /estoque no menu Catálogo mostra saldo de todos os produtos rastreados, com alerta de mínimo (vermelho/amarelo/verde), filtros, exportação CSV e ações de Entrada / Saída / Ajuste de inventário / Histórico completo. Nova tabela stock_movements + função SQL apply_stock_movement (no-op para produtos sem rastreio). Lojas sem o módulo Mercado não veem nada novo. Pedido Express, PDV V2, TEF, NFC-e, Multi-Pagamento e impressão NÃO foram alterados — a baixa só acontece via Frente de Caixa nesta fase.',

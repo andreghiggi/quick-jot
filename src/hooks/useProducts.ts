@@ -138,6 +138,14 @@ export function useProducts(options: UseProductsOptions = {}) {
           menu_item: productData.menuItem ?? true,
           code: codeToUse,
           cost_price: (productData as any).costPrice ?? null,
+          // Campos do módulo Mercado (opcionais; permanecem null/default quando não enviados)
+          gtin: (productData as any).gtin ?? null,
+          unit: (productData as any).unit ?? 'UN',
+          tax_rule_id: (productData as any).taxRuleId ?? null,
+          track_stock: (productData as any).trackStock ?? false,
+          // stock_quantity inicia em 0 propositalmente: a entrada inicial
+          // entra via apply_stock_movement no caller, para gerar histórico.
+          min_stock: (productData as any).minStock != null ? Number((productData as any).minStock) : 0,
         } as any)
         .select()
         .single();

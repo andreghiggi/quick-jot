@@ -24,6 +24,7 @@ import { uploadCompressedImage } from '@/utils/imageUtils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
+import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 
 interface ExtractedProduct {
   name: string;
@@ -51,7 +52,13 @@ export default function Products() {
   
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', costPrice: '', category: '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
+  const [newProduct, setNewProduct] = useState({
+    name: '', price: '', costPrice: '', category: '', description: '',
+    active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '',
+    // Campos do módulo Mercado — só aparecem na UI quando `mercado` está ativo.
+    gtin: '', code: '', unit: 'UN', taxRuleId: '',
+    trackStock: false, stockQuantity: '', minStock: '',
+  });
   const [newOptional, setNewOptional] = useState({ name: '', price: '', type: 'extra' as 'extra' | 'variation' });
   
   const [isUploading, setIsUploading] = useState(false);
@@ -140,7 +147,13 @@ export default function Products() {
       toast.error('Selecione uma subcategoria');
       return;
     }
-    await addProduct({
+    const mercadoOn = isModuleEnabled('mercado');
+    const initialQty =
+      mercadoOn && newProduct.trackStock && newProduct.stockQuantity !== ''
+        ? Number(newProduct.stockQuantity)
+        : 0;
+
+    const newId = await addProduct({
       name: newProduct.name,
       price: parseFloat(newProduct.price),
       category: newProduct.category,
@@ -149,8 +162,34 @@ export default function Products() {
       active: newProduct.active,
       subcategoryId: newProduct.subcategoryId || null,
       costPrice: newProduct.costPrice ? parseFloat(newProduct.costPrice) : null,
+      ...(mercadoOn
+        ? {
+            gtin: newProduct.gtin.trim() || null,
+            code: newProduct.code.trim() || null,
+            unit: newProduct.unit || 'UN',
+            taxRuleId: newProduct.taxRuleId || null,
+            trackStock: newProduct.trackStock,
+            minStock:
+              newProduct.minStock !== '' ? Number(newProduct.minStock) : 0,
+          }
+        : {}),
     } as any);
-    setNewProduct({ name: '', price: '', costPrice: '', category: categories[0]?.name || '', description: '', active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '' });
+
+    // Estoque inicial só faz sentido quando mercado + trackStock + qty > 0
+    if (newId && mercadoOn && newProduct.trackStock && initialQty > 0) {
+      await applyStockMovementOnce({
+        productId: newId,
+        quantity: initialQty,
+        type: 'initial',
+        notes: 'Estoque inicial no cadastro',
+      });
+    }
+    setNewProduct({
+      name: '', price: '', costPrice: '', category: categories[0]?.name || '', description: '',
+      active: true, imageUrl: '', pdvItem: true, menuItem: true, waiterItem: true, subcategoryId: '',
+      gtin: '', code: '', unit: 'UN', taxRuleId: '',
+      trackStock: false, stockQuantity: '', minStock: '',
+    });
     setIsProductDialogOpen(false);
   }
 
@@ -687,6 +726,108 @@ export default function Products() {
                 />
                 <Label>Item de Mesa/Garçom</Label>
               </div>
+            {isModuleEnabled('mercado') && (
+              <div className="rounded-md border bg-muted/30 p-3 space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold">Dados de mercado</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Necessários para bipar no Frente de Caixa e emitir NFC-e.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">GTIN / Código de barras</Label>
+                    <Input
+                      value={newProduct.gtin}
+                      onChange={(e) => setNewProduct({ ...newProduct, gtin: e.target.value })}
+                      placeholder="Ex: 7891234567890"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">SKU / Código interno</Label>
+                    <Input
+                      value={newProduct.code}
+                      onChange={(e) => setNewProduct({ ...newProduct, code: e.target.value })}
+                      placeholder="Auto se vazio"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Unidade de medida</Label>
+                    <Select value={newProduct.unit} onValueChange={(v) => setNewProduct({ ...newProduct, unit: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UN">UN</SelectItem>
+                        <SelectItem value="KG">KG</SelectItem>
+                        <SelectItem value="G">G</SelectItem>
+                        <SelectItem value="L">L</SelectItem>
+                        <SelectItem value="ML">ML</SelectItem>
+                        <SelectItem value="CX">CX</SelectItem>
+                        <SelectItem value="PCT">PCT</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Regra de tributação</Label>
+                    <Select
+                      value={newProduct.taxRuleId || 'none'}
+                      onValueChange={(v) => setNewProduct({ ...newProduct, taxRuleId: v === 'none' ? '' : v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhuma</SelectItem>
+                        {taxRules.map((tr) => (
+                          <SelectItem key={tr.id} value={tr.id}>{tr.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <div>
+                    <Label className="text-sm">Controlar estoque</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Cada venda no Frente de Caixa dá baixa automática.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={newProduct.trackStock}
+                    onCheckedChange={(v) => setNewProduct({ ...newProduct, trackStock: v })}
+                  />
+                </div>
+                {newProduct.trackStock && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Estoque inicial</Label>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        value={newProduct.stockQuantity}
+                        onChange={(e) => setNewProduct({ ...newProduct, stockQuantity: e.target.value })}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Estoque mínimo (alerta)</Label>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        value={newProduct.minStock}
+                        onChange={(e) => setNewProduct({ ...newProduct, minStock: e.target.value })}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                )}
+                {(!newProduct.gtin || !newProduct.taxRuleId) && (
+                  <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                    {!newProduct.gtin && <div>• Sem GTIN: produto não será encontrado ao bipar no Frente de Caixa.</div>}
+                    {!newProduct.taxRuleId && <div>• Sem regra tributária: NFC-e pode ser rejeitada.</div>}
+                  </div>
+                )}
+              </div>
+            )}
             <Button onClick={handleAddProduct} className="w-full">Salvar</Button>
           </div>
         </DialogContent>
