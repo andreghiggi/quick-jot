@@ -1000,6 +1000,59 @@ export default function Products() {
                   );
                 })()}
               </div>
+              {isModuleEnabled('mercado') && (
+                <div className="rounded-md border bg-muted/30 p-3 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <Label className="text-sm font-semibold">Controle de estoque</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Quando ativo, cada venda no Frente de Caixa dá baixa automática.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={!!(editingProduct as any).trackStock}
+                      onCheckedChange={(v) =>
+                        setEditingProduct({ ...editingProduct, trackStock: v } as any)
+                      }
+                    />
+                  </div>
+                  {(editingProduct as any).trackStock && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Saldo atual</Label>
+                        <Input
+                          type="number"
+                          step="0.001"
+                          value={(editingProduct as any).stockQuantity ?? 0}
+                          onChange={(e) =>
+                            setEditingProduct({
+                              ...editingProduct,
+                              stockQuantity: e.target.value === '' ? 0 : parseFloat(e.target.value),
+                            } as any)
+                          }
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Para ajustes pós-venda, use a tela Estoque.
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Estoque mínimo (alerta)</Label>
+                        <Input
+                          type="number"
+                          step="0.001"
+                          value={(editingProduct as any).minStock ?? 0}
+                          onChange={(e) =>
+                            setEditingProduct({
+                              ...editingProduct,
+                              minStock: e.target.value === '' ? 0 : parseFloat(e.target.value),
+                            } as any)
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <Label>Categoria</Label>
                 <Select value={editingProduct.category} onValueChange={(v) => setEditingProduct({ ...editingProduct, category: v, subcategoryId: null })}>
