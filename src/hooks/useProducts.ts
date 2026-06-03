@@ -72,6 +72,9 @@ export function useProducts(options: UseProductsOptions = {}) {
         grossWeight: (product as any).gross_weight != null ? Number((product as any).gross_weight) : null,
         costPrice: (product as any).cost_price != null ? Number((product as any).cost_price) : null,
         swappableInOrder: (product as any).swappable_in_order ?? false,
+        trackStock: (product as any).track_stock ?? false,
+        stockQuantity: (product as any).stock_quantity != null ? Number((product as any).stock_quantity) : 0,
+        minStock: (product as any).min_stock != null ? Number((product as any).min_stock) : 0,
         optionals: optionalsData
           .filter((opt) => opt.product_id === product.id)
           .map((opt) => ({
@@ -172,6 +175,9 @@ export function useProducts(options: UseProductsOptions = {}) {
       if ((productData as any).grossWeight !== undefined) (updateData as any).gross_weight = (productData as any).grossWeight;
       if ((productData as any).swappableInOrder !== undefined) (updateData as any).swappable_in_order = (productData as any).swappableInOrder;
       if ((productData as any).costPrice !== undefined) (updateData as any).cost_price = (productData as any).costPrice;
+      if ((productData as any).trackStock !== undefined) (updateData as any).track_stock = !!(productData as any).trackStock;
+      if ((productData as any).stockQuantity !== undefined) (updateData as any).stock_quantity = Number((productData as any).stockQuantity) || 0;
+      if ((productData as any).minStock !== undefined) (updateData as any).min_stock = Number((productData as any).minStock) || 0;
 
       const { error } = await supabase
         .from('products')
