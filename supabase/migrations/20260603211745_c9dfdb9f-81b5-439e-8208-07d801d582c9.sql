@@ -1,0 +1,1 @@
+ALTER TABLE public.coupons ADD COLUMN auto_apply boolean NOT NULL DEFAULT true;
