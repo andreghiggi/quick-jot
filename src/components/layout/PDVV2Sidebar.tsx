@@ -21,6 +21,7 @@ import {
   UtensilsCrossed,
   Table as TableIcon,
   ScanBarcode,
+  Boxes,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -76,6 +77,9 @@ export function PDVV2Sidebar() {
     { title: 'Subcategorias', icon: LayoutList, href: '/subcategorias' },
     { title: 'Produtos', icon: Package, href: '/produtos' },
     { title: 'Adicionais', icon: Layers, href: '/adicionais' },
+    ...(isModuleEnabled('mercado')
+      ? [{ title: 'Estoque', icon: Boxes, href: '/estoque' }]
+      : []),
     { title: 'Ver cardápio', icon: ChefHat, href: `/cardapio/${company?.slug || ''}` },
   ];
 
