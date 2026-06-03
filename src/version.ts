@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.10.0-beta";
+export const VERSION = "1.10.1-beta";
 export const RELEASE_DATE = "2026-06-03"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Controle de Estoque (mercado) — beta";
+export const CODENAME = "Cadastro de produto para mercado — beta";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.10.1-beta",
+    date: "2026-06-03",
+    codename: "Cadastro de produto para mercado — beta",
+    changes: [
+      "Fase 3.1 do módulo Mercado: o diálogo 'Novo Produto' agora exibe o bloco 'Dados de mercado' (GTIN, SKU, unidade de medida, regra de tributação, controle de estoque com saldo inicial e estoque mínimo) APENAS para lojas com o módulo Mercado ativo.",
+        "Aviso amarelo educativo no diálogo lista o que está faltando ('Sem GTIN não bipa', 'Sem regra tributária NFC-e pode rejeitar'), sem bloquear o salvamento.",
+      "Quando 'Controlar estoque' é marcado e há saldo inicial > 0, o sistema cria automaticamente um movimento do tipo 'initial' em stock_movements — o produto já aparece em /estoque com saldo e histórico correto.",
+      "Lojas SEM o módulo Mercado não veem nenhuma diferença no cadastro de produtos — o diálogo continua exatamente como antes.",
+      "Nenhum fluxo de PDV V2, Pedido Express, TEF (v1.0/v1.1/v1.2-beta), Multi-Pagamento, NFC-e ou impressão foi alterado.",
+    ],
+  },
   {
     version: "1.10.0-beta",
     date: "2026-06-03",
