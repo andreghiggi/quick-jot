@@ -556,6 +556,60 @@ export type Database = {
           },
         ]
       }
+      coupons: {
+        Row: {
+          active: boolean
+          code: string
+          company_id: string
+          created_at: string
+          discount_type: string
+          discount_value: number
+          free_shipping: boolean
+          id: string
+          max_discount: number | null
+          min_order_value: number | null
+          updated_at: string
+          usage_count: number
+          usage_limit: number | null
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          company_id: string
+          created_at?: string
+          discount_type: string
+          discount_value: number
+          free_shipping?: boolean
+          id?: string
+          max_discount?: number | null
+          min_order_value?: number | null
+          updated_at?: string
+          usage_count?: number
+          usage_limit?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          company_id?: string
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          free_shipping?: boolean
+          id?: string
+          max_discount?: number | null
+          min_order_value?: number | null
+          updated_at?: string
+          usage_count?: number
+          usage_limit?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       customer_addresses: {
         Row: {
           address: string | null
@@ -1061,12 +1115,15 @@ export type Database = {
         Row: {
           company_id: string | null
           confirmed_at: string | null
+          coupon_code: string | null
           created_at: string
           customer_name: string
           customer_phone: string | null
           daily_number: number | null
           delivery_address: string | null
+          discount_amount: number
           followup_sent: boolean
+          free_shipping_applied: boolean
           id: string
           notes: string | null
           order_code: string
@@ -1085,12 +1142,15 @@ export type Database = {
         Insert: {
           company_id?: string | null
           confirmed_at?: string | null
+          coupon_code?: string | null
           created_at?: string
           customer_name: string
           customer_phone?: string | null
           daily_number?: number | null
           delivery_address?: string | null
+          discount_amount?: number
           followup_sent?: boolean
+          free_shipping_applied?: boolean
           id?: string
           notes?: string | null
           order_code?: string
@@ -1109,12 +1169,15 @@ export type Database = {
         Update: {
           company_id?: string | null
           confirmed_at?: string | null
+          coupon_code?: string | null
           created_at?: string
           customer_name?: string
           customer_phone?: string | null
           daily_number?: number | null
           delivery_address?: string | null
+          discount_amount?: number
           followup_sent?: boolean
+          free_shipping_applied?: boolean
           id?: string
           notes?: string | null
           order_code?: string
