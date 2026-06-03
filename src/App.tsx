@@ -48,6 +48,7 @@ import CustomerReport from "./pages/CustomerReport";
 import ABCReport from "./pages/ABCReport";
 import SalesCampaigns from "./pages/SalesCampaigns";
 import PDVV2 from "./pages/PDVV2";
+import CouponsPage from "./pages/Coupons";
 import MesaQR from "./pages/MesaQR";
 import FrenteCaixa from "./pages/FrenteCaixa";
 import EstoqueRelatorio from "./pages/EstoqueRelatorio";
@@ -308,6 +309,12 @@ function AppRoutes() {
       <Route path="/campanhas" element={
         <ProtectedRoute requireCompany>
           <SalesCampaigns />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/cupons" element={
+        <ProtectedRoute requireCompany>
+          <CouponsPage />
         </ProtectedRoute>
       } />
       
