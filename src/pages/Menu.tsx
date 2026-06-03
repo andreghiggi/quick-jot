@@ -34,6 +34,9 @@ import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard
 import { detectDomainContext, COMANDATECH_ROOT } from '@/utils/domainRouting';
 import { useCustomerAddresses, CustomerAddress } from '@/hooks/useCustomerAddresses';
 import { CustomerAddressPicker } from '@/components/menu/CustomerAddressPicker';
+import { usePublicCoupons } from '@/hooks/usePublicCoupons';
+import { computeCouponDiscount, type Coupon } from '@/hooks/useCoupons';
+import { Ticket, X as XIcon } from 'lucide-react';
 
 interface Company {
   id: string;
@@ -137,6 +140,10 @@ export default function Menu() {
   const [selectedOptionals, setSelectedOptionals] = useState<ProductOptional[]>([]);
   const [itemNotes, setItemNotes] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [autoCouponApplied, setAutoCouponApplied] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerCpf, setCustomerCpf] = useState('');
@@ -841,8 +848,52 @@ export default function Menu() {
     cartTotal < settings.freeDeliveryMinOrder
       ? settings.freeDeliveryMinOrder - cartTotal
       : 0;
-  const deliveryFee = isFreeDelivery ? 0 : baseDeliveryFee;
-  const orderTotal = cartTotal + deliveryFee;
+  const baseFee = isFreeDelivery ? 0 : baseDeliveryFee;
+
+  // Cupom aplicado (encapsulado SOMENTE neste fluxo do cardápio público)
+  const couponResult = appliedCoupon ? computeCouponDiscount(appliedCoupon, cartTotal) : null;
+  const discountAmount = couponResult?.eligible ? couponResult.discountAmount : 0;
+  const couponFreeShipping = !!couponResult?.eligible && !!couponResult?.freeShipping && deliveryType !== 'pickup';
+  const deliveryFee = couponFreeShipping ? 0 : baseFee;
+  const orderTotal = Math.max(0, cartTotal - discountAmount) + deliveryFee;
+
+  // Cupons públicos para banner + auto-aplicação
+  const { coupons: publicCoupons } = usePublicCoupons(company?.id);
+
+  // Auto-aplica o melhor cupom elegível quando o cliente abre o carrinho
+  useEffect(() => {
+    if (!isCartOpen) return;
+    if (appliedCoupon || autoCouponApplied) return;
+    if (!publicCoupons || publicCoupons.length === 0 || cart.length === 0) return;
+    const eligible = publicCoupons
+      .map((c) => ({ c, r: computeCouponDiscount(c, cartTotal) }))
+      .filter((x) => x.r.eligible)
+      .sort((a, b) => b.r.discountAmount - a.r.discountAmount);
+    if (eligible.length > 0) {
+      setAppliedCoupon(eligible[0].c);
+      setCouponInput(eligible[0].c.code);
+      setAutoCouponApplied(true);
+    }
+  }, [isCartOpen, publicCoupons, cart.length, cartTotal, appliedCoupon, autoCouponApplied]);
+
+  function handleApplyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) { setCouponError('Digite um código'); return; }
+    const found = publicCoupons.find((c) => c.code.toUpperCase() === code);
+    if (!found) { setCouponError('Cupom inválido ou expirado'); setAppliedCoupon(null); return; }
+    const res = computeCouponDiscount(found, cartTotal);
+    if (!res.eligible) { setCouponError(res.reason || 'Cupom indisponível'); setAppliedCoupon(null); return; }
+    setAppliedCoupon(found);
+    setCouponError(null);
+    toast.success(`Cupom ${found.code} aplicado!`);
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponInput('');
+    setCouponError(null);
+    setAutoCouponApplied(true); // não re-auto-aplica até o usuário reabrir
+  }
 
   const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -947,6 +998,9 @@ export default function Menu() {
           total: orderTotal,
           status: 'pending',
           company_id: company?.id || null,
+          coupon_code: appliedCoupon?.code || null,
+          discount_amount: discountAmount,
+          free_shipping_applied: couponFreeShipping,
         })
         .select()
         .single();
@@ -1207,8 +1261,14 @@ export default function Menu() {
 
     message += `\n───────────────────\n`;
     message += `*Subtotal: R$ ${cartTotal.toFixed(2)}*\n`;
+    if (discountAmount > 0 && appliedCoupon) {
+      message += `*Cupom ${appliedCoupon.code}: -R$ ${discountAmount.toFixed(2)}*\n`;
+    }
     if (deliveryFee > 0) {
       message += `*Taxa de entrega: R$ ${deliveryFee.toFixed(2)}*\n`;
+    }
+    if (couponFreeShipping && baseFee > 0) {
+      message += `*Frete grátis (cupom)*\n`;
     }
     message += `*TOTAL: R$ ${orderTotal.toFixed(2)}*\n`;
     message += `───────────────────`;
