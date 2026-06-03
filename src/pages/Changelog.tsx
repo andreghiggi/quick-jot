@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '03/06/2026',
+    version: '1.10.0-beta',
+    type: 'feature',
+    description: 'Controle de Estoque (fase 3 do módulo Mercado) — produtos podem ter "Controle de estoque" ativado individualmente em Produtos → editar. Quando ativo, cada venda no Frente de Caixa faz baixa automática e registra o movimento. Nova tela /estoque no menu Catálogo mostra saldo de todos os produtos rastreados, com alerta de mínimo (vermelho/amarelo/verde), filtros, exportação CSV e ações de Entrada / Saída / Ajuste de inventário / Histórico completo. Nova tabela stock_movements + função SQL apply_stock_movement (no-op para produtos sem rastreio). Lojas sem o módulo Mercado não veem nada novo. Pedido Express, PDV V2, TEF, NFC-e, Multi-Pagamento e impressão NÃO foram alterados — a baixa só acontece via Frente de Caixa nesta fase.',
+  },
+  {
     date: '02/06/2026',
     version: '1.8.1-beta',
     type: 'improvement',
