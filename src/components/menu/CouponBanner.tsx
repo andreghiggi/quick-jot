@@ -16,7 +16,7 @@ function discountLabel(c: Coupon): string {
 }
 
 function ruleLabel(c: Coupon): string {
-  if (!c.min_order_value || c.min_order_value <= 0) return 'Sem valor mínimo';
+  if (!c.min_order_value || c.min_order_value <= 0) return '';
   return `Acima de R$ ${c.min_order_value.toFixed(2).replace('.', ',')}`;
 }
 
@@ -43,9 +43,12 @@ export function CouponBanner({ coupons }: CouponBannerProps) {
               🎟️ Cupom <span className="font-mono">{first.code}</span> — {discountLabel(first)}
             </p>
             <p className="text-xs text-muted-foreground leading-tight">
-              {ruleLabel(first)}
-              {moreCount > 0 && ` · +${moreCount} cupom${moreCount > 1 ? 's' : ''} disponível${moreCount > 1 ? 'eis' : ''}`}
-              {' · '}<span className="underline">Toque para ver</span>
+              {[
+                ruleLabel(first),
+                moreCount > 0 ? `+${moreCount} cupom${moreCount > 1 ? 's' : ''} disponível${moreCount > 1 ? 'eis' : ''}` : '',
+              ].filter(Boolean).join(' · ')}
+              {(ruleLabel(first) || moreCount > 0) && ' · '}
+              <span className="underline">Toque para ver</span>
             </p>
           </div>
         </div>
