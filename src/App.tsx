@@ -49,6 +49,7 @@ import ABCReport from "./pages/ABCReport";
 import SalesCampaigns from "./pages/SalesCampaigns";
 import PDVV2 from "./pages/PDVV2";
 import MesaQR from "./pages/MesaQR";
+import FrenteCaixa from "./pages/FrenteCaixa";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 
 // Admin Pages
@@ -171,6 +172,13 @@ function AppRoutes() {
           <PDVV2Guard>
             <PDVV2 />
           </PDVV2Guard>
+        </ProtectedRoute>
+      } />
+
+      {/* Frente de Caixa (módulo mercado) — guard interno via useMercadoEnabled */}
+      <Route path="/frente-caixa" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixa />
         </ProtectedRoute>
       } />
       
