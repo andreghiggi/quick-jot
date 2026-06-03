@@ -46,7 +46,7 @@ export function useStockMovements(options: UseStockMovementsOptions = {}) {
     }
     setLoading(true);
     try {
-      let q = supabase
+      let q = (supabase as any)
         .from('stock_movements')
         .select('*')
         .eq('company_id', companyId)
