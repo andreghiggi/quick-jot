@@ -13,6 +13,7 @@ export interface Coupon {
   min_order_value: number | null;
   max_discount: number | null;
   is_secret: boolean;
+  auto_apply: boolean;
   active: boolean;
   valid_from: string | null;
   valid_until: string | null;
