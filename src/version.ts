@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.11.0-beta";
+export const VERSION = "1.11.1-beta";
 export const RELEASE_DATE = "2026-06-03"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Cupons de desconto (cardápio online) — beta";
+export const CODENAME = "Cupons: troca de Frete grátis por Cupom secreto";
 
 export interface Release {
   version: string;
@@ -20,16 +20,25 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.11.1-beta",
+    date: "2026-06-03",
+    codename: "Cupons: troca de Frete grátis por Cupom secreto",
+    changes: [
+      "No cadastro de Cupons, a opção 'Frete grátis' foi substituída pela opção 'Cupom secreto'. Cupons marcados como secretos NÃO aparecem no banner do topo do cardápio — só são aceitos quando o cliente digita o código manualmente.",
+      "Removidos do banco os campos 'coupons.free_shipping' e 'orders.free_shipping_applied' (não estavam em uso por nenhuma loja em produção). Em troca, foi criada a coluna 'coupons.is_secret'.",
+      "Nenhuma outra lógica do cardápio, checkout, PDV, TEF, NFC-e, impressão ou WhatsApp foi alterada.",
+    ],
+  },
+  {
     version: "1.11.0-beta",
     date: "2026-06-03",
     codename: "Cupons de desconto (cardápio online) — beta",
     changes: [
-      "Novo menu lateral 'Cupons' (em Catálogo): permite criar cupons de desconto para o cardápio online com código, tipo (percentual % ou valor fixo R$), valor mínimo do pedido (se em branco, vale pro cardápio todo), desconto máximo opcional, toggle de frete grátis, validade inicial/final e limite de usos.",
+      "Novo menu lateral 'Cupons' (em Catálogo): permite criar cupons de desconto para o cardápio online com código, tipo (percentual % ou valor fixo R$), valor mínimo do pedido (se em branco, vale pro cardápio todo), desconto máximo opcional, toggle de cupom secreto (não aparece no banner), validade inicial/final e limite de usos.",
       "Cardápio público mostra um banner clicável no topo (acima das categorias) sempre que houver cupom ativo. Ao tocar, abre uma janela com todos os cupons disponíveis, regras e botão de copiar código.",
       "No checkout do cardápio, o cupom é aplicado AUTOMATICAMENTE quando o cliente atinge as condições (subtotal ≥ valor mínimo). Aparece linha 'Desconto' verde no resumo e o total já desconta o cupom. Cliente também pode digitar/colar um código manualmente.",
-      "Frete grátis: quando o cupom tem essa opção, a taxa de entrega é zerada automaticamente ao aplicar.",
       "Mensagem do WhatsApp do pedido agora inclui 1 linha 'Cupom: CODIGO  -R$ X,XX' quando há cupom aplicado. Sem cupom, a mensagem fica idêntica à atual.",
-      "Pedidos passam a registrar 'coupon_code', 'discount_amount' e 'free_shipping_applied' (campos opcionais e nullable — pedidos antigos continuam funcionando).",
+      "Pedidos passam a registrar 'coupon_code' e 'discount_amount' (campos opcionais e nullable — pedidos antigos continuam funcionando).",
       "Escopo desta fase: APENAS cardápio online. PDV, PDV V2, Pedido Express, Mesa QR, Garçom, TEF (v1.0/v1.1/v1.2-beta), Multi-Pagamento e NFC-e NÃO foram tocados.",
     ],
   },

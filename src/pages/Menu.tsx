@@ -853,8 +853,7 @@ export default function Menu() {
   // Cupom aplicado (encapsulado SOMENTE neste fluxo do cardápio público)
   const couponResult = appliedCoupon ? computeCouponDiscount(appliedCoupon, cartTotal) : null;
   const discountAmount = couponResult?.eligible ? couponResult.discountAmount : 0;
-  const couponFreeShipping = !!couponResult?.eligible && !!couponResult?.freeShipping && deliveryType !== 'pickup';
-  const deliveryFee = couponFreeShipping ? 0 : baseFee;
+  const deliveryFee = baseFee;
   const orderTotal = Math.max(0, cartTotal - discountAmount) + deliveryFee;
 
   // Cupons públicos para banner + auto-aplicação
@@ -1000,7 +999,6 @@ export default function Menu() {
           company_id: company?.id || null,
           coupon_code: appliedCoupon?.code || null,
           discount_amount: discountAmount,
-          free_shipping_applied: couponFreeShipping,
         })
         .select()
         .single();

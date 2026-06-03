@@ -21,7 +21,7 @@ function emptyForm(): CouponInput {
     discount_value: 10,
     min_order_value: null,
     max_discount: null,
-    free_shipping: false,
+    is_secret: false,
     active: true,
     valid_from: null,
     valid_until: null,
@@ -53,7 +53,7 @@ export default function CouponsPage() {
       discount_value: c.discount_value,
       min_order_value: c.min_order_value,
       max_discount: c.max_discount,
-      free_shipping: c.free_shipping,
+      is_secret: c.is_secret,
       active: c.active,
       valid_from: c.valid_from,
       valid_until: c.valid_until,
@@ -142,7 +142,7 @@ export default function CouponsPage() {
                         ) : (
                           <Badge variant="outline">Inativo</Badge>
                         )}
-                        {c.free_shipping && <Badge variant="outline" className="text-xs">Frete grátis</Badge>}
+                        {c.is_secret && <Badge variant="outline" className="text-xs">Secreto</Badge>}
                       </div>
                     </div>
                   </CardHeader>
@@ -281,13 +281,13 @@ export default function CouponsPage() {
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
-                <Label htmlFor="free_shipping" className="cursor-pointer">Frete grátis</Label>
-                <p className="text-xs text-muted-foreground">Zera a taxa de entrega quando o cupom for aplicado.</p>
+                <Label htmlFor="is_secret" className="cursor-pointer">Cupom secreto</Label>
+                <p className="text-xs text-muted-foreground">Não aparece no banner do cardápio. Só funciona quando o cliente digita o código.</p>
               </div>
               <Switch
-                id="free_shipping"
-                checked={form.free_shipping}
-                onCheckedChange={(v) => setForm({ ...form, free_shipping: v })}
+                id="is_secret"
+                checked={form.is_secret}
+                onCheckedChange={(v) => setForm({ ...form, is_secret: v })}
               />
             </div>
 

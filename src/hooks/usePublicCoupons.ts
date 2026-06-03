@@ -30,7 +30,10 @@ export function usePublicCoupons(companyId: string | null | undefined) {
         console.error('Erro ao carregar cupons públicos:', error);
         setCoupons([]);
       } else {
-        const filtered = (data || []).filter(isCouponCurrentlyValid) as Coupon[];
+        // Cupons secretos NÃO aparecem no banner público — só funcionam quando o cliente digita o código.
+        const filtered = ((data || []) as Coupon[]).filter(
+          (c) => isCouponCurrentlyValid(c) && !c.is_secret,
+        );
         setCoupons(filtered);
       }
       setLoading(false);

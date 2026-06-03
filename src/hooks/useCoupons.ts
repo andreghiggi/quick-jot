@@ -12,7 +12,7 @@ export interface Coupon {
   discount_value: number;
   min_order_value: number | null;
   max_discount: number | null;
-  free_shipping: boolean;
+  is_secret: boolean;
   active: boolean;
   valid_from: string | null;
   valid_until: string | null;
@@ -107,22 +107,20 @@ export function isCouponCurrentlyValid(c: Pick<Coupon, 'active' | 'valid_from' |
 
 export interface AppliedCouponResult {
   discountAmount: number;
-  freeShipping: boolean;
   eligible: boolean;
   reason?: string;
 }
 
 export function computeCouponDiscount(
-  coupon: Pick<Coupon, 'discount_type' | 'discount_value' | 'min_order_value' | 'max_discount' | 'free_shipping' | 'active' | 'valid_from' | 'valid_until' | 'usage_limit' | 'usage_count'>,
+  coupon: Pick<Coupon, 'discount_type' | 'discount_value' | 'min_order_value' | 'max_discount' | 'active' | 'valid_from' | 'valid_until' | 'usage_limit' | 'usage_count'>,
   subtotal: number,
 ): AppliedCouponResult {
   if (!isCouponCurrentlyValid(coupon)) {
-    return { discountAmount: 0, freeShipping: false, eligible: false, reason: 'Cupom indisponível' };
+    return { discountAmount: 0, eligible: false, reason: 'Cupom indisponível' };
   }
   if (coupon.min_order_value && subtotal < coupon.min_order_value) {
     return {
       discountAmount: 0,
-      freeShipping: false,
       eligible: false,
       reason: `Pedido mínimo de R$ ${coupon.min_order_value.toFixed(2).replace('.', ',')}`,
     };
@@ -136,5 +134,5 @@ export function computeCouponDiscount(
   }
   if (discount > subtotal) discount = subtotal;
   if (discount < 0) discount = 0;
-  return { discountAmount: discount, freeShipping: !!coupon.free_shipping, eligible: true };
+  return { discountAmount: discount, eligible: true };
 }

@@ -70,7 +70,6 @@ export function CouponBanner({ coupons }: CouponBannerProps) {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono font-bold text-lg text-foreground">{c.code}</span>
                       <Badge className="bg-green-600 hover:bg-green-600 text-white">{discountLabel(c)}</Badge>
-                      {c.free_shipping && <Badge variant="outline" className="border-primary/60 text-primary">Frete grátis</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{ruleLabel(c)}</p>
                     {c.max_discount != null && (
