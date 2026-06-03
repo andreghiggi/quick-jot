@@ -865,6 +865,7 @@ export default function Menu() {
     if (appliedCoupon || autoCouponApplied) return;
     if (!publicCoupons || publicCoupons.length === 0 || cart.length === 0) return;
     const eligible = publicCoupons
+      .filter((c) => c.auto_apply !== false)
       .map((c) => ({ c, r: computeCouponDiscount(c, cartTotal) }))
       .filter((x) => x.r.eligible)
       .sort((a, b) => b.r.discountAmount - a.r.discountAmount);
