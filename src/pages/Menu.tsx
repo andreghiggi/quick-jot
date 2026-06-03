@@ -2305,14 +2305,57 @@ export default function Menu() {
                 </div>
 
                 <div className="border-t pt-4 space-y-2">
+                  {/* Cupom de desconto */}
+                  <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Ticket className="h-4 w-4 text-primary" /> Cupom de desconto
+                    </div>
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-mono font-bold text-foreground">{appliedCoupon.code}</p>
+                          <p className="text-xs text-green-600">
+                            {discountAmount > 0 && `-R$ ${formatPrice(discountAmount)}`}
+                            {couponFreeShipping && (discountAmount > 0 ? ' + frete grátis' : 'Frete grátis')}
+                          </p>
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" onClick={handleRemoveCoupon}>
+                          <XIcon className="h-4 w-4 mr-1" /> Remover
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Digite o código"
+                          value={couponInput}
+                          onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(null); }}
+                          className="font-mono uppercase h-9"
+                        />
+                        <Button type="button" size="sm" onClick={handleApplyCoupon}>Aplicar</Button>
+                      </div>
+                    )}
+                    {couponError && <p className="text-xs text-destructive">{couponError}</p>}
+                  </div>
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span>Subtotal</span>
                     <span>R$ {formatPrice(cartTotal)}</span>
                   </div>
+                  {discountAmount > 0 && appliedCoupon && (
+                    <div className="flex items-center justify-between text-green-600 font-medium">
+                      <span>Desconto ({appliedCoupon.code})</span>
+                      <span>-R$ {formatPrice(discountAmount)}</span>
+                    </div>
+                  )}
                   {deliveryFee > 0 && (
                     <div className="flex items-center justify-between text-muted-foreground">
                       <span>Taxa de entrega</span>
                       <span>R$ {formatPrice(deliveryFee)}</span>
+                    </div>
+                  )}
+                  {couponFreeShipping && baseFee > 0 && (
+                    <div className="flex items-center justify-between text-success font-medium">
+                      <span>Taxa de entrega</span>
+                      <span>Grátis (cupom)</span>
                     </div>
                   )}
                   {freeDeliveryRemaining > 0 && (
