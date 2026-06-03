@@ -1318,6 +1318,10 @@ export default function Menu() {
     setDeliveryType('');
     setSelectedNeighborhood('');
     setPaymentMethod('');
+    setAppliedCoupon(null);
+    setCouponInput('');
+    setCouponError(null);
+    setAutoCouponApplied(false);
     setChangeFor('');
     setIsCartOpen(false);
     setIsSubmitting(false);
