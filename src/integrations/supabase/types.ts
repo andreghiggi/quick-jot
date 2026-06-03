@@ -564,8 +564,8 @@ export type Database = {
           created_at: string
           discount_type: string
           discount_value: number
-          free_shipping: boolean
           id: string
+          is_secret: boolean
           max_discount: number | null
           min_order_value: number | null
           updated_at: string
@@ -581,8 +581,8 @@ export type Database = {
           created_at?: string
           discount_type: string
           discount_value: number
-          free_shipping?: boolean
           id?: string
+          is_secret?: boolean
           max_discount?: number | null
           min_order_value?: number | null
           updated_at?: string
@@ -598,8 +598,8 @@ export type Database = {
           created_at?: string
           discount_type?: string
           discount_value?: number
-          free_shipping?: boolean
           id?: string
+          is_secret?: boolean
           max_discount?: number | null
           min_order_value?: number | null
           updated_at?: string
@@ -1123,7 +1123,6 @@ export type Database = {
           delivery_address: string | null
           discount_amount: number
           followup_sent: boolean
-          free_shipping_applied: boolean
           id: string
           notes: string | null
           order_code: string
@@ -1150,7 +1149,6 @@ export type Database = {
           delivery_address?: string | null
           discount_amount?: number
           followup_sent?: boolean
-          free_shipping_applied?: boolean
           id?: string
           notes?: string | null
           order_code?: string
@@ -1177,7 +1175,6 @@ export type Database = {
           delivery_address?: string | null
           discount_amount?: number
           followup_sent?: boolean
-          free_shipping_applied?: boolean
           id?: string
           notes?: string | null
           order_code?: string
