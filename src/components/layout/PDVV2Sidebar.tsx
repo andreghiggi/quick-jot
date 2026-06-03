@@ -20,6 +20,7 @@ import {
   Users,
   UtensilsCrossed,
   Table as TableIcon,
+  ScanBarcode,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -55,7 +56,12 @@ export function PDVV2Sidebar() {
   };
 
   const home = [{ title: 'PDV', icon: Monitor, href: '/pdv-v2' }];
-  const operations = [{ title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' }];
+  const operations = [
+    { title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' },
+    ...(isModuleEnabled('mercado')
+      ? [{ title: 'Frente de Caixa', icon: ScanBarcode, href: '/frente-caixa' }]
+      : []),
+  ];
 
   const tables = isModuleEnabled('mesas')
     ? [

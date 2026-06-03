@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.8.5";
-export const RELEASE_DATE = "2026-06-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Formas Entrega/Retirada para todas as lojas";
+export const VERSION = "1.9.0-beta";
+export const RELEASE_DATE = "2026-06-03"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Frente de Caixa (mercado) — beta";
 
 export interface Release {
   version: string;
@@ -19,6 +19,20 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.9.0-beta",
+    date: "2026-06-03",
+    codename: "Frente de Caixa (mercado) — beta",
+    changes: [
+      "Nova tela 'Frente de Caixa' (rota /frente-caixa) disponível apenas para lojas com o módulo 'Mercado' ativo — pensada para mini mercados e lojas de conveniência que vendem produtos com código de barras.",
+      "Operação 100% por leitor: input sempre focado, bipe → produto entra na lista, Enter adiciona, F2 finaliza, F4 remove o último item, Esc cancela a venda.",
+      "Busca aceita GTIN exato, SKU exato ou nome parcial. Atalho '3*7891234567890' adiciona 3 unidades de uma vez. Feedback sonoro curto para sucesso/erro.",
+      "Finalização reusa o diálogo de pagamento do PDV V2 (canal PDV) e registra a venda no caixa atual via fluxo já existente — nenhum dado novo no banco.",
+      "TEF integrado ainda NÃO disponível na Frente de Caixa nesta versão beta; ao escolher uma forma TEF, o sistema avisa para usar o PDV V2. NFC-e/impressão automática virão na próxima iteração.",
+      "Item 'Frente de Caixa' aparece no menu lateral apenas quando o módulo 'Mercado' está ativo. PDV V2, Pedido Express, Cobrança, TEF v1.0/v1.1/v1.2-beta e Multi-Pagamento NÃO foram alterados.",
+      "Rollout isolado: módulo 'Mercado' continua desligado por padrão — ativar manualmente em Admin → Módulos da empresa apenas em lojas-piloto de mercado.",
+    ],
+  },
   {
     version: "1.8.5",
     date: "2026-06-02",
