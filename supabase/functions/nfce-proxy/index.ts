@@ -128,20 +128,31 @@ Deno.serve(async (req) => {
       return `${baseUrl}?p=${chave}|${ambienteCode}|2`
     }
 
-    // Extract tpAmb from XML returned by Fiscal Flow (base64-encoded).
-    // Fiscal Flow does NOT include `ambiente`/`environment` in the JSON body,
-    // so we must parse the authorized XML to know if the NFC-e is in
-    // production (tpAmb=1) or homologation (tpAmb=2).
-    function ambienteFromXml(xmlBase64: any): string | null {
-      if (!xmlBase64 || typeof xmlBase64 !== 'string') return null
-      try {
-        const xml = atob(xmlBase64)
-        const m = xml.match(/<tpAmb>(\d)<\/tpAmb>/)
+    // Extract tpAmb from XML returned by Fiscal Flow. The provider may return
+    // the XML as raw text (starts with "<?xml") OR as base64 — we must handle
+    // both, otherwise authorized production NFC-es are mis-tagged as
+    // homologation and the SEFAZ environment column shows the wrong value.
+    function ambienteFromXml(xmlRaw: any): string | null {
+      if (!xmlRaw || typeof xmlRaw !== 'string') return null
+      const tryMatch = (s: string): string | null => {
+        const m = s.match(/<tpAmb>\s*(\d)\s*<\/tpAmb>/)
         if (!m) return null
         return m[1] === '1' ? 'producao' : 'homologacao'
-      } catch {
-        return null
       }
+      // 1) Raw XML (most common with Fiscal Flow)
+      if (xmlRaw.includes('<tpAmb>')) {
+        const r = tryMatch(xmlRaw)
+        if (r) return r
+      }
+      // 2) Base64-encoded XML (legacy / other providers)
+      try {
+        const decoded = atob(xmlRaw)
+        const r = tryMatch(decoded)
+        if (r) return r
+      } catch {
+        /* not base64 */
+      }
+      return null
     }
 
     // Try multiple known field names for the returned XML payload.
