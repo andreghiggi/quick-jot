@@ -124,6 +124,10 @@ export function PDVV2PaymentDialog({
   // Chave = id do ExtraItem.
   const [selectedExtraQtys, setSelectedExtraQtys] = useState<Map<string, number>>(new Map());
   const [splitPeople, setSplitPeople] = useState(2);
+  // Split-por-pessoas v2 (Opção B): operador escolhe quantas "partes" cobrar
+  // nesta transação (ex.: total ÷ 4 com 1 pessoa pagando 3 partes = 75% do total).
+  // Default 1 = comportamento legado. Não altera o fluxo de items mode (rachar).
+  const [splitPartsToCharge, setSplitPartsToCharge] = useState(1);
   // I9 — Rachar item: editor inline aberto para qual índice de checkoutItems.
   // splitItemPeople = em quantas pessoas, splitItemFractions = quantas frações cobrar agora.
   const [splitItemEditingIdx, setSplitItemEditingIdx] = useState<number | null>(null);
@@ -143,6 +147,8 @@ export function PDVV2PaymentDialog({
     if (open && activeSplit) {
       setI9Mode('split');
       setSplitPeople(activeSplit.totalPeople);
+      // Pessoa 2+: começa cobrando 1 parte por padrão.
+      setSplitPartsToCharge(1);
     }
   }, [open, activeSplit]);
 
@@ -278,6 +284,7 @@ export function PDVV2PaymentDialog({
       setSplitItemPeople(2);
       setSplitItemAmount(0);
       setSplitMemory(new Map());
+      setSplitPartsToCharge(1);
     }
   }, [open]);
 
@@ -323,10 +330,15 @@ export function PDVV2PaymentDialog({
 
   const i9SplitValue = (() => {
     if (!isLancheriaI9 || i9Mode !== 'split') return null;
+    // Limita partes ao restante disponível (evita cobrar além do total).
+    const maxParts = activeSplit
+      ? Math.max(1, activeSplit.totalPeople - activeSplit.currentPerson + 1)
+      : Math.max(1, splitPeople);
+    const parts = Math.max(1, Math.min(splitPartsToCharge, maxParts));
     // When activeSplit is provided (person 2+), use the pre-calculated value
-    if (activeSplit) return activeSplit.perPerson;
+    if (activeSplit) return Math.round(activeSplit.perPerson * parts * 100) / 100;
     if (splitPeople < 1) return null;
-    return Math.round((grossTotal / splitPeople) * 100) / 100;
+    return Math.round((grossTotal / splitPeople) * parts * 100) / 100;
   })();
 
   const finalTotal = (() => {
@@ -366,7 +378,17 @@ export function PDVV2PaymentDialog({
       customerDocument: isNfce && (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : undefined,
       prechargedTef: prechargedTef ?? undefined,
       splitInfo: isLancheriaI9 && i9Mode === 'split'
-        ? { perPerson: finalTotal, totalPeople: activeSplit?.totalPeople ?? splitPeople }
+        ? (() => {
+            const totalPeople = activeSplit?.totalPeople ?? splitPeople;
+            const basePerPerson = activeSplit
+              ? activeSplit.perPerson
+              : Math.round((grossTotal / Math.max(1, splitPeople)) * 100) / 100;
+            const maxParts = activeSplit
+              ? Math.max(1, activeSplit.totalPeople - activeSplit.currentPerson + 1)
+              : Math.max(1, splitPeople);
+            const parts = Math.max(1, Math.min(splitPartsToCharge, maxParts));
+            return { perPerson: basePerPerson, totalPeople, partsToCharge: parts };
+          })()
         : undefined,
       itemsInfo: isLancheriaI9 && i9Mode === 'items' && checkoutItems
         ? (() => {
