@@ -393,7 +393,10 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
    *  3) UPDATE orders → payment_status='paid' + notes '[COBRADO][MULTI]'
    *  4) NFC-e com pagamentos_split (vários detPag)
    */
-  async function handleMultiPaymentSubmit(lines: MultiPaymentInputLine[]) {
+  async function handleMultiPaymentSubmit(
+    lines: MultiPaymentInputLine[],
+    opts: { wantsNfce: boolean },
+  ) {
     if (!company?.id) return;
     if (!currentRegister) {
       toast.error('Caixa precisa estar aberto para cobrar pedidos.');
@@ -467,8 +470,9 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         paid_amount: isFullyPaid ? baseTotal : nextPaidAmount,
       }).eq('id', order.id);
 
-      // NFC-e com pagamentos_split
-      if (fiscalEnabled) {
+      // NFC-e com pagamentos_split — só quando solicitado pelo dialog
+      // (hasTef OU usuário escolheu "Venda com NFC-e").
+      if (opts.wantsNfce) {
         try {
           setIsEmittingNfce(true);
           setMultiPayStatus('Emitindo NFC-e…');
