@@ -1299,12 +1299,19 @@ export function PDVV2PaymentDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={submitting || chargingTef || !paymentMethodId || activePaymentMethods.length === 0 || splitItemEditingIdx !== null || (isLancheriaI9 && i9Mode === 'split' && !activeSplit)}
+            disabled={
+              submitting ||
+              chargingTef ||
+              !paymentMethodId ||
+              activePaymentMethods.length === 0 ||
+              splitItemEditingIdx !== null ||
+              (isLancheriaI9 && i9Mode === 'split' && !activeSplit && splitPeople < 2)
+            }
             title={
               splitItemEditingIdx !== null
                 ? 'Aplique ou cancele a divisão do item antes de cobrar'
-                : (isLancheriaI9 && i9Mode === 'split' && !activeSplit)
-                ? 'Clique em "Distribuir entre os itens" para continuar'
+                : (isLancheriaI9 && i9Mode === 'split' && !activeSplit && splitPeople < 2)
+                ? 'Informe pelo menos 2 pessoas para dividir'
                 : undefined
             }
           >
