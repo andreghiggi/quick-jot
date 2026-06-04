@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Order } from '@/types/order';
 import { emitirNFCe, type NFCeItem, type NFCeRecord, type NFCeTefData } from '@/services/nfceService';
-import { PDVV2MultiPaymentDialog } from '@/components/pdv-v2/PDVV2MultiPaymentDialog';
+import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 interface OrderCardChargeDialogProps {
   order: Order;
@@ -569,11 +569,13 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
           setMultiPayOpen(true);
         }}
       />
-      <PDVV2MultiPaymentDialog
+      <PDVV2SequentialPaymentDialog
         open={multiPayOpen}
         onOpenChange={setMultiPayOpen}
         companyId={company?.id}
         total={chargeBaseTotal}
+        contextKey={`order:${order.id}`}
+        contextLabel={`Pedido #${order.orderCode || order.dailyNumber}`}
         title={`Dividir formas — Pedido #${order.orderCode || order.dailyNumber}`}
         processingStatus={multiPayStatus}
         processing={multiPayProcessing}
