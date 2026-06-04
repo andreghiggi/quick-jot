@@ -578,6 +578,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         onOpenChange={setMultiPayOpen}
         companyId={company?.id}
         total={chargeBaseTotal}
+        fiscalEnabled={fiscalEnabled}
         contextKey={`order:${order.id}`}
         contextLabel={`Pedido #${order.orderCode || order.dailyNumber}`}
         title={`Dividir formas — Pedido #${order.orderCode || order.dailyNumber}`}
