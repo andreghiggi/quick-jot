@@ -628,6 +628,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         tefStatus={tefStatus}
         deliveryFilter={order.deliveryAddress && order.deliveryAddress.trim().length > 0 ? 'delivery' : 'pickup'}
         checkoutItems={checkoutItems}
+        activeSplit={activeSplit}
         onConfirm={handleConfirm}
         onSplitPayments={() => {
           onOpenChange(false);
