@@ -411,7 +411,10 @@ export function PDVV2SequentialPaymentDialog({
     <>
       <Dialog open={open} onOpenChange={handleOpenChangeGuarded}>
         <DialogContent
-          className="max-w-xl max-h-[90dvh] overflow-y-auto"
+          className={
+            'max-w-xl max-h-[90dvh] overflow-y-auto ' +
+            (locked || busy ? '[&>button[aria-label="Close"]]:hidden [&_button.absolute.right-4.top-4]:hidden' : '')
+          }
           onEscapeKeyDown={(e) => {
             if (locked || busy) e.preventDefault();
           }}
@@ -421,7 +424,6 @@ export function PDVV2SequentialPaymentDialog({
           onInteractOutside={(e) => {
             if (locked || busy) e.preventDefault();
           }}
-          hideClose={locked || busy}
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
