@@ -436,7 +436,12 @@ Deno.serve(async (req) => {
           }
 
           // Sobrescreve o que o bloco TEF legado eventualmente tenha montado.
-          emitPayload.pagamento = pagamentosArr[0]
+          // IMPORTANTE: a Fiscal Flow, quando recebe `pagamento` (singular),
+          // USA SÓ ELE e ignora todos os arrays — colapsando o split em
+          // um único <detPag>. Testes empíricos (homologação I9, jun/2026)
+          // confirmaram que enviar APENAS os arrays gera múltiplos <detPag>
+          // corretamente. Por isso, no split, removemos o singular.
+          delete emitPayload.pagamento
           emitPayload.pagamentos = pagamentosArr
           emitPayload.formas_pagamento = formasArr
           emitPayload.pag = { detPag: detPagArr }
