@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.13.4-beta";
+export const VERSION = "1.13.5-beta";
 export const RELEASE_DATE = "2026-06-04"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Multi-pagamento: valor manual + botão 'Usar restante'";
+export const CODENAME = "NFC-e split: correção do colapso para 1 detPag";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.13.5-beta",
+    date: "2026-06-04",
+    codename: "NFC-e split: correção do colapso para 1 detPag",
+    changes: [
+      "Correção crítica no nfce-proxy (bloco pagamentos_split): a Fiscal Flow estava colapsando vendas multi-pagamento em um único <detPag> Dinheiro com o valor total (ex.: R$3 dinheiro + R$1 débito virava R$4 dinheiro na NFC-e). Causa: enviávamos o campo legado 'pagamento' (singular) junto com os arrays, e a Fiscal Flow priorizava o singular ignorando os arrays.",
+      "Testes empíricos em homologação confirmaram: enviando apenas os arrays (pagamentos[], pag.detPag[], detPag[], formas_pagamento[]) a NFC-e sai com múltiplos <detPag> corretos. O fix removeu o campo 'pagamento' singular do bloco de split.",
+      "Impacto: NFC-e de vendas com Dividir Formas passa a refletir corretamente cada forma cobrada (dinheiro + cartão + PIX, etc.) já a partir da próxima emissão.",
+      "Não regrediu: single-payment (1 forma só), bloco TEF legado, runTefPayment, pinpadService, tef-webservice, TEF v1.0/v1.1/v1.2-beta, multi-pagamento sequencial v1.7, splits I9 — todos intocados. A mudança está isolada ao bloco 'if (pagamentos_split)' do nfce-proxy.",
+    ],
+  },
   {
     version: "1.13.4-beta",
     date: "2026-06-04",
