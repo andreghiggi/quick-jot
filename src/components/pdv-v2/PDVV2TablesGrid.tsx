@@ -65,11 +65,11 @@ export function PDVV2TablesGrid({ tabs, onImport, onDelete }: Props) {
                   <ul className="space-y-1 text-sm border rounded-md p-2 bg-muted/30 max-h-48 overflow-y-auto">
                     {tab.items.map((item) => (
                       <li key={item.id} className="flex justify-between gap-2">
-                        <span className="min-w-0">
+                        <span className="min-w-0 flex-1 break-words">
                           <span className="tabular-nums text-muted-foreground">{item.quantity}x </span>
-                          <span className="truncate">{item.productName}</span>
+                          <span className="break-words">{item.productName}</span>
                           {item.notes && (
-                            <span className="block text-xs text-muted-foreground italic truncate">
+                            <span className="block text-xs text-muted-foreground italic break-words">
                               {item.notes}
                             </span>
                           )}
