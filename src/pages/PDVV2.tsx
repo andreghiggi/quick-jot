@@ -1343,7 +1343,7 @@ export default function PDVV2() {
         transferLog={importingTab ? (openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.transfer_log as any) || undefined : undefined}
       />
 
-      <PDVV2MultiPaymentDialog
+      <PDVV2SequentialPaymentDialog
         open={multiPayOpen}
         onOpenChange={(o) => {
           setMultiPayOpen(o);
@@ -1351,6 +1351,13 @@ export default function PDVV2() {
         }}
         companyId={companyId}
         total={multiPayTab?.total || 0}
+        cashRegisterId={currentRegister?.id}
+        contextKey={multiPayTab ? `tab:${multiPayTab.id}` : undefined}
+        contextLabel={
+          multiPayTab?.tableNumber
+            ? `Mesa ${multiPayTab.tableNumber}`
+            : `Comanda ${multiPayTab?.tabNumber || ''}`
+        }
         title={
           multiPayTab?.tableNumber
             ? `Dividir formas — Mesa ${multiPayTab.tableNumber}`
