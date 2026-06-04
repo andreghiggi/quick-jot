@@ -32,6 +32,13 @@ export type MultiPaymentInputLine = {
   integration?: 'tef_pinpad' | 'tef_smartpos';
   /** Apenas para linhas TEF. */
   tef_options?: TefOptions;
+  /**
+   * v1.7 sequential: linha já executada antes (pelo PDVV2SequentialPaymentDialog).
+   * Quando presente, runMultiPayment NÃO chama runTefPayment de novo — apenas
+   * repassa o resultado. Aditivo: chamadas v1.6 (sem este campo) seguem
+   * comportamento original e estão preservadas.
+   */
+  _resolved?: MultiPaymentResolvedLine;
 };
 
 /** Linha resolvida (com dados TEF preenchidos quando aplicável). */
@@ -75,7 +82,7 @@ function extractControlNumber(notesFragment?: string): string | undefined {
 }
 
 /** Tenta estornar (CNC + CNF) uma transação TEF aprovada nesta cobrança. */
-async function rollbackApprovedTef(
+export async function rollbackApprovedTef(
   companyId: string,
   line: MultiPaymentResolvedLine,
 ): Promise<boolean> {
@@ -122,6 +129,11 @@ export async function runMultiPayment(args: RunMultiPaymentArgs): Promise<RunMul
 
   for (let i = 0; i < lines.length; i++) {
     const ln = lines[i];
+    // v1.7 sequential: linha já aprovada anteriormente — passthrough.
+    if (ln._resolved) {
+      resolved.push(ln._resolved);
+      continue;
+    }
     if (!ln.integration) {
       // Linha não-TEF (dinheiro, PIX manual etc.) — apenas registra.
       resolved.push({

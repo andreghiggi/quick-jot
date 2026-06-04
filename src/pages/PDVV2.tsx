@@ -39,7 +39,7 @@ import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceSe
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog';
-import { PDVV2MultiPaymentDialog } from '@/components/pdv-v2/PDVV2MultiPaymentDialog';
+import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
@@ -1343,7 +1343,7 @@ export default function PDVV2() {
         transferLog={importingTab ? (openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.transfer_log as any) || undefined : undefined}
       />
 
-      <PDVV2MultiPaymentDialog
+      <PDVV2SequentialPaymentDialog
         open={multiPayOpen}
         onOpenChange={(o) => {
           setMultiPayOpen(o);
@@ -1351,6 +1351,13 @@ export default function PDVV2() {
         }}
         companyId={companyId}
         total={multiPayTab?.total || 0}
+        cashRegisterId={currentRegister?.id}
+        contextKey={multiPayTab ? `tab:${multiPayTab.id}` : undefined}
+        contextLabel={
+          multiPayTab?.tableNumber
+            ? `Mesa ${multiPayTab.tableNumber}`
+            : `Comanda ${multiPayTab?.tabNumber || ''}`
+        }
         title={
           multiPayTab?.tableNumber
             ? `Dividir formas — Mesa ${multiPayTab.tableNumber}`

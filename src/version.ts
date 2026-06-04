@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.11.1-beta";
-export const RELEASE_DATE = "2026-06-03"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Cupons: troca de Frete grátis por Cupom secreto";
+export const VERSION = "1.12.0-beta";
+export const RELEASE_DATE = "2026-06-04"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Multi-pagamento sequencial v1.7 (modal travado + retomada)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,21 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.12.0-beta",
+    date: "2026-06-04",
+    codename: "Multi-pagamento sequencial v1.7 (modal travado + retomada)",
+    changes: [
+      "Multi-pagamento agora é SEQUENCIAL: ao clicar em 'Dividir formas' (Pedido Express, Cobrar Pedido do Cardápio, Importar/Cobrar Comanda/Mesa no PDV V2), o modal cobra uma forma de cada vez. Você escolhe a forma, informa o valor e clica em 'Cobrar' — a cobrança vai direto pro PinPad/registro e o restante atualiza. Repita até zerar.",
+      "Quando a forma escolhida é TEF, agora aparece o seletor de modalidade (Crédito à vista, Débito, Parcelado com Nº de parcelas + ADM/Loja, ou PIX) ANTES da cobrança — igual ao fluxo single-payment do PDV V2.",
+      "Modal TRAVADO enquanto houver valor restante: não dá pra fechar com X, clicar fora ou apertar ESC. A saída só libera depois de quitar 100% ou usar 'Cancelar e estornar tudo' (que faz CNC automático no PinPad em cada TEF aprovado).",
+      "RETOMADA AUTOMÁTICA: se o sistema cair / o navegador fechar / faltar luz no meio da cobrança, ao reabrir o mesmo pedido/comanda/mesa o sistema reidrata as cobranças já aprovadas e mostra o restante exato para continuar de onde parou. Persistência via nova tabela 'pdv_v2_open_charges'.",
+      "Recusa NÃO faz rollback automático: se a 3ª cobrança for negada, as 2 aprovadas continuam ativas e o operador escolhe outra forma/valor pro restante. Rollback só acontece se o operador clicar em 'Cancelar e estornar tudo'.",
+      "NFC-e (quando módulo fiscal está ativo) só é emitida ao FINALIZAR com restante = 0, mantendo o mesmo formato 'pagamentos_split' com várias <detPag>.",
+      "Liberado para TODAS as lojas com PDV V2.",
+      "NÃO foi alterado: runTefPayment, pinpadService, tef-webservice, nfce-proxy, PDVV2PaymentDialog single-payment, splits I9 (por pessoa / por itens), Importar Comanda, TEF v1.0/v1.1/v1.2-beta congelados, reimpressão TEF.",
+    ],
+  },
   {
     version: "1.11.1-beta",
     date: "2026-06-03",

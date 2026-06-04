@@ -1378,6 +1378,54 @@ export type Database = {
           },
         ]
       }
+      pdv_v2_open_charges: {
+        Row: {
+          cash_register_id: string
+          company_id: string
+          completed_at: string | null
+          context: string
+          context_ref: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          paid_amount: number
+          paid_lines: Json
+          status: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          cash_register_id: string
+          company_id: string
+          completed_at?: string | null
+          context: string
+          context_ref: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          paid_amount?: number
+          paid_lines?: Json
+          status?: string
+          total: number
+          updated_at?: string
+        }
+        Update: {
+          cash_register_id?: string
+          company_id?: string
+          completed_at?: string | null
+          context?: string
+          context_ref?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          paid_amount?: number
+          paid_lines?: Json
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pinpdv_logs: {
         Row: {
           action: string
