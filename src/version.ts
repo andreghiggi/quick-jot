@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.12.0-beta";
+export const VERSION = "1.12.1-beta";
 export const RELEASE_DATE = "2026-06-04"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Multi-pagamento sequencial v1.7 (modal travado + retomada)";
+export const CODENAME = "Multi-pagamento v1.7.1 — NFC-e opcional quando não há TEF";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.12.1-beta",
+    date: "2026-06-04",
+    codename: "Multi-pagamento v1.7.1 — NFC-e opcional quando não há TEF",
+    changes: [
+      "Correção no modal 'Dividir formas' (Pedido Express, Cobrar Pedido do Cardápio, Cobrar Comanda/Mesa no PDV V2): NFC-e não é mais emitida automaticamente quando a divisão é feita só em dinheiro/PIX manual.",
+      "Agora o modal mostra o seletor 'Só Venda / Venda com NFC-e' — mesma lógica do pagamento de uma forma só. Padrão: Só Venda.",
+      "Quando qualquer uma das cobranças é TEF (cartão), a NFC-e continua sendo emitida automaticamente (obrigatória por lei) — o seletor é substituído por um aviso informando isso.",
+      "Lojas sem o módulo Fiscal não veem o seletor.",
+      "Nada de TEF v1.0/v1.1/v1.2-beta, pinpadService, tef-webservice, nfce-proxy, pagamentos_split, single-payment ou splits I9 foi alterado.",
+    ],
+  },
   {
     version: "1.12.0-beta",
     date: "2026-06-04",
