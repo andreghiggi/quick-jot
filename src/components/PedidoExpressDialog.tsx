@@ -1655,7 +1655,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     customerDocument?: string;
     printDocument?: boolean;
     extraItems?: ExtraItem[];
-    splitInfo?: { perPerson: number; totalPeople: number };
+    splitInfo?: { perPerson: number; totalPeople: number; partsToCharge?: number };
     itemsInfo?: Array<{ id: string; paidQty: number }>;
     extraItemsInfo?: Array<{ id: string; paidQty: number }>;
   }): Promise<boolean> {
@@ -1688,7 +1688,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       }
       if (!splitData) return false;
 
+      // Número de partes (pessoas) cobradas nesta transação. Default = 1 para
+      // compatibilidade com chamadas antigas.
+      const requestedParts = Math.max(1, params.splitInfo?.partsToCharge ?? 1);
+      const partsToCharge = Math.min(requestedParts, splitData.remaining);
       const personIndex = splitData.total - splitData.remaining + 1;
+      const lastPersonIndex = personIndex + partsToCharge - 1;
+      const personLabel = partsToCharge > 1
+        ? `${personIndex}-${lastPersonIndex}/${splitData.total}`
+        : `${personIndex}/${splitData.total}`;
 
       // TEF (se aplicável) — mesmo helper do PDV V2
       let tefData: NFCeTefData | undefined;
@@ -1699,7 +1707,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           integration: params.tefIntegration,
           amount: partialTotal,
           options: params.tefOptions,
-          description: `Express - Divisão ${personIndex}/${splitData.total} - ${orderLabel}`,
+          description: `Express - Divisão ${personLabel} - ${orderLabel}`,
           onStatus: setTefStatus,
         });
         setTefStatus('');
@@ -1710,12 +1718,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
       const saleItems = [{
         product_id: null as string | null,
-        product_name: `Divisão ${personIndex}/${splitData.total} — ${orderLabel}`,
+        product_name: `Divisão ${personLabel} — ${orderLabel}`,
         quantity: 1,
         unit_price: partialTotal,
       }];
 
-      const saleNotes = `[EXPRESS] Divisão ${personIndex}/${splitData.total}: ${params.paymentName}${tefNotesFragment}`;
+      const saleNotes = `[EXPRESS] Divisão ${personLabel}: ${params.paymentName}${tefNotesFragment}`;
       const saleId = await addSale(saleItems, params.paymentMethodId, authUser.id, 0, orderLabel, saleNotes);
       if (!saleId) {
         toast.error('Falha ao registrar a venda parcial');
@@ -1725,10 +1733,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       // NFC-e: TEF força emissão; caso contrário segue documentMode.
       const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
       if (wantsNfce) {
-        const isLast = (splitData.remaining - 1) <= 0;
+        const isLast = (splitData.remaining - partsToCharge) <= 0;
         const partialObs = isLast
-          ? `Pagamento final do Pedido Express ${orderLabel} (divisao ${personIndex}/${splitData.total}). Pedido quitado.`
-          : `Pagamento parcial do Pedido Express ${orderLabel} - divisao ${personIndex} de ${splitData.total} pessoas. Saldo restante segue em aberto.`;
+          ? `Pagamento final do Pedido Express ${orderLabel} (divisao ${personLabel}). Pedido quitado.`
+          : `Pagamento parcial do Pedido Express ${orderLabel} - divisao ${personLabel} pessoas. Saldo restante segue em aberto.`;
         try {
           setIsEmittingNfce(true);
           const cleanDoc = (params.customerDocument || '').replace(/\D/g, '');
@@ -1785,7 +1793,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         }
       }
 
-      const newRemaining = splitData.remaining - 1;
+      const newRemaining = Math.max(0, splitData.remaining - partsToCharge);
       // Persiste o progresso parcial (split por pessoas) no `orders`.
       const updatedSplit = { ...splitData, remaining: newRemaining };
       const persistedId = await persistExpressPartial({
@@ -1800,11 +1808,19 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         // Última parte: cria o pedido (uma única vez) com o carrinho completo
         await finalizeExpressSplitOrder(params.paymentName, 'split');
         setExpressSplitInfo(null);
-        toast.success('Última pessoa cobrada — pedido finalizado!');
+        toast.success(
+          partsToCharge > 1
+            ? `Últimas ${partsToCharge} pessoas cobradas — pedido finalizado!`
+            : 'Última pessoa cobrada — pedido finalizado!'
+        );
         return true;
       }
       setExpressSplitInfo(updatedSplit);
-      toast.success(`Pessoa ${personIndex} cobrada. Faltam ${newRemaining}.`);
+      toast.success(
+        partsToCharge > 1
+          ? `Pessoas ${personIndex}–${lastPersonIndex} cobradas. Faltam ${newRemaining}.`
+          : `Pessoa ${personIndex} cobrada. Faltam ${newRemaining}.`
+      );
       return false;
     }
 
