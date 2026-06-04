@@ -733,7 +733,7 @@ export default function PDVV2() {
     setImportingTab(tab);
   }
 
-  async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0] & { splitInfo?: { perPerson: number; totalPeople: number }; itemsInfo?: Array<{ id: string; paidQty: number }>; extraItemsInfo?: Array<{ id: string; paidQty: number }> }) {
+  async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0] & { splitInfo?: { perPerson: number; totalPeople: number; partsToCharge?: number }; itemsInfo?: Array<{ id: string; paidQty: number }>; extraItemsInfo?: Array<{ id: string; paidQty: number }> }) {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -759,15 +759,29 @@ export default function PDVV2() {
     }
 
     if (splitData) {
+      // Opção B: operador pode cobrar várias "partes" nesta transação
+      // (ex.: comanda de R$100 dividida em 4 → uma pessoa paga 3 partes = R$75).
+      // Limita ao restante disponível para evitar cobrar além do total.
+      const requestedParts = Math.max(1, params.splitInfo?.partsToCharge ?? 1);
+      const parts = Math.min(requestedParts, splitData.remaining);
+      const chargeAmount = Math.round(splitData.perPerson * parts * 100) / 100;
+
       const customer = fullTab?.customer_name ||
         (fullTab?.table?.number ? `Mesa ${fullTab.table.number}` : importingTab.tableNumber ? `Mesa ${importingTab.tableNumber}` : `Comanda ${importingTab.tabNumber}`);
       const tabNumber = fullTab?.tab_number || importingTab.tabNumber || '?';
-      const personIndex = splitData.total - splitData.remaining + 1;
+      const startPerson = splitData.total - splitData.remaining + 1;
+      const endPerson = startPerson + parts - 1;
+      const personLabel = parts > 1
+        ? `Pessoas ${startPerson}-${endPerson}/${splitData.total}`
+        : `Pessoa ${startPerson}/${splitData.total}`;
+      const personDescr = parts > 1
+        ? `Divisão ${startPerson}-${endPerson}/${splitData.total} — ${customer}`
+        : `Divisão ${startPerson}/${splitData.total} — ${customer}`;
       const items = [{
         product_id: null as string | null,
-        product_name: `Divisão ${personIndex}/${splitData.total} — ${customer}`,
+        product_name: personDescr,
         quantity: 1,
-        unit_price: splitData.perPerson,
+        unit_price: chargeAmount,
       }];
 
       // ===== TEF: roda ANTES de criar a venda (igual PDV V1). Aborta se falhar.
@@ -777,9 +791,9 @@ export default function PDVV2() {
         const result = await runTefPayment({
           companyId,
           integration: params.tefIntegration,
-          amount: splitData.perPerson,
+          amount: chargeAmount,
           options: params.tefOptions,
-          description: `Comanda #${tabNumber} - Divisão ${personIndex}/${splitData.total}`,
+          description: `Comanda #${tabNumber} - ${personLabel.replace('/', ' de ')}`,
           onStatus: setTefStatus,
         });
         setTefStatus('');
@@ -788,7 +802,7 @@ export default function PDVV2() {
         tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
       }
 
-      const saleNotes = `Comanda #${tabNumber} | Divisão ${personIndex}/${splitData.total}: ${params.paymentName}${tefNotesFragment}`;
+      const saleNotes = `Comanda #${tabNumber} | ${personLabel}: ${params.paymentName}${tefNotesFragment}`;
       const saleId = await addSale(items, params.paymentMethodId, user.id, 0, customer, saleNotes);
       if (saleId) {
         // Persiste no tab para que o residual fique correto se a comanda
@@ -814,10 +828,10 @@ export default function PDVV2() {
           await supabase.from('tab_items').insert({
             tab_id: resolvedTabId,
             product_id: null,
-            product_name: `[Pago: Pessoa ${personIndex}/${splitData.total}]`,
-            unit_price: -splitData.perPerson,
+            product_name: `[Pago: ${personLabel}]`,
+            unit_price: -chargeAmount,
             quantity: 1,
-            total_price: -splitData.perPerson,
+            total_price: -chargeAmount,
             created_by: user.id,
             paid: false,
           } as any);
@@ -830,10 +844,13 @@ export default function PDVV2() {
         const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
         if (wantsNfce) {
           // Observação automática para NFC-e parcial de comanda (todas lojas com PDV V2)
-          const isLast = (splitData.remaining - 1) <= 0;
+          const isLast = (splitData.remaining - parts) <= 0;
+          const personRangeText = parts > 1
+            ? `pessoas ${startPerson} a ${endPerson} de ${splitData.total}`
+            : `pessoa ${startPerson} de ${splitData.total}`;
           const partialObs = isLast
-            ? `Pagamento final da Comanda #${tabNumber} (divisao ${personIndex}/${splitData.total}). Comanda quitada.`
-            : `Pagamento parcial da Comanda #${tabNumber} - divisao ${personIndex} de ${splitData.total} pessoas. Saldo restante segue em aberto na comanda.`;
+            ? `Pagamento final da Comanda #${tabNumber} (${personRangeText}). Comanda quitada.`
+            : `Pagamento parcial da Comanda #${tabNumber} - ${personRangeText}. Saldo restante segue em aberto na comanda.`;
           await emitNFCeAndOpenDialog({
             saleId,
             items,
@@ -846,15 +863,19 @@ export default function PDVV2() {
           });
         }
 
-        const newRemaining = splitData.remaining - 1;
+        const newRemaining = splitData.remaining - parts;
         if (newRemaining <= 0) {
           await closeTab(resolvedTabId);
-          toast.success('Última pessoa cobrada — comanda fechada!');
+          toast.success(parts > 1
+            ? `Últimas ${parts} pessoas cobradas — comanda fechada!`
+            : 'Última pessoa cobrada — comanda fechada!');
           setI9SplitInfo(null);
           setI9OriginalTabId(null);
           setImportingTab(null);
         } else {
-          toast.success(`Pessoa ${personIndex} cobrada. Faltam ${newRemaining}.`);
+          toast.success(parts > 1
+            ? `Pessoas ${startPerson}-${endPerson} cobradas. Faltam ${newRemaining}.`
+            : `Pessoa ${startPerson} cobrada. Faltam ${newRemaining}.`);
           setI9SplitInfo({ ...splitData, remaining: newRemaining });
           const savedTab = { ...importingTab, id: resolvedTabId };
           i9SplitTransitionRef.current = true;
