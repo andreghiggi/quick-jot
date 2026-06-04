@@ -101,6 +101,30 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     ? pendingExistingTotal
     : Math.max(0, order.total - Number(order.paidAmount || 0));
 
+  // Estado de "split por pessoas em andamento" — persistido em paid_items.split_state.
+  // Quando presente e ainda não quitado, o PDVV2PaymentDialog mostra o painel
+  // read-only "Pessoa X/N — quantas partes cobrar agora?" em vez de pedir
+  // novamente o nº de pessoas / valor por pessoa.
+  const splitState = useMemo(() => {
+    const raw = (order.paidItems as any)?.split_state;
+    if (!raw || typeof raw !== 'object') return null;
+    const totalPeople = Number(raw.totalPeople);
+    const perPerson = Number(raw.perPerson);
+    const paidPeople = Number(raw.paidPeople);
+    if (!Number.isFinite(totalPeople) || totalPeople < 1) return null;
+    if (!Number.isFinite(perPerson) || perPerson <= 0) return null;
+    if (!Number.isFinite(paidPeople) || paidPeople < 0) return null;
+    if (paidPeople >= totalPeople) return null;
+    return { totalPeople, perPerson, paidPeople };
+  }, [order.paidItems]);
+  const activeSplit = splitState
+    ? {
+        perPerson: splitState.perPerson,
+        totalPeople: splitState.totalPeople,
+        currentPerson: splitState.paidPeople + 1,
+      }
+    : undefined;
+
   const cleanItemName = (name: string) =>
     name.includes('(') ? name.substring(0, name.indexOf('(')).trim() : name;
 
