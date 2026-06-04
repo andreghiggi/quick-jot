@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.13.3-beta";
+export const VERSION = "1.13.4-beta";
 export const RELEASE_DATE = "2026-06-04"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Divisão por pessoas: NFC-e detalhada com itens rateados";
+export const CODENAME = "Multi-pagamento: valor manual + botão 'Usar restante'";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.13.4-beta",
+    date: "2026-06-04",
+    codename: "Multi-pagamento: valor manual + botão 'Usar restante'",
+    changes: [
+      "Modal 'Dividir formas de pagamento' (Pedido Express, Cobrar Pedido do Cardápio, Cobrar/Importar Comanda no PDV V2): o campo 'Valor' agora começa sempre VAZIO em cada cobrança. O operador escolhe a forma e digita o valor da linha — acabou o auto-preenchimento que fazia a 1ª forma absorver o total inteiro sem o operador perceber.",
+      "Novo botão 'Usar restante (R$ X,XX)' abaixo do campo Valor: opcional, preenche o campo com o saldo restante em um clique — útil pra fechar a última linha sem digitar de novo.",
+      "Permite dividir em 2, 3, 4 ou mais formas com segurança: cada linha exige escolha explícita de forma + valor.",
+      "Nenhuma alteração em runTefPayment, pinpadService, tef-webservice, nfce-proxy, pagamentos_split, single-payment, splits por pessoas/itens, Importar Comanda, TEF v1.0/v1.1/v1.2-beta congelados ou reimpressão TEF.",
+    ],
+  },
   {
     version: "1.13.3-beta",
     date: "2026-06-04",

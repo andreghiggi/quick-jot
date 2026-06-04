@@ -208,13 +208,10 @@ export function PDVV2SequentialPaymentDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Default no campo de valor = restante (sempre que muda restante).
-  useEffect(() => {
-    if (!open) return;
-    if (!charging && remaining > 0) {
-      setAmountText(maskCurrencyInput(remaining.toFixed(2).replace('.', ',')));
-    }
-  }, [remaining, open, charging]);
+  // O campo "Valor" começa sempre vazio. O operador escolhe a forma e digita
+  // o valor da linha. Para fechar a última, há o botão "Usar restante".
+  // (Auto-fill foi removido porque induzia o operador a cobrar o total
+  // inteiro na 1ª forma sem perceber.)
 
   // Default da forma quando lista carrega.
   useEffect(() => {
@@ -546,6 +543,21 @@ export function PDVV2SequentialPaymentDialog({
                     />
                   </div>
                 </div>
+
+                {remaining > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground -mt-1"
+                    onClick={() =>
+                      setAmountText(maskCurrencyInput(remaining.toFixed(2).replace('.', ',')))
+                    }
+                    disabled={busy}
+                  >
+                    Usar restante ({brl(remaining)})
+                  </Button>
+                )}
 
                 {isTef && (
                   <div className="rounded-md bg-muted/30 p-2 space-y-2">
