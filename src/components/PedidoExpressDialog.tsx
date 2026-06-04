@@ -3181,6 +3181,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         companyId={company?.id}
         total={total}
         channel="pdv"
+        fiscalEnabled={fiscalEnabled}
         title="Dividir formas — Pedido Express"
         processing={multiPayProcessing}
         processingStatus={multiPayStatus}
