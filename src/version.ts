@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.12.1-beta";
+export const VERSION = "1.13.0-beta";
 export const RELEASE_DATE = "2026-06-04"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Multi-pagamento v1.7.1 — NFC-e opcional quando não há TEF";
+export const CODENAME = "Dividir por pessoas: cobrar várias partes na mesma transação";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.13.0-beta",
+    date: "2026-06-04",
+    codename: "Dividir por pessoas: cobrar várias partes na mesma transação",
+    changes: [
+      "PDV V2 → Cobrar Comanda/Mesa → Dividir por pessoas: novo campo 'Cobrar agora quantas partes?' permite cobrar mais de uma pessoa de uma só vez (ex.: comanda de R$100 dividida em 4 — uma pessoa paga 3 partes = R$75 numa única cobrança e outra paga 1 parte = R$25).",
+      "Funciona em todas as pessoas: na primeira pessoa o operador escolhe o nº de pessoas + quantas partes cobrar agora; nas pessoas seguintes o sistema mostra quantas restam e o campo já vem limitado ao restante.",
+      "Cada cobrança gera uma única venda (com TEF próprio, se aplicável) e — quando o módulo fiscal está ativo — uma NFC-e parcial com observação automática ('pessoas X a Y de N').",
+      "Caminho legado 'Distribuir entre os itens' (rachar) continua disponível e inalterado para quem prefere dividir item a item.",
+      "Não foi alterado: runTefPayment, pinpadService, tef-webservice, nfce-proxy, single-payment, multi-pagamento sequencial (v1.7), rachar item, importar comanda single-payment, TEF v1.0/v1.1/v1.2-beta congelados.",
+    ],
+  },
   {
     version: "1.12.1-beta",
     date: "2026-06-04",
