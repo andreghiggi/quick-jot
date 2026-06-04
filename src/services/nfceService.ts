@@ -79,7 +79,23 @@ async function callNFCeProxy(body: Record<string, any>) {
   });
 
   if (response.error) {
-    throw new Error(response.error.message || 'Erro na API NFC-e');
+    // functions.invoke returns generic "non-2xx" when upstream returns 4xx/5xx.
+    // Try to extract real provider message from response.data (still populated on errors).
+    const data: any = (response as any).data;
+    const ctx: any = (response.error as any)?.context;
+    let providerMsg: string | undefined;
+    if (data && typeof data === 'object') {
+      providerMsg = data.error || data.mensagem || data.message
+        || (data.erros && JSON.stringify(data.erros))
+        || (data.raw && String(data.raw).slice(0, 300));
+    }
+    if (!providerMsg && ctx) {
+      providerMsg = ctx?.error || ctx?.message;
+    }
+    const baseMsg = response.error.message || 'Erro na API NFC-e';
+    const finalMsg = providerMsg ? `${baseMsg}: ${providerMsg}` : baseMsg;
+    console.error('[nfceService] proxy error', { baseMsg, providerMsg, data, ctx });
+    throw new Error(finalMsg);
   }
 
   return response.data;
