@@ -985,20 +985,44 @@ export function PDVV2PaymentDialog({
                       min={1}
                       max={50}
                       value={splitPeople}
-                      onChange={(e) => setSplitPeople(Math.max(1, parseInt(e.target.value) || 1))}
+                      onChange={(e) => {
+                        const v = Math.max(1, parseInt(e.target.value) || 1);
+                        setSplitPeople(v);
+                        // Garante que partes <= nº de pessoas.
+                        setSplitPartsToCharge((p) => Math.max(1, Math.min(p, v)));
+                      }}
                       className="h-8 w-20"
                     />
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Valor por pessoa: <span className="font-semibold text-foreground">{formatPrice(grossTotal / Math.max(1, splitPeople))}</span>
                   </p>
+                  <div className="flex items-center gap-3 pt-1 border-t">
+                    <Label className="text-sm whitespace-nowrap">Cobrar agora quantas partes?</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={splitPeople}
+                      value={splitPartsToCharge}
+                      onChange={(e) => {
+                        const v = Math.max(1, parseInt(e.target.value) || 1);
+                        setSplitPartsToCharge(Math.min(v, splitPeople));
+                      }}
+                      className="h-8 w-20"
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Vamos distribuir cada item da comanda em {splitPeople} partes iguais. Você poderá ajustar o valor de cada pessoa item a item (ex.: um paga mais, outro paga menos) usando o botão de rachar em cada linha.
+                    Esta cobrança = <span className="font-semibold text-foreground tabular-nums">{formatPrice(((grossTotal / Math.max(1, splitPeople)) * Math.max(1, Math.min(splitPartsToCharge, splitPeople))))}</span>
+                    {splitPartsToCharge < splitPeople && ` — restará ${splitPeople - splitPartsToCharge} pessoa(s) para cobrar depois`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Clique em <strong>Confirmar Pagamento</strong> para cobrar o valor acima agora — após cada cobrança o sistema reabre o diálogo para a próxima pessoa. Ou use <em>Distribuir entre os itens</em> abaixo se preferir rachar cada item.
                   </p>
                   <div className="flex justify-end">
                     <Button
                       type="button"
                       size="sm"
+                      variant="outline"
                       disabled={splitPeople < 2 || !checkoutItems?.length}
                       onClick={() => {
                         if (!checkoutItems?.length || splitPeople < 2) return;
