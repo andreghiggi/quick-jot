@@ -62,11 +62,22 @@ interface Props {
   /** Rótulo livre do contexto (ex.: 'Mesa 7', 'Pedido #AB12CD'). */
   contextLabel?: string;
   /**
+   * Quando true, o dialog exibe seletor "Só Venda / Venda com NFC-e" (igual
+   * single-payment). Quando há linha TEF aprovada, a NFC-e é forçada
+   * automaticamente (NFC-e obrigatória por lei) e o seletor desaparece.
+   * Default: false (mantém comportamento legado se não passar).
+   */
+  fiscalEnabled?: boolean;
+  /**
    * Mesma assinatura do v1.6: caller recebe linhas e roda runMultiPayment.
    * Aqui as linhas vêm com `_resolved` preenchido → runMultiPayment vira
    * passthrough (nenhum TEF é re-executado).
+   * Segundo parâmetro `opts.wantsNfce` indica se a NFC-e deve ser emitida.
    */
-  onConfirm: (lines: MultiPaymentInputLine[]) => Promise<void> | void;
+  onConfirm: (
+    lines: MultiPaymentInputLine[],
+    opts: { wantsNfce: boolean },
+  ) => Promise<void> | void;
 }
 
 type TefModality = 'avista' | 'parcelado' | 'debit' | 'pix';
@@ -96,6 +107,7 @@ export function PDVV2SequentialPaymentDialog({
   contextKey,
   cashRegisterId,
   contextLabel,
+  fiscalEnabled = false,
   onConfirm,
 }: Props) {
   const { activePaymentMethods: rawList } = usePaymentMethods({ companyId, channel });
@@ -119,6 +131,10 @@ export function PDVV2SequentialPaymentDialog({
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [rolling, setRolling] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  // Modo de documento — só importa quando NÃO há TEF aprovado.
+  // Default 'sale_only' (não emite NFC-e) — pareia com o comportamento
+  // padrão do single-payment quando o operador não escolhe NFC-e.
+  const [documentMode, setDocumentMode] = useState<'sale_only' | 'sale_with_nfce'>('sale_only');
 
   const hydratedRef = useRef(false);
 
@@ -154,6 +170,7 @@ export function PDVV2SequentialPaymentDialog({
     setCharging(false);
     setFinalizing(false);
     setConfirmCancelOpen(false);
+    setDocumentMode('sale_only');
 
     // Tenta hidratar de pdv_v2_open_charges se houver contextKey + cashRegister.
     (async () => {
