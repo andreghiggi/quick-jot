@@ -28,7 +28,7 @@ import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
-import { PDVV2MultiPaymentDialog } from '@/components/pdv-v2/PDVV2MultiPaymentDialog';
+import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import type { ExtraItem } from '@/components/pdv-v2/PDVV2AddItemSearch';
@@ -3171,7 +3171,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       />
 
       {/* Multi-payment (v1.6 beta) — dialog isolado, abre via botão "Dividir formas" */}
-      <PDVV2MultiPaymentDialog
+      <PDVV2SequentialPaymentDialog
         open={multiPayOpen}
         onOpenChange={setMultiPayOpen}
         companyId={company?.id}
