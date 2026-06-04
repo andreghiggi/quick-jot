@@ -159,7 +159,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     customerDocument?: string;
     prechargedTef?: { tefData?: NFCeTefData; notesFragment?: string };
     itemsInfo?: Array<{ id: string; paidQty: number }>;
-    splitInfo?: { perPerson: number; totalPeople: number };
+    splitInfo?: { perPerson: number; totalPeople: number; partsToCharge?: number };
   }) {
     if (!company?.id) return;
     if (!currentRegister) {
