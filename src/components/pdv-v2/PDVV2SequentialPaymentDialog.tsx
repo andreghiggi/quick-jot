@@ -365,7 +365,10 @@ export function PDVV2SequentialPaymentDialog({
         integration: r.integration,
         _resolved: r,
       }));
-      await onConfirm(lines);
+      // Regra: se houver TEF aprovado → NFC-e obrigatória (auto). Senão,
+      // respeita a escolha do operador. Sem módulo fiscal → nunca emite.
+      const wantsNfce = fiscalEnabled && (hasTefApproved || documentMode === 'sale_with_nfce');
+      await onConfirm(lines, { wantsNfce });
       await markCompleted();
       // Caller fecha o dialog via onOpenChange.
     } catch (e: any) {
