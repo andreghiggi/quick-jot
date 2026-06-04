@@ -1355,6 +1355,7 @@ export default function PDVV2() {
         }}
         companyId={companyId}
         total={multiPayTab?.total || 0}
+        fiscalEnabled={fiscalEnabled}
         cashRegisterId={currentRegister?.id}
         contextKey={multiPayTab ? `tab:${multiPayTab.id}` : undefined}
         contextLabel={
