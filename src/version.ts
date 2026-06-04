@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.13.1-beta";
+export const VERSION = "1.13.2-beta";
 export const RELEASE_DATE = "2026-06-04"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Cobrar pedido: continuidade do split por pessoas";
+export const CODENAME = "Pedido Express: split por pessoas respeita nº de partes cobradas";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.13.2-beta",
+    date: "2026-06-04",
+    codename: "Pedido Express: split por pessoas respeita nº de partes cobradas",
+    changes: [
+      "Pedido Express → Dividir por pessoas: corrigido bug em que o campo 'Cobrar quantas partes?' era ignorado no abatimento. Ex.: pedido R$170 dividido em 5 pessoas — ao cobrar 2 partes (R$68), o sistema só descontava 1 pessoa, permitindo que as mesmas partes fossem cobradas de novo.",
+      "Agora o saldo restante é decrementado pelo número exato de partes pagas. Rótulo da venda, observação da NFC-e parcial e toast indicam o intervalo de pessoas cobradas (ex.: 'Pessoas 1–2/5').",
+      "Nenhuma alteração em PDV V2 comanda/mesa, OrderCardChargeDialog (já corrigido na v1.13.1-beta), TEF v1.0/v1.1/v1.2-beta, runTefPayment, pinpadService, nfce-proxy, multi-pagamento sequencial ou rachar item.",
+    ],
+  },
   {
     version: "1.13.1-beta",
     date: "2026-06-04",
