@@ -88,7 +88,7 @@ interface PDVV2PaymentDialogProps {
       notesFragment?: string;
     };
     /** I9 split mode: info about the split so confirmImportTabI9 can use it directly */
-    splitInfo?: { perPerson: number; totalPeople: number };
+    splitInfo?: { perPerson: number; totalPeople: number; partsToCharge?: number };
     /** I9 items mode: selected items with partial qty so confirmImportTabI9 can handle TEF/NFC-e/loop */
     itemsInfo?: Array<{ id: string; paidQty: number }>;
     /** I9 items mode: selected extra checkout items and quantities */
@@ -124,6 +124,10 @@ export function PDVV2PaymentDialog({
   // Chave = id do ExtraItem.
   const [selectedExtraQtys, setSelectedExtraQtys] = useState<Map<string, number>>(new Map());
   const [splitPeople, setSplitPeople] = useState(2);
+  // Split-por-pessoas v2 (Opção B): operador escolhe quantas "partes" cobrar
+  // nesta transação (ex.: total ÷ 4 com 1 pessoa pagando 3 partes = 75% do total).
+  // Default 1 = comportamento legado. Não altera o fluxo de items mode (rachar).
+  const [splitPartsToCharge, setSplitPartsToCharge] = useState(1);
   // I9 — Rachar item: editor inline aberto para qual índice de checkoutItems.
   // splitItemPeople = em quantas pessoas, splitItemFractions = quantas frações cobrar agora.
   const [splitItemEditingIdx, setSplitItemEditingIdx] = useState<number | null>(null);
@@ -143,6 +147,8 @@ export function PDVV2PaymentDialog({
     if (open && activeSplit) {
       setI9Mode('split');
       setSplitPeople(activeSplit.totalPeople);
+      // Pessoa 2+: começa cobrando 1 parte por padrão.
+      setSplitPartsToCharge(1);
     }
   }, [open, activeSplit]);
 
@@ -278,6 +284,7 @@ export function PDVV2PaymentDialog({
       setSplitItemPeople(2);
       setSplitItemAmount(0);
       setSplitMemory(new Map());
+      setSplitPartsToCharge(1);
     }
   }, [open]);
 
@@ -323,10 +330,15 @@ export function PDVV2PaymentDialog({
 
   const i9SplitValue = (() => {
     if (!isLancheriaI9 || i9Mode !== 'split') return null;
+    // Limita partes ao restante disponível (evita cobrar além do total).
+    const maxParts = activeSplit
+      ? Math.max(1, activeSplit.totalPeople - activeSplit.currentPerson + 1)
+      : Math.max(1, splitPeople);
+    const parts = Math.max(1, Math.min(splitPartsToCharge, maxParts));
     // When activeSplit is provided (person 2+), use the pre-calculated value
-    if (activeSplit) return activeSplit.perPerson;
+    if (activeSplit) return Math.round(activeSplit.perPerson * parts * 100) / 100;
     if (splitPeople < 1) return null;
-    return Math.round((grossTotal / splitPeople) * 100) / 100;
+    return Math.round((grossTotal / splitPeople) * parts * 100) / 100;
   })();
 
   const finalTotal = (() => {
@@ -366,7 +378,17 @@ export function PDVV2PaymentDialog({
       customerDocument: isNfce && (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : undefined,
       prechargedTef: prechargedTef ?? undefined,
       splitInfo: isLancheriaI9 && i9Mode === 'split'
-        ? { perPerson: finalTotal, totalPeople: activeSplit?.totalPeople ?? splitPeople }
+        ? (() => {
+            const totalPeople = activeSplit?.totalPeople ?? splitPeople;
+            const basePerPerson = activeSplit
+              ? activeSplit.perPerson
+              : Math.round((grossTotal / Math.max(1, splitPeople)) * 100) / 100;
+            const maxParts = activeSplit
+              ? Math.max(1, activeSplit.totalPeople - activeSplit.currentPerson + 1)
+              : Math.max(1, splitPeople);
+            const parts = Math.max(1, Math.min(splitPartsToCharge, maxParts));
+            return { perPerson: basePerPerson, totalPeople, partsToCharge: parts };
+          })()
         : undefined,
       itemsInfo: isLancheriaI9 && i9Mode === 'items' && checkoutItems
         ? (() => {
@@ -963,20 +985,44 @@ export function PDVV2PaymentDialog({
                       min={1}
                       max={50}
                       value={splitPeople}
-                      onChange={(e) => setSplitPeople(Math.max(1, parseInt(e.target.value) || 1))}
+                      onChange={(e) => {
+                        const v = Math.max(1, parseInt(e.target.value) || 1);
+                        setSplitPeople(v);
+                        // Garante que partes <= nº de pessoas.
+                        setSplitPartsToCharge((p) => Math.max(1, Math.min(p, v)));
+                      }}
                       className="h-8 w-20"
                     />
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Valor por pessoa: <span className="font-semibold text-foreground">{formatPrice(grossTotal / Math.max(1, splitPeople))}</span>
                   </p>
+                  <div className="flex items-center gap-3 pt-1 border-t">
+                    <Label className="text-sm whitespace-nowrap">Cobrar agora quantas partes?</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={splitPeople}
+                      value={splitPartsToCharge}
+                      onChange={(e) => {
+                        const v = Math.max(1, parseInt(e.target.value) || 1);
+                        setSplitPartsToCharge(Math.min(v, splitPeople));
+                      }}
+                      className="h-8 w-20"
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Vamos distribuir cada item da comanda em {splitPeople} partes iguais. Você poderá ajustar o valor de cada pessoa item a item (ex.: um paga mais, outro paga menos) usando o botão de rachar em cada linha.
+                    Esta cobrança = <span className="font-semibold text-foreground tabular-nums">{formatPrice(((grossTotal / Math.max(1, splitPeople)) * Math.max(1, Math.min(splitPartsToCharge, splitPeople))))}</span>
+                    {splitPartsToCharge < splitPeople && ` — restará ${splitPeople - splitPartsToCharge} pessoa(s) para cobrar depois`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Clique em <strong>Confirmar Pagamento</strong> para cobrar o valor acima agora — após cada cobrança o sistema reabre o diálogo para a próxima pessoa. Ou use <em>Distribuir entre os itens</em> abaixo se preferir rachar cada item.
                   </p>
                   <div className="flex justify-end">
                     <Button
                       type="button"
                       size="sm"
+                      variant="outline"
                       disabled={splitPeople < 2 || !checkoutItems?.length}
                       onClick={() => {
                         if (!checkoutItems?.length || splitPeople < 2) return;
@@ -1018,7 +1064,39 @@ export function PDVV2PaymentDialog({
                   Pessoa {activeSplit.currentPerson} de {activeSplit.totalPeople}
                 </span>
               </div>
-              <p className="text-lg font-bold tabular-nums">{formatPrice(activeSplit.perPerson)}</p>
+              <p className="text-xs text-muted-foreground">
+                Valor por pessoa: <span className="font-semibold text-foreground tabular-nums">{formatPrice(activeSplit.perPerson)}</span>
+              </p>
+              {(() => {
+                const maxParts = Math.max(1, activeSplit.totalPeople - activeSplit.currentPerson + 1);
+                const parts = Math.max(1, Math.min(splitPartsToCharge, maxParts));
+                const amount = Math.round(activeSplit.perPerson * parts * 100) / 100;
+                return (
+                  <>
+                    <div className="flex items-center gap-3 pt-1">
+                      <Label className="text-sm whitespace-nowrap">Cobrar quantas partes?</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={maxParts}
+                        value={splitPartsToCharge}
+                        onChange={(e) => {
+                          const v = Math.max(1, parseInt(e.target.value) || 1);
+                          setSplitPartsToCharge(Math.min(v, maxParts));
+                        }}
+                        className="h-8 w-20"
+                      />
+                      <span className="text-xs text-muted-foreground">de {maxParts} restante(s)</span>
+                    </div>
+                    <p className="text-lg font-bold tabular-nums">{formatPrice(amount)}</p>
+                    {parts > 1 && (
+                      <p className="text-xs text-muted-foreground">
+                        Equivale às pessoas {activeSplit.currentPerson}–{activeSplit.currentPerson + parts - 1} de {activeSplit.totalPeople}.
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
 
@@ -1221,12 +1299,19 @@ export function PDVV2PaymentDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={submitting || chargingTef || !paymentMethodId || activePaymentMethods.length === 0 || splitItemEditingIdx !== null || (isLancheriaI9 && i9Mode === 'split' && !activeSplit)}
+            disabled={
+              submitting ||
+              chargingTef ||
+              !paymentMethodId ||
+              activePaymentMethods.length === 0 ||
+              splitItemEditingIdx !== null ||
+              (isLancheriaI9 && i9Mode === 'split' && !activeSplit && splitPeople < 2)
+            }
             title={
               splitItemEditingIdx !== null
                 ? 'Aplique ou cancele a divisão do item antes de cobrar'
-                : (isLancheriaI9 && i9Mode === 'split' && !activeSplit)
-                ? 'Clique em "Distribuir entre os itens" para continuar'
+                : (isLancheriaI9 && i9Mode === 'split' && !activeSplit && splitPeople < 2)
+                ? 'Informe pelo menos 2 pessoas para dividir'
                 : undefined
             }
           >
