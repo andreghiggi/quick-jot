@@ -212,17 +212,58 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         unit_price: ex.unit_price,
       }));
       // Quando é divisão por pessoas (sem fração de item explícita), lançamos
-      // a parcela como uma linha sintética no caixa. Nenhum item do pedido é
-      // marcado como pago — apenas o paid_amount é incrementado.
-      const splitSyntheticItem = isSplitByPeople && params.finalTotal > 0
-        ? [{
-            product_id: null,
-            product_name: `Parcela ${(order.paidAmount || 0) > 0 ? 'adicional' : '1'} - rachado`,
-            quantity: 1,
-            unit_price: params.finalTotal,
-          }]
-        : [];
-      const effectiveSaleItems = [...selectedExistingItems, ...extrasAsSaleItems, ...splitSyntheticItem];
+      // a parcela como itens RATEADOS proporcionalmente (mesmo array para caixa
+      // e NFC-e). A quantidade é fracionada (ex.: 1× X-Burger / 5 pessoas →
+      // 0,200) mantendo o preço unitário original — assim o estoque baixa
+      // corretamente ao final das N parcelas. Os itens não são marcados em
+      // paid_qtys (source_index = -1) — o controle de saldo continua via
+      // paid_amount / split_state.
+      let splitProratedItems: typeof selectedExistingItems = [];
+      if (isSplitByPeople && params.splitInfo && params.finalTotal > 0) {
+        const totalPeople = params.splitInfo.totalPeople;
+        const prevSplit = (order.paidItems as any)?.split_state;
+        const prevPaidPeople = Number(prevSplit?.paidPeople || 0);
+        const remainingBefore = Math.max(1, totalPeople - prevPaidPeople);
+        const requested = Math.max(
+          1,
+          params.splitInfo.partsToCharge ||
+            Math.round(params.finalTotal / Math.max(0.01, params.splitInfo.perPerson)),
+        );
+        const partsNow = Math.min(requested, remainingBefore);
+        const isLastBatch = partsNow >= remainingBefore;
+        const ratio = isLastBatch ? remainingBefore / totalPeople : partsNow / totalPeople;
+        const base = order.items
+          .filter((it) => it.quantity > 0 && it.price > 0)
+          .map((it, idx) => ({
+            source_index: -1,
+            product_id: it.productId || null,
+            product_name: cleanItemName(it.name),
+            quantity: Number((it.quantity * ratio).toFixed(3)),
+            unit_price: it.price,
+            _origIdx: idx,
+          }));
+        // Ajusta centavos do último item para o somatório bater com finalTotal
+        if (base.length > 0) {
+          const sumNow = Number(
+            base.reduce((s, it) => s + it.quantity * it.unit_price, 0).toFixed(2),
+          );
+          const diff = Number((params.finalTotal - sumNow).toFixed(2));
+          if (Math.abs(diff) >= 0.01) {
+            const last = base[base.length - 1];
+            if (last.quantity > 0) {
+              last.unit_price = Number(
+                (last.unit_price + diff / last.quantity).toFixed(2),
+              );
+            }
+          }
+        }
+        splitProratedItems = base.map(({ _origIdx, ...rest }) => rest);
+      }
+      const effectiveSaleItems = [
+        ...selectedExistingItems,
+        ...extrasAsSaleItems,
+        ...splitProratedItems,
+      ];
       if (effectiveSaleItems.length === 0) {
         toast.info('Não há itens pendentes para cobrar neste pedido.');
         return;
