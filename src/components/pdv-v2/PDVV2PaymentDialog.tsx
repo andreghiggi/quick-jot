@@ -88,7 +88,7 @@ interface PDVV2PaymentDialogProps {
       notesFragment?: string;
     };
     /** I9 split mode: info about the split so confirmImportTabI9 can use it directly */
-    splitInfo?: { perPerson: number; totalPeople: number };
+    splitInfo?: { perPerson: number; totalPeople: number; partsToCharge?: number };
     /** I9 items mode: selected items with partial qty so confirmImportTabI9 can handle TEF/NFC-e/loop */
     itemsInfo?: Array<{ id: string; paidQty: number }>;
     /** I9 items mode: selected extra checkout items and quantities */
