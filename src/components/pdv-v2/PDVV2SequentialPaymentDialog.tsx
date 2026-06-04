@@ -539,6 +539,7 @@ export function PDVV2SequentialPaymentDialog({
                       placeholder="0,00"
                       value={amountText}
                       onChange={(e) => setAmountText(maskCurrencyInput(e.target.value))}
+                      onFocus={(e) => e.target.select()}
                       disabled={busy}
                     />
                   </div>
