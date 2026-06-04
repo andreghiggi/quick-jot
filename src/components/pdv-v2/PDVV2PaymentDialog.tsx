@@ -1064,7 +1064,39 @@ export function PDVV2PaymentDialog({
                   Pessoa {activeSplit.currentPerson} de {activeSplit.totalPeople}
                 </span>
               </div>
-              <p className="text-lg font-bold tabular-nums">{formatPrice(activeSplit.perPerson)}</p>
+              <p className="text-xs text-muted-foreground">
+                Valor por pessoa: <span className="font-semibold text-foreground tabular-nums">{formatPrice(activeSplit.perPerson)}</span>
+              </p>
+              {(() => {
+                const maxParts = Math.max(1, activeSplit.totalPeople - activeSplit.currentPerson + 1);
+                const parts = Math.max(1, Math.min(splitPartsToCharge, maxParts));
+                const amount = Math.round(activeSplit.perPerson * parts * 100) / 100;
+                return (
+                  <>
+                    <div className="flex items-center gap-3 pt-1">
+                      <Label className="text-sm whitespace-nowrap">Cobrar quantas partes?</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={maxParts}
+                        value={splitPartsToCharge}
+                        onChange={(e) => {
+                          const v = Math.max(1, parseInt(e.target.value) || 1);
+                          setSplitPartsToCharge(Math.min(v, maxParts));
+                        }}
+                        className="h-8 w-20"
+                      />
+                      <span className="text-xs text-muted-foreground">de {maxParts} restante(s)</span>
+                    </div>
+                    <p className="text-lg font-bold tabular-nums">{formatPrice(amount)}</p>
+                    {parts > 1 && (
+                      <p className="text-xs text-muted-foreground">
+                        Equivale às pessoas {activeSplit.currentPerson}–{activeSplit.currentPerson + parts - 1} de {activeSplit.totalPeople}.
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
 
