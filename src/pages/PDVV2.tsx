@@ -608,7 +608,10 @@ export default function PDVV2() {
    * O link "Dividir em várias formas" só aparece quando i9Mode === '' e
    * sem activeSplit (PDVV2PaymentDialog já cuida disso).
    */
-  async function handleMultiPaymentImportTab(lines: MultiPaymentInputLine[]) {
+  async function handleMultiPaymentImportTab(
+    lines: MultiPaymentInputLine[],
+    opts: { wantsNfce: boolean },
+  ) {
     if (!multiPayTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto.');
       return;
@@ -652,8 +655,9 @@ export default function PDVV2() {
       );
       if (!saleId) return;
 
-      // NFC-e com pagamentos_split (se módulo fiscal ativo)
-      if (fiscalEnabled) {
+      // NFC-e com pagamentos_split — só quando solicitado pelo dialog
+      // (hasTef OU usuário escolheu "Venda com NFC-e").
+      if (opts.wantsNfce) {
         try {
           setIsEmittingNfce(true);
           setMultiPayStatus('Emitindo NFC-e…');
