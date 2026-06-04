@@ -82,7 +82,7 @@ function extractControlNumber(notesFragment?: string): string | undefined {
 }
 
 /** Tenta estornar (CNC + CNF) uma transação TEF aprovada nesta cobrança. */
-async function rollbackApprovedTef(
+export async function rollbackApprovedTef(
   companyId: string,
   line: MultiPaymentResolvedLine,
 ): Promise<boolean> {
