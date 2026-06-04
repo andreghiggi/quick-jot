@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.13.2-beta";
+export const VERSION = "1.13.3-beta";
 export const RELEASE_DATE = "2026-06-04"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Pedido Express: split por pessoas respeita nº de partes cobradas";
+export const CODENAME = "Divisão por pessoas: NFC-e detalhada com itens rateados";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.13.3-beta",
+    date: "2026-06-04",
+    codename: "Divisão por pessoas: NFC-e detalhada com itens rateados",
+    changes: [
+      "Cobrar pedido do cardápio + Pedido Express → Dividir por pessoas: a NFC-e parcial agora lista TODOS os itens do pedido com quantidade fracionada proporcional à parcela paga (ex.: pedido com 1× X-Burger dividido em 5 pessoas → cada parcela emite 0,200 × X-Burger), no lugar da linha única 'Parcela X - rachado'.",
+      "Quantidade é fracionada (3 casas) e preço unitário preservado — somando as N parcelas o estoque baixa exatamente a quantidade original vendida (sem multiplicar a baixa pelo nº de pessoas).",
+      "Centavos de arredondamento ajustados no último item de cada parcela para o somatório bater com o valor cobrado. Última parcela usa o saldo restante (remaining/totalPeople) para fechar 100% do pedido.",
+      "A venda do caixa interno também passa a registrar os itens detalhados rateados — relatórios e ABC enxergam os produtos reais em vez de 'Divisão X/Y'.",
+      "Nenhuma alteração em divisão por itens, PDV V2 comanda/mesa, TEF v1.0/v1.1/v1.2-beta, runTefPayment, pinpadService, nfce-proxy, multi-pagamento ou finalização do pedido.",
+    ],
+  },
   {
     version: "1.13.2-beta",
     date: "2026-06-04",
