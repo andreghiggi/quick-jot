@@ -592,6 +592,8 @@ Deno.serve(async (req) => {
           body: JSON.stringify({ justificativa: payload?.justificativa }),
         })
         result = await safeJson(apiResponse)
+        console.log('[nfce-proxy] Cancelar HTTP status:', apiResponse.status, 'nfceId:', nfceId)
+        console.log('[nfce-proxy] Cancelar raw result:', JSON.stringify(result).substring(0, 800))
 
         if (result.success) {
           await supabase.from('nfce_records')
