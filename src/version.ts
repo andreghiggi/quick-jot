@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.13.0-beta";
+export const VERSION = "1.13.1-beta";
 export const RELEASE_DATE = "2026-06-04"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Dividir por pessoas: cobrar várias partes na mesma transação";
+export const CODENAME = "Cobrar pedido: continuidade do split por pessoas";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.13.1-beta",
+    date: "2026-06-04",
+    codename: "Cobrar pedido: continuidade do split por pessoas",
+    changes: [
+      "Cobrar pedido do cardápio → Dividir por pessoas: ao reabrir a cobrança depois que uma ou mais pessoas já pagaram, o diálogo agora mostra automaticamente 'Pessoa X de N — restam Y' e o campo 'Cobrar quantas partes?' já vem limitado ao restante.",
+      "Acabou o problema de o sistema esquecer o nº original de pessoas e tratar o saldo residual como um novo split (ex.: pedido R$170 dividido em 6 — depois de 4 pagamentos, o sistema mostrava 'Nº de pessoas: 2' como se fosse novo, em vez de reconhecer que faltam 2 das 6 originais).",
+      "Estado do split persiste no próprio pedido (paid_items.split_state) e é limpo automaticamente quando o pedido é quitado.",
+      "Nenhuma alteração em PDV V2 comanda/mesa, Pedido Express, runTefPayment, pinpadService, nfce-proxy, multi-pagamento, rachar item ou TEF v1.0/v1.1/v1.2-beta.",
+    ],
+  },
   {
     version: "1.13.0-beta",
     date: "2026-06-04",

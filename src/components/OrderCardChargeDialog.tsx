@@ -101,6 +101,30 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     ? pendingExistingTotal
     : Math.max(0, order.total - Number(order.paidAmount || 0));
 
+  // Estado de "split por pessoas em andamento" — persistido em paid_items.split_state.
+  // Quando presente e ainda não quitado, o PDVV2PaymentDialog mostra o painel
+  // read-only "Pessoa X/N — quantas partes cobrar agora?" em vez de pedir
+  // novamente o nº de pessoas / valor por pessoa.
+  const splitState = useMemo(() => {
+    const raw = (order.paidItems as any)?.split_state;
+    if (!raw || typeof raw !== 'object') return null;
+    const totalPeople = Number(raw.totalPeople);
+    const perPerson = Number(raw.perPerson);
+    const paidPeople = Number(raw.paidPeople);
+    if (!Number.isFinite(totalPeople) || totalPeople < 1) return null;
+    if (!Number.isFinite(perPerson) || perPerson <= 0) return null;
+    if (!Number.isFinite(paidPeople) || paidPeople < 0) return null;
+    if (paidPeople >= totalPeople) return null;
+    return { totalPeople, perPerson, paidPeople };
+  }, [order.paidItems]);
+  const activeSplit = splitState
+    ? {
+        perPerson: splitState.perPerson,
+        totalPeople: splitState.totalPeople,
+        currentPerson: splitState.paidPeople + 1,
+      }
+    : undefined;
+
   const cleanItemName = (name: string) =>
     name.includes('(') ? name.substring(0, name.indexOf('(')).trim() : name;
 
@@ -135,7 +159,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     customerDocument?: string;
     prechargedTef?: { tefData?: NFCeTefData; notesFragment?: string };
     itemsInfo?: Array<{ id: string; paidQty: number }>;
-    splitInfo?: { perPerson: number; totalPeople: number };
+    splitInfo?: { perPerson: number; totalPeople: number; partsToCharge?: number };
   }) {
     if (!company?.id) return;
     if (!currentRegister) {
@@ -297,6 +321,43 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         paid_amount: isFullyPaid ? baseTotalAfterExtras : nextPaidAmount,
         paid_items: { ...((order.paidItems as any) || {}), paid_qtys: nextPaidItems },
       };
+      // Atualiza/cria/limpa o split_state quando esta cobrança é por divisão
+      // de pessoas. Mantém continuidade entre reaberturas do "Cobrar".
+      if (isSplitByPeople && params.splitInfo) {
+        const incomingPerPerson = params.splitInfo.perPerson;
+        const incomingTotalPeople = params.splitInfo.totalPeople;
+        const parts = Math.max(
+          1,
+          params.splitInfo.partsToCharge ||
+            Math.round(params.finalTotal / Math.max(0.01, incomingPerPerson)),
+        );
+        const prevSplit = (order.paidItems as any)?.split_state;
+        const prevPaid = Number(prevSplit?.paidPeople || 0);
+        const nextPaidPeople = prevPaid + parts;
+        const baseSplit = (order.paidItems as any) || {};
+        if (isFullyPaid || nextPaidPeople >= incomingTotalPeople) {
+          // Quitado — remove split_state para não vazar entre cobranças futuras.
+          const { split_state: _drop, ...rest } = baseSplit;
+          orderUpdate.paid_items = { ...rest, paid_qtys: nextPaidItems };
+        } else {
+          orderUpdate.paid_items = {
+            ...baseSplit,
+            paid_qtys: nextPaidItems,
+            split_state: {
+              totalPeople: incomingTotalPeople,
+              perPerson: incomingPerPerson,
+              paidPeople: nextPaidPeople,
+            },
+          };
+        }
+      } else if (isFullyPaid) {
+        // Pedido quitado por outro caminho — limpa split_state se existir.
+        const base = (order.paidItems as any) || {};
+        if (base.split_state) {
+          const { split_state: _drop, ...rest } = base;
+          orderUpdate.paid_items = { ...rest, paid_qtys: nextPaidItems };
+        }
+      }
       if (extrasTotal > 0) {
         orderUpdate.total = baseTotalAfterExtras;
       }
@@ -567,6 +628,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         tefStatus={tefStatus}
         deliveryFilter={order.deliveryAddress && order.deliveryAddress.trim().length > 0 ? 'delivery' : 'pickup'}
         checkoutItems={checkoutItems}
+        activeSplit={activeSplit}
         onConfirm={handleConfirm}
         onSplitPayments={() => {
           onOpenChange(false);

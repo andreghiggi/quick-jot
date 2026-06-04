@@ -19,3 +19,9 @@ TEF v1.0/v1.1/v1.2 beta, pinpadService, tef-webservice, nfce-proxy, PDVV2Payment
 
 ## Fase 2 (também pendente)
 Estender "cobrar X de N pessoas" para Pedido Express, OrderCardChargeDialog, Finalizar Venda direto e avaliar checkout do cardápio público.
+
+## Continuidade no OrderCardChargeDialog (v1.13.1-beta)
+Estado do split por pessoas agora persiste em `orders.paid_items.split_state = { totalPeople, perPerson, paidPeople }`.
+- `OrderCardChargeDialog` lê esse campo e passa `activeSplit` ao `PDVV2PaymentDialog`, reaproveitando o painel read-only "Pessoa X/N — restam Y" e o campo "cobrar quantas partes" já limitado ao restante.
+- A cada cobrança via split, `paidPeople += partsToCharge`. Quando atinge `totalPeople` ou o pedido é quitado, o `split_state` é removido.
+- Não toca PDV V2 comanda (`PDVV2.tsx` continua usando `i9SplitInfo` em memória), Pedido Express, TEF, NFC-e, multi-pagamento ou rachar item.
