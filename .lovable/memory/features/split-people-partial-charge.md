@@ -25,3 +25,12 @@ Estado do split por pessoas agora persiste em `orders.paid_items.split_state = {
 - `OrderCardChargeDialog` lê esse campo e passa `activeSplit` ao `PDVV2PaymentDialog`, reaproveitando o painel read-only "Pessoa X/N — restam Y" e o campo "cobrar quantas partes" já limitado ao restante.
 - A cada cobrança via split, `paidPeople += partsToCharge`. Quando atinge `totalPeople` ou o pedido é quitado, o `split_state` é removido.
 - Não toca PDV V2 comanda (`PDVV2.tsx` continua usando `i9SplitInfo` em memória), Pedido Express, TEF, NFC-e, multi-pagamento ou rachar item.
+
+## NFC-e detalhada com itens rateados (v1.13.3-beta)
+Tanto `OrderCardChargeDialog` (bloco `isSplitByPeople`) quanto `PedidoExpressDialog.handleSubmitSplitPartial` deixaram de emitir linha sintética "Parcela X - rachado"/"Divisão X/Y" e passaram a:
+- Construir `ratio = partsToCharge / totalPeople` (última parcela usa `remaining/totalPeople` para fechar 100%).
+- Listar **todos** os itens do pedido/cart com `quantity = round3(originalQty * ratio)` e `unit_price` original — quantidade fracionada baixa estoque corretamente ao final das N parcelas (sem multiplicar baixa pelo nº de pessoas).
+- Ajustar centavos no `unit_price` do **último item** para o somatório bater exatamente com `finalTotal/partialTotal`.
+- Usar o **mesmo array** detalhado tanto em `addSale` (caixa interno / relatórios / ABC) quanto em `nfceItems` (DANFE).
+- Em `OrderCardChargeDialog` os itens rateados entram com `source_index = -1` para NÃO atualizar `paid_qtys` — controle de saldo permanece via `paid_amount` + `split_state`.
+- Não altera divisão por itens, PDV V2 comanda/mesa, TEF v1.0/v1.1/v1.2-beta, runTefPayment, pinpadService, nfce-proxy, multi-pagamento ou finalização.
