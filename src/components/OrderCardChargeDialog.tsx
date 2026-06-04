@@ -321,6 +321,43 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         paid_amount: isFullyPaid ? baseTotalAfterExtras : nextPaidAmount,
         paid_items: { ...((order.paidItems as any) || {}), paid_qtys: nextPaidItems },
       };
+      // Atualiza/cria/limpa o split_state quando esta cobrança é por divisão
+      // de pessoas. Mantém continuidade entre reaberturas do "Cobrar".
+      if (isSplitByPeople && params.splitInfo) {
+        const incomingPerPerson = params.splitInfo.perPerson;
+        const incomingTotalPeople = params.splitInfo.totalPeople;
+        const parts = Math.max(
+          1,
+          params.splitInfo.partsToCharge ||
+            Math.round(params.finalTotal / Math.max(0.01, incomingPerPerson)),
+        );
+        const prevSplit = (order.paidItems as any)?.split_state;
+        const prevPaid = Number(prevSplit?.paidPeople || 0);
+        const nextPaidPeople = prevPaid + parts;
+        const baseSplit = (order.paidItems as any) || {};
+        if (isFullyPaid || nextPaidPeople >= incomingTotalPeople) {
+          // Quitado — remove split_state para não vazar entre cobranças futuras.
+          const { split_state: _drop, ...rest } = baseSplit;
+          orderUpdate.paid_items = { ...rest, paid_qtys: nextPaidItems };
+        } else {
+          orderUpdate.paid_items = {
+            ...baseSplit,
+            paid_qtys: nextPaidItems,
+            split_state: {
+              totalPeople: incomingTotalPeople,
+              perPerson: incomingPerPerson,
+              paidPeople: nextPaidPeople,
+            },
+          };
+        }
+      } else if (isFullyPaid) {
+        // Pedido quitado por outro caminho — limpa split_state se existir.
+        const base = (order.paidItems as any) || {};
+        if (base.split_state) {
+          const { split_state: _drop, ...rest } = base;
+          orderUpdate.paid_items = { ...rest, paid_qtys: nextPaidItems };
+        }
+      }
       if (extrasTotal > 0) {
         orderUpdate.total = baseTotalAfterExtras;
       }
