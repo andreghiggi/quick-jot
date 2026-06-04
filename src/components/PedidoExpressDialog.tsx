@@ -1459,7 +1459,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
    *  2) registra UMA pdv_sale com a forma de maior valor como principal,
    *  3) emite NFC-e com `pagamentos_split` (vários detPag).
    */
-  async function handleMultiPaymentSubmit(lines: MultiPaymentInputLine[]) {
+  async function handleMultiPaymentSubmit(
+    lines: MultiPaymentInputLine[],
+    opts: { wantsNfce: boolean },
+  ) {
     if (!company?.id) {
       toast.error('Loja não carregada.');
       return;
@@ -1560,8 +1563,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         return;
       }
 
-      // 3) NFC-e (se módulo fiscal ativo) com pagamentos_split.
-      if (fiscalEnabled) {
+      // 3) NFC-e com pagamentos_split — só quando solicitado pelo dialog
+      // (hasTef OU usuário escolheu "Venda com NFC-e").
+      if (opts.wantsNfce) {
         try {
           setIsEmittingNfce(true);
           setMultiPayStatus('Emitindo NFC-e…');
