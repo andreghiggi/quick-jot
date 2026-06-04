@@ -1723,6 +1723,45 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         unit_price: partialTotal,
       }];
 
+      // Itens RATEADOS proporcionalmente para caixa interno e NFC-e (mesmo
+      // array). Quantidade fracionada (ex.: 1× X-Burger / 5 pessoas → 0,200)
+      // preserva o estoque ao final das N parcelas e detalha a venda no caixa.
+      const isLastBatch = (splitData.remaining - partsToCharge) <= 0;
+      const ratio = isLastBatch
+        ? splitData.remaining / splitData.total
+        : partsToCharge / splitData.total;
+      const proratedBase = cart
+        .filter((item) => item.quantity > 0)
+        .map((item) => {
+          const unit =
+            item.product.price +
+            item.selectedOptionals.reduce((s, o) => s + o.price, 0);
+          return {
+            product_id: item.product.id || null,
+            product_name: item.product.name,
+            quantity: Number((item.quantity * ratio).toFixed(3)),
+            unit_price: unit,
+          };
+        })
+        .filter((it) => it.quantity > 0 && it.unit_price > 0);
+      if (proratedBase.length > 0) {
+        const sumNow = Number(
+          proratedBase.reduce((s, it) => s + it.quantity * it.unit_price, 0).toFixed(2),
+        );
+        const diff = Number((partialTotal - sumNow).toFixed(2));
+        if (Math.abs(diff) >= 0.01) {
+          const last = proratedBase[proratedBase.length - 1];
+          if (last.quantity > 0) {
+            last.unit_price = Number(
+              (last.unit_price + diff / last.quantity).toFixed(2),
+            );
+          }
+        }
+        // Sobrepõe os saleItems sintéticos pelos itens detalhados rateados
+        saleItems.length = 0;
+        proratedBase.forEach((it) => saleItems.push(it));
+      }
+
       const saleNotes = `[EXPRESS] Divisão ${personLabel}: ${params.paymentName}${tefNotesFragment}`;
       const saleId = await addSale(saleItems, params.paymentMethodId, authUser.id, 0, orderLabel, saleNotes);
       if (!saleId) {
@@ -1746,21 +1785,21 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               : cleanDoc.length === 14
               ? { cnpj: cleanDoc, nome: customerName || undefined }
               : undefined;
-          const nfceItems: NFCeItem[] = [{
-            codigo: 'DIVISAO',
-            descricao: saleItems[0].product_name,
+          const nfceItems: NFCeItem[] = saleItems.map((it) => ({
+            codigo: it.product_id || 'DIVISAO',
+            descricao: it.product_name,
             ncm: '00000000',
             cfop: '5102',
             unidade: 'UN',
-            quantidade: 1,
-            valor_unitario: partialTotal,
+            quantidade: it.quantity,
+            valor_unitario: it.unit_price,
             csosn: '102',
             aliquota_icms: 0,
             cst_pis: '49',
             aliquota_pis: 0,
             cst_cofins: '49',
             aliquota_cofins: 0,
-          }];
+          }));
           const externalId = `EXPRESS-SPLIT-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
           await emitirNFCe(company.id, saleId, {
             external_id: externalId,
