@@ -615,6 +615,35 @@ export function PDVV2SequentialPaymentDialog({
                 </Button>
               </div>
             )}
+
+            {/* Seletor de documento — só quando há módulo fiscal.
+                Se há TEF aprovado, NFC-e é forçada (sem escolha). */}
+            {fiscalEnabled && (
+              hasTefApproved ? (
+                <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                  <span>
+                    NFC-e será emitida automaticamente (uma das formas é TEF).
+                  </span>
+                </div>
+              ) : (
+                <div className="rounded-md border p-3 space-y-2">
+                  <Label className="text-xs text-muted-foreground">Documento fiscal</Label>
+                  <RadioGroup
+                    value={documentMode}
+                    onValueChange={(v) => setDocumentMode(v as 'sale_only' | 'sale_with_nfce')}
+                    className="grid grid-cols-2 gap-1"
+                  >
+                    <label className="flex items-center gap-2 text-sm">
+                      <RadioGroupItem value="sale_only" disabled={busy} /> Só Venda
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <RadioGroupItem value="sale_with_nfce" disabled={busy} /> Venda com NFC-e
+                    </label>
+                  </RadioGroup>
+                </div>
+              )
+            )}
           </div>
 
           <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2">
