@@ -438,12 +438,14 @@ export function PDVV2SequentialPaymentDialog({
           onEscapeKeyDown={(e) => {
             if (locked || busy) e.preventDefault();
           }}
-          onPointerDownOutside={(e) => {
-            if (locked || busy) e.preventDefault();
-          }}
-          onInteractOutside={(e) => {
-            if (locked || busy) e.preventDefault();
-          }}
+          /*
+           * NÃO bloquear onPointerDownOutside / onInteractOutside aqui.
+           * Os SelectContent (Radix) são renderizados em portal FORA do
+           * DialogContent — bloquear esses eventos engolia cliques nos
+           * itens do dropdown, prendendo a forma de pagamento na primeira
+           * escolha. A trava de saída do dialog já é garantida por
+           * handleOpenChangeGuarded + onEscapeKeyDown acima.
+           */
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
