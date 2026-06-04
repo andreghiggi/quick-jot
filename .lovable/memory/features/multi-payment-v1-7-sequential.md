@@ -14,3 +14,11 @@ type: feature
 - contextKey: tab:{id} (PDV V2), order:{id} (OrderCardChargeDialog). Pedido Express sem contextKey (efêmero).
 - Intocados: runTefPayment, pinpadService, tef-webservice, nfce-proxy, PDVV2PaymentDialog single, splits I9, TEF v1.0/1.1/1.2-beta.
 - Bump: v1.12.0-beta.
+
+## v1.7.1 (2026-06-04)
+
+- Adicionado seletor "Só Venda / Venda com NFC-e" no PDVV2SequentialPaymentDialog (default sale_only), visível apenas quando `fiscalEnabled && !hasTefApproved`.
+- Quando há linha TEF aprovada, NFC-e é forçada automaticamente (mostra banner; sem escolha).
+- `onConfirm` agora é `(lines, { wantsNfce }) => Promise<void>`. Os 3 callers (PDVV2, OrderCardChargeDialog, PedidoExpressDialog) trocaram `if (fiscalEnabled)` por `if (opts.wantsNfce)` na emissão NFC-e.
+- Nova prop `fiscalEnabled` repassada pelos 3 callers.
+- Bump: v1.12.1-beta.
