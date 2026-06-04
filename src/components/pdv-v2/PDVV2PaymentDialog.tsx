@@ -1016,40 +1016,8 @@ export function PDVV2PaymentDialog({
                     {splitPartsToCharge < splitPeople && ` — restará ${splitPeople - splitPartsToCharge} pessoa(s) para cobrar depois`}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Clique em <strong>Confirmar Pagamento</strong> para cobrar o valor acima agora — após cada cobrança o sistema reabre o diálogo para a próxima pessoa. Ou use <em>Distribuir entre os itens</em> abaixo se preferir rachar cada item.
+                    Clique em <strong>Confirmar Pagamento</strong> para cobrar o valor acima. Após cada cobrança o sistema reabre o diálogo para a próxima pessoa.
                   </p>
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={splitPeople < 2 || !checkoutItems?.length}
-                      onClick={() => {
-                        if (!checkoutItems?.length || splitPeople < 2) return;
-                        const nextSel = new Map<number, number>();
-                        const nextMem = new Map<number, number>();
-                        checkoutItems.forEach((it, idx) => {
-                          const pendingQty = getPendingQty(it);
-                          if (pendingQty <= 0) return;
-                          // Cada pessoa fica com 1/N da quantidade total do item.
-                          // Para itens com quantity === 1, isso vira fração (ex.: 0.5).
-                          // Para itens com quantity > 1, distribui proporcionalmente.
-                          const perPersonQty =
-                            Math.round((pendingQty / splitPeople) * 1000) / 1000;
-                          if (perPersonQty > 0) {
-                            nextSel.set(idx, perPersonQty);
-                            // Memoriza fração para sobreviver a toggles do checkbox.
-                            if (pendingQty === 1) nextMem.set(idx, perPersonQty);
-                          }
-                        });
-                        setSelectedItemQtys(nextSel);
-                        setSplitMemory(nextMem);
-                        setI9Mode('items');
-                      }}
-                    >
-                      Distribuir entre os itens
-                    </Button>
-                  </div>
                 </div>
               )}
             </div>
