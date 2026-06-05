@@ -431,11 +431,18 @@ export function AppSidebar() {
           </SidebarGroup>
         </Collapsible>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Ações de vendas</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {acoesVendasItems.map((item) => (
+        <Collapsible className="group/grp-acoes">
+          <SidebarGroup>
+            <SidebarGroupLabel asChild>
+              <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+                <span>Ações de vendas</span>
+                <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-acoes:rotate-180" />
+              </CollapsibleTrigger>
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {acoesVendasItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
@@ -448,15 +455,24 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
 
         {(mesasMenuItems.length > 0 || mesasConfigItems.length > 0) && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Salão</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
+          <Collapsible className="group/grp-salao">
+            <SidebarGroup>
+              <SidebarGroupLabel asChild>
+                <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+                  <span>Salão</span>
+                  <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-salao:rotate-180" />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
                 {mesasMenuItems.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
