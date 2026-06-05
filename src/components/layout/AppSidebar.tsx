@@ -358,22 +358,18 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <Collapsible className="group/cadastros">
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton>
-                      <FolderTree className="w-4 h-4" />
-                      <span>Cadastros</span>
-                      <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/cadastros:rotate-180" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      <Collapsible className="group/cadastros-produtos">
+        <Collapsible className="group/grp-cadastros">
+          <SidebarGroup>
+            <SidebarGroupLabel asChild>
+              <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+                <span>Cadastros</span>
+                <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-cadastros:rotate-180" />
+              </CollapsibleTrigger>
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <Collapsible className="group/cadastros-produtos">
                         <SidebarMenuSubItem>
                           <CollapsibleTrigger asChild>
                             <SidebarMenuSubButton>
@@ -429,13 +425,11 @@ export function AppSidebar() {
                           </CollapsibleContent>
                         </SidebarMenuSubItem>
                       </Collapsible>
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
 
         <SidebarGroup>
           <SidebarGroupLabel>Ações de vendas</SidebarGroupLabel>
