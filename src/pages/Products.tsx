@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star, Camera, Check, X, Sparkles } from 'lucide-react';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
 import { ProductsMercadoView } from '@/components/products/ProductsMercadoView';
+import { ProductsMercadoSidebar } from '@/components/products/ProductsMercadoSidebar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -854,7 +855,18 @@ export default function Products() {
         )}
 
         {isModuleEnabled('mercado') && productsTab === 'mercado' ? (
-          <ProductsMercadoView products={products} onEdit={openEditDialog} />
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1 min-w-0">
+              <ProductsMercadoView products={products} onEdit={openEditDialog} />
+            </div>
+            <ProductsMercadoSidebar
+              onNewProduct={() => setIsProductDialogOpen(true)}
+              onImportPhoto={() => importCameraRef.current?.click()}
+              onImportFile={() => importFileRef.current?.click()}
+              onBulkTax={taxRules.length > 0 ? () => setIsBulkTaxOpen(true) : undefined}
+              onCopyMenuLink={copyMenuLink}
+            />
+          </div>
         ) : (
         <>
         {/* Category filter chips */}
