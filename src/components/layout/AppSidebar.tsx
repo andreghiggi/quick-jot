@@ -30,6 +30,8 @@ import {
   Settings2,
   ChevronDown,
   Ticket,
+  Truck,
+  ClipboardEdit,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -90,37 +92,30 @@ export function AppSidebar() {
     },
   ];
 
-  const catalogMenuItems = [
-    {
-      title: 'Categorias',
-      icon: FolderOpen,
-      href: '/categorias',
-    },
-    {
-      title: 'Subcategorias',
-      icon: LayoutList,
-      href: '/subcategorias',
-    },
-    {
-      title: 'Produtos',
-      icon: Package,
-      href: '/produtos',
-    },
-    {
-      title: 'Adicionais',
-      icon: Layers,
-      href: '/adicionais',
-    },
-    {
-      title: 'Cupons',
-      icon: Ticket,
-      href: '/cupons',
-    },
-    {
-      title: 'Ver cardápio',
-      icon: ChefHat,
-      href: `/cardapio/${company?.slug || ''}`,
-    },
+  // Cadastros - bloco Produtos
+  const cadastrosProdutosItems = [
+    { title: 'Categorias', icon: FolderOpen, href: '/categorias' },
+    { title: 'Subcategorias', icon: LayoutList, href: '/subcategorias' },
+    { title: 'Produtos', icon: Package, href: '/produtos' },
+    { title: 'Adicionais', icon: Layers, href: '/adicionais' },
+    ...(isModuleEnabled('mercado')
+      ? [{ title: 'Estoque', icon: ClipboardEdit, href: '/estoque' }]
+      : []),
+  ];
+
+  // Cadastros - bloco Pessoas
+  const cadastrosPessoasItems = [
+    { title: 'Clientes', icon: Users, href: '/clientes' },
+    { title: 'Fornecedores', icon: Truck, href: '/fornecedores' },
+  ];
+
+  // Ações de vendas
+  const acoesVendasItems = [
+    { title: 'Cupons', icon: Ticket, href: '/cupons' },
+    ...(isModuleEnabled('sales_campaigns')
+      ? [{ title: 'Campanhas de Vendas', icon: Megaphone, href: '/campanhas' }]
+      : []),
+    { title: 'Ver cardápio', icon: ChefHat, href: `/cardapio/${company?.slug || ''}` },
   ];
 
   const pdvMenuItems = isModuleEnabled('pdv') && !pdvV2Enabled ? [
@@ -363,10 +358,52 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Catálogo</SidebarGroupLabel>
+          <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <div className="px-2 pt-1 pb-0.5 text-[11px] uppercase tracking-wide text-sidebar-foreground/50">
+              Produtos
+            </div>
+            <SidebarMenu>
+              {cadastrosProdutosItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.href}
+                  >
+                    <Link to={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+            <div className="px-2 pt-2 pb-0.5 text-[11px] uppercase tracking-wide text-sidebar-foreground/50">
+              Pessoas
+            </div>
+            <SidebarMenu>
+              {cadastrosPessoasItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.href}
+                  >
+                    <Link to={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Ações de vendas</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {catalogMenuItems.map((item) => (
+              {acoesVendasItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
