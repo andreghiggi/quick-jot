@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.14.0-beta";
+export const VERSION = "1.15.0-beta";
 export const RELEASE_DATE = "2026-06-05"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Produtos: aba Mercado (Fase A) com tabela densa estilo Gdoor";
+export const CODENAME = "Menu lateral reorganizado: Cadastros + Ações de vendas";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.15.0-beta",
+    date: "2026-06-05",
+    codename: "Menu lateral reorganizado: Cadastros + Ações de vendas",
+    changes: [
+      "Menu lateral 'Catálogo' renomeado para 'Cadastros' e reorganizado em dois sub-blocos: 'Produtos' (Categorias, Subcategorias, Produtos, Adicionais e — quando o módulo Mercado está ativo — Estoque) e 'Pessoas' (Clientes e Fornecedores).",
+      "Novo menu 'Ações de vendas' agrupando Cupons, Campanhas de Vendas (quando o módulo está ativo) e Ver cardápio — antes esses itens ficavam misturados em Catálogo/Relatórios.",
+      "Nova página 'Clientes' (rota /clientes) com CRUD completo (nome, telefone, CPF, data de nascimento, endereço, cidade/UF). O relatório existente em /relatorios/clientes continua intocado.",
+      "Nova página 'Fornecedores' (rota /fornecedores) com CRUD completo (razão social, CNPJ/CPF, IE, contato, telefone, e-mail, endereço completo, observações, ativo/inativo). Nova tabela 'suppliers' isolada por empresa via RLS.",
+      "Mudança válida para TODO o Comanda Tech (não restrita a quem tem mercado).",
+      "Nenhum fluxo homologado foi alterado: TEF v1.0/v1.1/v1.2-beta, Multi-Pagamento, NFC-e, PDV V2, Pedido Express, impressão e cardápio público continuam idênticos.",
+    ],
+  },
   {
     version: "1.14.0-beta",
     date: "2026-06-05",

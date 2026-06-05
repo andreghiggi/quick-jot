@@ -47,6 +47,8 @@ import Subcategories from "./pages/Subcategories";
 import CustomerReport from "./pages/CustomerReport";
 import ABCReport from "./pages/ABCReport";
 import SalesCampaigns from "./pages/SalesCampaigns";
+import Customers from "./pages/Customers";
+import Suppliers from "./pages/Suppliers";
 import PDVV2 from "./pages/PDVV2";
 import CouponsPage from "./pages/Coupons";
 import MesaQR from "./pages/MesaQR";
@@ -297,6 +299,18 @@ function AppRoutes() {
       <Route path="/relatorios/clientes" element={
         <ProtectedRoute requireCompany>
           <CustomerReport />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/clientes" element={
+        <ProtectedRoute requireCompany>
+          <Customers />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/fornecedores" element={
+        <ProtectedRoute requireCompany>
+          <Suppliers />
         </ProtectedRoute>
       } />
       
