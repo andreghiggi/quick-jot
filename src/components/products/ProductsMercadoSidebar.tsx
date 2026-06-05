@@ -1,4 +1,4 @@
-import { Plus, Camera, Upload, FileText, Link as LinkIcon } from 'lucide-react';
+import { Plus, Camera, Upload, FileText, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -7,7 +7,7 @@ interface Props {
   onImportPhoto: () => void;
   onImportFile: () => void;
   onBulkTax?: () => void;
-  onCopyMenuLink: () => void;
+  onOpenMenu: () => void;
 }
 
 /**
@@ -20,7 +20,7 @@ export function ProductsMercadoSidebar({
   onImportPhoto,
   onImportFile,
   onBulkTax,
-  onCopyMenuLink,
+  onOpenMenu,
 }: Props) {
   return (
     <aside className="w-full lg:w-56 lg:flex-shrink-0">
@@ -88,10 +88,10 @@ export function ProductsMercadoSidebar({
               variant="ghost"
               size="sm"
               className="w-full justify-start"
-              onClick={onCopyMenuLink}
+              onClick={onOpenMenu}
             >
-              <LinkIcon className="h-4 w-4 mr-2" />
-              Copiar link cardápio
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Ver cardápio
             </Button>
           </div>
         </CardContent>
