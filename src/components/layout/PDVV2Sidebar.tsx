@@ -23,6 +23,7 @@ import {
   ScanBarcode,
   Boxes,
   Ticket,
+  Truck,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -78,9 +79,20 @@ export function PDVV2Sidebar() {
     { title: 'Subcategorias', icon: LayoutList, href: '/subcategorias' },
     { title: 'Produtos', icon: Package, href: '/produtos' },
     { title: 'Adicionais', icon: Layers, href: '/adicionais' },
-    { title: 'Cupons', icon: Ticket, href: '/cupons' },
     ...(isModuleEnabled('mercado')
       ? [{ title: 'Estoque', icon: Boxes, href: '/estoque' }]
+      : []),
+  ];
+
+  const people = [
+    { title: 'Clientes', icon: Users, href: '/clientes' },
+    { title: 'Fornecedores', icon: Truck, href: '/fornecedores' },
+  ];
+
+  const salesActions = [
+    { title: 'Cupons', icon: Ticket, href: '/cupons' },
+    ...(isModuleEnabled('sales_campaigns')
+      ? [{ title: 'Campanhas de Vendas', icon: Megaphone, href: '/campanhas' }]
       : []),
     { title: 'Ver cardápio', icon: ChefHat, href: `/cardapio/${company?.slug || ''}` },
   ];
@@ -102,9 +114,6 @@ export function PDVV2Sidebar() {
     { title: 'Relatório de Clientes', icon: BarChart3, href: '/relatorios/clientes' },
     { title: 'Curva ABC', icon: BarChart3, href: '/relatorios/curva-abc' },
     { title: 'Relatório TEF', icon: CreditCard, href: '/relatorios/tef' },
-    ...(isModuleEnabled('sales_campaigns')
-      ? [{ title: 'Campanhas de Vendas', icon: Megaphone, href: '/campanhas' }]
-      : []),
   ];
 
   const settings = [
@@ -154,7 +163,42 @@ export function PDVV2Sidebar() {
       <SidebarContent>
         {renderGroup('Operação', [...home, ...operations])}
         {renderGroup('Mesas', tables)}
-        {renderGroup('Catálogo', catalog)}
+        <SidebarGroup>
+          <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <div className="px-2 pt-1 pb-0.5 text-[11px] uppercase tracking-wide text-sidebar-foreground/50">
+              Produtos
+            </div>
+            <SidebarMenu>
+              {catalog.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton asChild isActive={location.pathname === item.href}>
+                    <Link to={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+            <div className="px-2 pt-2 pb-0.5 text-[11px] uppercase tracking-wide text-sidebar-foreground/50">
+              Pessoas
+            </div>
+            <SidebarMenu>
+              {people.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton asChild isActive={location.pathname === item.href}>
+                    <Link to={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        {renderGroup('Ações de vendas', salesActions)}
         {renderGroup('Financeiro', finance)}
         {renderGroup('Fiscal', fiscal)}
         {renderGroup('Relatórios', reports)}
