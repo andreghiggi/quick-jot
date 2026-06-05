@@ -162,7 +162,7 @@ export function PDVV2Sidebar() {
       <Collapsible className={`group/grp-${slug}`}>
         <SidebarGroup>
           <SidebarGroupLabel asChild>
-            <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+            <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
               <span>{label}</span>
               <ChevronDown className={`ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-${slug}:rotate-180`} />
             </CollapsibleTrigger>
@@ -197,7 +197,7 @@ export function PDVV2Sidebar() {
         <Collapsible className="group/grp-cadastros">
           <SidebarGroup>
             <SidebarGroupLabel asChild>
-              <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+              <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
                 <span>Cadastros</span>
                 <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-cadastros:rotate-180" />
               </CollapsibleTrigger>

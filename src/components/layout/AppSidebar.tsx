@@ -361,7 +361,7 @@ export function AppSidebar() {
         <Collapsible className="group/grp-cadastros">
           <SidebarGroup>
             <SidebarGroupLabel asChild>
-              <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+              <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
                 <span>Cadastros</span>
                 <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-cadastros:rotate-180" />
               </CollapsibleTrigger>
@@ -434,7 +434,7 @@ export function AppSidebar() {
         <Collapsible className="group/grp-acoes">
           <SidebarGroup>
             <SidebarGroupLabel asChild>
-              <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+              <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
                 <span>Ações de vendas</span>
                 <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-acoes:rotate-180" />
               </CollapsibleTrigger>
@@ -465,7 +465,7 @@ export function AppSidebar() {
           <Collapsible className="group/grp-salao">
             <SidebarGroup>
               <SidebarGroupLabel asChild>
-                <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+                <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
                   <span>Salão</span>
                   <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-salao:rotate-180" />
                 </CollapsibleTrigger>
@@ -530,7 +530,7 @@ export function AppSidebar() {
           <Collapsible className="group/grp-fin">
             <SidebarGroup>
               <SidebarGroupLabel asChild>
-                <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+                <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
                   <span>Financeiro</span>
                   <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-fin:rotate-180" />
                 </CollapsibleTrigger>
@@ -561,7 +561,7 @@ export function AppSidebar() {
         <Collapsible className="group/grp-rel">
           <SidebarGroup>
             <SidebarGroupLabel asChild>
-              <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+              <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
                 <span>Relatórios</span>
                 <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-rel:rotate-180" />
               </CollapsibleTrigger>
@@ -638,7 +638,7 @@ export function AppSidebar() {
           <Collapsible className="group/grp-adm">
             <SidebarGroup>
               <SidebarGroupLabel asChild>
-                <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+                <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
                   <span>Administração</span>
                   <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-adm:rotate-180" />
                 </CollapsibleTrigger>
@@ -669,7 +669,7 @@ export function AppSidebar() {
         <Collapsible className="group/grp-cfg">
           <SidebarGroup>
             <SidebarGroupLabel asChild>
-              <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+              <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
                 <span>Configurações</span>
                 <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-cfg:rotate-180" />
               </CollapsibleTrigger>
