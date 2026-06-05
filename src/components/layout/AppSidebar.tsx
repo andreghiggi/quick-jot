@@ -519,16 +519,25 @@ export function AppSidebar() {
                     </SidebarMenuItem>
                   </Collapsible>
                 )}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
         )}
 
         {(financeMenuItems.length > 0 || paymentMethodsMenuItem.length > 0) && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Financeiro</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
+          <Collapsible className="group/grp-fin">
+            <SidebarGroup>
+              <SidebarGroupLabel asChild>
+                <CollapsibleTrigger className="flex w-full items-center cursor-pointer">
+                  <span>Financeiro</span>
+                  <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-fin:rotate-180" />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
                 {[...financeMenuItems, ...paymentMethodsMenuItem].map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
@@ -542,9 +551,11 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
         )}
 
         <SidebarGroup>
