@@ -864,7 +864,7 @@ export default function Products() {
               onImportPhoto={() => importCameraRef.current?.click()}
               onImportFile={() => importFileRef.current?.click()}
               onBulkTax={taxRules.length > 0 ? () => setIsBulkTaxOpen(true) : undefined}
-              onCopyMenuLink={copyMenuLink}
+              onOpenMenu={() => window.open(menuLink, '_blank')}
             />
           </div>
         ) : (
