@@ -843,6 +843,20 @@ export default function Products() {
     <AppLayout title="Produtos" actions={headerActions}>
       <div className="space-y-6">
 
+        {/* Abas Cardápio | Mercado — só aparecem quando módulo `mercado` está ativo */}
+        {isModuleEnabled('mercado') && (
+          <Tabs value={productsTab} onValueChange={(v) => setProductsTab(v as 'cardapio' | 'mercado')}>
+            <TabsList>
+              <TabsTrigger value="cardapio">Cardápio</TabsTrigger>
+              <TabsTrigger value="mercado">Mercado</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+
+        {isModuleEnabled('mercado') && productsTab === 'mercado' ? (
+          <ProductsMercadoView products={products} onEdit={openEditDialog} />
+        ) : (
+        <>
         {/* Category filter chips */}
         {groupedProducts.length > 1 && (
           <div className="flex gap-2 flex-wrap pb-1">
@@ -1017,6 +1031,8 @@ export default function Products() {
               </Button>
             </CardContent>
           </Card>
+        )}
+        </>
         )}
       </div>
 
