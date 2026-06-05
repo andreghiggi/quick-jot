@@ -370,13 +370,13 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <Collapsible className="group/cadastros-produtos">
-                        <SidebarMenuSubItem>
+                        <SidebarMenuItem>
                           <CollapsibleTrigger asChild>
-                            <SidebarMenuSubButton>
+                            <SidebarMenuButton>
                               <Package className="w-4 h-4" />
                               <span>Produtos</span>
                               <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/cadastros-produtos:rotate-180" />
-                            </SidebarMenuSubButton>
+                            </SidebarMenuButton>
                           </CollapsibleTrigger>
                           <CollapsibleContent>
                             <SidebarMenuSub className="pl-2">
@@ -395,16 +395,16 @@ export function AppSidebar() {
                               ))}
                             </SidebarMenuSub>
                           </CollapsibleContent>
-                        </SidebarMenuSubItem>
+                        </SidebarMenuItem>
                       </Collapsible>
                       <Collapsible className="group/cadastros-pessoas">
-                        <SidebarMenuSubItem>
+                        <SidebarMenuItem>
                           <CollapsibleTrigger asChild>
-                            <SidebarMenuSubButton>
+                            <SidebarMenuButton>
                               <Users className="w-4 h-4" />
                               <span>Pessoas</span>
                               <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/cadastros-pessoas:rotate-180" />
-                            </SidebarMenuSubButton>
+                            </SidebarMenuButton>
                           </CollapsibleTrigger>
                           <CollapsibleContent>
                             <SidebarMenuSub className="pl-2">
@@ -423,7 +423,7 @@ export function AppSidebar() {
                               ))}
                             </SidebarMenuSub>
                           </CollapsibleContent>
-                        </SidebarMenuSubItem>
+                        </SidebarMenuItem>
                       </Collapsible>
                 </SidebarMenu>
               </SidebarGroupContent>
