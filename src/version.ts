@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.13.5-beta";
-export const RELEASE_DATE = "2026-06-04"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e split: correção do colapso para 1 detPag";
+export const VERSION = "1.14.0-beta";
+export const RELEASE_DATE = "2026-06-05"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Produtos: aba Mercado (Fase A) com tabela densa estilo Gdoor";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.14.0-beta",
+    date: "2026-06-05",
+    codename: "Produtos: aba Mercado (Fase A) com tabela densa estilo Gdoor",
+    changes: [
+      "Página Produtos: quando o módulo Mercado está ativo, agora há duas abas — 'Cardápio' (visão atual, idêntica) e 'Mercado' (nova visão densa estilo Gdoor/Gweb).",
+      "Aba Mercado: tabela paginada (50 itens por página) com colunas SKU, Produto, GTIN, Categoria, Unidade, Estoque, Mínimo, Preço e ação de editar. Busca única por nome/SKU/GTIN, filtro por categoria e filtro rápido 'Estoque ≤ mínimo' ou 'Sem GTIN'.",
+      "Estoque é colorido por status (verde acima do mínimo, âmbar no mínimo, vermelho zerado, cinza sem controle) para localizar rupturas rapidamente, mesmo com 800+ itens.",
+      "Edição reusa o mesmo diálogo existente — nenhum fluxo de cadastro, NFC-e, TEF, PDV V2 ou cardápio foi alterado. Quando o módulo Mercado está desligado, a página Produtos renderiza exatamente como antes.",
+      "Próximas fases (não implementadas ainda): edição em página cheia tipo Gdoor, novos campos (peso, atacado, validade, CEST/ANP), sidebar de ações em massa.",
+    ],
+  },
   {
     version: "1.13.5-beta",
     date: "2026-06-04",
