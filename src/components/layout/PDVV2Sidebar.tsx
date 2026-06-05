@@ -24,6 +24,8 @@ import {
   Boxes,
   Ticket,
   Truck,
+  FolderTree,
+  ChevronDown,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -38,7 +40,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import logoIcon from '@/assets/logo-icon.png';
@@ -166,35 +172,72 @@ export function PDVV2Sidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
           <SidebarGroupContent>
-            <div className="px-2 pt-1 pb-0.5 text-[11px] uppercase tracking-wide text-sidebar-foreground/50">
-              Produtos
-            </div>
             <SidebarMenu>
-              {catalog.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={location.pathname === item.href}>
-                    <Link to={item.href}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
+              <Collapsible className="group/cadastros">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton>
+                      <FolderTree className="w-4 h-4" />
+                      <span>Cadastros</span>
+                      <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/cadastros:rotate-180" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      <Collapsible className="group/cadastros-produtos">
+                        <SidebarMenuSubItem>
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuSubButton>
+                              <Package className="w-4 h-4" />
+                              <span>Produtos</span>
+                              <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/cadastros-produtos:rotate-180" />
+                            </SidebarMenuSubButton>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub className="pl-2">
+                              {catalog.map((item) => (
+                                <SidebarMenuSubItem key={item.href}>
+                                  <SidebarMenuSubButton asChild isActive={location.pathname === item.href}>
+                                    <Link to={item.href}>
+                                      <item.icon className="w-4 h-4" />
+                                      <span>{item.title}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </SidebarMenuSubItem>
+                      </Collapsible>
+                      <Collapsible className="group/cadastros-pessoas">
+                        <SidebarMenuSubItem>
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuSubButton>
+                              <Users className="w-4 h-4" />
+                              <span>Pessoas</span>
+                              <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/cadastros-pessoas:rotate-180" />
+                            </SidebarMenuSubButton>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub className="pl-2">
+                              {people.map((item) => (
+                                <SidebarMenuSubItem key={item.href}>
+                                  <SidebarMenuSubButton asChild isActive={location.pathname === item.href}>
+                                    <Link to={item.href}>
+                                      <item.icon className="w-4 h-4" />
+                                      <span>{item.title}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </SidebarMenuSubItem>
+                      </Collapsible>
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
                 </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-            <div className="px-2 pt-2 pb-0.5 text-[11px] uppercase tracking-wide text-sidebar-foreground/50">
-              Pessoas
-            </div>
-            <SidebarMenu>
-              {people.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={location.pathname === item.href}>
-                    <Link to={item.href}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              </Collapsible>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
