@@ -16,6 +16,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star, Camera, Check, X, Sparkles } from 'lucide-react';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
+import { ProductsMercadoView } from '@/components/products/ProductsMercadoView';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -66,6 +68,8 @@ export default function Products() {
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [isBulkTaxOpen, setIsBulkTaxOpen] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
+  // Aba ativa quando módulo `mercado` está ligado. Default: Cardápio (zero impacto no fluxo atual).
+  const [productsTab, setProductsTab] = useState<'cardapio' | 'mercado'>('cardapio');
   const menuLink = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
 
   // AI import state
@@ -839,6 +843,20 @@ export default function Products() {
     <AppLayout title="Produtos" actions={headerActions}>
       <div className="space-y-6">
 
+        {/* Abas Cardápio | Mercado — só aparecem quando módulo `mercado` está ativo */}
+        {isModuleEnabled('mercado') && (
+          <Tabs value={productsTab} onValueChange={(v) => setProductsTab(v as 'cardapio' | 'mercado')}>
+            <TabsList>
+              <TabsTrigger value="cardapio">Cardápio</TabsTrigger>
+              <TabsTrigger value="mercado">Mercado</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+
+        {isModuleEnabled('mercado') && productsTab === 'mercado' ? (
+          <ProductsMercadoView products={products} onEdit={openEditDialog} />
+        ) : (
+        <>
         {/* Category filter chips */}
         {groupedProducts.length > 1 && (
           <div className="flex gap-2 flex-wrap pb-1">
@@ -1013,6 +1031,8 @@ export default function Products() {
               </Button>
             </CardContent>
           </Card>
+        )}
+        </>
         )}
       </div>
 
