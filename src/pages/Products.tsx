@@ -217,7 +217,7 @@ export default function Products() {
 
 
   function openEditDialog(product: Product) {
-    setEditingProduct(product);
+    navigate(`/produtos/${product.id}`);
   }
 
   async function handleEditImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
