@@ -144,9 +144,37 @@ export default function ProductEdit() {
       setStockQuantity(existing.stockQuantity != null ? String(existing.stockQuantity) : '0');
       setOriginalStock(existing.stockQuantity != null ? Number(existing.stockQuantity) : 0);
       setMinStock(existing.minStock != null ? String(existing.minStock) : '');
+      setNcm(existing.ncm || '');
+      setCest(existing.cest || '');
+      setCfop(existing.cfop || '');
+      setBrand(existing.brand || '');
+      setSupplierId(existing.supplierId || '');
+      setWholesalePrice(existing.wholesalePrice != null ? String(existing.wholesalePrice) : '');
+      setWholesaleMinQty(existing.wholesaleMinQty != null ? String(existing.wholesaleMinQty) : '');
+      setShelfLifeDays(existing.shelfLifeDays != null ? String(existing.shelfLifeDays) : '');
+      setExpirationDate(existing.expirationDate || '');
+      setBatchNumber(existing.batchNumber || '');
+      setIsScaleItem(!!existing.isScaleItem);
+      setScaleBarcode(existing.scaleBarcode || '');
+      setPricePerKg(!!existing.pricePerKg);
       setHydrated(true);
     }
   }, [existing, isNew, hydrated, categories, categoryName]);
+
+  // Carrega lista de fornecedores quando módulo Mercado está ativo
+  useEffect(() => {
+    if (!mercadoEnabled || !company?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await (supabase as any)
+        .from('suppliers')
+        .select('id, name')
+        .eq('company_id', company.id)
+        .order('name', { ascending: true });
+      if (!error && !cancelled) setSuppliersList(data || []);
+    })();
+    return () => { cancelled = true; };
+  }, [mercadoEnabled, company?.id]);
 
   // Edição com id inválido → volta pra lista (após carregar)
   if (!isNew && !loading && !existing) {
