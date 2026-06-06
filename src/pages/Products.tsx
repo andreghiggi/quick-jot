@@ -566,13 +566,11 @@ export default function Products() {
           <span className="hidden sm:inline">Tributação em massa</span>
         </Button>
       )}
+      <Button onClick={() => navigate('/produtos/novo')}>
+        <Plus className="h-4 w-4 mr-2" />
+        <span className="hidden sm:inline">Novo Produto</span>
+      </Button>
       <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-        <DialogTrigger asChild>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Novo Produto</span>
-          </Button>
-        </DialogTrigger>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Produto</DialogTitle>
