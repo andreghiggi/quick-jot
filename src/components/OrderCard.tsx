@@ -229,6 +229,14 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   // Converter para fuso horário de São Paulo
   const createdAt = new Date(order.createdAt);
   const timeAgo = formatTimeAgo(createdAt);
+  const isFinalized = order.status === 'delivered' || order.status === 'cancelled';
+  const finalizedDateTime = createdAt.toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
   
   // Formatar hora no fuso de SP para exibição
   const formattedTime = createdAt.toLocaleTimeString('pt-BR', { 
