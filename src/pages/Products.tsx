@@ -69,9 +69,29 @@ export default function Products() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [isBulkTaxOpen, setIsBulkTaxOpen] = useState(false);
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
+  // Filtro de categoria persistido em sessionStorage para sobreviver à
+  // navegação para a página de edição de produto (e voltar).
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(() => {
+    try {
+      const v = sessionStorage.getItem('products:categoryFilter');
+      return v === null || v === 'null' ? null : v;
+    } catch { return null; }
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('products:categoryFilter', selectedCategoryFilter ?? 'null');
+    } catch {}
+  }, [selectedCategoryFilter]);
   // Aba ativa quando módulo `mercado` está ligado. Default: Cardápio (zero impacto no fluxo atual).
-  const [productsTab, setProductsTab] = useState<'cardapio' | 'mercado'>('cardapio');
+  const [productsTab, setProductsTab] = useState<'cardapio' | 'mercado'>(() => {
+    try {
+      const v = sessionStorage.getItem('products:tab');
+      return v === 'mercado' ? 'mercado' : 'cardapio';
+    } catch { return 'cardapio'; }
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem('products:tab', productsTab); } catch {}
+  }, [productsTab]);
   const menuLink = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
 
   // AI import state
