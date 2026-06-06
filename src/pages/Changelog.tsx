@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '06/06/2026',
+    version: '1.15.1-beta',
+    type: 'fix',
+    description: 'Relatório de Vendas — comandas finalizadas em mesas agora entram corretamente no relatório pelo horário de fechamento da comanda, somando os itens de tab_items no faturamento, produtos vendidos e lista de vendas. As origens aparecem como Mesa (Garçom) ou Mesa QR com número da comanda/mesa quando disponível. Correção isolada em Relatórios → Relatório de Vendas; PDV V2, Pedido Express, TEF, NFC-e, impressão e demais relatórios não foram alterados.',
+  },
+  {
     date: '03/06/2026',
     version: '1.10.1-beta',
     type: 'feature',
