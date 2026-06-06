@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.15.1-beta";
+export const VERSION = "1.15.2-beta";
 export const RELEASE_DATE = "2026-06-06"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Relatório de Vendas: comandas finalizadas";
+export const CODENAME = "Caixa: trava anti-duplo-clique na abertura";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.15.2-beta",
+    date: "2026-06-06",
+    codename: "Caixa: trava anti-duplo-clique na abertura",
+    changes: [
+      "Correção de bug: ao clicar duas vezes muito rápido em 'Abrir Caixa' (PDV V2, PDV V1 ou tela Caixas) o sistema criava DOIS caixas abertos simultâneos para a mesma loja, com um deles virando 'caixa fantasma' acumulando vendas que deveriam estar no outro.",
+      "Trava tripla aplicada: (1) flag síncrona no hook impedindo segunda chamada antes da primeira terminar; (2) re-checagem no servidor antes do insert para impedir caixas vindos de outra aba/dispositivo; (3) índice único no banco (cash_registers_one_open_per_company) que garante que jamais existirão dois caixas com status='open' para a mesma loja, mesmo em condições extremas.",
+      "Botão 'Abrir Caixa' agora fica desabilitado e mostra 'Abrindo...' enquanto a operação está em andamento, com o botão 'Cancelar' também travado para evitar fechamento acidental do diálogo no meio do processo.",
+      "Nenhum fluxo de TEF, NFC-e, Pedido Express, Multi-Pagamento, impressão ou cardápio foi alterado.",
+    ],
+  },
   {
     version: "1.15.1-beta",
     date: "2026-06-06",
