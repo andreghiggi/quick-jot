@@ -1435,10 +1435,11 @@ export default function PDVV2() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenCashOpen(false)}>
+            <Button variant="outline" onClick={() => setOpenCashOpen(false)} disabled={isOpening}>
               Cancelar
             </Button>
             <Button
+              disabled={isOpening}
               onClick={async () => {
                 if (!user) return;
                 const amount = parseFloat(openingAmount.replace(',', '.')) || 0;
@@ -1449,7 +1450,7 @@ export default function PDVV2() {
                 }
               }}
             >
-              Abrir Caixa
+              {isOpening ? 'Abrindo...' : 'Abrir Caixa'}
             </Button>
           </DialogFooter>
         </DialogContent>
