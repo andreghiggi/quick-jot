@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -18,9 +20,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { BarChart3, Package, TrendingUp, Calendar, DollarSign, ShoppingCart, Loader2, Filter, Receipt } from 'lucide-react';
+import { BarChart3, Package, TrendingUp, Calendar as CalendarIcon, DollarSign, ShoppingCart, Loader2, Filter, Receipt } from 'lucide-react';
 
-type PeriodType = 'today' | 'week' | 'month' | 'last_month';
+type PeriodType = 'today' | 'week' | 'month' | 'last_month' | 'custom';
 
 type OriginKey = 'balcao' | 'delivery' | 'retirada' | 'mesa' | 'mesa_qr';
 
@@ -50,7 +52,7 @@ interface SaleData {
   short_code?: string | null;
 }
 
-function getPeriodDates(period: PeriodType) {
+function getPeriodDates(period: PeriodType, customStart?: Date, customEnd?: Date) {
   const now = new Date();
   
   switch (period) {
@@ -63,6 +65,12 @@ function getPeriodDates(period: PeriodType) {
     case 'last_month':
       const lastMonth = subMonths(now, 1);
       return { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth), label: 'Mês Anterior' };
+    case 'custom':
+      return {
+        start: startOfDay(customStart ?? now),
+        end: endOfDay(customEnd ?? customStart ?? now),
+        label: 'Personalizado',
+      };
     default:
       return { start: startOfDay(now), end: endOfDay(now), label: 'Hoje' };
   }
@@ -73,8 +81,12 @@ export default function SalesReport() {
   const [period, setPeriod] = useState<PeriodType>('week');
   const [productFilter, setProductFilter] = useState<string>('all');
   const [selectedOrigins, setSelectedOrigins] = useState<OriginKey[]>(ALL_ORIGINS);
+  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
 
-  const periodDates = useMemo(() => getPeriodDates(period), [period]);
+  const periodDates = useMemo(
+    () => getPeriodDates(period, customRange.from, customRange.to),
+    [period, customRange.from, customRange.to]
+  );
 
   // Fetch sales data: PDV sales + delivered orders
   const { data: salesData, isLoading: loadingSales } = useQuery({
@@ -327,8 +339,35 @@ export default function SalesReport() {
                     <SelectItem value="week">Esta Semana</SelectItem>
                     <SelectItem value="month">Este Mês</SelectItem>
                     <SelectItem value="last_month">Mês Anterior</SelectItem>
+                    <SelectItem value="custom">Personalizado</SelectItem>
                   </SelectContent>
                 </Select>
+                {period === 'custom' && (
+                  <div className="mt-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {customRange.from
+                            ? customRange.to
+                              ? `${format(customRange.from, 'dd/MM/yyyy', { locale: ptBR })} - ${format(customRange.to, 'dd/MM/yyyy', { locale: ptBR })}`
+                              : format(customRange.from, 'dd/MM/yyyy', { locale: ptBR })
+                            : 'Selecione as datas'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="range"
+                          selected={{ from: customRange.from, to: customRange.to }}
+                          onSelect={(r: any) => setCustomRange({ from: r?.from, to: r?.to })}
+                          numberOfMonths={2}
+                          locale={ptBR}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
               </div>
               <div className="flex-1">
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">
