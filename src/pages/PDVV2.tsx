@@ -418,17 +418,10 @@ export default function PDVV2() {
         return {
           codigo: product?.code || it.product_id || 'AVULSO',
           descricao: it.product_name,
-          ncm: taxRule?.ncm || fallbackNcm,
-          cfop: taxRule?.cfop || '5102',
           unidade: product?.unit || 'UN',
           quantidade: it.quantity,
           valor_unitario: it.unit_price,
-          csosn: taxRule?.csosn || '102',
-          aliquota_icms: taxRule?.icms_aliquot || 0,
-          cst_pis: taxRule?.pis_cst || '49',
-          aliquota_pis: taxRule?.pis_aliquot || 0,
-          cst_cofins: taxRule?.cofins_cst || '49',
-          aliquota_cofins: taxRule?.cofins_aliquot || 0,
+          ...buildNfceFiscalFields({ product, taxRule, mercadoEnabled, fallbackNcm }),
         };
       });
 
@@ -669,17 +662,10 @@ export default function PDVV2() {
             return {
               codigo: product?.code || it.product_id || 'AVULSO',
               descricao: it.product_name,
-              ncm: taxRule?.ncm || '00000000',
-              cfop: taxRule?.cfop || '5102',
               unidade: 'UN',
               quantidade: it.quantity,
               valor_unitario: it.unit_price,
-              csosn: taxRule?.csosn || '102',
-              aliquota_icms: taxRule?.icms_aliquot || 0,
-              cst_pis: taxRule?.pis_cst || '49',
-              aliquota_pis: taxRule?.pis_aliquot || 0,
-              cst_cofins: taxRule?.cofins_cst || '49',
-              aliquota_cofins: taxRule?.cofins_aliquot || 0,
+              ...buildNfceFiscalFields({ product, taxRule, mercadoEnabled }),
             };
           });
           const externalId = `TAB-MULTI-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
