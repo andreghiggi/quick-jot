@@ -97,7 +97,7 @@ export default function SalesReport() {
       // 1. Fetch PDV sales
       const { data: pdvSales, error: pdvError } = await supabase
         .from('pdv_sales')
-        .select('id, created_at, final_total')
+        .select('id, created_at, final_total, customer_name, notes')
         .eq('company_id', company.id)
         .gte('created_at', periodDates.start.toISOString())
         .lte('created_at', periodDates.end.toISOString())
@@ -110,7 +110,7 @@ export default function SalesReport() {
       // 2. Fetch delivered orders
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
-        .select('id, created_at, total, origin, table_number, delivery_address, short_code')
+        .select('id, created_at, total, origin, delivery_address, short_code')
         .eq('company_id', company.id)
         .eq('status', 'delivered')
         .gte('created_at', periodDates.start.toISOString())
@@ -131,13 +131,23 @@ export default function SalesReport() {
         short_code?: string | null;
       }[] = [];
 
-      (pdvSales || []).forEach(s => allSaleEntries.push({
-        ...s,
-        source: 'pdv',
-        origin: 'balcao',
-        table_number: null,
-        short_code: null,
-      }));
+      (pdvSales || []).forEach((s: any) => {
+        const customerName = String(s.customer_name || '');
+        const notes = String(s.notes || '');
+        const isComanda = notes.includes('Comanda #') || customerName.startsWith('Mesa ');
+        const tableMatch = customerName.match(/Mesa\s+(\d+)/i);
+        const tabMatch = notes.match(/Comanda\s+#?(\d+)/i);
+
+        allSaleEntries.push({
+          id: s.id,
+          created_at: s.created_at,
+          final_total: s.final_total,
+          source: 'pdv',
+          origin: isComanda ? (customerName.includes('(QR)') ? 'mesa_qr' : 'mesa') : 'balcao',
+          table_number: tableMatch?.[1] ?? null,
+          short_code: tabMatch?.[1] ? `Comanda ${tabMatch[1]}` : null,
+        });
+      });
 
       (orders || []).forEach((o: any) => {
         let originBucket: OriginKey = 'balcao';
@@ -154,7 +164,7 @@ export default function SalesReport() {
           final_total: o.total,
           source: 'order',
           origin: originBucket,
-          table_number: o.table_number ?? null,
+          table_number: null,
           short_code: o.short_code ?? null,
         });
       });
@@ -207,15 +217,18 @@ export default function SalesReport() {
 
       const salesWithItems: SaleData[] = allSaleEntries
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .map(sale => ({
-          id: sale.id,
-          created_at: sale.created_at,
-          final_total: sale.final_total,
-          items: itemsBySaleId[sale.id] || [],
-          origin: sale.origin,
-          table_number: sale.table_number,
-          short_code: sale.short_code,
-        }));
+        .map(sale => {
+          const items = itemsBySaleId[sale.id] || [];
+          return {
+            id: sale.id,
+            created_at: sale.created_at,
+            final_total: sale.final_total,
+            items,
+            origin: sale.origin,
+            table_number: sale.table_number,
+            short_code: sale.short_code,
+          };
+        });
       
       return salesWithItems;
     },

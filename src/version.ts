@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.15.0-beta";
-export const RELEASE_DATE = "2026-06-05"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Menu lateral reorganizado: Cadastros + Ações de vendas";
+export const VERSION = "1.15.1-beta";
+export const RELEASE_DATE = "2026-06-06"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Relatório de Vendas: comandas finalizadas";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.15.1-beta",
+    date: "2026-06-06",
+    codename: "Relatório de Vendas: comandas finalizadas",
+    changes: [
+      "Relatório de Vendas: vendas de comandas finalizadas agora deixam de aparecer como Balcão/PDV e passam a ser classificadas corretamente como Mesa (Garçom) ou Mesa QR.",
+      "A identificação exibe o número da comanda e a origem mostra a mesa quando disponível, usando a venda já registrada no caixa para não duplicar faturamento.",
+      "Correção isolada na aba Relatórios → Relatório de Vendas; PDV V2, Pedido Express, TEF, NFC-e, impressão e demais relatórios não foram alterados.",
+    ],
+  },
   {
     version: "1.15.0-beta",
     date: "2026-06-05",

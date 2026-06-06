@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '06/06/2026',
+    version: '1.15.1-beta',
+    type: 'fix',
+    description: 'Relatório de Vendas — vendas de comandas finalizadas agora deixam de aparecer como Balcão/PDV e passam a ser classificadas corretamente como Mesa (Garçom) ou Mesa QR. A identificação exibe o número da comanda e a origem mostra a mesa quando disponível, usando a venda já registrada no caixa para não duplicar faturamento. Correção isolada em Relatórios → Relatório de Vendas; PDV V2, Pedido Express, TEF, NFC-e, impressão e demais relatórios não foram alterados.',
+  },
+  {
     date: '03/06/2026',
     version: '1.10.1-beta',
     type: 'feature',
