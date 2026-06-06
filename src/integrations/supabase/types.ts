@@ -1592,93 +1592,132 @@ export type Database = {
       products: {
         Row: {
           active: boolean
+          batch_number: string | null
+          brand: string | null
           category: string
+          cest: string | null
+          cfop: string | null
           code: string | null
           company_id: string | null
           cost_price: number | null
           created_at: string
           description: string | null
           display_order: number | null
+          expiration_date: string | null
           gross_weight: number | null
           gtin: string | null
           icms_origin: string
           id: string
           image_url: string | null
           is_new: boolean
+          is_scale_item: boolean
           menu_item: boolean
           min_stock: number
           name: string
+          ncm: string | null
           net_weight: number | null
           pdv_item: boolean
           price: number
+          price_per_kg: boolean
+          scale_barcode: string | null
+          shelf_life_days: number | null
           stock_quantity: number
           subcategory_id: string | null
+          supplier_id: string | null
           swappable_in_order: boolean
           tax_rule_id: string | null
           track_stock: boolean
           unit: string
           updated_at: string
           waiter_item: boolean
+          wholesale_min_qty: number | null
+          wholesale_price: number | null
         }
         Insert: {
           active?: boolean
+          batch_number?: string | null
+          brand?: string | null
           category: string
+          cest?: string | null
+          cfop?: string | null
           code?: string | null
           company_id?: string | null
           cost_price?: number | null
           created_at?: string
           description?: string | null
           display_order?: number | null
+          expiration_date?: string | null
           gross_weight?: number | null
           gtin?: string | null
           icms_origin?: string
           id?: string
           image_url?: string | null
           is_new?: boolean
+          is_scale_item?: boolean
           menu_item?: boolean
           min_stock?: number
           name: string
+          ncm?: string | null
           net_weight?: number | null
           pdv_item?: boolean
           price: number
+          price_per_kg?: boolean
+          scale_barcode?: string | null
+          shelf_life_days?: number | null
           stock_quantity?: number
           subcategory_id?: string | null
+          supplier_id?: string | null
           swappable_in_order?: boolean
           tax_rule_id?: string | null
           track_stock?: boolean
           unit?: string
           updated_at?: string
           waiter_item?: boolean
+          wholesale_min_qty?: number | null
+          wholesale_price?: number | null
         }
         Update: {
           active?: boolean
+          batch_number?: string | null
+          brand?: string | null
           category?: string
+          cest?: string | null
+          cfop?: string | null
           code?: string | null
           company_id?: string | null
           cost_price?: number | null
           created_at?: string
           description?: string | null
           display_order?: number | null
+          expiration_date?: string | null
           gross_weight?: number | null
           gtin?: string | null
           icms_origin?: string
           id?: string
           image_url?: string | null
           is_new?: boolean
+          is_scale_item?: boolean
           menu_item?: boolean
           min_stock?: number
           name?: string
+          ncm?: string | null
           net_weight?: number | null
           pdv_item?: boolean
           price?: number
+          price_per_kg?: boolean
+          scale_barcode?: string | null
+          shelf_life_days?: number | null
           stock_quantity?: number
           subcategory_id?: string | null
+          supplier_id?: string | null
           swappable_in_order?: boolean
           tax_rule_id?: string | null
           track_stock?: boolean
           unit?: string
           updated_at?: string
           waiter_item?: boolean
+          wholesale_min_qty?: number | null
+          wholesale_price?: number | null
         }
         Relationships: [
           {
@@ -1693,6 +1732,13 @@ export type Database = {
             columns: ["subcategory_id"]
             isOneToOne: false
             referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
           {
