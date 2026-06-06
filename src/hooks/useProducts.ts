@@ -75,6 +75,19 @@ export function useProducts(options: UseProductsOptions = {}) {
         trackStock: (product as any).track_stock ?? false,
         stockQuantity: (product as any).stock_quantity != null ? Number((product as any).stock_quantity) : 0,
         minStock: (product as any).min_stock != null ? Number((product as any).min_stock) : 0,
+        ncm: (product as any).ncm ?? null,
+        cest: (product as any).cest ?? null,
+        cfop: (product as any).cfop ?? null,
+        wholesalePrice: (product as any).wholesale_price != null ? Number((product as any).wholesale_price) : null,
+        wholesaleMinQty: (product as any).wholesale_min_qty != null ? Number((product as any).wholesale_min_qty) : null,
+        brand: (product as any).brand ?? null,
+        supplierId: (product as any).supplier_id ?? null,
+        shelfLifeDays: (product as any).shelf_life_days != null ? Number((product as any).shelf_life_days) : null,
+        expirationDate: (product as any).expiration_date ?? null,
+        batchNumber: (product as any).batch_number ?? null,
+        isScaleItem: (product as any).is_scale_item ?? false,
+        scaleBarcode: (product as any).scale_barcode ?? null,
+        pricePerKg: (product as any).price_per_kg ?? false,
         optionals: optionalsData
           .filter((opt) => opt.product_id === product.id)
           .map((opt) => ({
