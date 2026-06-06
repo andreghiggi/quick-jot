@@ -215,15 +215,6 @@ export default function SalesReport() {
         });
       });
 
-      tabItems.forEach(item => {
-        if (!itemsBySaleId[item.tab_id]) itemsBySaleId[item.tab_id] = [];
-        itemsBySaleId[item.tab_id].push({
-          product_name: item.product_name,
-          quantity: Number(item.quantity || 0),
-          total_price: Number(item.total_price || 0),
-        });
-      });
-
       const salesWithItems: SaleData[] = allSaleEntries
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .map(sale => {
@@ -231,9 +222,7 @@ export default function SalesReport() {
           return {
             id: sale.id,
             created_at: sale.created_at,
-            final_total: sale.source === 'tab'
-              ? items.reduce((sum, item) => sum + item.total_price, 0)
-              : sale.final_total,
+            final_total: sale.final_total,
             items,
             origin: sale.origin,
             table_number: sale.table_number,
