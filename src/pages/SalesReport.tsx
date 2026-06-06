@@ -121,11 +121,40 @@ export default function SalesReport() {
         console.error('Error fetching orders:', ordersError);
       }
 
+      // 3. Fetch closed table tabs (comandas finalizadas)
+      const { data: tableTabs, error: tabsError } = await supabase
+        .from('tabs')
+        .select('id, created_at, closed_at, tab_number, customer_name, table_id')
+        .eq('company_id', company.id)
+        .eq('status', 'closed')
+        .gte('closed_at', periodDates.start.toISOString())
+        .lte('closed_at', periodDates.end.toISOString())
+        .order('closed_at', { ascending: false });
+
+      if (tabsError) {
+        console.error('Error fetching table tabs:', tabsError);
+      }
+
+      const tableIds = Array.from(new Set((tableTabs || []).map((tab: any) => tab.table_id).filter(Boolean)));
+      let tableNumberById: Record<string, string> = {};
+
+      if (tableIds.length > 0) {
+        const { data: tables } = await supabase
+          .from('tables')
+          .select('id, number')
+          .in('id', tableIds);
+
+        tableNumberById = (tables || []).reduce((acc: Record<string, string>, table: any) => {
+          acc[table.id] = String(table.number);
+          return acc;
+        }, {});
+      }
+
       const allSaleEntries: {
         id: string;
         created_at: string;
         final_total: number;
-        source: 'pdv' | 'order';
+        source: 'pdv' | 'order' | 'tab';
         origin: OriginKey;
         table_number?: string | null;
         short_code?: string | null;
@@ -159,14 +188,29 @@ export default function SalesReport() {
         });
       });
 
+      (tableTabs || []).forEach((tab: any) => {
+        const customerName = String(tab.customer_name || '');
+        allSaleEntries.push({
+          id: tab.id,
+          created_at: tab.closed_at || tab.created_at,
+          final_total: 0,
+          source: 'tab',
+          origin: customerName.includes('(QR)') ? 'mesa_qr' : 'mesa',
+          table_number: tab.table_id ? tableNumberById[tab.table_id] ?? null : null,
+          short_code: tab.tab_number ? `Comanda ${tab.tab_number}` : null,
+        });
+      });
+
       if (allSaleEntries.length === 0) return [];
 
       // Fetch PDV sale items
       const pdvIds = allSaleEntries.filter(s => s.source === 'pdv').map(s => s.id);
       const orderIds = allSaleEntries.filter(s => s.source === 'order').map(s => s.id);
+      const tabIds = allSaleEntries.filter(s => s.source === 'tab').map(s => s.id);
 
       let pdvItems: any[] = [];
       let orderItems: any[] = [];
+      let tabItems: any[] = [];
 
       if (pdvIds.length > 0) {
         const { data } = await supabase
@@ -182,6 +226,14 @@ export default function SalesReport() {
           .select('order_id, name, quantity, price')
           .in('order_id', orderIds);
         orderItems = data || [];
+      }
+
+      if (tabIds.length > 0) {
+        const { data } = await supabase
+          .from('tab_items')
+          .select('tab_id, product_name, quantity, total_price')
+          .in('tab_id', tabIds);
+        tabItems = data || [];
       }
 
       // Build items map
@@ -205,17 +257,31 @@ export default function SalesReport() {
         });
       });
 
+      tabItems.forEach(item => {
+        if (!itemsBySaleId[item.tab_id]) itemsBySaleId[item.tab_id] = [];
+        itemsBySaleId[item.tab_id].push({
+          product_name: item.product_name,
+          quantity: Number(item.quantity || 0),
+          total_price: Number(item.total_price || 0),
+        });
+      });
+
       const salesWithItems: SaleData[] = allSaleEntries
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .map(sale => ({
-          id: sale.id,
-          created_at: sale.created_at,
-          final_total: sale.final_total,
-          items: itemsBySaleId[sale.id] || [],
-          origin: sale.origin,
-          table_number: sale.table_number,
-          short_code: sale.short_code,
-        }));
+        .map(sale => {
+          const items = itemsBySaleId[sale.id] || [];
+          return {
+            id: sale.id,
+            created_at: sale.created_at,
+            final_total: sale.source === 'tab'
+              ? items.reduce((sum, item) => sum + item.total_price, 0)
+              : sale.final_total,
+            items,
+            origin: sale.origin,
+            table_number: sale.table_number,
+            short_code: sale.short_code,
+          };
+        });
       
       return salesWithItems;
     },
