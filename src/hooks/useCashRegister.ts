@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -87,6 +87,11 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
   const [cashOpenOptimistic, setCashOpenOptimistic] = useState<boolean | null>(
     () => readCashOpenCache(companyId)
   );
+  // Trava anti-duplo-clique para abertura de caixa. Usamos useRef para
+  // garantir sincronia entre cliques quase simultâneos (o setState do React
+  // não atualiza a tempo entre dois cliques em < 50ms).
+  const openingRef = useRef(false);
+  const [isOpening, setIsOpening] = useState(false);
 
   useEffect(() => {
     if (companyId) {
@@ -171,13 +176,32 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
   async function openRegister(openingAmount: number, userId: string): Promise<boolean> {
     if (!companyId) return false;
 
-    // Check if there's already an open register
+    // Guard anti-duplo-clique (síncrono)
+    if (openingRef.current) {
+      return false;
+    }
     if (currentRegister) {
       toast.error('Já existe um caixa aberto!');
       return false;
     }
+    openingRef.current = true;
+    setIsOpening(true);
 
     try {
+      // Re-checa no servidor para impedir caixa fantasma vindo de outra aba/dispositivo
+      const { data: existing } = await supabase
+        .from('cash_registers')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('status', 'open')
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        await fetchCurrentRegister();
+        toast.error('Já existe um caixa aberto!');
+        return false;
+      }
+
       const { data, error } = await supabase
         .from('cash_registers')
         .insert({
@@ -189,7 +213,15 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // 23505 = unique_violation (índice cash_registers_one_open_per_company)
+        if ((error as any).code === '23505') {
+          await fetchCurrentRegister();
+          toast.error('Já existe um caixa aberto!');
+          return false;
+        }
+        throw error;
+      }
 
       setCurrentRegister(data as CashRegister);
       if (companyId) {
@@ -204,6 +236,9 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
       console.error('Error opening register:', error);
       toast.error('Erro ao abrir caixa');
       return false;
+    } finally {
+      openingRef.current = false;
+      setIsOpening(false);
     }
   }
 
@@ -397,6 +432,7 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
     totalSales,
     salesCount,
     openRegister,
+    isOpening,
     closeRegister,
     reopenRegister,
     addSale,
