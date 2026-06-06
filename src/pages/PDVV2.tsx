@@ -98,6 +98,7 @@ export default function PDVV2() {
   const { activePaymentMethods: menuPaymentMethods } = usePaymentMethods({ companyId, channel: 'menu' });
   const { products } = useProducts({ companyId });
   const { taxRules } = useTaxRules({ companyId });
+  const { enabled: mercadoEnabled } = useMercadoEnabled(companyId);
   const fiscalEnabled = isModuleEnabled('fiscal');
 
   const [showCash, setShowCash] = useState(false);
