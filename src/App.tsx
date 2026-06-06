@@ -19,6 +19,7 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
+import ProductEdit from "./pages/ProductEdit";
 import Orders from "./pages/Orders";
 import Settings from "./pages/Settings";
 import Menu from "./pages/Menu";
@@ -151,7 +152,17 @@ function AppRoutes() {
           <Products />
         </ProtectedRoute>
       } />
-      
+      <Route path="/produtos/novo" element={
+        <ProtectedRoute requireCompany>
+          <ProductEdit />
+        </ProtectedRoute>
+      } />
+      <Route path="/produtos/:id" element={
+        <ProtectedRoute requireCompany>
+          <ProductEdit />
+        </ProtectedRoute>
+      } />
+
       <Route path="/configuracoes" element={
         <ProtectedRoute requireCompany>
           <Settings />
