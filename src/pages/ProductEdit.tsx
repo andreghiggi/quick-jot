@@ -286,6 +286,23 @@ export default function ProductEdit() {
         icmsOrigin: icmsOrigin || '0',
         costPrice: costPrice ? parseFloat(costPrice) : null,
         taxRuleId: taxRuleId || null,
+        ncm: ncm.trim() || null,
+        cest: cest.trim() || null,
+        cfop: cfop.trim() || null,
+        ...(mercadoEnabled
+          ? {
+              brand: brand.trim() || null,
+              supplierId: supplierId || null,
+              wholesalePrice: wholesalePrice ? parseFloat(wholesalePrice) : null,
+              wholesaleMinQty: wholesaleMinQty ? parseFloat(wholesaleMinQty) : null,
+              shelfLifeDays: shelfLifeDays ? parseInt(shelfLifeDays, 10) : null,
+              expirationDate: expirationDate || null,
+              batchNumber: batchNumber.trim() || null,
+              isScaleItem,
+              scaleBarcode: scaleBarcode.trim() || null,
+              pricePerKg,
+            }
+          : {}),
         ...(mercadoEnabled
           ? {
               trackStock: true,
