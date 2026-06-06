@@ -692,7 +692,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
         </div>
         <div className="flex items-center gap-1 text-muted-foreground">
           <Clock className="w-3.5 h-3.5" />
-          <span className="text-xs">{timeAgo}</span>
+          <span className="text-xs">{isFinalized ? finalizedDateTime : timeAgo}</span>
         </div>
       </div>
 
