@@ -641,6 +641,32 @@ export default function ProductEdit() {
           title="Tributação"
           description="Regra fiscal aplicada na emissão de NFC-e / NF-e."
         >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <Field label="NCM" hint="8 dígitos. Ex.: 22021000">
+              <Input
+                value={ncm}
+                onChange={(e) => setNcm(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="00000000"
+                inputMode="numeric"
+              />
+            </Field>
+            <Field label="CEST" hint="7 dígitos, quando aplicável.">
+              <Input
+                value={cest}
+                onChange={(e) => setCest(e.target.value.replace(/\D/g, '').slice(0, 7))}
+                placeholder="0000000"
+                inputMode="numeric"
+              />
+            </Field>
+            <Field label="CFOP padrão" hint="Ex.: 5102 (venda dentro do estado).">
+              <Input
+                value={cfop}
+                onChange={(e) => setCfop(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                placeholder="5102"
+                inputMode="numeric"
+              />
+            </Field>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Origem da mercadoria (ICMS)">
               <Select value={icmsOrigin} onValueChange={setIcmsOrigin}>
