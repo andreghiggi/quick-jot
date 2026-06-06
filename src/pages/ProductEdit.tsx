@@ -717,6 +717,145 @@ export default function ProductEdit() {
         </Section>
 
         {/* ===================== OPCIONAIS ===================== */}
+        {mercadoEnabled && (
+          <Section
+            title="Mercado / Varejo"
+            description="Marca, fornecedor, atacado, validade e balança."
+          >
+            {/* Marca + fornecedor */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="Marca">
+                <Input
+                  value={brand}
+                  onChange={(e) => setBrand(e.target.value)}
+                  placeholder="Ex.: Coca-Cola"
+                />
+              </Field>
+              <Field
+                label="Fornecedor padrão"
+                hint={suppliersList.length === 0 ? 'Cadastre fornecedores em Mercado › Fornecedores.' : undefined}
+              >
+                <Select
+                  value={supplierId || '__none'}
+                  onValueChange={(v) => setSupplierId(v === '__none' ? '' : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sem fornecedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Sem fornecedor</SelectItem>
+                    {suppliersList.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+
+            {/* Atacado */}
+            <div className="mt-6 pt-6 border-t">
+              <div className="mb-3">
+                <h3 className="text-sm font-medium">Atacado</h3>
+                <p className="text-xs text-muted-foreground">
+                  Preço diferenciado a partir de uma quantidade mínima.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Quantidade mínima">
+                  <Input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    value={wholesaleMinQty}
+                    onChange={(e) => setWholesaleMinQty(e.target.value)}
+                    placeholder="Ex.: 12"
+                  />
+                </Field>
+                <Field label="Preço de atacado (R$)">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={wholesalePrice}
+                    onChange={(e) => setWholesalePrice(e.target.value)}
+                    placeholder="0,00"
+                  />
+                </Field>
+              </div>
+            </div>
+
+            {/* Validade / lote */}
+            <div className="mt-6 pt-6 border-t">
+              <div className="mb-3">
+                <h3 className="text-sm font-medium">Validade e lote</h3>
+                <p className="text-xs text-muted-foreground">
+                  Controle de shelf life e rastreabilidade do lote atual.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Field label="Validade (dias)" hint="A partir da entrada do produto.">
+                  <Input
+                    type="number"
+                    min="0"
+                    value={shelfLifeDays}
+                    onChange={(e) => setShelfLifeDays(e.target.value)}
+                    placeholder="Ex.: 30"
+                  />
+                </Field>
+                <Field label="Data de validade (lote atual)">
+                  <Input
+                    type="date"
+                    value={expirationDate}
+                    onChange={(e) => setExpirationDate(e.target.value)}
+                  />
+                </Field>
+                <Field label="Lote">
+                  <Input
+                    value={batchNumber}
+                    onChange={(e) => setBatchNumber(e.target.value)}
+                    placeholder="Ex.: L20260101"
+                  />
+                </Field>
+              </div>
+            </div>
+
+            {/* Balança */}
+            <div className="mt-6 pt-6 border-t space-y-3">
+              <div>
+                <h3 className="text-sm font-medium">Balança</h3>
+                <p className="text-xs text-muted-foreground">
+                  Configurações para produtos pesáveis vendidos por balança.
+                </p>
+              </div>
+              <ToggleRow
+                label="Produto pesável"
+                description="Vendido por peso, lido em balança."
+                checked={isScaleItem}
+                onCheckedChange={setIsScaleItem}
+              />
+              {isScaleItem && (
+                <>
+                  <ToggleRow
+                    label="Preço por kg"
+                    description="Quando desligado, o preço é por unidade pesada."
+                    checked={pricePerKg}
+                    onCheckedChange={setPricePerKg}
+                  />
+                  <Field label="Código interno da balança" hint="Geralmente começa com 2 (EAN-13).">
+                    <Input
+                      value={scaleBarcode}
+                      onChange={(e) => setScaleBarcode(e.target.value.replace(/\D/g, '').slice(0, 13))}
+                      placeholder="2000001"
+                      inputMode="numeric"
+                    />
+                  </Field>
+                </>
+              )}
+            </div>
+          </Section>
+        )}
+
+        {/* ===================== OPCIONAIS ===================== */}
         <Section
           title="Opcionais"
           description="Grupos de opcionais associados a este produto (via categoria ou vínculo direto)."
