@@ -207,6 +207,19 @@ export default function ProductEdit() {
       toast.error(err);
       return;
     }
+    // Edição: se mudou o estoque atual, pede confirmação antes de salvar.
+    if (!isNew && mercadoEnabled) {
+      const newQty = stockQuantity !== '' ? Number(stockQuantity) : 0;
+      if (!Number.isNaN(newQty) && newQty !== originalStock) {
+        setPendingStockChange({ from: originalStock, to: newQty });
+        setStockConfirmOpen(true);
+        return;
+      }
+    }
+    await doSave();
+  }
+
+  async function doSave() {
     setIsSaving(true);
     try {
       const payload: any = {
@@ -237,12 +250,37 @@ export default function ProductEdit() {
       if (isNew) {
         const newId = await addProduct(payload);
         if (!newId) return;
+        // Estoque inicial → vira movimento `initial` para gerar histórico.
+        if (mercadoEnabled) {
+          const initialQty = stockQuantity !== '' ? Number(stockQuantity) : 0;
+          if (initialQty > 0) {
+            await applyStockMovementOnce({
+              productId: newId,
+              quantity: initialQty,
+              type: 'initial',
+              notes: 'Estoque inicial no cadastro',
+            });
+          }
+        }
         // Destaque (toggle is_new) é gerenciado em uma chamada separada;
         // não é crítico no cadastro, e tem limite de 5 — então fica para edição.
         navigate('/produtos');
       } else if (existing) {
         const ok = await updateProduct(existing.id, payload);
         if (!ok) return;
+        // Ajuste de estoque, quando o usuário confirmou a alteração.
+        if (mercadoEnabled) {
+          const newQty = stockQuantity !== '' ? Number(stockQuantity) : 0;
+          const delta = newQty - originalStock;
+          if (delta !== 0) {
+            await applyStockMovementOnce({
+              productId: existing.id,
+              quantity: delta,
+              type: 'adjustment',
+              notes: `Ajuste manual: ${originalStock} → ${newQty} (cadastro de produto)`,
+            });
+          }
+        }
         // Atualiza destaque se mudou (chamada separada por ter limite)
         if (!!existing.isNew !== isFeatured) {
           await supabase
@@ -254,6 +292,8 @@ export default function ProductEdit() {
       }
     } finally {
       setIsSaving(false);
+      setStockConfirmOpen(false);
+      setPendingStockChange(null);
     }
   }
 
