@@ -110,7 +110,7 @@ export default function SalesReport() {
       // 2. Fetch delivered orders
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
-        .select('id, created_at, total, origin, table_number, delivery_address, short_code')
+        .select('id, created_at, total, origin, delivery_address, short_code')
         .eq('company_id', company.id)
         .eq('status', 'delivered')
         .gte('created_at', periodDates.start.toISOString())
@@ -183,7 +183,7 @@ export default function SalesReport() {
           final_total: o.total,
           source: 'order',
           origin: originBucket,
-          table_number: o.table_number ?? null,
+          table_number: null,
           short_code: o.short_code ?? null,
         });
       });
