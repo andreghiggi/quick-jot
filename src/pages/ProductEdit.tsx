@@ -228,7 +228,7 @@ export default function ProductEdit() {
         taxRuleId: taxRuleId || null,
         ...(mercadoEnabled
           ? {
-              trackStock,
+              trackStock: true,
               minStock: minStock !== '' ? Number(minStock) : 0,
             }
           : {}),
