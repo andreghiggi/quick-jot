@@ -8,6 +8,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ArrowLeft, Camera, ExternalLink, Loader2, X } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
@@ -18,6 +28,7 @@ import { useOptionalGroups } from '@/hooks/useOptionalGroups';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadCompressedImage } from '@/utils/imageUtils';
+import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { toast } from 'sonner';
 
 /**
@@ -68,9 +79,15 @@ export default function ProductEdit() {
   const [price, setPrice] = useState('');
   const [icmsOrigin, setIcmsOrigin] = useState('0');
   const [taxRuleId, setTaxRuleId] = useState<string>('');
-  const [trackStock, setTrackStock] = useState(false);
+  // Estoque sempre controlado quando módulo `mercado` está ativo (Gweb-style).
+  // O toggle "Controlar estoque" foi removido conforme decisão de produto.
   const [stockQuantity, setStockQuantity] = useState('');
   const [minStock, setMinStock] = useState('');
+  // Snapshot do estoque atual no carregamento — usado para detectar ajuste manual na edição.
+  const [originalStock, setOriginalStock] = useState<number>(0);
+  // Confirmação de ajuste de estoque antes de salvar
+  const [stockConfirmOpen, setStockConfirmOpen] = useState(false);
+  const [pendingStockChange, setPendingStockChange] = useState<{ from: number; to: number } | null>(null);
 
   const [hydrated, setHydrated] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -105,8 +122,8 @@ export default function ProductEdit() {
       setPrice(existing.price != null ? String(existing.price) : '');
       setIcmsOrigin(existing.icmsOrigin || '0');
       setTaxRuleId(existing.taxRuleId || '');
-      setTrackStock(!!existing.trackStock);
-      setStockQuantity(existing.stockQuantity != null ? String(existing.stockQuantity) : '');
+      setStockQuantity(existing.stockQuantity != null ? String(existing.stockQuantity) : '0');
+      setOriginalStock(existing.stockQuantity != null ? Number(existing.stockQuantity) : 0);
       setMinStock(existing.minStock != null ? String(existing.minStock) : '');
       setHydrated(true);
     }
