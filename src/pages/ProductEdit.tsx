@@ -83,6 +83,25 @@ export default function ProductEdit() {
   // O toggle "Controlar estoque" foi removido conforme decisão de produto.
   const [stockQuantity, setStockQuantity] = useState('');
   const [minStock, setMinStock] = useState('');
+  // ---- Fiscal (Fase C) ----
+  const [ncm, setNcm] = useState('');
+  const [cest, setCest] = useState('');
+  const [cfop, setCfop] = useState('');
+  // ---- Mercado: comercial ----
+  const [brand, setBrand] = useState('');
+  const [supplierId, setSupplierId] = useState<string>('');
+  const [wholesalePrice, setWholesalePrice] = useState('');
+  const [wholesaleMinQty, setWholesaleMinQty] = useState('');
+  // ---- Mercado: validade / lote ----
+  const [shelfLifeDays, setShelfLifeDays] = useState('');
+  const [expirationDate, setExpirationDate] = useState('');
+  const [batchNumber, setBatchNumber] = useState('');
+  // ---- Mercado: balança ----
+  const [isScaleItem, setIsScaleItem] = useState(false);
+  const [scaleBarcode, setScaleBarcode] = useState('');
+  const [pricePerKg, setPricePerKg] = useState(false);
+  // Lista de fornecedores (para o select). Só carrega se módulo Mercado ativo.
+  const [suppliersList, setSuppliersList] = useState<Array<{ id: string; name: string }>>([]);
   // Snapshot do estoque atual no carregamento — usado para detectar ajuste manual na edição.
   const [originalStock, setOriginalStock] = useState<number>(0);
   // Confirmação de ajuste de estoque antes de salvar
@@ -125,9 +144,37 @@ export default function ProductEdit() {
       setStockQuantity(existing.stockQuantity != null ? String(existing.stockQuantity) : '0');
       setOriginalStock(existing.stockQuantity != null ? Number(existing.stockQuantity) : 0);
       setMinStock(existing.minStock != null ? String(existing.minStock) : '');
+      setNcm(existing.ncm || '');
+      setCest(existing.cest || '');
+      setCfop(existing.cfop || '');
+      setBrand(existing.brand || '');
+      setSupplierId(existing.supplierId || '');
+      setWholesalePrice(existing.wholesalePrice != null ? String(existing.wholesalePrice) : '');
+      setWholesaleMinQty(existing.wholesaleMinQty != null ? String(existing.wholesaleMinQty) : '');
+      setShelfLifeDays(existing.shelfLifeDays != null ? String(existing.shelfLifeDays) : '');
+      setExpirationDate(existing.expirationDate || '');
+      setBatchNumber(existing.batchNumber || '');
+      setIsScaleItem(!!existing.isScaleItem);
+      setScaleBarcode(existing.scaleBarcode || '');
+      setPricePerKg(!!existing.pricePerKg);
       setHydrated(true);
     }
   }, [existing, isNew, hydrated, categories, categoryName]);
+
+  // Carrega lista de fornecedores quando módulo Mercado está ativo
+  useEffect(() => {
+    if (!mercadoEnabled || !company?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await (supabase as any)
+        .from('suppliers')
+        .select('id, name')
+        .eq('company_id', company.id)
+        .order('name', { ascending: true });
+      if (!error && !cancelled) setSuppliersList(data || []);
+    })();
+    return () => { cancelled = true; };
+  }, [mercadoEnabled, company?.id]);
 
   // Edição com id inválido → volta pra lista (após carregar)
   if (!isNew && !loading && !existing) {
@@ -239,6 +286,23 @@ export default function ProductEdit() {
         icmsOrigin: icmsOrigin || '0',
         costPrice: costPrice ? parseFloat(costPrice) : null,
         taxRuleId: taxRuleId || null,
+        ncm: ncm.trim() || null,
+        cest: cest.trim() || null,
+        cfop: cfop.trim() || null,
+        ...(mercadoEnabled
+          ? {
+              brand: brand.trim() || null,
+              supplierId: supplierId || null,
+              wholesalePrice: wholesalePrice ? parseFloat(wholesalePrice) : null,
+              wholesaleMinQty: wholesaleMinQty ? parseFloat(wholesaleMinQty) : null,
+              shelfLifeDays: shelfLifeDays ? parseInt(shelfLifeDays, 10) : null,
+              expirationDate: expirationDate || null,
+              batchNumber: batchNumber.trim() || null,
+              isScaleItem,
+              scaleBarcode: scaleBarcode.trim() || null,
+              pricePerKg,
+            }
+          : {}),
         ...(mercadoEnabled
           ? {
               trackStock: true,
@@ -577,6 +641,32 @@ export default function ProductEdit() {
           title="Tributação"
           description="Regra fiscal aplicada na emissão de NFC-e / NF-e."
         >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <Field label="NCM" hint="8 dígitos. Ex.: 22021000">
+              <Input
+                value={ncm}
+                onChange={(e) => setNcm(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="00000000"
+                inputMode="numeric"
+              />
+            </Field>
+            <Field label="CEST" hint="7 dígitos, quando aplicável.">
+              <Input
+                value={cest}
+                onChange={(e) => setCest(e.target.value.replace(/\D/g, '').slice(0, 7))}
+                placeholder="0000000"
+                inputMode="numeric"
+              />
+            </Field>
+            <Field label="CFOP padrão" hint="Ex.: 5102 (venda dentro do estado).">
+              <Input
+                value={cfop}
+                onChange={(e) => setCfop(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                placeholder="5102"
+                inputMode="numeric"
+              />
+            </Field>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Origem da mercadoria (ICMS)">
               <Select value={icmsOrigin} onValueChange={setIcmsOrigin}>
@@ -625,6 +715,145 @@ export default function ProductEdit() {
             </Field>
           </div>
         </Section>
+
+        {/* ===================== OPCIONAIS ===================== */}
+        {mercadoEnabled && (
+          <Section
+            title="Mercado / Varejo"
+            description="Marca, fornecedor, atacado, validade e balança."
+          >
+            {/* Marca + fornecedor */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="Marca">
+                <Input
+                  value={brand}
+                  onChange={(e) => setBrand(e.target.value)}
+                  placeholder="Ex.: Coca-Cola"
+                />
+              </Field>
+              <Field
+                label="Fornecedor padrão"
+                hint={suppliersList.length === 0 ? 'Cadastre fornecedores em Mercado › Fornecedores.' : undefined}
+              >
+                <Select
+                  value={supplierId || '__none'}
+                  onValueChange={(v) => setSupplierId(v === '__none' ? '' : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sem fornecedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Sem fornecedor</SelectItem>
+                    {suppliersList.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+
+            {/* Atacado */}
+            <div className="mt-6 pt-6 border-t">
+              <div className="mb-3">
+                <h3 className="text-sm font-medium">Atacado</h3>
+                <p className="text-xs text-muted-foreground">
+                  Preço diferenciado a partir de uma quantidade mínima.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Quantidade mínima">
+                  <Input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    value={wholesaleMinQty}
+                    onChange={(e) => setWholesaleMinQty(e.target.value)}
+                    placeholder="Ex.: 12"
+                  />
+                </Field>
+                <Field label="Preço de atacado (R$)">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={wholesalePrice}
+                    onChange={(e) => setWholesalePrice(e.target.value)}
+                    placeholder="0,00"
+                  />
+                </Field>
+              </div>
+            </div>
+
+            {/* Validade / lote */}
+            <div className="mt-6 pt-6 border-t">
+              <div className="mb-3">
+                <h3 className="text-sm font-medium">Validade e lote</h3>
+                <p className="text-xs text-muted-foreground">
+                  Controle de shelf life e rastreabilidade do lote atual.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Field label="Validade (dias)" hint="A partir da entrada do produto.">
+                  <Input
+                    type="number"
+                    min="0"
+                    value={shelfLifeDays}
+                    onChange={(e) => setShelfLifeDays(e.target.value)}
+                    placeholder="Ex.: 30"
+                  />
+                </Field>
+                <Field label="Data de validade (lote atual)">
+                  <Input
+                    type="date"
+                    value={expirationDate}
+                    onChange={(e) => setExpirationDate(e.target.value)}
+                  />
+                </Field>
+                <Field label="Lote">
+                  <Input
+                    value={batchNumber}
+                    onChange={(e) => setBatchNumber(e.target.value)}
+                    placeholder="Ex.: L20260101"
+                  />
+                </Field>
+              </div>
+            </div>
+
+            {/* Balança */}
+            <div className="mt-6 pt-6 border-t space-y-3">
+              <div>
+                <h3 className="text-sm font-medium">Balança</h3>
+                <p className="text-xs text-muted-foreground">
+                  Configurações para produtos pesáveis vendidos por balança.
+                </p>
+              </div>
+              <ToggleRow
+                label="Produto pesável"
+                description="Vendido por peso, lido em balança."
+                checked={isScaleItem}
+                onCheckedChange={setIsScaleItem}
+              />
+              {isScaleItem && (
+                <>
+                  <ToggleRow
+                    label="Preço por kg"
+                    description="Quando desligado, o preço é por unidade pesada."
+                    checked={pricePerKg}
+                    onCheckedChange={setPricePerKg}
+                  />
+                  <Field label="Código interno da balança" hint="Geralmente começa com 2 (EAN-13).">
+                    <Input
+                      value={scaleBarcode}
+                      onChange={(e) => setScaleBarcode(e.target.value.replace(/\D/g, '').slice(0, 13))}
+                      placeholder="2000001"
+                      inputMode="numeric"
+                    />
+                  </Field>
+                </>
+              )}
+            </div>
+          </Section>
+        )}
 
         {/* ===================== OPCIONAIS ===================== */}
         <Section

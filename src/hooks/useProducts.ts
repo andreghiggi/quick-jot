@@ -75,6 +75,19 @@ export function useProducts(options: UseProductsOptions = {}) {
         trackStock: (product as any).track_stock ?? false,
         stockQuantity: (product as any).stock_quantity != null ? Number((product as any).stock_quantity) : 0,
         minStock: (product as any).min_stock != null ? Number((product as any).min_stock) : 0,
+        ncm: (product as any).ncm ?? null,
+        cest: (product as any).cest ?? null,
+        cfop: (product as any).cfop ?? null,
+        wholesalePrice: (product as any).wholesale_price != null ? Number((product as any).wholesale_price) : null,
+        wholesaleMinQty: (product as any).wholesale_min_qty != null ? Number((product as any).wholesale_min_qty) : null,
+        brand: (product as any).brand ?? null,
+        supplierId: (product as any).supplier_id ?? null,
+        shelfLifeDays: (product as any).shelf_life_days != null ? Number((product as any).shelf_life_days) : null,
+        expirationDate: (product as any).expiration_date ?? null,
+        batchNumber: (product as any).batch_number ?? null,
+        isScaleItem: (product as any).is_scale_item ?? false,
+        scaleBarcode: (product as any).scale_barcode ?? null,
+        pricePerKg: (product as any).price_per_kg ?? false,
         optionals: optionalsData
           .filter((opt) => opt.product_id === product.id)
           .map((opt) => ({
@@ -146,6 +159,19 @@ export function useProducts(options: UseProductsOptions = {}) {
           // stock_quantity inicia em 0 propositalmente: a entrada inicial
           // entra via apply_stock_movement no caller, para gerar histórico.
           min_stock: (productData as any).minStock != null ? Number((productData as any).minStock) : 0,
+          ncm: (productData as any).ncm ?? null,
+          cest: (productData as any).cest ?? null,
+          cfop: (productData as any).cfop ?? null,
+          wholesale_price: (productData as any).wholesalePrice ?? null,
+          wholesale_min_qty: (productData as any).wholesaleMinQty ?? null,
+          brand: (productData as any).brand ?? null,
+          supplier_id: (productData as any).supplierId ?? null,
+          shelf_life_days: (productData as any).shelfLifeDays ?? null,
+          expiration_date: (productData as any).expirationDate ?? null,
+          batch_number: (productData as any).batchNumber ?? null,
+          is_scale_item: (productData as any).isScaleItem ?? false,
+          scale_barcode: (productData as any).scaleBarcode ?? null,
+          price_per_kg: (productData as any).pricePerKg ?? false,
         } as any)
         .select()
         .single();
@@ -186,6 +212,19 @@ export function useProducts(options: UseProductsOptions = {}) {
       if ((productData as any).trackStock !== undefined) (updateData as any).track_stock = !!(productData as any).trackStock;
       if ((productData as any).stockQuantity !== undefined) (updateData as any).stock_quantity = Number((productData as any).stockQuantity) || 0;
       if ((productData as any).minStock !== undefined) (updateData as any).min_stock = Number((productData as any).minStock) || 0;
+      if ((productData as any).ncm !== undefined) (updateData as any).ncm = (productData as any).ncm || null;
+      if ((productData as any).cest !== undefined) (updateData as any).cest = (productData as any).cest || null;
+      if ((productData as any).cfop !== undefined) (updateData as any).cfop = (productData as any).cfop || null;
+      if ((productData as any).wholesalePrice !== undefined) (updateData as any).wholesale_price = (productData as any).wholesalePrice;
+      if ((productData as any).wholesaleMinQty !== undefined) (updateData as any).wholesale_min_qty = (productData as any).wholesaleMinQty;
+      if ((productData as any).brand !== undefined) (updateData as any).brand = (productData as any).brand || null;
+      if ((productData as any).supplierId !== undefined) (updateData as any).supplier_id = (productData as any).supplierId || null;
+      if ((productData as any).shelfLifeDays !== undefined) (updateData as any).shelf_life_days = (productData as any).shelfLifeDays;
+      if ((productData as any).expirationDate !== undefined) (updateData as any).expiration_date = (productData as any).expirationDate || null;
+      if ((productData as any).batchNumber !== undefined) (updateData as any).batch_number = (productData as any).batchNumber || null;
+      if ((productData as any).isScaleItem !== undefined) (updateData as any).is_scale_item = !!(productData as any).isScaleItem;
+      if ((productData as any).scaleBarcode !== undefined) (updateData as any).scale_barcode = (productData as any).scaleBarcode || null;
+      if ((productData as any).pricePerKg !== undefined) (updateData as any).price_per_kg = !!(productData as any).pricePerKg;
 
       const { error } = await supabase
         .from('products')

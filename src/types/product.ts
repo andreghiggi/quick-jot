@@ -40,6 +40,23 @@ export interface Product {
   stockQuantity?: number;
   /** Estoque mínimo (alerta). */
   minStock?: number;
+  // ---- Fiscal (Fase C) ----
+  ncm?: string | null;
+  cest?: string | null;
+  cfop?: string | null;
+  // ---- Comercial / atacado ----
+  wholesalePrice?: number | null;
+  wholesaleMinQty?: number | null;
+  brand?: string | null;
+  supplierId?: string | null;
+  // ---- Validade / lote ----
+  shelfLifeDays?: number | null;
+  expirationDate?: string | null; // ISO date (yyyy-mm-dd)
+  batchNumber?: string | null;
+  // ---- Balança ----
+  isScaleItem?: boolean;
+  scaleBarcode?: string | null;
+  pricePerKg?: boolean;
 }
 
 export interface CartItem {
