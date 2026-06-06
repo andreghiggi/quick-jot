@@ -47,7 +47,8 @@ export default function CashRegisters() {
     salesCount,
     openRegister, 
     closeRegister, 
-    reopenRegister
+    reopenRegister,
+    isOpening,
   } = useCashRegister({ companyId: company?.id });
 
   // Dialog states
@@ -63,9 +64,11 @@ export default function CashRegisters() {
     if (!user) return;
     
     const amount = parseFloat(openingAmount) || 0;
-    await openRegister(amount, user.id);
-    setOpenRegisterDialog(false);
-    setOpeningAmount('');
+    const ok = await openRegister(amount, user.id);
+    if (ok) {
+      setOpenRegisterDialog(false);
+      setOpeningAmount('');
+    }
   }
 
   async function handleCloseRegister() {
@@ -378,11 +381,11 @@ export default function CashRegisters() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenRegisterDialog(false)}>
+            <Button variant="outline" onClick={() => setOpenRegisterDialog(false)} disabled={isOpening}>
               Cancelar
             </Button>
-            <Button onClick={handleOpenRegister}>
-              Abrir Caixa
+            <Button onClick={handleOpenRegister} disabled={isOpening}>
+              {isOpening ? 'Abrindo...' : 'Abrir Caixa'}
             </Button>
           </DialogFooter>
         </DialogContent>
