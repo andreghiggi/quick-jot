@@ -1025,7 +1025,7 @@ export default function Products() {
             <CardContent className="py-12 text-center">
               <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">Nenhum produto cadastrado</p>
-              <Button className="mt-4" onClick={() => setIsProductDialogOpen(true)}>
+              <Button className="mt-4" onClick={() => navigate('/produtos/novo')}>
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar primeiro produto
               </Button>
