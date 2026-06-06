@@ -201,8 +201,13 @@ Deno.serve(async (req) => {
             // Trocar para 07 (isento) elimina o grupo PISOutr/COFINSOutr inválido.
             const fixCst = (cst: string, aliq: number) =>
               (cst === '49' || cst === '99') && (!aliq || aliq === 0) ? '07' : cst
+            // CEST é opcional: só repassa quando vier preenchido (string com 7 dígitos).
+            // Alguns produtos não exigem CEST e enviar vazio quebra o XML.
+            const cestRaw = (it.cest ?? it.CEST ?? '').toString().replace(/\D/g, '')
+            const cestField = cestRaw.length === 7 ? { cest: cestRaw, CEST: cestRaw } : {}
             return {
               ...it,
+              ...cestField,
               quantidade: qtd,
               qCom: qty(qtd),
               qTrib: qty(qtd),
