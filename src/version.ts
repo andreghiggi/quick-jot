@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.15.0-beta";
-export const RELEASE_DATE = "2026-06-05"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Menu lateral reorganizado: Cadastros + Ações de vendas";
+export const VERSION = "1.15.1-beta";
+export const RELEASE_DATE = "2026-06-06"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Relatório de Vendas: comandas finalizadas";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.15.1-beta",
+    date: "2026-06-06",
+    codename: "Relatório de Vendas: comandas finalizadas",
+    changes: [
+      "Relatório de Vendas: comandas finalizadas em mesas agora entram no período pelo horário de fechamento da comanda, somando os itens de tab_items no faturamento, produtos vendidos e lista de vendas.",
+      "As comandas aparecem na origem Mesa (Garçom) ou Mesa QR e mostram o número da comanda/mesa quando disponível.",
+      "Correção isolada na aba Relatórios → Relatório de Vendas; PDV V2, Pedido Express, TEF, NFC-e, impressão e demais relatórios não foram alterados.",
+    ],
+  },
   {
     version: "1.15.0-beta",
     date: "2026-06-05",
