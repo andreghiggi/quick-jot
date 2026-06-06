@@ -112,7 +112,8 @@ export default function PDV() {
     reopenRegister,
     addSale,
     deleteSale,
-    refetch: refetchSales
+    refetch: refetchSales,
+    isOpening,
   } = useCashRegister({ companyId: company?.id });
 
   const mesasEnabled = isModuleEnabled('mesas');
@@ -1390,8 +1391,8 @@ export default function PDV() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpenRegisterDialog(false)}>Cancelar</Button>
-              <Button onClick={handleOpenRegister}>Abrir Caixa</Button>
+              <Button variant="outline" onClick={() => setOpenRegisterDialog(false)} disabled={isOpening}>Cancelar</Button>
+              <Button onClick={handleOpenRegister} disabled={isOpening}>{isOpening ? 'Abrindo...' : 'Abrir Caixa'}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
