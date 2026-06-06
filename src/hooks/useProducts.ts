@@ -199,6 +199,19 @@ export function useProducts(options: UseProductsOptions = {}) {
       if ((productData as any).trackStock !== undefined) (updateData as any).track_stock = !!(productData as any).trackStock;
       if ((productData as any).stockQuantity !== undefined) (updateData as any).stock_quantity = Number((productData as any).stockQuantity) || 0;
       if ((productData as any).minStock !== undefined) (updateData as any).min_stock = Number((productData as any).minStock) || 0;
+      if ((productData as any).ncm !== undefined) (updateData as any).ncm = (productData as any).ncm || null;
+      if ((productData as any).cest !== undefined) (updateData as any).cest = (productData as any).cest || null;
+      if ((productData as any).cfop !== undefined) (updateData as any).cfop = (productData as any).cfop || null;
+      if ((productData as any).wholesalePrice !== undefined) (updateData as any).wholesale_price = (productData as any).wholesalePrice;
+      if ((productData as any).wholesaleMinQty !== undefined) (updateData as any).wholesale_min_qty = (productData as any).wholesaleMinQty;
+      if ((productData as any).brand !== undefined) (updateData as any).brand = (productData as any).brand || null;
+      if ((productData as any).supplierId !== undefined) (updateData as any).supplier_id = (productData as any).supplierId || null;
+      if ((productData as any).shelfLifeDays !== undefined) (updateData as any).shelf_life_days = (productData as any).shelfLifeDays;
+      if ((productData as any).expirationDate !== undefined) (updateData as any).expiration_date = (productData as any).expirationDate || null;
+      if ((productData as any).batchNumber !== undefined) (updateData as any).batch_number = (productData as any).batchNumber || null;
+      if ((productData as any).isScaleItem !== undefined) (updateData as any).is_scale_item = !!(productData as any).isScaleItem;
+      if ((productData as any).scaleBarcode !== undefined) (updateData as any).scale_barcode = (productData as any).scaleBarcode || null;
+      if ((productData as any).pricePerKg !== undefined) (updateData as any).price_per_kg = !!(productData as any).pricePerKg;
 
       const { error } = await supabase
         .from('products')
