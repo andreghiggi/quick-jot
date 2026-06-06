@@ -45,6 +45,14 @@ function fmtTime(iso?: string | null) {
     timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit',
   });
 }
+function fmtDateTime(iso?: string | null) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit', month: '2-digit', year: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 }
@@ -303,7 +311,7 @@ export default function CashReport() {
                           {reg.status === 'open' ? 'Aberto' : 'Fechado'}
                         </Badge>
                         <span className="text-sm font-normal text-muted-foreground">
-                          Abertura {fmtTime(reg.opened_at)} • Fechamento {reg.status === 'open' ? '—' : fmtTime(reg.closed_at)}
+                          Abertura {fmtDateTime(reg.opened_at)} • Fechamento {reg.status === 'open' ? '—' : fmtDateTime(reg.closed_at)}
                         </span>
                         {reg.operator_name && (
                           <span className="text-sm font-normal text-muted-foreground">
