@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -41,6 +42,7 @@ interface ExtractedProduct {
 
 export default function Products() {
   const { company } = useAuthContext();
+  const navigate = useNavigate();
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, duplicateProduct, toggleNewProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
