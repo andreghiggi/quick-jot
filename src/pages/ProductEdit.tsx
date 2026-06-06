@@ -87,6 +87,7 @@ export default function ProductEdit() {
   // ---- Fiscal (Fase C) ----
   const [ncm, setNcm] = useState('');
   const [cest, setCest] = useState('');
+  const [cestSuggestions, setCestSuggestions] = useState<CestMatch[]>([]);
   const [cfop, setCfop] = useState('');
   // ---- Mercado: comercial ----
   const [brand, setBrand] = useState('');
