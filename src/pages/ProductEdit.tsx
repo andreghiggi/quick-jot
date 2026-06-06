@@ -495,36 +495,39 @@ export default function ProductEdit() {
 
           {mercadoEnabled && (
             <div className="mt-6 pt-6 border-t space-y-4">
-              <ToggleRow
-                label="Controlar estoque"
-                description="Quando ativo, as vendas baixam o estoque automaticamente."
-                checked={trackStock}
-                onCheckedChange={setTrackStock}
-              />
-              {trackStock && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {isNew && (
-                    <Field label="Estoque inicial">
-                      <Input
-                        type="number"
-                        min="0"
-                        value={stockQuantity}
-                        onChange={(e) => setStockQuantity(e.target.value)}
-                        placeholder="0"
-                      />
-                    </Field>
-                  )}
-                  <Field label="Estoque mínimo (alerta)">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={minStock}
-                      onChange={(e) => setMinStock(e.target.value)}
-                      placeholder="0"
-                    />
-                  </Field>
-                </div>
-              )}
+              <div>
+                <h3 className="text-sm font-medium">Estoque</h3>
+                <p className="text-xs text-muted-foreground">
+                  As vendas baixam o estoque automaticamente.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field
+                  label={isNew ? 'Estoque inicial' : 'Estoque atual'}
+                  hint={
+                    !isNew
+                      ? 'Alterar este valor gera um ajuste manual no histórico.'
+                      : undefined
+                  }
+                >
+                  <Input
+                    type="number"
+                    min="0"
+                    value={stockQuantity}
+                    onChange={(e) => setStockQuantity(e.target.value)}
+                    placeholder="0"
+                  />
+                </Field>
+                <Field label="Estoque mínimo (alerta)">
+                  <Input
+                    type="number"
+                    min="0"
+                    value={minStock}
+                    onChange={(e) => setMinStock(e.target.value)}
+                    placeholder="0"
+                  />
+                </Field>
+              </div>
             </div>
           )}
         </Section>
