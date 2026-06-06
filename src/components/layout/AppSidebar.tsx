@@ -569,8 +569,7 @@ export function AppSidebar() {
             <CollapsibleContent>
               <SidebarGroupContent>
                 <SidebarMenu>
-              {isModuleEnabled('pdv') && (
-                <SidebarMenuItem>
+              <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
                     isActive={location.pathname === '/relatorios/vendas'}
@@ -581,7 +580,6 @@ export function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )}
               {isModuleEnabled('pdv_v2') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
