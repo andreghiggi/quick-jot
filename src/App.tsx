@@ -152,7 +152,17 @@ function AppRoutes() {
           <Products />
         </ProtectedRoute>
       } />
-      
+      <Route path="/produtos/novo" element={
+        <ProtectedRoute requireCompany>
+          <ProductEdit />
+        </ProtectedRoute>
+      } />
+      <Route path="/produtos/:id" element={
+        <ProtectedRoute requireCompany>
+          <ProductEdit />
+        </ProtectedRoute>
+      } />
+
       <Route path="/configuracoes" element={
         <ProtectedRoute requireCompany>
           <Settings />
