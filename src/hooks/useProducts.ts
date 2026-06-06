@@ -159,6 +159,19 @@ export function useProducts(options: UseProductsOptions = {}) {
           // stock_quantity inicia em 0 propositalmente: a entrada inicial
           // entra via apply_stock_movement no caller, para gerar histórico.
           min_stock: (productData as any).minStock != null ? Number((productData as any).minStock) : 0,
+          ncm: (productData as any).ncm ?? null,
+          cest: (productData as any).cest ?? null,
+          cfop: (productData as any).cfop ?? null,
+          wholesale_price: (productData as any).wholesalePrice ?? null,
+          wholesale_min_qty: (productData as any).wholesaleMinQty ?? null,
+          brand: (productData as any).brand ?? null,
+          supplier_id: (productData as any).supplierId ?? null,
+          shelf_life_days: (productData as any).shelfLifeDays ?? null,
+          expiration_date: (productData as any).expirationDate ?? null,
+          batch_number: (productData as any).batchNumber ?? null,
+          is_scale_item: (productData as any).isScaleItem ?? false,
+          scale_barcode: (productData as any).scaleBarcode ?? null,
+          price_per_kg: (productData as any).pricePerKg ?? false,
         } as any)
         .select()
         .single();
