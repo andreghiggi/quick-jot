@@ -3,14 +3,36 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { BarChart3, Package, TrendingUp, Calendar, DollarSign, ShoppingCart, Loader2 } from 'lucide-react';
+import { BarChart3, Package, TrendingUp, Calendar, DollarSign, ShoppingCart, Loader2, Filter, Receipt } from 'lucide-react';
 
 type PeriodType = 'today' | 'week' | 'month' | 'last_month';
+
+type OriginKey = 'balcao' | 'delivery' | 'retirada' | 'mesa' | 'mesa_qr';
+
+const ORIGIN_OPTIONS: { key: OriginKey; label: string; badgeClass: string }[] = [
+  { key: 'balcao',   label: 'Balcão / PDV',   badgeClass: 'bg-muted text-muted-foreground border-transparent' },
+  { key: 'delivery', label: 'Delivery',       badgeClass: 'bg-blue-100 text-blue-700 border-transparent dark:bg-blue-500/15 dark:text-blue-300' },
+  { key: 'retirada', label: 'Retirada',       badgeClass: 'bg-amber-100 text-amber-700 border-transparent dark:bg-amber-500/15 dark:text-amber-300' },
+  { key: 'mesa',     label: 'Mesa (Garçom)',  badgeClass: 'bg-purple-100 text-purple-700 border-transparent dark:bg-purple-500/15 dark:text-purple-300' },
+  { key: 'mesa_qr',  label: 'Mesa QR',        badgeClass: 'bg-purple-100 text-purple-700 border-transparent dark:bg-purple-500/15 dark:text-purple-300' },
+];
+
+const ALL_ORIGINS: OriginKey[] = ORIGIN_OPTIONS.map(o => o.key);
 
 interface SaleItem {
   product_name: string;
@@ -23,6 +45,9 @@ interface SaleData {
   created_at: string;
   final_total: number;
   items: SaleItem[];
+  origin: OriginKey;
+  table_number?: string | null;
+  short_code?: string | null;
 }
 
 function getPeriodDates(period: PeriodType) {
@@ -47,6 +72,7 @@ export default function SalesReport() {
   const { company } = useAuthContext();
   const [period, setPeriod] = useState<PeriodType>('week');
   const [productFilter, setProductFilter] = useState<string>('all');
+  const [selectedOrigins, setSelectedOrigins] = useState<OriginKey[]>(ALL_ORIGINS);
 
   const periodDates = useMemo(() => getPeriodDates(period), [period]);
 
@@ -72,7 +98,7 @@ export default function SalesReport() {
       // 2. Fetch delivered orders
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
-        .select('id, created_at, total')
+        .select('id, created_at, total, origin, table_number, delivery_address, short_code')
         .eq('company_id', company.id)
         .eq('status', 'delivered')
         .gte('created_at', periodDates.start.toISOString())
@@ -83,10 +109,43 @@ export default function SalesReport() {
         console.error('Error fetching orders:', ordersError);
       }
 
-      const allSaleEntries: { id: string; created_at: string; final_total: number; source: 'pdv' | 'order' }[] = [];
+      const allSaleEntries: {
+        id: string;
+        created_at: string;
+        final_total: number;
+        source: 'pdv' | 'order';
+        origin: OriginKey;
+        table_number?: string | null;
+        short_code?: string | null;
+      }[] = [];
 
-      (pdvSales || []).forEach(s => allSaleEntries.push({ ...s, source: 'pdv' }));
-      (orders || []).forEach(o => allSaleEntries.push({ id: o.id, created_at: o.created_at, final_total: o.total, source: 'order' }));
+      (pdvSales || []).forEach(s => allSaleEntries.push({
+        ...s,
+        source: 'pdv',
+        origin: 'balcao',
+        table_number: null,
+        short_code: null,
+      }));
+
+      (orders || []).forEach((o: any) => {
+        let originBucket: OriginKey = 'balcao';
+        const rawOrigin = (o.origin || '').toString();
+        if (rawOrigin === 'mesa') originBucket = 'mesa';
+        else if (rawOrigin === 'mesa_qr') originBucket = 'mesa_qr';
+        else if (rawOrigin === 'balcao') originBucket = 'balcao';
+        else if (rawOrigin === 'cardapio') {
+          originBucket = (o.delivery_address && String(o.delivery_address).trim().length > 0) ? 'delivery' : 'retirada';
+        }
+        allSaleEntries.push({
+          id: o.id,
+          created_at: o.created_at,
+          final_total: o.total,
+          source: 'order',
+          origin: originBucket,
+          table_number: o.table_number ?? null,
+          short_code: o.short_code ?? null,
+        });
+      });
 
       if (allSaleEntries.length === 0) return [];
 
@@ -141,6 +200,9 @@ export default function SalesReport() {
           created_at: sale.created_at,
           final_total: sale.final_total,
           items: itemsBySaleId[sale.id] || [],
+          origin: sale.origin,
+          table_number: sale.table_number,
+          short_code: sale.short_code,
         }));
       
       return salesWithItems;
@@ -162,11 +224,12 @@ export default function SalesReport() {
   const reportData = useMemo(() => {
     if (!salesData) return { totalSales: 0, totalRevenue: 0, productsSold: [] as { name: string; quantity: number; total: number }[], totalProducts: 0 };
 
-    let filteredSales = salesData;
-    
+    // Filter by origin first
+    let filteredSales = salesData.filter(s => selectedOrigins.includes(s.origin));
+
     // Filter by product if selected
     if (productFilter !== 'all') {
-      filteredSales = salesData.filter(sale => 
+      filteredSales = filteredSales.filter(sale =>
         sale.items.some(item => item.product_name === productFilter)
       );
     }
@@ -204,7 +267,26 @@ export default function SalesReport() {
     const totalProducts = productsSold.reduce((sum, p) => sum + p.quantity, 0);
 
     return { totalSales, totalRevenue, productsSold, totalProducts };
-  }, [salesData, productFilter]);
+  }, [salesData, productFilter, selectedOrigins]);
+
+  // Individual sales list (respecting filters), for the per-sale breakdown card
+  const filteredSalesList = useMemo(() => {
+    if (!salesData) return [] as SaleData[];
+    let list = salesData.filter(s => selectedOrigins.includes(s.origin));
+    if (productFilter !== 'all') {
+      list = list.filter(sale => sale.items.some(item => item.product_name === productFilter));
+    }
+    return list;
+  }, [salesData, productFilter, selectedOrigins]);
+
+  const toggleOrigin = (key: OriginKey) => {
+    setSelectedOrigins(prev =>
+      prev.includes(key) ? prev.filter(o => o !== key) : [...prev, key]
+    );
+  };
+
+  const originLabel = (key: OriginKey) => ORIGIN_OPTIONS.find(o => o.key === key)?.label ?? key;
+  const originBadgeClass = (key: OriginKey) => ORIGIN_OPTIONS.find(o => o.key === key)?.badgeClass ?? '';
 
   return (
     <AppLayout>
@@ -247,6 +329,49 @@ export default function SalesReport() {
                     <SelectItem value="last_month">Mês Anterior</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="flex-1">
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Origem
+                </label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between font-normal">
+                      <span className="flex items-center gap-2 truncate">
+                        <Filter className="h-4 w-4 shrink-0" />
+                        <span className="truncate">
+                          {selectedOrigins.length === ALL_ORIGINS.length
+                            ? 'Todas as origens'
+                            : selectedOrigins.length === 0
+                              ? 'Nenhuma selecionada'
+                              : `${selectedOrigins.length} selecionada(s)`}
+                        </span>
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuLabel>Filtrar por origem</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {ORIGIN_OPTIONS.map(opt => (
+                      <DropdownMenuCheckboxItem
+                        key={opt.key}
+                        checked={selectedOrigins.includes(opt.key)}
+                        onCheckedChange={() => toggleOrigin(opt.key)}
+                        onSelect={(e) => e.preventDefault()}
+                      >
+                        {opt.label}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      checked={selectedOrigins.length === ALL_ORIGINS.length}
+                      onCheckedChange={(v) => setSelectedOrigins(v ? ALL_ORIGINS : [])}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      Selecionar todas
+                    </DropdownMenuCheckboxItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="flex-1">
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">
@@ -366,6 +491,63 @@ export default function SalesReport() {
                           </TableCell>
                         </TableRow>
                       ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Per-sale list with origin badges */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Receipt className="h-5 w-5" />
+                  Vendas no Período
+                </CardTitle>
+                <CardDescription>
+                  Cada venda do período, com a origem identificada
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {filteredSalesList.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhuma venda encontrada com os filtros atuais
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Identificação</TableHead>
+                        <TableHead>Origem</TableHead>
+                        <TableHead>Data/Hora</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSalesList.map(sale => {
+                        const isMesa = sale.origin === 'mesa' || sale.origin === 'mesa_qr';
+                        const ident = sale.short_code
+                          ? sale.short_code
+                          : `#${sale.id.slice(0, 6).toUpperCase()}`;
+                        return (
+                          <TableRow key={sale.id}>
+                            <TableCell className="font-medium">{ident}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={originBadgeClass(sale.origin)}>
+                                {isMesa
+                                  ? `${originLabel(sale.origin)}${sale.table_number ? ` ${sale.table_number}` : ''}`
+                                  : originLabel(sale.origin)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {format(new Date(sale.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-success">
+                              R$ {Number(sale.final_total || 0).toFixed(2).replace('.', ',')}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}
