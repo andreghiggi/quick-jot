@@ -9,6 +9,8 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { useProducts } from '@/hooks/useProducts';
 import { useTaxRules } from '@/hooks/useTaxRules';
+import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -45,6 +47,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
   const { products } = useProducts({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
+  const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const fiscalEnabled = isModuleEnabled('fiscal');
 
@@ -416,17 +419,10 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
             return {
               codigo: product?.code || it.product_id || 'AVULSO',
               descricao: it.product_name,
-              ncm: taxRule?.ncm || '00000000',
-              cfop: taxRule?.cfop || '5102',
               unidade: 'UN',
               quantidade: it.quantity,
               valor_unitario: it.unit_price,
-              csosn: taxRule?.csosn || '102',
-              aliquota_icms: taxRule?.icms_aliquot || 0,
-              cst_pis: taxRule?.pis_cst || '49',
-              aliquota_pis: taxRule?.pis_aliquot || 0,
-              cst_cofins: taxRule?.cofins_cst || '49',
-              aliquota_cofins: taxRule?.cofins_aliquot || 0,
+              ...buildNfceFiscalFields({ product, taxRule, mercadoEnabled }),
             };
           });
 
@@ -586,17 +582,10 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
             return {
               codigo: product?.code || it.product_id || 'AVULSO',
               descricao: it.product_name,
-              ncm: taxRule?.ncm || '00000000',
-              cfop: taxRule?.cfop || '5102',
               unidade: 'UN',
               quantidade: it.quantity,
               valor_unitario: it.unit_price,
-              csosn: taxRule?.csosn || '102',
-              aliquota_icms: taxRule?.icms_aliquot || 0,
-              cst_pis: taxRule?.pis_cst || '49',
-              aliquota_pis: taxRule?.pis_aliquot || 0,
-              cst_cofins: taxRule?.cofins_cst || '49',
-              aliquota_cofins: taxRule?.cofins_aliquot || 0,
+              ...buildNfceFiscalFields({ product, taxRule, mercadoEnabled }),
             };
           });
           const externalId = `CARD-MULTI-${currentRegister.id.substring(0, 8)}-${Date.now()}`;

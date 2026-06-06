@@ -8,6 +8,8 @@ import { useTabs, Tab } from '@/hooks/useTabs';
 import { useTables } from '@/hooks/useTables';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useTaxRules } from '@/hooks/useTaxRules';
+import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useCategories } from '@/hooks/useCategories';
@@ -91,6 +93,7 @@ export default function PDV() {
   const { activePaymentMethods, loading: paymentLoading } = usePaymentMethods({ companyId: company?.id, channel: 'pdv' });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
+  const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
   const { settings: storeSettings, updateSetting } = useStoreSettings({ companyId: company?.id });
   const { openTabs, getTabTotal, closeTab, removeItemFromTab } = useTabs({ companyId: company?.id });
   const { tables } = useTables({ companyId: company?.id });
@@ -838,17 +841,10 @@ export default function PDV() {
               return {
                 codigo: product?.code || item.product_id || 'AVULSO',
                 descricao: item.product_name,
-                ncm: taxRule?.ncm || '00000000',
-                cfop: taxRule?.cfop || '5102',
                 unidade: 'UN',
                 quantidade: item.quantity,
                 valor_unitario: item.unit_price,
-                csosn: taxRule?.csosn || '102',
-                aliquota_icms: taxRule?.icms_aliquot || 0,
-                cst_pis: taxRule?.pis_cst || '49',
-                aliquota_pis: taxRule?.pis_aliquot || 0,
-                cst_cofins: taxRule?.cofins_cst || '49',
-                aliquota_cofins: taxRule?.cofins_aliquot || 0,
+                ...buildNfceFiscalFields({ product, taxRule, mercadoEnabled }),
               };
             });
 
@@ -2331,17 +2327,10 @@ export default function PDV() {
                                     return {
                                       codigo: product?.code || item.product_id || 'AVULSO',
                                       descricao: item.product_name,
-                                      ncm: taxRule?.ncm || '00000000',
-                                      cfop: taxRule?.cfop || '5102',
                                       unidade: 'UN',
                                       quantidade: item.quantity,
                                       valor_unitario: item.unit_price,
-                                      csosn: taxRule?.csosn || '102',
-                                      aliquota_icms: taxRule?.icms_aliquot || 0,
-                                      cst_pis: taxRule?.pis_cst || '49',
-                                      aliquota_pis: taxRule?.pis_aliquot || 0,
-                                      cst_cofins: taxRule?.cofins_cst || '49',
-                                      aliquota_cofins: taxRule?.cofins_aliquot || 0,
+                                      ...buildNfceFiscalFields({ product, taxRule, mercadoEnabled }),
                                     };
                                   });
 

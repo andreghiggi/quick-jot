@@ -15,6 +15,8 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { useTaxRules } from '@/hooks/useTaxRules';
+import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -72,6 +74,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { settings } = useStoreSettings({ companyId: company?.id });
   const { getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
+  const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
   const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const fiscalEnabled = isModuleEnabled('fiscal');
@@ -1178,17 +1181,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               return {
                 codigo: product?.code || it.product_id || 'AVULSO',
                 descricao: it.product_name,
-                ncm: taxRule?.ncm || '00000000',
-                cfop: taxRule?.cfop || '5102',
                 unidade: 'UN',
                 quantidade: it.quantity,
                 valor_unitario: it.unit_price,
-                csosn: taxRule?.csosn || '102',
-                aliquota_icms: taxRule?.icms_aliquot || 0,
-                cst_pis: taxRule?.pis_cst || '49',
-                aliquota_pis: taxRule?.pis_aliquot || 0,
-                cst_cofins: taxRule?.cofins_cst || '49',
-                aliquota_cofins: taxRule?.cofins_aliquot || 0,
+                ...buildNfceFiscalFields({ product, taxRule, mercadoEnabled }),
               };
             });
             const externalId = `EXPRESS-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
@@ -1577,17 +1573,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             return {
               codigo: product?.code || it.product_id || 'AVULSO',
               descricao: it.product_name,
-              ncm: taxRule?.ncm || '00000000',
-              cfop: taxRule?.cfop || '5102',
               unidade: 'UN',
               quantidade: it.quantity,
               valor_unitario: it.unit_price,
-              csosn: taxRule?.csosn || '102',
-              aliquota_icms: taxRule?.icms_aliquot || 0,
-              cst_pis: taxRule?.pis_cst || '49',
-              aliquota_pis: taxRule?.pis_aliquot || 0,
-              cst_cofins: taxRule?.cofins_cst || '49',
-              aliquota_cofins: taxRule?.cofins_aliquot || 0,
+              ...buildNfceFiscalFields({ product, taxRule, mercadoEnabled }),
             };
           });
           const externalId = `EXPRESS-MULTI-${currentRegister.id.substring(0, 8)}-${Date.now()}`;

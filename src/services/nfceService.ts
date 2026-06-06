@@ -15,6 +15,8 @@ export interface NFCeItem {
   aliquota_pis: number;
   cst_cofins: string;
   aliquota_cofins: number;
+  /** Código CEST (7 dígitos). Opcional — só é enviado quando preenchido. */
+  cest?: string;
 }
 
 export interface NFCeTefData {

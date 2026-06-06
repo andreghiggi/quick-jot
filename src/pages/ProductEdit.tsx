@@ -28,6 +28,7 @@ import { useOptionalGroups } from '@/hooks/useOptionalGroups';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadCompressedImage } from '@/utils/imageUtils';
+import { lookupCestByNcm, type CestMatch } from '@/utils/cestLookup';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { toast } from 'sonner';
 
@@ -86,6 +87,7 @@ export default function ProductEdit() {
   // ---- Fiscal (Fase C) ----
   const [ncm, setNcm] = useState('');
   const [cest, setCest] = useState('');
+  const [cestSuggestions, setCestSuggestions] = useState<CestMatch[]>([]);
   const [cfop, setCfop] = useState('');
   // ---- Mercado: comercial ----
   const [brand, setBrand] = useState('');
@@ -646,6 +648,21 @@ export default function ProductEdit() {
               <Input
                 value={ncm}
                 onChange={(e) => setNcm(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                onBlur={async (e) => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  if (!mercadoEnabled || !val || cest) return;
+                  try {
+                    const matches = await lookupCestByNcm(val);
+                    if (matches.length === 1) {
+                      setCest(matches[0].cest);
+                      toast.success(`CEST ${matches[0].cest} preenchido automaticamente`);
+                    } else if (matches.length > 1) {
+                      setCestSuggestions(matches);
+                    }
+                  } catch {
+                    /* lookup é best-effort */
+                  }
+                }}
                 placeholder="00000000"
                 inputMode="numeric"
               />
@@ -657,6 +674,33 @@ export default function ProductEdit() {
                 placeholder="0000000"
                 inputMode="numeric"
               />
+              {cestSuggestions.length > 1 && (
+                <div className="mt-2 rounded-md border bg-muted/40 p-2 text-xs space-y-1">
+                  <div className="font-medium text-muted-foreground">
+                    Selecione o CEST aplicável:
+                  </div>
+                  {cestSuggestions.map((s) => (
+                    <button
+                      key={s.cest}
+                      type="button"
+                      onClick={() => {
+                        setCest(s.cest);
+                        setCestSuggestions([]);
+                      }}
+                      className="block w-full text-left rounded px-2 py-1 hover:bg-accent"
+                    >
+                      <span className="font-mono font-semibold">{s.cest}</span> — {s.desc}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setCestSuggestions([])}
+                    className="text-muted-foreground hover:underline"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              )}
             </Field>
             <Field label="CFOP padrão" hint="Ex.: 5102 (venda dentro do estado).">
               <Input
