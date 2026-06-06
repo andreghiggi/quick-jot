@@ -91,6 +91,7 @@ export default function PDVV2() {
     refetch: refetchCash,
     loading: cashLoading,
     cashOpenKnown,
+    isOpening,
   } = useCashRegister({ companyId });
   const { openTabs, closeTab, deleteTab, refetch: refetchTabs } = useTabs({ companyId });
   const { settings } = useStoreSettings({ companyId });
