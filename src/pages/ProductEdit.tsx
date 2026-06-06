@@ -8,6 +8,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ArrowLeft, Camera, ExternalLink, Loader2, X } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
@@ -18,6 +28,7 @@ import { useOptionalGroups } from '@/hooks/useOptionalGroups';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadCompressedImage } from '@/utils/imageUtils';
+import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { toast } from 'sonner';
 
 /**
@@ -68,9 +79,15 @@ export default function ProductEdit() {
   const [price, setPrice] = useState('');
   const [icmsOrigin, setIcmsOrigin] = useState('0');
   const [taxRuleId, setTaxRuleId] = useState<string>('');
-  const [trackStock, setTrackStock] = useState(false);
+  // Estoque sempre controlado quando módulo `mercado` está ativo (Gweb-style).
+  // O toggle "Controlar estoque" foi removido conforme decisão de produto.
   const [stockQuantity, setStockQuantity] = useState('');
   const [minStock, setMinStock] = useState('');
+  // Snapshot do estoque atual no carregamento — usado para detectar ajuste manual na edição.
+  const [originalStock, setOriginalStock] = useState<number>(0);
+  // Confirmação de ajuste de estoque antes de salvar
+  const [stockConfirmOpen, setStockConfirmOpen] = useState(false);
+  const [pendingStockChange, setPendingStockChange] = useState<{ from: number; to: number } | null>(null);
 
   const [hydrated, setHydrated] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -105,8 +122,8 @@ export default function ProductEdit() {
       setPrice(existing.price != null ? String(existing.price) : '');
       setIcmsOrigin(existing.icmsOrigin || '0');
       setTaxRuleId(existing.taxRuleId || '');
-      setTrackStock(!!existing.trackStock);
-      setStockQuantity(existing.stockQuantity != null ? String(existing.stockQuantity) : '');
+      setStockQuantity(existing.stockQuantity != null ? String(existing.stockQuantity) : '0');
+      setOriginalStock(existing.stockQuantity != null ? Number(existing.stockQuantity) : 0);
       setMinStock(existing.minStock != null ? String(existing.minStock) : '');
       setHydrated(true);
     }
@@ -190,6 +207,19 @@ export default function ProductEdit() {
       toast.error(err);
       return;
     }
+    // Edição: se mudou o estoque atual, pede confirmação antes de salvar.
+    if (!isNew && mercadoEnabled) {
+      const newQty = stockQuantity !== '' ? Number(stockQuantity) : 0;
+      if (!Number.isNaN(newQty) && newQty !== originalStock) {
+        setPendingStockChange({ from: originalStock, to: newQty });
+        setStockConfirmOpen(true);
+        return;
+      }
+    }
+    await doSave();
+  }
+
+  async function doSave() {
     setIsSaving(true);
     try {
       const payload: any = {
@@ -211,7 +241,7 @@ export default function ProductEdit() {
         taxRuleId: taxRuleId || null,
         ...(mercadoEnabled
           ? {
-              trackStock,
+              trackStock: true,
               minStock: minStock !== '' ? Number(minStock) : 0,
             }
           : {}),
@@ -220,12 +250,37 @@ export default function ProductEdit() {
       if (isNew) {
         const newId = await addProduct(payload);
         if (!newId) return;
+        // Estoque inicial → vira movimento `initial` para gerar histórico.
+        if (mercadoEnabled) {
+          const initialQty = stockQuantity !== '' ? Number(stockQuantity) : 0;
+          if (initialQty > 0) {
+            await applyStockMovementOnce({
+              productId: newId,
+              quantity: initialQty,
+              type: 'initial',
+              notes: 'Estoque inicial no cadastro',
+            });
+          }
+        }
         // Destaque (toggle is_new) é gerenciado em uma chamada separada;
         // não é crítico no cadastro, e tem limite de 5 — então fica para edição.
         navigate('/produtos');
       } else if (existing) {
         const ok = await updateProduct(existing.id, payload);
         if (!ok) return;
+        // Ajuste de estoque, quando o usuário confirmou a alteração.
+        if (mercadoEnabled) {
+          const newQty = stockQuantity !== '' ? Number(stockQuantity) : 0;
+          const delta = newQty - originalStock;
+          if (delta !== 0) {
+            await applyStockMovementOnce({
+              productId: existing.id,
+              quantity: delta,
+              type: 'adjustment',
+              notes: `Ajuste manual: ${originalStock} → ${newQty} (cadastro de produto)`,
+            });
+          }
+        }
         // Atualiza destaque se mudou (chamada separada por ter limite)
         if (!!existing.isNew !== isFeatured) {
           await supabase
@@ -237,6 +292,8 @@ export default function ProductEdit() {
       }
     } finally {
       setIsSaving(false);
+      setStockConfirmOpen(false);
+      setPendingStockChange(null);
     }
   }
 
@@ -478,36 +535,39 @@ export default function ProductEdit() {
 
           {mercadoEnabled && (
             <div className="mt-6 pt-6 border-t space-y-4">
-              <ToggleRow
-                label="Controlar estoque"
-                description="Quando ativo, as vendas baixam o estoque automaticamente."
-                checked={trackStock}
-                onCheckedChange={setTrackStock}
-              />
-              {trackStock && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {isNew && (
-                    <Field label="Estoque inicial">
-                      <Input
-                        type="number"
-                        min="0"
-                        value={stockQuantity}
-                        onChange={(e) => setStockQuantity(e.target.value)}
-                        placeholder="0"
-                      />
-                    </Field>
-                  )}
-                  <Field label="Estoque mínimo (alerta)">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={minStock}
-                      onChange={(e) => setMinStock(e.target.value)}
-                      placeholder="0"
-                    />
-                  </Field>
-                </div>
-              )}
+              <div>
+                <h3 className="text-sm font-medium">Estoque</h3>
+                <p className="text-xs text-muted-foreground">
+                  As vendas baixam o estoque automaticamente.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field
+                  label={isNew ? 'Estoque inicial' : 'Estoque atual'}
+                  hint={
+                    !isNew
+                      ? 'Alterar este valor gera um ajuste manual no histórico.'
+                      : undefined
+                  }
+                >
+                  <Input
+                    type="number"
+                    min="0"
+                    value={stockQuantity}
+                    onChange={(e) => setStockQuantity(e.target.value)}
+                    placeholder="0"
+                  />
+                </Field>
+                <Field label="Estoque mínimo (alerta)">
+                  <Input
+                    type="number"
+                    min="0"
+                    value={minStock}
+                    onChange={(e) => setMinStock(e.target.value)}
+                    placeholder="0"
+                  />
+                </Field>
+              </div>
             </div>
           )}
         </Section>
@@ -613,6 +673,43 @@ export default function ProductEdit() {
             Salvar
           </Button>
         </div>
+
+        {/* Confirmação de alteração de estoque */}
+        <AlertDialog
+          open={stockConfirmOpen}
+          onOpenChange={(o) => {
+            if (!isSaving) setStockConfirmOpen(o);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar alteração de estoque</AlertDialogTitle>
+              <AlertDialogDescription>
+                {pendingStockChange && (
+                  <>
+                    Alterar o estoque de{' '}
+                    <strong>{pendingStockChange.from}</strong> para{' '}
+                    <strong>{pendingStockChange.to}</strong>?
+                    <br />
+                    Será registrado um ajuste manual no histórico de movimentações.
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isSaving}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={isSaving}
+                onClick={(e) => {
+                  e.preventDefault();
+                  doSave();
+                }}
+              >
+                Confirmar e salvar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
