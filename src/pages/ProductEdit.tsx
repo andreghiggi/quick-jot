@@ -673,6 +673,43 @@ export default function ProductEdit() {
             Salvar
           </Button>
         </div>
+
+        {/* Confirmação de alteração de estoque */}
+        <AlertDialog
+          open={stockConfirmOpen}
+          onOpenChange={(o) => {
+            if (!isSaving) setStockConfirmOpen(o);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar alteração de estoque</AlertDialogTitle>
+              <AlertDialogDescription>
+                {pendingStockChange && (
+                  <>
+                    Alterar o estoque de{' '}
+                    <strong>{pendingStockChange.from}</strong> para{' '}
+                    <strong>{pendingStockChange.to}</strong>?
+                    <br />
+                    Será registrado um ajuste manual no histórico de movimentações.
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isSaving}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={isSaving}
+                onClick={(e) => {
+                  e.preventDefault();
+                  doSave();
+                }}
+              >
+                Confirmar e salvar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
