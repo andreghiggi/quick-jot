@@ -8,6 +8,8 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { useProducts } from '@/hooks/useProducts';
 import { useTaxRules } from '@/hooks/useTaxRules';
+import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { Order, OrderStatus } from '@/types/order';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
