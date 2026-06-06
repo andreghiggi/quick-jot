@@ -97,7 +97,7 @@ export default function SalesReport() {
       // 1. Fetch PDV sales
       const { data: pdvSales, error: pdvError } = await supabase
         .from('pdv_sales')
-        .select('id, created_at, final_total')
+        .select('id, created_at, final_total, customer_name, notes')
         .eq('company_id', company.id)
         .gte('created_at', periodDates.start.toISOString())
         .lte('created_at', periodDates.end.toISOString())
@@ -121,52 +121,33 @@ export default function SalesReport() {
         console.error('Error fetching orders:', ordersError);
       }
 
-      // 3. Fetch closed table tabs (comandas finalizadas)
-      const { data: tableTabs, error: tabsError } = await supabase
-        .from('tabs')
-        .select('id, created_at, closed_at, tab_number, customer_name, table_id')
-        .eq('company_id', company.id)
-        .eq('status', 'closed')
-        .gte('closed_at', periodDates.start.toISOString())
-        .lte('closed_at', periodDates.end.toISOString())
-        .order('closed_at', { ascending: false });
-
-      if (tabsError) {
-        console.error('Error fetching table tabs:', tabsError);
-      }
-
-      const tableIds = Array.from(new Set((tableTabs || []).map((tab: any) => tab.table_id).filter(Boolean)));
-      let tableNumberById: Record<string, string> = {};
-
-      if (tableIds.length > 0) {
-        const { data: tables } = await supabase
-          .from('tables')
-          .select('id, number')
-          .in('id', tableIds);
-
-        tableNumberById = (tables || []).reduce((acc: Record<string, string>, table: any) => {
-          acc[table.id] = String(table.number);
-          return acc;
-        }, {});
-      }
-
       const allSaleEntries: {
         id: string;
         created_at: string;
         final_total: number;
-        source: 'pdv' | 'order' | 'tab';
+        source: 'pdv' | 'order';
         origin: OriginKey;
         table_number?: string | null;
         short_code?: string | null;
       }[] = [];
 
-      (pdvSales || []).forEach(s => allSaleEntries.push({
-        ...s,
-        source: 'pdv',
-        origin: 'balcao',
-        table_number: null,
-        short_code: null,
-      }));
+      (pdvSales || []).forEach((s: any) => {
+        const customerName = String(s.customer_name || '');
+        const notes = String(s.notes || '');
+        const isComanda = notes.includes('Comanda #') || customerName.startsWith('Mesa ');
+        const tableMatch = customerName.match(/Mesa\s+(\d+)/i);
+        const tabMatch = notes.match(/Comanda\s+#?(\d+)/i);
+
+        allSaleEntries.push({
+          id: s.id,
+          created_at: s.created_at,
+          final_total: s.final_total,
+          source: 'pdv',
+          origin: isComanda ? (customerName.includes('(QR)') ? 'mesa_qr' : 'mesa') : 'balcao',
+          table_number: tableMatch?.[1] ?? null,
+          short_code: tabMatch?.[1] ? `Comanda ${tabMatch[1]}` : null,
+        });
+      });
 
       (orders || []).forEach((o: any) => {
         let originBucket: OriginKey = 'balcao';
@@ -188,29 +169,14 @@ export default function SalesReport() {
         });
       });
 
-      (tableTabs || []).forEach((tab: any) => {
-        const customerName = String(tab.customer_name || '');
-        allSaleEntries.push({
-          id: tab.id,
-          created_at: tab.closed_at || tab.created_at,
-          final_total: 0,
-          source: 'tab',
-          origin: customerName.includes('(QR)') ? 'mesa_qr' : 'mesa',
-          table_number: tab.table_id ? tableNumberById[tab.table_id] ?? null : null,
-          short_code: tab.tab_number ? `Comanda ${tab.tab_number}` : null,
-        });
-      });
-
       if (allSaleEntries.length === 0) return [];
 
       // Fetch PDV sale items
       const pdvIds = allSaleEntries.filter(s => s.source === 'pdv').map(s => s.id);
       const orderIds = allSaleEntries.filter(s => s.source === 'order').map(s => s.id);
-      const tabIds = allSaleEntries.filter(s => s.source === 'tab').map(s => s.id);
 
       let pdvItems: any[] = [];
       let orderItems: any[] = [];
-      let tabItems: any[] = [];
 
       if (pdvIds.length > 0) {
         const { data } = await supabase
@@ -226,14 +192,6 @@ export default function SalesReport() {
           .select('order_id, name, quantity, price')
           .in('order_id', orderIds);
         orderItems = data || [];
-      }
-
-      if (tabIds.length > 0) {
-        const { data } = await supabase
-          .from('tab_items')
-          .select('tab_id, product_name, quantity, total_price')
-          .in('tab_id', tabIds);
-        tabItems = data || [];
       }
 
       // Build items map
