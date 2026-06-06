@@ -29,7 +29,6 @@ import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { lookupCestByNcm, type CestMatch } from '@/utils/cestLookup';
-import { toast } from 'sonner';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { toast } from 'sonner';
 
