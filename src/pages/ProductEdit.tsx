@@ -83,6 +83,25 @@ export default function ProductEdit() {
   // O toggle "Controlar estoque" foi removido conforme decisão de produto.
   const [stockQuantity, setStockQuantity] = useState('');
   const [minStock, setMinStock] = useState('');
+  // ---- Fiscal (Fase C) ----
+  const [ncm, setNcm] = useState('');
+  const [cest, setCest] = useState('');
+  const [cfop, setCfop] = useState('');
+  // ---- Mercado: comercial ----
+  const [brand, setBrand] = useState('');
+  const [supplierId, setSupplierId] = useState<string>('');
+  const [wholesalePrice, setWholesalePrice] = useState('');
+  const [wholesaleMinQty, setWholesaleMinQty] = useState('');
+  // ---- Mercado: validade / lote ----
+  const [shelfLifeDays, setShelfLifeDays] = useState('');
+  const [expirationDate, setExpirationDate] = useState('');
+  const [batchNumber, setBatchNumber] = useState('');
+  // ---- Mercado: balança ----
+  const [isScaleItem, setIsScaleItem] = useState(false);
+  const [scaleBarcode, setScaleBarcode] = useState('');
+  const [pricePerKg, setPricePerKg] = useState(false);
+  // Lista de fornecedores (para o select). Só carrega se módulo Mercado ativo.
+  const [suppliersList, setSuppliersList] = useState<Array<{ id: string; name: string }>>([]);
   // Snapshot do estoque atual no carregamento — usado para detectar ajuste manual na edição.
   const [originalStock, setOriginalStock] = useState<number>(0);
   // Confirmação de ajuste de estoque antes de salvar
