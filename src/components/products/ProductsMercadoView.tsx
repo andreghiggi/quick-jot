@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Search, Pencil, Package, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -22,10 +22,28 @@ const PAGE_SIZE = 50;
  * Reusa apenas o callback `onEdit` (que abre o diálogo de edição atual).
  */
 export function ProductsMercadoView({ products, onEdit }: Props) {
-  const [query, setQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [stockFilter, setStockFilter] = useState<StockFilter>('all');
-  const [page, setPage] = useState(0);
+  // Estado persistido em sessionStorage para sobreviver à navegação
+  // até a página de edição de produto e voltar.
+  const [query, setQuery] = useState<string>(() => {
+    try { return sessionStorage.getItem('mercado:query') ?? ''; } catch { return ''; }
+  });
+  const [categoryFilter, setCategoryFilter] = useState<string>(() => {
+    try { return sessionStorage.getItem('mercado:category') ?? 'all'; } catch { return 'all'; }
+  });
+  const [stockFilter, setStockFilter] = useState<StockFilter>(() => {
+    try {
+      const v = sessionStorage.getItem('mercado:stock');
+      return (v === 'low' || v === 'no_gtin' || v === 'all') ? v : 'all';
+    } catch { return 'all'; }
+  });
+  const [page, setPage] = useState<number>(() => {
+    try { return Number(sessionStorage.getItem('mercado:page') ?? 0) || 0; } catch { return 0; }
+  });
+
+  useEffect(() => { try { sessionStorage.setItem('mercado:query', query); } catch {} }, [query]);
+  useEffect(() => { try { sessionStorage.setItem('mercado:category', categoryFilter); } catch {} }, [categoryFilter]);
+  useEffect(() => { try { sessionStorage.setItem('mercado:stock', stockFilter); } catch {} }, [stockFilter]);
+  useEffect(() => { try { sessionStorage.setItem('mercado:page', String(page)); } catch {} }, [page]);
 
   const categories = useMemo(
     () => Array.from(new Set(products.map((p) => p.category))).sort(),
