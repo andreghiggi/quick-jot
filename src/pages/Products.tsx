@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -41,6 +42,7 @@ interface ExtractedProduct {
 
 export default function Products() {
   const { company } = useAuthContext();
+  const navigate = useNavigate();
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, duplicateProduct, toggleNewProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
@@ -215,7 +217,7 @@ export default function Products() {
 
 
   function openEditDialog(product: Product) {
-    setEditingProduct(product);
+    navigate(`/produtos/${product.id}`);
   }
 
   async function handleEditImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -564,13 +566,11 @@ export default function Products() {
           <span className="hidden sm:inline">Tributação em massa</span>
         </Button>
       )}
+      <Button onClick={() => navigate('/produtos/novo')}>
+        <Plus className="h-4 w-4 mr-2" />
+        <span className="hidden sm:inline">Novo Produto</span>
+      </Button>
       <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-        <DialogTrigger asChild>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Novo Produto</span>
-          </Button>
-        </DialogTrigger>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Produto</DialogTitle>
@@ -1025,7 +1025,7 @@ export default function Products() {
             <CardContent className="py-12 text-center">
               <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">Nenhum produto cadastrado</p>
-              <Button className="mt-4" onClick={() => setIsProductDialogOpen(true)}>
+              <Button className="mt-4" onClick={() => navigate('/produtos/novo')}>
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar primeiro produto
               </Button>
