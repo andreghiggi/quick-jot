@@ -349,9 +349,67 @@ export default function PDVV2() {
         else origin = 'balcao';
       }
 
+      const finalTotal = Number(s.final_total) || 0;
+
+      // Multi-pagamento: quebra a venda em uma linha por forma de pagamento real,
+      // usando o fragmento `[MULTI] ...` gerado por pdvV2MultiPayment.ts
+      // (formato: "Dinheiro: R$101.40 || TEF R$38.80: ... | Débito | ...").
+      // Assim o fechamento mostra "Dinheiro 101,40" + "Débito 38,80" + "Débito 27,80"
+      // ao invés de tudo no balde "Dinheiro".
+      const multiIdx = s.notes ? s.notes.lastIndexOf('[MULTI]') : -1;
+      if (s.notes && multiIdx >= 0) {
+        // pega tudo após o último [MULTI]
+        let body = s.notes.slice(multiIdx + '[MULTI]'.length);
+        // remove blocos volumosos que contêm "|" e podem atrapalhar o split
+        body = body
+          .replace(/\[COMPROVANTE\][\s\S]*?\[\/COMPROVANTE\]/g, '')
+          .replace(/\[TEF\d+\][\s\S]*?\[\/TEF\d+\]/g, '')
+          .trim();
+        const segments = body.split(/\s\|\|\s/).map((x) => x.trim()).filter(Boolean);
+        const parts: { label: string; amount: number }[] = [];
+        for (const seg of segments) {
+          const amtMatch = seg.match(/R\$\s*([\d.,]+)/);
+          if (!amtMatch) continue;
+          const raw = amtMatch[1];
+          // Normaliza: se tem vírgula, ela é o decimal; senão usa ponto
+          const normalized = raw.includes(',')
+            ? raw.replace(/\./g, '').replace(',', '.')
+            : raw;
+          const amount = parseFloat(normalized);
+          if (!isFinite(amount) || amount <= 0) continue;
+          // Rótulo: prioriza sub-tipo TEF (Débito/Crédito à Vista/PIX/Nx ...).
+          let label: string;
+          const subTef = seg.match(/\|\s*(Débito|Crédito à Vista|PIX|\d+x\s*(?:Cartão\s*(?:ADM|Loja)|Crédito))/i);
+          if (subTef) {
+            label = subTef[1];
+          } else {
+            // Nome antes do primeiro ":" (ex.: "Dinheiro", "PIX")
+            const head = seg.split(':')[0].trim();
+            // Remove prefixo "TEF " se sobrar (ex.: "TEF R$38.80")
+            label = head.replace(/^TEF\s+R\$[\d.,]+\s*$/i, 'TEF').replace(/\s+R\$[\d.,]+\s*$/, '');
+            if (!label) label = 'Outro';
+          }
+          parts.push({ label, amount });
+        }
+        const sum = parts.reduce((a, p) => a + p.amount, 0);
+        // Só aplica o split se a soma bater com o total da venda (±1 centavo).
+        // Senão, fallback: 1 linha só com o comportamento atual.
+        if (parts.length >= 2 && Math.abs(sum - finalTotal) <= 0.01) {
+          return parts.map((p, idx) => ({
+            id: `${s.id}#${idx}`,
+            final_total: p.amount,
+            payment_method_id: null,
+            payment_method_name: p.label,
+            customer_name: s.customer_name || null,
+            created_at: s.created_at,
+            origin,
+          }));
+        }
+      }
+
       return [{
         id: s.id,
-        final_total: Number(s.final_total) || 0,
+        final_total: finalTotal,
         payment_method_id: s.payment_method_id || null,
         payment_method_name: pmName,
         customer_name: s.customer_name || null,
