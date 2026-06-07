@@ -27,7 +27,7 @@ function OrdersContent() {
   const [activePeriod, setActivePeriod] = useState<'today' | '7d' | '15d' | '30d' | 'all'>('today');
   const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>('all');
   const [originFilter, setOriginFilter] = useState<OriginFilter>('all');
-  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all');
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>([]);
 
   const toSPDateString = (date: Date) => {
     return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
