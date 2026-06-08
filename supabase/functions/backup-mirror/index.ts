@@ -41,19 +41,19 @@ Deno.serve(async (req) => {
 
   // Auth: header x-backup-secret deve bater com BACKUP_TRIGGER_SECRET
   const provided = req.headers.get("x-backup-secret") ?? "";
-  let expected = Deno.env.get("BACKUP_TRIGGER_SECRET") ?? "";
-  // Fallback: ler do Vault da base de origem (mesma fonte usada pelo cron)
-  if (!expected) {
-    try {
-      const srcUrl = Deno.env.get("SUPABASE_DB_URL");
-      if (srcUrl) {
-        const sMeta = postgres(srcUrl, { max: 1, prepare: false, connect_timeout: 10 });
-        const rows = await sMeta`select decrypted_secret from vault.decrypted_secrets where name = 'BACKUP_TRIGGER_SECRET' limit 1`;
-        await sMeta.end({ timeout: 2 });
-        expected = (rows?.[0]?.decrypted_secret as string) ?? "";
-      }
-    } catch (_) { /* ignore */ }
-  }
+  // Fonte da verdade: Vault da base de origem (mesma usada pelo cron).
+  // Fallback: env var BACKUP_TRIGGER_SECRET (compat).
+  let expected = "";
+  try {
+    const srcUrl = Deno.env.get("SUPABASE_DB_URL");
+    if (srcUrl) {
+      const sMeta = postgres(srcUrl, { max: 1, prepare: false, connect_timeout: 10 });
+      const rows = await sMeta`select decrypted_secret from vault.decrypted_secrets where name = 'BACKUP_TRIGGER_SECRET' limit 1`;
+      await sMeta.end({ timeout: 2 });
+      expected = (rows?.[0]?.decrypted_secret as string) ?? "";
+    }
+  } catch (_) { /* ignore */ }
+  if (!expected) expected = Deno.env.get("BACKUP_TRIGGER_SECRET") ?? "";
   if (!expected || provided !== expected) {
     return json({ error: "unauthorized" }, 401);
   }
