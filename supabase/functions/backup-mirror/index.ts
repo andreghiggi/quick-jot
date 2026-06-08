@@ -357,5 +357,6 @@ Deno.serve(async (req) => {
       rows_copied: totalRows,
       duration_ms: durationMs,
       error_message: errorMessage,
+      schema_changes: schemaChanges,
     });
 });
