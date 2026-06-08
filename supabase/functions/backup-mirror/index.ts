@@ -62,7 +62,17 @@ Deno.serve(async (req) => {
   }
 
   const sourceUrl = Deno.env.get("SUPABASE_DB_URL");
-  const targetUrl = Deno.env.get("BACKUP_TARGET_DB_URL");
+  // Fonte da verdade: Vault da base de origem (mais fácil de manter sem formulário)
+  let targetUrl = "";
+  try {
+    if (sourceUrl) {
+      const sMeta = postgres(sourceUrl, { max: 1, prepare: false, connect_timeout: 10 });
+      const rows = await sMeta`select decrypted_secret from vault.decrypted_secrets where name = 'BACKUP_TARGET_DB_URL_VAULT' limit 1`;
+      await sMeta.end({ timeout: 2 });
+      targetUrl = (rows?.[0]?.decrypted_secret as string) ?? "";
+    }
+  } catch (_) { /* ignore */ }
+  if (!targetUrl) targetUrl = Deno.env.get("BACKUP_TARGET_DB_URL") ?? "";
   if (!sourceUrl || !targetUrl) {
     return json({ error: "missing DB URLs" }, 500);
   }
