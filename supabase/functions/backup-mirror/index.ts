@@ -108,8 +108,97 @@ Deno.serve(async (req) => {
   let status = "success";
   let errorMessage: string | null = null;
   const perTable: Record<string, { rows: number; ms: number; error?: string }> = {};
+  const schemaChanges: string[] = [];
+
+  // Auto-sync de schema: cria tabelas/colunas novas no destino antes do mirror
+  async function syncSchema() {
+    const srcCols = await source`
+      SELECT table_name, column_name, data_type, udt_name, is_nullable, column_default,
+             character_maximum_length, numeric_precision, numeric_scale
+      FROM information_schema.columns
+      WHERE table_schema='public'
+      ORDER BY table_name, ordinal_position
+    `;
+    const srcPks = await source`
+      SELECT tc.table_name,
+             array_agg(kcu.column_name ORDER BY kcu.ordinal_position) AS pk_cols
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON kcu.constraint_name = tc.constraint_name AND kcu.table_schema = tc.table_schema
+      WHERE tc.table_schema='public' AND tc.constraint_type='PRIMARY KEY'
+      GROUP BY tc.table_name
+    `;
+    const pkMap = new Map<string, string[]>(srcPks.map((r: any) => [r.table_name, r.pk_cols]));
+
+    const tgtCols = await target`
+      SELECT table_name, column_name
+      FROM information_schema.columns
+      WHERE table_schema='public'
+    `;
+    const tgtTableCols = new Map<string, Set<string>>();
+    for (const r of tgtCols) {
+      const t = r.table_name as string;
+      if (!tgtTableCols.has(t)) tgtTableCols.set(t, new Set());
+      tgtTableCols.get(t)!.add(r.column_name as string);
+    }
+
+    // Agrupa colunas da origem por tabela
+    const srcTableCols = new Map<string, any[]>();
+    for (const r of srcCols) {
+      const t = r.table_name as string;
+      if (!srcTableCols.has(t)) srcTableCols.set(t, []);
+      srcTableCols.get(t)!.push(r);
+    }
+
+    const colDef = (c: any) => {
+      let type = c.data_type as string;
+      if (type === "USER-DEFINED" || type === "ARRAY") type = c.udt_name; // enums/arrays
+      if (type === "character varying" && c.character_maximum_length) type = `varchar(${c.character_maximum_length})`;
+      if (type === "numeric" && c.numeric_precision) type = `numeric(${c.numeric_precision},${c.numeric_scale ?? 0})`;
+      let def = `"${c.column_name}" ${type}`;
+      if (c.is_nullable === "NO") def += " NOT NULL";
+      if (c.column_default) def += ` DEFAULT ${c.column_default}`;
+      return def;
+    };
+
+    for (const [table, cols] of srcTableCols) {
+      if (table === "backup_runs") continue;
+      if (!tgtTableCols.has(table)) {
+        // CREATE TABLE
+        const pk = pkMap.get(table);
+        const parts = cols.map(colDef);
+        if (pk && pk.length) parts.push(`PRIMARY KEY (${pk.map((c) => `"${c}"`).join(",")})`);
+        const ddl = `CREATE TABLE public."${table}" (${parts.join(", ")})`;
+        try {
+          await target.unsafe(ddl);
+          schemaChanges.push(`CREATE ${table}`);
+        } catch (e) {
+          schemaChanges.push(`ERR CREATE ${table}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      } else {
+        // ADD missing COLUMNs
+        const existing = tgtTableCols.get(table)!;
+        for (const c of cols) {
+          if (!existing.has(c.column_name)) {
+            const ddl = `ALTER TABLE public."${table}" ADD COLUMN ${colDef(c).replace(/ NOT NULL/, "")}`;
+            try {
+              await target.unsafe(ddl);
+              schemaChanges.push(`ADD ${table}.${c.column_name}`);
+            } catch (e) {
+              schemaChanges.push(`ERR ADD ${table}.${c.column_name}: ${e instanceof Error ? e.message : String(e)}`);
+            }
+          }
+        }
+      }
+    }
+  }
 
   try {
+    // 0) Sincroniza schema (tabelas/colunas novas) antes de copiar dados
+    try { await syncSchema(); } catch (e) {
+      schemaChanges.push(`syncSchema error: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
     // 1) Lista tabelas do public na origem com PK
     const tables = await source`
       SELECT
@@ -268,5 +357,6 @@ Deno.serve(async (req) => {
       rows_copied: totalRows,
       duration_ms: durationMs,
       error_message: errorMessage,
+      schema_changes: schemaChanges,
     });
 });
