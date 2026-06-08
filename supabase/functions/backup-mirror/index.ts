@@ -44,6 +44,8 @@ Deno.serve(async (req) => {
   // Fonte da verdade: Vault da base de origem (mesma usada pelo cron).
   // Fallback: env var BACKUP_TRIGGER_SECRET (compat).
   let expected = "";
+  let vaultErr = "";
+  let vaultLen = 0;
   try {
     const srcUrl = Deno.env.get("SUPABASE_DB_URL");
     if (srcUrl) {
@@ -51,11 +53,12 @@ Deno.serve(async (req) => {
       const rows = await sMeta`select decrypted_secret from vault.decrypted_secrets where name = 'BACKUP_TRIGGER_SECRET' limit 1`;
       await sMeta.end({ timeout: 2 });
       expected = (rows?.[0]?.decrypted_secret as string) ?? "";
+      vaultLen = expected.length;
     }
-  } catch (_) { /* ignore */ }
+  } catch (e) { vaultErr = e instanceof Error ? e.message : String(e); }
   if (!expected) expected = Deno.env.get("BACKUP_TRIGGER_SECRET") ?? "";
   if (!expected || provided !== expected) {
-    return json({ error: "unauthorized" }, 401);
+    return json({ error: "unauthorized", vaultLen, vaultErr, providedLen: provided.length, expectedLen: expected.length }, 401);
   }
 
   const sourceUrl = Deno.env.get("SUPABASE_DB_URL");
