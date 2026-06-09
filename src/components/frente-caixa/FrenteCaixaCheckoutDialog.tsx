@@ -424,6 +424,10 @@ export function FrenteCaixaCheckoutDialog({
                                 const cur = parseCurrencyInput(lines[m.id]?.text || '');
                                 if (cur === 0 && remaining > 0) {
                                   fillRemainingOnLine(m.id);
+                                  // após preencher, avança se ficou exato
+                                  setTimeout(() => setStep(2), 0);
+                                } else if (remaining === 0) {
+                                  setStep(2);
                                 }
                               }
                             }}
