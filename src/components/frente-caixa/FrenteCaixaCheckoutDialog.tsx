@@ -293,15 +293,15 @@ export function FrenteCaixaCheckoutDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !processing && onOpenChange(o)}>
       <DialogContent
-        className="max-w-6xl w-[95vw] h-[90dvh] p-0 gap-0 overflow-hidden bg-zinc-950 text-zinc-100 border-zinc-800"
+        className="max-w-6xl w-[95vw] h-[90dvh] p-0 gap-0 overflow-hidden bg-background text-foreground border-border"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2 className="text-xl font-semibold">Finalizando venda</h2>
           <button
             type="button"
             onClick={() => !processing && onOpenChange(false)}
-            className="text-zinc-400 hover:text-zinc-100"
+            className="text-zinc-400 hover:text-foreground"
             aria-label="Fechar"
           >
             <X className="h-5 w-5" />
@@ -318,8 +318,8 @@ export function FrenteCaixaCheckoutDialog({
         {/* Body */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-[300px_1fr] min-h-0 overflow-hidden">
           {/* Coluna esquerda — resumo */}
-          <div className="border-r border-zinc-800 p-4 overflow-auto">
-            <div className="rounded-lg bg-zinc-900 border border-zinc-800 divide-y divide-zinc-800">
+          <div className="border-r border-border p-4 overflow-auto">
+            <div className="rounded-lg bg-muted/40 border border-border divide-y divide-zinc-800">
               <SummaryRow label="Total dos produtos" value={brl(itemsTotal)} />
               <SummaryRow label="Total de desconto" value={brl(discount)} />
               <SummaryRow label="Total de acréscimo" value={brl(surcharge)} />
@@ -332,21 +332,21 @@ export function FrenteCaixaCheckoutDialog({
 
             <div className="mt-4 text-[11px] text-zinc-500 space-y-1 leading-snug">
               <p>
-                <kbd className="px-1 py-0.5 border border-zinc-700 rounded text-[10px]">Ctrl</kbd>{' '}
+                <kbd className="px-1 py-0.5 border border-border rounded text-[10px]">Ctrl</kbd>{' '}
                 +{' '}
-                <kbd className="px-1 py-0.5 border border-zinc-700 rounded text-[10px]">1/2/3</kbd>{' '}
+                <kbd className="px-1 py-0.5 border border-border rounded text-[10px]">1/2/3</kbd>{' '}
                 muda de etapa.
               </p>
               <p>
-                <kbd className="px-1 py-0.5 border border-zinc-700 rounded text-[10px]">A–Z</kbd>{' '}
+                <kbd className="px-1 py-0.5 border border-border rounded text-[10px]">A–Z</kbd>{' '}
                 foca a forma de pagamento.
               </p>
               <p>
-                <kbd className="px-1 py-0.5 border border-zinc-700 rounded text-[10px]">Home</kbd>{' '}
+                <kbd className="px-1 py-0.5 border border-border rounded text-[10px]">Home</kbd>{' '}
                 abre Desconto/Acréscimo.
               </p>
               <p>
-                <kbd className="px-1 py-0.5 border border-zinc-700 rounded text-[10px]">Esc</kbd>{' '}
+                <kbd className="px-1 py-0.5 border border-border rounded text-[10px]">Esc</kbd>{' '}
                 volta.
               </p>
             </div>
@@ -370,7 +370,7 @@ export function FrenteCaixaCheckoutDialog({
                       Nenhuma forma de pagamento cadastrada para o canal PDV.
                     </p>
                   )}
-                  <ul className="divide-y divide-zinc-800 border-y border-zinc-800">
+                  <ul className="divide-y divide-zinc-800 border-y border-border">
                     {activePaymentMethods.map((m, idx) => {
                       const letter = LETTERS[idx] || '';
                       const itg = (m as any).integration_type as string | undefined;
@@ -380,12 +380,12 @@ export function FrenteCaixaCheckoutDialog({
                           <span className="flex-1 flex items-center gap-2 text-sm">
                             <span>{m.name}</span>
                             {isTef && (
-                              <Badge variant="outline" className="text-[10px] border-zinc-700">
+                              <Badge variant="outline" className="text-[10px] border-border">
                                 TEF
                               </Badge>
                             )}
                             {letter && (
-                              <kbd className="ml-auto px-1.5 py-0.5 border border-zinc-700 rounded text-[10px] bg-zinc-900">
+                              <kbd className="ml-auto px-1.5 py-0.5 border border-border rounded text-[10px] bg-muted/40">
                                 {letter}
                               </kbd>
                             )}
@@ -406,7 +406,7 @@ export function FrenteCaixaCheckoutDialog({
                             placeholder="R$ 0,00"
                             inputMode="decimal"
                             disabled={processing}
-                            className="w-40 text-right bg-zinc-900 border-zinc-800 focus:border-primary"
+                            className="w-40 text-right bg-muted/40 border-border focus:border-primary"
                           />
                         </li>
                       );
@@ -414,7 +414,7 @@ export function FrenteCaixaCheckoutDialog({
                   </ul>
 
                   {showAdjust && (
-                    <div className="rounded-md border border-zinc-800 bg-zinc-900 p-3 grid grid-cols-2 gap-3">
+                    <div className="rounded-md border border-border bg-muted/40 p-3 grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs text-zinc-400">Desconto (R$)</Label>
                         <Input
@@ -423,7 +423,7 @@ export function FrenteCaixaCheckoutDialog({
                           onChange={(e) => setDiscountText(maskCurrencyInput(e.target.value))}
                           inputMode="decimal"
                           disabled={processing}
-                          className="bg-zinc-950 border-zinc-800"
+                          className="bg-background border-border"
                         />
                       </div>
                       <div>
@@ -433,7 +433,7 @@ export function FrenteCaixaCheckoutDialog({
                           onChange={(e) => setSurchargeText(maskCurrencyInput(e.target.value))}
                           inputMode="decimal"
                           disabled={processing}
-                          className="bg-zinc-950 border-zinc-800"
+                          className="bg-background border-border"
                         />
                       </div>
                     </div>
@@ -466,7 +466,7 @@ export function FrenteCaixaCheckoutDialog({
                         setTimeout(() => adjustRef.current?.focus(), 50);
                       }}
                       disabled={processing}
-                      className="border-zinc-700 hover:bg-zinc-800"
+                      className="border-border hover:bg-zinc-800"
                     >
                       Desconto/Acréscimo (Home)
                     </Button>
@@ -502,7 +502,7 @@ export function FrenteCaixaCheckoutDialog({
                         onChange={(e) => setCustomerName(e.target.value)}
                         placeholder="Nome do cliente (opcional)"
                         disabled={processing}
-                        className="bg-zinc-900 border-zinc-800"
+                        className="bg-muted/40 border-border"
                       />
                     </div>
                     <div>
@@ -512,7 +512,7 @@ export function FrenteCaixaCheckoutDialog({
                         onChange={(e) => setCustomerPhone(e.target.value)}
                         placeholder="(opcional)"
                         disabled={processing}
-                        className="bg-zinc-900 border-zinc-800"
+                        className="bg-muted/40 border-border"
                       />
                     </div>
                     <div>
@@ -522,7 +522,7 @@ export function FrenteCaixaCheckoutDialog({
                         onChange={(e) => setCustomerDocument(e.target.value)}
                         placeholder="(opcional)"
                         disabled={processing}
-                        className="bg-zinc-900 border-zinc-800"
+                        className="bg-muted/40 border-border"
                       />
                     </div>
                   </div>
@@ -558,14 +558,14 @@ export function FrenteCaixaCheckoutDialog({
                     rows={4}
                     placeholder="Observação livre (opcional)"
                     disabled={processing}
-                    className="w-full rounded-md bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-md bg-muted/40 border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                 </div>
               )}
             </div>
 
             {/* Rodapé */}
-            <div className="border-t border-zinc-800 px-6 py-3 flex items-center justify-end gap-2">
+            <div className="border-t border-border px-6 py-3 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -611,7 +611,7 @@ function SummaryRow({
 }) {
   return (
     <div className="flex items-center justify-between px-3 py-2">
-      <span className={emphasize ? 'text-zinc-100 font-semibold' : 'text-zinc-400 text-sm'}>
+      <span className={emphasize ? 'text-foreground font-semibold' : 'text-zinc-400 text-sm'}>
         {label}:
       </span>
       <span
@@ -657,10 +657,10 @@ function StepHeader({
       >
         {num}
       </span>
-      <span className={`text-sm ${active ? 'text-zinc-100' : 'text-zinc-400'}`}>
+      <span className={`text-sm ${active ? 'text-foreground' : 'text-zinc-400'}`}>
         {label}
       </span>
-      <kbd className="px-1.5 py-0.5 border border-zinc-700 rounded text-[10px] bg-zinc-900">
+      <kbd className="px-1.5 py-0.5 border border-border rounded text-[10px] bg-muted/40">
         {shortcut}
       </kbd>
       {optional && (
