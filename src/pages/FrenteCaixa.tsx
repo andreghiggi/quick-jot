@@ -62,6 +62,8 @@ export default function FrenteCaixa() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [searchMatches, setSearchMatches] = useState<Product[]>([]);
   const [highlightIdx, setHighlightIdx] = useState(0);
+  const [removeTarget, setRemoveTarget] = useState<CartLine | null>(null);
+  const [removeQty, setRemoveQty] = useState<string>('1');
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -252,6 +254,36 @@ export default function FrenteCaixa() {
 
   function removeLine(id: string) {
     setLines((prev) => prev.filter((l) => l.id !== id));
+  }
+
+  function requestRemoveLine(line: CartLine) {
+    if (line.quantity <= 1) {
+      removeLine(line.id);
+      setLastTouchedId((curr) => (curr === line.id ? null : curr));
+      return;
+    }
+    setRemoveTarget(line);
+    setRemoveQty('1');
+  }
+
+  function confirmRemoveQty() {
+    if (!removeTarget) return;
+    const max = removeTarget.quantity;
+    const n = Math.max(1, Math.min(max, parseInt(removeQty, 10) || 1));
+    setLines((prev) =>
+      prev
+        .map((l) =>
+          l.id === removeTarget.id ? { ...l, quantity: l.quantity - n } : l,
+        )
+        .filter((l) => l.quantity > 0),
+    );
+    if (n >= max) {
+      setLastTouchedId((curr) => (curr === removeTarget.id ? null : curr));
+    }
+    setRemoveTarget(null);
+    setRemoveQty('1');
+    beep(true);
+    setTimeout(() => inputRef.current?.focus(), 50);
   }
 
   function tryOpenPayment() {
@@ -475,7 +507,7 @@ export default function FrenteCaixa() {
                           size="icon"
                           variant="ghost"
                           className="h-7 w-7 text-destructive"
-                          onClick={() => removeLine(l.id)}
+                          onClick={() => requestRemoveLine(l)}
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -569,6 +601,73 @@ export default function FrenteCaixa() {
               >
                 Cancelar venda
               </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog
+          open={!!removeTarget}
+          onOpenChange={(o) => {
+            if (!o) {
+              setRemoveTarget(null);
+              setRemoveQty('1');
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancelar unidades do item</AlertDialogTitle>
+              <AlertDialogDescription>
+                {removeTarget && (
+                  <>
+                    Quantas unidades de <strong>{removeTarget.product_name}</strong> deseja
+                    cancelar? (1 a {removeTarget.quantity})
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-2">
+              <Input
+                type="number"
+                min={1}
+                max={removeTarget?.quantity ?? 1}
+                value={removeQty}
+                onChange={(e) => setRemoveQty(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmRemoveQty();
+                  }
+                }}
+                autoFocus
+                className="h-12 text-lg text-center"
+              />
+              {removeTarget && (
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setRemoveQty('1')}
+                  >
+                    1
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setRemoveQty(String(removeTarget.quantity))}
+                  >
+                    Todas ({removeTarget.quantity})
+                  </Button>
+                </div>
+              )}
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Voltar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmRemoveQty}>Confirmar</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
