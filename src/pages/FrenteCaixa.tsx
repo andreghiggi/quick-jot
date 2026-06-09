@@ -561,58 +561,115 @@ export default function FrenteCaixa() {
                   <ul className="divide-y">
                     {lines.map((l, idx) => {
                       const isLast = l.id === lastTouchedId;
+                      const lineGross = l.effective_unit_price * l.quantity;
+                      const lineTotal = lineGross - l.line_discount + l.line_surcharge;
+                      const hasAdjust =
+                        l.effective_unit_price !== l.unit_price ||
+                        l.line_discount > 0 ||
+                        l.line_surcharge > 0;
                       return (
-                      <li
-                        key={l.id}
-                        className={`flex items-center gap-3 px-3 py-2 transition-colors ${
-                          isLast ? 'bg-primary/5 ring-2 ring-primary ring-inset' : ''
-                        }`}
-                      >
-                        <span className="w-6 text-right text-xs font-semibold tabular-nums text-muted-foreground shrink-0">
-                          {idx + 1}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{l.product_name}</p>
-                          <p className="text-xs text-muted-foreground tabular-nums">
-                            R$ {l.unit_price.toFixed(3).replace('.', ',')} × {l.quantity} {l.unit}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            className="h-7 w-7"
-                            onClick={() => changeQty(l.id, -1)}
+                      <ContextMenu key={l.id}>
+                        <ContextMenuTrigger asChild>
+                          <li
+                            onClick={() => setLastTouchedId(l.id)}
+                            className={`flex items-center gap-3 px-3 py-2 transition-colors cursor-default ${
+                              isLast ? 'bg-primary/5 ring-2 ring-primary ring-inset' : ''
+                            }`}
                           >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-8 text-center text-sm tabular-nums font-medium">
-                            {l.quantity}
-                          </span>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            className="h-7 w-7"
-                            onClick={() => changeQty(l.id, +1)}
+                            <span className="w-6 text-right text-xs font-semibold tabular-nums text-muted-foreground shrink-0">
+                              {idx + 1}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{l.product_name}</p>
+                              <p className="text-xs text-muted-foreground tabular-nums">
+                                R$ {l.effective_unit_price.toFixed(3).replace('.', ',')} × {l.quantity} {l.unit}
+                                {l.effective_unit_price !== l.unit_price && (
+                                  <span className="ml-1 line-through opacity-60">
+                                    (R$ {l.unit_price.toFixed(3).replace('.', ',')})
+                                  </span>
+                                )}
+                              </p>
+                              {hasAdjust && (
+                                <p className="text-[11px] tabular-nums mt-0.5 flex flex-wrap gap-2">
+                                  {l.line_discount > 0 && (
+                                    <span className="text-rose-500">
+                                      − {formatPrice(l.line_discount)} desc.
+                                    </span>
+                                  )}
+                                  {l.line_surcharge > 0 && (
+                                    <span className="text-amber-500">
+                                      + {formatPrice(l.line_surcharge)} acr.
+                                    </span>
+                                  )}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="h-7 w-7"
+                                onClick={() => changeQty(l.id, -1)}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-8 text-center text-sm tabular-nums font-medium">
+                                {l.quantity}
+                              </span>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="h-7 w-7"
+                                onClick={() => changeQty(l.id, +1)}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <span className="w-24 text-right tabular-nums text-sm font-semibold text-emerald-600">
+                              {formatPrice(lineTotal).replace('.', ',')}
+                            </span>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive"
+                              onClick={() => requestRemoveLine(l)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </li>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent className="w-64">
+                          <ContextMenuItem
+                            onSelect={() => {
+                              setLastTouchedId(l.id);
+                              setPriceTarget(l);
+                            }}
+                            className="flex items-center justify-between gap-4"
                           >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <span className="w-20 text-right tabular-nums text-sm font-semibold text-emerald-600">
-                          {formatPrice(l.unit_price * l.quantity).replace('.', ',')}
-                        </span>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-destructive"
-                          onClick={() => requestRemoveLine(l)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </li>
+                            <span className="flex items-center gap-2">
+                              <Tag className="h-4 w-4" />
+                              Alterar preço
+                            </span>
+                            <kbd className="px-1.5 py-0.5 border rounded text-[10px] bg-muted">Home</kbd>
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            onSelect={() => {
+                              setLastTouchedId(l.id);
+                              setDetailsTarget(l);
+                            }}
+                            className="flex items-center justify-between gap-4"
+                          >
+                            <span className="flex items-center gap-2">
+                              <MoreHorizontal className="h-4 w-4" />
+                              Editar detalhes
+                            </span>
+                            <kbd className="px-1.5 py-0.5 border rounded text-[10px] bg-muted">Ctrl+D</kbd>
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
                       );
                     })}
                   </ul>
