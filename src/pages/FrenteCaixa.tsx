@@ -604,6 +604,73 @@ export default function FrenteCaixa() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <AlertDialog
+          open={!!removeTarget}
+          onOpenChange={(o) => {
+            if (!o) {
+              setRemoveTarget(null);
+              setRemoveQty('1');
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancelar unidades do item</AlertDialogTitle>
+              <AlertDialogDescription>
+                {removeTarget && (
+                  <>
+                    Quantas unidades de <strong>{removeTarget.product_name}</strong> deseja
+                    cancelar? (1 a {removeTarget.quantity})
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-2">
+              <Input
+                type="number"
+                min={1}
+                max={removeTarget?.quantity ?? 1}
+                value={removeQty}
+                onChange={(e) => setRemoveQty(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmRemoveQty();
+                  }
+                }}
+                autoFocus
+                className="h-12 text-lg text-center"
+              />
+              {removeTarget && (
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setRemoveQty('1')}
+                  >
+                    1
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setRemoveQty(String(removeTarget.quantity))}
+                  >
+                    Todas ({removeTarget.quantity})
+                  </Button>
+                </div>
+              )}
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Voltar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmRemoveQty}>Confirmar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </PDVV2Layout>
   );
