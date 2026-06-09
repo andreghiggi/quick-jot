@@ -562,6 +562,7 @@ export default function FrenteCaixa() {
                   setLines([]);
                   setQuery('');
                   setSearchMatches([]);
+                  setLastTouchedId(null);
                   setConfirmCancel(false);
                   setTimeout(() => inputRef.current?.focus(), 50);
                 }}
