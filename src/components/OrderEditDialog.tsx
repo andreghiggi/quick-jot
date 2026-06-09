@@ -64,6 +64,8 @@ export function OrderEditDialog({
   const { groups: optionalGroups } = useOptionalGroups({ companyId });
   const { categories } = useCategories({ companyId });
   const { settings: storeSettings } = useStoreSettings({ companyId });
+  const { neighborhoods } = useDeliveryNeighborhoods({ companyId });
+  const { activePaymentMethods } = usePaymentMethods({ companyId });
   const [working, setWorking] = useState<WorkingItem[]>([]);
   const [originalIds, setOriginalIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -74,6 +76,15 @@ export function OrderEditDialog({
   // Produto escolhido no browser (fluxo "Adicionar item") aguardando seleção de adicionais.
   const [optionalsProduct, setOptionalsProduct] = useState<Product | null>(null);
 
+  // --- NOVO (v1.16): edição de Entrega e Forma de Pagamento ---
+  // Modalidade atual derivada do pedido original.
+  const originalModality: 'pickup' | 'delivery' = order.deliveryAddress ? 'delivery' : 'pickup';
+  const [modality, setModality] = useState<'pickup' | 'delivery'>(originalModality);
+  const [addressLine, setAddressLine] = useState<string>('');
+  const [neighborhoodId, setNeighborhoodId] = useState<string>('');
+  const [paymentMethodId, setPaymentMethodId] = useState<string>('');
+  const [changeFor, setChangeFor] = useState<string>('');
+
   // Hidrata estado de trabalho ao abrir
   useEffect(() => {
     if (!open) return;
@@ -83,7 +94,27 @@ export function OrderEditDialog({
     setPickerMode(null);
     setSearch('');
     setOptionalsProduct(null);
-  }, [open, order.items]);
+    // Reset Entrega/Pagamento ao abrir
+    setModality(order.deliveryAddress ? 'delivery' : 'pickup');
+    setAddressLine(order.deliveryAddress || '');
+    setNeighborhoodId('');
+    // Tenta detectar o "troco para" das notes originais.
+    const trocoM = (order.notes || '').match(/Troco para R\$\s*([^)]+)/i);
+    setChangeFor(trocoM ? trocoM[1].trim() : '');
+    setPaymentMethodId('');
+  }, [open, order.items, order.deliveryAddress, order.notes]);
+
+  // Pré-seleciona método de pagamento atual quando a lista chega.
+  useEffect(() => {
+    if (!open) return;
+    if (paymentMethodId) return;
+    const current = extractPaymentName(order.notes);
+    if (!current) return;
+    const match = activePaymentMethods.find(
+      (m) => m.name.trim().toLowerCase() === current.trim().toLowerCase(),
+    );
+    if (match) setPaymentMethodId(match.id);
+  }, [open, activePaymentMethods, order.notes, paymentMethodId]);
 
   const newTotal = useMemo(
     () => working.reduce((s, it) => s + it.price * it.quantity, 0),
@@ -93,10 +124,88 @@ export function OrderEditDialog({
     () => order.items.reduce((s, it) => s + it.price * it.quantity, 0),
     [order.items],
   );
-  // Preserva eventual taxa de entrega do pedido original.
-  const deliveryFee = Math.max(0, order.total - subtotalOriginal);
-  const newGrandTotal = newTotal + deliveryFee;
+  // Taxa de entrega ORIGINAL preservada (derivada por diferença).
+  const originalDeliveryFee = Math.max(0, order.total - subtotalOriginal);
+
+  // Nova taxa de entrega conforme escolha atual no diálogo.
+  const newDeliveryFee = useMemo(() => {
+    if (modality === 'pickup') return 0;
+    if (storeSettings.deliveryMode === 'neighborhood') {
+      const n = neighborhoods.find((x) => x.id === neighborhoodId);
+      // Se ainda não escolheu bairro, mantém a taxa original (não zera por engano).
+      if (!n) return originalDeliveryFee;
+      return n.deliveryFee;
+    }
+    // Modo simples: usa taxa cidade quando habilitada, senão mantém original.
+    if (storeSettings.deliveryFeeCityEnabled) return storeSettings.deliveryFeeCity || 0;
+    return originalDeliveryFee;
+  }, [modality, neighborhoodId, neighborhoods, storeSettings, originalDeliveryFee]);
+
+  const newGrandTotal = newTotal + newDeliveryFee;
   const diff = newGrandTotal - order.total;
+
+  // Detecta mudanças efetivas em Entrega/Pagamento (sem disparar reimpressão à toa).
+  const newPaymentName = useMemo(
+    () => activePaymentMethods.find((p) => p.id === paymentMethodId)?.name || '',
+    [activePaymentMethods, paymentMethodId],
+  );
+  const originalPaymentName = useMemo(
+    () => (extractPaymentName(order.notes) || '').trim(),
+    [order.notes],
+  );
+  const originalTroco = useMemo(() => {
+    const m = (order.notes || '').match(/Troco para R\$\s*([^)]+)/i);
+    return m ? m[1].trim() : '';
+  }, [order.notes]);
+
+  const modalityChanged =
+    modality !== originalModality ||
+    (modality === 'delivery' && addressLine.trim() !== (order.deliveryAddress || '').trim()) ||
+    Math.abs(newDeliveryFee - originalDeliveryFee) > 0.001 ||
+    (modality === 'delivery' && !!neighborhoodId);
+  const paymentChanged =
+    !!newPaymentName &&
+    (newPaymentName.trim().toLowerCase() !== originalPaymentName.toLowerCase() ||
+      (/dinheiro/i.test(newPaymentName) && changeFor.trim() !== originalTroco));
+
+  const isMoneyPayment = /dinheiro/i.test(newPaymentName);
+  const isPixPayment = /pix/i.test(newPaymentName);
+  const selectedPixKey = activePaymentMethods.find((p) => p.id === paymentMethodId)?.pix_key || '';
+
+  // Endereço final que será gravado quando salvar.
+  function buildFinalDeliveryAddress(): string | null {
+    if (modality === 'pickup') return null;
+    const base = addressLine.trim();
+    if (!base) return null;
+    const n = neighborhoods.find((x) => x.id === neighborhoodId);
+    if (n && !base.toLowerCase().includes(n.neighborhoodName.toLowerCase())) {
+      return `${base} — Bairro ${n.neighborhoodName}`;
+    }
+    return base;
+  }
+
+  // Reescreve `notes` substituindo o bloco "Pagamento: ..." quando houve troca.
+  function rebuildNotesWithPayment(orig: string | null | undefined): string {
+    let cleaned = orig || '';
+    if (paymentChanged) {
+      // Remove TODOS os blocos antigos de "Pagamento: ..." (com ou sem parênteses)
+      cleaned = cleaned
+        .replace(/\[COBRADO\]\s*/gi, '')
+        .replace(/Pagamento:\s*[^|\[]*?(?:\s*\([^)]*\))?(?=\s*\||\s*\[|$)/gi, '')
+        .replace(/\s*\|\s*\|\s*/g, ' | ')
+        .replace(/^\s*\|\s*/, '')
+        .replace(/\s*\|\s*$/, '')
+        .trim();
+      let block = `Pagamento: ${newPaymentName}`;
+      if (isMoneyPayment && changeFor.trim()) {
+        block += ` (Troco para R$ ${changeFor.trim()})`;
+      } else if (isPixPayment && selectedPixKey) {
+        block += ` (Chave PIX: ${selectedPixKey})`;
+      }
+      cleaned = block + (cleaned ? ' | ' + cleaned : '');
+    }
+    return cleaned;
+  }
 
   const swappableProducts = useMemo(() => products.filter((p) => p.active && p.swappableInOrder), [products]);
   const allActiveProducts = useMemo(() => products.filter((p) => p.active), [products]);
