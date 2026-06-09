@@ -660,6 +660,19 @@ export function OrderEditDialog({
 
   async function handleSave() {
     if (saving) return;
+    // Validação dos novos blocos
+    if (modality === 'delivery' && !addressLine.trim()) {
+      toast.error('Informe o endereço de entrega');
+      return;
+    }
+    if (
+      paymentChanged &&
+      isMoneyPayment &&
+      !changeFor.trim()
+    ) {
+      toast.error('Informe o troco (ou "Não precisa de troco")');
+      return;
+    }
     setSaving(true);
     try {
       // Diff: novos itens (sem dbId) + trocas (com dbId mas swappedFrom).
@@ -709,21 +722,32 @@ export function OrderEditDialog({
         insertedRows.push(...(data || []));
       }
 
-      // Recalcular total e marcar audit trail nas notas.
+      // Recalcular total + endereço + pagamento e marcar audit trail nas notas.
       const stamp = new Date().toLocaleTimeString('pt-BR', {
         timeZone: 'America/Sao_Paulo',
         hour: '2-digit',
         minute: '2-digit',
       });
-      const auditTag = ` [EDITADO ${stamp}]`;
-      const newNotes = (order.notes || '') + auditTag;
+      const flags: string[] = [];
+      if (inserts.length > 0 || updates.length > 0) flags.push('itens');
+      if (modalityChanged) flags.push('entrega');
+      if (paymentChanged) flags.push('pagamento');
+      const auditTag = ` [EDITADO ${stamp}${flags.length ? ': ' + flags.join('+') : ''}]`;
+      const rewrittenNotes = rebuildNotesWithPayment(order.notes);
+      const newNotes = rewrittenNotes + auditTag;
+      const finalDeliveryAddress = buildFinalDeliveryAddress();
+
+      const orderUpdate: any = {
+        total: newGrandTotal,
+        notes: newNotes,
+      };
+      if (modalityChanged) {
+        orderUpdate.delivery_address = finalDeliveryAddress;
+      }
 
       const { error: orderErr } = await supabase
         .from('orders')
-        .update({
-          total: newGrandTotal,
-          notes: newNotes,
-        })
+        .update(orderUpdate)
         .eq('id', order.id);
       if (orderErr) throw orderErr;
 
@@ -740,12 +764,21 @@ export function OrderEditDialog({
             label: `EDIÇÃO ${order.customerName} #${order.orderCode || order.dailyNumber}`,
           } as any);
         }
-        const receiptHtml = buildUpdatedReceiptHtml(working);
+        // Só reimprime recibo se algo mudou (itens, entrega ou pagamento).
+        const shouldReprintReceipt =
+          deltaItems.length > 0 || modalityChanged || paymentChanged;
+        if (shouldReprintReceipt) {
+          const receiptHtml = buildUpdatedReceiptHtml(working, {
+            deliveryAddress: finalDeliveryAddress,
+            notes: newNotes,
+            deliveryFee: newDeliveryFee,
+          });
         await supabase.from('print_queue').insert({
           company_id: companyId,
-          html_content: receiptHtml,
+            html_content: receiptHtml,
           label: `RECIBO EDITADO #${order.orderCode || order.dailyNumber}`,
         } as any);
+        }
       } catch (e) {
         console.warn('[OrderEdit] Falha ao enfileirar impressão:', e);
       }
