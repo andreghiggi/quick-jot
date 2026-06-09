@@ -23,8 +23,11 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { useProducts } from '@/hooks/useProducts';
 import { useCashRegister } from '@/hooks/useCashRegister';
-import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { brl as formatPrice } from '@/components/pdv-v2/_format';
+import {
+  FrenteCaixaCheckoutDialog,
+  type FrenteCaixaCheckoutResult,
+} from '@/components/frente-caixa/FrenteCaixaCheckoutDialog';
 import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 
@@ -298,19 +301,14 @@ export default function FrenteCaixa() {
     setPaymentOpen(true);
   }
 
-  async function handleConfirmPayment(params: {
-    paymentMethodId: string;
-    paymentName: string;
-    discount: number;
-    finalTotal: number;
-    tefIntegration?: 'tef_pinpad' | 'tef_smartpos';
-  }) {
-    // Fase 4 (MVP): TEF não é executado aqui — orientar uso do PDV V2.
-    if (params.tefIntegration) {
-      toast.error('TEF ainda não disponível na Frente de Caixa. Use o PDV V2 ou outra forma.');
-      return;
-    }
+  async function handleConfirmPayment(params: FrenteCaixaCheckoutResult) {
     if (!user?.id) return;
+    const noteParts: string[] = [`[FRENTE-CAIXA] Pagamento: ${params.paymentName}`];
+    if (params.combinedNotesFragment) noteParts.push(params.combinedNotesFragment);
+    if (params.customerPhone) noteParts.push(`Tel: ${params.customerPhone}`);
+    if (params.customerDocument) noteParts.push(`CPF: ${params.customerDocument}`);
+    if (params.surcharge > 0) noteParts.push(`Acréscimo: ${formatPrice(params.surcharge)}`);
+    if (params.notes) noteParts.push(`Obs: ${params.notes}`);
     const saleId = await addSale(
       lines.map((l) => ({
         product_id: l.product_id,
@@ -321,8 +319,8 @@ export default function FrenteCaixa() {
       params.paymentMethodId,
       user.id,
       params.discount,
-      undefined,
-      `Venda Frente de Caixa (${params.paymentName})`,
+      params.customerName,
+      noteParts.join(' | '),
     );
     if (saleId) {
       // Baixa automática de estoque (no-op para produtos sem track_stock).
