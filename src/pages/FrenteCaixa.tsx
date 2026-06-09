@@ -735,10 +735,51 @@ export default function FrenteCaixa() {
             product_id: l.product_id,
             product_name: l.product_name,
             quantity: l.quantity,
-            unit_price: l.unit_price,
+            unit_price: Math.max(
+              0,
+              (l.effective_unit_price * l.quantity - l.line_discount + l.line_surcharge) /
+                Math.max(l.quantity, 0.0001),
+            ),
           }))}
           itemsTotal={total}
           onConfirm={handleConfirmPayment}
+        />
+
+        <FrenteCaixaPriceDialog
+          open={!!priceTarget}
+          onOpenChange={(o) => !o && setPriceTarget(null)}
+          productName={priceTarget?.product_name ?? ''}
+          initialUnitPrice={priceTarget?.effective_unit_price ?? 0}
+          quantity={priceTarget?.quantity ?? 1}
+          onConfirm={(change) => {
+            if (priceTarget) applyPriceChange(priceTarget, change);
+            setPriceTarget(null);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }}
+        />
+
+        <FrenteCaixaItemDetailsDialog
+          open={!!detailsTarget}
+          onOpenChange={(o) => !o && setDetailsTarget(null)}
+          code={detailsTarget ? productCode(detailsTarget) : ''}
+          productName={detailsTarget?.product_name ?? ''}
+          unit={detailsTarget?.unit ?? 'UN'}
+          initialQuantity={detailsTarget?.quantity ?? 1}
+          initialUnitPrice={detailsTarget?.effective_unit_price ?? 0}
+          initialDiscount={detailsTarget?.line_discount ?? 0}
+          onConfirm={(r) => {
+            if (detailsTarget) applyDetailsChange(detailsTarget, r);
+            setDetailsTarget(null);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }}
+          onRemove={() => {
+            if (detailsTarget) {
+              setLines((prev) => prev.filter((l) => l.id !== detailsTarget.id));
+              setLastTouchedId(null);
+            }
+            setDetailsTarget(null);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }}
         />
 
         <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
