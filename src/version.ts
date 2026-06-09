@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.15.2-beta";
-export const RELEASE_DATE = "2026-06-06"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Caixa: trava anti-duplo-clique na abertura";
+export const VERSION = "1.16.0-beta";
+export const RELEASE_DATE = "2026-06-09"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Editar Pedido: entrega + forma de pagamento";
 
 export interface Release {
   version: string;
@@ -19,6 +19,20 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.16.0-beta",
+    date: "2026-06-09",
+    codename: "Editar Pedido: entrega + forma de pagamento",
+    changes: [
+      "Editar Pedido (disponível em pedidos com status Pendente/Preparando) agora permite alterar TAMBÉM a forma de entrega e a forma de pagamento, além dos itens. Continua bloqueado a partir do status Pronto.",
+      "Novo bloco 'Entrega' no diálogo: alterna entre Retirada e Entrega; quando Entrega, captura endereço livre e, em lojas que cobram por bairro, mostra select com a lista cadastrada. A taxa é recalculada na hora (modo bairro pega a fee do bairro escolhido; modo simples usa a taxa cidade configurada). Mudou para Retirada → taxa zera.",
+      "Novo bloco 'Forma de pagamento': select com as formas ativas da loja. Dinheiro pede 'Troco para R$' (obrigatório). PIX mostra a chave configurada. A nova forma é gravada dentro de notes do pedido no mesmo formato lido pelo recibo (Pagamento: ... | Troco para R$ ... | Chave PIX: ...).",
+      "Recibo é REIMPRESSO automaticamente quando entrega ou pagamento mudou (mesmo sem mexer em itens). A comanda de produção continua só saindo quando itens são adicionados/trocados — cozinha não recebe reimpressão desnecessária.",
+      "Tag de auditoria expandida em notes: '[EDITADO HH:MM: itens+entrega+pagamento]' indica exatamente o que mudou.",
+      "WhatsApp do cliente, quando ativo, agora menciona a mudança de modalidade (com endereço novo e taxa) e/ou a nova forma de pagamento.",
+      "Nada de TEF (v1.0/v1.1/v1.2-beta), NFC-e, Multi-Pagamento, PDV V2 checkout, Pedido Express ou cardápio público foi alterado — a mudança fica isolada ao diálogo Editar Pedido.",
+    ],
+  },
   {
     version: "1.15.2-beta",
     date: "2026-06-06",
