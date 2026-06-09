@@ -636,6 +636,23 @@ export function OrderEditDialog({
         lines.push(`${prefix} ${it.quantity}x ${cleanName} - R$ ${lineTotal}${suffix}`);
       }
       lines.push('');
+      if (modalityChanged) {
+        if (modality === 'delivery') {
+          const addr = buildFinalDeliveryAddress();
+          lines.push(`🚚 *Modalidade:* Entrega${addr ? ` — ${addr}` : ''}`);
+          if (newDeliveryFee > 0) {
+            lines.push(`   Taxa de entrega: R$ ${newDeliveryFee.toFixed(2).replace('.', ',')}`);
+          }
+        } else {
+          lines.push('🏪 *Modalidade:* Retirada no local');
+        }
+      }
+      if (paymentChanged) {
+        let payLine = `💳 *Pagamento:* ${newPaymentName}`;
+        if (isMoneyPayment && changeFor.trim()) payLine += ` (Troco para R$ ${changeFor.trim()})`;
+        lines.push(payLine);
+      }
+      if (modalityChanged || paymentChanged) lines.push('');
       lines.push(`💰 *Novo total: R$ ${(newGrandTotal).toFixed(2).replace('.', ',')}*`);
       if (Math.abs(diff) > 0.001) {
         const sign = diff > 0 ? '+' : '-';
