@@ -561,19 +561,23 @@ export default function FrenteCaixa() {
 
             <div className="mt-auto text-[11px] text-muted-foreground space-y-1">
               <p>Dica: digite <code>3*7891234567890</code> para adicionar 3 unidades.</p>
-              <p>TEF integrado ainda não disponível aqui — use o PDV V2.</p>
+              <p>Atalhos no checkout: <kbd className="px-1 border rounded text-[10px]">A–Z</kbd> foca forma, <kbd className="px-1 border rounded text-[10px]">Home</kbd> desconto/acréscimo.</p>
             </div>
           </div>
         </div>
 
-        {/* Diálogo de pagamento (reusa o do PDV V2, canal pdv) */}
-        <PDVV2PaymentDialog
+        {/* Diálogo de pagamento — tela "Finalizando venda" estilo Gweb */}
+        <FrenteCaixaCheckoutDialog
           open={paymentOpen}
           onOpenChange={setPaymentOpen}
           companyId={company?.id}
-          total={total}
-          title="Finalizar Venda — Frente de Caixa"
-          channel="pdv"
+          items={lines.map((l) => ({
+            product_id: l.product_id,
+            product_name: l.product_name,
+            quantity: l.quantity,
+            unit_price: l.unit_price,
+          }))}
+          itemsTotal={total}
           onConfirm={handleConfirmPayment}
         />
 
