@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '09/06/2026',
+    version: '1.16.0-beta',
+    type: 'feature',
+    description: 'Editar Pedido (Pendente/Preparando) agora permite trocar a forma de entrega e a forma de pagamento, além dos itens. Novo bloco "Entrega" alterna Retirada ↔ Entrega, captura endereço e — em lojas que cobram por bairro — mostra select com a lista cadastrada, recalculando a taxa em tempo real. Novo bloco "Forma de pagamento" lista as formas ativas, exige "Troco para R$" no Dinheiro e mostra a chave do PIX. Recibo é reimpresso automaticamente quando entrega ou pagamento mudou; comanda de produção continua só saindo quando itens mudam. Tag de auditoria em notes passa a indicar [EDITADO HH:MM: itens+entrega+pagamento]. Mensagem do WhatsApp avisa o cliente sobre a nova modalidade/taxa/pagamento. Nada de TEF (v1.0/v1.1/v1.2-beta), NFC-e, Multi-Pagamento, PDV V2 checkout, Pedido Express ou cardápio público foi alterado.',
+  },
+  {
     date: '06/06/2026',
     version: '1.15.1-beta',
     type: 'fix',

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Plus, ArrowLeftRight, Search } from 'lucide-react';
+import { Loader2, Plus, ArrowLeftRight, Search, Bike, Store, CreditCard } from 'lucide-react';
 import { Order, OrderItem } from '@/types/order';
 import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +12,10 @@ import { useProducts } from '@/hooks/useProducts';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useCategories } from '@/hooks/useCategories';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
+import { usePaymentMethods } from '@/hooks/usePaymentMethods';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
@@ -60,6 +64,8 @@ export function OrderEditDialog({
   const { groups: optionalGroups } = useOptionalGroups({ companyId });
   const { categories } = useCategories({ companyId });
   const { settings: storeSettings } = useStoreSettings({ companyId });
+  const { neighborhoods } = useDeliveryNeighborhoods({ companyId });
+  const { activePaymentMethods } = usePaymentMethods({ companyId });
   const [working, setWorking] = useState<WorkingItem[]>([]);
   const [originalIds, setOriginalIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -70,6 +76,15 @@ export function OrderEditDialog({
   // Produto escolhido no browser (fluxo "Adicionar item") aguardando seleção de adicionais.
   const [optionalsProduct, setOptionalsProduct] = useState<Product | null>(null);
 
+  // --- NOVO (v1.16): edição de Entrega e Forma de Pagamento ---
+  // Modalidade atual derivada do pedido original.
+  const originalModality: 'pickup' | 'delivery' = order.deliveryAddress ? 'delivery' : 'pickup';
+  const [modality, setModality] = useState<'pickup' | 'delivery'>(originalModality);
+  const [addressLine, setAddressLine] = useState<string>('');
+  const [neighborhoodId, setNeighborhoodId] = useState<string>('');
+  const [paymentMethodId, setPaymentMethodId] = useState<string>('');
+  const [changeFor, setChangeFor] = useState<string>('');
+
   // Hidrata estado de trabalho ao abrir
   useEffect(() => {
     if (!open) return;
@@ -79,7 +94,27 @@ export function OrderEditDialog({
     setPickerMode(null);
     setSearch('');
     setOptionalsProduct(null);
-  }, [open, order.items]);
+    // Reset Entrega/Pagamento ao abrir
+    setModality(order.deliveryAddress ? 'delivery' : 'pickup');
+    setAddressLine(order.deliveryAddress || '');
+    setNeighborhoodId('');
+    // Tenta detectar o "troco para" das notes originais.
+    const trocoM = (order.notes || '').match(/Troco para R\$\s*([^)]+)/i);
+    setChangeFor(trocoM ? trocoM[1].trim() : '');
+    setPaymentMethodId('');
+  }, [open, order.items, order.deliveryAddress, order.notes]);
+
+  // Pré-seleciona método de pagamento atual quando a lista chega.
+  useEffect(() => {
+    if (!open) return;
+    if (paymentMethodId) return;
+    const current = extractPaymentName(order.notes);
+    if (!current) return;
+    const match = activePaymentMethods.find(
+      (m) => m.name.trim().toLowerCase() === current.trim().toLowerCase(),
+    );
+    if (match) setPaymentMethodId(match.id);
+  }, [open, activePaymentMethods, order.notes, paymentMethodId]);
 
   const newTotal = useMemo(
     () => working.reduce((s, it) => s + it.price * it.quantity, 0),
@@ -89,10 +124,88 @@ export function OrderEditDialog({
     () => order.items.reduce((s, it) => s + it.price * it.quantity, 0),
     [order.items],
   );
-  // Preserva eventual taxa de entrega do pedido original.
-  const deliveryFee = Math.max(0, order.total - subtotalOriginal);
-  const newGrandTotal = newTotal + deliveryFee;
+  // Taxa de entrega ORIGINAL preservada (derivada por diferença).
+  const originalDeliveryFee = Math.max(0, order.total - subtotalOriginal);
+
+  // Nova taxa de entrega conforme escolha atual no diálogo.
+  const newDeliveryFee = useMemo(() => {
+    if (modality === 'pickup') return 0;
+    if (storeSettings.deliveryMode === 'neighborhood') {
+      const n = neighborhoods.find((x) => x.id === neighborhoodId);
+      // Se ainda não escolheu bairro, mantém a taxa original (não zera por engano).
+      if (!n) return originalDeliveryFee;
+      return n.deliveryFee;
+    }
+    // Modo simples: usa taxa cidade quando habilitada, senão mantém original.
+    if (storeSettings.deliveryFeeCityEnabled) return storeSettings.deliveryFeeCity || 0;
+    return originalDeliveryFee;
+  }, [modality, neighborhoodId, neighborhoods, storeSettings, originalDeliveryFee]);
+
+  const newGrandTotal = newTotal + newDeliveryFee;
   const diff = newGrandTotal - order.total;
+
+  // Detecta mudanças efetivas em Entrega/Pagamento (sem disparar reimpressão à toa).
+  const newPaymentName = useMemo(
+    () => activePaymentMethods.find((p) => p.id === paymentMethodId)?.name || '',
+    [activePaymentMethods, paymentMethodId],
+  );
+  const originalPaymentName = useMemo(
+    () => (extractPaymentName(order.notes) || '').trim(),
+    [order.notes],
+  );
+  const originalTroco = useMemo(() => {
+    const m = (order.notes || '').match(/Troco para R\$\s*([^)]+)/i);
+    return m ? m[1].trim() : '';
+  }, [order.notes]);
+
+  const modalityChanged =
+    modality !== originalModality ||
+    (modality === 'delivery' && addressLine.trim() !== (order.deliveryAddress || '').trim()) ||
+    Math.abs(newDeliveryFee - originalDeliveryFee) > 0.001 ||
+    (modality === 'delivery' && !!neighborhoodId);
+  const paymentChanged =
+    !!newPaymentName &&
+    (newPaymentName.trim().toLowerCase() !== originalPaymentName.toLowerCase() ||
+      (/dinheiro/i.test(newPaymentName) && changeFor.trim() !== originalTroco));
+
+  const isMoneyPayment = /dinheiro/i.test(newPaymentName);
+  const isPixPayment = /pix/i.test(newPaymentName);
+  const selectedPixKey = activePaymentMethods.find((p) => p.id === paymentMethodId)?.pix_key || '';
+
+  // Endereço final que será gravado quando salvar.
+  function buildFinalDeliveryAddress(): string | null {
+    if (modality === 'pickup') return null;
+    const base = addressLine.trim();
+    if (!base) return null;
+    const n = neighborhoods.find((x) => x.id === neighborhoodId);
+    if (n && !base.toLowerCase().includes(n.neighborhoodName.toLowerCase())) {
+      return `${base} — Bairro ${n.neighborhoodName}`;
+    }
+    return base;
+  }
+
+  // Reescreve `notes` substituindo o bloco "Pagamento: ..." quando houve troca.
+  function rebuildNotesWithPayment(orig: string | null | undefined): string {
+    let cleaned = orig || '';
+    if (paymentChanged) {
+      // Remove TODOS os blocos antigos de "Pagamento: ..." (com ou sem parênteses)
+      cleaned = cleaned
+        .replace(/\[COBRADO\]\s*/gi, '')
+        .replace(/Pagamento:\s*[^|\[]*?(?:\s*\([^)]*\))?(?=\s*\||\s*\[|$)/gi, '')
+        .replace(/\s*\|\s*\|\s*/g, ' | ')
+        .replace(/^\s*\|\s*/, '')
+        .replace(/\s*\|\s*$/, '')
+        .trim();
+      let block = `Pagamento: ${newPaymentName}`;
+      if (isMoneyPayment && changeFor.trim()) {
+        block += ` (Troco para R$ ${changeFor.trim()})`;
+      } else if (isPixPayment && selectedPixKey) {
+        block += ` (Chave PIX: ${selectedPixKey})`;
+      }
+      cleaned = block + (cleaned ? ' | ' + cleaned : '');
+    }
+    return cleaned;
+  }
 
   const swappableProducts = useMemo(() => products.filter((p) => p.active && p.swappableInOrder), [products]);
   const allActiveProducts = useMemo(() => products.filter((p) => p.active), [products]);
@@ -286,13 +399,28 @@ export function OrderEditDialog({
     });
   }
 
-  function buildUpdatedReceiptHtml(items: WorkingItem[]): string {
+  function buildUpdatedReceiptHtml(
+    items: WorkingItem[],
+    overrides?: {
+      deliveryAddress?: string | null;
+      notes?: string | null;
+      deliveryFee?: number;
+    },
+  ): string {
     // Mirror do template do auto_printer.py (formatar_recibo_html), com o
     // mesmo HTML/markup esperado pelo GDI: <!--BOX_START-->/<!--BOX_END-->,
     // .item-name, .additionals/.add-line, .obs, .delivery-badge,
     // payment block, "Obrigado pela preferencia!".
+    const effectiveDeliveryFee =
+      overrides?.deliveryFee !== undefined ? overrides.deliveryFee : originalDeliveryFee;
+    const effectiveDeliveryAddress =
+      overrides && 'deliveryAddress' in overrides
+        ? overrides.deliveryAddress
+        : order.deliveryAddress;
+    const effectiveNotes =
+      overrides && 'notes' in overrides ? overrides.notes : order.notes;
     const subtotal = items.reduce((s, it) => s + it.price * it.quantity, 0);
-    const total = subtotal + deliveryFee;
+    const total = subtotal + effectiveDeliveryFee;
     const fontSize = paperSize === '80mm' ? '11pt' : '10pt';
     const dt = new Date().toLocaleString('pt-BR', {
       timeZone: 'America/Sao_Paulo',
@@ -302,7 +430,7 @@ export function OrderEditDialog({
     const orderNum = order.orderCode || order.dailyNumber;
 
     // Origem do pedido — mesmo critério do auto_printer.py
-    const notesRaw = order.notes || '';
+    const notesRaw = effectiveNotes || '';
     const isExpressNote = notesRaw.includes('[EXPRESS]');
     const source = (order as any).source || '';
     let origemLabel = '📱 CARDÁPIO ONLINE';
@@ -321,14 +449,14 @@ export function OrderEditDialog({
       if (pixMatch) paymentHtml += `<p><span class="label">CHAVE PIX:</span> ${pixMatch[1].trim()}</p>`;
     }
     if (!paymentHtml) {
-      const fallback = extractPaymentName(order.notes);
+      const fallback = extractPaymentName(effectiveNotes);
       if (fallback) paymentHtml = `<p><span class="label">PAGAMENTO:</span> ${fallback}</p>`;
     }
 
     // Bloco entrega / retirada
-    const deliverySection = order.deliveryAddress
+    const deliverySection = effectiveDeliveryAddress
       ? `<div class="delivery-badge">ENTREGA</div>
-         <div class="section"><p>${order.deliveryAddress}</p></div>`
+         <div class="section"><p>${effectiveDeliveryAddress}</p></div>`
       : '<div class="delivery-badge">RETIRADA NO LOCAL</div>';
 
     // Itens — usando mesmo markup do auto_printer.py
@@ -383,8 +511,8 @@ export function OrderEditDialog({
 
     const subtotalStr = subtotal.toFixed(2).replace('.', ',');
     const totalStr = total.toFixed(2).replace('.', ',');
-    const deliveryFeeHtml = deliveryFee > 0
-      ? `<div class="total-line"><span>Entrega:</span><span>R$ ${deliveryFee.toFixed(2).replace('.', ',')}</span></div>`
+    const deliveryFeeHtml = effectiveDeliveryFee > 0
+      ? `<div class="total-line"><span>Entrega:</span><span>R$ ${effectiveDeliveryFee.toFixed(2).replace('.', ',')}</span></div>`
       : '';
     const phoneHtml = order.customerPhone
       ? `<p><span class="label">Tel:</span> ${order.customerPhone}</p>`
@@ -508,6 +636,23 @@ export function OrderEditDialog({
         lines.push(`${prefix} ${it.quantity}x ${cleanName} - R$ ${lineTotal}${suffix}`);
       }
       lines.push('');
+      if (modalityChanged) {
+        if (modality === 'delivery') {
+          const addr = buildFinalDeliveryAddress();
+          lines.push(`🚚 *Modalidade:* Entrega${addr ? ` — ${addr}` : ''}`);
+          if (newDeliveryFee > 0) {
+            lines.push(`   Taxa de entrega: R$ ${newDeliveryFee.toFixed(2).replace('.', ',')}`);
+          }
+        } else {
+          lines.push('🏪 *Modalidade:* Retirada no local');
+        }
+      }
+      if (paymentChanged) {
+        let payLine = `💳 *Pagamento:* ${newPaymentName}`;
+        if (isMoneyPayment && changeFor.trim()) payLine += ` (Troco para R$ ${changeFor.trim()})`;
+        lines.push(payLine);
+      }
+      if (modalityChanged || paymentChanged) lines.push('');
       lines.push(`💰 *Novo total: R$ ${(newGrandTotal).toFixed(2).replace('.', ',')}*`);
       if (Math.abs(diff) > 0.001) {
         const sign = diff > 0 ? '+' : '-';
@@ -532,6 +677,19 @@ export function OrderEditDialog({
 
   async function handleSave() {
     if (saving) return;
+    // Validação dos novos blocos
+    if (modality === 'delivery' && !addressLine.trim()) {
+      toast.error('Informe o endereço de entrega');
+      return;
+    }
+    if (
+      paymentChanged &&
+      isMoneyPayment &&
+      !changeFor.trim()
+    ) {
+      toast.error('Informe o troco (ou "Não precisa de troco")');
+      return;
+    }
     setSaving(true);
     try {
       // Diff: novos itens (sem dbId) + trocas (com dbId mas swappedFrom).
@@ -581,21 +739,32 @@ export function OrderEditDialog({
         insertedRows.push(...(data || []));
       }
 
-      // Recalcular total e marcar audit trail nas notas.
+      // Recalcular total + endereço + pagamento e marcar audit trail nas notas.
       const stamp = new Date().toLocaleTimeString('pt-BR', {
         timeZone: 'America/Sao_Paulo',
         hour: '2-digit',
         minute: '2-digit',
       });
-      const auditTag = ` [EDITADO ${stamp}]`;
-      const newNotes = (order.notes || '') + auditTag;
+      const flags: string[] = [];
+      if (inserts.length > 0 || updates.length > 0) flags.push('itens');
+      if (modalityChanged) flags.push('entrega');
+      if (paymentChanged) flags.push('pagamento');
+      const auditTag = ` [EDITADO ${stamp}${flags.length ? ': ' + flags.join('+') : ''}]`;
+      const rewrittenNotes = rebuildNotesWithPayment(order.notes);
+      const newNotes = rewrittenNotes + auditTag;
+      const finalDeliveryAddress = buildFinalDeliveryAddress();
+
+      const orderUpdate: any = {
+        total: newGrandTotal,
+        notes: newNotes,
+      };
+      if (modalityChanged) {
+        orderUpdate.delivery_address = finalDeliveryAddress;
+      }
 
       const { error: orderErr } = await supabase
         .from('orders')
-        .update({
-          total: newGrandTotal,
-          notes: newNotes,
-        })
+        .update(orderUpdate)
         .eq('id', order.id);
       if (orderErr) throw orderErr;
 
@@ -612,12 +781,21 @@ export function OrderEditDialog({
             label: `EDIÇÃO ${order.customerName} #${order.orderCode || order.dailyNumber}`,
           } as any);
         }
-        const receiptHtml = buildUpdatedReceiptHtml(working);
+        // Só reimprime recibo se algo mudou (itens, entrega ou pagamento).
+        const shouldReprintReceipt =
+          deltaItems.length > 0 || modalityChanged || paymentChanged;
+        if (shouldReprintReceipt) {
+          const receiptHtml = buildUpdatedReceiptHtml(working, {
+            deliveryAddress: finalDeliveryAddress,
+            notes: newNotes,
+            deliveryFee: newDeliveryFee,
+          });
         await supabase.from('print_queue').insert({
           company_id: companyId,
-          html_content: receiptHtml,
+            html_content: receiptHtml,
           label: `RECIBO EDITADO #${order.orderCode || order.dailyNumber}`,
         } as any);
+        }
       } catch (e) {
         console.warn('[OrderEdit] Falha ao enfileirar impressão:', e);
       }
@@ -705,7 +883,9 @@ export function OrderEditDialog({
         ) : (
           <div className="flex-1 flex flex-col gap-3 min-h-0">
             <ScrollArea className="flex-1 min-h-0 border rounded-md">
-              <div className="p-2 space-y-2">
+              <div className="p-2 space-y-4">
+                {/* Itens */}
+                <div className="space-y-2">
                 {working.map((it, idx) => {
                   const cleanName = cleanProductName(it.name);
                   const swappable = isItemSwappable(it);
@@ -755,22 +935,135 @@ export function OrderEditDialog({
                     </div>
                   );
                 })}
+                <Button
+                  variant="outline"
+                  onClick={() => setPickerMode({ type: 'add' })}
+                  className="gap-1 self-start"
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar item
+                </Button>
+                </div>
+
+                {/* Bloco: Entrega */}
+                <div className="space-y-2 border-t pt-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    {modality === 'delivery' ? <Bike className="w-4 h-4" /> : <Store className="w-4 h-4" />}
+                    Entrega
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={modality === 'pickup' ? 'default' : 'outline'}
+                      className="gap-1 flex-1"
+                      onClick={() => setModality('pickup')}
+                    >
+                      <Store className="w-4 h-4" /> Retirada
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={modality === 'delivery' ? 'default' : 'outline'}
+                      className="gap-1 flex-1"
+                      onClick={() => setModality('delivery')}
+                    >
+                      <Bike className="w-4 h-4" /> Entrega
+                    </Button>
+                  </div>
+                  {modality === 'delivery' && (
+                    <div className="space-y-2">
+                      <div>
+                        <Label className="text-xs">Endereço</Label>
+                        <Input
+                          placeholder="Rua, número, complemento..."
+                          value={addressLine}
+                          onChange={(e) => setAddressLine(e.target.value)}
+                        />
+                      </div>
+                      {storeSettings.deliveryMode === 'neighborhood' && neighborhoods.filter((n) => n.active).length > 0 && (
+                        <div>
+                          <Label className="text-xs">Bairro</Label>
+                          <Select value={neighborhoodId} onValueChange={setNeighborhoodId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o bairro" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {neighborhoods
+                                .filter((n) => n.active)
+                                .map((n) => (
+                                  <SelectItem key={n.id} value={n.id}>
+                                    {n.neighborhoodName} — R$ {n.deliveryFee.toFixed(2).replace('.', ',')}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        Taxa de entrega:{' '}
+                        <span className="font-semibold text-foreground">
+                          R$ {newDeliveryFee.toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bloco: Forma de pagamento */}
+                <div className="space-y-2 border-t pt-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <CreditCard className="w-4 h-4" />
+                    Forma de pagamento
+                  </div>
+                  {originalPaymentName && (
+                    <div className="text-xs text-muted-foreground">
+                      Atual: <span className="font-medium text-foreground">{originalPaymentName}</span>
+                    </div>
+                  )}
+                  <Select value={paymentMethodId} onValueChange={setPaymentMethodId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a forma de pagamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activePaymentMethods.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isMoneyPayment && (
+                    <div>
+                      <Label className="text-xs">Troco para R$</Label>
+                      <Input
+                        placeholder="Ex: 50,00 ou 'Não precisa'"
+                        value={changeFor}
+                        onChange={(e) => setChangeFor(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  {isPixPayment && selectedPixKey && (
+                    <div className="text-xs text-muted-foreground">
+                      Chave PIX: <span className="font-mono text-foreground">{selectedPixKey}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </ScrollArea>
-            <Button
-              variant="outline"
-              onClick={() => setPickerMode({ type: 'add' })}
-              className="gap-1 self-start"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar item
-            </Button>
 
             <div className="border-t pt-3 space-y-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total original</span>
                 <span>R$ {order.total.toFixed(2).replace('.', ',')}</span>
               </div>
+              {modality === 'delivery' && newDeliveryFee > 0 && (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Taxa de entrega</span>
+                  <span>R$ {newDeliveryFee.toFixed(2).replace('.', ',')}</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold">
                 <span>Novo total</span>
                 <span className="text-green-600">R$ {newGrandTotal.toFixed(2).replace('.', ',')}</span>
