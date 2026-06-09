@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.17.0-beta";
+export const VERSION = "1.18.0-beta";
 export const RELEASE_DATE = "2026-06-09"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: tela Finalizando venda";
+export const CODENAME = "Frente de Caixa: menu de contexto e ajustes por item";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.18.0-beta",
+    date: "2026-06-09",
+    codename: "Frente de Caixa: menu de contexto e ajustes por item",
+    changes: [
+      "Frente de Caixa (módulo Mercado): novo MENU DE CONTEXTO ao clicar com o botão direito sobre qualquer item do carrinho — espelha o PDV do Gweb. Duas ações: 'Alterar preço' (atalho Home) e 'Editar detalhes' (atalho Ctrl+D). Atalhos agem sobre o último item tocado.",
+      "Novo modal 'Alteração no preço do item': 3 modos selecionáveis com hotkeys — Desconto (−), Alteração no valor unitário (=) e Acréscimo (+). Tudo por linha, separado do desconto/acréscimo da venda toda. Múltiplas aplicações somam.",
+      "Novo modal 'Editar detalhes' (aba IDENTIFICAÇÃO — aba ADICIONAIS ainda não disponível): edita quantidade, valor unitário e desconto da linha, mostra Código/GTIN, Quantidade convertida e Valor total recalculado em tempo real. Botão REMOVER (vermelho) no rodapé esquerdo descarta a linha.",
+      "Cada linha do carrinho agora mostra o preço efetivo, com o preço original riscado quando há override, além de chips '− R$ X,XX desc.' / '+ R$ Y,YY acr.' separados. O Total da venda recalcula com tudo somado/abatido.",
+      "Persistência: os ajustes por item são registrados em 'notes' da venda como linhas separadas ('Item N PRODUTO: preço A → B', 'Item N PRODUTO: desconto R$ X', 'Item N PRODUTO: acréscimo R$ Y') para auditoria. O pdv_sale_items grava unit_price efetivo da linha (override + desconto/acréscimo distribuídos).",
+      "Nada de PDV V2, OrderCardChargeDialog, Pedido Express, TEF v1.0/v1.1/v1.2-beta, Multi-Pagamento v1.6/v1.7, NFC-e, impressão ou demais fluxos homologados foi tocado. Os novos diálogos vivem isolados em src/components/frente-caixa/.",
+    ],
+  },
   {
     version: "1.17.0-beta",
     date: "2026-06-09",
