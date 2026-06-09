@@ -1,0 +1,671 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2, ArrowLeft, Save, X } from 'lucide-react';
+import { toast } from 'sonner';
+
+import { usePaymentMethods } from '@/hooks/usePaymentMethods';
+import { brl, maskCurrencyInput, parseCurrencyInput } from '@/components/pdv-v2/_format';
+import {
+  runMultiPayment,
+  type MultiPaymentInputLine,
+} from '@/utils/pdvV2MultiPayment';
+
+/**
+ * "Finalizando venda" — tela de checkout da Frente de Caixa (módulo mercado).
+ *
+ * Inspirada no PDV do Gweb: 2 colunas (resumo financeiro + wizard de 3 etapas),
+ * multi-pagamento nativo com atalhos por letra, contador "Falta" e SALVAR só
+ * quando Falta = 0.
+ *
+ * Isolada: NÃO altera PDV V2, Pedido Express, OrderCardChargeDialog,
+ * PDVV2PaymentDialog/MultiPaymentDialog nem TEF v1.0/v1.1/v1.2-beta.
+ * Reaproveita `runMultiPayment` (v1.6) — engine já homologada.
+ */
+
+export interface FrenteCaixaCheckoutItem {
+  product_id: string | null;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface FrenteCaixaCheckoutResult {
+  paymentMethodId: string;
+  paymentName: string;
+  discount: number;
+  surcharge: number;
+  finalTotal: number;
+  customerName?: string;
+  customerPhone?: string;
+  customerDocument?: string;
+  notes?: string;
+  combinedNotesFragment?: string;
+}
+
+interface Props {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  companyId?: string;
+  items: FrenteCaixaCheckoutItem[];
+  /** Soma dos itens (passada pelo caller para evitar recomputar). */
+  itemsTotal: number;
+  /**
+   * Chamado quando o operador clicar SALVAR e todas as cobranças (incluindo
+   * TEF) foram aprovadas. O caller é responsável por persistir a venda via
+   * `useCashRegister.addSale`.
+   */
+  onConfirm: (result: FrenteCaixaCheckoutResult) => Promise<void> | void;
+}
+
+type StepId = 1 | 2 | 3;
+
+interface LineState {
+  /** Texto digitado pelo operador (mascarado em R$). */
+  text: string;
+}
+
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+export function FrenteCaixaCheckoutDialog({
+  open,
+  onOpenChange,
+  companyId,
+  items,
+  itemsTotal,
+  onConfirm,
+}: Props) {
+  const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
+
+  const [step, setStep] = useState<StepId>(1);
+  const [discountText, setDiscountText] = useState('');
+  const [surchargeText, setSurchargeText] = useState('');
+  const [showAdjust, setShowAdjust] = useState(false);
+  const [lines, setLines] = useState<Record<string, LineState>>({});
+
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerDocument, setCustomerDocument] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const [processing, setProcessing] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState<string>('');
+
+  // refs dos inputs de pagamento (pra foco por atalho A/B/C…)
+  const lineRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const adjustRef = useRef<HTMLInputElement | null>(null);
+
+  const discount = parseCurrencyInput(discountText);
+  const surcharge = parseCurrencyInput(surchargeText);
+  const total = Math.max(0, itemsTotal - discount + surcharge);
+
+  const allocated = useMemo(
+    () =>
+      activePaymentMethods.reduce(
+        (sum, m) => sum + parseCurrencyInput(lines[m.id]?.text || ''),
+        0,
+      ),
+    [lines, activePaymentMethods],
+  );
+  const remaining = Math.max(0, total - allocated);
+  const over = allocated > total + 0.005;
+  const exact = total > 0 && Math.abs(allocated - total) < 0.005;
+
+  // reset ao abrir
+  useEffect(() => {
+    if (open) {
+      setStep(1);
+      setLines({});
+      setDiscountText('');
+      setSurchargeText('');
+      setShowAdjust(false);
+      setCustomerName('');
+      setCustomerPhone('');
+      setCustomerDocument('');
+      setNotes('');
+      setProcessing(false);
+      setProcessingStatus('');
+    }
+  }, [open]);
+
+  // foco inicial no primeiro método quando entra na etapa 1
+  useEffect(() => {
+    if (!open || step !== 1 || activePaymentMethods.length === 0) return;
+    const first = activePaymentMethods[0];
+    setTimeout(() => lineRefs.current[first.id]?.focus(), 50);
+  }, [open, step, activePaymentMethods]);
+
+  function focusMethodByIndex(idx: number) {
+    const m = activePaymentMethods[idx];
+    if (!m) return;
+    const el = lineRefs.current[m.id];
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  }
+
+  function updateLine(methodId: string, text: string) {
+    setLines((prev) => ({ ...prev, [methodId]: { text: maskCurrencyInput(text) } }));
+  }
+
+  function fillRemainingOnLine(methodId: string) {
+    const current = parseCurrencyInput(lines[methodId]?.text || '');
+    const target = current + remaining;
+    if (target <= 0) return;
+    setLines((prev) => ({
+      ...prev,
+      [methodId]: {
+        text: maskCurrencyInput(target.toFixed(2).replace('.', ',')),
+      },
+    }));
+  }
+
+  // ===== atalhos =====
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (processing) return;
+      // Ctrl + 1/2/3 → etapas
+      if (e.ctrlKey && (e.key === '1' || e.key === '2' || e.key === '3')) {
+        e.preventDefault();
+        setStep(Number(e.key) as StepId);
+        return;
+      }
+      // Esc → fechar (com confirmação se houver algo alocado)
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (allocated > 0) {
+          if (window.confirm('Descartar pagamentos digitados e voltar?')) {
+            onOpenChange(false);
+          }
+        } else {
+          onOpenChange(false);
+        }
+        return;
+      }
+      // Home → desconto/acréscimo
+      if (e.key === 'Home' && step === 1) {
+        e.preventDefault();
+        setShowAdjust((v) => !v);
+        setTimeout(() => adjustRef.current?.focus(), 50);
+        return;
+      }
+      // Letras A..Z → foca método correspondente (somente etapa 1)
+      if (
+        step === 1 &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        e.key.length === 1 &&
+        /[a-zA-Z]/.test(e.key)
+      ) {
+        const target = document.activeElement as HTMLElement | null;
+        const isTyping =
+          target &&
+          (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+        if (isTyping) return; // não sequestrar se já está digitando
+        const idx = LETTERS.indexOf(e.key.toUpperCase());
+        if (idx >= 0 && idx < activePaymentMethods.length) {
+          e.preventDefault();
+          focusMethodByIndex(idx);
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, step, processing, allocated, activePaymentMethods]);
+
+  // ===== salvar =====
+  async function handleSave() {
+    if (!companyId) return;
+    if (!exact) {
+      toast.error('O valor pago precisa ser igual ao total.');
+      return;
+    }
+    setProcessing(true);
+    setProcessingStatus('Processando pagamentos…');
+    try {
+      // Monta linhas para runMultiPayment
+      const mpLines: MultiPaymentInputLine[] = activePaymentMethods
+        .map((m) => {
+          const amount = parseCurrencyInput(lines[m.id]?.text || '');
+          if (amount <= 0) return null;
+          const itg = (m as any).integration_type as string | undefined;
+          const isTef = itg === 'tef_pinpad' || itg === 'tef_smartpos';
+          return {
+            payment_method_id: m.id,
+            payment_name: m.name,
+            amount,
+            integration: isTef ? (itg as 'tef_pinpad' | 'tef_smartpos') : undefined,
+            tef_options: isTef ? { modality: 'avista' as const } : undefined,
+          } as MultiPaymentInputLine;
+        })
+        .filter((l): l is MultiPaymentInputLine => l !== null);
+
+      if (mpLines.length === 0) {
+        toast.error('Nenhuma forma de pagamento informada.');
+        return;
+      }
+
+      const mp = await runMultiPayment({
+        companyId,
+        lines: mpLines,
+        description: customerName ? `Frente de Caixa - ${customerName}` : 'Frente de Caixa',
+        onStatus: setProcessingStatus,
+      });
+
+      if (!mp.ok || !mp.primary) {
+        const extra = mp.rolledBackCount
+          ? ` (${mp.rolledBackCount} cobrança(s) estornada(s))`
+          : '';
+        toast.error((mp.errorMessage || 'Cobrança recusada') + extra);
+        return;
+      }
+
+      await onConfirm({
+        paymentMethodId: mp.primary.payment_method_id,
+        paymentName: mp.primary.payment_name,
+        discount,
+        surcharge,
+        finalTotal: total,
+        customerName: customerName.trim() || undefined,
+        customerPhone: customerPhone.trim() || undefined,
+        customerDocument: customerDocument.trim() || undefined,
+        notes: notes.trim() || undefined,
+        combinedNotesFragment: mp.combinedNotesFragment,
+      });
+    } catch (err: any) {
+      console.error('[FrenteCaixaCheckout] error:', err);
+      toast.error(err?.message || 'Erro ao processar venda.');
+    } finally {
+      setProcessing(false);
+      setProcessingStatus('');
+    }
+  }
+
+  // ===== render =====
+  return (
+    <Dialog open={open} onOpenChange={(o) => !processing && onOpenChange(o)}>
+      <DialogContent
+        className="max-w-6xl w-[95vw] h-[90dvh] p-0 gap-0 overflow-hidden bg-zinc-950 text-zinc-100 border-zinc-800"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+          <h2 className="text-xl font-semibold">Finalizando venda</h2>
+          <button
+            type="button"
+            onClick={() => !processing && onOpenChange(false)}
+            className="text-zinc-400 hover:text-zinc-100"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {processingStatus && (
+          <div className="bg-primary/10 border-b border-primary/30 px-6 py-2 text-sm flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{processingStatus}</span>
+          </div>
+        )}
+
+        {/* Body */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-[300px_1fr] min-h-0 overflow-hidden">
+          {/* Coluna esquerda — resumo */}
+          <div className="border-r border-zinc-800 p-4 overflow-auto">
+            <div className="rounded-lg bg-zinc-900 border border-zinc-800 divide-y divide-zinc-800">
+              <SummaryRow label="Total dos produtos" value={brl(itemsTotal)} />
+              <SummaryRow label="Total de desconto" value={brl(discount)} />
+              <SummaryRow label="Total de acréscimo" value={brl(surcharge)} />
+              <SummaryRow
+                label="Total geral"
+                value={brl(total)}
+                emphasize
+              />
+            </div>
+
+            <div className="mt-4 text-[11px] text-zinc-500 space-y-1 leading-snug">
+              <p>
+                <kbd className="px-1 py-0.5 border border-zinc-700 rounded text-[10px]">Ctrl</kbd>{' '}
+                +{' '}
+                <kbd className="px-1 py-0.5 border border-zinc-700 rounded text-[10px]">1/2/3</kbd>{' '}
+                muda de etapa.
+              </p>
+              <p>
+                <kbd className="px-1 py-0.5 border border-zinc-700 rounded text-[10px]">A–Z</kbd>{' '}
+                foca a forma de pagamento.
+              </p>
+              <p>
+                <kbd className="px-1 py-0.5 border border-zinc-700 rounded text-[10px]">Home</kbd>{' '}
+                abre Desconto/Acréscimo.
+              </p>
+              <p>
+                <kbd className="px-1 py-0.5 border border-zinc-700 rounded text-[10px]">Esc</kbd>{' '}
+                volta.
+              </p>
+            </div>
+          </div>
+
+          {/* Coluna direita — wizard */}
+          <div className="flex flex-col min-h-0">
+            <div className="flex-1 overflow-auto p-6 space-y-6">
+              {/* Etapa 1 */}
+              <StepHeader
+                num={1}
+                label="Pagamentos"
+                shortcut="Ctrl+1"
+                active={step === 1}
+                onClick={() => setStep(1)}
+              />
+              {step === 1 && (
+                <div className="ml-9 space-y-3">
+                  {activePaymentMethods.length === 0 && (
+                    <p className="text-sm text-zinc-400">
+                      Nenhuma forma de pagamento cadastrada para o canal PDV.
+                    </p>
+                  )}
+                  <ul className="divide-y divide-zinc-800 border-y border-zinc-800">
+                    {activePaymentMethods.map((m, idx) => {
+                      const letter = LETTERS[idx] || '';
+                      const itg = (m as any).integration_type as string | undefined;
+                      const isTef = itg === 'tef_pinpad' || itg === 'tef_smartpos';
+                      return (
+                        <li key={m.id} className="flex items-center gap-3 py-3">
+                          <span className="flex-1 flex items-center gap-2 text-sm">
+                            <span>{m.name}</span>
+                            {isTef && (
+                              <Badge variant="outline" className="text-[10px] border-zinc-700">
+                                TEF
+                              </Badge>
+                            )}
+                            {letter && (
+                              <kbd className="ml-auto px-1.5 py-0.5 border border-zinc-700 rounded text-[10px] bg-zinc-900">
+                                {letter}
+                              </kbd>
+                            )}
+                          </span>
+                          <Input
+                            ref={(el) => (lineRefs.current[m.id] = el)}
+                            value={lines[m.id]?.text || ''}
+                            onChange={(e) => updateLine(m.id, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const cur = parseCurrencyInput(lines[m.id]?.text || '');
+                                if (cur === 0 && remaining > 0) {
+                                  fillRemainingOnLine(m.id);
+                                }
+                              }
+                            }}
+                            placeholder="R$ 0,00"
+                            inputMode="decimal"
+                            disabled={processing}
+                            className="w-40 text-right bg-zinc-900 border-zinc-800 focus:border-primary"
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  {showAdjust && (
+                    <div className="rounded-md border border-zinc-800 bg-zinc-900 p-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-zinc-400">Desconto (R$)</Label>
+                        <Input
+                          ref={adjustRef}
+                          value={discountText}
+                          onChange={(e) => setDiscountText(maskCurrencyInput(e.target.value))}
+                          inputMode="decimal"
+                          disabled={processing}
+                          className="bg-zinc-950 border-zinc-800"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-zinc-400">Acréscimo (R$)</Label>
+                        <Input
+                          value={surchargeText}
+                          onChange={(e) => setSurchargeText(maskCurrencyInput(e.target.value))}
+                          inputMode="decimal"
+                          disabled={processing}
+                          className="bg-zinc-950 border-zinc-800"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-2 text-sm">
+                    <span className="text-zinc-300">
+                      Pagamentos: <strong>{brl(allocated)}</strong>
+                    </span>
+                    <span
+                      className={
+                        exact
+                          ? 'text-emerald-400 font-semibold'
+                          : over
+                            ? 'text-destructive font-semibold'
+                            : 'text-destructive font-semibold border-b-2 border-destructive pb-0.5'
+                      }
+                    >
+                      {over ? `Excede: ${brl(allocated - total)}` : `Falta: ${brl(remaining)}`}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowAdjust((v) => !v);
+                        setTimeout(() => adjustRef.current?.focus(), 50);
+                      }}
+                      disabled={processing}
+                      className="border-zinc-700 hover:bg-zinc-800"
+                    >
+                      Desconto/Acréscimo (Home)
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setStep(2)}
+                      disabled={processing}
+                      className="bg-zinc-800 hover:bg-zinc-700"
+                    >
+                      Próximo
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Etapa 2 */}
+              <StepHeader
+                num={2}
+                label="Cliente"
+                shortcut="Ctrl+2"
+                optional
+                active={step === 2}
+                onClick={() => setStep(2)}
+              />
+              {step === 2 && (
+                <div className="ml-9 space-y-3 max-w-xl">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                      <Label className="text-xs text-zinc-400">Nome</Label>
+                      <Input
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="Nome do cliente (opcional)"
+                        disabled={processing}
+                        className="bg-zinc-900 border-zinc-800"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-zinc-400">Telefone</Label>
+                      <Input
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="(opcional)"
+                        disabled={processing}
+                        className="bg-zinc-900 border-zinc-800"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-zinc-400">CPF</Label>
+                      <Input
+                        value={customerDocument}
+                        onChange={(e) => setCustomerDocument(e.target.value)}
+                        placeholder="(opcional)"
+                        disabled={processing}
+                        className="bg-zinc-900 border-zinc-800"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setStep(3)}
+                      disabled={processing}
+                      className="bg-zinc-800 hover:bg-zinc-700"
+                    >
+                      Próximo
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Etapa 3 */}
+              <StepHeader
+                num={3}
+                label="Informações adicionais"
+                shortcut="Ctrl+3"
+                optional
+                active={step === 3}
+                onClick={() => setStep(3)}
+              />
+              {step === 3 && (
+                <div className="ml-9 space-y-2 max-w-xl">
+                  <Label className="text-xs text-zinc-400">Observação</Label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={4}
+                    placeholder="Observação livre (opcional)"
+                    disabled={processing}
+                    className="w-full rounded-md bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Rodapé */}
+            <div className="border-t border-zinc-800 px-6 py-3 flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => !processing && onOpenChange(false)}
+                disabled={processing}
+                className="text-zinc-300 hover:bg-zinc-800"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Voltar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={processing || !exact}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[140px]"
+              >
+                {processing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-1" /> SALVAR
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+  emphasize,
+}: {
+  label: string;
+  value: string;
+  emphasize?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between px-3 py-2">
+      <span className={emphasize ? 'text-zinc-100 font-semibold' : 'text-zinc-400 text-sm'}>
+        {label}:
+      </span>
+      <span
+        className={
+          emphasize
+            ? 'text-emerald-400 font-bold text-lg tabular-nums'
+            : 'text-zinc-200 tabular-nums'
+        }
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function StepHeader({
+  num,
+  label,
+  shortcut,
+  optional,
+  active,
+  onClick,
+}: {
+  num: number;
+  label: string;
+  shortcut: string;
+  optional?: boolean;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-3 text-left w-full"
+    >
+      <span
+        className={`h-7 w-7 rounded-full grid place-items-center text-xs font-semibold ${
+          active
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-zinc-800 text-zinc-400'
+        }`}
+      >
+        {num}
+      </span>
+      <span className={`text-sm ${active ? 'text-zinc-100' : 'text-zinc-400'}`}>
+        {label}
+      </span>
+      <kbd className="px-1.5 py-0.5 border border-zinc-700 rounded text-[10px] bg-zinc-900">
+        {shortcut}
+      </kbd>
+      {optional && (
+        <span className="text-[11px] text-zinc-500 ml-1">Opcional</span>
+      )}
+    </button>
+  );
+}
