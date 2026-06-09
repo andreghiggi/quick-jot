@@ -301,7 +301,7 @@ export function FrenteCaixaCheckoutDialog({
           <button
             type="button"
             onClick={() => !processing && onOpenChange(false)}
-            className="text-zinc-400 hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground"
             aria-label="Fechar"
           >
             <X className="h-5 w-5" />
@@ -319,7 +319,7 @@ export function FrenteCaixaCheckoutDialog({
         <div className="flex-1 grid grid-cols-1 md:grid-cols-[300px_1fr] min-h-0 overflow-hidden">
           {/* Coluna esquerda — resumo */}
           <div className="border-r border-border p-4 overflow-auto">
-            <div className="rounded-lg bg-muted/40 border border-border divide-y divide-zinc-800">
+            <div className="rounded-lg bg-muted/40 border border-border divide-y divide-border">
               <SummaryRow label="Total dos produtos" value={brl(itemsTotal)} />
               <SummaryRow label="Total de desconto" value={brl(discount)} />
               <SummaryRow label="Total de acréscimo" value={brl(surcharge)} />
@@ -366,11 +366,11 @@ export function FrenteCaixaCheckoutDialog({
               {step === 1 && (
                 <div className="ml-9 space-y-3">
                   {activePaymentMethods.length === 0 && (
-                    <p className="text-sm text-zinc-400">
+                    <p className="text-sm text-muted-foreground">
                       Nenhuma forma de pagamento cadastrada para o canal PDV.
                     </p>
                   )}
-                  <ul className="divide-y divide-zinc-800 border-y border-border">
+                  <ul className="divide-y divide-border border-y border-border">
                     {activePaymentMethods.map((m, idx) => {
                       const letter = LETTERS[idx] || '';
                       const itg = (m as any).integration_type as string | undefined;
@@ -416,7 +416,7 @@ export function FrenteCaixaCheckoutDialog({
                   {showAdjust && (
                     <div className="rounded-md border border-border bg-muted/40 p-3 grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs text-zinc-400">Desconto (R$)</Label>
+                        <Label className="text-xs text-muted-foreground">Desconto (R$)</Label>
                         <Input
                           ref={adjustRef}
                           value={discountText}
@@ -427,7 +427,7 @@ export function FrenteCaixaCheckoutDialog({
                         />
                       </div>
                       <div>
-                        <Label className="text-xs text-zinc-400">Acréscimo (R$)</Label>
+                        <Label className="text-xs text-muted-foreground">Acréscimo (R$)</Label>
                         <Input
                           value={surchargeText}
                           onChange={(e) => setSurchargeText(maskCurrencyInput(e.target.value))}
@@ -440,7 +440,7 @@ export function FrenteCaixaCheckoutDialog({
                   )}
 
                   <div className="flex items-center justify-between pt-2 text-sm">
-                    <span className="text-zinc-300">
+                    <span className="text-muted-foreground">
                       Pagamentos: <strong>{brl(allocated)}</strong>
                     </span>
                     <span
@@ -466,7 +466,7 @@ export function FrenteCaixaCheckoutDialog({
                         setTimeout(() => adjustRef.current?.focus(), 50);
                       }}
                       disabled={processing}
-                      className="border-border hover:bg-zinc-800"
+                      className="border-border hover:bg-muted"
                     >
                       Desconto/Acréscimo (Home)
                     </Button>
@@ -475,7 +475,7 @@ export function FrenteCaixaCheckoutDialog({
                       size="sm"
                       onClick={() => setStep(2)}
                       disabled={processing}
-                      className="bg-zinc-800 hover:bg-zinc-700"
+                      className="bg-muted hover:bg-muted/70"
                     >
                       Próximo
                     </Button>
@@ -496,7 +496,7 @@ export function FrenteCaixaCheckoutDialog({
                 <div className="ml-9 space-y-3 max-w-xl">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
-                      <Label className="text-xs text-zinc-400">Nome</Label>
+                      <Label className="text-xs text-muted-foreground">Nome</Label>
                       <Input
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
@@ -506,7 +506,7 @@ export function FrenteCaixaCheckoutDialog({
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-zinc-400">Telefone</Label>
+                      <Label className="text-xs text-muted-foreground">Telefone</Label>
                       <Input
                         value={customerPhone}
                         onChange={(e) => setCustomerPhone(e.target.value)}
@@ -516,7 +516,7 @@ export function FrenteCaixaCheckoutDialog({
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-zinc-400">CPF</Label>
+                      <Label className="text-xs text-muted-foreground">CPF</Label>
                       <Input
                         value={customerDocument}
                         onChange={(e) => setCustomerDocument(e.target.value)}
@@ -532,7 +532,7 @@ export function FrenteCaixaCheckoutDialog({
                       size="sm"
                       onClick={() => setStep(3)}
                       disabled={processing}
-                      className="bg-zinc-800 hover:bg-zinc-700"
+                      className="bg-muted hover:bg-muted/70"
                     >
                       Próximo
                     </Button>
@@ -551,7 +551,7 @@ export function FrenteCaixaCheckoutDialog({
               />
               {step === 3 && (
                 <div className="ml-9 space-y-2 max-w-xl">
-                  <Label className="text-xs text-zinc-400">Observação</Label>
+                  <Label className="text-xs text-muted-foreground">Observação</Label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
@@ -571,7 +571,7 @@ export function FrenteCaixaCheckoutDialog({
                 variant="ghost"
                 onClick={() => !processing && onOpenChange(false)}
                 disabled={processing}
-                className="text-zinc-300 hover:bg-zinc-800"
+                className="text-muted-foreground hover:bg-muted"
               >
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Voltar
@@ -611,7 +611,7 @@ function SummaryRow({
 }) {
   return (
     <div className="flex items-center justify-between px-3 py-2">
-      <span className={emphasize ? 'text-foreground font-semibold' : 'text-zinc-400 text-sm'}>
+      <span className={emphasize ? 'text-foreground font-semibold' : 'text-muted-foreground text-sm'}>
         {label}:
       </span>
       <span
@@ -652,12 +652,12 @@ function StepHeader({
         className={`h-7 w-7 rounded-full grid place-items-center text-xs font-semibold ${
           active
             ? 'bg-primary text-primary-foreground'
-            : 'bg-zinc-800 text-zinc-400'
+            : 'bg-muted text-muted-foreground'
         }`}
       >
         {num}
       </span>
-      <span className={`text-sm ${active ? 'text-foreground' : 'text-zinc-400'}`}>
+      <span className={`text-sm ${active ? 'text-foreground' : 'text-muted-foreground'}`}>
         {label}
       </span>
       <kbd className="px-1.5 py-0.5 border border-border rounded text-[10px] bg-muted/40">
