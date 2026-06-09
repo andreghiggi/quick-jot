@@ -34,6 +34,7 @@ interface CartLine {
   product_name: string;
   quantity: number;
   unit_price: number;
+  unit: string;
 }
 
 /**
@@ -56,6 +57,7 @@ export default function FrenteCaixa() {
 
   const [query, setQuery] = useState('');
   const [lines, setLines] = useState<CartLine[]>([]);
+  const [lastTouchedId, setLastTouchedId] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [searchMatches, setSearchMatches] = useState<Product[]>([]);
@@ -163,24 +165,30 @@ export default function FrenteCaixa() {
   }
 
   function addProductToCart(p: Product, qty = 1) {
+    let touchedId: string | null = null;
     setLines((prev) => {
       const existing = prev.find((l) => l.product_id === p.id);
       if (existing) {
+        touchedId = existing.id;
         return prev.map((l) =>
           l.id === existing.id ? { ...l, quantity: l.quantity + qty } : l,
         );
       }
+      const newId = crypto.randomUUID();
+      touchedId = newId;
       return [
         ...prev,
         {
-          id: crypto.randomUUID(),
+          id: newId,
           product_id: p.id,
           product_name: p.name,
           quantity: qty,
           unit_price: Number(p.price) || 0,
+          unit: ((p as any).unit as string) || 'UN',
         },
       ];
     });
+    if (touchedId) setLastTouchedId(touchedId);
     beep(true);
   }
 
