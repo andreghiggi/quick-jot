@@ -195,6 +195,28 @@ export function FrenteCaixaCheckoutDialog({
         setTimeout(() => adjustRef.current?.focus(), 50);
         return;
       }
+      // Enter → avança etapa (ou salva na 3)
+      if (e.key === 'Enter') {
+        const target = document.activeElement as HTMLElement | null;
+        const isTextarea = target?.tagName === 'TEXTAREA';
+        if (isTextarea) return; // permitir quebra de linha em observação
+        if (step === 1) {
+          if (!exact) return; // deixa o handler do input cuidar (auto-preencher)
+          e.preventDefault();
+          setStep(2);
+          return;
+        }
+        if (step === 2) {
+          e.preventDefault();
+          setStep(3);
+          return;
+        }
+        if (step === 3) {
+          e.preventDefault();
+          if (exact && !processing) handleSave();
+          return;
+        }
+      }
       // Letras A..Z → foca método correspondente (somente etapa 1)
       if (
         step === 1 &&
@@ -208,18 +230,20 @@ export function FrenteCaixaCheckoutDialog({
         const isTyping =
           target &&
           (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
-        if (isTyping) return; // não sequestrar se já está digitando
+        // permite trocar de forma de pagamento mesmo digitando em um input de valor
         const idx = LETTERS.indexOf(e.key.toUpperCase());
         if (idx >= 0 && idx < activePaymentMethods.length) {
           e.preventDefault();
           focusMethodByIndex(idx);
+          return;
         }
+        if (isTyping) return;
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, step, processing, allocated, activePaymentMethods]);
+  }, [open, step, processing, allocated, activePaymentMethods, exact]);
 
   // ===== salvar =====
   async function handleSave() {
@@ -400,6 +424,10 @@ export function FrenteCaixaCheckoutDialog({
                                 const cur = parseCurrencyInput(lines[m.id]?.text || '');
                                 if (cur === 0 && remaining > 0) {
                                   fillRemainingOnLine(m.id);
+                                  // após preencher, avança se ficou exato
+                                  setTimeout(() => setStep(2), 0);
+                                } else if (remaining === 0) {
+                                  setStep(2);
                                 }
                               }
                             }}
