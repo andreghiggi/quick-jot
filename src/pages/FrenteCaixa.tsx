@@ -312,6 +312,7 @@ export default function FrenteCaixa() {
 
       setLines([]);
       setQuery('');
+      setLastTouchedId(null);
       setPaymentOpen(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
@@ -425,12 +426,22 @@ export default function FrenteCaixa() {
                   </div>
                 ) : (
                   <ul className="divide-y">
-                    {lines.map((l) => (
-                      <li key={l.id} className="flex items-center gap-3 px-3 py-2">
+                    {lines.map((l, idx) => {
+                      const isLast = l.id === lastTouchedId;
+                      return (
+                      <li
+                        key={l.id}
+                        className={`flex items-center gap-3 px-3 py-2 transition-colors ${
+                          isLast ? 'bg-primary/5 ring-2 ring-primary ring-inset' : ''
+                        }`}
+                      >
+                        <span className="w-6 text-right text-xs font-semibold tabular-nums text-muted-foreground shrink-0">
+                          {idx + 1}
+                        </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{l.product_name}</p>
                           <p className="text-xs text-muted-foreground tabular-nums">
-                            {formatPrice(l.unit_price)} cada
+                            R$ {l.unit_price.toFixed(3).replace('.', ',')} × {l.quantity} {l.unit}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -469,10 +480,19 @@ export default function FrenteCaixa() {
                           <X className="h-4 w-4" />
                         </Button>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
               </ScrollArea>
+              {lines.length > 0 && (
+                <div className="border-t bg-muted/40 px-4 py-2 flex items-center justify-end gap-2">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Total</span>
+                  <span className="text-2xl font-bold tabular-nums text-emerald-600">
+                    {formatPrice(total)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
