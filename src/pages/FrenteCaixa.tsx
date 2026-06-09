@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { ScanBarcode, X, Plus, Minus, Loader2, AlertTriangle, Trash2 } from 'lucide-react';
+import { ScanBarcode, X, Plus, Minus, Loader2, AlertTriangle, Trash2, Tag, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PDVV2Layout } from '@/components/layout/PDVV2Layout';
@@ -18,6 +18,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
@@ -28,6 +34,14 @@ import {
   FrenteCaixaCheckoutDialog,
   type FrenteCaixaCheckoutResult,
 } from '@/components/frente-caixa/FrenteCaixaCheckoutDialog';
+import {
+  FrenteCaixaPriceDialog,
+  type PriceChange,
+} from '@/components/frente-caixa/FrenteCaixaPriceDialog';
+import {
+  FrenteCaixaItemDetailsDialog,
+  type ItemDetailsResult,
+} from '@/components/frente-caixa/FrenteCaixaItemDetailsDialog';
 import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 
@@ -36,7 +50,14 @@ interface CartLine {
   product_id: string | null;
   product_name: string;
   quantity: number;
+  /** Preço unitário original do produto (referência imutável) */
   unit_price: number;
+  /** Preço unitário efetivo (após "Alteração no valor" ou edição) */
+  effective_unit_price: number;
+  /** Desconto em R$ aplicado à linha inteira */
+  line_discount: number;
+  /** Acréscimo em R$ aplicado à linha inteira */
+  line_surcharge: number;
   unit: string;
 }
 
@@ -67,6 +88,8 @@ export default function FrenteCaixa() {
   const [highlightIdx, setHighlightIdx] = useState(0);
   const [removeTarget, setRemoveTarget] = useState<CartLine | null>(null);
   const [removeQty, setRemoveQty] = useState<string>('1');
+  const [priceTarget, setPriceTarget] = useState<CartLine | null>(null);
+  const [detailsTarget, setDetailsTarget] = useState<CartLine | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -77,7 +100,12 @@ export default function FrenteCaixa() {
   );
 
   const total = useMemo(
-    () => lines.reduce((sum, l) => sum + l.unit_price * l.quantity, 0),
+    () =>
+      lines.reduce(
+        (sum, l) =>
+          sum + l.effective_unit_price * l.quantity - l.line_discount + l.line_surcharge,
+        0,
+      ),
     [lines],
   );
   const itemsCount = useMemo(
@@ -123,7 +151,7 @@ export default function FrenteCaixa() {
   // ---- atalhos globais ----
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (paymentOpen || confirmCancel) return;
+      if (paymentOpen || confirmCancel || priceTarget || detailsTarget || removeTarget) return;
       if (e.key === 'F2') {
         e.preventDefault();
         tryOpenPayment();
@@ -133,6 +161,14 @@ export default function FrenteCaixa() {
           setLines((prev) => prev.slice(0, -1));
           beep(true);
         }
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        const target = lines.find((l) => l.id === lastTouchedId) ?? lines[lines.length - 1];
+        if (target) setPriceTarget(target);
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault();
+        const target = lines.find((l) => l.id === lastTouchedId) ?? lines[lines.length - 1];
+        if (target) setDetailsTarget(target);
       } else if (e.key === 'Escape') {
         if (lines.length > 0) {
           setConfirmCancel(true);
@@ -142,7 +178,7 @@ export default function FrenteCaixa() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lines, paymentOpen, confirmCancel]);
+  }, [lines, paymentOpen, confirmCancel, priceTarget, detailsTarget, removeTarget, lastTouchedId]);
 
   // ---- lookup ----
   function findProduct(raw: string): { product: Product | null; multiple: Product[] } {
@@ -181,6 +217,7 @@ export default function FrenteCaixa() {
       }
       const newId = crypto.randomUUID();
       touchedId = newId;
+      const price = Number(p.price) || 0;
       return [
         ...prev,
         {
@@ -188,7 +225,10 @@ export default function FrenteCaixa() {
           product_id: p.id,
           product_name: p.name,
           quantity: qty,
-          unit_price: Number(p.price) || 0,
+          unit_price: price,
+          effective_unit_price: price,
+          line_discount: 0,
+          line_surcharge: 0,
           unit: ((p as any).unit as string) || 'UN',
         },
       ];
@@ -301,6 +341,46 @@ export default function FrenteCaixa() {
     setPaymentOpen(true);
   }
 
+  function applyPriceChange(target: CartLine, change: PriceChange) {
+    setLines((prev) =>
+      prev.map((l) => {
+        if (l.id !== target.id) return l;
+        if (change.mode === 'override') {
+          return { ...l, effective_unit_price: change.value };
+        }
+        if (change.mode === 'discount') {
+          return { ...l, line_discount: l.line_discount + change.value };
+        }
+        // surcharge
+        return { ...l, line_surcharge: l.line_surcharge + change.value };
+      }),
+    );
+    setLastTouchedId(target.id);
+    beep(true);
+  }
+
+  function applyDetailsChange(target: CartLine, result: ItemDetailsResult) {
+    setLines((prev) =>
+      prev.map((l) =>
+        l.id === target.id
+          ? {
+              ...l,
+              quantity: result.quantity,
+              effective_unit_price: result.unitPrice,
+              line_discount: result.discount,
+            }
+          : l,
+      ),
+    );
+    setLastTouchedId(target.id);
+    beep(true);
+  }
+
+  function productCode(l: CartLine): string {
+    const p = products.find((pp) => pp.id === l.product_id) as any;
+    return (p?.gtin || p?.code || p?.sku || l.product_id || '—').toString();
+  }
+
   async function handleConfirmPayment(params: FrenteCaixaCheckoutResult) {
     if (!user?.id) return;
     const noteParts: string[] = [`[FRENTE-CAIXA] Pagamento: ${params.paymentName}`];
@@ -309,12 +389,35 @@ export default function FrenteCaixa() {
     if (params.customerDocument) noteParts.push(`CPF: ${params.customerDocument}`);
     if (params.surcharge > 0) noteParts.push(`Acréscimo: ${formatPrice(params.surcharge)}`);
     if (params.notes) noteParts.push(`Obs: ${params.notes}`);
+    // Ajustes por item (Alterar preço / Editar detalhes) — registrados em separado
+    lines.forEach((l, idx) => {
+      if (l.effective_unit_price !== l.unit_price) {
+        noteParts.push(
+          `Item ${idx + 1} ${l.product_name}: preço ${formatPrice(l.unit_price)} → ${formatPrice(l.effective_unit_price)}`,
+        );
+      }
+      if (l.line_discount > 0) {
+        noteParts.push(
+          `Item ${idx + 1} ${l.product_name}: desconto ${formatPrice(l.line_discount)}`,
+        );
+      }
+      if (l.line_surcharge > 0) {
+        noteParts.push(
+          `Item ${idx + 1} ${l.product_name}: acréscimo ${formatPrice(l.line_surcharge)}`,
+        );
+      }
+    });
     const saleId = await addSale(
       lines.map((l) => ({
         product_id: l.product_id,
         product_name: l.product_name,
         quantity: l.quantity,
-        unit_price: l.unit_price,
+        // Preço unitário efetivo já contemplando override + desconto/acréscimo da linha
+        unit_price: Math.max(
+          0,
+          (l.effective_unit_price * l.quantity - l.line_discount + l.line_surcharge) /
+            Math.max(l.quantity, 0.0001),
+        ),
       })),
       params.paymentMethodId,
       user.id,
@@ -458,58 +561,115 @@ export default function FrenteCaixa() {
                   <ul className="divide-y">
                     {lines.map((l, idx) => {
                       const isLast = l.id === lastTouchedId;
+                      const lineGross = l.effective_unit_price * l.quantity;
+                      const lineTotal = lineGross - l.line_discount + l.line_surcharge;
+                      const hasAdjust =
+                        l.effective_unit_price !== l.unit_price ||
+                        l.line_discount > 0 ||
+                        l.line_surcharge > 0;
                       return (
-                      <li
-                        key={l.id}
-                        className={`flex items-center gap-3 px-3 py-2 transition-colors ${
-                          isLast ? 'bg-primary/5 ring-2 ring-primary ring-inset' : ''
-                        }`}
-                      >
-                        <span className="w-6 text-right text-xs font-semibold tabular-nums text-muted-foreground shrink-0">
-                          {idx + 1}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{l.product_name}</p>
-                          <p className="text-xs text-muted-foreground tabular-nums">
-                            R$ {l.unit_price.toFixed(3).replace('.', ',')} × {l.quantity} {l.unit}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            className="h-7 w-7"
-                            onClick={() => changeQty(l.id, -1)}
+                      <ContextMenu key={l.id}>
+                        <ContextMenuTrigger asChild>
+                          <li
+                            onClick={() => setLastTouchedId(l.id)}
+                            className={`flex items-center gap-3 px-3 py-2 transition-colors cursor-default ${
+                              isLast ? 'bg-primary/5 ring-2 ring-primary ring-inset' : ''
+                            }`}
                           >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-8 text-center text-sm tabular-nums font-medium">
-                            {l.quantity}
-                          </span>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            className="h-7 w-7"
-                            onClick={() => changeQty(l.id, +1)}
+                            <span className="w-6 text-right text-xs font-semibold tabular-nums text-muted-foreground shrink-0">
+                              {idx + 1}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{l.product_name}</p>
+                              <p className="text-xs text-muted-foreground tabular-nums">
+                                R$ {l.effective_unit_price.toFixed(3).replace('.', ',')} × {l.quantity} {l.unit}
+                                {l.effective_unit_price !== l.unit_price && (
+                                  <span className="ml-1 line-through opacity-60">
+                                    (R$ {l.unit_price.toFixed(3).replace('.', ',')})
+                                  </span>
+                                )}
+                              </p>
+                              {hasAdjust && (
+                                <p className="text-[11px] tabular-nums mt-0.5 flex flex-wrap gap-2">
+                                  {l.line_discount > 0 && (
+                                    <span className="text-rose-500">
+                                      − {formatPrice(l.line_discount)} desc.
+                                    </span>
+                                  )}
+                                  {l.line_surcharge > 0 && (
+                                    <span className="text-amber-500">
+                                      + {formatPrice(l.line_surcharge)} acr.
+                                    </span>
+                                  )}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="h-7 w-7"
+                                onClick={() => changeQty(l.id, -1)}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-8 text-center text-sm tabular-nums font-medium">
+                                {l.quantity}
+                              </span>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="h-7 w-7"
+                                onClick={() => changeQty(l.id, +1)}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <span className="w-24 text-right tabular-nums text-sm font-semibold text-emerald-600">
+                              {formatPrice(lineTotal).replace('.', ',')}
+                            </span>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive"
+                              onClick={() => requestRemoveLine(l)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </li>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent className="w-64">
+                          <ContextMenuItem
+                            onSelect={() => {
+                              setLastTouchedId(l.id);
+                              setPriceTarget(l);
+                            }}
+                            className="flex items-center justify-between gap-4"
                           >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <span className="w-20 text-right tabular-nums text-sm font-semibold text-emerald-600">
-                          {formatPrice(l.unit_price * l.quantity).replace('.', ',')}
-                        </span>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-destructive"
-                          onClick={() => requestRemoveLine(l)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </li>
+                            <span className="flex items-center gap-2">
+                              <Tag className="h-4 w-4" />
+                              Alterar preço
+                            </span>
+                            <kbd className="px-1.5 py-0.5 border rounded text-[10px] bg-muted">Home</kbd>
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            onSelect={() => {
+                              setLastTouchedId(l.id);
+                              setDetailsTarget(l);
+                            }}
+                            className="flex items-center justify-between gap-4"
+                          >
+                            <span className="flex items-center gap-2">
+                              <MoreHorizontal className="h-4 w-4" />
+                              Editar detalhes
+                            </span>
+                            <kbd className="px-1.5 py-0.5 border rounded text-[10px] bg-muted">Ctrl+D</kbd>
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
                       );
                     })}
                   </ul>
@@ -575,10 +735,51 @@ export default function FrenteCaixa() {
             product_id: l.product_id,
             product_name: l.product_name,
             quantity: l.quantity,
-            unit_price: l.unit_price,
+            unit_price: Math.max(
+              0,
+              (l.effective_unit_price * l.quantity - l.line_discount + l.line_surcharge) /
+                Math.max(l.quantity, 0.0001),
+            ),
           }))}
           itemsTotal={total}
           onConfirm={handleConfirmPayment}
+        />
+
+        <FrenteCaixaPriceDialog
+          open={!!priceTarget}
+          onOpenChange={(o) => !o && setPriceTarget(null)}
+          productName={priceTarget?.product_name ?? ''}
+          initialUnitPrice={priceTarget?.effective_unit_price ?? 0}
+          quantity={priceTarget?.quantity ?? 1}
+          onConfirm={(change) => {
+            if (priceTarget) applyPriceChange(priceTarget, change);
+            setPriceTarget(null);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }}
+        />
+
+        <FrenteCaixaItemDetailsDialog
+          open={!!detailsTarget}
+          onOpenChange={(o) => !o && setDetailsTarget(null)}
+          code={detailsTarget ? productCode(detailsTarget) : ''}
+          productName={detailsTarget?.product_name ?? ''}
+          unit={detailsTarget?.unit ?? 'UN'}
+          initialQuantity={detailsTarget?.quantity ?? 1}
+          initialUnitPrice={detailsTarget?.effective_unit_price ?? 0}
+          initialDiscount={detailsTarget?.line_discount ?? 0}
+          onConfirm={(r) => {
+            if (detailsTarget) applyDetailsChange(detailsTarget, r);
+            setDetailsTarget(null);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }}
+          onRemove={() => {
+            if (detailsTarget) {
+              setLines((prev) => prev.filter((l) => l.id !== detailsTarget.id));
+              setLastTouchedId(null);
+            }
+            setDetailsTarget(null);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }}
         />
 
         <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
