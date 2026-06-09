@@ -330,7 +330,7 @@ export function FrenteCaixaCheckoutDialog({
               />
             </div>
 
-            <div className="mt-4 text-[11px] text-zinc-500 space-y-1 leading-snug">
+            <div className="mt-4 text-[11px] text-muted-foreground space-y-1 leading-snug">
               <p>
                 <kbd className="px-1 py-0.5 border border-border rounded text-[10px]">Ctrl</kbd>{' '}
                 +{' '}
@@ -618,7 +618,7 @@ function SummaryRow({
         className={
           emphasize
             ? 'text-emerald-400 font-bold text-lg tabular-nums'
-            : 'text-zinc-200 tabular-nums'
+            : 'text-foreground tabular-nums'
         }
       >
         {value}
@@ -664,7 +664,7 @@ function StepHeader({
         {shortcut}
       </kbd>
       {optional && (
-        <span className="text-[11px] text-zinc-500 ml-1">Opcional</span>
+        <span className="text-[11px] text-muted-foreground ml-1">Opcional</span>
       )}
     </button>
   );
