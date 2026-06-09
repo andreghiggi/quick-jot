@@ -616,60 +616,79 @@ export default function FrenteCaixa() {
             }
           }}
         >
-          <AlertDialogContent>
+          <AlertDialogContent className="max-w-xl">
             <AlertDialogHeader>
-              <AlertDialogTitle>Cancelar unidades do item</AlertDialogTitle>
-              <AlertDialogDescription>
-                {removeTarget && (
-                  <>
-                    Quantas unidades de <strong>{removeTarget.product_name}</strong> deseja
-                    cancelar? (1 a {removeTarget.quantity})
-                  </>
-                )}
-              </AlertDialogDescription>
+              <AlertDialogTitle className="text-2xl">Remover item</AlertDialogTitle>
             </AlertDialogHeader>
-            <div className="py-2">
-              <Input
-                type="number"
-                min={1}
-                max={removeTarget?.quantity ?? 1}
-                value={removeQty}
-                onChange={(e) => setRemoveQty(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    confirmRemoveQty();
-                  }
-                }}
-                autoFocus
-                className="h-12 text-lg text-center"
-              />
-              {removeTarget && (
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setRemoveQty('1')}
-                  >
-                    1
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setRemoveQty(String(removeTarget.quantity))}
-                  >
-                    Todas ({removeTarget.quantity})
-                  </Button>
+            {removeTarget && (() => {
+              const idx = lines.findIndex((l) => l.id === removeTarget.id) + 1;
+              const prod = products.find((p) => p.id === removeTarget.product_id) as any;
+              const codigo =
+                (prod?.gtin || prod?.code || prod?.sku || removeTarget.product_id || '—')
+                  .toString();
+              return (
+                <div className="space-y-5 py-2">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-1">
+                      <div className="text-xs text-muted-foreground">Item *</div>
+                      <div className="text-lg border-b border-border pb-1">{idx}</div>
+                      <div className="pt-1">
+                        <kbd className="px-2 py-0.5 border rounded text-[10px] bg-muted">F2</kbd>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-xs text-muted-foreground">Código *</div>
+                      <div className="text-lg border-b border-border pb-1 truncate">{codigo}</div>
+                      <div className="pt-1">
+                        <kbd className="px-2 py-0.5 border rounded text-[10px] bg-muted">F3</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-sm">Item:</div>
+                    <div className="text-base font-bold uppercase">
+                      {removeTarget.product_name}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-sm">Qtd. vendida:</div>
+                    <div className="text-base font-bold">
+                      {removeTarget.quantity} {removeTarget.unit || 'UN'}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Quantidade a ser removida</div>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={removeTarget.quantity}
+                      value={removeQty}
+                      onChange={(e) => setRemoveQty(e.target.value)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          confirmRemoveQty();
+                        }
+                      }}
+                      autoFocus
+                      className="h-10 text-base"
+                    />
+                    <div className="pt-1">
+                      <kbd className="px-2 py-0.5 border rounded text-[10px] bg-muted">F4</kbd>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
+              );
+            })()}
             <AlertDialogFooter>
-              <AlertDialogCancel>Voltar</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmRemoveQty}>Confirmar</AlertDialogAction>
+              <AlertDialogCancel className="uppercase">Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmRemoveQty} className="uppercase">
+                Confirmar
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
