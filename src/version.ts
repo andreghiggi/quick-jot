@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.16.0-beta";
+export const VERSION = "1.17.0-beta";
 export const RELEASE_DATE = "2026-06-09"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Editar Pedido: entrega + forma de pagamento";
+export const CODENAME = "Frente de Caixa: tela Finalizando venda";
 
 export interface Release {
   version: string;
@@ -19,6 +19,22 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.17.0-beta",
+    date: "2026-06-09",
+    codename: "Frente de Caixa: tela Finalizando venda",
+    changes: [
+      "Frente de Caixa (módulo Mercado): nova tela 'Finalizando venda' inspirada no PDV do Gweb, substituindo o diálogo de pagamento simples. Layout em 2 colunas — resumo financeiro à esquerda (produtos, desconto, acréscimo, total geral) e wizard de 3 etapas à direita.",
+      "Etapa 1 — Pagamentos: multi-pagamento nativo com todas as formas ativas do canal PDV listadas, cada uma com atalho de letra (A, B, C, D…) para focar o campo de valor. Pressionar Enter com o campo vazio preenche automaticamente o saldo restante. Contador 'Pagamentos / Falta' em tempo real, com 'Falta' em vermelho enquanto > 0. SALVAR só habilita quando Falta = 0.",
+      "Botão 'Desconto/Acréscimo (Home)' abre painel inline para informar valores em R$, recalculando o Total geral.",
+      "Etapa 2 — Cliente (opcional, Ctrl+2): captura nome, telefone e CPF avulsos para a venda. Etapa 3 — Informações adicionais (opcional, Ctrl+3): observação livre. Ambas podem ser puladas.",
+      "TEF integrado: linhas com forma TEF (PinPad/SmartPOS) disparam o PinPad pela engine runMultiPayment já homologada (v1.6) — tudo-ou-nada com estorno automático em caso de recusa parcial. NÃO altera pinpadService, tef-webservice, runTefPayment nem TEF v1.0/v1.1/v1.2-beta.",
+      "Persistência: usa useCashRegister.addSale como antes, gravando combinedNotesFragment do multi-pagamento dentro de notes para auditoria e relatórios.",
+      "Atalhos globais no modal: Ctrl+1/2/3 navega entre etapas, Home abre Desconto/Acréscimo, Esc fecha (com confirmação se houver valor alocado).",
+      "Nada de PDV V2, OrderCardChargeDialog, Pedido Express, PDVV2PaymentDialog ou PDVV2MultiPaymentDialog foi tocado — a tela vive isolada em src/components/frente-caixa/FrenteCaixaCheckoutDialog.tsx e só é alcançável quando o módulo Mercado está ativo.",
+      "NFC-e ainda NÃO é emitida automaticamente nesta tela (planejado para uma versão futura). Vendas ficam registradas no caixa normalmente.",
+    ],
+  },
   {
     version: "1.16.0-beta",
     date: "2026-06-09",
