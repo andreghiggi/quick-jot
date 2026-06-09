@@ -866,7 +866,9 @@ export function OrderEditDialog({
         ) : (
           <div className="flex-1 flex flex-col gap-3 min-h-0">
             <ScrollArea className="flex-1 min-h-0 border rounded-md">
-              <div className="p-2 space-y-2">
+              <div className="p-2 space-y-4">
+                {/* Itens */}
+                <div className="space-y-2">
                 {working.map((it, idx) => {
                   const cleanName = cleanProductName(it.name);
                   const swappable = isItemSwappable(it);
@@ -916,22 +918,135 @@ export function OrderEditDialog({
                     </div>
                   );
                 })}
+                <Button
+                  variant="outline"
+                  onClick={() => setPickerMode({ type: 'add' })}
+                  className="gap-1 self-start"
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar item
+                </Button>
+                </div>
+
+                {/* Bloco: Entrega */}
+                <div className="space-y-2 border-t pt-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    {modality === 'delivery' ? <Bike className="w-4 h-4" /> : <Store className="w-4 h-4" />}
+                    Entrega
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={modality === 'pickup' ? 'default' : 'outline'}
+                      className="gap-1 flex-1"
+                      onClick={() => setModality('pickup')}
+                    >
+                      <Store className="w-4 h-4" /> Retirada
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={modality === 'delivery' ? 'default' : 'outline'}
+                      className="gap-1 flex-1"
+                      onClick={() => setModality('delivery')}
+                    >
+                      <Bike className="w-4 h-4" /> Entrega
+                    </Button>
+                  </div>
+                  {modality === 'delivery' && (
+                    <div className="space-y-2">
+                      <div>
+                        <Label className="text-xs">Endereço</Label>
+                        <Input
+                          placeholder="Rua, número, complemento..."
+                          value={addressLine}
+                          onChange={(e) => setAddressLine(e.target.value)}
+                        />
+                      </div>
+                      {storeSettings.deliveryMode === 'neighborhood' && neighborhoods.filter((n) => n.active).length > 0 && (
+                        <div>
+                          <Label className="text-xs">Bairro</Label>
+                          <Select value={neighborhoodId} onValueChange={setNeighborhoodId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o bairro" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {neighborhoods
+                                .filter((n) => n.active)
+                                .map((n) => (
+                                  <SelectItem key={n.id} value={n.id}>
+                                    {n.neighborhoodName} — R$ {n.deliveryFee.toFixed(2).replace('.', ',')}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        Taxa de entrega:{' '}
+                        <span className="font-semibold text-foreground">
+                          R$ {newDeliveryFee.toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bloco: Forma de pagamento */}
+                <div className="space-y-2 border-t pt-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <CreditCard className="w-4 h-4" />
+                    Forma de pagamento
+                  </div>
+                  {originalPaymentName && (
+                    <div className="text-xs text-muted-foreground">
+                      Atual: <span className="font-medium text-foreground">{originalPaymentName}</span>
+                    </div>
+                  )}
+                  <Select value={paymentMethodId} onValueChange={setPaymentMethodId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a forma de pagamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activePaymentMethods.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isMoneyPayment && (
+                    <div>
+                      <Label className="text-xs">Troco para R$</Label>
+                      <Input
+                        placeholder="Ex: 50,00 ou 'Não precisa'"
+                        value={changeFor}
+                        onChange={(e) => setChangeFor(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  {isPixPayment && selectedPixKey && (
+                    <div className="text-xs text-muted-foreground">
+                      Chave PIX: <span className="font-mono text-foreground">{selectedPixKey}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </ScrollArea>
-            <Button
-              variant="outline"
-              onClick={() => setPickerMode({ type: 'add' })}
-              className="gap-1 self-start"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar item
-            </Button>
 
             <div className="border-t pt-3 space-y-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total original</span>
                 <span>R$ {order.total.toFixed(2).replace('.', ',')}</span>
               </div>
+              {modality === 'delivery' && newDeliveryFee > 0 && (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Taxa de entrega</span>
+                  <span>R$ {newDeliveryFee.toFixed(2).replace('.', ',')}</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold">
                 <span>Novo total</span>
                 <span className="text-green-600">R$ {newGrandTotal.toFixed(2).replace('.', ',')}</span>
