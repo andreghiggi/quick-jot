@@ -399,13 +399,28 @@ export function OrderEditDialog({
     });
   }
 
-  function buildUpdatedReceiptHtml(items: WorkingItem[]): string {
+  function buildUpdatedReceiptHtml(
+    items: WorkingItem[],
+    overrides?: {
+      deliveryAddress?: string | null;
+      notes?: string | null;
+      deliveryFee?: number;
+    },
+  ): string {
     // Mirror do template do auto_printer.py (formatar_recibo_html), com o
     // mesmo HTML/markup esperado pelo GDI: <!--BOX_START-->/<!--BOX_END-->,
     // .item-name, .additionals/.add-line, .obs, .delivery-badge,
     // payment block, "Obrigado pela preferencia!".
+    const effectiveDeliveryFee =
+      overrides?.deliveryFee !== undefined ? overrides.deliveryFee : originalDeliveryFee;
+    const effectiveDeliveryAddress =
+      overrides && 'deliveryAddress' in overrides
+        ? overrides.deliveryAddress
+        : order.deliveryAddress;
+    const effectiveNotes =
+      overrides && 'notes' in overrides ? overrides.notes : order.notes;
     const subtotal = items.reduce((s, it) => s + it.price * it.quantity, 0);
-    const total = subtotal + deliveryFee;
+    const total = subtotal + effectiveDeliveryFee;
     const fontSize = paperSize === '80mm' ? '11pt' : '10pt';
     const dt = new Date().toLocaleString('pt-BR', {
       timeZone: 'America/Sao_Paulo',
@@ -415,7 +430,7 @@ export function OrderEditDialog({
     const orderNum = order.orderCode || order.dailyNumber;
 
     // Origem do pedido — mesmo critério do auto_printer.py
-    const notesRaw = order.notes || '';
+    const notesRaw = effectiveNotes || '';
     const isExpressNote = notesRaw.includes('[EXPRESS]');
     const source = (order as any).source || '';
     let origemLabel = '📱 CARDÁPIO ONLINE';
@@ -434,14 +449,14 @@ export function OrderEditDialog({
       if (pixMatch) paymentHtml += `<p><span class="label">CHAVE PIX:</span> ${pixMatch[1].trim()}</p>`;
     }
     if (!paymentHtml) {
-      const fallback = extractPaymentName(order.notes);
+      const fallback = extractPaymentName(effectiveNotes);
       if (fallback) paymentHtml = `<p><span class="label">PAGAMENTO:</span> ${fallback}</p>`;
     }
 
     // Bloco entrega / retirada
-    const deliverySection = order.deliveryAddress
+    const deliverySection = effectiveDeliveryAddress
       ? `<div class="delivery-badge">ENTREGA</div>
-         <div class="section"><p>${order.deliveryAddress}</p></div>`
+         <div class="section"><p>${effectiveDeliveryAddress}</p></div>`
       : '<div class="delivery-badge">RETIRADA NO LOCAL</div>';
 
     // Itens — usando mesmo markup do auto_printer.py
@@ -496,8 +511,8 @@ export function OrderEditDialog({
 
     const subtotalStr = subtotal.toFixed(2).replace('.', ',');
     const totalStr = total.toFixed(2).replace('.', ',');
-    const deliveryFeeHtml = deliveryFee > 0
-      ? `<div class="total-line"><span>Entrega:</span><span>R$ ${deliveryFee.toFixed(2).replace('.', ',')}</span></div>`
+    const deliveryFeeHtml = effectiveDeliveryFee > 0
+      ? `<div class="total-line"><span>Entrega:</span><span>R$ ${effectiveDeliveryFee.toFixed(2).replace('.', ',')}</span></div>`
       : '';
     const phoneHtml = order.customerPhone
       ? `<p><span class="label">Tel:</span> ${order.customerPhone}</p>`
