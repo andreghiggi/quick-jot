@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '09/06/2026',
+    version: '1.17.0-beta',
+    type: 'feature',
+    description: 'Frente de Caixa (módulo Mercado) — nova tela "Finalizando venda" inspirada no PDV do Gweb, em 2 colunas: resumo financeiro (produtos, desconto, acréscimo, total geral) à esquerda e wizard de 3 etapas à direita. Etapa 1 — Pagamentos: multi-pagamento nativo com todas as formas ativas do canal PDV, cada uma com atalho de letra (A, B, C, D…) para focar o campo de valor; Enter no campo vazio preenche o saldo restante; contador "Pagamentos / Falta" em tempo real ("Falta" em vermelho enquanto > 0). SALVAR só habilita quando Falta = 0. Botão "Desconto/Acréscimo (Home)" abre painel inline em R$ e recalcula o total na hora. Etapa 2 — Cliente (opcional, Ctrl+2): nome, telefone e CPF avulsos. Etapa 3 — Informações adicionais (opcional, Ctrl+3): observação livre. TEF integrado via runMultiPayment (v1.6) — linhas TEF disparam o PinPad com estorno automático em recusa parcial. Atalhos globais: Ctrl+1/2/3 navega entre etapas, Home abre Desconto/Acréscimo, Esc fecha (com confirmação se houver valor alocado). NFC-e ainda NÃO é emitida automaticamente nesta tela (planejada para versão futura). Nada de PDV V2, OrderCardChargeDialog, Pedido Express, PDVV2PaymentDialog ou PDVV2MultiPaymentDialog foi tocado — o checkout vive isolado em src/components/frente-caixa/FrenteCaixaCheckoutDialog.tsx e só é alcançável quando o módulo Mercado está ativo.',
+  },
+  {
+    date: '09/06/2026',
     version: '1.16.0-beta',
     type: 'feature',
     description: 'Editar Pedido (Pendente/Preparando) agora permite trocar a forma de entrega e a forma de pagamento, além dos itens. Novo bloco "Entrega" alterna Retirada ↔ Entrega, captura endereço e — em lojas que cobram por bairro — mostra select com a lista cadastrada, recalculando a taxa em tempo real. Novo bloco "Forma de pagamento" lista as formas ativas, exige "Troco para R$" no Dinheiro e mostra a chave do PIX. Recibo é reimpresso automaticamente quando entrega ou pagamento mudou; comanda de produção continua só saindo quando itens mudam. Tag de auditoria em notes passa a indicar [EDITADO HH:MM: itens+entrega+pagamento]. Mensagem do WhatsApp avisa o cliente sobre a nova modalidade/taxa/pagamento. Nada de TEF (v1.0/v1.1/v1.2-beta), NFC-e, Multi-Pagamento, PDV V2 checkout, Pedido Express ou cardápio público foi alterado.',
