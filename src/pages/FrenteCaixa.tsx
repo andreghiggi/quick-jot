@@ -62,6 +62,8 @@ export default function FrenteCaixa() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [searchMatches, setSearchMatches] = useState<Product[]>([]);
   const [highlightIdx, setHighlightIdx] = useState(0);
+  const [removeTarget, setRemoveTarget] = useState<CartLine | null>(null);
+  const [removeQty, setRemoveQty] = useState<string>('1');
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -252,6 +254,36 @@ export default function FrenteCaixa() {
 
   function removeLine(id: string) {
     setLines((prev) => prev.filter((l) => l.id !== id));
+  }
+
+  function requestRemoveLine(line: CartLine) {
+    if (line.quantity <= 1) {
+      removeLine(line.id);
+      setLastTouchedId((curr) => (curr === line.id ? null : curr));
+      return;
+    }
+    setRemoveTarget(line);
+    setRemoveQty('1');
+  }
+
+  function confirmRemoveQty() {
+    if (!removeTarget) return;
+    const max = removeTarget.quantity;
+    const n = Math.max(1, Math.min(max, parseInt(removeQty, 10) || 1));
+    setLines((prev) =>
+      prev
+        .map((l) =>
+          l.id === removeTarget.id ? { ...l, quantity: l.quantity - n } : l,
+        )
+        .filter((l) => l.quantity > 0),
+    );
+    if (n >= max) {
+      setLastTouchedId((curr) => (curr === removeTarget.id ? null : curr));
+    }
+    setRemoveTarget(null);
+    setRemoveQty('1');
+    beep(true);
+    setTimeout(() => inputRef.current?.focus(), 50);
   }
 
   function tryOpenPayment() {
@@ -475,7 +507,7 @@ export default function FrenteCaixa() {
                           size="icon"
                           variant="ghost"
                           className="h-7 w-7 text-destructive"
-                          onClick={() => removeLine(l.id)}
+                          onClick={() => requestRemoveLine(l)}
                         >
                           <X className="h-4 w-4" />
                         </Button>
