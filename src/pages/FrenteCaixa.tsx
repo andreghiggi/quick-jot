@@ -597,7 +597,7 @@ export default function FrenteCaixa() {
                                     </span>
                                   )}
                                   {l.line_surcharge > 0 && (
-                                    <span className="text-amber-500">
+                                    <span className="text-muted-foreground font-medium">
                                       + {formatPrice(l.line_surcharge)} acr.
                                     </span>
                                   )}
