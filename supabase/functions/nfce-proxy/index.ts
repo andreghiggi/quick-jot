@@ -687,6 +687,72 @@ Deno.serve(async (req) => {
         break
       }
 
+      case 'inutilizar': {
+        // Inutiliza uma faixa de numeração NFC-e. Cria registro local em
+        // `nfce_inutilizacoes` com status 'pendente', chama a Fiscal Flow e
+        // atualiza o status conforme resposta.
+        const serie = String(payload?.serie ?? '').trim()
+        const numero_inicial = Number(payload?.numero_inicial)
+        const numero_final = Number(payload?.numero_final)
+        const ano = Number(payload?.ano ?? new Date().getFullYear())
+        const justificativa = String(payload?.justificativa ?? '').trim()
+
+        if (!serie || !Number.isInteger(numero_inicial) || !Number.isInteger(numero_final)
+          || numero_final < numero_inicial || justificativa.length < 15) {
+          return new Response(
+            JSON.stringify({ error: 'Dados inválidos. Justificativa deve ter ao menos 15 caracteres.' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        const reqBody = { serie, numero_inicial, numero_final, ano, justificativa }
+        const { data: inserted, error: insErr } = await supabase
+          .from('nfce_inutilizacoes')
+          .insert({
+            company_id: companyId,
+            serie,
+            numero_inicial,
+            numero_final,
+            ano,
+            justificativa,
+            status: 'pendente',
+            request_payload: reqBody,
+            created_by: userId,
+          })
+          .select('id')
+          .single()
+        if (insErr) {
+          return new Response(JSON.stringify({ error: 'Falha ao registrar: ' + insErr.message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+
+        apiResponse = await fetch(`${NFCE_API_URL}/inutilizar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': NFCE_API_KEY },
+          body: JSON.stringify(reqBody),
+        })
+        result = await safeJson(apiResponse)
+
+        const ok = apiResponse.ok && (result?.success !== false)
+        const newStatus = ok ? 'aceita' : 'rejeitada'
+        const protocolo = result?.protocolo ?? result?.data?.protocolo ?? null
+        const motivo = ok ? null : (result?.error || result?.message || 'Rejeitado pela SEFAZ')
+
+        await supabase.from('nfce_inutilizacoes')
+          .update({
+            status: newStatus,
+            protocolo,
+            response_payload: result,
+            motivo_rejeicao: motivo,
+            external_id: result?.id ?? result?.data?.id ?? null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', inserted.id)
+
+        result = { ...result, inutilizacao_id: inserted.id, status: newStatus }
+        break
+      }
+
       default:
         return new Response(JSON.stringify({ error: 'Ação inválida' }), { status: 400, headers: corsHeaders })
     }
