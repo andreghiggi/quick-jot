@@ -135,7 +135,8 @@ export function FrenteCaixaActionsMenu({
           {block('Configurações', [
             { label: 'Formas de pagamento', icon: CreditCard, onClick: () => navigate('/formas-pagamento') },
             { label: 'Impressão', icon: Printer, onClick: () => navigate('/configuracoes/impressao') },
-            { label: 'Geral', icon: Settings, onClick: () => navigate('/configuracoes') },
+            { label: 'Configurações do PDV', icon: Settings, onClick: () => navigate('/frente-caixa/configuracoes') },
+            { label: 'Geral da loja', icon: Settings, onClick: () => navigate('/configuracoes') },
           ])}
         </div>
       </SheetContent>
