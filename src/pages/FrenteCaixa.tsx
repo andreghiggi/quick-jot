@@ -505,7 +505,11 @@ export default function FrenteCaixa() {
 
   return (
     <PDVV2Layout>
-      <div className="h-full flex flex-col bg-background">
+      <div
+        className={`h-full flex flex-col bg-background transition-[padding] duration-200 ${
+          menuOpen ? 'pr-80' : 'pr-0'
+        }`}
+      >
         {/* Header compacto */}
         <div className="border-b px-4 py-2 flex items-center justify-between bg-card">
           <div className="flex items-center gap-2">
