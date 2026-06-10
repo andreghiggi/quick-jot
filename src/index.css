@@ -72,9 +72,9 @@
     --muted: 0 0% 92%;
     --muted-foreground: 0 0% 45%;
 
-    /* Laranja como accent */
-    --accent: 40 95% 55%;
-    --accent-foreground: 0 0% 100%;
+    /* Vermelho suave alinhado ao primary do Comanda Tech */
+    --accent: 0 85% 96%;
+    --accent-foreground: 355 80% 40%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -132,8 +132,8 @@
     --muted: 0 0% 20%;
     --muted-foreground: 0 0% 60%;
 
-    --accent: 40 90% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 0 50% 18%;
+    --accent-foreground: 0 85% 90%;
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
