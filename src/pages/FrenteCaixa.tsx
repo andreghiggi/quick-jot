@@ -527,8 +527,11 @@ export default function FrenteCaixa() {
                   <button
                     key={p.id}
                     type="button"
-                    className={`w-full text-left flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-accent ${
-                      i === highlightIdx ? 'bg-accent' : ''
+                    onMouseEnter={() => setHighlightIdx(i)}
+                    className={`w-full text-left flex items-center justify-between gap-2 px-3 py-2 text-sm transition-colors ${
+                      i === highlightIdx
+                        ? 'bg-accent text-accent-foreground border-l-2 border-primary'
+                        : 'border-l-2 border-transparent hover:bg-muted'
                     }`}
                     onClick={() => {
                       addProductToCart(p);
