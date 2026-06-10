@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.18.1-beta";
+export const VERSION = "1.18.2-beta";
 export const RELEASE_DATE = "2026-06-10"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Multi-pagamento v1.7.2 — auto-finalizar + trava até registrar";
+export const CODENAME = "Frente de Caixa: busca/cadastro de cliente estilo Gweb";
 
 export interface Release {
   version: string;
@@ -19,6 +19,20 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.18.2-beta",
+    date: "2026-06-10",
+    codename: "Frente de Caixa: busca/cadastro de cliente estilo Gweb",
+    changes: [
+      "Frente de Caixa (módulo Mercado) → tela 'Finalizando venda' → Etapa 2 Cliente: agora começa COLAPSADA com o estado 'Nenhum cliente vinculado' + botão 'INFORMAR CLIENTE' — espelha o PDV do Gweb. Os 3 campos abertos (Nome/Telefone/CPF) foram substituídos por um modal dedicado.",
+      "Novo modal 'Buscar pessoas (clientes)': campo único que pesquisa CPF/CNPJ, nome OU telefone (debounce 280ms) sobre a base de clientes da loja. Lista resultados com nome + telefone + CPF, clique seleciona, duplo-clique já confirma.",
+      "Botão 'CADASTRAR PESSOA' abre formulário rápido (Nome, Telefone, CPF) DENTRO do mesmo modal — sem sair do checkout. Ao salvar, o cliente é inserido em `customers` (multi-tenant via company_id) e já vinculado à venda.",
+      "Quando o termo digitado tem 11+ dígitos e não retorna nada, aparece atalho 'Usar X como CPF/CNPJ no cupom' que preenche apenas o documento sem criar cadastro — preserva o fluxo de quem só quer o CPF na NFC-e.",
+      "Cliente vinculado aparece como chip compacto na etapa 2 com botões 'Alterar' / 'Remover'. CPF/Telefone continuam fluindo para `runMultiPayment` e dali para o `nfce-proxy` exatamente como antes.",
+      "Atalhos A–Z / Ctrl+1/2/3 / Home / Esc do checkout ficam SUSPENSOS enquanto o modal de cliente está aberto para não conflitar com a digitação.",
+      "Mudança isolada: PDV V2, Pedido Express, OrderCardChargeDialog, runMultiPayment, nfce-proxy, TEF v1.0/v1.1/v1.2-beta, impressão e demais fluxos homologados não foram tocados.",
+    ],
+  },
   {
     version: "1.18.1-beta",
     date: "2026-06-10",
