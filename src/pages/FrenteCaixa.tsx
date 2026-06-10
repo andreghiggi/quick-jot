@@ -101,8 +101,23 @@ export default function FrenteCaixa() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [inutOpen, setInutOpen] = useState(false);
   const [xmlMesOpen, setXmlMesOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // ---- fullscreen ----
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  }
 
   // ---- helpers ----
   const activeProducts = useMemo(
