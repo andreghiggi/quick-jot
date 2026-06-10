@@ -96,6 +96,7 @@ export default function FrenteCaixa() {
   const [priceTarget, setPriceTarget] = useState<CartLine | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<CartLine | null>(null);
   const [cashMovementOpen, setCashMovementOpen] = useState<null | CashMovementType>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -185,6 +186,9 @@ export default function FrenteCaixa() {
       } else if (e.key === 'F7') {
         e.preventDefault();
         if (currentRegister) setCashMovementOpen('sangria');
+      } else if (e.key === 'F10') {
+        e.preventDefault();
+        setMenuOpen(true);
       }
     }
     window.addEventListener('keydown', onKey);
