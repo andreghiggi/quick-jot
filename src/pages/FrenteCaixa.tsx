@@ -962,6 +962,30 @@ export default function FrenteCaixa() {
             companyName={company.name}
           />
         )}
+
+        {/* Rail lateral (estilo Gweb) — abre/fecha pela setinha »/« ou F10 */}
+        <FrenteCaixaActionsMenu
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+          onSangria={() => setCashMovementOpen('sangria')}
+          onSuprimento={() => setCashMovementOpen('suprimento')}
+          onInutilizarNfce={() => setInutOpen(true)}
+          onXmlMes={() => setXmlMesOpen(true)}
+        />
+
+        {/* FAB vermelho — atalho contextual (foca scanner ou abre pagamento) */}
+        <button
+          type="button"
+          onClick={() => {
+            if (lines.length > 0) tryOpenPayment();
+            else inputRef.current?.focus();
+          }}
+          title={lines.length > 0 ? 'Finalizar venda' : 'Focar scanner'}
+          aria-label="Ação rápida"
+          className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90 transition flex items-center justify-center"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
       </div>
     </PDVV2Layout>
   );
