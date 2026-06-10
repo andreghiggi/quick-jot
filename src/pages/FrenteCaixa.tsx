@@ -525,10 +525,9 @@ export default function FrenteCaixa() {
           </div>
         )}
 
-        {/* Conteúdo: scanner + lista | total */}
-        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-0">
-          {/* Coluna esquerda: input + itens */}
-          <div className="flex flex-col min-h-0 p-4 gap-3">
+        {/* Conteúdo: coluna única vertical (estilo Gweb) — scanner → itens → total → finalizar */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="h-full max-w-5xl mx-auto flex flex-col min-h-0 p-4 gap-3">
             <form onSubmit={handleSubmit} className="flex gap-2">
               <div className="relative flex-1">
                 <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -708,51 +707,44 @@ export default function FrenteCaixa() {
                   </ul>
                 )}
               </ScrollArea>
-              {lines.length > 0 && (
-                <div className="border-t bg-muted/40 px-4 py-2 flex items-center justify-end gap-2">
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Total</span>
-                  <span className="text-2xl font-bold tabular-nums text-emerald-600">
-                    {formatPrice(total)}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Coluna direita: total */}
-          <div className="border-l bg-muted/30 flex flex-col p-4 gap-3">
-            <div className="rounded-md bg-card border p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Total</p>
-              <p className="text-4xl font-bold tabular-nums text-emerald-600 mt-1">
-                {formatPrice(total)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {itemsCount} {itemsCount === 1 ? 'item' : 'itens'}
-              </p>
             </div>
 
-            <Button
-              size="lg"
-              className="h-16 text-lg"
-              onClick={tryOpenPayment}
-              disabled={lines.length === 0 || !currentRegister}
-            >
-              Finalizar (F2)
-            </Button>
+            {/* Painel inferior: TOTAL + Finalizar + Cancelar (fluxo vertical, sem coluna lateral) */}
+            <div className="rounded-md border bg-card shadow-sm p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Total</p>
+                <p className="text-4xl font-bold tabular-nums text-emerald-600 leading-tight">
+                  {formatPrice(total)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {itemsCount} {itemsCount === 1 ? 'item' : 'itens'}
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-stretch">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-14"
+                  onClick={() => {
+                    if (lines.length > 0) setConfirmCancel(true);
+                  }}
+                  disabled={lines.length === 0}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Cancelar venda (Esc)
+                </Button>
+                <Button
+                  size="lg"
+                  className="h-14 text-lg px-8 sm:min-w-[260px]"
+                  onClick={tryOpenPayment}
+                  disabled={lines.length === 0 || !currentRegister}
+                >
+                  Finalizar (F2)
+                </Button>
+              </div>
+            </div>
 
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => {
-                if (lines.length > 0) setConfirmCancel(true);
-              }}
-              disabled={lines.length === 0}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Cancelar venda (Esc)
-            </Button>
-
-            <div className="mt-auto text-[11px] text-muted-foreground space-y-1">
+            <div className="text-[11px] text-muted-foreground space-y-0.5">
               <p>Dica: digite <code>3*7891234567890</code> para adicionar 3 unidades.</p>
               <p>Atalhos no checkout: <kbd className="px-1 border rounded text-[10px]">A–Z</kbd> foca forma, <kbd className="px-1 border rounded text-[10px]">Home</kbd> desconto/acréscimo.</p>
             </div>
