@@ -198,6 +198,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/frente-caixa/lista" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaLista />
+        </ProtectedRoute>
+      } />
+
       {/* Estoque (módulo mercado) — guard interno via useMercadoEnabled */}
       <Route path="/estoque" element={
         <ProtectedRoute requireCompany>
