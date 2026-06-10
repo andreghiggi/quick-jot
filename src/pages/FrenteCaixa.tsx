@@ -914,6 +914,18 @@ export default function FrenteCaixa() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <FrenteCaixaCashMovementDialog
+          open={cashMovementOpen !== null}
+          type={cashMovementOpen ?? 'sangria'}
+          companyId={company?.id}
+          cashRegisterId={currentRegister?.id}
+          userId={user?.id}
+          onOpenChange={(o) => {
+            if (!o) setCashMovementOpen(null);
+          }}
+          onDone={() => setTimeout(() => inputRef.current?.focus(), 50)}
+        />
       </div>
     </PDVV2Layout>
   );
