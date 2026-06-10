@@ -47,6 +47,7 @@ import {
   FrenteCaixaCashMovementDialog,
   type CashMovementType,
 } from '@/components/frente-caixa/FrenteCaixaCashMovementDialog';
+import { FrenteCaixaInutilizarNfceDialog } from '@/components/frente-caixa/FrenteCaixaInutilizarNfceDialog';
 import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 
@@ -97,6 +98,7 @@ export default function FrenteCaixa() {
   const [detailsTarget, setDetailsTarget] = useState<CartLine | null>(null);
   const [cashMovementOpen, setCashMovementOpen] = useState<null | CashMovementType>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [inutOpen, setInutOpen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -508,6 +510,7 @@ export default function FrenteCaixa() {
               onOpenChange={setMenuOpen}
               onSangria={() => setCashMovementOpen('sangria')}
               onSuprimento={() => setCashMovementOpen('suprimento')}
+              onInutilizarNfce={() => setInutOpen(true)}
             />
           </div>
         </div>
@@ -931,6 +934,12 @@ export default function FrenteCaixa() {
             if (!o) setCashMovementOpen(null);
           }}
           onDone={() => setTimeout(() => inputRef.current?.focus(), 50)}
+        />
+
+        <FrenteCaixaInutilizarNfceDialog
+          open={inutOpen}
+          companyId={company?.id}
+          onOpenChange={setInutOpen}
         />
       </div>
     </PDVV2Layout>
