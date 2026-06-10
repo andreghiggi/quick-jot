@@ -1,5 +1,4 @@
 name: Deploy to VPS
-# trigger: force redeploy 2026-06-10
 
 on:
   push:
@@ -16,6 +15,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build project
+        run: bun run build
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
@@ -23,17 +33,17 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy on VPS
+      - name: Deploy dist to VPS
         run: |
-          ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} << 'ENDSSH'
+          tar -C dist -czf - . | ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} << 'ENDSSH'
             set -e
-            cd /var/www/comandatech
-            echo "==> Pulling latest code"
-            git pull origin main
-            echo "==> Installing dependencies"
-            npm install --no-audit --no-fund
-            echo "==> Building project"
-            npm run build
+            echo "==> Preparing static deploy"
+            rm -rf /tmp/comandatech-dist
+            mkdir -p /tmp/comandatech-dist /var/www/comandatech/dist
+            tar -xzf - -C /tmp/comandatech-dist
+            echo "==> Publishing dist"
+            rm -rf /var/www/comandatech/dist/*
+            cp -a /tmp/comandatech-dist/. /var/www/comandatech/dist/
             echo "==> Reloading Nginx"
             systemctl reload nginx
             echo "==> Deploy complete!"
