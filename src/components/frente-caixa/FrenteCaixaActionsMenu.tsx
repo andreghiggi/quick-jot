@@ -1,31 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import {
-  Menu,
-  ArrowUpFromLine,
-  ArrowDownToLine,
-  List,
-  Receipt,
-  FileX2,
-  FileArchive,
-  Settings,
-  CreditCard,
-  Printer,
-  Users,
-  Package,
-  Boxes,
-  CircleDollarSign,
-} from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
+import { ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Props {
   onSangria: () => void;
@@ -37,13 +12,35 @@ interface Props {
   onOpenChange?: (o: boolean) => void;
 }
 
+type Item = {
+  /** Label completa do item. */
+  label: string;
+  /** Índice (0-based) da letra a ser sublinhada como atalho visual estilo GWeb. */
+  accel?: number;
+  onClick: () => void;
+  disabled?: boolean;
+  hint?: string; // ex.: "Desativado", "Em breve"
+};
+
+/** Renderiza o label com uma letra sublinhada (padrão GWeb). */
+function AccelLabel({ label, accel = 0 }: { label: string; accel?: number }) {
+  if (accel < 0 || accel >= label.length) return <>{label}</>;
+  return (
+    <>
+      {label.slice(0, accel)}
+      <span className="underline">{label[accel]}</span>
+      {label.slice(accel + 1)}
+    </>
+  );
+}
+
 /**
- * Menu lateral (Sheet à direita) com os atalhos no estilo do Gweb:
- * - Acessar (navegação rápida para módulos relacionados)
- * - Ações (sangria, suprimento, lista do PDV, inutilizar NFC-e, XML do mês)
- * - Configurações (formas de pagamento, impressão, clientes, produtos, estoque)
+ * Rail lateral fixo à direita (estilo Gweb). Não é Sheet/modal: fica
+ * sempre encostado na borda direita do viewport, com setinha »/« para
+ * expandir/recolher. Atalho F10 alterna o estado (controlado pelo pai).
  *
- * Acessível por botão no header e por atalho <kbd>F10</kbd>.
+ * Seções em cards brancos: Acessar, Ações, Configurações.
+ * Itens usam letra sublinhada como dica visual de atalho (estilo Gweb).
  */
 export function FrenteCaixaActionsMenu({
   onSangria,
@@ -51,40 +48,34 @@ export function FrenteCaixaActionsMenu({
   onLista,
   onInutilizarNfce,
   onXmlMes,
-  open,
+  open = false,
   onOpenChange,
 }: Props) {
   const navigate = useNavigate();
+  const toggle = () => onOpenChange?.(!open);
 
-  const block = (
-    title: string,
-    items: { label: string; icon: any; onClick: () => void; shortcut?: string; soon?: boolean }[],
-  ) => (
-    <div className="space-y-1">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-2">
-        {title}
-      </p>
-      <ul className="space-y-0.5">
+  const Section = ({ title, items }: { title: string; items: Item[] }) => (
+    <div className="rounded-md bg-card border shadow-sm overflow-hidden">
+      <p className="px-4 pt-3 pb-1 text-[12px] text-muted-foreground">{title}</p>
+      <ul className="pb-2">
         {items.map((it) => (
           <li key={it.label}>
             <button
               type="button"
-              disabled={it.soon}
+              disabled={it.disabled}
               onClick={() => {
-                if (it.soon) return;
+                if (it.disabled) return;
                 it.onClick();
               }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <it.icon className="h-4 w-4 text-muted-foreground" />
-              <span className="flex-1 text-left">{it.label}</span>
-              {it.soon && (
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">em breve</span>
+              className={cn(
+                'w-full text-left px-4 py-1.5 text-[15px] transition-colors',
+                'hover:bg-accent hover:text-accent-foreground',
+                it.disabled && 'opacity-50 cursor-not-allowed hover:bg-transparent',
               )}
-              {it.shortcut && !it.soon && (
-                <kbd className="px-1.5 py-0.5 border rounded text-[10px] bg-muted">
-                  {it.shortcut}
-                </kbd>
+            >
+              <AccelLabel label={it.label} accel={it.accel ?? 0} />
+              {it.hint && (
+                <span className="ml-1.5 text-xs text-muted-foreground">({it.hint})</span>
               )}
             </button>
           </li>
@@ -94,52 +85,68 @@ export function FrenteCaixaActionsMenu({
   );
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Menu className="h-4 w-4" />
-          Menu
-          <kbd className="ml-1 px-1 py-0.5 border rounded text-[10px] bg-muted">F10</kbd>
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="right" className="w-80 sm:w-96">
-        <SheetHeader>
-          <SheetTitle>Menu da Frente de Caixa</SheetTitle>
-          <SheetDescription>
-            Atalhos para operações de caixa, fiscais e configurações.
-          </SheetDescription>
-        </SheetHeader>
+    <>
+      {/* Aba para expandir/recolher — visível em todos os estados, fixa na borda direita */}
+      <button
+        type="button"
+        onClick={toggle}
+        title={open ? 'Recolher menu (F10)' : 'Expandir menu (F10)'}
+        aria-label={open ? 'Recolher menu' : 'Expandir menu'}
+        className={cn(
+          'fixed top-1/2 -translate-y-1/2 z-40 h-12 w-6 rounded-l-md bg-card border border-r-0 shadow-sm',
+          'flex items-center justify-center text-muted-foreground hover:bg-accent transition-all',
+          open ? 'right-80' : 'right-0',
+        )}
+      >
+        {open ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+      </button>
 
-        <div className="mt-6 space-y-5">
-          {block('Acessar', [
-            { label: 'Pedidos', icon: Receipt, onClick: () => navigate('/pedidos') },
-            { label: 'Clientes', icon: Users, onClick: () => navigate('/clientes') },
-            { label: 'Produtos', icon: Package, onClick: () => navigate('/produtos') },
-            { label: 'Estoque', icon: Boxes, onClick: () => navigate('/estoque') },
-            { label: 'Relatório de Caixa', icon: CircleDollarSign, onClick: () => navigate('/relatorios/caixa') },
-            { label: 'NFC-e Monitor', icon: Receipt, onClick: () => navigate('/nfce') },
-          ])}
+      {/* Rail lateral fixo — fica encostado no canto direito, slide-in/out */}
+      <aside
+        className={cn(
+          'fixed top-0 right-0 bottom-0 z-30 w-80 bg-muted/40 border-l p-3 overflow-y-auto transition-transform',
+          open ? 'translate-x-0' : 'translate-x-full',
+        )}
+        aria-hidden={!open}
+      >
+        <div className="space-y-3 pt-2 pb-24">
+          <Section
+            title="Acessar"
+            items={[
+              { label: 'Pedidos', accel: 0, onClick: () => navigate('/pedidos') },
+              { label: 'Clientes', accel: 0, onClick: () => navigate('/clientes') },
+              { label: 'Produtos', accel: 0, onClick: () => navigate('/produtos') },
+              { label: 'Estoque', accel: 0, onClick: () => navigate('/estoque') },
+              { label: 'Relatório de Caixa', accel: 0, onClick: () => navigate('/relatorios/caixa') },
+              { label: 'NFC-e Monitor', accel: 5, onClick: () => navigate('/nfce') },
+            ]}
+          />
 
-          <Separator />
+          <Section
+            title="Ações"
+            items={[
+              { label: 'Inutilizar numeração', accel: 0, onClick: onInutilizarNfce ?? (() => {}), disabled: !onInutilizarNfce },
+              { label: 'XML do mês', accel: 0, onClick: onXmlMes ?? (() => {}), disabled: !onXmlMes },
+              { label: 'Contingência', accel: 0, onClick: () => {}, disabled: true, hint: 'Desativado' },
+              { label: 'Sangria', accel: 0, onClick: onSangria },
+              { label: 'Suprimento', accel: 0, onClick: onSuprimento },
+              { label: 'Lista do PDV', accel: 0, onClick: onLista ?? (() => navigate('/frente-caixa/lista')) },
+              { label: 'Rel. de fechamento', accel: 5, onClick: () => navigate('/relatorios/caixa') },
+            ]}
+          />
 
-          {block('Ações', [
-            { label: 'Suprimento', icon: ArrowDownToLine, onClick: onSuprimento, shortcut: 'F6' },
-            { label: 'Sangria', icon: ArrowUpFromLine, onClick: onSangria, shortcut: 'F7' },
-            { label: 'Lista do PDV', icon: List, onClick: onLista ?? (() => navigate('/frente-caixa/lista')) },
-            { label: 'Inutilizar NFC-e', icon: FileX2, onClick: onInutilizarNfce ?? (() => {}), soon: !onInutilizarNfce },
-            { label: 'XML do mês', icon: FileArchive, onClick: onXmlMes ?? (() => {}), soon: !onXmlMes },
-          ])}
-
-          <Separator />
-
-          {block('Configurações', [
-            { label: 'Formas de pagamento', icon: CreditCard, onClick: () => navigate('/formas-pagamento') },
-            { label: 'Impressão', icon: Printer, onClick: () => navigate('/configuracoes/impressao') },
-            { label: 'Configurações do PDV', icon: Settings, onClick: () => navigate('/frente-caixa/configuracoes') },
-            { label: 'Geral da loja', icon: Settings, onClick: () => navigate('/configuracoes') },
-          ])}
+          <Section
+            title="Configurações"
+            items={[
+              { label: 'Configurações do PDV', accel: 0, onClick: () => navigate('/frente-caixa/configuracoes') },
+              { label: 'Configurações da NFC-e', accel: 2, onClick: () => navigate('/configuracoes') },
+              { label: 'Preferências', accel: 0, onClick: () => navigate('/configuracoes') },
+              { label: 'Formas de pagamento', accel: 0, onClick: () => navigate('/formas-pagamento') },
+              { label: 'Impressão', accel: 0, onClick: () => navigate('/configuracoes/impressao') },
+            ]}
+          />
         </div>
-      </SheetContent>
-    </Sheet>
+      </aside>
+    </>
   );
 }

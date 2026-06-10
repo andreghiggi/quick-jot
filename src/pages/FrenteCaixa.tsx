@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { ScanBarcode, X, Plus, Minus, Loader2, AlertTriangle, Trash2, Tag, MoreHorizontal } from 'lucide-react';
+import { ScanBarcode, X, Plus, Minus, Loader2, AlertTriangle, Trash2, Tag, MoreHorizontal, Maximize2, Minimize2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PDVV2Layout } from '@/components/layout/PDVV2Layout';
@@ -101,8 +101,23 @@ export default function FrenteCaixa() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [inutOpen, setInutOpen] = useState(false);
   const [xmlMesOpen, setXmlMesOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // ---- fullscreen ----
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  }
 
   // ---- helpers ----
   const activeProducts = useMemo(
@@ -507,14 +522,16 @@ export default function FrenteCaixa() {
               <kbd className="px-1 py-0.5 border rounded text-[10px]">F4</kbd> remover último •{' '}
               <kbd className="px-1 py-0.5 border rounded text-[10px]">Esc</kbd> cancelar
             </div>
-            <FrenteCaixaActionsMenu
-              open={menuOpen}
-              onOpenChange={setMenuOpen}
-              onSangria={() => setCashMovementOpen('sangria')}
-              onSuprimento={() => setCashMovementOpen('suprimento')}
-              onInutilizarNfce={() => setInutOpen(true)}
-              onXmlMes={() => setXmlMesOpen(true)}
-            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              title={isFullscreen ? 'Sair de tela cheia' : 'Tela cheia'}
+              onClick={toggleFullscreen}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
 
@@ -945,6 +962,30 @@ export default function FrenteCaixa() {
             companyName={company.name}
           />
         )}
+
+        {/* Rail lateral (estilo Gweb) — abre/fecha pela setinha »/« ou F10 */}
+        <FrenteCaixaActionsMenu
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+          onSangria={() => setCashMovementOpen('sangria')}
+          onSuprimento={() => setCashMovementOpen('suprimento')}
+          onInutilizarNfce={() => setInutOpen(true)}
+          onXmlMes={() => setXmlMesOpen(true)}
+        />
+
+        {/* FAB vermelho — atalho contextual (foca scanner ou abre pagamento) */}
+        <button
+          type="button"
+          onClick={() => {
+            if (lines.length > 0) tryOpenPayment();
+            else inputRef.current?.focus();
+          }}
+          title={lines.length > 0 ? 'Finalizar venda' : 'Focar scanner'}
+          aria-label="Ação rápida"
+          className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90 transition flex items-center justify-center"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
       </div>
     </PDVV2Layout>
   );
