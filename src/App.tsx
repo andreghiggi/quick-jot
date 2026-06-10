@@ -54,6 +54,7 @@ import PDVV2 from "./pages/PDVV2";
 import CouponsPage from "./pages/Coupons";
 import MesaQR from "./pages/MesaQR";
 import FrenteCaixa from "./pages/FrenteCaixa";
+import FrenteCaixaLista from "./pages/FrenteCaixaLista";
 import EstoqueRelatorio from "./pages/EstoqueRelatorio";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 
@@ -194,6 +195,12 @@ function AppRoutes() {
       <Route path="/frente-caixa" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixa />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/frente-caixa/lista" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaLista />
         </ProtectedRoute>
       } />
 
