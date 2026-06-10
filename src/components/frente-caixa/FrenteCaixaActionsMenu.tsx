@@ -33,6 +33,8 @@ interface Props {
   onLista?: () => void;
   onInutilizarNfce?: () => void;
   onXmlMes?: () => void;
+  open?: boolean;
+  onOpenChange?: (o: boolean) => void;
 }
 
 /**
@@ -49,6 +51,8 @@ export function FrenteCaixaActionsMenu({
   onLista,
   onInutilizarNfce,
   onXmlMes,
+  open,
+  onOpenChange,
 }: Props) {
   const navigate = useNavigate();
 
@@ -90,7 +94,7 @@ export function FrenteCaixaActionsMenu({
   );
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Menu className="h-4 w-4" />
