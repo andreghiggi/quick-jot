@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.18.0-beta";
-export const RELEASE_DATE = "2026-06-09"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: menu de contexto e ajustes por item";
+export const VERSION = "1.18.1-beta";
+export const RELEASE_DATE = "2026-06-10"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Multi-pagamento v1.7.2 — auto-finalizar + trava até registrar";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.18.1-beta",
+    date: "2026-06-10",
+    codename: "Multi-pagamento v1.7.2 — auto-finalizar + trava até registrar",
+    changes: [
+      "Correção crítica no Multi-pagamento sequencial (PDV V2, Cobrar Comanda/Mesa, Pedido Express, Cobrar Pedido do Cardápio): quando o operador zerava o saldo restante (última cobrança TEF aprovada), o modal NÃO finalizava sozinho — esperava o clique manual em 'Finalizar venda (NFC-e)'. Se o operador fechava o modal/atualizava a tela nesse ponto, o PinPad já tinha cobrado o cliente mas a venda NUNCA era registrada no caixa, a NFC-e não saía e a comanda continuava em aberto (caso Bon Appetit / Mesa 11 / Comanda #268).",
+      "Agora, assim que o restante chega a R$ 0,00, o modal AUTO-FINALIZA: dispara onConfirm (addSale + NFC-e quando aplicável) e só depois marca a cobrança como completed — sem depender do clique do operador.",
+      "Trava de saída reforçada: o modal só libera o fechamento depois que markCompleted gravar status='completed' no servidor. Antes, com o restante zerado mas a venda ainda não registrada, o modal era 'fechável' — agora continua travado até a venda existir de fato.",
+      "Se onConfirm falhar (ex.: erro de rede ao gravar a venda), o modal NÃO marca como completed: continua travado mostrando o erro, e o operador pode tentar finalizar de novo ou usar 'Cancelar e estornar tudo' (CNC automático nos TEFs aprovados).",
+      "Nada de runTefPayment, pinpadService, tef-webservice, nfce-proxy, runMultiPayment, single-payment, splits por pessoas/itens, TEF v1.0/v1.1/v1.2-beta foi alterado — a mudança está isolada ao PDVV2SequentialPaymentDialog.",
+    ],
+  },
   {
     version: "1.18.0-beta",
     date: "2026-06-09",

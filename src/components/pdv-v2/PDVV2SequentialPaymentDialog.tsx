@@ -131,6 +131,13 @@ export function PDVV2SequentialPaymentDialog({
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [rolling, setRolling] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  // Flag que indica que `onConfirm` rodou com sucesso e `markCompleted`
+  // já gravou status='completed'. Só liberamos a saída do modal depois disso —
+  // assim, mesmo que o operador clique fora ou aperte ESC, ele não escapa de
+  // uma cobrança com PinPad aprovado sem a venda ter sido registrada.
+  const [completed, setCompleted] = useState(false);
+  // Trava para garantir que o auto-finalizar só dispara uma vez por cobrança.
+  const autoFinishedRef = useRef(false);
   // Modo de documento — só importa quando NÃO há TEF aprovado.
   // Default 'sale_only' (não emite NFC-e) — pareia com o comportamento
   // padrão do single-payment quando o operador não escolhe NFC-e.
@@ -169,6 +176,8 @@ export function PDVV2SequentialPaymentDialog({
     setTefStatus('');
     setCharging(false);
     setFinalizing(false);
+    setCompleted(false);
+    autoFinishedRef.current = false;
     setConfirmCancelOpen(false);
     setDocumentMode('sale_only');
 
@@ -367,14 +376,33 @@ export function PDVV2SequentialPaymentDialog({
       const wantsNfce = fiscalEnabled && (hasTefApproved || documentMode === 'sale_with_nfce');
       await onConfirm(lines, { wantsNfce });
       await markCompleted();
+      setCompleted(true);
       // Caller fecha o dialog via onOpenChange.
     } catch (e: any) {
       console.error('[PDVV2Sequential] finalize error', e);
       toast.error(e?.message || 'Falha ao finalizar a venda.');
+      // Não marca como completed — modal continua travado e o operador
+      // pode tentar finalizar de novo (ou cancelar com estorno).
     } finally {
       setFinalizing(false);
     }
   }
+
+  // -------- Auto-finalizar quando o restante zerar --------
+  // Quando a última cobrança aprovada zera o restante, dispara `handleFinish`
+  // automaticamente — sem depender do operador clicar no botão. Isso evita
+  // o cenário "TEF aprovado no PinPad mas venda nunca registrada" se o
+  // operador fechar a tela / o sistema cair antes do clique manual.
+  useEffect(() => {
+    if (!open) return;
+    if (!exact || !hasApproved) return;
+    if (autoFinishedRef.current) return;
+    if (charging || finalizing || rolling || processing) return;
+    if (completed) return;
+    autoFinishedRef.current = true;
+    void handleFinish();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, exact, hasApproved, charging, finalizing, rolling, processing, completed]);
 
   // -------- Ação: cancelar com estorno --------
   async function handleCancelAndRefund() {
@@ -402,7 +430,11 @@ export function PDVV2SequentialPaymentDialog({
   }
 
   // -------- Trava de saída --------
-  const locked = hasApproved && !exact;
+  // Trava enquanto: há cobrança aprovada E (ainda falta valor OU a venda
+  // ainda não foi marcada como completed). Só libera após `markCompleted`
+  // rodar com sucesso — antes disso, fechar o modal deixaria PinPad
+  // aprovado sem venda registrada.
+  const locked = hasApproved && (!exact || !completed);
   const busy = charging || finalizing || rolling || processing;
 
   function handleOpenChangeGuarded(o: boolean) {
@@ -413,12 +445,12 @@ export function PDVV2SequentialPaymentDialog({
       onOpenChange(false);
       return;
     }
-    // Cobrança concluída (restante = 0) — pode fechar.
-    if (exact) {
+    // Cobrança concluída E venda registrada (markCompleted ok) — pode fechar.
+    if (exact && completed) {
       onOpenChange(false);
       return;
     }
-    // Travado — força cancelar com estorno.
+    // Travado — força cancelar com estorno (ou aguardar finalizar).
     setConfirmCancelOpen(true);
   }
 

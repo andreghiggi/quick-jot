@@ -22,3 +22,14 @@ type: feature
 - `onConfirm` agora é `(lines, { wantsNfce }) => Promise<void>`. Os 3 callers (PDVV2, OrderCardChargeDialog, PedidoExpressDialog) trocaram `if (fiscalEnabled)` por `if (opts.wantsNfce)` na emissão NFC-e.
 - Nova prop `fiscalEnabled` repassada pelos 3 callers.
 - Bump: v1.12.1-beta.
+
+## v1.7.2 (2026-06-10) — auto-finalizar + trava até registrar
+
+- Bug Bon Appetit (Mesa 11 / Comanda #268): quando o restante zerava, o modal NÃO chamava `handleFinish` sozinho — esperava clique manual em "Finalizar venda". Se o operador fechasse a tela aí, os TEFs já estavam aprovados no PinPad mas `addSale` / `closeTab` / NFC-e nunca rodavam. A `pdv_v2_open_charges` ficava `open`, comanda ficava `open` e a venda sumia.
+- Fix em `PDVV2SequentialPaymentDialog.tsx`:
+  - Novo state `completed` + ref `autoFinishedRef`.
+  - `useEffect` dispara `handleFinish()` automaticamente quando `exact && hasApproved && !busy && !completed`, uma única vez por cobrança.
+  - `handleFinish` só seta `completed=true` APÓS `onConfirm` + `markCompleted` rodarem com sucesso. Se onConfirm falhar, completed continua false e modal segue travado pra o operador tentar de novo ou cancelar com estorno.
+  - `locked = hasApproved && (!exact || !completed)` — antes era só `!exact`. Agora a trava de saída cobre o intervalo entre "restante=0" e "venda registrada".
+- Intocados: runTefPayment, runMultiPayment, pinpadService, tef-webservice, nfce-proxy, splits I9, TEF v1.0/1.1/1.2-beta, callers (PDVV2, OrderCardChargeDialog, PedidoExpressDialog).
+- Bump: v1.18.1-beta.
