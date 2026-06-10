@@ -208,17 +208,12 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                 </div>
               )}
               {!loading && query.trim().length >= 2 && results.length === 0 && (
-                <div className="py-6 text-center text-sm text-muted-foreground space-y-3">
+                <div className="py-6 text-center text-sm text-muted-foreground space-y-2">
                   <p>Nenhum cliente encontrado.</p>
                   {onlyDigits(query).length >= 11 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleUseRawCpf}
-                    >
-                      Usar “{onlyDigits(query)}” como CPF/CNPJ no cupom
-                    </Button>
+                    <p className="text-xs">
+                      Clique em <strong>CONFIRMAR</strong> para usar “{onlyDigits(query)}” como CPF/CNPJ no cupom (sem cadastrar).
+                    </p>
                   )}
                 </div>
               )}
@@ -280,8 +275,11 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                 <Button
                   type="button"
                   size="sm"
-                  disabled={!selected}
-                  onClick={handleConfirmSelected}
+                  disabled={!selected && onlyDigits(query).length < 11}
+                  onClick={() => {
+                    if (selected) handleConfirmSelected();
+                    else handleUseRawCpf();
+                  }}
                 >
                   CONFIRMAR
                 </Button>
