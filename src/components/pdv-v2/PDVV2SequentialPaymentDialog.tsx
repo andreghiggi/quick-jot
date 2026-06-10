@@ -131,6 +131,13 @@ export function PDVV2SequentialPaymentDialog({
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [rolling, setRolling] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  // Flag que indica que `onConfirm` rodou com sucesso e `markCompleted`
+  // já gravou status='completed'. Só liberamos a saída do modal depois disso —
+  // assim, mesmo que o operador clique fora ou aperte ESC, ele não escapa de
+  // uma cobrança com PinPad aprovado sem a venda ter sido registrada.
+  const [completed, setCompleted] = useState(false);
+  // Trava para garantir que o auto-finalizar só dispara uma vez por cobrança.
+  const autoFinishedRef = useRef(false);
   // Modo de documento — só importa quando NÃO há TEF aprovado.
   // Default 'sale_only' (não emite NFC-e) — pareia com o comportamento
   // padrão do single-payment quando o operador não escolhe NFC-e.
@@ -169,6 +176,8 @@ export function PDVV2SequentialPaymentDialog({
     setTefStatus('');
     setCharging(false);
     setFinalizing(false);
+    setCompleted(false);
+    autoFinishedRef.current = false;
     setConfirmCancelOpen(false);
     setDocumentMode('sale_only');
 
