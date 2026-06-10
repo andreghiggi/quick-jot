@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { ScanBarcode, X, Plus, Minus, Loader2, AlertTriangle, Trash2, Tag, MoreHorizontal } from 'lucide-react';
+import { ScanBarcode, X, Plus, Minus, Loader2, AlertTriangle, Trash2, Tag, MoreHorizontal, Maximize2, Minimize2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PDVV2Layout } from '@/components/layout/PDVV2Layout';
@@ -507,14 +507,16 @@ export default function FrenteCaixa() {
               <kbd className="px-1 py-0.5 border rounded text-[10px]">F4</kbd> remover último •{' '}
               <kbd className="px-1 py-0.5 border rounded text-[10px]">Esc</kbd> cancelar
             </div>
-            <FrenteCaixaActionsMenu
-              open={menuOpen}
-              onOpenChange={setMenuOpen}
-              onSangria={() => setCashMovementOpen('sangria')}
-              onSuprimento={() => setCashMovementOpen('suprimento')}
-              onInutilizarNfce={() => setInutOpen(true)}
-              onXmlMes={() => setXmlMesOpen(true)}
-            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              title={isFullscreen ? 'Sair de tela cheia' : 'Tela cheia'}
+              onClick={toggleFullscreen}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
 
