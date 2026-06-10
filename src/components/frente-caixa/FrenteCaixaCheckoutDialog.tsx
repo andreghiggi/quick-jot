@@ -527,38 +527,57 @@ export function FrenteCaixaCheckoutDialog({
               />
               {step === 2 && (
                 <div className="ml-9 space-y-3 max-w-xl">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                      <Label className="text-xs text-muted-foreground">Nome</Label>
-                      <Input
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        placeholder="Nome do cliente (opcional)"
-                        disabled={processing}
-                        className="bg-muted/40 border-border"
-                      />
+                  {customerName || customerPhone || customerDocument ? (
+                    <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 px-4 py-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">
+                          {customerName || 'Cliente avulso'}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {[customerPhone, customerDocument && `CPF ${customerDocument}`]
+                            .filter(Boolean)
+                            .join(' • ') || 'Sem dados'}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setCustomerDialogOpen(true)}
+                          disabled={processing}
+                        >
+                          Alterar
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setCustomerName('');
+                            setCustomerPhone('');
+                            setCustomerDocument('');
+                          }}
+                          disabled={processing}
+                        >
+                          Remover
+                        </Button>
+                      </div>
                     </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Telefone</Label>
-                      <Input
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        placeholder="(opcional)"
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-6 gap-3">
+                      <p className="text-sm text-muted-foreground">Nenhum cliente vinculado</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCustomerDialogOpen(true)}
                         disabled={processing}
-                        className="bg-muted/40 border-border"
-                      />
+                      >
+                        INFORMAR CLIENTE
+                      </Button>
                     </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">CPF</Label>
-                      <Input
-                        value={customerDocument}
-                        onChange={(e) => setCustomerDocument(e.target.value)}
-                        placeholder="(opcional)"
-                        disabled={processing}
-                        className="bg-muted/40 border-border"
-                      />
-                    </div>
-                  </div>
+                  )}
                   <div className="flex justify-end">
                     <Button
                       type="button"
