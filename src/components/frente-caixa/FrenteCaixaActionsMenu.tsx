@@ -125,7 +125,7 @@ export function FrenteCaixaActionsMenu({
           {block('Ações', [
             { label: 'Suprimento', icon: ArrowDownToLine, onClick: onSuprimento, shortcut: 'F6' },
             { label: 'Sangria', icon: ArrowUpFromLine, onClick: onSangria, shortcut: 'F7' },
-            { label: 'Lista do PDV', icon: List, onClick: onLista ?? (() => {}), soon: !onLista },
+            { label: 'Lista do PDV', icon: List, onClick: onLista ?? (() => navigate('/frente-caixa/lista')) },
             { label: 'Inutilizar NFC-e', icon: FileX2, onClick: onInutilizarNfce ?? (() => {}), soon: !onInutilizarNfce },
             { label: 'XML do mês', icon: FileArchive, onClick: onXmlMes ?? (() => {}), soon: !onXmlMes },
           ])}
