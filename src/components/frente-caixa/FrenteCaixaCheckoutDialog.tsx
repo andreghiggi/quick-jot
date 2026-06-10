@@ -648,6 +648,16 @@ export function FrenteCaixaCheckoutDialog({
           </div>
         </div>
       </DialogContent>
+      <FrenteCaixaCustomerDialog
+        open={customerDialogOpen}
+        onOpenChange={setCustomerDialogOpen}
+        companyId={companyId}
+        onPick={(c) => {
+          setCustomerName(c.name || '');
+          setCustomerPhone(c.phone || '');
+          setCustomerDocument(c.document || '');
+        }}
+      />
     </Dialog>
   );
 }
