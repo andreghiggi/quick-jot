@@ -808,6 +808,74 @@ export type Database = {
           },
         ]
       }
+      nfce_inutilizacoes: {
+        Row: {
+          ambiente: string | null
+          ano: number
+          company_id: string
+          created_at: string
+          created_by: string
+          external_id: string | null
+          id: string
+          justificativa: string
+          motivo_rejeicao: string | null
+          numero_final: number
+          numero_inicial: number
+          protocolo: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          serie: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ambiente?: string | null
+          ano: number
+          company_id: string
+          created_at?: string
+          created_by: string
+          external_id?: string | null
+          id?: string
+          justificativa: string
+          motivo_rejeicao?: string | null
+          numero_final: number
+          numero_inicial: number
+          protocolo?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          serie: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ambiente?: string | null
+          ano?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          external_id?: string | null
+          id?: string
+          justificativa?: string
+          motivo_rejeicao?: string | null
+          numero_final?: number
+          numero_inicial?: number
+          protocolo?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          serie?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfce_inutilizacoes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nfce_records: {
         Row: {
           ambiente: string | null
