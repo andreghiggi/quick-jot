@@ -30,7 +30,7 @@ jobs:
             echo "==> Pulling latest code"
             git pull origin main
             echo "==> Installing dependencies"
-            npm ci
+            npm install --no-audit --no-fund
             echo "==> Building project"
             npm run build
             echo "==> Reloading Nginx"
