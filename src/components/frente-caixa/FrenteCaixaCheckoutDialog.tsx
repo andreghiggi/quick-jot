@@ -14,6 +14,7 @@ import {
   runMultiPayment,
   type MultiPaymentInputLine,
 } from '@/utils/pdvV2MultiPayment';
+import { FrenteCaixaCustomerDialog } from './FrenteCaixaCustomerDialog';
 
 /**
  * "Finalizando venda" — tela de checkout da Frente de Caixa (módulo mercado).
@@ -91,6 +92,7 @@ export function FrenteCaixaCheckoutDialog({
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerDocument, setCustomerDocument] = useState('');
   const [notes, setNotes] = useState('');
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
 
   const [processing, setProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>('');
@@ -127,6 +129,7 @@ export function FrenteCaixaCheckoutDialog({
       setCustomerPhone('');
       setCustomerDocument('');
       setNotes('');
+      setCustomerDialogOpen(false);
       setProcessing(false);
       setProcessingStatus('');
     }
@@ -170,6 +173,8 @@ export function FrenteCaixaCheckoutDialog({
     if (!open) return;
     function onKey(e: KeyboardEvent) {
       if (processing) return;
+      // não capturar atalhos enquanto o modal de cliente está aberto
+      if (customerDialogOpen) return;
       // Ctrl + 1/2/3 → etapas
       if (e.ctrlKey && (e.key === '1' || e.key === '2' || e.key === '3')) {
         e.preventDefault();
@@ -243,7 +248,7 @@ export function FrenteCaixaCheckoutDialog({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, step, processing, allocated, activePaymentMethods, exact]);
+  }, [open, step, processing, allocated, activePaymentMethods, exact, customerDialogOpen]);
 
   // ===== salvar =====
   async function handleSave() {
