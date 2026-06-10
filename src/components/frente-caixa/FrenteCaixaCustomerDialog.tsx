@@ -45,6 +45,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
   const [results, setResults] = useState<CustomerRow[]>([]);
   const [selected, setSelected] = useState<CustomerRow | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cpfArmed, setCpfArmed] = useState(false);
 
   // create form
   const [form, setForm] = useState({ name: '', phone: '', cpf: '' });
@@ -59,6 +60,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
       setQuery('');
       setResults([]);
       setSelected(null);
+      setCpfArmed(false);
       setForm({ name: '', phone: '', cpf: '' });
       setSaving(false);
       setTimeout(() => searchRef.current?.focus(), 60);
@@ -189,11 +191,17 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setSelected(null);
+                  setCpfArmed(false);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && selected) {
                     e.preventDefault();
                     handleConfirmSelected();
+                    return;
+                  }
+                  if (e.key === 'Enter' && !selected && onlyDigits(query).length >= 11) {
+                    e.preventDefault();
+                    setCpfArmed(true);
                   }
                 }}
                 placeholder="Digite para buscar…"
@@ -201,20 +209,29 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
               />
             </div>
 
+            {onlyDigits(query).length >= 11 && !selected && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {cpfArmed ? (
+                  <>
+                    CPF/CNPJ <strong className="text-foreground">{onlyDigits(query)}</strong> pronto. Clique em <strong>CONFIRMAR</strong>.
+                  </>
+                ) : (
+                  <>
+                    Pressione <kbd className="px-1.5 py-0.5 border rounded text-[10px] font-mono">Enter</kbd> para informar somente o CPF/CNPJ
+                  </>
+                )}
+              </p>
+            )}
+
             <div className="mt-4 min-h-[160px] max-h-[280px] overflow-y-auto">
               {loading && (
                 <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" /> Buscando…
                 </div>
               )}
-              {!loading && query.trim().length >= 2 && results.length === 0 && (
-                <div className="py-6 text-center text-sm text-muted-foreground space-y-2">
+              {!loading && query.trim().length >= 2 && results.length === 0 && onlyDigits(query).length < 11 && (
+                <div className="py-6 text-center text-sm text-muted-foreground">
                   <p>Nenhum cliente encontrado.</p>
-                  {onlyDigits(query).length >= 11 && (
-                    <p className="text-xs">
-                      Clique em <strong>CONFIRMAR</strong> para usar “{onlyDigits(query)}” como CPF/CNPJ no cupom (sem cadastrar).
-                    </p>
-                  )}
                 </div>
               )}
               {!loading && results.length > 0 && (
@@ -275,10 +292,10 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                 <Button
                   type="button"
                   size="sm"
-                  disabled={!selected && onlyDigits(query).length < 11}
+                  disabled={!selected && !cpfArmed}
                   onClick={() => {
                     if (selected) handleConfirmSelected();
-                    else handleUseRawCpf();
+                    else if (cpfArmed) handleUseRawCpf();
                   }}
                 >
                   CONFIRMAR
