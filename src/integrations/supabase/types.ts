@@ -1494,6 +1494,59 @@ export type Database = {
           },
         ]
       }
+      pdv_settings: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          print_show_customer: boolean
+          print_show_discount: boolean
+          print_show_product_notes: boolean
+          print_show_sale_notes: boolean
+          print_show_serial: boolean
+          print_show_surcharge: boolean
+          promo_message: string
+          require_customer_above_value: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          print_show_customer?: boolean
+          print_show_discount?: boolean
+          print_show_product_notes?: boolean
+          print_show_sale_notes?: boolean
+          print_show_serial?: boolean
+          print_show_surcharge?: boolean
+          promo_message?: string
+          require_customer_above_value?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          print_show_customer?: boolean
+          print_show_discount?: boolean
+          print_show_product_notes?: boolean
+          print_show_sale_notes?: boolean
+          print_show_serial?: boolean
+          print_show_surcharge?: boolean
+          promo_message?: string
+          require_customer_above_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_v2_open_charges: {
         Row: {
           cash_register_id: string
