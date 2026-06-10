@@ -35,15 +35,18 @@ jobs:
 
       - name: Deploy dist to VPS
         run: |
-          tar -C dist -czf - . | ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} << 'ENDSSH'
+          tar -C dist -czf /tmp/comandatech-dist.tar.gz .
+          scp -i ~/.ssh/deploy_key /tmp/comandatech-dist.tar.gz root@${{ secrets.VPS_HOST }}:/tmp/comandatech-dist.tar.gz
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} << 'ENDSSH'
             set -e
             echo "==> Preparing static deploy"
             rm -rf /tmp/comandatech-dist
             mkdir -p /tmp/comandatech-dist /var/www/comandatech/dist
-            tar -xzf - -C /tmp/comandatech-dist
+            tar -xzf /tmp/comandatech-dist.tar.gz -C /tmp/comandatech-dist
             echo "==> Publishing dist"
             rm -rf /var/www/comandatech/dist/*
             cp -a /tmp/comandatech-dist/. /var/www/comandatech/dist/
+            rm -f /tmp/comandatech-dist.tar.gz
             echo "==> Reloading Nginx"
             systemctl reload nginx
             echo "==> Deploy complete!"
