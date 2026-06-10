@@ -376,14 +376,33 @@ export function PDVV2SequentialPaymentDialog({
       const wantsNfce = fiscalEnabled && (hasTefApproved || documentMode === 'sale_with_nfce');
       await onConfirm(lines, { wantsNfce });
       await markCompleted();
+      setCompleted(true);
       // Caller fecha o dialog via onOpenChange.
     } catch (e: any) {
       console.error('[PDVV2Sequential] finalize error', e);
       toast.error(e?.message || 'Falha ao finalizar a venda.');
+      // Não marca como completed — modal continua travado e o operador
+      // pode tentar finalizar de novo (ou cancelar com estorno).
     } finally {
       setFinalizing(false);
     }
   }
+
+  // -------- Auto-finalizar quando o restante zerar --------
+  // Quando a última cobrança aprovada zera o restante, dispara `handleFinish`
+  // automaticamente — sem depender do operador clicar no botão. Isso evita
+  // o cenário "TEF aprovado no PinPad mas venda nunca registrada" se o
+  // operador fechar a tela / o sistema cair antes do clique manual.
+  useEffect(() => {
+    if (!open) return;
+    if (!exact || !hasApproved) return;
+    if (autoFinishedRef.current) return;
+    if (charging || finalizing || rolling || processing) return;
+    if (completed) return;
+    autoFinishedRef.current = true;
+    void handleFinish();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, exact, hasApproved, charging, finalizing, rolling, processing, completed]);
 
   // -------- Ação: cancelar com estorno --------
   async function handleCancelAndRefund() {
