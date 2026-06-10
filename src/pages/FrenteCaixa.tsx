@@ -42,6 +42,11 @@ import {
   FrenteCaixaItemDetailsDialog,
   type ItemDetailsResult,
 } from '@/components/frente-caixa/FrenteCaixaItemDetailsDialog';
+import { FrenteCaixaActionsMenu } from '@/components/frente-caixa/FrenteCaixaActionsMenu';
+import {
+  FrenteCaixaCashMovementDialog,
+  type CashMovementType,
+} from '@/components/frente-caixa/FrenteCaixaCashMovementDialog';
 import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 
@@ -90,6 +95,7 @@ export default function FrenteCaixa() {
   const [removeQty, setRemoveQty] = useState<string>('1');
   const [priceTarget, setPriceTarget] = useState<CartLine | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<CartLine | null>(null);
+  const [cashMovementOpen, setCashMovementOpen] = useState<null | CashMovementType>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -173,6 +179,12 @@ export default function FrenteCaixa() {
         if (lines.length > 0) {
           setConfirmCancel(true);
         }
+      } else if (e.key === 'F6') {
+        e.preventDefault();
+        if (currentRegister) setCashMovementOpen('suprimento');
+      } else if (e.key === 'F7') {
+        e.preventDefault();
+        if (currentRegister) setCashMovementOpen('sangria');
       }
     }
     window.addEventListener('keydown', onKey);
