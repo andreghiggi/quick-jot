@@ -194,7 +194,7 @@ export default function FrenteCaixa() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lines, paymentOpen, confirmCancel, priceTarget, detailsTarget, removeTarget, lastTouchedId]);
+  }, [lines, paymentOpen, confirmCancel, priceTarget, detailsTarget, removeTarget, lastTouchedId, currentRegister]);
 
   // ---- lookup ----
   function findProduct(raw: string): { product: Product | null; multiple: Product[] } {
