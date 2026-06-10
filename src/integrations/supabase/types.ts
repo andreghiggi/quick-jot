@@ -190,6 +190,54 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_movements: {
+        Row: {
+          amount: number
+          cash_register_id: string
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          reason: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          cash_register_id: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          reason?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          cash_register_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          reason?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_registers: {
         Row: {
           closed_at: string | null

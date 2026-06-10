@@ -42,6 +42,11 @@ import {
   FrenteCaixaItemDetailsDialog,
   type ItemDetailsResult,
 } from '@/components/frente-caixa/FrenteCaixaItemDetailsDialog';
+import { FrenteCaixaActionsMenu } from '@/components/frente-caixa/FrenteCaixaActionsMenu';
+import {
+  FrenteCaixaCashMovementDialog,
+  type CashMovementType,
+} from '@/components/frente-caixa/FrenteCaixaCashMovementDialog';
 import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 
@@ -90,6 +95,8 @@ export default function FrenteCaixa() {
   const [removeQty, setRemoveQty] = useState<string>('1');
   const [priceTarget, setPriceTarget] = useState<CartLine | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<CartLine | null>(null);
+  const [cashMovementOpen, setCashMovementOpen] = useState<null | CashMovementType>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -173,12 +180,21 @@ export default function FrenteCaixa() {
         if (lines.length > 0) {
           setConfirmCancel(true);
         }
+      } else if (e.key === 'F6') {
+        e.preventDefault();
+        if (currentRegister) setCashMovementOpen('suprimento');
+      } else if (e.key === 'F7') {
+        e.preventDefault();
+        if (currentRegister) setCashMovementOpen('sangria');
+      } else if (e.key === 'F10') {
+        e.preventDefault();
+        setMenuOpen(true);
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lines, paymentOpen, confirmCancel, priceTarget, detailsTarget, removeTarget, lastTouchedId]);
+  }, [lines, paymentOpen, confirmCancel, priceTarget, detailsTarget, removeTarget, lastTouchedId, currentRegister]);
 
   // ---- lookup ----
   function findProduct(raw: string): { product: Product | null; multiple: Product[] } {
@@ -481,10 +497,18 @@ export default function FrenteCaixa() {
               <Badge variant="secondary" className="ml-1">Caixa aberto</Badge>
             )}
           </div>
-          <div className="text-xs text-muted-foreground">
-            <kbd className="px-1 py-0.5 border rounded text-[10px]">F2</kbd> finalizar •{' '}
-            <kbd className="px-1 py-0.5 border rounded text-[10px]">F4</kbd> remover último •{' '}
-            <kbd className="px-1 py-0.5 border rounded text-[10px]">Esc</kbd> cancelar
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-muted-foreground hidden md:block">
+              <kbd className="px-1 py-0.5 border rounded text-[10px]">F2</kbd> finalizar •{' '}
+              <kbd className="px-1 py-0.5 border rounded text-[10px]">F4</kbd> remover último •{' '}
+              <kbd className="px-1 py-0.5 border rounded text-[10px]">Esc</kbd> cancelar
+            </div>
+            <FrenteCaixaActionsMenu
+              open={menuOpen}
+              onOpenChange={setMenuOpen}
+              onSangria={() => setCashMovementOpen('sangria')}
+              onSuprimento={() => setCashMovementOpen('suprimento')}
+            />
           </div>
         </div>
 
@@ -896,6 +920,18 @@ export default function FrenteCaixa() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <FrenteCaixaCashMovementDialog
+          open={cashMovementOpen !== null}
+          type={cashMovementOpen ?? 'sangria'}
+          companyId={company?.id}
+          cashRegisterId={currentRegister?.id}
+          userId={user?.id}
+          onOpenChange={(o) => {
+            if (!o) setCashMovementOpen(null);
+          }}
+          onDone={() => setTimeout(() => inputRef.current?.focus(), 50)}
+        />
       </div>
     </PDVV2Layout>
   );
