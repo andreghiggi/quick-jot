@@ -48,6 +48,7 @@ import {
   type CashMovementType,
 } from '@/components/frente-caixa/FrenteCaixaCashMovementDialog';
 import { FrenteCaixaInutilizarNfceDialog } from '@/components/frente-caixa/FrenteCaixaInutilizarNfceDialog';
+import { FrenteCaixaXmlMesDialog } from '@/components/frente-caixa/FrenteCaixaXmlMesDialog';
 import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 
@@ -99,6 +100,7 @@ export default function FrenteCaixa() {
   const [cashMovementOpen, setCashMovementOpen] = useState<null | CashMovementType>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [inutOpen, setInutOpen] = useState(false);
+  const [xmlMesOpen, setXmlMesOpen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -511,6 +513,7 @@ export default function FrenteCaixa() {
               onSangria={() => setCashMovementOpen('sangria')}
               onSuprimento={() => setCashMovementOpen('suprimento')}
               onInutilizarNfce={() => setInutOpen(true)}
+              onXmlMes={() => setXmlMesOpen(true)}
             />
           </div>
         </div>
@@ -941,6 +944,15 @@ export default function FrenteCaixa() {
           companyId={company?.id}
           onOpenChange={setInutOpen}
         />
+
+        {company?.id && (
+          <FrenteCaixaXmlMesDialog
+            open={xmlMesOpen}
+            onOpenChange={setXmlMesOpen}
+            companyId={company.id}
+            companyName={company.name}
+          />
+        )}
       </div>
     </PDVV2Layout>
   );
