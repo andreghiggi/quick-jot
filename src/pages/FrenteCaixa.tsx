@@ -493,10 +493,16 @@ export default function FrenteCaixa() {
               <Badge variant="secondary" className="ml-1">Caixa aberto</Badge>
             )}
           </div>
-          <div className="text-xs text-muted-foreground">
-            <kbd className="px-1 py-0.5 border rounded text-[10px]">F2</kbd> finalizar •{' '}
-            <kbd className="px-1 py-0.5 border rounded text-[10px]">F4</kbd> remover último •{' '}
-            <kbd className="px-1 py-0.5 border rounded text-[10px]">Esc</kbd> cancelar
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-muted-foreground hidden md:block">
+              <kbd className="px-1 py-0.5 border rounded text-[10px]">F2</kbd> finalizar •{' '}
+              <kbd className="px-1 py-0.5 border rounded text-[10px]">F4</kbd> remover último •{' '}
+              <kbd className="px-1 py-0.5 border rounded text-[10px]">Esc</kbd> cancelar
+            </div>
+            <FrenteCaixaActionsMenu
+              onSangria={() => setCashMovementOpen('sangria')}
+              onSuprimento={() => setCashMovementOpen('suprimento')}
+            />
           </div>
         </div>
 
