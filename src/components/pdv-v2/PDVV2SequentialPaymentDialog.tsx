@@ -430,7 +430,11 @@ export function PDVV2SequentialPaymentDialog({
   }
 
   // -------- Trava de saída --------
-  const locked = hasApproved && !exact;
+  // Trava enquanto: há cobrança aprovada E (ainda falta valor OU a venda
+  // ainda não foi marcada como completed). Só libera após `markCompleted`
+  // rodar com sucesso — antes disso, fechar o modal deixaria PinPad
+  // aprovado sem venda registrada.
+  const locked = hasApproved && (!exact || !completed);
   const busy = charging || finalizing || rolling || processing;
 
   function handleOpenChangeGuarded(o: boolean) {
@@ -441,12 +445,12 @@ export function PDVV2SequentialPaymentDialog({
       onOpenChange(false);
       return;
     }
-    // Cobrança concluída (restante = 0) — pode fechar.
-    if (exact) {
+    // Cobrança concluída E venda registrada (markCompleted ok) — pode fechar.
+    if (exact && completed) {
       onOpenChange(false);
       return;
     }
-    // Travado — força cancelar com estorno.
+    // Travado — força cancelar com estorno (ou aguardar finalizar).
     setConfirmCancelOpen(true);
   }
 
