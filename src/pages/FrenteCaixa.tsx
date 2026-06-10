@@ -504,6 +504,8 @@ export default function FrenteCaixa() {
               <kbd className="px-1 py-0.5 border rounded text-[10px]">Esc</kbd> cancelar
             </div>
             <FrenteCaixaActionsMenu
+              open={menuOpen}
+              onOpenChange={setMenuOpen}
               onSangria={() => setCashMovementOpen('sangria')}
               onSuprimento={() => setCashMovementOpen('suprimento')}
             />
