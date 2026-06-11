@@ -52,6 +52,7 @@ import { FrenteCaixaXmlMesDialog } from '@/components/frente-caixa/FrenteCaixaXm
 import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { printCurrentCashClosing } from '@/utils/printCurrentCashClosing';
+import { usePdvSettings } from '@/hooks/usePdvSettings';
 
 interface CartLine {
   id: string; // local uuid
@@ -80,6 +81,7 @@ export default function FrenteCaixa() {
   const { user, company } = useAuthContext();
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
+  const { settings: pdvSettings } = usePdvSettings(company?.id);
   const {
     currentRegister,
     cashOpenKnown,
@@ -204,6 +206,7 @@ export default function FrenteCaixa() {
         }
       } else if (e.key === 'Home') {
         e.preventDefault();
+        if (!pdvSettings.allow_price_change_on_sale) return;
         const target = lines.find((l) => l.id === lastTouchedId) ?? lines[lines.length - 1];
         if (target) setPriceTarget(target);
       } else if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
@@ -256,6 +259,22 @@ export default function FrenteCaixa() {
   }
 
   function addProductToCart(p: Product, qty = 1) {
+    const price = Number(p.price) || 0;
+    if (pdvSettings.block_sale_without_price && price <= 0) {
+      toast.error(`Produto sem preço cadastrado: ${p.name}`);
+      beep(false);
+      return;
+    }
+    if (
+      pdvSettings.confirm_quantity_above > 0 &&
+      qty > pdvSettings.confirm_quantity_above
+    ) {
+      const ok = window.confirm(`Confirmar adição de ${qty} unidades de "${p.name}"?`);
+      if (!ok) {
+        beep(false);
+        return;
+      }
+    }
     let touchedId: string | null = null;
     setLines((prev) => {
       const existing = prev.find((l) => l.product_id === p.id);
@@ -267,7 +286,6 @@ export default function FrenteCaixa() {
       }
       const newId = crypto.randomUUID();
       touchedId = newId;
-      const price = Number(p.price) || 0;
       return [
         ...prev,
         {
@@ -384,7 +402,7 @@ export default function FrenteCaixa() {
       toast.info('Bipe pelo menos um produto');
       return;
     }
-    if (!currentRegister) {
+    if (pdvSettings.cash_control_enabled && !currentRegister) {
       toast.error('Abra um caixa antes de vender');
       return;
     }
@@ -511,6 +529,7 @@ export default function FrenteCaixa() {
       await printCurrentCashClosing({
         companyId: company.id,
         registerId: currentRegister.id,
+        blindClose: pdvSettings.blind_close_enabled,
       });
     } catch (e: any) {
       console.error(e);
@@ -533,7 +552,8 @@ export default function FrenteCaixa() {
     return <Navigate to="/pdv-v2" replace />;
   }
 
-  const cashClosed = !cashLoading && cashOpenKnown === false;
+  const cashClosed =
+    pdvSettings.cash_control_enabled && !cashLoading && cashOpenKnown === false;
 
   return (
     <PDVV2Layout>
@@ -728,7 +748,9 @@ export default function FrenteCaixa() {
                         </ContextMenuTrigger>
                         <ContextMenuContent className="w-64">
                           <ContextMenuItem
+                            disabled={!pdvSettings.allow_price_change_on_sale}
                             onSelect={() => {
+                              if (!pdvSettings.allow_price_change_on_sale) return;
                               setLastTouchedId(l.id);
                               setPriceTarget(l);
                             }}
@@ -978,6 +1000,7 @@ export default function FrenteCaixa() {
           companyId={company?.id}
           cashRegisterId={currentRegister?.id}
           userId={user?.id}
+          requireReason={pdvSettings.require_movement_reason}
           onOpenChange={(o) => {
             if (!o) setCashMovementOpen(null);
           }}

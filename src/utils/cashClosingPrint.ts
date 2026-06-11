@@ -30,6 +30,8 @@ export interface CashClosingPrintInput {
   paperSize?: '58mm' | '80mm';
   expectedAmount: number;
   sales: CloseCashSale[];
+  /** Quando true, omite "Valor esperado" e "Diferença" no relatório. */
+  blindClose?: boolean;
   /** Quando informado, inclui um cabeçalho com horários do caixa. */
   registerInfo?: {
     openedAt?: string | null;
@@ -76,6 +78,7 @@ export function printCashClosingDetailed(input: CashClosingPrintInput) {
     paperSize = '80mm',
     expectedAmount,
     sales,
+    blindClose = false,
     registerInfo,
     fiscalHeader,
     cashMovements,
@@ -145,7 +148,7 @@ export function printCashClosingDetailed(input: CashClosingPrintInput) {
       <div class="row"><span>Fechamento:</span><span>${registerInfo.status === 'open' ? 'Em aberto' : fmtDateTime(registerInfo.closedAt)}</span></div>
       ${registerInfo.openingAmount != null ? `<div class="row"><span>Valor de abertura:</span><span>R$ ${fmt(Number(registerInfo.openingAmount))}</span></div>` : ''}
       ${registerInfo.closingAmount != null ? `<div class="row"><span>Valor fechado:</span><span>R$ ${fmt(Number(registerInfo.closingAmount))}</span></div>` : ''}
-      ${registerInfo.difference != null ? `<div class="row"><span>Diferença:</span><span>R$ ${fmt(Number(registerInfo.difference))}</span></div>` : ''}
+      ${(!blindClose && registerInfo.difference != null) ? `<div class="row"><span>Diferença:</span><span>R$ ${fmt(Number(registerInfo.difference))}</span></div>` : ''}
     </div>
     <div class="divider"></div>` : '';
 
@@ -235,7 +238,7 @@ export function printCashClosingDetailed(input: CashClosingPrintInput) {
       ${fiscalHeaderBlock}
       ${headerInfoBlock}
       <div class="section">
-        <div class="row bold"><span>Valor esperado em caixa:</span><span>R$ ${fmt(expectedAmount)}</span></div>
+        ${blindClose ? '' : `<div class="row bold"><span>Valor esperado em caixa:</span><span>R$ ${fmt(expectedAmount)}</span></div>`}
         <div class="row"><span>Total de vendas:</span><span>${totalVendas}</span></div>
         <div class="row bold"><span>Total geral:</span><span>R$ ${fmt(totalGeral)}</span></div>
       </div>

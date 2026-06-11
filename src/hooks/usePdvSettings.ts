@@ -10,6 +10,20 @@ export interface PdvSettings {
   print_show_sale_notes: boolean;
   print_show_product_notes: boolean;
   require_customer_above_value: number;
+  // Fase A — novos toggles (Gweb-like)
+  cash_control_enabled: boolean;
+  blind_close_enabled: boolean;
+  require_movement_reason: boolean;
+  block_sale_without_price: boolean;
+  allow_price_change_on_sale: boolean;
+  confirm_quantity_above: number;
+  auto_print_on_finish: boolean;
+  auto_open_drawer_cash: boolean;
+  clear_screen_after_sale: boolean;
+  auto_print_second_copy: boolean;
+  print_show_logo: boolean;
+  print_show_review_qr: boolean;
+  review_qr_url: string;
 }
 
 export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
@@ -21,6 +35,19 @@ export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
   print_show_sale_notes: true,
   print_show_product_notes: true,
   require_customer_above_value: 0,
+  cash_control_enabled: true,
+  blind_close_enabled: false,
+  require_movement_reason: false,
+  block_sale_without_price: true,
+  allow_price_change_on_sale: true,
+  confirm_quantity_above: 10,
+  auto_print_on_finish: false,
+  auto_open_drawer_cash: false,
+  clear_screen_after_sale: true,
+  auto_print_second_copy: false,
+  print_show_logo: true,
+  print_show_review_qr: false,
+  review_qr_url: '',
 };
 
 /**
@@ -60,6 +87,19 @@ export function usePdvSettings(companyId?: string | null) {
         print_show_sale_notes: !!data.print_show_sale_notes,
         print_show_product_notes: !!data.print_show_product_notes,
         require_customer_above_value: Number(data.require_customer_above_value ?? 0),
+        cash_control_enabled: (data as any).cash_control_enabled ?? true,
+        blind_close_enabled: !!(data as any).blind_close_enabled,
+        require_movement_reason: !!(data as any).require_movement_reason,
+        block_sale_without_price: (data as any).block_sale_without_price ?? true,
+        allow_price_change_on_sale: (data as any).allow_price_change_on_sale ?? true,
+        confirm_quantity_above: Number((data as any).confirm_quantity_above ?? 10),
+        auto_print_on_finish: !!(data as any).auto_print_on_finish,
+        auto_open_drawer_cash: !!(data as any).auto_open_drawer_cash,
+        clear_screen_after_sale: (data as any).clear_screen_after_sale ?? true,
+        auto_print_second_copy: !!(data as any).auto_print_second_copy,
+        print_show_logo: (data as any).print_show_logo ?? true,
+        print_show_review_qr: !!(data as any).print_show_review_qr,
+        review_qr_url: (data as any).review_qr_url ?? '',
       });
     } else {
       setSettings(PDV_SETTINGS_DEFAULTS);

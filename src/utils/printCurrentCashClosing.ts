@@ -18,8 +18,9 @@ export async function printCurrentCashClosing(params: {
   companyId: string;
   registerId: string;
   paperSize?: '58mm' | '80mm';
+  blindClose?: boolean;
 }) {
-  const { companyId, registerId, paperSize = '80mm' } = params;
+  const { companyId, registerId, paperSize = '80mm', blindClose = false } = params;
 
   // 1) Empresa (cabeçalho fiscal)
   const { data: company } = await supabase
@@ -147,6 +148,7 @@ export async function printCurrentCashClosing(params: {
     paperSize,
     expectedAmount: expected,
     sales: mappedSales,
+    blindClose,
     registerInfo: reg
       ? {
           openedAt: (reg as any).opened_at,

@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.19.0-beta";
+export const VERSION = "1.20.0-beta";
 export const RELEASE_DATE = "2026-06-11"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: rail fixo estilo Gweb + Receitas + Rel. fechamento ampliado";
+export const CODENAME = "Frente de Caixa: Configurações do PDV (Fase A — estilo Gweb)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,20 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.20.0-beta",
+    date: "2026-06-11",
+    codename: "Frente de Caixa: Configurações do PDV (Fase A — estilo Gweb)",
+    changes: [
+      "Configurações da Frente de Caixa ganhou 4 novos blocos espelhando o PDV do Gweb (Fase A). Todos os toggles vivem em `pdv_settings` e são consumidos APENAS pela Frente de Caixa — PDV V2, Pedido Express, Cobrança e TEF continuam intocados.",
+      "Bloco 'Controle de caixa': (a) Exigir caixa aberto para vender — quando desligado, suprime o banner 'Nenhum caixa aberto' e libera abrir o checkout sem caixa; (b) Fechamento de caixa cego — esconde 'Valor esperado' e 'Diferença' no Rel. de fechamento; (c) Exigir motivo em sangria/suprimento — torna o campo Motivo obrigatório no diálogo de movimentações de caixa.",
+      "Bloco 'Itens de venda': (a) Bloquear venda de item sem preço — impede adicionar produto com preço ≤ 0 ao carrinho; (b) Permitir alterar preço na venda — quando desligado, desabilita o item 'Alterar preço' do menu de contexto e o atalho Home; (c) Confirmar quando a quantidade adicionada for maior que N — pede confirmação ao usar o multiplicador (ex.: 50*7891234567890).",
+      "Bloco 'Comportamento': prepara as flags Imprimir cupom automaticamente ao finalizar, Imprimir 2ª via automaticamente, Abrir gaveta no pagamento em dinheiro e Limpar tela após finalizar venda — gravadas em `pdv_settings` para uso pela próxima fase de impressão da Frente de Caixa.",
+      "Bloco 'Cupom — extras': Mostrar logo da loja, Mostrar QR Code de avaliação e URL do QR de avaliação — também gravadas, prontas para a impressão dedicada da Frente de Caixa.",
+      "Defaults preservam 100% do comportamento atual: nenhuma loja sente diferença até ligar/desligar manualmente os toggles na tela Configurações do PDV.",
+      "Itens FORA da Fase A (ficam para fases B/C/D): ordenação/visibilidade de pagamentos, intermediador NFC-e, código de barras de balança, Gerar financeiro, Tabela de preço, Boleto e Crédito Loja.",
+    ],
+  },
   {
     version: "1.19.0-beta",
     date: "2026-06-11",
