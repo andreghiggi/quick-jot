@@ -206,6 +206,7 @@ export default function FrenteCaixa() {
         }
       } else if (e.key === 'Home') {
         e.preventDefault();
+        if (!pdvSettings.allow_price_change_on_sale) return;
         const target = lines.find((l) => l.id === lastTouchedId) ?? lines[lines.length - 1];
         if (target) setPriceTarget(target);
       } else if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
