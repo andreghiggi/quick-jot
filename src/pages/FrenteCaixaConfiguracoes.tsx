@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Save, CreditCard, Printer, Settings, Receipt } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, CreditCard, Printer, Settings, Receipt, Wallet, ShoppingBag, MousePointerClick } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -162,6 +162,136 @@ export default function FrenteCaixaConfiguracoes() {
             <p className="text-[11px] text-muted-foreground">
               Use 0 para nunca exigir. Acima desse valor a Frente de Caixa pedirá CPF/cliente antes de finalizar.
             </p>
+          </div>
+
+          {([
+            ['auto_print_on_finish', 'Imprimir cupom automaticamente ao finalizar'],
+            ['auto_print_second_copy', 'Imprimir 2ª via automaticamente'],
+            ['auto_open_drawer_cash', 'Abrir gaveta automaticamente em pagamento em dinheiro'],
+            ['clear_screen_after_sale', 'Limpar tela após finalizar venda'],
+          ] as const).map(([key, label]) => (
+            <div key={key} className="flex items-center justify-between gap-3 py-1.5">
+              <Label htmlFor={key} className="font-normal cursor-pointer">{label}</Label>
+              <Switch
+                id={key}
+                checked={form[key] as boolean}
+                onCheckedChange={(v) => upd(key, v as any)}
+                disabled={loading}
+              />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Controle de caixa */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Wallet className="h-4 w-4" /> Controle de caixa
+          </CardTitle>
+          <CardDescription>
+            Regras de abertura, fechamento e movimentações manuais.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {([
+            ['cash_control_enabled', 'Exigir caixa aberto para vender'],
+            ['blind_close_enabled', 'Fechamento de caixa cego (esconde valor esperado e diferença)'],
+            ['require_movement_reason', 'Exigir motivo em sangria/suprimento'],
+          ] as const).map(([key, label]) => (
+            <div key={key} className="flex items-center justify-between gap-3 py-1.5">
+              <Label htmlFor={key} className="font-normal cursor-pointer">{label}</Label>
+              <Switch
+                id={key}
+                checked={form[key] as boolean}
+                onCheckedChange={(v) => upd(key, v as any)}
+                disabled={loading}
+              />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Itens de venda */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ShoppingBag className="h-4 w-4" /> Itens de venda
+          </CardTitle>
+          <CardDescription>
+            Regras aplicadas ao adicionar produtos ao carrinho.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {([
+            ['block_sale_without_price', 'Bloquear venda de item sem preço'],
+            ['allow_price_change_on_sale', 'Permitir alterar preço na venda'],
+          ] as const).map(([key, label]) => (
+            <div key={key} className="flex items-center justify-between gap-3 py-1.5">
+              <Label htmlFor={key} className="font-normal cursor-pointer">{label}</Label>
+              <Switch
+                id={key}
+                checked={form[key] as boolean}
+                onCheckedChange={(v) => upd(key, v as any)}
+                disabled={loading}
+              />
+            </div>
+          ))}
+          <div className="space-y-1.5">
+            <Label htmlFor="confirm_quantity_above">
+              Confirmar quando a quantidade adicionada for maior que
+            </Label>
+            <Input
+              id="confirm_quantity_above"
+              type="number"
+              min={0}
+              step={1}
+              value={form.confirm_quantity_above}
+              onChange={(e) => upd('confirm_quantity_above', parseInt(e.target.value, 10) || 0)}
+              disabled={loading}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Use 0 para nunca pedir confirmação.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Impressão estendida */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Printer className="h-4 w-4" /> Cupom — extras
+          </CardTitle>
+          <CardDescription>
+            Elementos opcionais no cupom da Frente de Caixa.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {([
+            ['print_show_logo', 'Mostrar logo da loja no cupom'],
+            ['print_show_review_qr', 'Mostrar QR Code de avaliação'],
+          ] as const).map(([key, label]) => (
+            <div key={key} className="flex items-center justify-between gap-3 py-1.5">
+              <Label htmlFor={key} className="font-normal cursor-pointer">{label}</Label>
+              <Switch
+                id={key}
+                checked={form[key] as boolean}
+                onCheckedChange={(v) => upd(key, v as any)}
+                disabled={loading}
+              />
+            </div>
+          ))}
+          <div className="space-y-1.5">
+            <Label htmlFor="review_qr_url">URL do QR Code de avaliação</Label>
+            <Input
+              id="review_qr_url"
+              type="url"
+              placeholder="https://g.page/r/..."
+              value={form.review_qr_url}
+              onChange={(e) => upd('review_qr_url', e.target.value)}
+              disabled={loading || !form.print_show_review_qr}
+            />
           </div>
         </CardContent>
       </Card>
