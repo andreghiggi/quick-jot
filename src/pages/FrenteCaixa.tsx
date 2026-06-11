@@ -552,7 +552,8 @@ export default function FrenteCaixa() {
     return <Navigate to="/pdv-v2" replace />;
   }
 
-  const cashClosed = !cashLoading && cashOpenKnown === false;
+  const cashClosed =
+    pdvSettings.cash_control_enabled && !cashLoading && cashOpenKnown === false;
 
   return (
     <PDVV2Layout>
