@@ -402,7 +402,7 @@ export default function FrenteCaixa() {
       toast.info('Bipe pelo menos um produto');
       return;
     }
-    if (!currentRegister) {
+    if (pdvSettings.cash_control_enabled && !currentRegister) {
       toast.error('Abra um caixa antes de vender');
       return;
     }
