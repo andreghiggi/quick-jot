@@ -5,9 +5,9 @@ import { cn } from '@/lib/utils';
 interface Props {
   onSangria: () => void;
   onSuprimento: () => void;
-  onLista?: () => void;
   onInutilizarNfce?: () => void;
   onXmlMes?: () => void;
+  onRelFechamento?: () => void;
   open?: boolean;
   onOpenChange?: (o: boolean) => void;
 }
@@ -42,12 +42,22 @@ function AccelLabel({ label, accel = 0 }: { label: string; accel?: number }) {
  * Seções em cards brancos: Acessar, Ações, Configurações.
  * Itens usam letra sublinhada como dica visual de atalho (estilo Gweb).
  */
+/**
+ * Rail lateral fixo do Frente de Caixa (estilo Gweb).
+ *
+ * - Inicia aberto por padrão (controlado pelo pai, com persistência).
+ * - Não é Sheet/modal: fica encostado na borda direita do viewport.
+ * - Setinha »/« recolhe/expande manualmente. F10 alterna.
+ * - Contém SOMENTE itens relacionados ao fluxo de venda do PDV.
+ *   Configurações globais (NFC-e/Preferências/Impressão/Formas de pagto)
+ *   continuam acessíveis pelo menu principal — NÃO duplicar aqui.
+ */
 export function FrenteCaixaActionsMenu({
   onSangria,
   onSuprimento,
-  onLista,
   onInutilizarNfce,
   onXmlMes,
+  onRelFechamento,
   open = false,
   onOpenChange,
 }: Props) {
@@ -113,12 +123,10 @@ export function FrenteCaixaActionsMenu({
           <Section
             title="Acessar"
             items={[
-              { label: 'Pedidos', accel: 0, onClick: () => navigate('/pedidos') },
-              { label: 'Clientes', accel: 0, onClick: () => navigate('/clientes') },
-              { label: 'Produtos', accel: 0, onClick: () => navigate('/produtos') },
-              { label: 'Estoque', accel: 0, onClick: () => navigate('/estoque') },
-              { label: 'Relatório de Caixa', accel: 0, onClick: () => navigate('/relatorios/caixa') },
-              { label: 'NFC-e Monitor', accel: 5, onClick: () => navigate('/nfce') },
+              { label: 'Lista', accel: 0, onClick: () => navigate('/frente-caixa/lista') },
+              { label: 'Relatórios', accel: 0, onClick: () => navigate('/relatorios/vendas') },
+              { label: 'Recebimento', accel: 0, onClick: () => navigate('/frente-caixa/recebimento') },
+              { label: 'ECONF', accel: 0, onClick: () => {}, disabled: true, hint: 'Em breve' },
             ]}
           />
 
@@ -130,8 +138,7 @@ export function FrenteCaixaActionsMenu({
               { label: 'Contingência', accel: 0, onClick: () => {}, disabled: true, hint: 'Desativado' },
               { label: 'Sangria', accel: 0, onClick: onSangria },
               { label: 'Suprimento', accel: 0, onClick: onSuprimento },
-              { label: 'Lista do PDV', accel: 0, onClick: onLista ?? (() => navigate('/frente-caixa/lista')) },
-              { label: 'Rel. de fechamento', accel: 5, onClick: () => navigate('/relatorios/caixa') },
+              { label: 'Rel. de fechamento', accel: 5, onClick: onRelFechamento ?? (() => navigate('/relatorios/caixa')) },
             ]}
           />
 
@@ -139,10 +146,6 @@ export function FrenteCaixaActionsMenu({
             title="Configurações"
             items={[
               { label: 'Configurações do PDV', accel: 0, onClick: () => navigate('/frente-caixa/configuracoes') },
-              { label: 'Configurações da NFC-e', accel: 2, onClick: () => navigate('/configuracoes') },
-              { label: 'Preferências', accel: 0, onClick: () => navigate('/configuracoes') },
-              { label: 'Formas de pagamento', accel: 0, onClick: () => navigate('/formas-pagamento') },
-              { label: 'Impressão', accel: 0, onClick: () => navigate('/configuracoes/impressao') },
             ]}
           />
         </div>

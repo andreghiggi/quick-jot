@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.18.2-beta";
-export const RELEASE_DATE = "2026-06-10"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: busca/cadastro de cliente estilo Gweb";
+export const VERSION = "1.19.0-beta";
+export const RELEASE_DATE = "2026-06-11"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Frente de Caixa: rail fixo estilo Gweb + Receitas + Rel. fechamento ampliado";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.19.0-beta",
+    date: "2026-06-11",
+    codename: "Frente de Caixa: rail fixo estilo Gweb + Receitas + Rel. fechamento ampliado",
+    changes: [
+      "Rail lateral direito do Frente de Caixa foi reorganizado para espelhar o PDV do Gweb: agora INICIA SEMPRE ABERTO (preferência persistida em localStorage 'frenteCaixa.menuOpen'), com toggle »/« para recolher manualmente e atalho F10 para alternar.",
+      "Conteúdo enxuto e focado APENAS no fluxo de venda do PDV: card 'Acessar' (Lista, Relatórios, Recebimento, ECONF em stand-by), card 'Ações' (Inutilizar numeração, XML do mês, Contingência desativada, Sangria, Suprimento, Rel. de fechamento) e card 'Configurações' (Configurações do PDV).",
+      "Itens globais (Pedidos, Clientes, Produtos, Estoque, NFC-e Monitor, Preferências, Formas de pagamento, Impressão, Configurações da NFC-e) foram REMOVIDOS do rail — continuam acessíveis pelo menu principal, sem duplicação.",
+      "Nova tela 'Receitas' (rota /frente-caixa/recebimento) — equivalente ao Recebimento do Gweb. Lista entradas finalizadas combinando vendas internas do PDV (PV…) com NFC-e emitidas (NFCE…), mostrando Doc., Valor, datas de emissão/vencimento/recebimento e status (Recebida/Pendente/Cancelada). Busca por texto + filtros por Cliente, Status, Emissão inicial/final e Nº do documento (múltiplos por vírgula).",
+      "Rel. de fechamento agora gera o PDF DIRETAMENTE pelo rail (item 'Rel. de fechamento'), sem precisar navegar até /relatorios/caixa. Usa o caixa aberto atual e adiciona 3 blocos vindos da análise do PDF do Gweb: (1) Cabeçalho fiscal completo (Fantasia/CNPJ/Endereço/Telefone), (2) Movimentações Manuais listando Suprimento e Sangria com motivo, (3) Caixa Físico com Calc. Sistema × Inf. Operador × Diferença por espécie.",
+      "Mudança ISOLADA ao Frente de Caixa (módulo Mercado). PDV V2, Pedido Express, OrderCardChargeDialog, runMultiPayment, runTefPayment, pinpadService, tef-webservice, nfce-proxy, TEF v1.0/v1.1/v1.2-beta, Multi-Pagamento v1.6/v1.7, CashReport, PDVV2CloseCashDialog, impressão de produção/cupom e demais fluxos homologados NÃO foram tocados.",
+    ],
+  },
   {
     version: "1.18.2-beta",
     date: "2026-06-10",

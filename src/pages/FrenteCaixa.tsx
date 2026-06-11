@@ -51,6 +51,7 @@ import { FrenteCaixaInutilizarNfceDialog } from '@/components/frente-caixa/Frent
 import { FrenteCaixaXmlMesDialog } from '@/components/frente-caixa/FrenteCaixaXmlMesDialog';
 import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
+import { printCurrentCashClosing } from '@/utils/printCurrentCashClosing';
 
 interface CartLine {
   id: string; // local uuid
@@ -98,7 +99,21 @@ export default function FrenteCaixa() {
   const [priceTarget, setPriceTarget] = useState<CartLine | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<CartLine | null>(null);
   const [cashMovementOpen, setCashMovementOpen] = useState<null | CashMovementType>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
+  // Rail lateral fixo — inicia aberto por padrão; persiste preferência em localStorage.
+  const [menuOpen, setMenuOpenState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('frenteCaixa.menuOpen') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const setMenuOpen = (v: boolean | ((prev: boolean) => boolean)) => {
+    setMenuOpenState((prev) => {
+      const next = typeof v === 'function' ? (v as (p: boolean) => boolean)(prev) : v;
+      try { localStorage.setItem('frenteCaixa.menuOpen', next ? 'true' : 'false'); } catch {/*noop*/}
+      return next;
+    });
+  };
   const [inutOpen, setInutOpen] = useState(false);
   const [xmlMesOpen, setXmlMesOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -207,7 +222,7 @@ export default function FrenteCaixa() {
         if (currentRegister) setCashMovementOpen('sangria');
       } else if (e.key === 'F10') {
         e.preventDefault();
-        setMenuOpen(true);
+        setMenuOpen((o) => !o);
       }
     }
     window.addEventListener('keydown', onKey);
@@ -483,6 +498,23 @@ export default function FrenteCaixa() {
       setLastTouchedId(null);
       setPaymentOpen(false);
       setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }
+
+  async function handleRelFechamento() {
+    if (!company?.id) return;
+    if (!currentRegister?.id) {
+      toast.error('Nenhum caixa aberto. Abra um caixa para gerar o relatório.');
+      return;
+    }
+    try {
+      await printCurrentCashClosing({
+        companyId: company.id,
+        registerId: currentRegister.id,
+      });
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erro ao gerar Relatório de Fechamento: ' + (e?.message || e));
     }
   }
 
@@ -975,6 +1007,7 @@ export default function FrenteCaixa() {
           onSuprimento={() => setCashMovementOpen('suprimento')}
           onInutilizarNfce={() => setInutOpen(true)}
           onXmlMes={() => setXmlMesOpen(true)}
+          onRelFechamento={handleRelFechamento}
         />
 
         {/* FAB vermelho — atalho contextual (foca scanner ou abre pagamento) */}
