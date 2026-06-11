@@ -997,6 +997,7 @@ export default function FrenteCaixa() {
           companyId={company?.id}
           cashRegisterId={currentRegister?.id}
           userId={user?.id}
+          requireReason={pdvSettings.require_movement_reason}
           onOpenChange={(o) => {
             if (!o) setCashMovementOpen(null);
           }}
