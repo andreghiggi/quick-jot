@@ -52,6 +52,7 @@ import { FrenteCaixaXmlMesDialog } from '@/components/frente-caixa/FrenteCaixaXm
 import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { printCurrentCashClosing } from '@/utils/printCurrentCashClosing';
+import { usePdvSettings } from '@/hooks/usePdvSettings';
 
 interface CartLine {
   id: string; // local uuid
@@ -80,6 +81,7 @@ export default function FrenteCaixa() {
   const { user, company } = useAuthContext();
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
+  const { settings: pdvSettings } = usePdvSettings(company?.id);
   const {
     currentRegister,
     cashOpenKnown,
