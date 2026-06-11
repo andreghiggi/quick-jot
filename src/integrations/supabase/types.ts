@@ -1496,45 +1496,84 @@ export type Database = {
       }
       pdv_settings: {
         Row: {
+          allow_price_change_on_sale: boolean
+          auto_open_drawer_cash: boolean
+          auto_print_on_finish: boolean
+          auto_print_second_copy: boolean
+          blind_close_enabled: boolean
+          block_sale_without_price: boolean
+          cash_control_enabled: boolean
+          clear_screen_after_sale: boolean
           company_id: string
+          confirm_quantity_above: number
           created_at: string
           id: string
           print_show_customer: boolean
           print_show_discount: boolean
+          print_show_logo: boolean
           print_show_product_notes: boolean
+          print_show_review_qr: boolean
           print_show_sale_notes: boolean
           print_show_serial: boolean
           print_show_surcharge: boolean
           promo_message: string
           require_customer_above_value: number
+          require_movement_reason: boolean
+          review_qr_url: string
           updated_at: string
         }
         Insert: {
+          allow_price_change_on_sale?: boolean
+          auto_open_drawer_cash?: boolean
+          auto_print_on_finish?: boolean
+          auto_print_second_copy?: boolean
+          blind_close_enabled?: boolean
+          block_sale_without_price?: boolean
+          cash_control_enabled?: boolean
+          clear_screen_after_sale?: boolean
           company_id: string
+          confirm_quantity_above?: number
           created_at?: string
           id?: string
           print_show_customer?: boolean
           print_show_discount?: boolean
+          print_show_logo?: boolean
           print_show_product_notes?: boolean
+          print_show_review_qr?: boolean
           print_show_sale_notes?: boolean
           print_show_serial?: boolean
           print_show_surcharge?: boolean
           promo_message?: string
           require_customer_above_value?: number
+          require_movement_reason?: boolean
+          review_qr_url?: string
           updated_at?: string
         }
         Update: {
+          allow_price_change_on_sale?: boolean
+          auto_open_drawer_cash?: boolean
+          auto_print_on_finish?: boolean
+          auto_print_second_copy?: boolean
+          blind_close_enabled?: boolean
+          block_sale_without_price?: boolean
+          cash_control_enabled?: boolean
+          clear_screen_after_sale?: boolean
           company_id?: string
+          confirm_quantity_above?: number
           created_at?: string
           id?: string
           print_show_customer?: boolean
           print_show_discount?: boolean
+          print_show_logo?: boolean
           print_show_product_notes?: boolean
+          print_show_review_qr?: boolean
           print_show_sale_notes?: boolean
           print_show_serial?: boolean
           print_show_surcharge?: boolean
           promo_message?: string
           require_customer_above_value?: number
+          require_movement_reason?: boolean
+          review_qr_url?: string
           updated_at?: string
         }
         Relationships: [
