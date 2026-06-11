@@ -747,7 +747,9 @@ export default function FrenteCaixa() {
                         </ContextMenuTrigger>
                         <ContextMenuContent className="w-64">
                           <ContextMenuItem
+                            disabled={!pdvSettings.allow_price_change_on_sale}
                             onSelect={() => {
+                              if (!pdvSettings.allow_price_change_on_sale) return;
                               setLastTouchedId(l.id);
                               setPriceTarget(l);
                             }}
