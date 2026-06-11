@@ -41,6 +41,29 @@ export interface CashClosingPrintInput {
     notes?: string | null;
     status?: 'open' | 'closed' | string;
   };
+  /** Cabeçalho fiscal completo (CNPJ, endereço, telefone). */
+  fiscalHeader?: {
+    fantasia?: string | null;
+    cnpj?: string | null;
+    address?: string | null;
+    phone?: string | null;
+  };
+  /** Movimentações manuais (sangria/suprimento) com motivo. */
+  cashMovements?: Array<{
+    type: 'sangria' | 'suprimento' | string;
+    amount: number;
+    reason?: string | null;
+    created_at?: string;
+  }>;
+  /**
+   * Conferência do caixa físico (estilo Gweb): por espécie, comparando
+   * calculado pelo sistema vs informado pelo operador.
+   */
+  physicalCash?: Array<{
+    species: string; // ex.: 'DINHEIRO', 'CHEQUE'
+    systemAmount: number;
+    operatorAmount: number;
+  }>;
 }
 
 /**
@@ -48,7 +71,16 @@ export interface CashClosingPrintInput {
  * Reaproveitado pelo dialog de fechamento (PDV V2) e pelo Relatório de Caixa.
  */
 export function printCashClosingDetailed(input: CashClosingPrintInput) {
-  const { companyName, paperSize = '80mm', expectedAmount, sales, registerInfo } = input;
+  const {
+    companyName,
+    paperSize = '80mm',
+    expectedAmount,
+    sales,
+    registerInfo,
+    fiscalHeader,
+    cashMovements,
+    physicalCash,
+  } = input;
   const w = window.open('', '_blank');
   if (!w) return;
 
@@ -122,6 +154,56 @@ export function printCashClosingDetailed(input: CashClosingPrintInput) {
     <div class="section"><pre style="white-space:pre-wrap;font-family:inherit;font-size:10px;">${registerInfo.notes.replace(/</g, '&lt;')}</pre></div>
     <div class="divider"></div>` : '';
 
+  const fiscalHeaderBlock = fiscalHeader ? `
+    <div class="section">
+      ${fiscalHeader.fantasia ? `<div class="row"><span>Fantasia:</span><span>${fiscalHeader.fantasia}</span></div>` : ''}
+      ${fiscalHeader.cnpj ? `<div class="row"><span>CNPJ:</span><span>${fiscalHeader.cnpj}</span></div>` : ''}
+      ${fiscalHeader.address ? `<div class="row"><span>Endereço:</span><span>${fiscalHeader.address}</span></div>` : ''}
+      ${fiscalHeader.phone ? `<div class="row"><span>Telefone:</span><span>${fiscalHeader.phone}</span></div>` : ''}
+    </div>
+    <div class="divider"></div>` : '';
+
+  const movementsBlock = (cashMovements && cashMovements.length > 0) ? (() => {
+    const supr = cashMovements.filter((m) => m.type === 'suprimento');
+    const sang = cashMovements.filter((m) => m.type === 'sangria');
+    const supTotal = supr.reduce((s, m) => s + Number(m.amount || 0), 0);
+    const sanTotal = sang.reduce((s, m) => s + Number(m.amount || 0), 0);
+    const rows: string[] = [];
+    rows.push(`<div class="row bold"><span>(+) SUPRIMENTO</span><span>R$ ${fmt(supTotal)}</span></div>`);
+    supr.forEach((m) => {
+      rows.push(`<div class="row"><span style="padding-left:8px;">Motivo: ${(m.reason || '—').replace(/</g, '&lt;')}</span><span>R$ ${fmt(Number(m.amount || 0))}</span></div>`);
+    });
+    rows.push(`<div class="row bold"><span>(−) SANGRIA</span><span>R$ ${fmt(sanTotal)}</span></div>`);
+    sang.forEach((m) => {
+      rows.push(`<div class="row"><span style="padding-left:8px;">Motivo: ${(m.reason || '—').replace(/</g, '&lt;')}</span><span>R$ ${fmt(Number(m.amount || 0))}</span></div>`);
+    });
+    return `
+      <div class="group-title">Movimentações Manuais</div>
+      <div class="section">${rows.join('')}</div>
+      <div class="divider"></div>`;
+  })() : '';
+
+  const physicalCashBlock = (physicalCash && physicalCash.length > 0) ? (() => {
+    const sysTotal = physicalCash.reduce((s, r) => s + r.systemAmount, 0);
+    const opTotal = physicalCash.reduce((s, r) => s + r.operatorAmount, 0);
+    const rows = physicalCash.map((r) => {
+      const diff = r.operatorAmount - r.systemAmount;
+      return `
+        <div class="row"><span>(+) ${r.species}</span><span>Sis. R$ ${fmt(r.systemAmount)}</span></div>
+        <div class="row"><span style="padding-left:8px;">Operador</span><span>Op. R$ ${fmt(r.operatorAmount)}</span></div>
+        <div class="row"><span style="padding-left:8px;">Diferença</span><span>R$ ${fmt(diff)}</span></div>`;
+    }).join('');
+    return `
+      <div class="group-title">Caixa Físico</div>
+      <div class="section">
+        ${rows}
+        <div class="row bold"><span>(=) Total Sistema</span><span>R$ ${fmt(sysTotal)}</span></div>
+        <div class="row bold"><span>(=) Total Operador</span><span>R$ ${fmt(opTotal)}</span></div>
+        <div class="row bold"><span>(=) Diferença</span><span>R$ ${fmt(opTotal - sysTotal)}</span></div>
+      </div>
+      <div class="divider"></div>`;
+  })() : '';
+
   const html = `
     <!DOCTYPE html>
     <html><head><meta charset="UTF-8"><title>Fechamento Detalhado</title>
@@ -150,6 +232,7 @@ export function printCashClosingDetailed(input: CashClosingPrintInput) {
         <p>${now}</p>
       </div>
       <div class="divider"></div>
+      ${fiscalHeaderBlock}
       ${headerInfoBlock}
       <div class="section">
         <div class="row bold"><span>Valor esperado em caixa:</span><span>R$ ${fmt(expectedAmount)}</span></div>
@@ -162,6 +245,8 @@ export function printCashClosingDetailed(input: CashClosingPrintInput) {
       <div class="group-title">Totais por forma de pagamento</div>
       <div class="section">${paymentRows || '<p style="font-size:10px;text-align:center;">—</p>'}</div>
       <div class="divider"></div>
+      ${movementsBlock}
+      ${physicalCashBlock}
       ${notesBlock}
       <p class="footer">Impresso em ${now}</p>
       <script>window.onload = function() { window.print(); window.close(); }</script>
