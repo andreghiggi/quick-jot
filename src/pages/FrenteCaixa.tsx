@@ -258,6 +258,22 @@ export default function FrenteCaixa() {
   }
 
   function addProductToCart(p: Product, qty = 1) {
+    const price = Number(p.price) || 0;
+    if (pdvSettings.block_sale_without_price && price <= 0) {
+      toast.error(`Produto sem preço cadastrado: ${p.name}`);
+      beep(false);
+      return;
+    }
+    if (
+      pdvSettings.confirm_quantity_above > 0 &&
+      qty > pdvSettings.confirm_quantity_above
+    ) {
+      const ok = window.confirm(`Confirmar adição de ${qty} unidades de "${p.name}"?`);
+      if (!ok) {
+        beep(false);
+        return;
+      }
+    }
     let touchedId: string | null = null;
     setLines((prev) => {
       const existing = prev.find((l) => l.product_id === p.id);
@@ -269,7 +285,6 @@ export default function FrenteCaixa() {
       }
       const newId = crypto.randomUUID();
       touchedId = newId;
-      const price = Number(p.price) || 0;
       return [
         ...prev,
         {
