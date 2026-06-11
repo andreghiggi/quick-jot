@@ -24,6 +24,8 @@ interface Props {
   companyId?: string;
   cashRegisterId?: string;
   userId?: string;
+  /** Quando true, o campo Motivo passa a ser obrigatório. */
+  requireReason?: boolean;
   onOpenChange: (o: boolean) => void;
   onDone?: () => void;
 }
@@ -41,6 +43,7 @@ export function FrenteCaixaCashMovementDialog({
   companyId,
   cashRegisterId,
   userId,
+  requireReason = false,
   onOpenChange,
   onDone,
 }: Props) {
@@ -66,6 +69,10 @@ export function FrenteCaixaCashMovementDialog({
     const parsed = Number(amount.replace(',', '.'));
     if (!Number.isFinite(parsed) || parsed <= 0) {
       toast.error('Informe um valor maior que zero');
+      return;
+    }
+    if (requireReason && !reason.trim()) {
+      toast.error('Informe o motivo');
       return;
     }
     if (!companyId || !cashRegisterId || !userId) {
@@ -123,7 +130,9 @@ export function FrenteCaixaCashMovementDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cm-reason">Motivo (opcional)</Label>
+            <Label htmlFor="cm-reason">
+              Motivo {requireReason ? <span className="text-destructive">*</span> : '(opcional)'}
+            </Label>
             <Textarea
               id="cm-reason"
               value={reason}
