@@ -529,6 +529,7 @@ export default function FrenteCaixa() {
       await printCurrentCashClosing({
         companyId: company.id,
         registerId: currentRegister.id,
+        blindClose: pdvSettings.blind_close_enabled,
       });
     } catch (e: any) {
       console.error(e);
