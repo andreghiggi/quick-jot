@@ -18,6 +18,11 @@ Novas colunas em `public.pdv_settings` (todas com default = comportamento atual)
 - `auto_print_closing_report` (false) — em lojas com Mercado ativo, dispara `printCurrentCashClosing` após `closeRegister` ter sucesso em `CashRegisters.tsx`.
 - Wiring: `src/pages/CashRegisters.tsx` é a ÚNICA tela fora da Frente de Caixa que lê `pdv_settings`, e somente quando `useMercadoEnabled` retorna true.
 
+**Fase A.2** (aba Comportamento Gweb-like):
+- `stock_move_on_fiscal_only` (false) — quando ligado, `FrenteCaixa.tsx` NÃO chama `applyStockMovementOnce` no `onPaymentSuccess`. Baixa de estoque na emissão fiscal NÃO está wirada ainda (TODO Fase A.3 / módulo fiscal).
+- `print_on_finish_mode` ('off'|'auto'|'ask', default 'off') — substitui o boolean `auto_print_on_finish` da Fase A. Migração SQL automática: `auto_print_on_finish=true` vira `print_on_finish_mode='auto'`. UI usa Select.
+- Itens Gweb descartados (não fazem sentido sem novos módulos): Gerar financeiro, Sugerir vendedor, Usar tabela de preço, Pré-venda (mesclar/pagamentos digitais).
+
 **Escopo:** o hook `usePdvSettings` continua exclusivo da Frente de Caixa. PDV V2, Pedido Express, OrderCardChargeDialog, TEF (v1.0/v1.1/v1.2-beta), Multi-Pagamento e NFC-e NÃO leem `pdv_settings` e não devem passar a ler.
 
 UI: `src/pages/FrenteCaixaConfiguracoes.tsx` (cards: Controle de caixa, Itens de venda, Comportamento, Cupom — extras).
