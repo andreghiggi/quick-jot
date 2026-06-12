@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.20.0-beta";
-export const RELEASE_DATE = "2026-06-11"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: Configurações do PDV (Fase A — estilo Gweb)";
+export const VERSION = "1.20.1-beta";
+export const RELEASE_DATE = "2026-06-12"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Frente de Caixa: Configurações do PDV (Fase A.1)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.20.1-beta",
+    date: "2026-06-12",
+    codename: "Frente de Caixa: Configurações do PDV (Fase A.1)",
+    changes: [
+      "Configurações da Frente de Caixa → bloco 'Controle de caixa' ganhou 2 novos toggles (Fase A.1): 'Bloquear fechamento com venda pendente (itens no carrinho)' e 'Imprimir relatório de fechamento automaticamente'. Ambos com default DESLIGADO — comportamento atual preservado.",
+      "Quando 'Bloquear fechamento com venda pendente' está ligado E a loja tem o módulo Mercado ativo: a tela Caixas impede fechar o caixa enquanto houver itens no carrinho da Frente de Caixa (contagem persistida em localStorage 'frenteCaixa.cartPendingCount'). Mostra toast com a quantidade de itens pendentes.",
+      "Quando 'Imprimir relatório de fechamento automaticamente' está ligado E a loja tem o módulo Mercado ativo: assim que o caixa é fechado com sucesso na tela Caixas, o Rel. de fechamento (mesmo do rail da Frente de Caixa) é impresso automaticamente — respeitando 'Fechamento de caixa cego' quando ligado.",
+      "Mudança ISOLADA: nada de PDV V2, Pedido Express, OrderCardChargeDialog, runMultiPayment, runTefPayment, pinpadService, tef-webservice, nfce-proxy, TEF v1.0/v1.1/v1.2-beta, Multi-Pagamento v1.6/v1.7 foi tocado. Lojas sem módulo Mercado não enxergam diferença na tela Caixas.",
+    ],
+  },
   {
     version: "1.20.0-beta",
     date: "2026-06-11",
