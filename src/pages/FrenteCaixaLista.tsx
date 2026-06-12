@@ -44,7 +44,13 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { supabase } from '@/integrations/supabase/client';
 import { brl } from '@/components/pdv-v2/_format';
-import { printDanfeFromRecord } from '@/services/nfceService';
+import { printDanfeFromRecord, emitirNFCe, type NFCeItem } from '@/services/nfceService';
+import { useProducts } from '@/hooks/useProducts';
+import { useTaxRules } from '@/hooks/useTaxRules';
+import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
+import { applyStockMovementOnce } from '@/hooks/useStockMovements';
+import { usePdvSettings } from '@/hooks/usePdvSettings';
+import { FileText } from 'lucide-react';
 
 interface SaleRow {
   id: string;
@@ -84,6 +90,10 @@ export default function FrenteCaixaLista() {
   const navigate = useNavigate();
   const { company } = useAuthContext();
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
+  const { products } = useProducts({ companyId: company?.id });
+  const { taxRules } = useTaxRules({ companyId: company?.id });
+  const { settings: pdvSettings } = usePdvSettings(company?.id);
+  const [emittingId, setEmittingId] = useState<string | null>(null);
 
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const [dateFrom, setDateFrom] = useState(today);
@@ -213,6 +223,83 @@ export default function FrenteCaixaLista() {
       await printDanfeFromRecord(rec as any);
     } catch (e: any) {
       toast.error('Falha ao reimprimir: ' + e.message);
+    }
+  }
+
+  /**
+   * Fase 3 — emitir NFC-e retroativamente para uma pré-venda (sem NFC-e
+   * autorizada). Reaproveita os itens já gravados em `pdv_sale_items` e
+   * a engine `emitirNFCe`. Quando o operador tem `stock_move_on_fiscal_only`
+   * ligado, dispara também a baixa de estoque que ficou pendente.
+   */
+  async function emitNfceRetroativa(sale: SaleRow) {
+    if (!company?.id) return;
+    if (sale.nfce?.status === 'autorizada' || sale.nfce?.status === 'processando') {
+      toast.info('Esta venda já possui NFC-e em andamento.');
+      return;
+    }
+    setEmittingId(sale.id);
+    try {
+      const { data: itemsData, error: itErr } = await supabase
+        .from('pdv_sale_items')
+        .select('product_id, product_name, quantity, unit_price')
+        .eq('sale_id', sale.id);
+      if (itErr) throw itErr;
+      const saleItems = (itemsData as any[]) || [];
+      if (saleItems.length === 0) {
+        toast.error('Venda sem itens — não é possível emitir NFC-e.');
+        return;
+      }
+      const nfceItems: NFCeItem[] = saleItems.map((it) => {
+        const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
+        const taxRule = (product as any)?.taxRuleId
+          ? taxRules.find((tr) => tr.id === (product as any).taxRuleId)
+          : null;
+        const fallbackNcm = it.product_id ? '00000000' : '21069090';
+        return {
+          codigo: (product as any)?.code || it.product_id || 'AVULSO',
+          descricao: it.product_name,
+          unidade: ((product as any)?.unit as string) || 'UN',
+          quantidade: Number(it.quantity) || 1,
+          valor_unitario: Number(it.unit_price) || 0,
+          ...buildNfceFiscalFields({ product: product as any, taxRule, mercadoEnabled: true, fallbackNcm }),
+        };
+      });
+      const externalId = `FCX-RETRO-${sale.id.substring(0, 8)}-${Date.now()}`;
+      await emitirNFCe(company.id, sale.id, {
+        external_id: externalId,
+        itens: nfceItems,
+        valor_desconto: Number(sale.discount) || 0,
+        valor_frete: 0,
+        observacoes: sale.customer_name ? `Cliente: ${sale.customer_name}` : undefined,
+      } as any);
+      // Marca venda como fiscal e dispara baixa de estoque pendente (se aplicável).
+      await supabase
+        .from('pdv_sales')
+        .update({ fiscal_mode: 'fiscal' } as any)
+        .eq('id', sale.id);
+      if (pdvSettings.stock_move_on_fiscal_only) {
+        (async () => {
+          for (const it of saleItems) {
+            if (!it.product_id) continue;
+            await applyStockMovementOnce({
+              productId: it.product_id,
+              quantity: -(Number(it.quantity) || 0),
+              type: 'sale',
+              referenceType: 'pdv_sale',
+              referenceId: sale.id,
+              notes: 'Baixa retroativa via emissão NFC-e',
+            });
+          }
+        })();
+      }
+      toast.success('NFC-e enviada para processamento.');
+      await load();
+    } catch (e: any) {
+      console.error('[FrenteCaixaLista] emitNfceRetroativa', e);
+      toast.error('Falha ao emitir NFC-e: ' + (e?.message || e));
+    } finally {
+      setEmittingId(null);
     }
   }
 
@@ -366,6 +453,22 @@ export default function FrenteCaixaLista() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          {(!r.nfce || (r.nfce.status !== 'autorizada' && r.nfce.status !== 'processando' && r.nfce.status !== 'cancelada')) && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-primary"
+                              onClick={() => emitNfceRetroativa(r)}
+                              disabled={emittingId === r.id}
+                              title="Emitir NFC-e desta venda"
+                            >
+                              {emittingId === r.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <FileText className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
                           <Button
                             size="icon"
                             variant="ghost"
