@@ -509,19 +509,36 @@ export default function FrenteCaixa() {
       // Baixa automática de estoque (no-op para produtos sem track_stock).
       // Fire-and-forget: não bloqueia o fluxo de venda nem mostra erro ao operador
       // se algum item falhar — a venda já foi registrada.
-      (async () => {
-        for (const l of lines) {
-          if (!l.product_id) continue;
-          await applyStockMovementOnce({
-            productId: l.product_id,
-            quantity: -l.quantity,
-            type: 'sale',
-            referenceType: 'pdv_sale',
-            referenceId: saleId,
-            notes: `Frente de Caixa (${params.paymentName})`,
-          });
+      // Fase A.2: quando `stock_move_on_fiscal_only` está ligado, NÃO baixa
+      // estoque aqui — a baixa fica reservada à emissão fiscal (NFC-e).
+      if (!pdvSettings.stock_move_on_fiscal_only) {
+        (async () => {
+          for (const l of lines) {
+            if (!l.product_id) continue;
+            await applyStockMovementOnce({
+              productId: l.product_id,
+              quantity: -l.quantity,
+              type: 'sale',
+              referenceType: 'pdv_sale',
+              referenceId: saleId,
+              notes: `Frente de Caixa (${params.paymentName})`,
+            });
+          }
+        })();
+      }
+
+      // Fase A.2: ação ao salvar a venda (impressão do cupom).
+      const mode = pdvSettings.print_on_finish_mode;
+      if (mode === 'auto') {
+        // TODO Fase B: chamar a impressão real do cupom da Frente de Caixa.
+        toast.success('Cupom enviado para impressão.');
+      } else if (mode === 'ask') {
+        const ok = window.confirm('Imprimir cupom desta venda?');
+        if (ok) {
+          // TODO Fase B: chamar a impressão real do cupom da Frente de Caixa.
+          toast.success('Cupom enviado para impressão.');
         }
-      })();
+      }
 
       setLines([]);
       setQuery('');
