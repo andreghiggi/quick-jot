@@ -13,6 +13,7 @@ import { brl, maskCurrencyInput, parseCurrencyInput } from '@/components/pdv-v2/
 import {
   runMultiPayment,
   type MultiPaymentInputLine,
+  type MultiPaymentResolvedLine,
 } from '@/utils/pdvV2MultiPayment';
 import { FrenteCaixaCustomerDialog } from './FrenteCaixaCustomerDialog';
 
@@ -46,6 +47,10 @@ export interface FrenteCaixaCheckoutResult {
   customerDocument?: string;
   notes?: string;
   combinedNotesFragment?: string;
+  /** Fase 1: indica se a venda deve ser registrada com NFC-e ou como pré-venda. */
+  fiscalMode: 'fiscal' | 'nao_fiscal';
+  /** Linhas resolvidas do multi-pagamento — usado para montar `pagamentos_split` da NFC-e. */
+  mpLines: MultiPaymentResolvedLine[];
 }
 
 interface Props {
@@ -55,6 +60,8 @@ interface Props {
   items: FrenteCaixaCheckoutItem[];
   /** Soma dos itens (passada pelo caller para evitar recomputar). */
   itemsTotal: number;
+  /** Fase 1: comportamento padrão do botão SALVAR (Configurações → Comportamento). */
+  defaultFiscalMode?: 'fiscal' | 'nao_fiscal' | 'ask';
   /**
    * Chamado quando o operador clicar SALVAR e todas as cobranças (incluindo
    * TEF) foram aprovadas. O caller é responsável por persistir a venda via
@@ -78,6 +85,7 @@ export function FrenteCaixaCheckoutDialog({
   companyId,
   items,
   itemsTotal,
+  defaultFiscalMode = 'ask',
   onConfirm,
 }: Props) {
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
