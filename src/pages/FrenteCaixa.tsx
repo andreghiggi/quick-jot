@@ -53,6 +53,11 @@ import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { printCurrentCashClosing } from '@/utils/printCurrentCashClosing';
 import { usePdvSettings } from '@/hooks/usePdvSettings';
+import { useTaxRules } from '@/hooks/useTaxRules';
+import { emitirNFCe, type NFCeItem } from '@/services/nfceService';
+import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
+import { buildPagamentosSplit } from '@/utils/pdvV2MultiPayment';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CartLine {
   id: string; // local uuid
@@ -82,6 +87,7 @@ export default function FrenteCaixa() {
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
   const { settings: pdvSettings } = usePdvSettings(company?.id);
+  const { taxRules } = useTaxRules({ companyId: company?.id });
   const {
     currentRegister,
     cashOpenKnown,
