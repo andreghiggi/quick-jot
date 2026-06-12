@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.20.2-beta";
+export const VERSION = "1.21.0-beta";
 export const RELEASE_DATE = "2026-06-12"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: Configurações do PDV (Fase A.2 — Comportamento)";
+export const CODENAME = "Frente de Caixa: Pré-venda + NFC-e retroativa (Fases 1+2+3)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.0-beta",
+    date: "2026-06-12",
+    codename: "Frente de Caixa: Pré-venda + NFC-e retroativa (Fases 1+2+3)",
+    changes: [
+      "Configurações da Frente de Caixa → bloco 'Comportamento' ganhou nova opção 'Ação ao salvar a venda (fiscal)': 'Salvar como pré-venda (sem NFC-e)', 'Salvar e emitir NFC-e' ou 'Perguntar sempre'. Padrão: Perguntar sempre — não altera comportamento das lojas existentes.",
+      "Fase 1 — pdv_sales ganhou a coluna fiscal_mode ('fiscal' | 'nao_fiscal', default 'nao_fiscal'). Toda venda da Frente de Caixa agora é classificada explicitamente como pré-venda ou venda fiscal. Histórico permanece intacto (vendas antigas ficam como 'nao_fiscal').",
+      "Fase 2 — quando 'Perguntar sempre' está ativo, o checkout exibe dois botões SALVAR: 'Salvar pré-venda' (sem NFC-e) e 'Salvar + NFC-e' (emite automaticamente após cobrança aprovada). Quando o modo padrão é 'fiscal' ou 'nao_fiscal', aparece um único botão correspondente. A NFC-e é enviada com pagamentos_split (compatível com Multi-Pagamento v1.6/v1.7).",
+      "Fase 3 — Lista do PDV (Frente de Caixa → Lista) ganhou botão 'Emitir NFC-e' para vendas sem NFC-e autorizada ou rejeitada/inutilizada. Reaproveita pdv_sale_items, monta o payload e dispara o nfce-proxy. Marca a venda como fiscal_mode='fiscal' após envio e dispara a baixa de estoque pendente quando 'Movimentar estoque apenas na emissão fiscal' está ligado.",
+      "Pré-venda continua movimentando estoque e caixa normalmente (a menos que 'Movimentar estoque apenas na emissão fiscal' esteja ligado). A NFC-e retroativa cuida da baixa pendente, sem duplicar movimentações (proteção em applyStockMovementOnce).",
+      "Mudança ISOLADA à Frente de Caixa (módulo Mercado). PDV V2, Pedido Express, OrderCardChargeDialog, runMultiPayment, runTefPayment, pinpadService, tef-webservice, nfce-proxy, TEF v1.0/v1.1/v1.2-beta, Multi-Pagamento v1.6/v1.7 NÃO foram tocados. Lojas sem o módulo Mercado não enxergam diferença.",
+    ],
+  },
   {
     version: "1.20.2-beta",
     date: "2026-06-12",
