@@ -198,6 +198,8 @@ export default function FrenteCaixaConfiguracoes() {
             ['cash_control_enabled', 'Exigir caixa aberto para vender'],
             ['blind_close_enabled', 'Fechamento de caixa cego (esconde valor esperado e diferença)'],
             ['require_movement_reason', 'Exigir motivo em sangria/suprimento'],
+            ['block_close_with_pending_sales', 'Bloquear fechamento com venda pendente (itens no carrinho)'],
+            ['auto_print_closing_report', 'Imprimir relatório de fechamento automaticamente'],
           ] as const).map(([key, label]) => (
             <div key={key} className="flex items-center justify-between gap-3 py-1.5">
               <Label htmlFor={key} className="font-normal cursor-pointer">{label}</Label>
