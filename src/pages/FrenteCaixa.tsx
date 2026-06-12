@@ -120,6 +120,18 @@ export default function FrenteCaixa() {
   const [xmlMesOpen, setXmlMesOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Persiste o carrinho em localStorage para que outras telas (ex.: Caixas)
+  // possam detectar venda pendente antes de fechar o caixa.
+  useEffect(() => {
+    try {
+      if (lines.length > 0) {
+        localStorage.setItem('frenteCaixa.cartPendingCount', String(lines.length));
+      } else {
+        localStorage.removeItem('frenteCaixa.cartPendingCount');
+      }
+    } catch {/*noop*/}
+  }, [lines.length]);
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   // ---- fullscreen ----

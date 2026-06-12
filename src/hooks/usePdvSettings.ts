@@ -24,6 +24,8 @@ export interface PdvSettings {
   print_show_logo: boolean;
   print_show_review_qr: boolean;
   review_qr_url: string;
+  block_close_with_pending_sales: boolean;
+  auto_print_closing_report: boolean;
 }
 
 export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
@@ -48,6 +50,8 @@ export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
   print_show_logo: true,
   print_show_review_qr: false,
   review_qr_url: '',
+  block_close_with_pending_sales: false,
+  auto_print_closing_report: false,
 };
 
 /**
@@ -100,6 +104,8 @@ export function usePdvSettings(companyId?: string | null) {
         print_show_logo: (data as any).print_show_logo ?? true,
         print_show_review_qr: !!(data as any).print_show_review_qr,
         review_qr_url: (data as any).review_qr_url ?? '',
+        block_close_with_pending_sales: !!(data as any).block_close_with_pending_sales,
+        auto_print_closing_report: !!(data as any).auto_print_closing_report,
       });
     } else {
       setSettings(PDV_SETTINGS_DEFAULTS);

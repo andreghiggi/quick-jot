@@ -1498,9 +1498,11 @@ export type Database = {
         Row: {
           allow_price_change_on_sale: boolean
           auto_open_drawer_cash: boolean
+          auto_print_closing_report: boolean
           auto_print_on_finish: boolean
           auto_print_second_copy: boolean
           blind_close_enabled: boolean
+          block_close_with_pending_sales: boolean
           block_sale_without_price: boolean
           cash_control_enabled: boolean
           clear_screen_after_sale: boolean
@@ -1525,9 +1527,11 @@ export type Database = {
         Insert: {
           allow_price_change_on_sale?: boolean
           auto_open_drawer_cash?: boolean
+          auto_print_closing_report?: boolean
           auto_print_on_finish?: boolean
           auto_print_second_copy?: boolean
           blind_close_enabled?: boolean
+          block_close_with_pending_sales?: boolean
           block_sale_without_price?: boolean
           cash_control_enabled?: boolean
           clear_screen_after_sale?: boolean
@@ -1552,9 +1556,11 @@ export type Database = {
         Update: {
           allow_price_change_on_sale?: boolean
           auto_open_drawer_cash?: boolean
+          auto_print_closing_report?: boolean
           auto_print_on_finish?: boolean
           auto_print_second_copy?: boolean
           blind_close_enabled?: boolean
+          block_close_with_pending_sales?: boolean
           block_sale_without_price?: boolean
           cash_control_enabled?: boolean
           clear_screen_after_sale?: boolean
