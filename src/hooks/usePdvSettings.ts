@@ -28,6 +28,11 @@ export interface PdvSettings {
   auto_print_closing_report: boolean;
   stock_move_on_fiscal_only: boolean;
   print_on_finish_mode: 'off' | 'auto' | 'ask';
+  /** Fase 1: ação padrão ao salvar a venda na Frente de Caixa.
+   *  - 'fiscal'    → salva já tentando emitir NFC-e
+   *  - 'nao_fiscal'→ salva como pré-venda (sem NFC-e)
+   *  - 'ask'       → mostra dois botões no checkout para o operador escolher */
+  default_fiscal_mode: 'fiscal' | 'nao_fiscal' | 'ask';
 }
 
 export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
@@ -56,6 +61,7 @@ export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
   auto_print_closing_report: false,
   stock_move_on_fiscal_only: false,
   print_on_finish_mode: 'off',
+  default_fiscal_mode: 'ask',
 };
 
 /**
@@ -113,6 +119,8 @@ export function usePdvSettings(companyId?: string | null) {
         stock_move_on_fiscal_only: !!(data as any).stock_move_on_fiscal_only,
         print_on_finish_mode:
           ((data as any).print_on_finish_mode as 'off' | 'auto' | 'ask') ?? 'off',
+        default_fiscal_mode:
+          ((data as any).default_fiscal_mode as 'fiscal' | 'nao_fiscal' | 'ask') ?? 'ask',
       });
     } else {
       setSettings(PDV_SETTINGS_DEFAULTS);
