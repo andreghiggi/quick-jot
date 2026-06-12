@@ -13,6 +13,11 @@ Novas colunas em `public.pdv_settings` (todas com default = comportamento atual)
 - `auto_print_on_finish`, `auto_print_second_copy`, `auto_open_drawer_cash`, `clear_screen_after_sale` — flags de impressão/comportamento, gravadas e prontas para a próxima fase de impressão da Frente de Caixa.
 - `print_show_logo`, `print_show_review_qr`, `review_qr_url` — extras de cupom, gravados para uso futuro.
 
+**Fase A.1** (CashRegisters integração mínima):
+- `block_close_with_pending_sales` (false) — em lojas com Mercado ativo, bloqueia fechar o caixa enquanto houver itens no carrinho da Frente de Caixa (contagem via localStorage `frenteCaixa.cartPendingCount`).
+- `auto_print_closing_report` (false) — em lojas com Mercado ativo, dispara `printCurrentCashClosing` após `closeRegister` ter sucesso em `CashRegisters.tsx`.
+- Wiring: `src/pages/CashRegisters.tsx` é a ÚNICA tela fora da Frente de Caixa que lê `pdv_settings`, e somente quando `useMercadoEnabled` retorna true.
+
 **Escopo:** o hook `usePdvSettings` continua exclusivo da Frente de Caixa. PDV V2, Pedido Express, OrderCardChargeDialog, TEF (v1.0/v1.1/v1.2-beta), Multi-Pagamento e NFC-e NÃO leem `pdv_settings` e não devem passar a ler.
 
 UI: `src/pages/FrenteCaixaConfiguracoes.tsx` (cards: Controle de caixa, Itens de venda, Comportamento, Cupom — extras).
