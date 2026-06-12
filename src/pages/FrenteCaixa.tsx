@@ -920,6 +920,7 @@ export default function FrenteCaixa() {
           open={paymentOpen}
           onOpenChange={setPaymentOpen}
           companyId={company?.id}
+          defaultFiscalMode={pdvSettings.default_fiscal_mode}
           items={lines.map((l) => ({
             product_id: l.product_id,
             product_name: l.product_name,
