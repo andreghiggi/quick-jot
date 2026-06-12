@@ -1429,6 +1429,7 @@ export type Database = {
           customer_name: string | null
           discount: number | null
           final_total: number
+          fiscal_mode: string
           id: string
           notes: string | null
           order_id: string | null
@@ -1443,6 +1444,7 @@ export type Database = {
           customer_name?: string | null
           discount?: number | null
           final_total?: number
+          fiscal_mode?: string
           id?: string
           notes?: string | null
           order_id?: string | null
@@ -1457,6 +1459,7 @@ export type Database = {
           customer_name?: string | null
           discount?: number | null
           final_total?: number
+          fiscal_mode?: string
           id?: string
           notes?: string | null
           order_id?: string | null
@@ -1509,6 +1512,7 @@ export type Database = {
           company_id: string
           confirm_quantity_above: number
           created_at: string
+          default_fiscal_mode: string
           id: string
           print_on_finish_mode: string
           print_show_customer: boolean
@@ -1540,6 +1544,7 @@ export type Database = {
           company_id: string
           confirm_quantity_above?: number
           created_at?: string
+          default_fiscal_mode?: string
           id?: string
           print_on_finish_mode?: string
           print_show_customer?: boolean
@@ -1571,6 +1576,7 @@ export type Database = {
           company_id?: string
           confirm_quantity_above?: number
           created_at?: string
+          default_fiscal_mode?: string
           id?: string
           print_on_finish_mode?: string
           print_show_customer?: boolean
