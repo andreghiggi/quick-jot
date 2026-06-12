@@ -3,6 +3,9 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { usePdvSettings } from '@/hooks/usePdvSettings';
+import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { printCurrentCashClosing } from '@/utils/printCurrentCashClosing';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -39,6 +42,8 @@ function formatCurrency(value: number) {
 export default function CashRegisters() {
   const { user, company } = useAuthContext();
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
+  const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
+  const { settings: pdvSettings } = usePdvSettings(company?.id);
   const { 
     currentRegister, 
     registers,
@@ -73,12 +78,38 @@ export default function CashRegisters() {
 
   async function handleCloseRegister() {
     if (!currentRegister || !user) return;
-    
+
+    // Fase A.1 — bloquear fechamento com venda pendente na Frente de Caixa.
+    // Só aplica para lojas com o módulo `mercado` ativo e com o toggle ligado.
+    if (mercadoEnabled && pdvSettings.block_close_with_pending_sales) {
+      const pending = parseInt(localStorage.getItem('frenteCaixa.cartPendingCount') || '0', 10);
+      if (pending > 0) {
+        toast.error(
+          `Há ${pending} item(ns) no carrinho da Frente de Caixa. Finalize ou cancele a venda antes de fechar o caixa.`
+        );
+        return;
+      }
+    }
+
     const amount = parseFloat(closingAmount) || 0;
-    await closeRegister(amount, user.id, closingNotes || undefined);
+    const closed = await closeRegister(amount, user.id, closingNotes || undefined);
     setCloseRegisterDialog(false);
     setClosingAmount('');
     setClosingNotes('');
+
+    // Fase A.1 — auto-impressão do Relatório de Fechamento (apenas Mercado).
+    if (closed && mercadoEnabled && pdvSettings.auto_print_closing_report && company?.id) {
+      try {
+        await printCurrentCashClosing({
+          companyId: company.id,
+          registerId: closed.id,
+          paperSize: (storeSettings as any)?.printer_paper_size === '58mm' ? '58mm' : '80mm',
+          blindClose: pdvSettings.blind_close_enabled,
+        });
+      } catch (err) {
+        console.error('[CashRegisters] auto print closing failed', err);
+      }
+    }
   }
 
   async function handleReopenRegister(registerId: string) {
