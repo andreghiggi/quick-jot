@@ -259,12 +259,14 @@ export function FrenteCaixaCheckoutDialog({
   }, [open, step, processing, allocated, activePaymentMethods, exact, customerDialogOpen]);
 
   // ===== salvar =====
-  async function handleSave() {
+  async function handleSave(fiscalChoice?: 'fiscal' | 'nao_fiscal') {
     if (!companyId) return;
     if (!exact) {
       toast.error('O valor pago precisa ser igual ao total.');
       return;
     }
+    const fiscalMode: 'fiscal' | 'nao_fiscal' =
+      fiscalChoice ?? (defaultFiscalMode === 'ask' ? 'nao_fiscal' : defaultFiscalMode);
     setProcessing(true);
     setProcessingStatus('Processando pagamentos…');
     try {
@@ -316,6 +318,8 @@ export function FrenteCaixaCheckoutDialog({
         customerDocument: customerDocument.trim() || undefined,
         notes: notes.trim() || undefined,
         combinedNotesFragment: mp.combinedNotesFragment,
+        fiscalMode,
+        mpLines: mp.lines || [],
       });
     } catch (err: any) {
       console.error('[FrenteCaixaCheckout] error:', err);
