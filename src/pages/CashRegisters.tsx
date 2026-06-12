@@ -103,7 +103,7 @@ export default function CashRegisters() {
         await printCurrentCashClosing({
           companyId: company.id,
           registerId: closed.id,
-          paperSize: (storeSettings as any)?.printer_paper_size === '58mm' ? '58mm' : '80mm',
+          paperSize: (storeSettings as any)?.printerPaperSize === '58mm' ? '58mm' : '80mm',
           blindClose: pdvSettings.blind_close_enabled,
         });
       } catch (err) {
