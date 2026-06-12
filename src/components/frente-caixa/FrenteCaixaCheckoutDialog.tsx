@@ -640,22 +640,50 @@ export function FrenteCaixaCheckoutDialog({
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Voltar
               </Button>
-              <Button
-                type="button"
-                onClick={handleSave}
-                disabled={processing || !exact}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[140px]"
-              >
-                {processing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-1" /> SALVAR
-                  </>
-                )}
-              </Button>
+              {defaultFiscalMode === 'ask' ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleSave('nao_fiscal')}
+                    disabled={processing || !exact}
+                    className="min-w-[180px]"
+                  >
+                    {processing ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…</>
+                    ) : (
+                      <><Save className="h-4 w-4 mr-1" /> Salvar pré-venda</>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => handleSave('fiscal')}
+                    disabled={processing || !exact}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[180px]"
+                  >
+                    {processing ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…</>
+                    ) : (
+                      <><Save className="h-4 w-4 mr-1" /> Salvar + NFC-e</>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={() => handleSave(defaultFiscalMode)}
+                  disabled={processing || !exact}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[160px]"
+                >
+                  {processing ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…</>
+                  ) : defaultFiscalMode === 'fiscal' ? (
+                    <><Save className="h-4 w-4 mr-1" /> Salvar + NFC-e</>
+                  ) : (
+                    <><Save className="h-4 w-4 mr-1" /> Salvar pré-venda</>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         </div>
