@@ -53,6 +53,11 @@ import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { printCurrentCashClosing } from '@/utils/printCurrentCashClosing';
 import { usePdvSettings } from '@/hooks/usePdvSettings';
+import { useTaxRules } from '@/hooks/useTaxRules';
+import { emitirNFCe, type NFCeItem } from '@/services/nfceService';
+import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
+import { buildPagamentosSplit } from '@/utils/pdvV2MultiPayment';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CartLine {
   id: string; // local uuid
@@ -82,6 +87,7 @@ export default function FrenteCaixa() {
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
   const { settings: pdvSettings } = usePdvSettings(company?.id);
+  const { taxRules } = useTaxRules({ companyId: company?.id });
   const {
     currentRegister,
     cashOpenKnown,
@@ -504,14 +510,19 @@ export default function FrenteCaixa() {
       params.discount,
       params.customerName,
       noteParts.join(' | '),
+      undefined,
+      params.fiscalMode,
     );
     if (saleId) {
       // Baixa automática de estoque (no-op para produtos sem track_stock).
-      // Fire-and-forget: não bloqueia o fluxo de venda nem mostra erro ao operador
-      // se algum item falhar — a venda já foi registrada.
       // Fase A.2: quando `stock_move_on_fiscal_only` está ligado, NÃO baixa
       // estoque aqui — a baixa fica reservada à emissão fiscal (NFC-e).
-      if (!pdvSettings.stock_move_on_fiscal_only) {
+      // Fase 1 fiscal: se a venda é não-fiscal e o operador escolheu
+      // "movimentar só na nota", a baixa fica pendente até a NFC-e ser emitida
+      // (retroativa via Lista do PDV).
+      const shouldMoveStockNow = !pdvSettings.stock_move_on_fiscal_only ||
+        params.fiscalMode === 'fiscal';
+      if (shouldMoveStockNow) {
         (async () => {
           for (const l of lines) {
             if (!l.product_id) continue;
@@ -523,6 +534,55 @@ export default function FrenteCaixa() {
               referenceId: saleId,
               notes: `Frente de Caixa (${params.paymentName})`,
             });
+          }
+        })();
+      }
+
+      // Fase 1+2 fiscal: se o operador escolheu emitir NFC-e, dispara agora.
+      // Não bloqueia o fechamento do checkout — toast informa rejeição.
+      if (params.fiscalMode === 'fiscal' && company?.id) {
+        (async () => {
+          try {
+            const nfceItems: NFCeItem[] = lines.map((l) => {
+              const product = l.product_id ? products.find((p) => p.id === l.product_id) : null;
+              const taxRule = (product as any)?.taxRuleId
+                ? taxRules.find((tr) => tr.id === (product as any).taxRuleId)
+                : null;
+              const fallbackNcm = l.product_id ? '00000000' : '21069090';
+              const unitNet = Math.max(
+                0,
+                (l.effective_unit_price * l.quantity - l.line_discount + l.line_surcharge) /
+                  Math.max(l.quantity, 0.0001),
+              );
+              return {
+                codigo: (product as any)?.code || l.product_id || 'AVULSO',
+                descricao: l.product_name,
+                unidade: ((product as any)?.unit as string) || l.unit || 'UN',
+                quantidade: l.quantity,
+                valor_unitario: unitNet,
+                ...buildNfceFiscalFields({ product: product as any, taxRule, mercadoEnabled, fallbackNcm }),
+              };
+            });
+            const cleanDoc = (params.customerDocument || '').replace(/\D/g, '');
+            const destinatario = cleanDoc.length === 11
+              ? { cpf: cleanDoc, nome: params.customerName || undefined }
+              : cleanDoc.length === 14
+                ? { cnpj: cleanDoc, nome: params.customerName || undefined }
+                : undefined;
+            const externalId = `FCX-${currentRegister?.id?.substring(0, 8) || 'NOCR'}-${Date.now()}`;
+            await emitirNFCe(company.id, saleId, {
+              external_id: externalId,
+              itens: nfceItems,
+              valor_desconto: params.discount || 0,
+              valor_frete: 0,
+              observacoes: params.customerName ? `Cliente: ${params.customerName}` : undefined,
+              destinatario,
+              pagamentos_split: buildPagamentosSplit(params.mpLines),
+            } as any);
+            toast.success('NFC-e enviada para processamento.');
+          } catch (err: any) {
+            console.error('[FrenteCaixa] NFC-e error:', err);
+            toast.error(`Venda salva, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
           }
         })();
       }
@@ -860,6 +920,7 @@ export default function FrenteCaixa() {
           open={paymentOpen}
           onOpenChange={setPaymentOpen}
           companyId={company?.id}
+          defaultFiscalMode={pdvSettings.default_fiscal_mode}
           items={lines.map((l) => ({
             product_id: l.product_id,
             product_name: l.product_name,

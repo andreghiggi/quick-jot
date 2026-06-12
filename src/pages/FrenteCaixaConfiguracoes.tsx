@@ -202,6 +202,28 @@ export default function FrenteCaixaConfiguracoes() {
               Controla o que acontece com o cupom após cada venda finalizada na Frente de Caixa.
             </p>
           </div>
+
+          <div className="space-y-1.5 pt-3 border-t border-border">
+            <Label htmlFor="default_fiscal_mode">Ação ao salvar a venda (fiscal)</Label>
+            <Select
+              value={form.default_fiscal_mode}
+              onValueChange={(v) => upd('default_fiscal_mode', v as 'fiscal' | 'nao_fiscal' | 'ask')}
+              disabled={loading}
+            >
+              <SelectTrigger id="default_fiscal_mode">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nao_fiscal">Salvar como pré-venda (sem NFC-e)</SelectItem>
+                <SelectItem value="fiscal">Salvar e emitir NFC-e</SelectItem>
+                <SelectItem value="ask">Perguntar sempre</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Pré-venda movimenta estoque e caixa, mas não gera NFC-e — a nota pode ser emitida depois pela Lista do PDV.
+              "Perguntar sempre" mostra dois botões no checkout para o operador decidir em cada venda.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
