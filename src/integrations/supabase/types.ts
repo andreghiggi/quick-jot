@@ -1510,6 +1510,7 @@ export type Database = {
           confirm_quantity_above: number
           created_at: string
           id: string
+          print_on_finish_mode: string
           print_show_customer: boolean
           print_show_discount: boolean
           print_show_logo: boolean
@@ -1522,6 +1523,7 @@ export type Database = {
           require_customer_above_value: number
           require_movement_reason: boolean
           review_qr_url: string
+          stock_move_on_fiscal_only: boolean
           updated_at: string
         }
         Insert: {
@@ -1539,6 +1541,7 @@ export type Database = {
           confirm_quantity_above?: number
           created_at?: string
           id?: string
+          print_on_finish_mode?: string
           print_show_customer?: boolean
           print_show_discount?: boolean
           print_show_logo?: boolean
@@ -1551,6 +1554,7 @@ export type Database = {
           require_customer_above_value?: number
           require_movement_reason?: boolean
           review_qr_url?: string
+          stock_move_on_fiscal_only?: boolean
           updated_at?: string
         }
         Update: {
@@ -1568,6 +1572,7 @@ export type Database = {
           confirm_quantity_above?: number
           created_at?: string
           id?: string
+          print_on_finish_mode?: string
           print_show_customer?: boolean
           print_show_discount?: boolean
           print_show_logo?: boolean
@@ -1580,6 +1585,7 @@ export type Database = {
           require_customer_above_value?: number
           require_movement_reason?: boolean
           review_qr_url?: string
+          stock_move_on_fiscal_only?: boolean
           updated_at?: string
         }
         Relationships: [

@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.20.1-beta";
+export const VERSION = "1.20.2-beta";
 export const RELEASE_DATE = "2026-06-12"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: Configurações do PDV (Fase A.1)";
+export const CODENAME = "Frente de Caixa: Configurações do PDV (Fase A.2 — Comportamento)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.20.2-beta",
+    date: "2026-06-12",
+    codename: "Frente de Caixa: Configurações do PDV (Fase A.2 — Comportamento)",
+    changes: [
+      "Configurações da Frente de Caixa → bloco 'Comportamento' ganhou 2 novos ajustes (Fase A.2): 'Movimentar estoque apenas na emissão fiscal' e 'Ação ao salvar a venda' (Não imprimir / Imprimir automaticamente / Perguntar sempre). Defaults preservam comportamento atual.",
+      "Quando 'Movimentar estoque apenas na emissão fiscal' está ligado: a Frente de Caixa NÃO baixa estoque ao registrar a venda — a baixa fica reservada à emissão da NFC-e (próxima fase). Útil para quem só quer movimentar estoque com documento fiscal autorizado.",
+      "'Ação ao salvar a venda' substitui o toggle on/off da Fase A por 3 modos: 'off' (padrão, não imprime), 'auto' (dispara impressão automática) e 'ask' (pergunta ao operador via confirm). Lojas que já tinham o toggle on são migradas automaticamente para 'auto'.",
+      "Itens FORA da Fase A.2 (Gweb tem, Comanda Tech não suporta hoje): Gerar financeiro, Sugerir vendedor, Usar tabela de preço, Pagamentos digitais na pré-venda, Mesclar pré-vendas — todos dependem de módulos ainda inexistentes (contas a receber, comissão, tabelas de preço, pré-venda).",
+      "Mudança ISOLADA: nada de PDV V2, Pedido Express, OrderCardChargeDialog, runMultiPayment, runTefPayment, pinpadService, tef-webservice, nfce-proxy, TEF v1.0/v1.1/v1.2-beta foi tocado.",
+    ],
+  },
   {
     version: "1.20.1-beta",
     date: "2026-06-12",

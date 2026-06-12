@@ -26,6 +26,8 @@ export interface PdvSettings {
   review_qr_url: string;
   block_close_with_pending_sales: boolean;
   auto_print_closing_report: boolean;
+  stock_move_on_fiscal_only: boolean;
+  print_on_finish_mode: 'off' | 'auto' | 'ask';
 }
 
 export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
@@ -52,6 +54,8 @@ export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
   review_qr_url: '',
   block_close_with_pending_sales: false,
   auto_print_closing_report: false,
+  stock_move_on_fiscal_only: false,
+  print_on_finish_mode: 'off',
 };
 
 /**
@@ -106,6 +110,9 @@ export function usePdvSettings(companyId?: string | null) {
         review_qr_url: (data as any).review_qr_url ?? '',
         block_close_with_pending_sales: !!(data as any).block_close_with_pending_sales,
         auto_print_closing_report: !!(data as any).auto_print_closing_report,
+        stock_move_on_fiscal_only: !!(data as any).stock_move_on_fiscal_only,
+        print_on_finish_mode:
+          ((data as any).print_on_finish_mode as 'off' | 'auto' | 'ask') ?? 'off',
       });
     } else {
       setSettings(PDV_SETTINGS_DEFAULTS);
