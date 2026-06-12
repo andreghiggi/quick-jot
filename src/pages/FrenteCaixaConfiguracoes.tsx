@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
@@ -165,10 +166,10 @@ export default function FrenteCaixaConfiguracoes() {
           </div>
 
           {([
-            ['auto_print_on_finish', 'Imprimir cupom automaticamente ao finalizar'],
             ['auto_print_second_copy', 'Imprimir 2ª via automaticamente'],
             ['auto_open_drawer_cash', 'Abrir gaveta automaticamente em pagamento em dinheiro'],
             ['clear_screen_after_sale', 'Limpar tela após finalizar venda'],
+            ['stock_move_on_fiscal_only', 'Movimentar estoque apenas na emissão fiscal (não baixa na venda do PDV)'],
           ] as const).map(([key, label]) => (
             <div key={key} className="flex items-center justify-between gap-3 py-1.5">
               <Label htmlFor={key} className="font-normal cursor-pointer">{label}</Label>
@@ -180,6 +181,27 @@ export default function FrenteCaixaConfiguracoes() {
               />
             </div>
           ))}
+
+          <div className="space-y-1.5 pt-1">
+            <Label htmlFor="print_on_finish_mode">Ação ao salvar a venda</Label>
+            <Select
+              value={form.print_on_finish_mode}
+              onValueChange={(v) => upd('print_on_finish_mode', v as 'off' | 'auto' | 'ask')}
+              disabled={loading}
+            >
+              <SelectTrigger id="print_on_finish_mode">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="off">Não imprimir</SelectItem>
+                <SelectItem value="auto">Imprimir automaticamente</SelectItem>
+                <SelectItem value="ask">Perguntar sempre</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Controla o que acontece com o cupom após cada venda finalizada na Frente de Caixa.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
