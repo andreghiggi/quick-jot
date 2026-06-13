@@ -325,21 +325,43 @@ export default function MesaQR() {
       let ticketLabel: string | null = null;
       if (settings.autoPrintProductionTicket && selectedMesa) {
         try {
+          // MesaQR é exclusivo da Lancheria I9 (V3) — sempre envia grupos.
+          const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+          const sendGroupedV3 = companyId === I9_COMPANY_ID;
           const productionItems = cart.map((item) => {
             const additionalNames: string[] = [];
+            const groupedOptionals: { groupName: string; items: string }[] = [];
             if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
               for (const entry of item.groupedOptionalNames) {
-                const afterColon = entry.includes(':')
-                  ? entry.split(':').slice(1).join(':')
-                  : entry;
+                const hasColon = entry.includes(':');
+                const groupName = hasColon ? entry.split(':')[0].trim() : 'Adicionais';
+                const afterColon = hasColon ? entry.split(':').slice(1).join(':') : entry;
                 const parts = afterColon
                   .split(',')
                   .map((s) => s.replace(/\s*R\$\s*[\d.,]+\s*$/i, '').trim())
                   .filter(Boolean);
                 additionalNames.push(...parts);
+                const itemsWithPrice = afterColon
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+                  .join(', ');
+                if (parts.length > 0) groupedOptionals.push({ groupName, items: itemsWithPrice });
               }
             } else if (item.selectedOptionals.length > 0) {
               additionalNames.push(...item.selectedOptionals.map((o) => o.name));
+              if (sendGroupedV3) {
+                groupedOptionals.push({
+                  groupName: 'Adicionais',
+                  items: item.selectedOptionals
+                    .map((o) =>
+                      o.price > 0
+                        ? `${o.name} R$${o.price.toFixed(2).replace('.', ',')}`
+                        : o.name
+                    )
+                    .join(', '),
+                });
+              }
             }
 
             const notesParts: string[] = [];
@@ -359,6 +381,8 @@ export default function MesaQR() {
               quantity: item.quantity,
               notes: notesParts.length > 0 ? notesParts.join(' | ') : undefined,
               description,
+              groupedOptionals:
+                sendGroupedV3 && groupedOptionals.length > 0 ? groupedOptionals : undefined,
             };
           });
 
