@@ -152,18 +152,23 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
   payload.items.forEach((it) => {
     const nome = it.name || 'Item';
     let main = nome;
-    const adicionais: string[] = [];
+    // V3 (I9): preserva o nome do grupo. Cada entrada vira "GRUPO: item1, item2".
+    const grupoLinhas: { grupo: string; itens: string[] }[] = [];
     const idxP = nome.indexOf('(');
     if (idxP >= 0 && nome.endsWith(')')) {
       main = nome.slice(0, idxP).trim();
       const extras = nome.slice(idxP + 1, -1).trim();
       const grupos = extras.split('|').map((g) => g.trim()).filter(Boolean);
       for (const g of grupos) {
-        const after = g.includes(':') ? g.split(':').slice(1).join(':') : g;
+        const hasColon = g.includes(':');
+        const grupoNome = hasColon ? g.split(':')[0].trim() : 'Adicionais';
+        const after = hasColon ? g.split(':').slice(1).join(':') : g;
+        const itens: string[] = [];
         for (const p of after.split(',').map((s) => s.trim()).filter(Boolean)) {
           const clean = p.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
-          if (clean) adicionais.push(clean);
+          if (clean) itens.push(clean);
         }
+        if (itens.length > 0) grupoLinhas.push({ grupo: grupoNome, itens });
       }
     }
     const sub = it.price * it.quantity;
@@ -173,9 +178,13 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
     const cab = `${main.toUpperCase()} ${money(it.price)}`;
     wrap(cab, COLS).forEach((l) => itemLines.push(l));
 
-    // Adicionais numerados "   [N] descricao"
-    adicionais.forEach((ad, i) => {
-      wrap(`[${i + 1}] ${ad}`, COLS, 3).forEach((l) => itemLines.push(l));
+    // Adicionais agrupados: "  GRUPO: item1, item2" (rótulo do grupo bold via marcador)
+    grupoLinhas.forEach(({ grupo, itens }) => {
+      const linha = `${grupo.toUpperCase()}: ${itens.join(', ')}`;
+      wrap(linha, COLS, 3).forEach((l, idx) => {
+        // marca apenas a primeira linha do grupo como bold (rótulo está nela)
+        itemLines.push(idx === 0 ? '__BOLD__' + l : l);
+      });
     });
     if (it.notes) {
       wrap(`Obs: ${it.notes}`, COLS, 3).forEach((l) => itemLines.push(l));

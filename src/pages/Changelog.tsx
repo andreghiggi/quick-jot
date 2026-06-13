@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '13/06/2026',
+    version: '1.21.1-beta',
+    type: 'improvement',
+    description: 'Impressão V3 (Lancheria da i9) — comanda de produção e recibo agora mostram os adicionais SEPARADOS POR GRUPO, com o rótulo do grupo em negrito (igual ao que já aparece no card do pedido). Ex.: "Sabores da sua Pizza: CAMARÃO R$12,00, FILÉ R$8,00" em uma linha e "Borda: Chocolate R$10,00" em outra. Aplicado nas 3 origens (cardápio público, MesaQR e Pedido Express) e o recibo do PDV V2 (import de comanda/mesa) herda a correção automaticamente. Rollout ISOLADO por company_id — só a Lancheria da i9 recebe; Margen, Império, Bon Appetit, Rei do Açaí, Scubidão e Vânia continuam exatamente como estavam até validação manual. Layouts V1 e V2 e fluxos de NFC-e/TEF/PinPad/Multi-Pagamento não foram tocados.',
+  },
+  {
     date: '09/06/2026',
     version: '1.18.0-beta',
     type: 'feature',
