@@ -26,10 +26,11 @@ interface Props {
   sales: ClosedTabSale[];
   companyId?: string;
   paperSize?: '58mm' | '80mm';
+  printLayout?: 'v1' | 'v2' | 'v3';
   onSaleDeleted: () => void;
 }
 
-export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, paperSize = '80mm', onSaleDeleted }: Props) {
+export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, paperSize = '80mm', printLayout, onSaleDeleted }: Props) {
   const [nfceMap, setNfceMap] = useState<Record<string, NFCeRecord | null>>({});
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
@@ -89,6 +90,7 @@ export function PDVV2ClosedTabsDialog({ open, onOpenChange, sales, companyId, pa
         total: sale.final_total,
         notes: sale.notes || undefined,
         paperSize,
+        printLayout,
       });
       toast.success('Recibo enviado para impressão');
     } catch (e: any) {
