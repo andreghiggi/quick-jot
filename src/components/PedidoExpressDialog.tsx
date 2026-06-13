@@ -3148,6 +3148,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         }}
         companyId={company?.id}
         total={total}
+        printLayout={settings.printLayout}
         title={isLancheriaI9 && step === 5 ? 'Finalizar Pedido' : 'Cobrar Retirada'}
         showDocumentMode
         showAddItem
