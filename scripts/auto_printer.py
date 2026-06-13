@@ -33,7 +33,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.30"  # remove legado piloto i9: V3 só quando print_layout=v3
+SCRIPT_VERSION = "v8.31"  # i9: prefixo '+' em adicionais (comanda+recibo V1/V2)
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -1354,7 +1354,11 @@ def imprimir_html(html, order_number):
                 continue
 
             if is_v2 and m_add:
-                texto_add = '>> ' + m_add.group(1).strip().upper()
+                # Lancheria I9: usa '+' como marcador (mais clean e semântico)
+                # em vez do '>>'. Outras lojas mantêm o '>>' original — sem regressão.
+                I9_COMPANY_ID_ADD = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
+                add_prefix = '+ ' if COMPANY_ID == I9_COMPANY_ID_ADD else '>> '
+                texto_add = add_prefix + m_add.group(1).strip().upper()
                 hDC.SelectObject(font_bold_big)
                 sublinhas_add = quebrar_linha_px(texto_add, usable_text_px)
                 garantir_espaco(line_h * len(sublinhas_add))

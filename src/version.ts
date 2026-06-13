@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.7-beta";
+export const VERSION = "1.21.8-beta";
 export const RELEASE_DATE = "2026-06-13"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "auto_printer: 'Pronto até' Pedido Express (I9)";
+export const CODENAME = "auto_printer: '+' nos adicionais (I9)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.8-beta",
+    date: "2026-06-13",
+    codename: "auto_printer: '+' nos adicionais (I9)",
+    changes: [
+      "auto_printer.py (Lancheria da i9): o prefixo dos adicionais na comanda de produção e no recibo (V1/V2 e Pedido Express) mudou de '>> ' para '+ ' — visual mais clean e semântico de 'acrescentado'.",
+      "Isolado por company_id no próprio script: outras lojas que rodam o auto_printer.py continuam imprimindo '>> ' como antes — zero regressão.",
+      "Requer atualização do auto_printer.py na máquina da i9 (Configurações → Impressora → baixar/reinstalar). Versão do script: v8.31.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, recibo V3 ou demais lojas.",
+    ],
+  },
   {
     version: "1.21.7-beta",
     date: "2026-06-13",
