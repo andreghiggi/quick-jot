@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.4-beta";
+export const VERSION = "1.21.5-beta";
 export const RELEASE_DATE = "2026-06-13"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "V2: grupos de adicionais nomeados (I9)";
+export const CODENAME = "V2: 'Pronto até' no cabeçalho (I9)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.5-beta",
+    date: "2026-06-13",
+    codename: "V2: 'Pronto até' no cabeçalho (I9)",
+    changes: [
+      "Comanda de produção V2 e recibo V3 (somente Lancheria da i9): removida a linha redundante 'Criado em' (a data/hora já aparece no cabeçalho). Logo abaixo da data/hora agora sai 'Pronto até: HH:MM' em destaque.",
+      "Cálculo do 'Pronto até' continua usando o prazo estimado configurado em WhatsApp (máximo − 10 min). Nenhuma alteração para as demais lojas, V1 ou layouts não-V2/V3.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento ou nfce-proxy.",
+    ],
+  },
   {
     version: "1.21.4-beta",
     date: "2026-06-13",
