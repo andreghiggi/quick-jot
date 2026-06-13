@@ -228,8 +228,18 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
   out.push('__BOLD__' + rightCol('TOTAL GERAL', money(payload.total)));
   // Meta direto, sem espaço
   out.push(pipeRow(`COD: ${(payload.orderCode || '').slice(0, 7).toLowerCase()}`, 'App Pedidos'));
-  out.push(pipeRow('Criado em', ts));
+  // I9 (V2): remove "Criado em" (redundante com "Impresso em") e adiciona
+  // "Pronto até" logo abaixo da data/hora do recibo.
   out.push(pipeRow('Impresso em', ts));
+  if (payload.companyId === I9_COMPANY_ID_V3) {
+    const offset = computeReadyOffsetMinutes(payload.estimatedWaitTime, 30);
+    const ready = new Date(now.getTime() + offset * 60 * 1000);
+    const readyTs = ready.toLocaleTimeString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit', minute: '2-digit',
+    });
+    out.push('__BOLD__' + pipeRow('Pronto até', readyTs));
+  }
   if (payload.notes) {
     out.push(repeat('-'));
     wrap(`Obs: ${payload.notes}`, COLS).forEach((l) => out.push(l));
