@@ -341,6 +341,15 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
 
         /* V2: adicionais empilhados destacados com >> e fonte maior */
         .additionals { margin: 1.5mm 0 0 4mm; }
+        /* V2 (I9): rótulo do grupo de adicionais, exibido acima dos itens do grupo. */
+        .add-group-label {
+          font-size: ${obsFontSize};
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-top: 1mm;
+          text-decoration: underline;
+        }
         .add-line {
           font-size: ${addFontSize};
           font-weight: 900;
