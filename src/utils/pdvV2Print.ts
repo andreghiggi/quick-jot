@@ -58,6 +58,20 @@ function buildReceiptHTML(payload: PrintPayload): string {
     )
     .join('');
 
+  // I9 (V2): "Pronto até" no cabeçalho do recibo, logo abaixo do Cliente.
+  // Calcula como criação + (máximo do prazo estimado − 10 min). Fallback 30min.
+  // Isolado por companyId — demais lojas não recebem nenhuma alteração.
+  let prontoAteHtml = '';
+  if (payload.companyId === I9_COMPANY_ID_V3) {
+    const offset = computeReadyOffsetMinutes(payload.estimatedWaitTime, 30);
+    const ready = new Date(Date.now() + offset * 60 * 1000);
+    const readyTs = ready.toLocaleTimeString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit', minute: '2-digit',
+    });
+    prontoAteHtml = `<div style="font-size:13px;font-weight:bold;text-transform:uppercase;margin-top:2px;">Pronto até: ${readyTs}</div>`;
+  }
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     @page { size: ${w} auto; margin: 0; }
     body { width: ${w}; font-family: monospace; padding: 8px; margin: 0; }
@@ -69,6 +83,7 @@ function buildReceiptHTML(payload: PrintPayload): string {
     <div style="font-size:14px;font-weight:bold;">${payload.shortCode ? escapeHtml(payload.shortCode) : `Pedido #${payload.dailyNumber}`}</div>
     <div style="font-size:10px;">${escapeHtml(payload.orderCode)}</div>
     <div style="font-size:12px;">Cliente: ${escapeHtml(payload.customerName)}</div>
+    ${prontoAteHtml}
     <hr/>
     ${itemsHtml}
     <hr/>
