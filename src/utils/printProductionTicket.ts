@@ -425,7 +425,19 @@ function generateProductionTicketHTMLv3(data: PrintTicketData): string {
 
   const itemsHTML = data.items.map((item, index) => {
     const { additionals, observations } = parseNotes(item.notes);
-    const additionalsHTML = additionals.length > 0
+    // V3 (I9): se o caller forneceu grupos, renderiza "Grupo: itens" com rótulo
+    // em negrito (mesmo formato do OrderCard). Fallback: lista plana antiga.
+    const groups = item.groupedOptionals && item.groupedOptionals.length > 0
+      ? item.groupedOptionals
+      : null;
+    const additionalsHTML = groups
+      ? `<div class="adds-v3">${groups
+          .map(
+            (g) =>
+              `<div class="grp-v3"><span class="grp-label-v3">${g.groupName}:</span> ${g.items}</div>`
+          )
+          .join('')}</div>`
+      : additionals.length > 0
       ? `<div class="adds-v3">${additionals.map(a => `<div class="add-v3">+ ${a}</div>`).join('')}</div>`
       : '';
     const observationsHTML = observations.length > 0
@@ -494,6 +506,12 @@ function generateProductionTicketHTMLv3(data: PrintTicketData): string {
           font-size:${addSize}; font-weight:900; text-transform:uppercase;
           line-height:1.4; letter-spacing:0.5px;
         }
+        .grp-v3 {
+          font-size:${addSize}; font-weight:700;
+          line-height:1.35; letter-spacing:0.2px;
+          margin-bottom:0.5mm; word-break:break-word;
+        }
+        .grp-label-v3 { font-weight:900; text-transform:uppercase; }
         .obs-v3-block { margin:1.5mm 0 0 9mm; }
         .obs-v3 {
           background:#000 !important; color:#fff !important;
