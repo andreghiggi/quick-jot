@@ -13,6 +13,11 @@ interface PrintItem {
    *  product name in italic small text. When omitted (default), output is
    *  byte-for-byte identical to the previous behavior. */
   description?: string | null;
+  /** Adicionais agrupados (V3, I9 rollout). Quando presente, o renderizador
+   *  V3 exibe cada grupo com o rótulo em negrito (igual ao OrderCard).
+   *  Formato: [{ groupName: "Sabores da sua Pizza", items: "CAMARÃO R$12,00, FILÉ R$8,00" }].
+   *  Quando omitido, comportamento permanece idêntico ao anterior (parseNotes). */
+  groupedOptionals?: { groupName: string; items: string }[];
 }
 
 interface PrintTicketData {
