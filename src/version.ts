@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.2-beta";
+export const VERSION = "1.21.3-beta";
 export const RELEASE_DATE = "2026-06-13"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão: seletor V1/V2/V3 volta a funcionar na I9";
+export const CODENAME = "Impressão: printer.py respeita V2 na I9";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.3-beta",
+    date: "2026-06-13",
+    codename: "Impressão: printer.py respeita V2 na I9",
+    changes: [
+      "Correção operacional (Lancheria da i9): o backend já estava gerando a fila nova em V2, mas o computador da loja ainda podia estar com um printer.py antigo (v5.x) em modo 'piloto i9', que recriava o recibo direto no layout V3.",
+      "O printer.py baixável agora sai como v8.30, grava também o layout atual selecionado (V1/V2/V3) e reforça que V3 só é usado quando print_layout='v3' — nunca mais por slug/company_id da I9.",
+      "Configurações → Impressora agora mostra o layout ativo e avisa para substituir o printer.py antigo em C:\\ComandaTech quando a loja ainda estiver imprimindo V3 com V2 selecionado.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, nfce-proxy ou nos desenhos visuais dos layouts V1/V2/V3.",
+    ],
+  },
   {
     version: "1.21.2-beta",
     date: "2026-06-13",

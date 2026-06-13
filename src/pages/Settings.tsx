@@ -235,11 +235,13 @@ export default function Settings() {
     const storeName = escapePythonString(company?.name || 'Minha Loja');
     const companySlug = escapePythonString(company?.slug || '');
     const paperSize = storeSettings.printerPaperSize === '80mm' ? '80mm' : '58mm';
+    const printLayout = storeSettings.printLayout || 'v1';
 
     return autoPrinterTemplate
       .replace('STORE_NAME = "Comanda Tech"', `STORE_NAME = "${storeName}"`)
       .replace('COMPANY_SLUG = ""', `COMPANY_SLUG = "${companySlug}"`)
-      .replace('PAPER_SIZE = "58mm"', `PAPER_SIZE = "${paperSize}"`);
+      .replace('PAPER_SIZE = "58mm"', `PAPER_SIZE = "${paperSize}"`)
+      .replace('PRINT_LAYOUT = "v1"', `PRINT_LAYOUT = "${printLayout}"`);
   };
 
   const generateBatScript = () => {
@@ -1446,10 +1448,17 @@ pause
                     <span className="text-muted-foreground">Bobina:</span>{' '}
                     <code className="bg-background px-1 py-0.5 rounded">{storeSettings.printerPaperSize}</code>
                   </div>
+                  <div>
+                    <span className="text-muted-foreground">Layout:</span>{' '}
+                    <code className="bg-background px-1 py-0.5 rounded">{storeSettings.printLayout}</code>
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
                   O script usa o <strong>slug</strong> para identificar a empresa. Se precisar corrigir manualmente, 
                   edite a variável <code className="bg-background px-1 rounded">COMPANY_SLUG</code> no arquivo printer.py.
+                </p>
+                <p className="text-xs text-destructive mt-2">
+                  Se a loja ainda imprimir V3 com V2 selecionado, baixe novamente o printer.py abaixo e substitua o arquivo antigo em C:\ComandaTech.
                 </p>
               </div>
 

@@ -33,7 +33,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.29"  # libera margem segura anti-corte para TODAS as lojas
+SCRIPT_VERSION = "v8.30"  # remove legado piloto i9: V3 só quando print_layout=v3
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -1495,7 +1495,9 @@ def processar_pedido(pedido, store_name="Comanda Tech", store_info=None):
         log(f"  - {item.get('quantity', 1)}x {item.get('name', 'Item')}", "INFO")
     
     # Formata recibo HTML (mesmo layout do painel web)
-    log("Gerando recibo HTML...", "INFO")
+    # Segurança: Lancheria I9 NÃO força mais V3 por slug/company_id. V3 só entra
+    # quando a configuração print_layout estiver explicitamente como "v3".
+    log(f"Gerando recibo HTML no layout {PRINT_LAYOUT}...", "INFO")
     if PRINT_LAYOUT == 'v3':
         html = formatar_recibo_html_v3(pedido, itens, store_name, store_info or {})
     else:
