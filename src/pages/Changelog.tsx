@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '13/06/2026',
+    version: '1.21.4-beta',
+    type: 'improvement',
+    description: 'Comanda de produção V2 (somente Lancheria da i9) — os adicionais agora saem agrupados pelo nome do grupo (ex.: "SABORES:", "BORDAS:", "MOLHOS:") em vez de uma lista única misturada, igual ao que já aparece no card do pedido na tela. Pedidos antigos ou sem grupos estruturados continuam saindo no formato anterior do V2 (lista plana com ">>"). Nenhuma alteração nas demais lojas, nos layouts V1/V3, no recibo do cliente, em TEF, PinPad, NFC-e ou Multi-Pagamento.',
+  },
+  {
+    date: '13/06/2026',
     version: '1.21.3-beta',
     type: 'fix',
     description: 'Correção operacional (Lancheria da i9): o backend já estava gerando a fila nova em V2, mas o computador da loja ainda podia estar com um printer.py antigo (v5.x) em modo "piloto i9", que recriava o recibo direto no layout V3. O printer.py baixável agora sai como v8.30, grava também o layout atual selecionado (V1/V2/V3) e reforça que V3 só é usado quando print_layout="v3" — nunca mais por slug/company_id da I9. Configurações → Impressora agora mostra o layout ativo e avisa para substituir o printer.py antigo em C:\\ComandaTech quando a loja ainda estiver imprimindo V3 com V2 selecionado. TEF, PinPad, NFC-e, Multi-Pagamento, nfce-proxy e os desenhos visuais dos layouts não foram tocados.',
