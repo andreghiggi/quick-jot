@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.5-beta";
+export const VERSION = "1.21.6-beta";
 export const RELEASE_DATE = "2026-06-13"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "V2: 'Pronto até' no cabeçalho (I9)";
+export const CODENAME = "Recibo V2: 'Pronto até' (I9)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.6-beta",
+    date: "2026-06-13",
+    codename: "Recibo V2: 'Pronto até' (I9)",
+    changes: [
+      "Recibo do pedido V2 (somente Lancheria da i9): 'Pronto até: HH:MM' em destaque logo abaixo do Cliente, mesmo cálculo da comanda (criação + prazo máximo − 10 min).",
+      "Nenhuma alteração nas demais lojas, recibo V1/V3, comanda de produção, TEF, PinPad, NFC-e ou Multi-Pagamento.",
+    ],
+  },
   {
     version: "1.21.5-beta",
     date: "2026-06-13",
