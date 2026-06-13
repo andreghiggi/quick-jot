@@ -644,6 +644,7 @@ export default function PDVV2() {
           total: finalTotal,
           notes: `Pagamento: ${paymentName}${discount > 0 ? ` | Desconto: R$ ${discount.toFixed(2)}` : ''}${documentMode === 'sale_with_nfce' ? ' | NFC-e' : ''}`,
           paperSize,
+          printLayout: settings.printLayout,
         });
       }
       await closeTab(fullTab.id);
