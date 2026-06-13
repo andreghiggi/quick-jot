@@ -1450,6 +1450,7 @@ export default function PDVV2() {
         sales={closedTabSales}
         companyId={companyId}
         paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
+        printLayout={settings.printLayout}
         onSaleDeleted={refetchCash}
       />
 
