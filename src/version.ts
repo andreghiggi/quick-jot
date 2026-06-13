@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.0-beta";
-export const RELEASE_DATE = "2026-06-12"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: Pré-venda + NFC-e retroativa (Fases 1+2+3)";
+export const VERSION = "1.21.1-beta";
+export const RELEASE_DATE = "2026-06-13"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Impressão V3: adicionais agrupados (Lancheria I9)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.1-beta",
+    date: "2026-06-13",
+    codename: "Impressão V3: adicionais agrupados (Lancheria I9)",
+    changes: [
+      "Impressão V3 (Lancheria da i9): comanda de produção e recibo agora mostram os adicionais SEPARADOS POR GRUPO, com o rótulo do grupo em negrito — igual ao que já aparece no card do pedido. Ex.: 'Sabores da sua Pizza: CAMARÃO R$12,00, FILÉ R$8,00' em uma linha, 'Borda: Chocolate R$10,00' em outra.",
+      "Aplicado às 3 origens de pedido: cardápio público (/r/i9), MesaQR e Pedido Express. PDV V2 (import de comanda/mesa) também herda o recibo corrigido automaticamente.",
+      "Rollout ISOLADO por company_id — só a Lancheria da i9 recebe o novo formato. Margen Pizzaria, Império do Açaí, Bon Appetit, Rei do Açaí, Scubidão e Vânia Lanches continuam EXATAMENTE iguais até validação manual.",
+      "Layouts V1 e V2 não foram alterados. NFC-e, TEF, PinPad, runMultiPayment, OrderCardChargeDialog, nfce-proxy e fluxos homologados não foram tocados.",
+    ],
+  },
   {
     version: "1.21.0-beta",
     date: "2026-06-12",
