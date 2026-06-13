@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.6-beta";
+export const VERSION = "1.21.7-beta";
 export const RELEASE_DATE = "2026-06-13"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Recibo V2: 'Pronto até' (I9)";
+export const CODENAME = "auto_printer: 'Pronto até' Pedido Express (I9)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.7-beta",
+    date: "2026-06-13",
+    codename: "auto_printer: 'Pronto até' Pedido Express (I9)",
+    changes: [
+      "auto_printer.py (Lancheria i9): recibos gerados localmente pelo script (Pedido Express e demais layouts V1/V2) agora exibem 'Pronto até: HH:MM' no cabeçalho, mesma fórmula da comanda (criação + prazo máximo − 10 min).",
+      "Isolado por company_id — outras lojas que rodam o auto_printer.py não sofrem nenhuma alteração no recibo.",
+      "Requer atualização do auto_printer.py na máquina da i9 (reinstalar/baixar o script). Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento ou recibo V3.",
+    ],
+  },
   {
     version: "1.21.6-beta",
     date: "2026-06-13",
