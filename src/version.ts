@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.3-beta";
+export const VERSION = "1.21.4-beta";
 export const RELEASE_DATE = "2026-06-13"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão: printer.py respeita V2 na I9";
+export const CODENAME = "V2: grupos de adicionais nomeados (I9)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.4-beta",
+    date: "2026-06-13",
+    codename: "V2: grupos de adicionais nomeados (I9)",
+    changes: [
+      "Comanda de produção V2 (somente Lancheria da i9): os adicionais agora saem agrupados pelo nome do grupo (ex.: 'SABORES:', 'BORDAS:', 'MOLHOS:') em vez de uma lista única misturada. Mesma informação que o OrderCard já mostra na tela.",
+      "Fallback preservado: pedidos sem grupos estruturados continuam saindo no formato antigo do V2 (lista plana com '>>'). Nenhuma mudança para as demais lojas.",
+      "Nenhuma alteração em V1, V3, recibo do cliente, TEF, PinPad, NFC-e ou Multi-Pagamento.",
+    ],
+  },
   {
     version: "1.21.3-beta",
     date: "2026-06-13",
