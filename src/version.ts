@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.1-beta";
+export const VERSION = "1.21.2-beta";
 export const RELEASE_DATE = "2026-06-13"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão V3: adicionais agrupados (Lancheria I9)";
+export const CODENAME = "Impressão: seletor V1/V2/V3 volta a funcionar na I9";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.2-beta",
+    date: "2026-06-13",
+    codename: "Impressão: seletor V1/V2/V3 volta a funcionar na I9",
+    changes: [
+      "Correção (Lancheria da i9): o recibo do PDV V2 / Pedido Express / Cobrança ignorava o seletor 'Layout de Impressão' das Configurações e forçava sempre V3 por causa de uma trava antiga por company_id. Agora o seletor V1/V2/V3 volta a funcionar normalmente — escolher V2 imprime V2, escolher V3 imprime V3.",
+      "A comanda de produção do PDV V2 (balcão/online) também passou a respeitar o `print_layout` salvo (antes caía sempre em V1 por não repassar o campo). Pedido Express, Menu público e MesaQR já passavam corretamente — sem mudança.",
+      "Nenhuma alteração em V1/V2/V3 visualmente: as funções de renderização ficam intactas. A correção é apenas em qual delas é escolhida na hora de imprimir.",
+      "NFC-e, TEF v1.0/v1.1/v1.2-beta, PinPad, runMultiPayment, OrderCardChargeDialog e nfce-proxy NÃO foram tocados.",
+    ],
+  },
   {
     version: "1.21.1-beta",
     date: "2026-06-13",
