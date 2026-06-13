@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '13/06/2026',
+    version: '1.21.5-beta',
+    type: 'improvement',
+    description: 'Comanda de produção V2 e recibo V3 (somente Lancheria da i9): removida a linha redundante "Criado em" — a data/hora já aparece no cabeçalho. Logo abaixo da data/hora agora sai "Pronto até: HH:MM" em destaque. Cálculo continua usando o prazo estimado configurado em WhatsApp (máximo − 10 min). Nenhuma alteração para as demais lojas, layout V1, TEF, PinPad, NFC-e, Multi-Pagamento ou nfce-proxy.',
+  },
+  {
+    date: '13/06/2026',
     version: '1.21.4-beta',
     type: 'improvement',
     description: 'Comanda de produção V2 (somente Lancheria da i9) — os adicionais agora saem agrupados pelo nome do grupo (ex.: "SABORES:", "BORDAS:", "MOLHOS:") em vez de uma lista única misturada, igual ao que já aparece no card do pedido na tela. Pedidos antigos ou sem grupos estruturados continuam saindo no formato anterior do V2 (lista plana com ">>"). Nenhuma alteração nas demais lojas, nos layouts V1/V3, no recibo do cliente, em TEF, PinPad, NFC-e ou Multi-Pagamento.',
