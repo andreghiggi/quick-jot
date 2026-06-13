@@ -1388,6 +1388,7 @@ export default function PDVV2() {
         }}
         companyId={companyId}
         total={importingTab?.total || 0}
+        printLayout={settings.printLayout}
         title={
           i9SplitInfo
             ? `Pessoa ${i9SplitInfo.total - i9SplitInfo.remaining + 1} de ${i9SplitInfo.total}`
