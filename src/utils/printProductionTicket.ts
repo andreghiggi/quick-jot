@@ -384,6 +384,8 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         .ready-block { border: 1px dashed #000; padding: 1.5mm 2mm; margin: 2mm 0; text-align: center; }
         .ready-line { font-size: 10pt; font-weight: bold; line-height: 1.4; }
         .ready-highlight { font-size: 12pt; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 0.5mm; }
+        /* V2 (I9): "Pronto até" inline no cabeçalho, logo abaixo da data/hora. */
+        .ready-inline { font-size: 11pt; font-weight: 900; margin-top: 0.5mm; text-transform: uppercase; letter-spacing: 0.3px; }
         @media print {
           html, body, * {
             -webkit-print-color-adjust: exact !important;
