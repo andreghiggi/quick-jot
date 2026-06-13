@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '13/06/2026',
+    version: '1.21.7-beta',
+    type: 'improvement',
+    description: 'auto_printer.py (Lancheria da i9): recibos gerados localmente pelo script — incluindo Pedido Express e demais layouts V1/V2 — agora exibem "Pronto até: HH:MM" em destaque no cabeçalho, mesma fórmula da comanda (criação + prazo máximo − 10 min). Isolado por company_id: outras lojas que rodam o auto_printer.py NÃO sofrem nenhuma alteração. Requer atualização do auto_printer.py na máquina da i9 (baixar/reinstalar pelo Configurações → Impressora). Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento ou recibo V3.',
+  },
+  {
+    date: '13/06/2026',
     version: '1.21.6-beta',
     type: 'improvement',
     description: 'Recibo do pedido V2 (somente Lancheria da i9): adicionada a linha "Pronto até: HH:MM" em destaque logo abaixo do nome do cliente, replicando o mesmo cálculo da comanda de produção (criação + prazo estimado máximo − 10 min). Nenhuma alteração para as demais lojas, recibo V1/V3, comanda de produção, TEF, PinPad, NFC-e, Multi-Pagamento ou nfce-proxy.',
