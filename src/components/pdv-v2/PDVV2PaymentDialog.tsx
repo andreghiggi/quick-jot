@@ -631,6 +631,7 @@ export function PDVV2PaymentDialog({
                     price: i.unit_price,
                   })),
                   total: total,
+                  printLayout,
                 });
                 toast.success('Comanda enviada para impressão!');
               }}
