@@ -32,6 +32,10 @@ interface PrintPayload {
   /** Texto livre do campo "Prazo estimado de entrega" (estimated_wait_time).
    *  Usado apenas para Lancheria I9 para calcular "Pronto até = criação + (max − 10 min)". */
   estimatedWaitTime?: string | null;
+  /** Layout de impressão selecionado em Configurações (`print_layout`).
+   *  Quando omitido, mantém o comportamento legado (V1 ou V3 forçado para I9).
+   *  Quando fornecido, respeita a escolha do lojista (V1/V2/V3). */
+  printLayout?: 'v1' | 'v2' | 'v3';
 }
 
 async function enqueue(companyId: string, label: string, html: string) {
@@ -275,9 +279,12 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
 }
 
 function buildReceiptHTMLForCompany(payload: PrintPayload): string {
-  if (payload.companyId === I9_COMPANY_ID_V3) {
-    return buildReceiptHTMLv3(payload);
-  }
+  // Quando o caller informa explicitamente o layout, respeita a escolha do lojista.
+  if (payload.printLayout === 'v3') return buildReceiptHTMLv3(payload);
+  if (payload.printLayout === 'v1' || payload.printLayout === 'v2') return buildReceiptHTML(payload);
+  // Compat legado: callers que ainda não passam printLayout caem no comportamento antigo
+  // (I9 forçado em V3). Será removido quando todos os callers passarem o campo.
+  if (payload.companyId === I9_COMPANY_ID_V3) return buildReceiptHTMLv3(payload);
   return buildReceiptHTML(payload);
 }
 
@@ -295,6 +302,7 @@ function buildProductionHtml(payload: PrintPayload, ref: string) {
     paperSize: payload.paperSize || '80mm',
     referenceLabel: ref,
     companyId: payload.companyId,
+    layout: payload.printLayout,
     // Lancheria I9: previsão = criação + (máximo do prazo estimado − 10 min).
     // Lê dinamicamente "Prazo estimado de entrega" (Configurações → WhatsApp).
     showReadyTime: isLancheriaI9,

@@ -644,6 +644,7 @@ export default function PDVV2() {
           total: finalTotal,
           notes: `Pagamento: ${paymentName}${discount > 0 ? ` | Desconto: R$ ${discount.toFixed(2)}` : ''}${documentMode === 'sale_with_nfce' ? ' | NFC-e' : ''}`,
           paperSize,
+          printLayout: settings.printLayout,
         });
       }
       await closeTab(fullTab.id);
@@ -1387,6 +1388,7 @@ export default function PDVV2() {
         }}
         companyId={companyId}
         total={importingTab?.total || 0}
+        printLayout={settings.printLayout}
         title={
           i9SplitInfo
             ? `Pessoa ${i9SplitInfo.total - i9SplitInfo.remaining + 1} de ${i9SplitInfo.total}`
@@ -1448,6 +1450,7 @@ export default function PDVV2() {
         sales={closedTabSales}
         companyId={companyId}
         paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
+        printLayout={settings.printLayout}
         onSaleDeleted={refetchCash}
       />
 

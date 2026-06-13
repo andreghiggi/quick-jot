@@ -46,6 +46,8 @@ interface PDVV2PaymentDialogProps {
   activeSplit?: { perPerson: number; totalPeople: number; currentPerson: number };
   /** Histórico de transferências da comanda (apenas exibição, sem efeito em fluxo). */
   transferLog?: Array<{ from_table_number: number | null; to_table_number: number; at: string; by_name: string }>;
+  /** Layout de impressão (`print_layout`) — repassado ao botão "Imprimir comanda". */
+  printLayout?: 'v1' | 'v2' | 'v3';
   /**
    * Multi-pagamento (v1.6 beta). Quando informado, exibe um link discreto
    * abaixo do seletor de forma de pagamento ("Dividir em várias formas").
@@ -116,6 +118,7 @@ export function PDVV2PaymentDialog({
   activeSplit,
   transferLog,
   onSplitPayments,
+  printLayout,
 }: PDVV2PaymentDialogProps) {
   // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
@@ -628,6 +631,7 @@ export function PDVV2PaymentDialog({
                     price: i.unit_price,
                   })),
                   total: total,
+                  printLayout,
                 });
                 toast.success('Comanda enviada para impressão!');
               }}

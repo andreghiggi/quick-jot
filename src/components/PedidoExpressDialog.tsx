@@ -1256,6 +1256,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             total: effectiveTotal,
             notes: `Pagamento: ${paymentName}${override.discount > 0 ? ` | Desconto: R$ ${override.discount.toFixed(2)}` : ''}`,
             paperSize,
+            printLayout: settings.printLayout,
           });
         } catch (e) {
           console.error('Erro ao enfileirar recibo:', e);
@@ -3147,6 +3148,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         }}
         companyId={company?.id}
         total={total}
+        printLayout={settings.printLayout}
         title={isLancheriaI9 && step === 5 ? 'Finalizar Pedido' : 'Cobrar Retirada'}
         showDocumentMode
         showAddItem
