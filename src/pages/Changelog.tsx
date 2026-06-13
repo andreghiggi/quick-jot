@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '13/06/2026',
+    version: '1.21.3-beta',
+    type: 'fix',
+    description: 'Correção operacional (Lancheria da i9): o backend já estava gerando a fila nova em V2, mas o computador da loja ainda podia estar com um printer.py antigo (v5.x) em modo "piloto i9", que recriava o recibo direto no layout V3. O printer.py baixável agora sai como v8.30, grava também o layout atual selecionado (V1/V2/V3) e reforça que V3 só é usado quando print_layout="v3" — nunca mais por slug/company_id da I9. Configurações → Impressora agora mostra o layout ativo e avisa para substituir o printer.py antigo em C:\\ComandaTech quando a loja ainda estiver imprimindo V3 com V2 selecionado. TEF, PinPad, NFC-e, Multi-Pagamento, nfce-proxy e os desenhos visuais dos layouts não foram tocados.',
+  },
+  {
+    date: '13/06/2026',
     version: '1.21.2-beta',
     type: 'fix',
     description: 'Correção (Lancheria da i9): o seletor "Layout de Impressão" (V1/V2/V3) das Configurações não estava sendo respeitado — o recibo do PDV V2 / Pedido Express / Cobrança caía sempre em V3 por causa de uma trava antiga por company_id. Agora escolher V2 imprime V2, escolher V3 imprime V3. A comanda de produção do PDV V2 (balcão/online) também passou a respeitar o print_layout salvo (antes caía sempre em V1). Pedido Express, cardápio público e MesaQR já passavam corretamente — sem mudança visual nos layouts em si. NFC-e, TEF v1.0/v1.1/v1.2-beta, PinPad, runMultiPayment, OrderCardChargeDialog e nfce-proxy não foram tocados.',
