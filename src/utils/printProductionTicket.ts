@@ -253,9 +253,30 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
 
   const itemsHTML = data.items.map((item, index) => {
     const { additionals, observations } = parseNotes(item.notes);
-    const additionalsHTML = additionals.length > 0
-      ? `<div class="additionals">${additionals.map(a => `<div class="add-line">&gt;&gt; ${a}</div>`).join('')}</div>`
-      : '';
+    // I9 only: quando o caller forneceu grupos estruturados, exibir o nome
+    // do grupo em negrito antes dos itens (mesmo formato visual do V3/OrderCard).
+    // Fallback (qualquer outra loja ou pedidos antigos sem groupedOptionals):
+    // mantém EXATAMENTE o comportamento original do V2 (lista plana ">> item").
+    const i9GroupedV2 =
+      data.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164' &&
+      item.groupedOptionals &&
+      item.groupedOptionals.length > 0;
+    const additionalsHTML = i9GroupedV2
+      ? `<div class="additionals">${item.groupedOptionals!
+          .map(
+            (g) =>
+              `<div class="add-group-label">${g.groupName}:</div>` +
+              g.items
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+                .map((it) => `<div class="add-line">&gt;&gt; ${it}</div>`)
+                .join('')
+          )
+          .join('')}</div>`
+      : additionals.length > 0
+        ? `<div class="additionals">${additionals.map(a => `<div class="add-line">&gt;&gt; ${a}</div>`).join('')}</div>`
+        : '';
     const observationsHTML = observations.length > 0
       ? `<div class="obs-block">${observations.map(o => `<div class="obs"><span class="obs-text">${o}</span></div>`).join('')}</div>`
       : '';
