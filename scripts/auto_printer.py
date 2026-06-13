@@ -380,6 +380,33 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     phone_html = ''
     if customer_phone:
         phone_html = f'<p><span class="label">Tel:</span> {customer_phone}</p>'
+
+    # Lancheria I9: "Pronto até" no cabeçalho do recibo (V1/V2).
+    # Fórmula: criação + (máximo do estimated_wait_time − 10 min). Fallback 30 min.
+    # Isolado por company_id — outras lojas não são afetadas.
+    I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
+    pronto_ate_html = ''
+    if pedido.get('company_id') == I9_COMPANY_ID:
+        wait_min_i9 = 30
+        try:
+            url_si9 = f"{SUPABASE_URL}/rest/v1/store_settings"
+            params_si9 = {"company_id": f"eq.{pedido.get('company_id')}", "key": "eq.estimated_wait_time"}
+            rsi9 = requests.get(url_si9, headers=HEADERS, params=params_si9, timeout=3)
+            if rsi9.ok and rsi9.json():
+                val_i9 = rsi9.json()[0].get('value', '')
+                nums_i9 = re.findall(r'\d+', val_i9 or '')
+                if nums_i9:
+                    wait_min_i9 = max(int(n) for n in nums_i9)
+        except Exception:
+            pass
+        try:
+            dt_utc_i9 = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
+            dt_sp_i9 = dt_utc_i9.astimezone(timezone(timedelta(hours=-3)))
+            offset_i9 = max(1, wait_min_i9 - 10)
+            ready_i9 = dt_sp_i9 + timedelta(minutes=offset_i9)
+            pronto_ate_html = f'<div class="date" style="font-size:11pt;font-weight:bold;text-transform:uppercase;margin-top:1mm;">Pronto até: {ready_i9.strftime("%H:%M")}</div>'
+        except Exception:
+            pass
     
     html = f'''<!DOCTYPE html>
 <html>
@@ -441,6 +468,7 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         <div class="order-num">PEDIDO #{order_num}</div>
         <div class="origem">{origem_label}</div>
         <div class="date">{formatted_date}</div>
+        {pronto_ate_html}
     </div>
     <hr class="divider">
     <div class="section">
