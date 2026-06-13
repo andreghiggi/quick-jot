@@ -1128,20 +1128,47 @@ export default function Menu() {
         // Send production ticket to print queue if enabled
         if (settings.autoPrintProductionTicket) {
           try {
+            // V3 (I9 rollout): envia adicionais agrupados (com rótulo do grupo)
+            // exclusivamente para a Lancheria da i9. As demais lojas continuam
+            // com o comportamento atual (lista plana via `Adicionais:`).
+            const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+            const sendGroupedV3 = company?.id === I9_COMPANY_ID;
             const productionItems = cart.map((item) => {
               // Build a clean list of additional names (without prices, without group prefix)
               const additionalNames: string[] = [];
+              const groupedOptionals: { groupName: string; items: string }[] = [];
               if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
                 for (const entry of item.groupedOptionalNames) {
-                  const afterColon = entry.includes(':') ? entry.split(':').slice(1).join(':') : entry;
+                  const hasColon = entry.includes(':');
+                  const groupName = hasColon ? entry.split(':')[0].trim() : 'Adicionais';
+                  const afterColon = hasColon ? entry.split(':').slice(1).join(':') : entry;
                   const items = afterColon
                     .split(',')
                     .map((s) => s.replace(/\s*R\$\s*[\d.,]+\s*$/i, '').trim())
                     .filter(Boolean);
                   additionalNames.push(...items);
+                  // Para V3 I9 preservamos preços no items (igual ao OrderCard).
+                  const itemsWithPrice = afterColon
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                    .join(', ');
+                  if (items.length > 0) groupedOptionals.push({ groupName, items: itemsWithPrice });
                 }
               } else if (item.selectedOptionals.length > 0) {
                 additionalNames.push(...item.selectedOptionals.map((optional) => optional.name));
+                if (sendGroupedV3) {
+                  groupedOptionals.push({
+                    groupName: 'Adicionais',
+                    items: item.selectedOptionals
+                      .map((o) =>
+                        o.price > 0
+                          ? `${o.name} R$${o.price.toFixed(2).replace('.', ',')}`
+                          : o.name
+                      )
+                      .join(', '),
+                  });
+                }
               }
 
               const notesParts: string[] = [];
@@ -1166,6 +1193,8 @@ export default function Menu() {
                 quantity: item.quantity,
                 notes: notesParts.length > 0 ? notesParts.join(' | ') : undefined,
                 description,
+                groupedOptionals:
+                  sendGroupedV3 && groupedOptionals.length > 0 ? groupedOptionals : undefined,
               };
             });
 
