@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '13/06/2026',
+    version: '1.21.6-beta',
+    type: 'improvement',
+    description: 'Recibo do pedido V2 (somente Lancheria da i9): adicionada a linha "Pronto até: HH:MM" em destaque logo abaixo do nome do cliente, replicando o mesmo cálculo da comanda de produção (criação + prazo estimado máximo − 10 min). Nenhuma alteração para as demais lojas, recibo V1/V3, comanda de produção, TEF, PinPad, NFC-e, Multi-Pagamento ou nfce-proxy.',
+  },
+  {
+    date: '13/06/2026',
     version: '1.21.5-beta',
     type: 'improvement',
     description: 'Comanda de produção V2 e recibo V3 (somente Lancheria da i9): removida a linha redundante "Criado em" — a data/hora já aparece no cabeçalho. Logo abaixo da data/hora agora sai "Pronto até: HH:MM" em destaque. Cálculo continua usando o prazo estimado configurado em WhatsApp (máximo − 10 min). Nenhuma alteração para as demais lojas, layout V1, TEF, PinPad, NFC-e, Multi-Pagamento ou nfce-proxy.',
