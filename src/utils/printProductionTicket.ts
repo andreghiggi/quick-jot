@@ -242,13 +242,11 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
   const readyDate = new Date(now.getTime() + readyOffset * 60 * 1000);
   const readyDateStr = readyDate.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   const readyTimeStr = readyDate.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
-  const readyBlockHTML = data.showReadyTime
-    ? `
-      <div class="ready-block">
-        <div class="ready-line"><strong>Criado em:</strong> ${dateStr} às ${timeStr}</div>
-        <div class="ready-line ready-highlight"><strong>Pronto até:</strong> ${readyDateStr} às ${readyTimeStr}</div>
-      </div>
-    `
+  // I9 (V2): remove "Criado em" redundante e mostra "Pronto até" logo abaixo
+  // da data/hora do cabeçalho. Demais lojas: bloco vazio (sem alteração).
+  const readyBlockHTML = '';
+  const readyHeaderHTML = data.showReadyTime
+    ? `<div class="datetime ready-inline"><strong>Pronto até:</strong> ${readyTimeStr}</div>`
     : '';
 
   const itemsHTML = data.items.map((item, index) => {
@@ -410,6 +408,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         ${data.tableNumber ? `<div class="table-info">MESA ${data.tableNumber}</div>` : ''}
         ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
         <div class="datetime">${dateStr} às ${timeStr}</div>
+        ${readyHeaderHTML}
       </div>
       <!--BOX_END-->
       ${readyBlockHTML}
