@@ -466,8 +466,8 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
             font-weight: bold;
             width: {paper_size};
             max-width: {paper_size};
-            padding: 2mm;
-            line-height: 1.3;
+            padding: {_body_pad};
+            line-height: {_body_lh};
             -webkit-print-color-adjust: exact;
         }}
         .center {{ text-align: center; }}
@@ -476,18 +476,18 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         .order-num {{ font-size: 16pt; font-weight: bold; margin: 1mm 0; }}
         .origem {{ font-size: 9pt; font-weight: bold; margin: 0.5mm 0; }}
         .date {{ font-size: 8pt; }}
-        .divider {{ border: none; border-top: 1px dashed #000; margin: 2mm 0; }}
+        .divider {{ border: none; border-top: 1px dashed #000; margin: {_divider_mg}; }}
         .label {{ font-size: 9pt; font-weight: bold; }}
         .value {{ font-size: 10pt; font-weight: bold; }}
         .section {{ margin: 1mm 0; }}
         .section p {{ margin: 0.5mm 0; font-size: 10pt; }}
-        .item {{ margin: 1.5mm 0; }}
+        .item {{ margin: {_item_margin}; }}
         .item-name {{ font-size: 11pt; font-weight: bold; text-transform: uppercase; }}
         .item-detail {{ font-size: 9pt; margin-left: 2mm; }}
         .item-notes {{ font-size: 9pt; font-style: italic; margin-left: 2mm; }}
         /* V2: adicionais empilhados em negrito */
         .additionals {{ margin: 1mm 0 0 2mm; }}
-        .add-line {{ font-size: 11pt; font-weight: 900; line-height: 1.4; word-break: break-word; text-transform: uppercase; }}
+        .add-line {{ font-size: 11pt; font-weight: 900; line-height: {_add_lh}; word-break: break-word; text-transform: uppercase; }}
         /* V2: observações texto invertido (fundo preto, letras brancas) */
         .obs-block {{ margin: 1mm 0 0 2mm; }}
         .obs {{ display: inline-block; background: #000 !important; color: #fff !important; padding: 0.5mm 2mm; font-weight: bold; font-size: 10pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
