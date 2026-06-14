@@ -1,8 +1,11 @@
 import postgres from "npm:postgres@3.4.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-const BATCH_SIZE = 2000;
-const MAX_RUNTIME_MS = 110_000; // edge function limit é ~150s; deixa folga pro UPDATE final + notificação
+// Limites por invocação (mantidos baixos pra caber no CPU budget da edge function).
+// O backup é fatiado: cada chamada processa algumas tabelas e dispara a próxima via fetch.
+const BATCH_SIZE = 1000;
+const MAX_RUNTIME_MS = 30_000;
+const MAX_TABLES_PER_INVOCATION = 8;
 
 // Tabelas que NÃO devem ser espelhadas (logs voláteis e/ou pesados demais)
 const SKIP_TABLES = new Set<string>([
