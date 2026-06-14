@@ -2,7 +2,7 @@ import postgres from "npm:postgres@3.4.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 const BATCH_SIZE = 2000;
-const MAX_RUNTIME_MS = 130_000; // edge function limit é ~150s; deixa folga pro UPDATE final
+const MAX_RUNTIME_MS = 110_000; // edge function limit é ~150s; deixa folga pro UPDATE final + notificação
 
 // Tabelas que NÃO devem ser espelhadas (logs voláteis e/ou pesados demais)
 const SKIP_TABLES = new Set<string>([
