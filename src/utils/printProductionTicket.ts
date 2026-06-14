@@ -222,7 +222,7 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
       </div>
       <!--BOX_END-->
       <div class="items">${itemsHTML}</div>
-      <div class="footer">--- FIM DO PEDIDO ---</div>
+      <div class="footer">--- FIM ---</div>
     </body>
     </html>
   `;
