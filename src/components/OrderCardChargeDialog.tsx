@@ -65,6 +65,11 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
   const tefPromptOpenRef = useRef(false);
   const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
+  // Trava anti-duplo-clique para qualquer fluxo de cobrança neste diálogo.
+  // Cliques quase simultâneos (< 50ms) chegavam a inserir 2-3 vendas em
+  // pdv_sales. useRef garante sincronia entre handlers — setState não
+  // atualiza a tempo entre dois cliques no mesmo tick do React.
+  const chargingRef = useRef(false);
   const paidQtyByIndex = useMemo(() => {
     const raw = (order.paidItems as any)?.paid_qtys;
     const map = new Map<string, number>();
@@ -169,6 +174,11 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       toast.error('Caixa precisa estar aberto para cobrar pedidos.');
       return;
     }
+
+    // Guard anti-duplo-clique (síncrono). Bloqueia chamadas reentrantes
+    // antes de qualquer await — evita 2-3 vendas duplicadas em pdv_sales.
+    if (chargingRef.current) return;
+    chargingRef.current = true;
 
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -479,6 +489,8 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     } catch (err: any) {
       console.error('[OrderCardCharge] error:', err);
       toast.error(err?.message || 'Erro ao cobrar pedido.');
+    } finally {
+      chargingRef.current = false;
     }
   }
 
@@ -500,6 +512,9 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       toast.error('Caixa precisa estar aberto para cobrar pedidos.');
       return;
     }
+    // Guard anti-duplo-clique (síncrono).
+    if (chargingRef.current) return;
+    chargingRef.current = true;
     setMultiPayProcessing(true);
     setMultiPayStatus('Iniciando cobranças…');
     try {
@@ -627,6 +642,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     } finally {
       setMultiPayProcessing(false);
       setMultiPayStatus('');
+      chargingRef.current = false;
     }
   }
 
