@@ -1018,8 +1018,9 @@ def imprimir_html(html, order_number):
             colunas = 22 if is_80mm else 18
         else:
             colunas = 24 if is_80mm else 20
-        # MODO COMPACTO V2: economia de papel para qualquer loja no layout v2
-        compact_v2 = (PRINT_LAYOUT == 'v2')
+        # MODO COMPACTO V2: economia de papel isolada na Lancheria I9.
+        # O rollout não deve alterar o espaçamento das demais lojas sem validação.
+        compact_v2 = (PRINT_LAYOUT == 'v2' and COMPANY_ID == I9_COMPANY_ID)
         margin_factor = 0.02 if compact_v2 else 0.04  # margem cai pela metade
         margin_x = int(dpi_x * (0.12 if safe_margin else 0.04))  # ~3mm (allow-list) ou ~1mm (padrão)
         margin_y = int(dpi_y * margin_factor)
@@ -1270,7 +1271,7 @@ def imprimir_html(html, order_number):
         # Estado da caixa do cabeçalho (borda envolvendo todo o conteúdo pré-itens)
         box_top_y = 0
         box_pad_x = int(dpi_x * 0.04)
-        box_pad_y = int(dpi_y * 0.02)
+        box_pad_y = max(1, int(dpi_y * (0.008 if compact_v2 else 0.02)))
 
         i = 0
         while i < len(linhas):
