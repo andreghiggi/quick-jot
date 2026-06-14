@@ -1276,6 +1276,8 @@ def imprimir_html(html, order_number):
             m_desc = re.match(r'^\[DESC\](.*)\[/DESC\]$', stripped)
             m_name = re.match(r'^\[NAME\](.*)\[/NAME\]$', stripped)
             m_cliente = re.match(r'^\[CLIENTE\](.*)\[/CLIENTE\]$', stripped)
+            m_endereco = re.match(r'^\[ENDERECO\](.*)\[/ENDERECO\]$', stripped)
+            m_addgroup = re.match(r'^\[ADDGROUP_LABEL\](.*)\[/ADDGROUP_LABEL\]$', stripped)
             m_sep = (stripped == '[SEP]')
 
             # Descrição do produto (V1 e V2) — linha em itálico, prefixo "Descrição:"
