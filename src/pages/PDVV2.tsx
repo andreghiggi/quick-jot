@@ -555,6 +555,9 @@ export default function PDVV2() {
     tefIntegration,
     customerDocument,
   }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean; tefOptions?: TefOptions; tefIntegration?: 'tef_pinpad' | 'tef_smartpos'; customerDocument?: string }) {
+    if (confirmImportTabGuardRef.current) return;
+    confirmImportTabGuardRef.current = true;
+    try {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -654,6 +657,9 @@ export default function PDVV2() {
       await closeTab(fullTab.id);
       toast.success('Comanda importada e fechada!');
       setImportingTab(null);
+    }
+    } finally {
+      confirmImportTabGuardRef.current = false;
     }
   }
 
