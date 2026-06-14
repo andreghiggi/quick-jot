@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.17-beta";
+export const VERSION = "1.21.18-beta";
 export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Comanda: rodapé curto em todos os caminhos";
+export const CODENAME = "Printer: borda direita segura no V2 compacto";
 
 export interface Release {
   version: string;
@@ -19,6 +19,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.18-beta",
+    date: "2026-06-14",
+    codename: "Printer: borda direita segura no V2 compacto",
+    changes: [
+      "auto_printer.py v8.37: corrigido o cálculo dos retângulos desenhados via GDI no V2 compacto da Lancheria da i9. A borda direita do cabeçalho e blocos pretos agora é limitada à área imprimível, evitando corte na lateral direita.",
+      "Mudança isolada ao V2 compacto da Lancheria da i9; sem alteração em TEF, PinPad, NFC-e, Multi-Pagamento, cobranças ou demais lojas.",
+    ],
+  },
   {
     version: "1.21.17-beta",
     date: "2026-06-14",
