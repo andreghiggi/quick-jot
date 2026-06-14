@@ -443,6 +443,15 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         except Exception:
             pass
     
+    # v8.35: Modo compacto (i9) — reduz paddings/margins SEM mexer no tamanho da fonte.
+    # Rollout isolado por company_id; demais lojas mantêm o comportamento da v8.34.
+    _i9_compact = (pedido.get('company_id') == I9_COMPANY_ID)
+    _body_pad     = '1mm'      if _i9_compact else '2mm'
+    _body_lh      = '1.15'     if _i9_compact else '1.3'
+    _item_margin  = '0.5mm 0'  if _i9_compact else '1.5mm 0'
+    _add_lh       = '1.15'     if _i9_compact else '1.4'
+    _divider_mg   = '0.8mm 0'  if _i9_compact else '2mm 0'
+
     html = f'''<!DOCTYPE html>
 <html>
 <head>
