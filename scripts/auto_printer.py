@@ -33,7 +33,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.32"  # i9: rótulo de grupo (■ sublinhado) + endereço invertido
+SCRIPT_VERSION = "v8.33"  # i9: adicionais com valor preservam "R$ X,XX" no recibo V2
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
