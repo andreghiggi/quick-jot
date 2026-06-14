@@ -793,6 +793,9 @@ export default function PDVV2() {
   }
 
   async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0] & { splitInfo?: { perPerson: number; totalPeople: number; partsToCharge?: number }; itemsInfo?: Array<{ id: string; paidQty: number }>; extraItemsInfo?: Array<{ id: string; paidQty: number }> }) {
+    if (confirmImportTabI9GuardRef.current) return;
+    confirmImportTabI9GuardRef.current = true;
+    try {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -1158,6 +1161,9 @@ export default function PDVV2() {
     }
 
     await confirmImportTab(params);
+    } finally {
+      confirmImportTabI9GuardRef.current = false;
+    }
   }
 
   async function handleCloseCash(closingAmount: number, notes: string) {
