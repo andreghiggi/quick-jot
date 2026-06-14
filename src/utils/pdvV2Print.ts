@@ -55,16 +55,19 @@ async function enqueue(companyId: string, label: string, html: string) {
 
 function buildReceiptHTML(payload: PrintPayload): string {
   const w = payload.paperSize === '58mm' ? '58mm' : '80mm';
-  const isI9 = payload.companyId === I9_COMPANY_ID_V3;
+  // V2 layout: markers ([ADD] com valor, [ADDGROUP_LABEL], [ENDERECO], [CLIENTE])
+  // são emitidos para todas as lojas que usam o layout V2. O auto_printer.py
+  // v8.34+ interpreta; versões anteriores ignoram (retrocompatível).
+  const isV2 = true;
   const itemsHtml = payload.items
     .map((it) => {
       const head = `<div style="display:flex;justify-content:space-between;font-size:12px;">
           <span>${it.quantity}× ${escapeHtml(it.name)}</span>
           <span>R$ ${(it.price * it.quantity).toFixed(2).replace('.', ',')}</span>
         </div>`;
-      // I9 v8.32+: adicionais agrupados via markers que o auto_printer interpreta.
+      // V2 layout: adicionais agrupados via markers que o auto_printer interpreta.
       // 1 grupo: sem rótulo; 2+ grupos: rótulo ■ sublinhado.
-      if (!isI9 || !it.groupedOptionals || it.groupedOptionals.length === 0) return head;
+      if (!isV2 || !it.groupedOptionals || it.groupedOptionals.length === 0) return head;
       const groups = it.groupedOptionals;
       const single = groups.length === 1;
       const groupsHtml = groups
@@ -104,8 +107,8 @@ function buildReceiptHTML(payload: PrintPayload): string {
     prontoAteHtml = `<div style="font-size:13px;font-weight:bold;text-transform:uppercase;margin-top:2px;">Pronto até: ${readyTs}</div>`;
   }
 
-  // I9 v8.32+: endereço de entrega em bloco invertido (mesmo estilo do nome).
-  const enderecoHtml = isI9 && payload.deliveryAddress
+  // V2: endereço de entrega em bloco invertido (mesmo estilo do nome).
+  const enderecoHtml = isV2 && payload.deliveryAddress
     ? `<div style="font-size:12px;">[ENDERECO]${escapeHtml(payload.deliveryAddress)}[/ENDERECO]</div>`
     : '';
 
@@ -119,7 +122,7 @@ function buildReceiptHTML(payload: PrintPayload): string {
     <h2>RECIBO</h2>
     <div style="font-size:14px;font-weight:bold;">${payload.shortCode ? escapeHtml(payload.shortCode) : `Pedido #${payload.dailyNumber}`}</div>
     <div style="font-size:10px;">${escapeHtml(payload.orderCode)}</div>
-    <div style="font-size:12px;">${isI9 ? `[CLIENTE]${escapeHtml(payload.customerName)}[/CLIENTE]` : `Cliente: ${escapeHtml(payload.customerName)}`}</div>
+    <div style="font-size:12px;">${isV2 ? `[CLIENTE]${escapeHtml(payload.customerName)}[/CLIENTE]` : `Cliente: ${escapeHtml(payload.customerName)}`}</div>
     ${enderecoHtml}
     ${prontoAteHtml}
     <hr/>
