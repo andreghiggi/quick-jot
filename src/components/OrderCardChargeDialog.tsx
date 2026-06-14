@@ -569,6 +569,10 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         order.id,
       );
       if (!saleId) return;
+      // Registra o split de formas para o relatório de fechamento.
+      if (company?.id) {
+        await recordSalePayments(saleId, company.id, mp.lines);
+      }
 
       // Marca pedido como pago.
       const chargedAmount = saleItems.reduce((s, it) => s + it.quantity * it.unit_price, 0);
