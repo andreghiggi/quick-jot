@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -50,6 +50,9 @@ export function FrenteCaixaCashMovementDialog({
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
+  // Trava síncrona anti duplo-clique (setState não atualiza entre dois cliques
+  // no mesmo tick — useRef bloqueia reentrância imediatamente).
+  const savingGuardRef = useRef(false);
 
   useEffect(() => {
     if (open) {
@@ -66,6 +69,7 @@ export function FrenteCaixaCashMovementDialog({
   const Icon = isSangria ? ArrowUpFromLine : ArrowDownToLine;
 
   async function handleConfirm() {
+    if (savingGuardRef.current) return;
     const parsed = Number(amount.replace(',', '.'));
     if (!Number.isFinite(parsed) || parsed <= 0) {
       toast.error('Informe um valor maior que zero');
@@ -79,6 +83,7 @@ export function FrenteCaixaCashMovementDialog({
       toast.error('Caixa não está aberto');
       return;
     }
+    savingGuardRef.current = true;
     setSaving(true);
     const { error } = await supabase.from('cash_movements' as any).insert({
       company_id: companyId,
@@ -89,6 +94,7 @@ export function FrenteCaixaCashMovementDialog({
       created_by: userId,
     });
     setSaving(false);
+    savingGuardRef.current = false;
     if (error) {
       toast.error('Falha ao salvar: ' + error.message);
       return;
