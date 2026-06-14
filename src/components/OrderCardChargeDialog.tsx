@@ -642,6 +642,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     } finally {
       setMultiPayProcessing(false);
       setMultiPayStatus('');
+      chargingRef.current = false;
     }
   }
 
