@@ -255,17 +255,25 @@ Deno.serve(async (req) => {
       ORDER BY t.table_name
     `;
 
+    let processedThisInvocation = 0;
+    let lastProcessedTable: string | null = startAfterTable;
+    let hasMore = false;
     for (const t of tables) {
-      if (Date.now() - startedAt > MAX_RUNTIME_MS) {
-        status = "partial";
-        errorMessage = "timeout: nem todas as tabelas foram processadas";
+      const table = t.table_name as string;
+      if (startAfterTable && table <= startAfterTable) continue;
+      if (
+        processedThisInvocation >= MAX_TABLES_PER_INVOCATION ||
+        Date.now() - startedAt > MAX_RUNTIME_MS
+      ) {
+        hasMore = true;
         break;
       }
-      const table = t.table_name as string;
       const pkCols = (t.pk_cols ?? []) as string[] | null;
       // Pula tabelas sem PK (não dá pra upsert) e tabelas de log voláteis
       if (!pkCols || pkCols.length === 0 || SKIP_TABLES.has(table)) {
         perTable[table] = { rows: 0, ms: 0, error: "skip: sem PK ou tabela ignorada" };
+        lastProcessedTable = table;
+        processedThisInvocation++;
         continue;
       }
 
