@@ -59,6 +59,14 @@ function buildReceiptHTML(payload: PrintPayload): string {
   // são emitidos para todas as lojas que usam o layout V2. O auto_printer.py
   // v8.34+ interpreta; versões anteriores ignoram (retrocompatível).
   const isV2 = true;
+  // Modo compacto V2 (economia de papel) — rollout isolado: Lancheria da i9.
+  // Reduz paddings/margins SEM mexer no tamanho da fonte.
+  const I9_COMPANY_ID_COMPACT = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const compact = payload.companyId === I9_COMPANY_ID_COMPACT;
+  const bodyPad = compact ? '4px' : '8px';
+  const bodyLH = compact ? '1.15' : '1.4';
+  const h2Margin = compact ? '2px 0' : '4px 0';
+  const hrMargin = compact ? '3px 0' : '6px 0';
   const itemsHtml = payload.items
     .map((it) => {
       const head = `<div style="display:flex;justify-content:space-between;font-size:12px;">
@@ -114,9 +122,9 @@ function buildReceiptHTML(payload: PrintPayload): string {
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     @page { size: ${w} auto; margin: 0; }
-    body { width: ${w}; font-family: monospace; padding: 8px; margin: 0; }
-    h2 { text-align:center; margin: 4px 0; font-size:14px; }
-    hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+    body { width: ${w}; font-family: monospace; padding: ${bodyPad}; margin: 0; line-height: ${bodyLH}; }
+    h2 { text-align:center; margin: ${h2Margin}; font-size:14px; }
+    hr { border: 0; border-top: 1px dashed #000; margin: ${hrMargin}; }
     .total { font-weight:bold; font-size:14px; display:flex; justify-content:space-between; }
   </style></head><body>
     <h2>RECIBO</h2>
