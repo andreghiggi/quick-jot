@@ -404,7 +404,9 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
           letter-spacing: 0.5px;
         }
 
-        .footer { border-top: 1px dashed #000; padding-top: ${footerPadTop}; margin-top: ${footerMarginTop}; text-align: center; font-size: 8pt; }
+        /* V2: footer compactado — sem border-top (os traços do texto já servem
+           de separador), reduzindo de 2 linhas visuais para 1. */
+        .footer { padding-top: 0; margin-top: ${footerMarginTop}; text-align: center; font-size: 8pt; line-height: 1; }
 
         /* V2: bloco de previsão de pronto (Lancheria I9) */
         .ready-block { border: 1px dashed #000; padding: 1.5mm 2mm; margin: 2mm 0; text-align: center; }
