@@ -33,7 +33,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.34"  # i9: observação do item volta a sair em texto invertido (V2)
+SCRIPT_VERSION = "v8.35"  # i9: modo compacto (paddings/margins menores, fonte intacta)
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
