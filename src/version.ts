@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.22.0-beta";
+export const VERSION = "1.22.1-beta";
 export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Fechamento de caixa: multi-pagamento separado por forma";
+export const CODENAME = "Cupom secreto: validação no checkout corrigida";
 
 export interface Release {
   version: string;
@@ -19,6 +19,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.22.1-beta",
+    date: "2026-06-14",
+    codename: "Cupom secreto: validação no checkout corrigida",
+    changes: [
+      "Cupons marcados como SECRETO (ex.: BRASIL15) agora funcionam normalmente quando o cliente cola o código no carrinho — antes a validação só olhava os cupons públicos visíveis no banner e devolvia 'Cupom inválido ou expirado'.",
+      "Agora, ao aplicar um código manualmente, o cardápio consulta o banco direto pelo código informado (respeitando empresa, ativo, validade e limite de uso).",
+    ],
+  },
   {
     version: "1.22.0-beta",
     date: "2026-06-14",
