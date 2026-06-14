@@ -21,3 +21,10 @@ type: feature
 - `runTefPayment`, `pinpadService`, `tef-webservice` — intactos.
 - `PDVV2PaymentDialog.handleConfirm` (single-payment) — intacto.
 - Fluxo single-payment de cada consumidor — intacto.
+
+## v1.6.2 — Split no fechamento de caixa (1.22.0-beta)
+- Nova tabela `pdv_sale_payments` (sale_id, company_id, payment_method_id, payment_method_name, amount, integration).
+- Helper `src/utils/recordSalePayments.ts` insere uma linha por forma após `addSale` nos 3 consumidores multi (PedidoExpress, OrderCardChargeDialog, PDV V2 importar/cobrar).
+- Helper `src/utils/expandSalesWithSplits.ts` explode cada venda com split em N linhas no relatório.
+- `CashReport.tsx` e `printCurrentCashClosing.ts` agora usam o expand → cada forma aparece com valor correto no fechamento.
+- Vendas single-payment seguem usando `pdv_sales.payment_method_id` (zero impacto).
