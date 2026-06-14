@@ -39,6 +39,7 @@ import { imprimirComprovanteTefAutomatico } from '@/utils/tefAutoPrint';
 import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
+import { recordSalePayments } from '@/utils/recordSalePayments';
 import {
   sendPinpadPayment,
   pollPinpadStatus,
@@ -1635,6 +1636,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       if (!saleId) {
         toast.error('Venda não foi registrada.');
         return;
+      }
+      // Registra o split de formas para o relatório de fechamento.
+      if (company?.id) {
+        await recordSalePayments(saleId, company.id, mp.lines);
       }
 
       // 3) NFC-e com pagamentos_split — só quando solicitado pelo dialog

@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.18-beta";
+export const VERSION = "1.22.0-beta";
 export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Printer: borda direita segura no V2 compacto";
+export const CODENAME = "Fechamento de caixa: multi-pagamento separado por forma";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.22.0-beta",
+    date: "2026-06-14",
+    codename: "Fechamento de caixa: multi-pagamento separado por forma",
+    changes: [
+      "Vendas pagas com várias formas (multi-pagamento) agora aparecem no relatório/impressão de fechamento de caixa divididas por forma — cada forma com o valor exato cobrado, em vez de tudo somado na forma de maior valor.",
+      "Nova tabela `pdv_sale_payments` registra o split de cada venda multi-pagamento (PDV V2, Pedido Express e Cobrar Comanda/Mesa).",
+      "Nenhuma alteração em TEF, PinPad, NFC-e ou no fluxo de cobrança em si — apenas a forma como o relatório de fechamento exibe.",
+    ],
+  },
   {
     version: "1.21.18-beta",
     date: "2026-06-14",

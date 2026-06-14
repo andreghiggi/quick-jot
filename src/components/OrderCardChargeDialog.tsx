@@ -18,6 +18,7 @@ import { Order } from '@/types/order';
 import { emitirNFCe, type NFCeItem, type NFCeRecord, type NFCeTefData } from '@/services/nfceService';
 import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
+import { recordSalePayments } from '@/utils/recordSalePayments';
 interface OrderCardChargeDialogProps {
   order: Order;
   open: boolean;
@@ -568,6 +569,10 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         order.id,
       );
       if (!saleId) return;
+      // Registra o split de formas para o relatório de fechamento.
+      if (company?.id) {
+        await recordSalePayments(saleId, company.id, mp.lines);
+      }
 
       // Marca pedido como pago.
       const chargedAmount = saleItems.reduce((s, it) => s + it.quantity * it.unit_price, 0);
