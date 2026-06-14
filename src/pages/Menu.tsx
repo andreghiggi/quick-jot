@@ -876,10 +876,31 @@ export default function Menu() {
     }
   }, [isCartOpen, publicCoupons, cart.length, cartTotal, appliedCoupon, autoCouponApplied]);
 
-  function handleApplyCoupon() {
+  async function handleApplyCoupon() {
     const code = couponInput.trim().toUpperCase();
     if (!code) { setCouponError('Digite um código'); return; }
-    const found = publicCoupons.find((c) => c.code.toUpperCase() === code);
+    if (!company?.id) { setCouponError('Aguarde o carregamento da loja'); return; }
+
+    // 1) Tenta achar entre os cupons públicos já carregados
+    let found: Coupon | null = publicCoupons.find((c) => c.code.toUpperCase() === code) || null;
+
+    // 2) Se não achou (ex.: cupom SECRETO), consulta o banco direto pelo código
+    if (!found) {
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('company_id', company.id)
+        .eq('active', true)
+        .ilike('code', code)
+        .maybeSingle();
+      if (error) {
+        setCouponError('Erro ao validar cupom. Tente novamente.');
+        setAppliedCoupon(null);
+        return;
+      }
+      found = (data as Coupon | null) || null;
+    }
+
     if (!found) { setCouponError('Cupom inválido ou expirado'); setAppliedCoupon(null); return; }
     const res = computeCouponDiscount(found, cartTotal);
     if (!res.eligible) { setCouponError(res.reason || 'Cupom indisponível'); setAppliedCoupon(null); return; }
