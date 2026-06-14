@@ -489,6 +489,8 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
     } catch (err: any) {
       console.error('[OrderCardCharge] error:', err);
       toast.error(err?.message || 'Erro ao cobrar pedido.');
+    } finally {
+      chargingRef.current = false;
     }
   }
 
