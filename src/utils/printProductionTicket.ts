@@ -256,19 +256,18 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
 
   const itemsHTML = data.items.map((item, index) => {
     const { additionals, observations } = parseNotes(item.notes);
-    // I9 only: quando o caller forneceu grupos estruturados, exibir o nome
-    // do grupo em negrito antes dos itens (mesmo formato visual do V3/OrderCard).
-    // Fallback (qualquer outra loja ou pedidos antigos sem groupedOptionals):
-    // mantém EXATAMENTE o comportamento original do V2 (lista plana ">> item").
-    const i9GroupedV2 =
-      data.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164' &&
+    // V2: quando o caller forneceu grupos estruturados, exibir o nome
+    // do grupo em negrito antes dos itens. Fallback (sem groupedOptionals):
+    // mantém o comportamento original V2 (lista plana ">> item").
+    const groupedV2 =
+      data.layout === 'v2' &&
       item.groupedOptionals &&
       item.groupedOptionals.length > 0;
     // I9 v8.32+:
     //  - 1 grupo: esconde o rótulo, só lista "+ ITEM"
     //  - 2+ grupos: emite [ADDGROUP_LABEL]Nome[/ADDGROUP_LABEL] (■ + sublinhado + sem CAPS)
     //  - itens sempre via <div class="add-line"> → Python converte em [ADD] (+ CAPS).
-    const additionalsHTML = i9GroupedV2
+    const additionalsHTML = groupedV2
       ? `<div class="additionals">${item.groupedOptionals!
           .map((g) => {
             const itensHtml = g.items
@@ -423,7 +422,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
         <div class="datetime">${dateStr} às ${timeStr}</div>
         ${readyHeaderHTML}
-        ${data.deliveryAddress && data.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164' ? `<div class="info">[ENDERECO]${data.deliveryAddress}[/ENDERECO]</div>` : ''}
+        ${data.deliveryAddress && data.layout === 'v2' ? `<div class="info">[ENDERECO]${data.deliveryAddress}[/ENDERECO]</div>` : ''}
       </div>
       <!--BOX_END-->
       ${readyBlockHTML}

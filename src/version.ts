@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.10-beta";
+export const VERSION = "1.21.11-beta";
 export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Recibo V2 (I9): valor dos adicionais aparece no recibo";
+export const CODENAME = "Recibo V2: melhorias liberadas para todas as lojas com layout V2";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.11-beta",
+    date: "2026-06-14",
+    codename: "Recibo V2: melhorias liberadas para todas as lojas com layout V2",
+    changes: [
+      "As melhorias de impressão antes restritas à Lancheria da i9 foram liberadas para TODAS as lojas com layout V2 marcado em Configurações.",
+      "Passa a valer em qualquer loja V2: rótulo do grupo de adicionais com ■ sublinhado, endereço de entrega em bloco invertido, valor dos adicionais no recibo (ex.: '+ LEITE CONDENSADO  R$ 3,00') e observação do item em invertido.",
+      "Aplicado nas 3 origens de recibo V2: PDV V2 / Pedido Express (pdvV2Print.ts), comanda de produção V2 (printProductionTicket.ts) e reimpressão após edição (OrderEditDialog).",
+      "Lojas com layout V1 ou V3 continuam intactas. Para enxergar as melhorias, baixe o auto_printer.py v8.34 na máquina da loja.",
+    ],
+  },
   {
     version: "1.21.10-beta",
     date: "2026-06-14",
