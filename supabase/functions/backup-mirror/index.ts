@@ -1,8 +1,21 @@
 import postgres from "npm:postgres@3.4.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-const BATCH_SIZE = 500;
-const MAX_RUNTIME_MS = 140_000; // edge function limit é ~150s
+const BATCH_SIZE = 2000;
+const MAX_RUNTIME_MS = 130_000; // edge function limit é ~150s; deixa folga pro UPDATE final
+
+// Tabelas que NÃO devem ser espelhadas (logs voláteis e/ou pesados demais)
+const SKIP_TABLES = new Set<string>([
+  "backup_runs",
+  "tef_webservice_logs",
+  "pinpdv_logs",
+  "whatsapp_auto_reply_locks",
+]);
+
+// Tabelas grandes onde só copiamos os últimos N dias
+const RECENT_ONLY_TABLES: Record<string, { column: string; days: number }> = {
+  whatsapp_messages: { column: "created_at", days: 90 },
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
