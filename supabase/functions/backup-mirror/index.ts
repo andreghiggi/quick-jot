@@ -112,19 +112,37 @@ Deno.serve(async (req) => {
   const source = postgres(sourceUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
   const target = postgres(targetUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
 
-  // Log: cria registro 'running' (via target, mas vamos guardar no source também)
+  // Estado da execução (pode ser continuação de uma invocação anterior)
   const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
-  const [runRow] = await sourceMeta`
-    INSERT INTO public.backup_runs (status) VALUES ('running') RETURNING id
-  `;
-  const runId = runRow.id as string;
-
+  const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
+  const startAfterTable: string | null = typeof body?.start_after === "string" ? body.start_after : null;
+  let runId: string;
   let tablesProcessed = 0;
   let totalRows = 0;
   let status = "success";
   let errorMessage: string | null = null;
-  const perTable: Record<string, { rows: number; ms: number; error?: string }> = {};
-  const schemaChanges: string[] = [];
+  let perTable: Record<string, { rows: number; ms: number; error?: string }> = {};
+  let schemaChanges: string[] = [];
+
+  if (isContinuation) {
+    runId = body.run_id;
+    const [prev] = await sourceMeta`
+      SELECT tables_processed, rows_copied, error_message, details
+      FROM public.backup_runs WHERE id = ${runId}
+    `;
+    if (prev) {
+      tablesProcessed = Number(prev.tables_processed ?? 0);
+      totalRows = Number(prev.rows_copied ?? 0);
+      errorMessage = (prev.error_message as string | null) ?? null;
+      const det = prev.details as any;
+      if (det && typeof det === "object") perTable = det;
+    }
+  } else {
+    const [runRow] = await sourceMeta`
+      INSERT INTO public.backup_runs (status) VALUES ('running') RETURNING id
+    `;
+    runId = runRow.id as string;
+  }
 
   // Auto-sync de schema: cria tabelas/colunas novas no destino antes do mirror
   async function syncSchema() {
