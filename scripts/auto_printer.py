@@ -33,7 +33,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.33"  # i9: adicionais com valor preservam "R$ X,XX" no recibo V2
+SCRIPT_VERSION = "v8.34"  # i9: observação do item volta a sair em texto invertido (V2)
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -332,9 +332,11 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
                         items_html += f'    <div class="add-line">+ {ad_clean.upper()}{price_suffix}</div>\n'
                 items_html += '  </div>\n'
 
-            # V2: observações em texto invertido (apenas o conteúdo — o GDI adiciona o rótulo "OBSERVAÇÕES:")
+            # V2: observações em texto invertido (apenas o conteúdo — o GDI adiciona o rótulo "OBSERVAÇÕES:").
+            # IMPORTANTE: precisa ser <div class="obs"> pra casar com a regex `marcar_obs`
+            # que converte em [OBS]...[/OBS] e o GDI renderiza com fundo preto/texto branco.
             if item_notes:
-                items_html += f'  <div class="obs-block"><span class="obs">{item_notes}</span></div>\n'
+                items_html += f'  <div class="obs"><span class="obs-text">{item_notes}</span></div>\n'
         else:
             # V1: comportamento original
             if extras:
