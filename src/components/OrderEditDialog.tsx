@@ -429,6 +429,11 @@ export function OrderEditDialog({
     });
     const orderNum = order.orderCode || order.dailyNumber;
 
+    // I9 v8.32+ (recibo V2 editado): rótulo de grupo com ■ sublinhado e
+    // endereço invertido. Isolado por companyId — demais lojas intactas.
+    const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+    const isI9 = companyId === I9_COMPANY_ID;
+
     // Origem do pedido — mesmo critério do auto_printer.py
     const notesRaw = effectiveNotes || '';
     const isExpressNote = notesRaw.includes('[EXPRESS]');
@@ -455,27 +460,37 @@ export function OrderEditDialog({
 
     // Bloco entrega / retirada
     const deliverySection = effectiveDeliveryAddress
-      ? `<div class="delivery-badge">ENTREGA</div>
-         <div class="section"><p>${effectiveDeliveryAddress}</p></div>`
+      ? (isI9
+          ? `<div class="delivery-badge">ENTREGA</div>
+         <div class="section"><p>[ENDERECO]${effectiveDeliveryAddress}[/ENDERECO]</p></div>`
+          : `<div class="delivery-badge">ENTREGA</div>
+         <div class="section"><p>${effectiveDeliveryAddress}</p></div>`)
       : '<div class="delivery-badge">RETIRADA NO LOCAL</div>';
 
     // Itens — usando mesmo markup do auto_printer.py
     const itemsHtml = items.map((it, idx) => {
       const qtd = it.quantity;
       const cleanName = cleanProductName(it.name);
-      // Extrai adicionais do nome composto "Produto (Adicionais: a, b)"
+      // Extrai adicionais. I9: preserva grupos (rótulo ■ sublinhado quando 2+).
       let adicionais: string[] = [];
+      let grupos: { nome: string; itens: string[] }[] = [];
       if (it.name.includes('(') && it.name.endsWith(')')) {
         const inside = it.name.substring(it.name.indexOf('(') + 1, it.name.length - 1).trim();
         const m = inside.match(/^Adicionais?:\s*(.+)$/i);
         if (m) {
           adicionais = m[1].split(',').map(s => s.trim()).filter(Boolean);
+          if (isI9 && adicionais.length > 0) {
+            grupos.push({ nome: 'Adicionais', itens: adicionais.slice() });
+          }
         } else {
-          // Formato com grupos "Grupo: a, b | Grupo2: c"
-          const grupos = inside.split('|').map(s => s.trim()).filter(Boolean);
-          for (const g of grupos) {
-            const after = g.includes(':') ? g.split(':').slice(1).join(':') : g;
-            after.split(',').map(p => p.trim()).filter(Boolean).forEach(p => adicionais.push(p));
+          const partes = inside.split('|').map(s => s.trim()).filter(Boolean);
+          for (const g of partes) {
+            const hasColon = g.includes(':');
+            const nome = hasColon ? g.split(':')[0].trim() : 'Adicionais';
+            const after = hasColon ? g.split(':').slice(1).join(':') : g;
+            const itens = after.split(',').map(p => p.trim()).filter(Boolean);
+            itens.forEach(p => adicionais.push(p));
+            if (isI9 && itens.length > 0) grupos.push({ nome, itens });
           }
         }
       }
@@ -490,7 +505,20 @@ export function OrderEditDialog({
       const lineTotal = (it.price * qtd).toFixed(2).replace('.', ',');
       let block = '<div class="item">\n';
       block += `  <div class="item-name">${qtd}x ${cleanName}</div>\n`;
-      if (adicionais.length > 0) {
+      if (isI9 && grupos.length > 0) {
+        block += '  <div class="additionals">\n';
+        const single = grupos.length === 1;
+        for (const g of grupos) {
+          if (!single) {
+            block += `    <div class="add-group-label">[ADDGROUP_LABEL]${g.nome}[/ADDGROUP_LABEL]</div>\n`;
+          }
+          for (const ad of g.itens) {
+            const adClean = ad.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
+            if (adClean) block += `    <div class="add-line">+ ${adClean.toUpperCase()}</div>\n`;
+          }
+        }
+        block += '  </div>\n';
+      } else if (adicionais.length > 0) {
         block += '  <div class="additionals">\n';
         for (const ad of adicionais) {
           const adClean = ad.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
