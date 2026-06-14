@@ -17,6 +17,10 @@ interface PrintItem {
   quantity: number;
   price: number;
   notes?: string;
+  /** Adicionais agrupados (I9). Quando presente, recibo V2 e comanda V2
+   *  renderizam rótulo do grupo (■ sublinhado) + itens (+ CAPS). 1 grupo
+   *  esconde o rótulo. Quando ausente, comportamento legado preservado. */
+  groupedOptionals?: { groupName: string; items: string }[];
 }
 
 interface PrintPayload {
@@ -36,6 +40,9 @@ interface PrintPayload {
    *  Quando omitido, mantém o comportamento legado (V1 ou V3 forçado para I9).
    *  Quando fornecido, respeita a escolha do lojista (V1/V2/V3). */
   printLayout?: 'v1' | 'v2' | 'v3';
+  /** Endereço de entrega (I9 only). Renderizado em bloco invertido no recibo
+   *  e propagado para a comanda V2. */
+  deliveryAddress?: string | null;
 }
 
 async function enqueue(companyId: string, label: string, html: string) {
@@ -48,14 +55,34 @@ async function enqueue(companyId: string, label: string, html: string) {
 
 function buildReceiptHTML(payload: PrintPayload): string {
   const w = payload.paperSize === '58mm' ? '58mm' : '80mm';
+  const isI9 = payload.companyId === I9_COMPANY_ID_V3;
   const itemsHtml = payload.items
-    .map(
-      (it) =>
-        `<div style="display:flex;justify-content:space-between;font-size:12px;">
+    .map((it) => {
+      const head = `<div style="display:flex;justify-content:space-between;font-size:12px;">
           <span>${it.quantity}× ${escapeHtml(it.name)}</span>
           <span>R$ ${(it.price * it.quantity).toFixed(2).replace('.', ',')}</span>
-        </div>`
-    )
+        </div>`;
+      // I9 v8.32+: adicionais agrupados via markers que o auto_printer interpreta.
+      // 1 grupo: sem rótulo; 2+ grupos: rótulo ■ sublinhado.
+      if (!isI9 || !it.groupedOptionals || it.groupedOptionals.length === 0) return head;
+      const groups = it.groupedOptionals;
+      const single = groups.length === 1;
+      const groupsHtml = groups
+        .map((g) => {
+          const itensHtml = g.items
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .map((x) => `<div class="add-line">&gt;&gt; ${escapeHtml(x)}</div>`)
+            .join('');
+          const labelHtml = single
+            ? ''
+            : `<div class="add-group-label">[ADDGROUP_LABEL]${escapeHtml(g.groupName)}[/ADDGROUP_LABEL]</div>`;
+          return labelHtml + itensHtml;
+        })
+        .join('');
+      return head + groupsHtml;
+    })
     .join('');
 
   // I9 (V2): "Pronto até" no cabeçalho do recibo, logo abaixo do Cliente.
@@ -72,6 +99,11 @@ function buildReceiptHTML(payload: PrintPayload): string {
     prontoAteHtml = `<div style="font-size:13px;font-weight:bold;text-transform:uppercase;margin-top:2px;">Pronto até: ${readyTs}</div>`;
   }
 
+  // I9 v8.32+: endereço de entrega em bloco invertido (mesmo estilo do nome).
+  const enderecoHtml = isI9 && payload.deliveryAddress
+    ? `<div style="font-size:12px;">[ENDERECO]${escapeHtml(payload.deliveryAddress)}[/ENDERECO]</div>`
+    : '';
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     @page { size: ${w} auto; margin: 0; }
     body { width: ${w}; font-family: monospace; padding: 8px; margin: 0; }
@@ -82,7 +114,8 @@ function buildReceiptHTML(payload: PrintPayload): string {
     <h2>RECIBO</h2>
     <div style="font-size:14px;font-weight:bold;">${payload.shortCode ? escapeHtml(payload.shortCode) : `Pedido #${payload.dailyNumber}`}</div>
     <div style="font-size:10px;">${escapeHtml(payload.orderCode)}</div>
-    <div style="font-size:12px;">Cliente: ${escapeHtml(payload.customerName)}</div>
+    <div style="font-size:12px;">${isI9 ? `[CLIENTE]${escapeHtml(payload.customerName)}[/CLIENTE]` : `Cliente: ${escapeHtml(payload.customerName)}`}</div>
+    ${enderecoHtml}
     ${prontoAteHtml}
     <hr/>
     ${itemsHtml}
@@ -322,12 +355,14 @@ function buildProductionHtml(payload: PrintPayload, ref: string) {
       productName: i.name,
       quantity: i.quantity,
       notes: i.notes || null,
+      groupedOptionals: i.groupedOptionals,
     })),
     createdAt: new Date(),
     paperSize: payload.paperSize || '80mm',
     referenceLabel: ref,
     companyId: payload.companyId,
     layout: payload.printLayout,
+    deliveryAddress: payload.deliveryAddress || null,
     // Lancheria I9: previsão = criação + (máximo do prazo estimado − 10 min).
     // Lê dinamicamente "Prazo estimado de entrega" (Configurações → WhatsApp).
     showReadyTime: isLancheriaI9,

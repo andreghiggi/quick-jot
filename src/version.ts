@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.8-beta";
-export const RELEASE_DATE = "2026-06-13"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "auto_printer: '+' nos adicionais (I9)";
+export const VERSION = "1.21.9-beta";
+export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "auto_printer: rótulo de grupo + endereço invertido (I9)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.9-beta",
+    date: "2026-06-14",
+    codename: "auto_printer: rótulo de grupo + endereço invertido (I9)",
+    changes: [
+      "Comanda de produção V2 e recibo V2 (Lancheria da i9): o rótulo do grupo de adicionais agora aparece prefixado com ■, sublinhado e com capitalização original (ex.: ■ Adicionais:) em vez de CAPS sem destaque. Itens dos grupos continuam em CAPS com '+ ITEM'.",
+      "Quando o produto tem apenas 1 grupo de adicionais, o rótulo é omitido — imprime só '+ ITEM' direto, evitando ruído visual.",
+      "Endereço de entrega passou a sair em bloco invertido (fundo preto / texto branco), igual ao nome do cliente — fica imediatamente abaixo do nome no recibo e no cabeçalho da comanda.",
+      "Tudo isolado por company_id da Lancheria da i9 — demais lojas que rodam o auto_printer.py continuam idênticas. V1, V3, TEF, PinPad, NFC-e, Multi-Pagamento e nfce-proxy não foram tocados.",
+      "Requer atualização do auto_printer.py na máquina da i9 (Configurações → Impressora → baixar/reinstalar). Versão do script: v8.32.",
+    ],
+  },
   {
     version: "1.21.8-beta",
     date: "2026-06-13",

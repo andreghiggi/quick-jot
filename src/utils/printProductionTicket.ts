@@ -42,6 +42,11 @@ interface PrintTicketData {
    *  ajudar a logística da cozinha. Quando omitido, o layout permanece
    *  idêntico ao anterior. */
   orderType?: OrderTicketType;
+  /** Endereço de entrega (I9 only). Quando presente, renderiza em bloco
+   *  invertido (fundo preto, texto branco) igual ao nome do cliente.
+   *  Emite marcador [ENDERECO]...[/ENDERECO] que o auto_printer.py >= v8.32
+   *  interpreta. Em outras lojas: ignorado (sem regressão). */
+  deliveryAddress?: string | null;
 }
 
 // Allow-list ISOLADA: troca de "Comanda #<n>" por referenceLabel no cabeçalho.
@@ -259,18 +264,25 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
       data.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164' &&
       item.groupedOptionals &&
       item.groupedOptionals.length > 0;
+    // I9 v8.32+:
+    //  - 1 grupo: esconde o rótulo, só lista "+ ITEM"
+    //  - 2+ grupos: emite [ADDGROUP_LABEL]Nome[/ADDGROUP_LABEL] (■ + sublinhado + sem CAPS)
+    //  - itens sempre via <div class="add-line"> → Python converte em [ADD] (+ CAPS).
     const additionalsHTML = i9GroupedV2
       ? `<div class="additionals">${item.groupedOptionals!
-          .map(
-            (g) =>
-              `<div class="add-group-label">${g.groupName}:</div>` +
-              g.items
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean)
-                .map((it) => `<div class="add-line">&gt;&gt; ${it}</div>`)
-                .join('')
-          )
+          .map((g) => {
+            const itensHtml = g.items
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .map((it) => `<div class="add-line">&gt;&gt; ${it}</div>`)
+              .join('');
+            const single = item.groupedOptionals!.length === 1;
+            const labelHtml = single
+              ? ''
+              : `<div class="add-group-label">[ADDGROUP_LABEL]${g.groupName}[/ADDGROUP_LABEL]</div>`;
+            return labelHtml + itensHtml;
+          })
           .join('')}</div>`
       : additionals.length > 0
         ? `<div class="additionals">${additionals.map(a => `<div class="add-line">&gt;&gt; ${a}</div>`).join('')}</div>`
@@ -411,6 +423,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
         <div class="datetime">${dateStr} às ${timeStr}</div>
         ${readyHeaderHTML}
+        ${data.deliveryAddress && data.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164' ? `<div class="info">[ENDERECO]${data.deliveryAddress}[/ENDERECO]</div>` : ''}
       </div>
       <!--BOX_END-->
       ${readyBlockHTML}

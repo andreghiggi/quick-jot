@@ -33,7 +33,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.31"  # i9: prefixo '+' em adicionais (comanda+recibo V1/V2)
+SCRIPT_VERSION = "v8.32"  # i9: rótulo de grupo (■ sublinhado) + endereço invertido
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -1276,6 +1276,8 @@ def imprimir_html(html, order_number):
             m_desc = re.match(r'^\[DESC\](.*)\[/DESC\]$', stripped)
             m_name = re.match(r'^\[NAME\](.*)\[/NAME\]$', stripped)
             m_cliente = re.match(r'^\[CLIENTE\](.*)\[/CLIENTE\]$', stripped)
+            m_endereco = re.match(r'^\[ENDERECO\](.*)\[/ENDERECO\]$', stripped)
+            m_addgroup = re.match(r'^\[ADDGROUP_LABEL\](.*)\[/ADDGROUP_LABEL\]$', stripped)
             m_sep = (stripped == '[SEP]')
 
             # Descrição do produto (V1 e V2) — linha em itálico, prefixo "Descrição:"
@@ -1394,6 +1396,64 @@ def imprimir_html(html, order_number):
                 i += 1
                 continue
 
+            # ENDERECO invertido (I9, V2) — mesmo bloco preto/branco do CLIENTE.
+            # Aparece após o nome no recibo/comanda quando o pedido é entrega.
+            if m_endereco:
+                conteudo_end = m_endereco.group(1).strip().upper()
+                if not conteudo_end:
+                    i += 1
+                    continue
+                hDC.SelectObject(font_obs)
+                pad_x = int(dpi_x * 0.02)
+                pad_y = int(dpi_y * 0.015)
+                sublinhas = quebrar_linha_px(conteudo_end, max(1, usable_text_px - pad_x * 2))
+                garantir_espaco(line_h * len(sublinhas) + pad_y * 2 + int(line_h * 0.3))
+                rect_top = y - pad_y
+                rect_h = line_h * len(sublinhas) + pad_y * 2
+                rect_right = margin_x + int(colunas * tm['tmAveCharWidth']) + pad_x * 2
+                desenhar_fundo_preto(rect_top, rect_h, rect_right)
+                hDC.SetTextColor(0xFFFFFF)
+                hDC.SetBkMode(win32con.TRANSPARENT)
+                for sub in sublinhas:
+                    hDC.TextOut(margin_x + pad_x, y, sub)
+                    y += line_h
+                hDC.SetTextColor(0x000000)
+                hDC.SelectObject(font_normal)
+                y += int(line_h * 0.3)
+                i += 1
+                continue
+
+            # ADDGROUP_LABEL (I9, V2): rótulo do grupo de adicionais, prefixo ■,
+            # SUBLINHADO, capitalização original (sem CAPS). Aparece acima dos
+            # itens "+ ITEM" quando há 2+ grupos no produto.
+            if m_addgroup:
+                conteudo_grp = m_addgroup.group(1).strip()
+                if not conteudo_grp:
+                    i += 1
+                    continue
+                texto_grp = f'\u25A0 {conteudo_grp}'
+                # cria fonte sublinhada (cai pra font_normal se falhar)
+                try:
+                    font_grp = win32ui.CreateFont({
+                        'name': 'Courier New',
+                        'height': font_height,
+                        'weight': 700,
+                        'underline': True,
+                    })
+                except Exception:
+                    font_grp = font_normal
+                hDC.SelectObject(font_grp)
+                sublinhas_grp = quebrar_linha_px(texto_grp, usable_text_px)
+                garantir_espaco(line_h * len(sublinhas_grp))
+                hDC.SetTextColor(0x000000)
+                hDC.SetBkMode(win32con.TRANSPARENT)
+                for sub in sublinhas_grp:
+                    hDC.TextOut(margin_x, y, sub)
+                    y += line_h
+                hDC.SelectObject(font_normal)
+                i += 1
+                continue
+
             if is_v2 and m_obs:
                 conteudo_obs = m_obs.group(1).strip().upper()
                 conteudo_obs = re.sub(r'^OBSERVAÇÕES:\s*', '', conteudo_obs, flags=re.IGNORECASE)
@@ -1431,7 +1491,7 @@ def imprimir_html(html, order_number):
                 continue
 
             # Linha normal: remove marcadores residuais e imprime
-            stripped_clean = re.sub(r'\[/?(ADD|OBS|DESC|NAME|ITEM|SEP|CLIENTE|BOX_START|BOX_END)\]', '', stripped).replace('|||', ' ').strip()
+            stripped_clean = re.sub(r'\[/?(ADD|ADDGROUP_LABEL|OBS|DESC|NAME|ITEM|SEP|CLIENTE|ENDERECO|BOX_START|BOX_END)\]', '', stripped).replace('|||', ' ').strip()
             if not stripped_clean:
                 i += 1
                 continue
