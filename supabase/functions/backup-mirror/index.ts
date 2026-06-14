@@ -240,9 +240,9 @@ Deno.serve(async (req) => {
       }
       const table = t.table_name as string;
       const pkCols = (t.pk_cols ?? []) as string[] | null;
-      // Pula tabelas sem PK (não dá pra upsert) e backup_runs (pra não bagunçar)
-      if (!pkCols || pkCols.length === 0 || table === "backup_runs") {
-        perTable[table] = { rows: 0, ms: 0, error: "skip: sem PK ou tabela de log" };
+      // Pula tabelas sem PK (não dá pra upsert) e tabelas de log voláteis
+      if (!pkCols || pkCols.length === 0 || SKIP_TABLES.has(table)) {
+        perTable[table] = { rows: 0, ms: 0, error: "skip: sem PK ou tabela ignorada" };
         continue;
       }
 
@@ -264,15 +264,19 @@ Deno.serve(async (req) => {
           .join(",");
         const conflictCols = pkCols.map((c) => `"${c}"`).join(",");
 
-        // Pagina a leitura
+        // Pagina a leitura (com filtro opcional pra tabelas grandes)
         const orderBy = pkCols.map((c) => `"${c}"`).join(",");
+        const recent = RECENT_ONLY_TABLES[table];
+        const whereClause = recent
+          ? `WHERE "${recent.column}" >= now() - interval '${recent.days} days'`
+          : "";
         let offset = 0;
         while (true) {
           if (Date.now() - startedAt > MAX_RUNTIME_MS) {
             throw new Error("timeout no meio da tabela");
           }
           const batch = await source.unsafe(
-            `SELECT ${quotedCols} FROM public."${table}" ORDER BY ${orderBy} LIMIT ${BATCH_SIZE} OFFSET ${offset}`,
+            `SELECT ${quotedCols} FROM public."${table}" ${whereClause} ORDER BY ${orderBy} LIMIT ${BATCH_SIZE} OFFSET ${offset}`,
           );
           if (batch.length === 0) break;
 
