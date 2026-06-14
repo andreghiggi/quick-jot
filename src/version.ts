@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.14-beta";
+export const VERSION = "1.21.15-beta";
 export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão compacta real no instalador v8.36";
+export const CODENAME = "Comanda V2: '--- FIM DO PEDIDO ---' em 1 linha";
 
 export interface Release {
   version: string;
@@ -19,6 +19,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.15-beta",
+    date: "2026-06-14",
+    codename: "Comanda V2: '--- FIM DO PEDIDO ---' em 1 linha",
+    changes: [
+      "Comanda de produção V2: o rodapé '--- FIM DO PEDIDO ---' estava ocupando 2 linhas visuais (uma para o tracejado de borda e outra para o texto). Removi a borda tracejada — os próprios traços do texto já servem de separador — e o rodapé agora ocupa apenas 1 linha, economizando mais alguns milímetros de papel por pedido.",
+      "Nenhuma alteração em V1, V3, recibo do cliente, TEF, PinPad, NFC-e ou Multi-Pagamento. Não precisa reinstalar o auto_printer.py.",
+    ],
+  },
   {
     version: "1.21.14-beta",
     date: "2026-06-14",
