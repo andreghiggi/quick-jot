@@ -93,11 +93,11 @@ function buildReceiptHTML(payload: PrintPayload): string {
     })
     .join('');
 
-  // I9 (V2): "Pronto até" no cabeçalho do recibo, logo abaixo do Cliente.
+  // V2: "Pronto até" no cabeçalho do recibo, logo abaixo do Cliente.
   // Calcula como criação + (máximo do prazo estimado − 10 min). Fallback 30min.
-  // Isolado por companyId — demais lojas não recebem nenhuma alteração.
+  // Ativo para todas as lojas com layout V2 marcado.
   let prontoAteHtml = '';
-  if (payload.companyId === I9_COMPANY_ID_V3) {
+  if (isV2) {
     const offset = computeReadyOffsetMinutes(payload.estimatedWaitTime, 30);
     const ready = new Date(Date.now() + offset * 60 * 1000);
     const readyTs = ready.toLocaleTimeString('pt-BR', {
@@ -287,7 +287,8 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
   // I9 (V2): remove "Criado em" (redundante com "Impresso em") e adiciona
   // "Pronto até" logo abaixo da data/hora do recibo.
   out.push(pipeRow('Impresso em', ts));
-  if (payload.companyId === I9_COMPANY_ID_V3) {
+  // V3 layout (atualmente só I9, mas mantém compat se outras lojas marcarem V3).
+  if (payload.printLayout === 'v3' || payload.companyId === I9_COMPANY_ID_V3) {
     const offset = computeReadyOffsetMinutes(payload.estimatedWaitTime, 30);
     const ready = new Date(now.getTime() + offset * 60 * 1000);
     const readyTs = ready.toLocaleTimeString('pt-BR', {
@@ -355,7 +356,9 @@ function buildReceiptHTMLForCompany(payload: PrintPayload): string {
 }
 
 function buildProductionHtml(payload: PrintPayload, ref: string) {
-  const isLancheriaI9 = true;
+  // "Pronto até" na comanda de produção: ativo para todas as lojas com
+  // layout V2 (cálculo: criação + máx. prazo estimado − 10 min, fallback 30).
+  const showReady = payload.printLayout === 'v2' || !payload.printLayout;
   return generateProductionTicketHTML({
     tabNumber: payload.dailyNumber,
     customerName: payload.customerName,
@@ -371,10 +374,8 @@ function buildProductionHtml(payload: PrintPayload, ref: string) {
     companyId: payload.companyId,
     layout: payload.printLayout,
     deliveryAddress: payload.deliveryAddress || null,
-    // Lancheria I9: previsão = criação + (máximo do prazo estimado − 10 min).
-    // Lê dinamicamente "Prazo estimado de entrega" (Configurações → WhatsApp).
-    showReadyTime: isLancheriaI9,
-    readyOffsetMinutes: isLancheriaI9
+    showReadyTime: showReady,
+    readyOffsetMinutes: showReady
       ? computeReadyOffsetMinutes(payload.estimatedWaitTime, 30)
       : undefined,
   });
