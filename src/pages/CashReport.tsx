@@ -136,7 +136,7 @@ export default function CashReport() {
         ordersMap = new Map((ord || []).map((o: any) => [o.id, { origin: o.origin, delivery_address: o.delivery_address, notes: o.notes }]));
       }
 
-      const mapped: CloseCashSale[] = (sales || []).flatMap((s: any) => {
+      const base: CloseCashSale[] = (sales || []).flatMap((s: any) => {
         // Exclui vendas canceladas — elas ficam no histórico mas não devem
         // somar no relatório/fechamento de caixa.
         const saleCancelled = !!s.notes?.includes('[CANCELADA]');
@@ -173,6 +173,9 @@ export default function CashReport() {
           origin,
         }];
       });
+      // Expande vendas multi-pagamento em uma linha por forma.
+      const { expandSalesWithSplits } = await import('@/utils/expandSalesWithSplits');
+      const mapped: CloseCashSale[] = await expandSalesWithSplits(base);
 
       setSalesByRegister((prev) => ({ ...prev, [registerId]: mapped }));
       return mapped;
