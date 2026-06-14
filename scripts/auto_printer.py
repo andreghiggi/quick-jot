@@ -33,7 +33,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.36"  # i9: compactação real no GDI (remove linhas vazias extras, fonte intacta)
+SCRIPT_VERSION = "v8.37"  # i9: corrige borda direita do cabeçalho no GDI compacto
 I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
@@ -1237,9 +1237,18 @@ def imprimir_html(html, order_number):
 
         is_v2 = (PRINT_LAYOUT == 'v2')
 
+        def limitar_retangulo_direita(rect_right_px):
+            """Evita que retângulos GDI ultrapassem a área imprimível.
+            Rollout isolado: apenas V2 compacto da Lancheria I9."""
+            if compact_v2:
+                safe_gap = max(2, int(dpi_x * 0.01))
+                return min(rect_right_px, page_w - margin_x - safe_gap)
+            return rect_right_px
+
         def desenhar_fundo_preto(rect_top_px, rect_h_px, rect_right_px):
             try:
                 import win32gui
+                rect_right_px = limitar_retangulo_direita(rect_right_px)
                 brush = win32gui.CreateSolidBrush(0x000000)
                 pen = win32gui.CreatePen(win32con.PS_SOLID, 1, 0x000000)
                 old_brush = win32gui.SelectObject(hDC.GetSafeHdc(), brush)
@@ -1255,6 +1264,7 @@ def imprimir_html(html, order_number):
         def desenhar_borda(rect_top_px, rect_h_px, rect_right_px):
             try:
                 import win32gui
+                rect_right_px = limitar_retangulo_direita(rect_right_px)
                 # Borda apenas (sem preenchimento) — usa NULL_BRUSH
                 pen = win32gui.CreatePen(win32con.PS_SOLID, 2, 0x000000)
                 null_brush = win32gui.GetStockObject(win32con.NULL_BRUSH)
