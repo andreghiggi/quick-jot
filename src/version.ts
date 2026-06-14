@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.12-beta";
+export const VERSION = "1.21.13-beta";
 export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Pronto até liberado para todas as lojas com layout V2";
+export const CODENAME = "Recibo V2 modo compacto (economia de papel — piloto I9)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.13-beta",
+    date: "2026-06-14",
+    codename: "Recibo V2 modo compacto (economia de papel — piloto I9)",
+    changes: [
+      "Recibo V2 e comanda de produção V2 ganharam um 'modo compacto' que reduz o consumo de bobina SEM alterar o tamanho da fonte. Estimativa: 18% a 22% menos papel por pedido.",
+      "O que mudou: linhas mais próximas umas das outras (line-height menor), margens em cima/embaixo de cada item reduzidas, caixinha preta de observação mais enxuta, cabeçalho e rodapé com menos espaço.",
+      "O que NÃO mudou: tamanho da fonte (continua igual), linha tracejada separando os itens (mantida), 5 linhas em branco no fim do recibo para anotação manual (mantidas).",
+      "Rollout ISOLADO à Lancheria da i9 (piloto) — demais lojas com layout V2 continuam imprimindo no formato atual até validação. Lojas V1 e V3 não foram tocadas.",
+      "Nenhuma alteração em TEF v1.0/v1.1/v1.2-beta, PinPad, NFC-e, Multi-Pagamento v1.6/v1.7, nfce-proxy, Frente de Caixa, OrderCardChargeDialog ou runMultiPayment.",
+    ],
+  },
   {
     version: "1.21.12-beta",
     date: "2026-06-14",
