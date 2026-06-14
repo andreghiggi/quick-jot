@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.11-beta";
+export const VERSION = "1.21.12-beta";
 export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Recibo V2: melhorias liberadas para todas as lojas com layout V2";
+export const CODENAME = "Pronto até liberado para todas as lojas com layout V2";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.12-beta",
+    date: "2026-06-14",
+    codename: "Pronto até liberado para todas as lojas com layout V2",
+    changes: [
+      "O campo 'Pronto até' (previsão de quando o pedido fica pronto) agora aparece no recibo e na comanda de produção de TODAS as lojas com layout V2 marcado em Configurações — antes era exclusivo da Lancheria da i9.",
+      "Cálculo automático: horário de criação + (máximo do 'Prazo estimado de entrega' − 10 min). Cada loja configura o prazo em Configurações → WhatsApp. Fallback de 30 min se não configurado.",
+      "Lojas com layout V1 continuam sem o campo. V3 continua com 'Pronto até' apenas na I9 (layout exclusivo).",
+    ],
+  },
   {
     version: "1.21.11-beta",
     date: "2026-06-14",
