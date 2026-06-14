@@ -178,6 +178,10 @@ export default function PDVV2() {
   const isI9Company = companyId === I9_COMPANY_ID;
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
   const tefPromptOpenRef = useRef(false);
+  // Trava síncrona anti duplo-clique para os fluxos de cobrança de comanda.
+  // Bloqueia chamadas reentrantes na mesma tick do React (antes do setState).
+  const confirmImportTabGuardRef = useRef(false);
+  const confirmImportTabI9GuardRef = useRef(false);
   const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
 
   useEffect(() => {
