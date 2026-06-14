@@ -512,6 +512,9 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       toast.error('Caixa precisa estar aberto para cobrar pedidos.');
       return;
     }
+    // Guard anti-duplo-clique (síncrono).
+    if (chargingRef.current) return;
+    chargingRef.current = true;
     setMultiPayProcessing(true);
     setMultiPayStatus('Iniciando cobranças…');
     try {
