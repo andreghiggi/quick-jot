@@ -429,10 +429,10 @@ export function OrderEditDialog({
     });
     const orderNum = order.orderCode || order.dailyNumber;
 
-    // I9 v8.32+ (recibo V2 editado): rótulo de grupo com ■ sublinhado e
-    // endereço invertido. Isolado por companyId — demais lojas intactas.
-    const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-    const isI9 = companyId === I9_COMPANY_ID;
+    // V2 (recibo editado): rótulo de grupo com ■ sublinhado, endereço
+    // invertido e adicionais com valor. Ativo para todas as lojas com
+    // layout V2 marcado. auto_printer.py v8.34+ interpreta os markers.
+    const isI9 = storeSettings?.printLayout === 'v2';
 
     // Origem do pedido — mesmo critério do auto_printer.py
     const notesRaw = effectiveNotes || '';
