@@ -33,7 +33,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.34"  # i9: observação do item volta a sair em texto invertido (V2)
+SCRIPT_VERSION = "v8.35"  # i9: modo compacto (paddings/margins menores, fonte intacta)
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
 # ============================================
@@ -443,6 +443,15 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         except Exception:
             pass
     
+    # v8.35: Modo compacto (i9) — reduz paddings/margins SEM mexer no tamanho da fonte.
+    # Rollout isolado por company_id; demais lojas mantêm o comportamento da v8.34.
+    _i9_compact = (pedido.get('company_id') == I9_COMPANY_ID)
+    _body_pad     = '1mm'      if _i9_compact else '2mm'
+    _body_lh      = '1.15'     if _i9_compact else '1.3'
+    _item_margin  = '0.5mm 0'  if _i9_compact else '1.5mm 0'
+    _add_lh       = '1.15'     if _i9_compact else '1.4'
+    _divider_mg   = '0.8mm 0'  if _i9_compact else '2mm 0'
+
     html = f'''<!DOCTYPE html>
 <html>
 <head>
@@ -457,8 +466,8 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
             font-weight: bold;
             width: {paper_size};
             max-width: {paper_size};
-            padding: 2mm;
-            line-height: 1.3;
+            padding: {_body_pad};
+            line-height: {_body_lh};
             -webkit-print-color-adjust: exact;
         }}
         .center {{ text-align: center; }}
@@ -467,18 +476,18 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         .order-num {{ font-size: 16pt; font-weight: bold; margin: 1mm 0; }}
         .origem {{ font-size: 9pt; font-weight: bold; margin: 0.5mm 0; }}
         .date {{ font-size: 8pt; }}
-        .divider {{ border: none; border-top: 1px dashed #000; margin: 2mm 0; }}
+        .divider {{ border: none; border-top: 1px dashed #000; margin: {_divider_mg}; }}
         .label {{ font-size: 9pt; font-weight: bold; }}
         .value {{ font-size: 10pt; font-weight: bold; }}
         .section {{ margin: 1mm 0; }}
         .section p {{ margin: 0.5mm 0; font-size: 10pt; }}
-        .item {{ margin: 1.5mm 0; }}
+        .item {{ margin: {_item_margin}; }}
         .item-name {{ font-size: 11pt; font-weight: bold; text-transform: uppercase; }}
         .item-detail {{ font-size: 9pt; margin-left: 2mm; }}
         .item-notes {{ font-size: 9pt; font-style: italic; margin-left: 2mm; }}
         /* V2: adicionais empilhados em negrito */
         .additionals {{ margin: 1mm 0 0 2mm; }}
-        .add-line {{ font-size: 11pt; font-weight: 900; line-height: 1.4; word-break: break-word; text-transform: uppercase; }}
+        .add-line {{ font-size: 11pt; font-weight: 900; line-height: {_add_lh}; word-break: break-word; text-transform: uppercase; }}
         /* V2: observações texto invertido (fundo preto, letras brancas) */
         .obs-block {{ margin: 1mm 0 0 2mm; }}
         .obs {{ display: inline-block; background: #000 !important; color: #fff !important; padding: 0.5mm 2mm; font-weight: bold; font-size: 10pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
