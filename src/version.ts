@@ -7,7 +7,7 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.15-beta";
+export const VERSION = "1.21.16-beta";
 export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
 export const CODENAME = "Comanda V2: '--- FIM DO PEDIDO ---' em 1 linha";
 
@@ -19,6 +19,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.16-beta",
+    date: "2026-06-14",
+    codename: "Comanda V2: rodapé encurtado para caber em 1 linha",
+    changes: [
+      "Comanda de produção V2: '--- FIM DO PEDIDO ---' era largo demais e quebrava em 2 linhas na bobina 80mm com a fonte bold. Encurtado para '--- FIM ---', que cabe folgado em 1 linha — economia adicional de papel.",
+      "Sem impacto em V1, V3, recibo do cliente, TEF, PinPad, NFC-e ou Multi-Pagamento. Não precisa reinstalar o auto_printer.py.",
+    ],
+  },
   {
     version: "1.21.15-beta",
     date: "2026-06-14",
