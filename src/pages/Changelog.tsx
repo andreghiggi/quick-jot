@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '14/06/2026',
+    version: '1.21.9-beta',
+    type: 'improvement',
+    description: 'Comanda de produção V2 e recibo V2 (Lancheria da i9): rótulo do grupo de adicionais agora sai prefixado com ■, sublinhado e com capitalização original (ex.: "■ Adicionais:") em vez de CAPS sem destaque. Itens continuam em CAPS com "+ ITEM". Quando o produto tem apenas 1 grupo, o rótulo é omitido — sai só "+ ITEM" direto. Endereço de entrega agora aparece em bloco invertido (fundo preto / texto branco), igual ao nome do cliente, no recibo e no cabeçalho da comanda. Tudo isolado por company_id da i9 — demais lojas, V1, V3, TEF, PinPad, NFC-e, Multi-Pagamento e nfce-proxy continuam idênticos. Requer atualização do auto_printer.py na máquina da i9 (Configurações → Impressora → baixar/reinstalar). Versão do script: v8.32.',
+  },
+  {
     date: '13/06/2026',
     version: '1.21.8-beta',
     type: 'improvement',
