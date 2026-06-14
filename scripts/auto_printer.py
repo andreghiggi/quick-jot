@@ -972,6 +972,13 @@ def html_para_texto(html):
     text = re.sub(r'[ \t]+', ' ', text)
     text = re.sub(r' *\n *', '\n', text)
     text = re.sub(r'\n{3,}', '\n\n', text)
+
+    # v8.36: no modo compacto da I9, a impressão automática usa GDI e não CSS.
+    # O HTML vinha com quebras entre praticamente todos os <div>, e o GDI
+    # transformava cada quebra vazia em avanço de papel. Aqui removemos essas
+    # linhas vazias artificiais sem alterar tamanho de fonte nem conteúdo.
+    if PRINT_LAYOUT == 'v2' and COMPANY_ID == I9_COMPANY_ID:
+        text = re.sub(r'\n{2,}', '\n', text)
     return text.strip()
 
 
