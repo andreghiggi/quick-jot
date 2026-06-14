@@ -336,13 +336,19 @@ Deno.serve(async (req) => {
         perTable[table] = { rows: rowsForTable, ms: Date.now() - tStart };
         totalRows += rowsForTable;
         tablesProcessed++;
+        lastProcessedTable = table;
+        processedThisInvocation++;
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         perTable[table] = { rows: rowsForTable, ms: Date.now() - tStart, error: msg };
         status = status === "success" ? "partial" : status;
         errorMessage = (errorMessage ? errorMessage + "; " : "") + `${table}: ${msg}`;
+        lastProcessedTable = table;
+        processedThisInvocation++;
       }
     }
+    (globalThis as any).__bk_hasMore = hasMore;
+    (globalThis as any).__bk_lastTable = lastProcessedTable;
   } catch (e) {
     status = "error";
     errorMessage = e instanceof Error ? e.message : String(e);
@@ -352,13 +358,16 @@ Deno.serve(async (req) => {
   }
 
   const durationMs = Date.now() - startedAt;
+  const hasMore = Boolean((globalThis as any).__bk_hasMore);
+  const lastTable = (globalThis as any).__bk_lastTable as string | null;
+  const finalStatus = hasMore ? "running" : status;
 
   // Atualiza log
   try {
     await sourceMeta`
       UPDATE public.backup_runs
-      SET finished_at = now(),
-          status = ${status},
+      SET finished_at = ${hasMore ? null : new Date()},
+          status = ${finalStatus},
           tables_processed = ${tablesProcessed},
           rows_copied = ${totalRows},
           duration_ms = ${durationMs},
@@ -370,6 +379,31 @@ Deno.serve(async (req) => {
     // ignore
   } finally {
     await sourceMeta.end({ timeout: 5 });
+  }
+
+  // Se ainda tem mais tabelas, dispara próxima invocação (fire-and-forget)
+  if (hasMore && lastTable) {
+    const selfUrl = `https://iwmrtxdzlkasuzutxvhh.supabase.co/functions/v1/backup-mirror`;
+    const p = fetch(selfUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-backup-secret": expected },
+      body: JSON.stringify({ run_id: runId, start_after: lastTable }),
+    }).then((r) => r.text()).catch(() => {});
+    try {
+      // @ts-ignore EdgeRuntime existe no runtime do Supabase
+      if (typeof EdgeRuntime !== "undefined" && (EdgeRuntime as any)?.waitUntil) {
+        // @ts-ignore
+        (EdgeRuntime as any).waitUntil(p);
+      }
+    } catch (_) { /* ignore */ }
+
+    return json({
+      run_id: runId,
+      status: "running",
+      tables_processed: tablesProcessed,
+      rows_copied: totalRows,
+      continued_after: lastTable,
+    });
   }
 
   // Notifica admin via WhatsApp (Evolution API, instância Lancheria da i9)
