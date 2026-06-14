@@ -132,7 +132,7 @@ export function generateProductionTicketText(data: PrintTicketData): string {
       ...(item.notes ? [`→ ${item.notes}`] : []),
       ''
     ]),
-    '--- FIM DO PEDIDO ---',
+    '--- FIM ---',
   ];
 
   return lines.join('\n').trim();
@@ -444,7 +444,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
       <!--BOX_END-->
       ${readyBlockHTML}
       <div class="items">${itemsHTML}</div>
-      <div class="footer">--- FIM DO PEDIDO ---</div>
+      <div class="footer">--- FIM ---</div>
     </body>
     </html>
   `;
@@ -607,7 +607,7 @@ function generateProductionTicketHTMLv3(data: PrintTicketData): string {
       <!--BOX_END-->
       <div class="items-v3">${itemsHTML}</div>
       <div class="frame-sep">================================</div>
-      <div class="foot-v3">--- FIM DO PEDIDO ---</div>
+      <div class="foot-v3">--- FIM ---</div>
     </body>
     </html>
   `;

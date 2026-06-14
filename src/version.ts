@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.16-beta";
+export const VERSION = "1.21.17-beta";
 export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Comanda V2: '--- FIM DO PEDIDO ---' em 1 linha";
+export const CODENAME = "Comanda: rodapé curto em todos os caminhos";
 
 export interface Release {
   version: string;
@@ -19,6 +19,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.17-beta",
+    date: "2026-06-14",
+    codename: "Comanda: rodapé curto em todos os caminhos",
+    changes: [
+      "Corrigido o ponto real que ainda imprimia '--- FIM DO PEDIDO ---' na comanda de produção: o rodapé agora sai como '--- FIM ---' também no layout V2, no texto fallback e no layout V3.",
+      "Sem alteração em TEF, PinPad, NFC-e, Multi-Pagamento, cobranças ou regras de pedido.",
+    ],
+  },
   {
     version: "1.21.16-beta",
     date: "2026-06-14",
