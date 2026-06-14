@@ -228,9 +228,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 0) Sincroniza schema (tabelas/colunas novas) antes de copiar dados
-    try { await syncSchema(); } catch (e) {
-      schemaChanges.push(`syncSchema error: ${e instanceof Error ? e.message : String(e)}`);
+    // 0) Sincroniza schema só na primeira invocação (custosa em CPU)
+    if (!isContinuation) {
+      try { await syncSchema(); } catch (e) {
+        schemaChanges.push(`syncSchema error: ${e instanceof Error ? e.message : String(e)}`);
+      }
     }
 
     // 1) Lista tabelas do public na origem com PK
