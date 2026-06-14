@@ -75,7 +75,7 @@ export async function printCurrentCashClosing(params: {
     );
   }
 
-  const mappedSales: CloseCashSale[] = (sales || []).flatMap((s: any) => {
+  const baseSales: CloseCashSale[] = (sales || []).flatMap((s: any) => {
     const saleCancelled = !!s.notes?.includes('[CANCELADA]');
     const linkedOrder = s.order_id ? ordersMap.get(s.order_id) : undefined;
     if (saleCancelled || linkedOrder?.notes?.includes('[CANCELADA]')) return [];
@@ -115,6 +115,9 @@ export async function printCurrentCashClosing(params: {
       },
     ];
   });
+  // Expande vendas multi-pagamento em uma linha por forma usando pdv_sale_payments.
+  const { expandSalesWithSplits } = await import('@/utils/expandSalesWithSplits');
+  const mappedSales: CloseCashSale[] = await expandSalesWithSplits(baseSales);
 
   // 4) Movimentações manuais (sangria/suprimento)
   const { data: movs } = await supabase
