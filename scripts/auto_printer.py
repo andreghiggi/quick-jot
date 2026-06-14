@@ -283,23 +283,44 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
                 extras_resto = extras
 
         if PRINT_LAYOUT == 'v2':
-            # V2: extrai TODOS os adicionais — formato legado (vírgula) ou novo (grupos com "Nome: a, b | Nome2: c")
+            # V2: extrai adicionais. I9 v8.32+: preserva grupos e emite
+            # [ADDGROUP_LABEL] quando há 2+ grupos (■ sublinhado, sem CAPS).
+            # Demais lojas: comportamento legado (lista plana com "+ ITEM").
+            I9_COMPANY_ID_V2 = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
+            is_i9_v2 = COMPANY_ID == I9_COMPANY_ID_V2
+            grupos_estruturados = []  # [(nome, [itens])]
             v2_adicionais = []
             if adicionais_list:
                 v2_adicionais.extend(adicionais_list)
+                if is_i9_v2 and adicionais_list:
+                    grupos_estruturados.append(('Adicionais', list(adicionais_list)))
             if extras_resto:
-                # Formato com grupos: "Frutas: Abacaxi, Manga | Adicionais: Leite Condensado R$3,00, Banana R$2,00"
                 grupos = [g.strip() for g in extras_resto.split('|') if g.strip()]
                 for grupo in grupos:
                     if ':' in grupo:
-                        _, after = grupo.split(':', 1)
+                        nome_g, after = grupo.split(':', 1)
                         partes = [p.strip() for p in after.split(',') if p.strip()]
                         v2_adicionais.extend(partes)
+                        if is_i9_v2 and partes:
+                            grupos_estruturados.append((nome_g.strip(), partes))
                     else:
                         partes = [p.strip() for p in grupo.split(',') if p.strip()]
                         v2_adicionais.extend(partes)
+                        if is_i9_v2 and partes:
+                            grupos_estruturados.append(('Adicionais', partes))
 
-            if v2_adicionais:
+            if is_i9_v2 and grupos_estruturados:
+                items_html += '  <div class="additionals">\n'
+                single = len(grupos_estruturados) == 1
+                for nome_g, itens_g in grupos_estruturados:
+                    if not single:
+                        items_html += f'    <div class="add-group-label">[ADDGROUP_LABEL]{nome_g}[/ADDGROUP_LABEL]</div>\n'
+                    for ad in itens_g:
+                        ad_clean = re.sub(r'\s*R\$\s*[\d.,]+\s*$', '', ad).strip()
+                        if ad_clean:
+                            items_html += f'    <div class="add-line">+ {ad_clean.upper()}</div>\n'
+                items_html += '  </div>\n'
+            elif v2_adicionais:
                 items_html += '  <div class="additionals">\n'
                 for ad in v2_adicionais:
                     ad_clean = re.sub(r'\s*R\$\s*[\d.,]+\s*$', '', ad).strip()
@@ -324,8 +345,16 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
             items_html += '<div class="item-sep">................................</div>\n'
     
     # Delivery section
+    # I9 v8.32+: envolve endereço com [ENDERECO] pro GDI renderizar invertido.
+    I9_COMPANY_ID_END = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
     if delivery_address:
-        delivery_section = f'''
+        if COMPANY_ID == I9_COMPANY_ID_END:
+            delivery_section = f'''
+            <div class="delivery-badge">ENTREGA</div>
+            <div class="section"><p>[ENDERECO]{delivery_address}[/ENDERECO]</p></div>
+        '''
+        else:
+            delivery_section = f'''
             <div class="delivery-badge">ENTREGA</div>
             <div class="section"><p>{delivery_address}</p></div>
         '''
