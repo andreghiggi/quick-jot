@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FileX2, Loader2, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -55,6 +55,9 @@ export function FrenteCaixaInutilizarNfceDialog({ open, companyId, onOpenChange 
   const [ano, setAno] = useState(String(currentYear));
   const [justificativa, setJustificativa] = useState('');
   const [sending, setSending] = useState(false);
+  // Trava síncrona anti duplo-clique — bloqueia chamadas reentrantes antes
+  // do setState propagar.
+  const sendingGuardRef = useRef(false);
   const [history, setHistory] = useState<InutRow[]>([]);
   const [loadingHist, setLoadingHist] = useState(false);
 
@@ -86,6 +89,7 @@ export function FrenteCaixaInutilizarNfceDialog({ open, companyId, onOpenChange 
   }, [open, companyId]);
 
   async function handleSubmit() {
+    if (sendingGuardRef.current) return;
     const ini = parseInt(numIni, 10);
     const fim = parseInt(numFim, 10);
     if (!serie.trim() || !Number.isFinite(ini) || !Number.isFinite(fim) || fim < ini) {
@@ -97,6 +101,7 @@ export function FrenteCaixaInutilizarNfceDialog({ open, companyId, onOpenChange 
       return;
     }
     if (!companyId) return;
+    sendingGuardRef.current = true;
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke('nfce-proxy', {
@@ -129,6 +134,7 @@ export function FrenteCaixaInutilizarNfceDialog({ open, companyId, onOpenChange 
       toast.error('Falha: ' + (e?.message || 'desconhecido'));
     } finally {
       setSending(false);
+      sendingGuardRef.current = false;
     }
   }
 

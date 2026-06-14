@@ -435,6 +435,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const [tefProcessing, setTefProcessing] = useState(false);
   const [tefStatus, setTefStatus] = useState('');
   const tefCancelRef = useRef(false);
+  // Trava síncrona anti duplo-clique (não substitui setIsSubmitting, é uma
+  // camada extra que bloqueia chamadas reentrantes na mesma "tick" do React,
+  // antes do setState ter chance de atualizar).
+  const handleSubmitGuardRef = useRef(false);
+  const handleSplitPartialGuardRef = useRef(false);
 
   const activeProducts = getActiveProducts();
   const productCategories = getCategories();
@@ -853,6 +858,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     extraItems?: ExtraItem[];
   }) {
     if (!override && !canGoNext()) return;
+    if (handleSubmitGuardRef.current) return;
+    handleSubmitGuardRef.current = true;
+    try {
     setIsSubmitting(true);
 
     const selectedPM = override
@@ -1403,6 +1411,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       onOpenChange(false);
     }
     setIsSubmitting(false);
+    } finally {
+      handleSubmitGuardRef.current = false;
+    }
   }
 
 
@@ -1715,6 +1726,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     itemsInfo?: Array<{ id: string; paidQty: number }>;
     extraItemsInfo?: Array<{ id: string; paidQty: number }>;
   }): Promise<boolean> {
+    if (handleSplitPartialGuardRef.current) return false;
+    handleSplitPartialGuardRef.current = true;
+    try {
     if (!company?.id || !currentRegister) {
       toast.error('Caixa precisa estar aberto');
       return false;
@@ -2098,6 +2112,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
 
     return false;
+    } finally {
+      handleSplitPartialGuardRef.current = false;
+    }
   }
 
   /**

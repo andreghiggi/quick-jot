@@ -178,6 +178,10 @@ export default function PDVV2() {
   const isI9Company = companyId === I9_COMPANY_ID;
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
   const tefPromptOpenRef = useRef(false);
+  // Trava síncrona anti duplo-clique para os fluxos de cobrança de comanda.
+  // Bloqueia chamadas reentrantes na mesma tick do React (antes do setState).
+  const confirmImportTabGuardRef = useRef(false);
+  const confirmImportTabI9GuardRef = useRef(false);
   const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
 
   useEffect(() => {
@@ -551,6 +555,9 @@ export default function PDVV2() {
     tefIntegration,
     customerDocument,
   }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean; tefOptions?: TefOptions; tefIntegration?: 'tef_pinpad' | 'tef_smartpos'; customerDocument?: string }) {
+    if (confirmImportTabGuardRef.current) return;
+    confirmImportTabGuardRef.current = true;
+    try {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -650,6 +657,9 @@ export default function PDVV2() {
       await closeTab(fullTab.id);
       toast.success('Comanda importada e fechada!');
       setImportingTab(null);
+    }
+    } finally {
+      confirmImportTabGuardRef.current = false;
     }
   }
 
@@ -783,6 +793,9 @@ export default function PDVV2() {
   }
 
   async function confirmImportTabI9(params: Parameters<typeof confirmImportTab>[0] & { splitInfo?: { perPerson: number; totalPeople: number; partsToCharge?: number }; itemsInfo?: Array<{ id: string; paidQty: number }>; extraItemsInfo?: Array<{ id: string; paidQty: number }> }) {
+    if (confirmImportTabI9GuardRef.current) return;
+    confirmImportTabI9GuardRef.current = true;
+    try {
     if (!importingTab || !user || !currentRegister || !companyId) {
       toast.error('Caixa precisa estar aberto');
       return;
@@ -1148,6 +1161,9 @@ export default function PDVV2() {
     }
 
     await confirmImportTab(params);
+    } finally {
+      confirmImportTabI9GuardRef.current = false;
+    }
   }
 
   async function handleCloseCash(closingAmount: number, notes: string) {
