@@ -423,6 +423,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
         <div class="datetime">${dateStr} às ${timeStr}</div>
         ${readyHeaderHTML}
+        ${data.deliveryAddress && data.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164' ? `<div class="info">[ENDERECO]${data.deliveryAddress}[/ENDERECO]</div>` : ''}
       </div>
       <!--BOX_END-->
       ${readyBlockHTML}
