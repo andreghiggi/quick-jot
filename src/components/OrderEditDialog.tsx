@@ -513,16 +513,24 @@ export function OrderEditDialog({
             block += `    <div class="add-group-label">[ADDGROUP_LABEL]${g.nome}[/ADDGROUP_LABEL]</div>\n`;
           }
           for (const ad of g.itens) {
+            const mPrice = ad.match(/\s*R\$\s*([\d.,]+)\s*$/);
             const adClean = ad.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
-            if (adClean) block += `    <div class="add-line">+ ${adClean.toUpperCase()}</div>\n`;
+            if (adClean) {
+              const priceSuffix = mPrice ? `  R$ ${mPrice[1]}` : '';
+              block += `    <div class="add-line">+ ${adClean.toUpperCase()}${priceSuffix}</div>\n`;
+            }
           }
         }
         block += '  </div>\n';
       } else if (adicionais.length > 0) {
         block += '  <div class="additionals">\n';
         for (const ad of adicionais) {
+          const mPrice = ad.match(/\s*R\$\s*([\d.,]+)\s*$/);
           const adClean = ad.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
-          if (adClean) block += `    <div class="add-line">+ ${adClean.toUpperCase()}</div>\n`;
+          if (adClean) {
+            const priceSuffix = mPrice ? `  R$ ${mPrice[1]}` : '';
+            block += `    <div class="add-line">+ ${adClean.toUpperCase()}${priceSuffix}</div>\n`;
+          }
         }
         block += '  </div>\n';
       }

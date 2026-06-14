@@ -316,16 +316,20 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
                     if not single:
                         items_html += f'    <div class="add-group-label">[ADDGROUP_LABEL]{nome_g}[/ADDGROUP_LABEL]</div>\n'
                     for ad in itens_g:
+                        m_price = re.search(r'\s*R\$\s*([\d.,]+)\s*$', ad)
                         ad_clean = re.sub(r'\s*R\$\s*[\d.,]+\s*$', '', ad).strip()
                         if ad_clean:
-                            items_html += f'    <div class="add-line">+ {ad_clean.upper()}</div>\n'
+                            price_suffix = f'  R$ {m_price.group(1)}' if m_price else ''
+                            items_html += f'    <div class="add-line">+ {ad_clean.upper()}{price_suffix}</div>\n'
                 items_html += '  </div>\n'
             elif v2_adicionais:
                 items_html += '  <div class="additionals">\n'
                 for ad in v2_adicionais:
+                    m_price = re.search(r'\s*R\$\s*([\d.,]+)\s*$', ad)
                     ad_clean = re.sub(r'\s*R\$\s*[\d.,]+\s*$', '', ad).strip()
                     if ad_clean:
-                        items_html += f'    <div class="add-line">+ {ad_clean.upper()}</div>\n'
+                        price_suffix = f'  R$ {m_price.group(1)}' if m_price else ''
+                        items_html += f'    <div class="add-line">+ {ad_clean.upper()}{price_suffix}</div>\n'
                 items_html += '  </div>\n'
 
             # V2: observações em texto invertido (apenas o conteúdo — o GDI adiciona o rótulo "OBSERVAÇÕES:")

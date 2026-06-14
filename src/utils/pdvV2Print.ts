@@ -73,7 +73,12 @@ function buildReceiptHTML(payload: PrintPayload): string {
             .split(',')
             .map((s) => s.trim())
             .filter(Boolean)
-            .map((x) => `<div class="add-line">&gt;&gt; ${escapeHtml(x)}</div>`)
+            .map((x) => {
+              const m = x.match(/\s*R\$\s*([\d.,]+)\s*$/);
+              const clean = x.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
+              const priceSuffix = m ? `  R$ ${m[1]}` : '';
+              return `<div class="add-line">&gt;&gt; ${escapeHtml(clean + priceSuffix)}</div>`;
+            })
             .join('');
           const labelHtml = single
             ? ''

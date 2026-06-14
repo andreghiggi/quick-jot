@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.9-beta";
+export const VERSION = "1.21.10-beta";
 export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "auto_printer: rótulo de grupo + endereço invertido (I9)";
+export const CODENAME = "Recibo V2 (I9): valor dos adicionais aparece no recibo";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.10-beta",
+    date: "2026-06-14",
+    codename: "Recibo V2 (I9): valor dos adicionais aparece no recibo",
+    changes: [
+      "Recibo V2 da Lancheria da i9: adicionais com valor agora mostram o preço no recibo (ex.: '+ LEITE CONDENSADO  R$ 3,00'). Antes o valor só aparecia na comanda de produção — no recibo o '+ R$' era removido.",
+      "Aplicado nas 3 origens de recibo V2: pedidos do cardápio online (auto_printer.py), PDV V2 / Pedido Express (pdvV2Print.ts) e reimpressão após edição (OrderEditDialog).",
+      "Isolado por company_id da Lancheria da i9 — demais lojas continuam idênticas. Não muda comanda V2, V1, V3, TEF, PinPad, NFC-e ou Multi-Pagamento.",
+      "NÃO precisa reinstalar o auto_printer.py — a formatação é só de texto dentro dos marcadores [ADD] já existentes (versão do script continua v8.32).",
+    ],
+  },
   {
     version: "1.21.9-beta",
     date: "2026-06-14",
