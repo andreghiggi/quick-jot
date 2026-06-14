@@ -1420,6 +1420,61 @@ export type Database = {
           },
         ]
       }
+      pdv_sale_payments: {
+        Row: {
+          amount: number
+          company_id: string
+          created_at: string
+          id: string
+          integration: string | null
+          payment_method_id: string | null
+          payment_method_name: string
+          sale_id: string
+        }
+        Insert: {
+          amount: number
+          company_id: string
+          created_at?: string
+          id?: string
+          integration?: string | null
+          payment_method_id?: string | null
+          payment_method_name: string
+          sale_id: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          integration?: string | null
+          payment_method_id?: string | null
+          payment_method_name?: string
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_sale_payments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_sale_payments_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_sale_payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_sales: {
         Row: {
           cash_register_id: string
