@@ -42,6 +42,11 @@ interface PrintTicketData {
    *  ajudar a logística da cozinha. Quando omitido, o layout permanece
    *  idêntico ao anterior. */
   orderType?: OrderTicketType;
+  /** Endereço de entrega (I9 only). Quando presente, renderiza em bloco
+   *  invertido (fundo preto, texto branco) igual ao nome do cliente.
+   *  Emite marcador [ENDERECO]...[/ENDERECO] que o auto_printer.py >= v8.32
+   *  interpreta. Em outras lojas: ignorado (sem regressão). */
+  deliveryAddress?: string | null;
 }
 
 // Allow-list ISOLADA: troca de "Comanda #<n>" por referenceLabel no cabeçalho.
