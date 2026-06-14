@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.21.13-beta";
+export const VERSION = "1.21.14-beta";
 export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Recibo V2 modo compacto (economia de papel — piloto I9)";
+export const CODENAME = "Impressão compacta real no instalador v8.36";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.21.14-beta",
+    date: "2026-06-14",
+    codename: "Impressão compacta real no instalador v8.36",
+    changes: [
+      "Corrigido o ponto real da economia de papel na Lancheria da i9: o instalador v8.35 estava recebendo HTML compacto, mas a impressão automática via GDI convertia o HTML em texto e ainda mantinha linhas vazias artificiais entre quase todos os blocos.",
+      "O auto_printer.py agora sai como v8.36 e, somente no layout V2 da Lancheria da i9, remove essas linhas vazias extras antes de enviar para a impressora, mantendo o mesmo tamanho de fonte e o mesmo conteúdo do pedido.",
+      "Também reduzi o padding interno da caixa do cabeçalho no caminho GDI compacto, sem alterar TEF, PinPad, NFC-e, Multi-Pagamento, nfce-proxy, frente de caixa ou cobranças.",
+    ],
+  },
   {
     version: "1.21.13-beta",
     date: "2026-06-14",
