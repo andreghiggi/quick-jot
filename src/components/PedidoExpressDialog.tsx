@@ -1240,12 +1240,46 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         if (shouldPrintReceipt) {
         try {
           const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
-          const printItems = cart.map((item) => ({
-            name: item.product.name,
-            quantity: item.quantity,
-            price: item.product.price + item.selectedOptionals.reduce((s, o) => s + o.price, 0),
-            notes: item.notes || undefined,
-          }));
+          // I9 (v8.32+): propaga adicionais agrupados para o recibo V2
+          // (rótulo ■ sublinhado quando 2+ grupos; só itens com "+ " quando 1).
+          const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+          const sendGroupedReceipt = company?.id === I9_COMPANY_ID;
+          const printItems = cart.map((item) => {
+            const groupedOptionals: { groupName: string; items: string }[] = [];
+            if (sendGroupedReceipt) {
+              if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+                for (const entry of item.groupedOptionalNames) {
+                  const hasColon = entry.includes(':');
+                  const groupName = hasColon ? entry.split(':')[0].trim() : 'Adicionais';
+                  const after = hasColon ? entry.split(':').slice(1).join(':') : entry;
+                  const itemsStr = after
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                    .join(', ');
+                  if (itemsStr) groupedOptionals.push({ groupName, items: itemsStr });
+                }
+              } else if (item.selectedOptionals.length > 0) {
+                groupedOptionals.push({
+                  groupName: 'Adicionais',
+                  items: item.selectedOptionals
+                    .map((o) =>
+                      o.price > 0
+                        ? `${o.name} R$${o.price.toFixed(2).replace('.', ',')}`
+                        : o.name,
+                    )
+                    .join(', '),
+                });
+              }
+            }
+            return {
+              name: item.product.name,
+              quantity: item.quantity,
+              price: item.product.price + item.selectedOptionals.reduce((s, o) => s + o.price, 0),
+              notes: item.notes || undefined,
+              groupedOptionals: groupedOptionals.length > 0 ? groupedOptionals : undefined,
+            };
+          });
           await printOnlyReceipt({
             companyId: company.id,
             orderCode: createdOrderCode,
@@ -1257,6 +1291,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             notes: `Pagamento: ${paymentName}${override.discount > 0 ? ` | Desconto: R$ ${override.discount.toFixed(2)}` : ''}`,
             paperSize,
             printLayout: settings.printLayout,
+            // I9 v8.32+: endereço de entrega invertido (mesmo bloco do nome).
+            deliveryAddress:
+              sendGroupedReceipt && deliveryType === 'entrega' && fullAddress
+                ? fullAddress
+                : null,
           });
         } catch (e) {
           console.error('Erro ao enfileirar recibo:', e);
