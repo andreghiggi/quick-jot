@@ -721,6 +721,8 @@ export default function PDVV2() {
         `Comanda #${fullTab.tab_number}[MULTI] | Pagamento: ${mp.primary.payment_name}${mp.combinedNotesFragment ? ` | ${mp.combinedNotesFragment}` : ''}`,
       );
       if (!saleId) return;
+      // Registra o split de formas para o relatório de fechamento.
+      await recordSalePayments(saleId, companyId, mp.lines);
 
       // NFC-e com pagamentos_split — só quando solicitado pelo dialog
       // (hasTef OU usuário escolheu "Venda com NFC-e").
