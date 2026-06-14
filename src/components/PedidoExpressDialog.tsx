@@ -1726,6 +1726,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     itemsInfo?: Array<{ id: string; paidQty: number }>;
     extraItemsInfo?: Array<{ id: string; paidQty: number }>;
   }): Promise<boolean> {
+    if (handleSplitPartialGuardRef.current) return false;
+    handleSplitPartialGuardRef.current = true;
+    try {
     if (!company?.id || !currentRegister) {
       toast.error('Caixa precisa estar aberto');
       return false;
@@ -2109,6 +2112,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
 
     return false;
+    } finally {
+      handleSplitPartialGuardRef.current = false;
+    }
   }
 
   /**
