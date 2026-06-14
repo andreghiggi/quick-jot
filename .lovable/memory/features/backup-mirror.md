@@ -1,6 +1,6 @@
 ---
 name: backup-mirror
-description: Backup automático diário (cron 03:00 BRT) espelhando o banco public da origem para o Supabase externo vyotbtmnnosiejyltlxc. Auth via Vault (BACKUP_TRIGGER_SECRET) e target DB URL via Vault (BACKUP_TARGET_DB_URL_VAULT). Resync completo via scripts/backup_resync.sh quando schema dessincronizar.
+description: Backup automático diário (cron 03:00 BRT) espelhando o banco public da origem para o Supabase externo vyotbtmnnosiejyltlxc. Auth via Vault (BACKUP_TRIGGER_SECRET) e target DB URL via Vault (BACKUP_TARGET_DB_URL_VAULT). Invocação ENCADEADA: cada chamada processa ~8 tabelas e dispara a próxima via fetch+EdgeRuntime.waitUntil. Resync completo via scripts/backup_resync.sh quando schema dessincronizar.
 type: feature
 ---
 - Edge function: `backup-mirror` (UPSERT por PK em todas as tabelas com PK).
@@ -9,3 +9,8 @@ type: feature
 - Logs: `public.backup_runs`.
 - Erros tipo "column X of relation Y does not exist" no run = schema do destino atrasado → rodar `bash scripts/backup_resync.sh` no sandbox pra recriar `public` inteiro e recarregar dados.
 - FKs para `auth.users` falham no resync (esperado: sandbox não tem acesso ao schema `auth`); 3 constraints ficam pendentes.
+- Limites por invocação: MAX_TABLES_PER_INVOCATION=8, MAX_RUNTIME_MS=30s, BATCH_SIZE=1000. syncSchema só roda na 1ª invocação.
+- SKIP_TABLES (não espelhadas): backup_runs, tef_webservice_logs, pinpdv_logs, whatsapp_auto_reply_locks.
+- RECENT_ONLY_TABLES: whatsapp_messages (últimos 90 dias).
+- Status final 'success' só quando a última invocação termina; antes disso o run fica 'running' com tables_processed acumulado.
+- Erro recorrente esperado: "companies: O serial da loja não pode ser alterado" (trigger set_company_serial bloqueia UPDATE). Não é bloqueante — status volta a 'success' nas próximas.

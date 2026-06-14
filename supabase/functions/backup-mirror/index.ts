@@ -1,8 +1,24 @@
 import postgres from "npm:postgres@3.4.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-const BATCH_SIZE = 500;
-const MAX_RUNTIME_MS = 140_000; // edge function limit é ~150s
+// Limites por invocação (mantidos baixos pra caber no CPU budget da edge function).
+// O backup é fatiado: cada chamada processa algumas tabelas e dispara a próxima via fetch.
+const BATCH_SIZE = 1000;
+const MAX_RUNTIME_MS = 30_000;
+const MAX_TABLES_PER_INVOCATION = 8;
+
+// Tabelas que NÃO devem ser espelhadas (logs voláteis e/ou pesados demais)
+const SKIP_TABLES = new Set<string>([
+  "backup_runs",
+  "tef_webservice_logs",
+  "pinpdv_logs",
+  "whatsapp_auto_reply_locks",
+]);
+
+// Tabelas grandes onde só copiamos os últimos N dias
+const RECENT_ONLY_TABLES: Record<string, { column: string; days: number }> = {
+  whatsapp_messages: { column: "created_at", days: 90 },
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -96,19 +112,37 @@ Deno.serve(async (req) => {
   const source = postgres(sourceUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
   const target = postgres(targetUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
 
-  // Log: cria registro 'running' (via target, mas vamos guardar no source também)
+  // Estado da execução (pode ser continuação de uma invocação anterior)
   const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
-  const [runRow] = await sourceMeta`
-    INSERT INTO public.backup_runs (status) VALUES ('running') RETURNING id
-  `;
-  const runId = runRow.id as string;
-
+  const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
+  const startAfterTable: string | null = typeof body?.start_after === "string" ? body.start_after : null;
+  let runId: string;
   let tablesProcessed = 0;
   let totalRows = 0;
   let status = "success";
   let errorMessage: string | null = null;
-  const perTable: Record<string, { rows: number; ms: number; error?: string }> = {};
-  const schemaChanges: string[] = [];
+  let perTable: Record<string, { rows: number; ms: number; error?: string }> = {};
+  let schemaChanges: string[] = [];
+
+  if (isContinuation) {
+    runId = body.run_id;
+    const [prev] = await sourceMeta`
+      SELECT tables_processed, rows_copied, error_message, details
+      FROM public.backup_runs WHERE id = ${runId}
+    `;
+    if (prev) {
+      tablesProcessed = Number(prev.tables_processed ?? 0);
+      totalRows = Number(prev.rows_copied ?? 0);
+      errorMessage = (prev.error_message as string | null) ?? null;
+      const det = prev.details as any;
+      if (det && typeof det === "object") perTable = det;
+    }
+  } else {
+    const [runRow] = await sourceMeta`
+      INSERT INTO public.backup_runs (status) VALUES ('running') RETURNING id
+    `;
+    runId = runRow.id as string;
+  }
 
   // Auto-sync de schema: cria tabelas/colunas novas no destino antes do mirror
   async function syncSchema() {
@@ -194,9 +228,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 0) Sincroniza schema (tabelas/colunas novas) antes de copiar dados
-    try { await syncSchema(); } catch (e) {
-      schemaChanges.push(`syncSchema error: ${e instanceof Error ? e.message : String(e)}`);
+    // 0) Sincroniza schema só na primeira invocação (custosa em CPU)
+    if (!isContinuation) {
+      try { await syncSchema(); } catch (e) {
+        schemaChanges.push(`syncSchema error: ${e instanceof Error ? e.message : String(e)}`);
+      }
     }
 
     // 1) Lista tabelas do public na origem com PK
@@ -219,17 +255,25 @@ Deno.serve(async (req) => {
       ORDER BY t.table_name
     `;
 
+    let processedThisInvocation = 0;
+    let lastProcessedTable: string | null = startAfterTable;
+    let hasMore = false;
     for (const t of tables) {
-      if (Date.now() - startedAt > MAX_RUNTIME_MS) {
-        status = "partial";
-        errorMessage = "timeout: nem todas as tabelas foram processadas";
+      const table = t.table_name as string;
+      if (startAfterTable && table <= startAfterTable) continue;
+      if (
+        processedThisInvocation >= MAX_TABLES_PER_INVOCATION ||
+        Date.now() - startedAt > MAX_RUNTIME_MS
+      ) {
+        hasMore = true;
         break;
       }
-      const table = t.table_name as string;
       const pkCols = (t.pk_cols ?? []) as string[] | null;
-      // Pula tabelas sem PK (não dá pra upsert) e backup_runs (pra não bagunçar)
-      if (!pkCols || pkCols.length === 0 || table === "backup_runs") {
-        perTable[table] = { rows: 0, ms: 0, error: "skip: sem PK ou tabela de log" };
+      // Pula tabelas sem PK (não dá pra upsert) e tabelas de log voláteis
+      if (!pkCols || pkCols.length === 0 || SKIP_TABLES.has(table)) {
+        perTable[table] = { rows: 0, ms: 0, error: "skip: sem PK ou tabela ignorada" };
+        lastProcessedTable = table;
+        processedThisInvocation++;
         continue;
       }
 
@@ -251,15 +295,19 @@ Deno.serve(async (req) => {
           .join(",");
         const conflictCols = pkCols.map((c) => `"${c}"`).join(",");
 
-        // Pagina a leitura
+        // Pagina a leitura (com filtro opcional pra tabelas grandes)
         const orderBy = pkCols.map((c) => `"${c}"`).join(",");
+        const recent = RECENT_ONLY_TABLES[table];
+        const whereClause = recent
+          ? `WHERE "${recent.column}" >= now() - interval '${recent.days} days'`
+          : "";
         let offset = 0;
         while (true) {
           if (Date.now() - startedAt > MAX_RUNTIME_MS) {
             throw new Error("timeout no meio da tabela");
           }
           const batch = await source.unsafe(
-            `SELECT ${quotedCols} FROM public."${table}" ORDER BY ${orderBy} LIMIT ${BATCH_SIZE} OFFSET ${offset}`,
+            `SELECT ${quotedCols} FROM public."${table}" ${whereClause} ORDER BY ${orderBy} LIMIT ${BATCH_SIZE} OFFSET ${offset}`,
           );
           if (batch.length === 0) break;
 
@@ -288,13 +336,19 @@ Deno.serve(async (req) => {
         perTable[table] = { rows: rowsForTable, ms: Date.now() - tStart };
         totalRows += rowsForTable;
         tablesProcessed++;
+        lastProcessedTable = table;
+        processedThisInvocation++;
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         perTable[table] = { rows: rowsForTable, ms: Date.now() - tStart, error: msg };
         status = status === "success" ? "partial" : status;
         errorMessage = (errorMessage ? errorMessage + "; " : "") + `${table}: ${msg}`;
+        lastProcessedTable = table;
+        processedThisInvocation++;
       }
     }
+    (globalThis as any).__bk_hasMore = hasMore;
+    (globalThis as any).__bk_lastTable = lastProcessedTable;
   } catch (e) {
     status = "error";
     errorMessage = e instanceof Error ? e.message : String(e);
@@ -304,13 +358,16 @@ Deno.serve(async (req) => {
   }
 
   const durationMs = Date.now() - startedAt;
+  const hasMore = Boolean((globalThis as any).__bk_hasMore);
+  const lastTable = (globalThis as any).__bk_lastTable as string | null;
+  const finalStatus = hasMore ? "running" : status;
 
   // Atualiza log
   try {
     await sourceMeta`
       UPDATE public.backup_runs
-      SET finished_at = now(),
-          status = ${status},
+      SET finished_at = ${hasMore ? null : new Date()},
+          status = ${finalStatus},
           tables_processed = ${tablesProcessed},
           rows_copied = ${totalRows},
           duration_ms = ${durationMs},
@@ -322,6 +379,31 @@ Deno.serve(async (req) => {
     // ignore
   } finally {
     await sourceMeta.end({ timeout: 5 });
+  }
+
+  // Se ainda tem mais tabelas, dispara próxima invocação (fire-and-forget)
+  if (hasMore && lastTable) {
+    const selfUrl = `https://iwmrtxdzlkasuzutxvhh.supabase.co/functions/v1/backup-mirror`;
+    const p = fetch(selfUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-backup-secret": expected },
+      body: JSON.stringify({ run_id: runId, start_after: lastTable }),
+    }).then((r) => r.text()).catch(() => {});
+    try {
+      // @ts-ignore EdgeRuntime existe no runtime do Supabase
+      if (typeof EdgeRuntime !== "undefined" && (EdgeRuntime as any)?.waitUntil) {
+        // @ts-ignore
+        (EdgeRuntime as any).waitUntil(p);
+      }
+    } catch (_) { /* ignore */ }
+
+    return json({
+      run_id: runId,
+      status: "running",
+      tables_processed: tablesProcessed,
+      rows_copied: totalRows,
+      continued_after: lastTable,
+    });
   }
 
   // Notifica admin via WhatsApp (Evolution API, instância Lancheria da i9)
