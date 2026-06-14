@@ -175,6 +175,11 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       return;
     }
 
+    // Guard anti-duplo-clique (síncrono). Bloqueia chamadas reentrantes
+    // antes de qualquer await — evita 2-3 vendas duplicadas em pdv_sales.
+    if (chargingRef.current) return;
+    chargingRef.current = true;
+
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) {
