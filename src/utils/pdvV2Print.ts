@@ -17,6 +17,10 @@ interface PrintItem {
   quantity: number;
   price: number;
   notes?: string;
+  /** Adicionais agrupados (I9). Quando presente, recibo V2 e comanda V2
+   *  renderizam rótulo do grupo (■ sublinhado) + itens (+ CAPS). 1 grupo
+   *  esconde o rótulo. Quando ausente, comportamento legado preservado. */
+  groupedOptionals?: { groupName: string; items: string }[];
 }
 
 interface PrintPayload {
@@ -36,6 +40,9 @@ interface PrintPayload {
    *  Quando omitido, mantém o comportamento legado (V1 ou V3 forçado para I9).
    *  Quando fornecido, respeita a escolha do lojista (V1/V2/V3). */
   printLayout?: 'v1' | 'v2' | 'v3';
+  /** Endereço de entrega (I9 only). Renderizado em bloco invertido no recibo
+   *  e propagado para a comanda V2. */
+  deliveryAddress?: string | null;
 }
 
 async function enqueue(companyId: string, label: string, html: string) {
