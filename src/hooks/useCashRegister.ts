@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
 
 export interface CashRegister {
   id: string;
@@ -246,9 +247,22 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
     if (!currentRegister) return null;
 
     try {
-      // Calculate expected amount
-      const salesTotal = sales.reduce((sum, sale) => sum + sale.final_total, 0);
-      const expectedAmount = currentRegister.opening_amount + salesTotal;
+      // Valor esperado em dinheiro: abertura + vendas em dinheiro + suprimentos − sangrias.
+      const closingSales = await loadCashClosingSales({
+        companyId: currentRegister.company_id,
+        registerId: currentRegister.id,
+        openedAt: currentRegister.opened_at,
+        closedAt: new Date().toISOString(),
+      });
+      const { data: movements } = await supabase
+        .from('cash_movements')
+        .select('type, amount')
+        .eq('cash_register_id', currentRegister.id);
+      const expectedAmount = getExpectedCashDrawer(
+        currentRegister.opening_amount,
+        closingSales,
+        (movements || []) as any,
+      );
       const difference = closingAmount - expectedAmount;
 
       const { data, error } = await supabase
