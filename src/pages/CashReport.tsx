@@ -366,11 +366,11 @@ export default function CashReport() {
                         <div>
                           <p className="text-xs text-muted-foreground">Diferença</p>
                           <p className={`tabular-nums font-medium ${
-                            reg.difference == null ? '' :
-                            Number(reg.difference) === 0 ? 'text-green-600' :
-                            Number(reg.difference) > 0 ? 'text-blue-600' : 'text-destructive'
+                            difference == null ? '' :
+                            difference === 0 ? 'text-green-600' :
+                            difference > 0 ? 'text-blue-600' : 'text-destructive'
                           }`}>
-                            {reg.difference != null ? brl(Number(reg.difference)) : '—'}
+                            {difference != null ? brl(difference) : '—'}
                           </p>
                         </div>
                       </div>
