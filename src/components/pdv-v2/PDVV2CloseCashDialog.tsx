@@ -31,10 +31,17 @@ export interface CloseCashPaymentMethod {
   name: string;
 }
 
+interface CloseCashMovement {
+  type: string;
+  amount: number | string | null;
+}
+
 interface PDVV2CloseCashDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   expectedAmount: number;
+  openingAmount?: number;
+  cashMovements?: CloseCashMovement[];
   sales: CloseCashSale[];
   paymentMethods?: CloseCashPaymentMethod[];
   /** Formas de pagamento do cardápio online (channel='menu'). Usadas no select de Deliveries quando informadas. */
@@ -61,6 +68,8 @@ export function PDVV2CloseCashDialog({
   open,
   onOpenChange,
   expectedAmount,
+  openingAmount = 0,
+  cashMovements = [],
   sales,
   paymentMethods = [],
   deliveryPaymentMethods,
@@ -99,6 +108,19 @@ export function PDVV2CloseCashDialog({
     }
     return out;
   }, [sales]);
+
+  const cashBreakdown = useMemo(() => {
+    const cashSales = sales
+      .filter((s) => /dinheiro/i.test(s.payment_method_name || ''))
+      .reduce((acc, s) => acc + (Number(s.final_total) || 0), 0);
+    const suprimentos = cashMovements
+      .filter((m) => m.type === 'suprimento')
+      .reduce((acc, m) => acc + Number(m.amount || 0), 0);
+    const sangrias = cashMovements
+      .filter((m) => m.type === 'sangria')
+      .reduce((acc, m) => acc + Number(m.amount || 0), 0);
+    return { opening: Number(openingAmount || 0), cashSales, suprimentos, sangrias };
+  }, [openingAmount, sales, cashMovements]);
 
   const salesByOrigin = useMemo(() => {
     const out: Record<string, CloseCashSale[]> = {};
