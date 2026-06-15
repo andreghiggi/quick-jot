@@ -10,6 +10,7 @@ import { cancelarNFCe, printDanfeFromRecord, type NFCeRecord, getNFCeRecordBySal
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { parseTefDataFromNotes, reimprimirComprovanteTef } from '@/utils/tefOrderActions';
 import { formatCancelledAt, SaleCancellationRecord } from '@/utils/saleCancellation';
+import { PDVV2SaleDetailsDialog } from './PDVV2SaleDetailsDialog';
 
 export interface ClosedTabSaleCardData {
   id: string;
@@ -43,6 +44,7 @@ export function PDVV2ClosedTabSaleCard({
   allowCancelSale, onRequestCancelSale, onNfceChanged,
 }: Props) {
   const [loading, setLoading] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const tabNumber = parseTabNumber(sale.notes);
   const time = sale.created_at
     ? new Date(sale.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
@@ -111,14 +113,19 @@ export function PDVV2ClosedTabSaleCard({
   }
 
   return (
-    <Card className={isCancelled ? 'border-destructive/40 bg-destructive/5' : ''}>
+    <Card className={`${isCancelled ? 'border-destructive/40 bg-destructive/5' : ''} hover:border-primary/40 transition-colors`}>
       <CardContent className="p-3 space-y-2">
         {isCancelled && (
           <div className="flex items-center justify-center gap-2 py-1 px-2 rounded bg-destructive/10 border border-destructive/20">
             <span className="text-xs font-bold text-destructive tracking-wider">⛔ VENDA CANCELADA</span>
           </div>
         )}
-        <div className="flex items-start justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => setDetailsOpen(true)}
+          className="w-full flex items-start justify-between gap-3 text-left hover:opacity-80 transition-opacity"
+          title="Ver itens e horários"
+        >
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-sm">
@@ -139,7 +146,7 @@ export function PDVV2ClosedTabSaleCard({
           <span className={`font-bold tabular-nums text-sm shrink-0 ${isCancelled ? 'line-through text-destructive/70' : ''}`}>
             {formatPrice(sale.final_total)}
           </span>
-        </div>
+        </button>
 
         {isCancelled && (
           <div className="text-xs rounded border border-destructive/30 bg-destructive/5 p-2 space-y-0.5">
@@ -187,6 +194,18 @@ export function PDVV2ClosedTabSaleCard({
             </Button>
           )}
         </div>
+
+        <PDVV2SaleDetailsDialog
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+          saleId={sale.id}
+          companyId={companyId}
+          tabNumber={tabNumber}
+          saleCreatedAt={sale.created_at}
+          finalTotal={sale.final_total}
+          customerName={sale.customer_name}
+          paymentMethodName={sale.payment_method_name}
+        />
       </CardContent>
     </Card>
   );
