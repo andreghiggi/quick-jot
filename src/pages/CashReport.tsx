@@ -159,9 +159,8 @@ export default function CashReport() {
 
   async function handlePrint(reg: RegisterRow) {
     const sales = await loadSales(reg.id);
-    const expected = reg.expected_amount != null
-      ? Number(reg.expected_amount)
-      : Number(reg.opening_amount) + sales.reduce((a, s) => a + s.final_total, 0);
+    const movements = movementsByRegister[reg.id] || [];
+    const expected = getExpectedCashDrawer(Number(reg.opening_amount), sales, movements);
     printCashClosingDetailed({
       companyName: company?.name,
       paperSize,
@@ -242,9 +241,11 @@ export default function CashReport() {
               const isOpen = expandedId === reg.id;
               const sales = salesByRegister[reg.id] || [];
               const totalVendas = sales.reduce((a, s) => a + s.final_total, 0);
-              const expected = reg.expected_amount != null
-                ? Number(reg.expected_amount)
-                : Number(reg.opening_amount) + totalVendas;
+              const expected = getExpectedCashDrawer(
+                Number(reg.opening_amount),
+                sales,
+                movementsByRegister[reg.id] || [],
+              );
 
               // Agrupa para visualização
               const byOrigin: Record<string, Record<string, { total: number; count: number }>> = {};
