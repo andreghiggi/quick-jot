@@ -44,7 +44,7 @@ import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog
 import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import { recordSalePayments } from '@/utils/recordSalePayments';
-import { getExpectedCashDrawer } from '@/utils/cashClosingSales';
+import { getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
 }
@@ -148,6 +148,7 @@ export default function PDVV2() {
   }, [filter, filterStorageKey, storageHydrated]);
   const [closeOpen, setCloseOpen] = useState(false);
   const [cashMovements, setCashMovements] = useState<{ type: string; amount: number | string | null }[]>([]);
+  const [closeCashSales, setCloseCashSales] = useState<CloseCashSale[]>([]);
   const [openCashOpen, setOpenCashOpen] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
   const [newOrderOpen, setNewOrderOpen] = useState(false);
