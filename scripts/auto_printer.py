@@ -33,7 +33,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.38"  # libera ajustes V2 v8.32-v8.37 para todas as lojas com layout V2
+SCRIPT_VERSION = "v8.39"  # V2: grupos estruturados liberados e rótulo preservado quando não é genérico
 I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
@@ -284,8 +284,8 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
                 extras_resto = extras
 
         if PRINT_LAYOUT == 'v2':
-            # V2 v8.38: preserva grupos e emite [ADDGROUP_LABEL] quando há
-            # 2+ grupos (■ sublinhado, sem CAPS) para todas as lojas V2.
+            # V2 v8.39: preserva grupos e emite [ADDGROUP_LABEL] para nomes
+            # reais de grupo, mesmo quando há só 1 grupo. Só omite "Adicionais" genérico.
             use_v2_enhancements = PRINT_LAYOUT == 'v2'
             grupos_estruturados = []  # [(nome, [itens])]
             v2_adicionais = []
@@ -310,9 +310,9 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
 
             if use_v2_enhancements and grupos_estruturados:
                 items_html += '  <div class="additionals">\n'
-                single = len(grupos_estruturados) == 1
                 for nome_g, itens_g in grupos_estruturados:
-                    if not single:
+                    single_generic = len(grupos_estruturados) == 1 and nome_g.strip().lower() == 'adicionais'
+                    if not single_generic:
                         items_html += f'    <div class="add-group-label">[ADDGROUP_LABEL]{nome_g}[/ADDGROUP_LABEL]</div>\n'
                     for ad in itens_g:
                         m_price = re.search(r'\s*R\$\s*([\d.,]+)\s*$', ad)

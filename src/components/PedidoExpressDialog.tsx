@@ -1249,10 +1249,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         if (shouldPrintReceipt) {
         try {
           const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
-          // I9 (v8.32+): propaga adicionais agrupados para o recibo V2
-          // (rótulo ■ sublinhado quando 2+ grupos; só itens com "+ " quando 1).
+          // V2+: propaga adicionais agrupados para qualquer loja com Layout V2/V3 ativo.
           const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-          const sendGroupedReceipt = company?.id === I9_COMPANY_ID;
+          const sendGroupedReceipt =
+            settings.printLayout === 'v2' || settings.printLayout === 'v3' || company?.id === I9_COMPANY_ID;
           const printItems = cart.map((item) => {
             const groupedOptionals: { groupName: string; items: string }[] = [];
             if (sendGroupedReceipt) {
@@ -1300,7 +1300,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             notes: `Pagamento: ${paymentName}${override.discount > 0 ? ` | Desconto: R$ ${override.discount.toFixed(2)}` : ''}`,
             paperSize,
             printLayout: settings.printLayout,
-            // I9 v8.32+: endereço de entrega invertido (mesmo bloco do nome).
+            // V2+: endereço de entrega invertido (mesmo bloco do nome).
             deliveryAddress:
               sendGroupedReceipt && deliveryType === 'entrega' && fullAddress
                 ? fullAddress
@@ -1313,10 +1313,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       } else if (settings.autoPrintProductionTicket && company?.id) {
         // Enfileira comanda de produção (mesmo padrão do Waiter)
         try {
-          // V3 (I9 rollout): envia adicionais agrupados (rótulo do grupo em
-          // negrito) exclusivamente para a Lancheria da i9.
+          // V2+: envia adicionais agrupados para qualquer loja com Layout V2/V3 ativo.
           const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-          const sendGroupedV3 = company?.id === I9_COMPANY_ID;
+          const sendGroupedOptionals =
+            settings.printLayout === 'v2' || settings.printLayout === 'v3' || company?.id === I9_COMPANY_ID;
           const productionItems = cart.flatMap(item => {
             // Build a clean list of additional names (without prices, without group prefix)
             const additionalNames: string[] = [];
@@ -1339,7 +1339,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               }
             } else if (item.selectedOptionals.length > 0) {
               additionalNames.push(...item.selectedOptionals.map(o => o.name));
-              if (sendGroupedV3) {
+              if (sendGroupedOptionals) {
                 groupedOptionals.push({
                   groupName: 'Adicionais',
                   items: item.selectedOptionals
@@ -1372,7 +1372,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               notes: notesParts.length > 0 ? notesParts.join(' | ') : undefined,
               description,
               groupedOptionals:
-                sendGroupedV3 && groupedOptionals.length > 0 ? groupedOptionals : undefined,
+                sendGroupedOptionals && groupedOptionals.length > 0 ? groupedOptionals : undefined,
             }];
           });
 
@@ -1393,6 +1393,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             readyOffsetMinutes: isLancheriaI9
               ? computeReadyOffsetMinutes(settings.estimatedWaitTime, 30)
               : undefined,
+            deliveryAddress: deliveryType === 'entrega' && fullAddress ? fullAddress : null,
           });
 
           await supabase.from('print_queue').insert({
