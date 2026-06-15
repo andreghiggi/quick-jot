@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.22.9-beta";
+export const VERSION = "1.22.10-beta";
 export const RELEASE_DATE = "2026-06-15"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Comandas: sync realtime do garçom/QR no caixa";
+export const CODENAME = "Menu lateral: operação e fiscal reorganizados";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.22.10-beta",
+    date: "2026-06-15",
+    codename: "Menu lateral: operação e fiscal reorganizados",
+    changes: [
+      "Corrigido o menu lateral real usado pelas telas do PDV: 'Frente de Caixa' agora aparece no Menu Principal quando o módulo Mercado está ativo, junto de PDV, Pedidos e Comandas.",
+      "Fiscal e NFC-e Monitor saíram do Menu Principal e voltaram para um grupo próprio 'Fiscal', evitando misturar operações de caixa com configurações/monitor fiscal.",
+      "Ajuste apenas de navegação/visibilidade de menu. Nenhuma alteração em TEF, PinPad, NFC-e, Frente de Caixa, emissão fiscal, impressão ou cobrança.",
+    ],
+  },
   {
     version: "1.22.9-beta",
     date: "2026-06-15",
