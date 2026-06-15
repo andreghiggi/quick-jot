@@ -62,6 +62,14 @@ export async function loadCashClosingSales(params: {
     .order('created_at', { ascending: false });
   if (error) throw error;
 
+  const { data: paymentMethods, error: paymentMethodsError } = await supabase
+    .from('payment_methods')
+    .select('id, name')
+    .eq('company_id', companyId)
+    .eq('active', true);
+  if (paymentMethodsError) throw paymentMethodsError;
+  const paymentMethodNames = ((paymentMethods || []) as Array<{ name: string | null }>).map((pm) => pm.name).filter(Boolean) as string[];
+
   const orderIds = Array.from(new Set((sales || []).map((s: any) => s.order_id).filter(Boolean)));
   let ordersMap = new Map<string, { origin: string; delivery_address: string | null; notes: string | null }>();
   if (orderIds.length) {
@@ -77,9 +85,7 @@ export async function loadCashClosingSales(params: {
     const linkedOrder = s.order_id ? ordersMap.get(s.order_id) : undefined;
     if (saleCancelled || linkedOrder?.notes?.includes('[CANCELADA]')) return [];
 
-    let pmName = s.payment_method?.name || 'Sem forma';
-    const tefMatch = s.notes?.match(/\|\s*(Débito|Crédito à Vista|PIX|\d+x\s*(?:Cartão\s*(?:ADM|Loja)|Crédito))/i);
-    if (tefMatch) pmName = `${pmName} (${tefMatch[1]})`;
+    const pmName = appendTefSubtype(s.payment_method?.name || paymentNameFromNotes(s.notes) || 'Sem forma', s.notes);
 
     return [{
       id: s.id,
@@ -101,7 +107,7 @@ export async function loadCashClosingSales(params: {
     .eq('company_id', companyId)
     .eq('status', 'delivered')
     .gte('created_at', openedAt)
-    .ilike('notes', '%Dinheiro%');
+    .or('payment_status.in.(paid,partial),notes.ilike.%Pagamento:%');
   if (closedAt) missingQuery = missingQuery.lte('created_at', closedAt);
 
   const { data: missingOrders, error: missingError } = await missingQuery;
@@ -110,11 +116,12 @@ export async function loadCashClosingSales(params: {
   const soldOrderIds = new Set(orderIds);
   const missingCashSales: CloseCashSale[] = (missingOrders || [])
     .filter((o: any) => !soldOrderIds.has(o.id) && !o.notes?.includes('[CANCELADA]'))
+    .filter((o: any) => Number(o.total || 0) > 0)
     .map((o: any) => ({
       id: `order-${o.id}`,
       final_total: Number(o.total) || 0,
       payment_method_id: null,
-      payment_method_name: 'Dinheiro',
+      payment_method_name: paymentNameFromNotes(o.notes) || paymentMethodNames.find((name) => o.notes?.toLowerCase().includes(name.toLowerCase())) || 'Sem forma',
       customer_name: o.customer_name || null,
       created_at: o.created_at,
       origin: originFromOrder(o),
