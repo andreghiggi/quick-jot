@@ -350,10 +350,9 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
             items_html += '<div class="item-sep">................................</div>\n'
     
     # Delivery section
-    # I9 v8.32+: envolve endereço com [ENDERECO] pro GDI renderizar invertido.
-    I9_COMPANY_ID_END = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
+    # V2 v8.38: envolve endereço com [ENDERECO] para o GDI renderizar invertido.
     if delivery_address:
-        if COMPANY_ID == I9_COMPANY_ID_END:
+        if PRINT_LAYOUT == 'v2':
             delivery_section = f'''
             <div class="delivery-badge">ENTREGA</div>
             <div class="section"><p>[ENDERECO]{delivery_address}[/ENDERECO]</p></div>
@@ -415,12 +414,10 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     if customer_phone:
         phone_html = f'<p><span class="label">Tel:</span> {customer_phone}</p>'
 
-    # Lancheria I9: "Pronto até" no cabeçalho do recibo (V1/V2).
+    # V2: "Pronto até" no cabeçalho do recibo.
     # Fórmula: criação + (máximo do estimated_wait_time − 10 min). Fallback 30 min.
-    # Isolado por company_id — outras lojas não são afetadas.
-    I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
     pronto_ate_html = ''
-    if pedido.get('company_id') == I9_COMPANY_ID:
+    if PRINT_LAYOUT == 'v2':
         wait_min_i9 = 30
         try:
             url_si9 = f"{SUPABASE_URL}/rest/v1/store_settings"
@@ -442,14 +439,14 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
         except Exception:
             pass
     
-    # v8.35: Modo compacto (i9) — reduz paddings/margins SEM mexer no tamanho da fonte.
-    # Rollout isolado por company_id; demais lojas mantêm o comportamento da v8.34.
-    _i9_compact = (pedido.get('company_id') == I9_COMPANY_ID)
-    _body_pad     = '1mm'      if _i9_compact else '2mm'
-    _body_lh      = '1.15'     if _i9_compact else '1.3'
-    _item_margin  = '0.5mm 0'  if _i9_compact else '1.5mm 0'
-    _add_lh       = '1.15'     if _i9_compact else '1.4'
-    _divider_mg   = '0.8mm 0'  if _i9_compact else '2mm 0'
+    # v8.38: modo compacto para todas as lojas V2 — reduz paddings/margins
+    # SEM mexer no tamanho da fonte.
+    _compact_v2_html = PRINT_LAYOUT == 'v2'
+    _body_pad     = '1mm'      if _compact_v2_html else '2mm'
+    _body_lh      = '1.15'     if _compact_v2_html else '1.3'
+    _item_margin  = '0.5mm 0'  if _compact_v2_html else '1.5mm 0'
+    _add_lh       = '1.15'     if _compact_v2_html else '1.4'
+    _divider_mg   = '0.8mm 0'  if _compact_v2_html else '2mm 0'
 
     html = f'''<!DOCTYPE html>
 <html>
