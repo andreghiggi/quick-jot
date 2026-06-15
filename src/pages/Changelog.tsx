@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '15/06/2026',
+    version: '1.22.10-beta',
+    type: 'fix',
+    description: 'Menu lateral: corrigida a sidebar real usada pelo PDV. Frente de Caixa volta a aparecer no Menu Principal quando o módulo Mercado está ativo, junto de PDV, Pedidos e Comandas. Fiscal e NFC-e Monitor foram movidos para um grupo próprio Fiscal. Ajuste apenas de navegação; sem alteração em TEF, PinPad, NFC-e, emissão fiscal, impressão ou cobrança.',
+  },
+  {
+    date: '15/06/2026',
     version: '1.22.8-beta',
     type: 'feature',
     description: 'Novo "Histórico de Comandas" no PDV V2 (logo abaixo de Pedidos): acesse comandas finalizadas mesmo após o fechamento do caixa, com filtro de data e busca por cliente/observação. Ações disponíveis: reimprimir venda, reimprimir comprovante TEF, reimprimir/cancelar NFC-e. Cancelar venda continua restrito ao caixa atual aberto. Cancelamento de venda agora exige motivo (mínimo 20 caracteres) e grava automaticamente em log próprio quem cancelou, data/hora e se houve estorno TEF — vendas canceladas mostram esses dados no card. Sem alteração em TEF, PinPad, NFC-e ou no fluxo de cobrança.',
