@@ -1232,8 +1232,7 @@ def imprimir_html(html, order_number):
         is_v2 = (PRINT_LAYOUT == 'v2')
 
         def limitar_retangulo_direita(rect_right_px):
-            """Evita que retângulos GDI ultrapassem a área imprimível.
-            Rollout isolado: apenas V2 compacto da Lancheria I9."""
+            """Evita que retângulos GDI ultrapassem a área imprimível no V2 compacto."""
             if compact_v2:
                 safe_gap = max(2, int(dpi_x * 0.01))
                 return min(rect_right_px, page_w - margin_x - safe_gap)
@@ -1451,7 +1450,7 @@ def imprimir_html(html, order_number):
                 i += 1
                 continue
 
-            # ENDERECO invertido (I9, V2) — mesmo bloco preto/branco do CLIENTE.
+            # ENDERECO invertido (V2) — mesmo bloco preto/branco do CLIENTE.
             # Aparece após o nome no recibo/comanda quando o pedido é entrega.
             if m_endereco:
                 conteudo_end = m_endereco.group(1).strip().upper()
@@ -1478,7 +1477,7 @@ def imprimir_html(html, order_number):
                 i += 1
                 continue
 
-            # ADDGROUP_LABEL (I9, V2): rótulo do grupo de adicionais, prefixo ■,
+            # ADDGROUP_LABEL (V2): rótulo do grupo de adicionais, prefixo ■,
             # SUBLINHADO, capitalização original (sem CAPS). Aparece acima dos
             # itens "+ ITEM" quando há 2+ grupos no produto.
             if m_addgroup:
@@ -1791,9 +1790,8 @@ if __name__ == "__main__":
         print(f"Empresa '{slug}' não encontrada ou inativa. Verifique o slug.")
         exit(1)
 
-    # IMPORTANTE: imprimir_html() usa o COMPANY_ID global para ativar a margem
-    # segura da allow-list. Sem esta atribuição, a Lancheria I9 nunca entrava
-    # no modo anti-corte, mesmo com SAFE_MARGIN_COMPANY_IDS configurado.
+    # IMPORTANTE: imprimir_html() usa o COMPANY_ID global para configurações
+    # específicas do script e diagnóstico.
     COMPANY_ID = company_id
     
     # Busca configuração de papel e layout
