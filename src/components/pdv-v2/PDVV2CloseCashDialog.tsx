@@ -400,14 +400,14 @@ export function PDVV2CloseCashDialog({
                       </div>
 
                       {isDeliveryOrigin && onChangeSalePaymentMethod ? (
-                        s.id.includes('#') ? (
+                        (s.id.includes('__') || s.id.startsWith('order-')) ? (
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">Pagamento:</span>
                             <Badge variant="outline" className="text-xs">
                               {s.payment_method_name}
                             </Badge>
                             <span className="text-[10px] text-muted-foreground">
-                              (multi — alterar pelo card do pedido)
+                              (registro consolidado)
                             </span>
                           </div>
                         ) : (
