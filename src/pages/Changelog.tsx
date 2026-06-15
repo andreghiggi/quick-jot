@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '15/06/2026',
+    version: '1.22.6-beta',
+    type: 'fix',
+    description: 'Fechamento de caixa: todo pagamento cobrado/finalizado agora entra na base do relatório, independentemente da origem (balcão, Pedido Express, online/cardápio, retirada, delivery ou mesa). Pedidos cobrados sem venda PDV vinculada também são consolidados pela forma de pagamento registrada. Sem alteração em TEF, PinPad, NFC-e ou no fluxo de cobrança.',
+  },
+  {
+    date: '15/06/2026',
     version: '1.22.3-beta',
     type: 'fix',
     description: 'Impressão V2: corrigida a origem que ainda mandava adicionais como lista plana para Margen e demais lojas V2. Cardápio público e Pedido Express agora enviam os grupos estruturados para qualquer loja com Layout V2/V3 ativo — grupos reais como "Sabores"/"Borda" imprimem o rótulo com ■ sublinhado mesmo quando há só 1 grupo; apenas o grupo genérico "Adicionais" continua oculto quando é único. auto_printer.py v8.39. TEF, PinPad, NFC-e, Multi-Pagamento, cobranças e V1 não foram alterados.',
