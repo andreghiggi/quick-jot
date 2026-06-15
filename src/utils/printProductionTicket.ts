@@ -237,10 +237,10 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
   const nameFontSize = data.paperSize === '80mm' ? '12pt' : '11pt';
   const addFontSize = data.paperSize === '80mm' ? '13pt' : '12pt';
   const obsFontSize = data.paperSize === '80mm' ? '12pt' : '11pt';
-  // Modo compacto V2 (economia de papel) — liberado para todas as lojas V2.
-  // Reduz line-height, margens e paddings SEM mexer no tamanho da fonte.
-  // Mantém separadores (.item-sep) e estrutura intactos.
-  const compact = data.layout === 'v2';
+  // Modo compacto V2 desativado na COMANDA DE PRODUÇÃO a pedido das lojas
+  // (espaçamento idêntico ao de antes do modo compacto). O recibo do cliente
+  // continua compacto via flag própria em src/utils/pdvV2Print.ts.
+  const compact = false;
   const bodyLH = compact ? '1.15' : '1.3';
   const itemPad = compact ? '0.8mm 0' : '1.5mm 0';
   const addLH = compact ? '1.2' : '1.5';
