@@ -55,7 +55,7 @@ export interface CashClosingPrintInput {
     type: 'sangria' | 'suprimento' | string;
     amount: number;
     reason?: string | null;
-    created_at?: string;
+    created_at?: string | null;
   }>;
   /**
    * Conferência do caixa físico (estilo Gweb): por espécie, comparando
