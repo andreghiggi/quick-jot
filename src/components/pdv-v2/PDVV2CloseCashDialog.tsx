@@ -185,6 +185,13 @@ export function PDVV2CloseCashDialog({
       paperSize,
       expectedAmount,
       sales,
+      cashMovements: cashMovements.map((m) => ({
+        type: m.type,
+        amount: Number(m.amount || 0),
+      })),
+      physicalCash: [
+        { species: 'DINHEIRO', systemAmount: expectedAmount, operatorAmount: 0 },
+      ],
     });
   }
 
@@ -193,6 +200,12 @@ export function PDVV2CloseCashDialog({
       <div className="rounded-md border p-3 bg-muted/40">
         <p className="text-sm text-muted-foreground">Valor esperado em caixa</p>
         <p className="text-2xl font-bold tabular-nums">{formatPrice(expectedAmount)}</p>
+        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <div className="flex justify-between gap-2"><span>Abertura</span><span>{formatPrice(cashBreakdown.opening)}</span></div>
+          <div className="flex justify-between gap-2"><span>Dinheiro</span><span>{formatPrice(cashBreakdown.cashSales)}</span></div>
+          <div className="flex justify-between gap-2"><span>Suprimento</span><span>{formatPrice(cashBreakdown.suprimentos)}</span></div>
+          <div className="flex justify-between gap-2"><span>Sangria</span><span>-{formatPrice(cashBreakdown.sangrias)}</span></div>
+        </div>
       </div>
 
       {/* Resumo por origem */}
