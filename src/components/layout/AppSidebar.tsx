@@ -107,7 +107,7 @@ export function AppSidebar() {
     { title: 'Subcategorias', icon: LayoutList, href: '/subcategorias' },
     { title: 'Produtos', icon: Package, href: '/produtos' },
     { title: 'Adicionais', icon: Layers, href: '/adicionais' },
-    ...(isModuleEnabled('mercado')
+    ...(mercadoEnabled
       ? [{ title: 'Estoque', icon: ClipboardEdit, href: '/estoque' }]
       : []),
   ];
