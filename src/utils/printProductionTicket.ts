@@ -13,8 +13,8 @@ interface PrintItem {
    *  product name in italic small text. When omitted (default), output is
    *  byte-for-byte identical to the previous behavior. */
   description?: string | null;
-  /** Adicionais agrupados (V3, I9 rollout). Quando presente, o renderizador
-   *  V3 exibe cada grupo com o rótulo em negrito (igual ao OrderCard).
+  /** Adicionais agrupados. Quando presente, os renderizadores V2/V3 exibem
+   *  cada grupo com rótulo próprio (igual ao OrderCard).
    *  Formato: [{ groupName: "Sabores da sua Pizza", items: "CAMARÃO R$12,00, FILÉ R$8,00" }].
    *  Quando omitido, comportamento permanece idêntico ao anterior (parseNotes). */
   groupedOptionals?: { groupName: string; items: string }[];
@@ -30,8 +30,7 @@ interface PrintTicketData {
   referenceLabel?: string;
   layout?: PrintLayoutVersion;
   /** Quando true (layout v2), exibe data/hora de criação e previsão de pronto.
-   *  Previsão = createdAt + readyOffsetMinutes. Para Lancheria I9 (prazo estimado 20–40 min),
-   *  usar readyOffsetMinutes = 30 (máximo − 10 min). */
+   *  Previsão = createdAt + readyOffsetMinutes. */
   showReadyTime?: boolean;
   readyOffsetMinutes?: number;
   /** Company atual. Usado para rollout isolado do título "PEDIDO <short_code>"
@@ -256,13 +255,13 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
   const dateStr = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   const timeStr = now.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
 
-  // Previsão de pronto (apenas quando solicitado, ex.: Lancheria I9)
+  // Previsão de pronto (apenas quando solicitado pelo caller)
   const readyOffset = typeof data.readyOffsetMinutes === 'number' ? data.readyOffsetMinutes : 10;
   const readyDate = new Date(now.getTime() + readyOffset * 60 * 1000);
   const readyDateStr = readyDate.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   const readyTimeStr = readyDate.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
-  // I9 (V2): remove "Criado em" redundante e mostra "Pronto até" logo abaixo
-  // da data/hora do cabeçalho. Demais lojas: bloco vazio (sem alteração).
+  // V2: remove "Criado em" redundante e mostra "Pronto até" logo abaixo
+  // da data/hora do cabeçalho.
   const readyBlockHTML = '';
   const readyHeaderHTML = data.showReadyTime
     ? `<div class="datetime ready-inline"><strong>Pronto até:</strong> ${readyTimeStr}</div>`
@@ -277,7 +276,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
       data.layout === 'v2' &&
       item.groupedOptionals &&
       item.groupedOptionals.length > 0;
-    // I9 v8.32+:
+    // V2 v8.32+:
     //  - 1 grupo: esconde o rótulo, só lista "+ ITEM"
     //  - 2+ grupos: emite [ADDGROUP_LABEL]Nome[/ADDGROUP_LABEL] (■ + sublinhado + sem CAPS)
     //  - itens sempre via <div class="add-line"> → Python converte em [ADD] (+ CAPS).
@@ -364,7 +363,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
 
         /* V2: adicionais empilhados destacados com >> e fonte maior */
         .additionals { margin: ${addMargin}; }
-        /* V2 (I9): rótulo do grupo de adicionais, exibido acima dos itens do grupo. */
+        /* V2: rótulo do grupo de adicionais, exibido acima dos itens do grupo. */
         .add-group-label {
           font-size: ${obsFontSize};
           font-weight: 900;
@@ -407,11 +406,11 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
            de separador), reduzindo de 2 linhas visuais para 1. */
         .footer { padding-top: 0; margin-top: ${footerMarginTop}; text-align: center; font-size: 8pt; line-height: 1; }
 
-        /* V2: bloco de previsão de pronto (Lancheria I9) */
+        /* V2: bloco de previsão de pronto */
         .ready-block { border: 1px dashed #000; padding: 1.5mm 2mm; margin: 2mm 0; text-align: center; }
         .ready-line { font-size: 10pt; font-weight: bold; line-height: 1.4; }
         .ready-highlight { font-size: 12pt; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 0.5mm; }
-        /* V2 (I9): "Pronto até" inline no cabeçalho, logo abaixo da data/hora. */
+        /* V2: "Pronto até" inline no cabeçalho, logo abaixo da data/hora. */
         .ready-inline { font-size: 11pt; font-weight: 900; margin-top: 0.5mm; text-transform: uppercase; letter-spacing: 0.3px; }
         @media print {
           html, body, * {
