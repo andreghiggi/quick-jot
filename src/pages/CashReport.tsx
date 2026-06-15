@@ -97,6 +97,18 @@ export default function CashReport() {
     return mapped;
   }
 
+  async function loadRegisterMovements(registerId: string): Promise<CashMovementRow[]> {
+    const { data, error } = await supabase
+      .from('cash_movements')
+      .select('type, amount, reason, created_at')
+      .eq('cash_register_id', registerId)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    const rows = (data || []) as CashMovementRow[];
+    setMovementsByRegister((prev) => ({ ...prev, [registerId]: rows }));
+    return rows;
+  }
+
   async function fetchRegisters() {
     if (!companyId) return;
     setLoading(true);
@@ -122,7 +134,7 @@ export default function CashReport() {
         rows.forEach((r) => { r.operator_name = map.get(r.opened_by) || null; });
       }
       setRegisters(rows);
-      await Promise.all(rows.map((r) => loadRegisterDetails(r)));
+      await Promise.all(rows.flatMap((r) => [loadRegisterDetails(r), loadRegisterMovements(r.id)]));
     } catch (e: any) {
       console.error(e);
       toast.error('Erro ao carregar caixas');
@@ -163,7 +175,8 @@ export default function CashReport() {
 
   async function handlePrint(reg: RegisterRow) {
     const sales = await loadSales(reg.id);
-    const expected = getCashSalesTotal(sales);
+    const movements = movementsByRegister[reg.id] || await loadRegisterMovements(reg.id);
+    const expected = getExpectedCashDrawer(Number(reg.opening_amount || 0), sales, movements);
     printCashClosingDetailed({
       companyName: company?.name,
       paperSize,
@@ -179,6 +192,15 @@ export default function CashReport() {
         notes: reg.notes,
         status: reg.status,
       },
+      cashMovements: movements.map((m) => ({
+        type: m.type,
+        amount: Number(m.amount || 0),
+        reason: m.reason,
+        created_at: m.created_at,
+      })),
+      physicalCash: [
+        { species: 'DINHEIRO', systemAmount: expected, operatorAmount: Number(reg.closing_amount || 0) },
+      ],
     });
   }
 
