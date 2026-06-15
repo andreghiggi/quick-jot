@@ -85,11 +85,6 @@ export default function CashReport() {
       openedAt: reg.opened_at,
       closedAt: reg.closed_at,
     });
-    const { data: movs } = await supabase
-      .from('cash_movements')
-      .select('type, amount')
-      .eq('cash_register_id', reg.id);
-
     setSalesByRegister((prev) => ({ ...prev, [reg.id]: mapped }));
     return mapped;
   }
