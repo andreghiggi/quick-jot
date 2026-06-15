@@ -74,7 +74,6 @@ export default function CashReport() {
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [salesByRegister, setSalesByRegister] = useState<Record<string, CloseCashSale[]>>({});
-  const [movementsByRegister, setMovementsByRegister] = useState<Record<string, { type: string; amount: number }[]>>({});
   const [loadingSales, setLoadingSales] = useState<string | null>(null);
 
   const paperSize = (settings?.printerPaperSize as '58mm' | '80mm') || '80mm';
@@ -92,10 +91,6 @@ export default function CashReport() {
       .eq('cash_register_id', reg.id);
 
     setSalesByRegister((prev) => ({ ...prev, [reg.id]: mapped }));
-    setMovementsByRegister((prev) => ({
-      ...prev,
-      [reg.id]: (movs || []).map((m: any) => ({ type: m.type, amount: Number(m.amount || 0) })),
-    }));
     return mapped;
   }
 
