@@ -32,13 +32,12 @@ import {
   Ticket,
   Truck,
   ClipboardEdit,
-  FolderTree,
+  ScanBarcode,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
-import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
-import { cn } from '@/lib/utils';
+import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import {
   Sidebar,
   SidebarContent,
@@ -64,6 +63,7 @@ export function AppSidebar() {
   const { user, profile, company, signOut, isSuperAdmin, isWaiter, isCompanyAdmin } = useAuthContext();
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
+  const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
 
   // Waiter-only menu
   const waiterMenuItems = [
@@ -91,6 +91,12 @@ export function AppSidebar() {
       icon: ShoppingBag,
       href: '/pedidos',
     },
+    ...(pdvV2Enabled
+      ? [{ title: 'Comandas', icon: ClipboardEdit, href: '/pdv-v2/comandas-historico' }]
+      : []),
+    ...(mercadoEnabled
+      ? [{ title: 'Frente de Caixa', icon: ScanBarcode, href: '/frente-caixa' }]
+      : []),
   ];
 
   // Cadastros - bloco Produtos
@@ -99,7 +105,7 @@ export function AppSidebar() {
     { title: 'Subcategorias', icon: LayoutList, href: '/subcategorias' },
     { title: 'Produtos', icon: Package, href: '/produtos' },
     { title: 'Adicionais', icon: Layers, href: '/adicionais' },
-    ...(isModuleEnabled('mercado')
+    ...(mercadoEnabled
       ? [{ title: 'Estoque', icon: ClipboardEdit, href: '/estoque' }]
       : []),
   ];
@@ -341,19 +347,6 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              {fiscalMenuItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === item.href}
-                  >
-                    <Link to={item.href}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -551,6 +544,35 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
+        )}
+
+        {fiscalMenuItems.length > 0 && (
+          <Collapsible className="group/grp-fiscal">
+            <SidebarGroup>
+              <SidebarGroupLabel asChild>
+                <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
+                  <span>Fiscal</span>
+                  <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-fiscal:rotate-180" />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {fiscalMenuItems.map((item) => (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton asChild isActive={location.pathname === item.href}>
+                          <Link to={item.href}>
+                            <item.icon className="w-4 h-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </CollapsibleContent>
