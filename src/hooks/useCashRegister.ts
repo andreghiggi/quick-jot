@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
+import { getCashSalesTotal, loadCashClosingSales } from '@/utils/cashClosingSales';
 
 export interface CashRegister {
   id: string;
@@ -254,15 +254,7 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
         openedAt: currentRegister.opened_at,
         closedAt: new Date().toISOString(),
       });
-      const { data: movements } = await supabase
-        .from('cash_movements')
-        .select('type, amount')
-        .eq('cash_register_id', currentRegister.id);
-      const expectedAmount = getExpectedCashDrawer(
-        currentRegister.opening_amount,
-        closingSales,
-        (movements || []) as any,
-      );
+      const expectedAmount = getCashSalesTotal(closingSales);
       const difference = closingAmount - expectedAmount;
 
       const { data, error } = await supabase
