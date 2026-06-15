@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.22.2-beta";
+export const VERSION = "1.22.3-beta";
 export const RELEASE_DATE = "2026-06-15"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Printer V2 liberado para lojas V2";
+export const CODENAME = "Printer V2: grupos liberados na origem";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.22.3-beta",
+    date: "2026-06-15",
+    codename: "Printer V2: grupos liberados na origem",
+    changes: [
+      "Corrigido o ponto que ainda deixava Margen e demais lojas V2 imprimirem adicionais como lista plana: cardápio público e Pedido Express agora enviam os grupos estruturados para o layout V2/V3, não apenas para a I9.",
+      "Com isso, pizzas com 2+ grupos passam a sair com o rótulo do grupo (■ sublinhado) e os itens abaixo; pedidos com 1 grupo seguem mostrando só os itens com '+'.",
+      "Não altera TEF, PinPad, NFC-e, Multi-Pagamento, cobranças ou layouts V1. O auto_printer.py v8.38 já interpreta esses dados.",
+    ],
+  },
   {
     version: "1.22.2-beta",
     date: "2026-06-15",
