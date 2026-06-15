@@ -44,7 +44,7 @@ import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog
 import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import { recordSalePayments } from '@/utils/recordSalePayments';
-import { getExpectedCashDrawer } from '@/utils/cashClosingSales';
+import { getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
 }
@@ -148,6 +148,7 @@ export default function PDVV2() {
   }, [filter, filterStorageKey, storageHydrated]);
   const [closeOpen, setCloseOpen] = useState(false);
   const [cashMovements, setCashMovements] = useState<{ type: string; amount: number | string | null }[]>([]);
+  const [closeCashSales, setCloseCashSales] = useState<CloseCashSale[]>([]);
   const [openCashOpen, setOpenCashOpen] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
   const [newOrderOpen, setNewOrderOpen] = useState(false);
@@ -317,134 +318,28 @@ export default function PDVV2() {
     loadCashMovements();
   }, [currentRegister?.id]);
 
-  // Mapeia vendas do caixa atual em estrutura para o fechamento
-  const closeCashSales: CloseCashSale[] = useMemo(() => {
-    const mappedSales = sales.flatMap((s) => {
-      // Exclui vendas canceladas do fechamento de caixa — elas continuam
-      // existindo na base e visíveis em outras telas (Comandas Finalizadas,
-      // histórico), mas não somam no valor esperado de fechamento.
-      const saleCancelled = !!s.notes?.includes('[CANCELADA]');
-      const orderId = (s as any).order_id as string | undefined;
-      const linkedOrder = orderId ? orders.find((o) => o.id === orderId) : undefined;
-      if (saleCancelled || linkedOrder?.notes?.includes('[CANCELADA]')) {
-        return [];
+  useEffect(() => {
+    let active = true;
+    async function loadCloseCashSalesForRegister() {
+      if (!companyId || !currentRegister?.id) {
+        setCloseCashSales([]);
+        return;
       }
-      // Determina origem cruzando com orders (quando há order_id)
-      let origin: CloseCashSale['origin'] = 'balcao';
-
-      // Extrai sub-tipo TEF das notes (Débito, Crédito à Vista, Parcelado, PIX)
-      let pmName = s.payment_method?.name || 'Sem forma';
-      if (s.notes) {
-        const tefMatch = s.notes.match(/\|\s*(Débito|Crédito à Vista|PIX|\d+x\s*(?:Cartão\s*(?:ADM|Loja)|Crédito))/i);
-        if (tefMatch) {
-          pmName = `${pmName} (${tefMatch[1]})`;
-        }
+      try {
+        const mapped = await loadCashClosingSales({
+          companyId,
+          registerId: currentRegister.id,
+          openedAt: currentRegister.opened_at,
+          closedAt: currentRegister.closed_at,
+        });
+        if (active) setCloseCashSales(mapped);
+      } catch (e) {
+        console.error('[PDVV2] Error loading close cash sales:', e);
       }
-
-      if (orderId) {
-        if (linkedOrder) {
-          if (linkedOrder.origin === 'mesa') origin = 'mesa';
-          else if (linkedOrder.origin === 'balcao') origin = 'balcao';
-          else origin = isDelivery(linkedOrder) ? 'cardapio_delivery' : 'cardapio_retirada';
-        } else {
-          origin = 'outros';
-        }
-      } else {
-        // Sem order vinculado — venda balcão direta
-        // ou comanda importada (notes contém "Comanda")
-        if (s.notes?.toLowerCase().includes('comanda')) origin = 'mesa';
-        else origin = 'balcao';
-      }
-
-      const finalTotal = Number(s.final_total) || 0;
-
-      // Multi-pagamento: quebra a venda em uma linha por forma de pagamento real,
-      // usando o fragmento `[MULTI] ...` gerado por pdvV2MultiPayment.ts
-      // (formato: "Dinheiro: R$101.40 || TEF R$38.80: ... | Débito | ...").
-      // Assim o fechamento mostra "Dinheiro 101,40" + "Débito 38,80" + "Débito 27,80"
-      // ao invés de tudo no balde "Dinheiro".
-      const multiIdx = s.notes ? s.notes.lastIndexOf('[MULTI]') : -1;
-      if (s.notes && multiIdx >= 0) {
-        // pega tudo após o último [MULTI]
-        let body = s.notes.slice(multiIdx + '[MULTI]'.length);
-        // remove blocos volumosos que contêm "|" e podem atrapalhar o split
-        body = body
-          .replace(/\[COMPROVANTE\][\s\S]*?\[\/COMPROVANTE\]/g, '')
-          .replace(/\[TEF\d+\][\s\S]*?\[\/TEF\d+\]/g, '')
-          .trim();
-        const segments = body.split(/\s\|\|\s/).map((x) => x.trim()).filter(Boolean);
-        const parts: { label: string; amount: number }[] = [];
-        for (const seg of segments) {
-          const amtMatch = seg.match(/R\$\s*([\d.,]+)/);
-          if (!amtMatch) continue;
-          const raw = amtMatch[1];
-          // Normaliza: se tem vírgula, ela é o decimal; senão usa ponto
-          const normalized = raw.includes(',')
-            ? raw.replace(/\./g, '').replace(',', '.')
-            : raw;
-          const amount = parseFloat(normalized);
-          if (!isFinite(amount) || amount <= 0) continue;
-          // Rótulo: prioriza sub-tipo TEF (Débito/Crédito à Vista/PIX/Nx ...).
-          let label: string;
-          const subTef = seg.match(/\|\s*(Débito|Crédito à Vista|PIX|\d+x\s*(?:Cartão\s*(?:ADM|Loja)|Crédito))/i);
-          if (subTef) {
-            label = subTef[1];
-          } else {
-            // Nome antes do primeiro ":" (ex.: "Dinheiro", "PIX")
-            const head = seg.split(':')[0].trim();
-            // Remove prefixo "TEF " se sobrar (ex.: "TEF R$38.80")
-            label = head.replace(/^TEF\s+R\$[\d.,]+\s*$/i, 'TEF').replace(/\s+R\$[\d.,]+\s*$/, '');
-            if (!label) label = 'Outro';
-          }
-          parts.push({ label, amount });
-        }
-        const sum = parts.reduce((a, p) => a + p.amount, 0);
-        // Só aplica o split se a soma bater com o total da venda (±1 centavo).
-        // Senão, fallback: 1 linha só com o comportamento atual.
-        if (parts.length >= 2 && Math.abs(sum - finalTotal) <= 0.01) {
-          return parts.map((p, idx) => ({
-            id: `${s.id}#${idx}`,
-            final_total: p.amount,
-            payment_method_id: null,
-            payment_method_name: p.label,
-            customer_name: s.customer_name || null,
-            created_at: s.created_at,
-            origin,
-          }));
-        }
-      }
-
-      return [{
-        id: s.id,
-        final_total: finalTotal,
-        payment_method_id: s.payment_method_id || null,
-        payment_method_name: pmName,
-        customer_name: s.customer_name || null,
-        created_at: s.created_at,
-        origin,
-      }];
-    });
-    const soldOrderIds = new Set(sales.map((s) => (s as any).order_id).filter(Boolean));
-    const openedAt = currentRegister?.opened_at ? new Date(currentRegister.opened_at) : null;
-    const missingDeliveredCashOrders = orders
-      .filter((o) =>
-        o.status === 'delivered' &&
-        /dinheiro/i.test(o.notes || '') &&
-        !soldOrderIds.has(o.id) &&
-        (!openedAt || o.createdAt >= openedAt) &&
-        !o.notes?.includes('[CANCELADA]')
-      )
-      .map((o) => ({
-        id: `order-${o.id}`,
-        final_total: Number(o.total) || 0,
-        payment_method_id: null,
-        payment_method_name: 'Dinheiro',
-        customer_name: o.customerName || null,
-        created_at: o.createdAt.toISOString(),
-        origin: isDelivery(o) ? 'cardapio_delivery' as const : 'cardapio_retirada' as const,
-      }));
-    return [...mappedSales, ...missingDeliveredCashOrders];
-  }, [sales, orders, currentRegister?.opened_at]);
+    }
+    loadCloseCashSalesForRegister();
+    return () => { active = false; };
+  }, [companyId, currentRegister?.id, currentRegister?.opened_at, currentRegister?.closed_at, sales]);
   const expectedCashDrawerAmount = useMemo(
     () => getExpectedCashDrawer(Number(currentRegister?.opening_amount || 0), closeCashSales, cashMovements),
     [currentRegister?.opening_amount, closeCashSales, cashMovements],
@@ -1203,6 +1098,19 @@ export default function PDVV2() {
 
   async function openCloseCashDialog() {
     if (currentRegister?.id) {
+      if (companyId) {
+        try {
+          const mapped = await loadCashClosingSales({
+            companyId,
+            registerId: currentRegister.id,
+            openedAt: currentRegister.opened_at,
+            closedAt: currentRegister.closed_at,
+          });
+          setCloseCashSales(mapped);
+        } catch (e) {
+          console.error('[PDVV2] Error refreshing close cash sales:', e);
+        }
+      }
       const { data, error } = await supabase
         .from('cash_movements')
         .select('type, amount')

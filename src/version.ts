@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.22.5-beta";
+export const VERSION = "1.22.6-beta";
 export const RELEASE_DATE = "2026-06-15"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Fechamento espelha movimento de caixa";
+export const CODENAME = "Fechamento consolida todo pagamento";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.22.6-beta",
+    date: "2026-06-15",
+    codename: "Fechamento consolida todo pagamento",
+    changes: [
+      "Corrigida a base do fechamento de caixa para consolidar todo pagamento finalizado/cobrado no período do caixa, independentemente da origem: balcão, Pedido Express, online/cardápio, retirada, delivery ou mesa.",
+      "Pedidos cobrados que não tenham `pdv_sale` vinculada também entram no relatório de fechamento pela forma de pagamento registrada, evitando vendas legítimas ficarem fora da conciliação.",
+      "Ajuste feito no carregador central do fechamento, sem alterar TEF, PinPad, NFC-e ou o fluxo de cobrança.",
+    ],
+  },
   {
     version: "1.22.5-beta",
     date: "2026-06-15",

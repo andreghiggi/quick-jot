@@ -7,6 +7,7 @@
 - Visuals: Primary default #ef4444. Prices in green with comma. 85dvh for mobile viewports.
 - IDs: Orders use 6-character hex identifiers (e.g., #AB7CAE), never sequential numbers.
 - Workflow: Always document updates and new features in the 'Novidades' (Changelog) menu.
+- Cash closing: every finalized/charged payment must be included regardless of origin; never filter closure by source.
 - Printing rollout must be isolated per store until validated; never change all stores at once.
 - TEF v1.0 (Multiplus) está homologado e CONGELADO como beta — não alterar nada de TEF/PinPad sem autorização explícita.
 - TEF v1.1 consolidado (Lancheria I9): TEF restaurado no PDV V2, reimpressão/via cancelada nos cards, formas de pagamento completas no Pedido Express e cancelamento de venda dispara estorno PinPad automático — não regredir.
