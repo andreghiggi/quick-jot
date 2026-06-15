@@ -42,10 +42,10 @@ interface PrintTicketData {
    *  ajudar a logística da cozinha. Quando omitido, o layout permanece
    *  idêntico ao anterior. */
   orderType?: OrderTicketType;
-  /** Endereço de entrega (I9 only). Quando presente, renderiza em bloco
+  /** Endereço de entrega. Quando presente no layout V2, renderiza em bloco
    *  invertido (fundo preto, texto branco) igual ao nome do cliente.
    *  Emite marcador [ENDERECO]...[/ENDERECO] que o auto_printer.py >= v8.32
-   *  interpreta. Em outras lojas: ignorado (sem regressão). */
+   *  interpreta. */
   deliveryAddress?: string | null;
 }
 
@@ -238,11 +238,10 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
   const nameFontSize = data.paperSize === '80mm' ? '12pt' : '11pt';
   const addFontSize = data.paperSize === '80mm' ? '13pt' : '12pt';
   const obsFontSize = data.paperSize === '80mm' ? '12pt' : '11pt';
-  // Modo compacto V2 (economia de papel) — rollout isolado: Lancheria da i9.
+  // Modo compacto V2 (economia de papel) — liberado para todas as lojas V2.
   // Reduz line-height, margens e paddings SEM mexer no tamanho da fonte.
   // Mantém separadores (.item-sep) e estrutura intactos.
-  const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-  const compact = data.companyId === I9_COMPANY_ID;
+  const compact = data.layout === 'v2';
   const bodyLH = compact ? '1.15' : '1.3';
   const itemPad = compact ? '0.8mm 0' : '1.5mm 0';
   const addLH = compact ? '1.2' : '1.5';
