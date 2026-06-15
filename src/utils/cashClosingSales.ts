@@ -103,12 +103,12 @@ export async function loadCashClosingSales(params: {
   if (!openedAt) return mapped;
   let missingQuery = supabase
     .from('orders')
-    .select('id, total, customer_name, created_at, origin, delivery_address, notes, status')
+    .select('id, total, paid_amount, payment_status, customer_name, created_at, updated_at, origin, delivery_address, notes, status')
     .eq('company_id', companyId)
     .eq('status', 'delivered')
-    .gte('created_at', openedAt)
+    .gte('updated_at', openedAt)
     .or('payment_status.in.(paid,partial),notes.ilike.%Pagamento:%');
-  if (closedAt) missingQuery = missingQuery.lte('created_at', closedAt);
+  if (closedAt) missingQuery = missingQuery.lte('updated_at', closedAt);
 
   const { data: missingOrders, error: missingError } = await missingQuery;
   if (missingError) throw missingError;
@@ -116,16 +116,20 @@ export async function loadCashClosingSales(params: {
   const soldOrderIds = new Set(orderIds);
   const missingCashSales: CloseCashSale[] = (missingOrders || [])
     .filter((o: any) => !soldOrderIds.has(o.id) && !o.notes?.includes('[CANCELADA]'))
-    .filter((o: any) => Number(o.total || 0) > 0)
-    .map((o: any) => ({
-      id: `order-${o.id}`,
-      final_total: Number(o.total) || 0,
-      payment_method_id: null,
-      payment_method_name: paymentNameFromNotes(o.notes) || paymentMethodNames.find((name) => o.notes?.toLowerCase().includes(name.toLowerCase())) || 'Sem forma',
-      customer_name: o.customer_name || null,
-      created_at: o.created_at,
-      origin: originFromOrder(o),
-    }));
+    .map((o: any) => {
+      const paidAmount = Number(o.paid_amount || 0);
+      const amount = o.payment_status === 'partial' && paidAmount > 0 ? paidAmount : Number(o.total || 0);
+      return {
+        id: `order-${o.id}`,
+        final_total: amount,
+        payment_method_id: null,
+        payment_method_name: paymentNameFromNotes(o.notes) || paymentMethodNames.find((name) => o.notes?.toLowerCase().includes(name.toLowerCase())) || 'Sem forma',
+        customer_name: o.customer_name || null,
+        created_at: o.updated_at || o.created_at,
+        origin: originFromOrder(o),
+      };
+    })
+    .filter((s: CloseCashSale) => Number(s.final_total || 0) > 0);
 
   return [...mapped, ...missingCashSales];
 }
