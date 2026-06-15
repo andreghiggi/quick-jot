@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '15/06/2026',
+    version: '1.22.3-beta',
+    type: 'fix',
+    description: 'Impressão V2: corrigida a origem que ainda mandava adicionais como lista plana para Margen e demais lojas V2. Cardápio público e Pedido Express agora enviam os grupos estruturados para qualquer loja com Layout V2/V3 ativo — pizzas com 2+ grupos passam a imprimir o rótulo do grupo com ■ sublinhado e itens abaixo; 1 grupo continua só com os itens em "+". O auto_printer.py v8.38 já estava pronto para interpretar isso. TEF, PinPad, NFC-e, Multi-Pagamento, cobranças e V1 não foram alterados.',
+  },
+  {
+    date: '15/06/2026',
     version: '1.22.2-beta',
     type: 'improvement',
     description: 'auto_printer.py v8.38: liberados para TODAS as lojas com Layout V2 ativo os ajustes de impressão que estavam restritos à Lancheria da i9 — rótulo de grupo com ■ sublinhado, endereço invertido, adicionais com "+", "Pronto até" no recibo V2 e modo compacto/economia de papel no GDI. Lojas V1/V3 continuam intactas. TEF, PinPad, NFC-e, Multi-Pagamento e cobranças não foram alterados.',
