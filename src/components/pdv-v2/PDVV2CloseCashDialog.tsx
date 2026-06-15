@@ -109,6 +109,29 @@ export function PDVV2CloseCashDialog({
     return out;
   }, [sales]);
 
+  /**
+   * Conciliação consolidada: agrupa todas as variações de "máquina móvel"
+   * (PIX/Débito/Crédito - máquina móvel) em uma única linha "Máquina móvel",
+   * e todas as variações de TEF (Débito/Crédito à Vista/Parcelado) em
+   * uma única linha "TEF". As demais formas permanecem como estão.
+   * Afeta APENAS a seção "Conciliação por forma de pagamento" — o
+   * "Resumo por origem" continua detalhado por forma.
+   */
+  function reconcileGroupOf(paymentName: string): string {
+    const n = (paymentName || '').toLowerCase();
+    if (/m[áa]quina\s*m[óo]vel/.test(n)) return 'Máquina móvel';
+    if (/\btef\b/.test(n)) return 'TEF';
+    return paymentName || 'Sem forma';
+  }
+  const declaredByReconcileGroup = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const [pay, val] of Object.entries(declaredByPayment)) {
+      const g = reconcileGroupOf(pay);
+      out[g] = (out[g] || 0) + val;
+    }
+    return out;
+  }, [declaredByPayment]);
+
   const cashBreakdown = useMemo(() => {
     const cashSales = sales
       .filter((s) => /dinheiro/i.test(s.payment_method_name || ''))
@@ -140,7 +163,7 @@ export function PDVV2CloseCashDialog({
 
     // Build reconciliation note
     const reconcileLines: string[] = [];
-    for (const [pay, declared] of Object.entries(declaredByPayment)) {
+    for (const [pay, declared] of Object.entries(declaredByReconcileGroup)) {
       const informed = useCurrencyMask
         ? parseCurrencyInput(reconcile[pay] || '')
         : parseFloat((reconcile[pay] || '').replace(',', '.')) || 0;
@@ -251,13 +274,13 @@ export function PDVV2CloseCashDialog({
       </div>
 
       {/* Conciliação manual */}
-      {Object.keys(declaredByPayment).length > 0 && (
+      {Object.keys(declaredByReconcileGroup).length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold">Conciliação por forma de pagamento</h3>
           <p className="text-xs text-muted-foreground">
             Informe o valor que você realmente recebeu em cada forma para validar divergências.
           </p>
-          {Object.entries(declaredByPayment).map(([pay, declared]) => {
+          {Object.entries(declaredByReconcileGroup).map(([pay, declared]) => {
             const informed = useCurrencyMask
               ? parseCurrencyInput(reconcile[pay] || '')
               : parseFloat((reconcile[pay] || '').replace(',', '.')) || 0;
