@@ -334,10 +334,22 @@ export default function CashReport() {
                   {isOpen && (
                     <CardContent className="p-4 pt-0 space-y-4">
                       {/* Resumo do caixa */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
                         <div>
                           <p className="text-xs text-muted-foreground">Abertura</p>
                           <p className="tabular-nums font-medium">{brl(Number(reg.opening_amount))}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Vendas dinheiro</p>
+                          <p className="tabular-nums font-medium">{brl(cashSalesTotal)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Suprimentos</p>
+                          <p className="tabular-nums font-medium">{brl(suprimentos)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Sangrias</p>
+                          <p className="tabular-nums font-medium">{brl(sangrias)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Esperado</p>
