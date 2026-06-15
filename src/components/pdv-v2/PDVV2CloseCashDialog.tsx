@@ -224,7 +224,7 @@ export function PDVV2CloseCashDialog({
   const mainBody = (
     <div className="space-y-4 py-2">
       <div className="rounded-md border p-3 bg-muted/40">
-        <p className="text-sm text-muted-foreground">Valor esperado em caixa</p>
+        <p className="text-sm text-muted-foreground">Valor em dinheiro esperado em caixa</p>
         <p className="text-2xl font-bold tabular-nums">{formatPrice(expectedAmount)}</p>
         <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <div className="flex justify-between gap-2"><span>Abertura</span><span>{formatPrice(cashBreakdown.opening)}</span></div>
