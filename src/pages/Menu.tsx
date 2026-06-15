@@ -1149,11 +1149,11 @@ export default function Menu() {
         // Send production ticket to print queue if enabled
         if (settings.autoPrintProductionTicket) {
           try {
-            // V3 (I9 rollout): envia adicionais agrupados (com rótulo do grupo)
-            // exclusivamente para a Lancheria da i9. As demais lojas continuam
-            // com o comportamento atual (lista plana via `Adicionais:`).
+            // V2+: envia adicionais agrupados para qualquer loja com Layout V2/V3 ativo.
+            // Antes isso ainda estava preso na I9, então Margen recebia lista plana.
             const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-            const sendGroupedV3 = company?.id === I9_COMPANY_ID;
+            const sendGroupedOptionals =
+              settings.printLayout === 'v2' || settings.printLayout === 'v3' || company?.id === I9_COMPANY_ID;
             const productionItems = cart.map((item) => {
               // Build a clean list of additional names (without prices, without group prefix)
               const additionalNames: string[] = [];
@@ -1178,7 +1178,7 @@ export default function Menu() {
                 }
               } else if (item.selectedOptionals.length > 0) {
                 additionalNames.push(...item.selectedOptionals.map((optional) => optional.name));
-                if (sendGroupedV3) {
+                if (sendGroupedOptionals) {
                   groupedOptionals.push({
                     groupName: 'Adicionais',
                     items: item.selectedOptionals
@@ -1215,7 +1215,7 @@ export default function Menu() {
                 notes: notesParts.length > 0 ? notesParts.join(' | ') : undefined,
                 description,
                 groupedOptionals:
-                  sendGroupedV3 && groupedOptionals.length > 0 ? groupedOptionals : undefined,
+                  sendGroupedOptionals && groupedOptionals.length > 0 ? groupedOptionals : undefined,
               };
             });
 
@@ -1235,6 +1235,7 @@ export default function Menu() {
                 true
                   ? computeReadyOffsetMinutes(settings.estimatedWaitTime, 30)
                   : undefined,
+              deliveryAddress: deliveryType !== 'pickup' && fullAddress ? fullAddress : null,
             });
 
             await supabase
