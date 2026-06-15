@@ -261,7 +261,7 @@ export default function TefReport() {
               Relatório TEF
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Transações consolidadas de pagamento por máquina (PinPad / SmartPOS).
+              Transações TEF consolidadas de pedidos e vendas finalizadas no PDV.
             </p>
           </div>
           <div className="flex gap-2">
@@ -437,7 +437,7 @@ export default function TefReport() {
                   <TableBody>
                     {filtered.map((r) => (
                       <TableRow key={r.id} className={cn(r.cancelled && 'opacity-60')}>
-                        <TableCell className="font-mono text-xs">#{r.order_code}</TableCell>
+                        <TableCell className="font-mono text-xs">{formatReferenceCode(r.order_code)}</TableCell>
                         <TableCell className="text-xs whitespace-nowrap">{format(new Date(r.created_at), 'dd/MM HH:mm:ss')}</TableCell>
                         <TableCell className="font-mono text-xs">{r.nsu}</TableCell>
                         <TableCell className="font-mono text-xs">{r.authCode}</TableCell>
