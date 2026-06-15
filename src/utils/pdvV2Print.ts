@@ -61,7 +61,7 @@ function buildReceiptHTML(payload: PrintPayload): string {
   const isV2 = true;
   // Modo compacto V2 (economia de papel) — liberado para todas as lojas V2.
   // Reduz paddings/margins SEM mexer no tamanho da fonte.
-  const compact = true;
+  const compact = payload.printLayout === 'v2';
   const bodyPad = compact ? '4px' : '8px';
   const bodyLH = compact ? '1.15' : '1.4';
   const h2Margin = compact ? '2px 0' : '4px 0';
