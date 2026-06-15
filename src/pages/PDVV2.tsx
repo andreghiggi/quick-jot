@@ -1412,7 +1412,7 @@ export default function PDVV2() {
         companyId={companyId}
         companyName={company?.name}
         paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
-        expectedAmount={expectedCashSalesAmount}
+        expectedAmount={expectedCashDrawerAmount}
         sales={closeCashSales}
         paymentMethods={activePaymentMethods.map((p) => ({ id: p.id, name: p.name }))}
         deliveryPaymentMethods={menuPaymentMethods.map((p) => ({ id: p.id, name: p.name }))}
