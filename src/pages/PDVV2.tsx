@@ -1424,6 +1424,7 @@ export default function PDVV2() {
         paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
         printLayout={settings.printLayout}
         onSaleDeleted={refetchCash}
+        registerId={currentRegister?.id || null}
       />
 
       <PDVV2NFCePostSaleDialog

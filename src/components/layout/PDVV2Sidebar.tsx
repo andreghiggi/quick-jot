@@ -25,6 +25,7 @@ import {
   Ticket,
   Truck,
   FolderTree,
+  History,
   ChevronDown,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
@@ -67,6 +68,7 @@ export function PDVV2Sidebar() {
   const home = [{ title: 'PDV', icon: Monitor, href: '/pdv-v2' }];
   const operations = [
     { title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' },
+    { title: 'Histórico de Comandas', icon: History, href: '/pdv-v2/comandas-historico' },
     ...(isModuleEnabled('mercado')
       ? [{ title: 'Frente de Caixa', icon: ScanBarcode, href: '/frente-caixa' }]
       : []),
