@@ -1098,6 +1098,19 @@ export default function PDVV2() {
 
   async function openCloseCashDialog() {
     if (currentRegister?.id) {
+      if (companyId) {
+        try {
+          const mapped = await loadCashClosingSales({
+            companyId,
+            registerId: currentRegister.id,
+            openedAt: currentRegister.opened_at,
+            closedAt: currentRegister.closed_at,
+          });
+          setCloseCashSales(mapped);
+        } catch (e) {
+          console.error('[PDVV2] Error refreshing close cash sales:', e);
+        }
+      }
       const { data, error } = await supabase
         .from('cash_movements')
         .select('type, amount')
