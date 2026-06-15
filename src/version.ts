@@ -26,7 +26,7 @@ export const RELEASES: Release[] = [
     changes: [
       "Corrigido o ponto que ainda deixava Margen e demais lojas V2 imprimirem adicionais como lista plana: cardápio público e Pedido Express agora enviam os grupos estruturados para o layout V2/V3, não apenas para a I9.",
       "Com isso, pizzas com 2+ grupos passam a sair com o rótulo do grupo (■ sublinhado) e os itens abaixo; pedidos com 1 grupo seguem mostrando só os itens com '+'.",
-      "Não altera TEF, PinPad, NFC-e, Multi-Pagamento, cobranças ou layouts V1. O auto_printer.py v8.38 já interpreta esses dados.",
+      "Não altera TEF, PinPad, NFC-e, Multi-Pagamento, cobranças ou layouts V1. O auto_printer.py v8.39 preserva o rótulo do grupo mesmo quando há só 1 grupo real.",
     ],
   },
   {
