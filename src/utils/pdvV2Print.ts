@@ -17,7 +17,7 @@ interface PrintItem {
   quantity: number;
   price: number;
   notes?: string;
-  /** Adicionais agrupados (I9). Quando presente, recibo V2 e comanda V2
+  /** Adicionais agrupados. Quando presente, recibo V2 e comanda V2
    *  renderizam rótulo do grupo (■ sublinhado) + itens (+ CAPS). 1 grupo
    *  esconde o rótulo. Quando ausente, comportamento legado preservado. */
   groupedOptionals?: { groupName: string; items: string }[];
@@ -34,13 +34,13 @@ interface PrintPayload {
   notes?: string;
   paperSize?: '58mm' | '80mm';
   /** Texto livre do campo "Prazo estimado de entrega" (estimated_wait_time).
-   *  Usado apenas para Lancheria I9 para calcular "Pronto até = criação + (max − 10 min)". */
+   *  Usado no layout V2 para calcular "Pronto até = criação + (max − 10 min)". */
   estimatedWaitTime?: string | null;
   /** Layout de impressão selecionado em Configurações (`print_layout`).
    *  Quando omitido, mantém o comportamento legado (V1 ou V3 forçado para I9).
    *  Quando fornecido, respeita a escolha do lojista (V1/V2/V3). */
   printLayout?: 'v1' | 'v2' | 'v3';
-  /** Endereço de entrega (I9 only). Renderizado em bloco invertido no recibo
+  /** Endereço de entrega no V2. Renderizado em bloco invertido no recibo
    *  e propagado para a comanda V2. */
   deliveryAddress?: string | null;
 }
@@ -59,10 +59,9 @@ function buildReceiptHTML(payload: PrintPayload): string {
   // são emitidos para todas as lojas que usam o layout V2. O auto_printer.py
   // v8.34+ interpreta; versões anteriores ignoram (retrocompatível).
   const isV2 = true;
-  // Modo compacto V2 (economia de papel) — rollout isolado: Lancheria da i9.
+  // Modo compacto V2 (economia de papel) — liberado para todas as lojas V2.
   // Reduz paddings/margins SEM mexer no tamanho da fonte.
-  const I9_COMPANY_ID_COMPACT = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-  const compact = payload.companyId === I9_COMPANY_ID_COMPACT;
+  const compact = payload.printLayout === 'v2';
   const bodyPad = compact ? '4px' : '8px';
   const bodyLH = compact ? '1.15' : '1.4';
   const h2Margin = compact ? '2px 0' : '4px 0';
@@ -292,7 +291,7 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
   out.push('__BOLD__' + rightCol('TOTAL GERAL', money(payload.total)));
   // Meta direto, sem espaço
   out.push(pipeRow(`COD: ${(payload.orderCode || '').slice(0, 7).toLowerCase()}`, 'App Pedidos'));
-  // I9 (V2): remove "Criado em" (redundante com "Impresso em") e adiciona
+  // V3: remove "Criado em" (redundante com "Impresso em") e adiciona
   // "Pronto até" logo abaixo da data/hora do recibo.
   out.push(pipeRow('Impresso em', ts));
   // V3 layout (atualmente só I9, mas mantém compat se outras lojas marcarem V3).

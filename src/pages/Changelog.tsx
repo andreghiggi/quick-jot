@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '15/06/2026',
+    version: '1.22.2-beta',
+    type: 'improvement',
+    description: 'auto_printer.py v8.38: liberados para TODAS as lojas com Layout V2 ativo os ajustes de impressão que estavam restritos à Lancheria da i9 — rótulo de grupo com ■ sublinhado, endereço invertido, adicionais com "+", "Pronto até" no recibo V2 e modo compacto/economia de papel no GDI. Lojas V1/V3 continuam intactas. TEF, PinPad, NFC-e, Multi-Pagamento e cobranças não foram alterados.',
+  },
+  {
     date: '14/06/2026',
     version: '1.21.9-beta',
     type: 'improvement',

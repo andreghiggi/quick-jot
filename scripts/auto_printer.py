@@ -33,7 +33,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.37"  # i9: corrige borda direita do cabeçalho no GDI compacto
+SCRIPT_VERSION = "v8.38"  # libera ajustes V2 v8.32-v8.37 para todas as lojas com layout V2
 I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
@@ -284,16 +284,14 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
                 extras_resto = extras
 
         if PRINT_LAYOUT == 'v2':
-            # V2: extrai adicionais. I9 v8.32+: preserva grupos e emite
-            # [ADDGROUP_LABEL] quando há 2+ grupos (■ sublinhado, sem CAPS).
-            # Demais lojas: comportamento legado (lista plana com "+ ITEM").
-            I9_COMPANY_ID_V2 = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
-            is_i9_v2 = COMPANY_ID == I9_COMPANY_ID_V2
+            # V2 v8.38: preserva grupos e emite [ADDGROUP_LABEL] quando há
+            # 2+ grupos (■ sublinhado, sem CAPS) para todas as lojas V2.
+            use_v2_enhancements = PRINT_LAYOUT == 'v2'
             grupos_estruturados = []  # [(nome, [itens])]
             v2_adicionais = []
             if adicionais_list:
                 v2_adicionais.extend(adicionais_list)
-                if is_i9_v2 and adicionais_list:
+                if use_v2_enhancements and adicionais_list:
                     grupos_estruturados.append(('Adicionais', list(adicionais_list)))
             if extras_resto:
                 grupos = [g.strip() for g in extras_resto.split('|') if g.strip()]
@@ -302,15 +300,15 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
                         nome_g, after = grupo.split(':', 1)
                         partes = [p.strip() for p in after.split(',') if p.strip()]
                         v2_adicionais.extend(partes)
-                        if is_i9_v2 and partes:
+                        if use_v2_enhancements and partes:
                             grupos_estruturados.append((nome_g.strip(), partes))
                     else:
                         partes = [p.strip() for p in grupo.split(',') if p.strip()]
                         v2_adicionais.extend(partes)
-                        if is_i9_v2 and partes:
+                        if use_v2_enhancements and partes:
                             grupos_estruturados.append(('Adicionais', partes))
 
-            if is_i9_v2 and grupos_estruturados:
+            if use_v2_enhancements and grupos_estruturados:
                 items_html += '  <div class="additionals">\n'
                 single = len(grupos_estruturados) == 1
                 for nome_g, itens_g in grupos_estruturados:
@@ -352,10 +350,9 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
             items_html += '<div class="item-sep">................................</div>\n'
     
     # Delivery section
-    # I9 v8.32+: envolve endereço com [ENDERECO] pro GDI renderizar invertido.
-    I9_COMPANY_ID_END = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
+    # V2 v8.38: envolve endereço com [ENDERECO] para o GDI renderizar invertido.
     if delivery_address:
-        if COMPANY_ID == I9_COMPANY_ID_END:
+        if PRINT_LAYOUT == 'v2':
             delivery_section = f'''
             <div class="delivery-badge">ENTREGA</div>
             <div class="section"><p>[ENDERECO]{delivery_address}[/ENDERECO]</p></div>
@@ -417,41 +414,39 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     if customer_phone:
         phone_html = f'<p><span class="label">Tel:</span> {customer_phone}</p>'
 
-    # Lancheria I9: "Pronto até" no cabeçalho do recibo (V1/V2).
+    # V2: "Pronto até" no cabeçalho do recibo.
     # Fórmula: criação + (máximo do estimated_wait_time − 10 min). Fallback 30 min.
-    # Isolado por company_id — outras lojas não são afetadas.
-    I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
     pronto_ate_html = ''
-    if pedido.get('company_id') == I9_COMPANY_ID:
-        wait_min_i9 = 30
+    if PRINT_LAYOUT == 'v2':
+        wait_min_v2 = 30
         try:
-            url_si9 = f"{SUPABASE_URL}/rest/v1/store_settings"
-            params_si9 = {"company_id": f"eq.{pedido.get('company_id')}", "key": "eq.estimated_wait_time"}
-            rsi9 = requests.get(url_si9, headers=HEADERS, params=params_si9, timeout=3)
-            if rsi9.ok and rsi9.json():
-                val_i9 = rsi9.json()[0].get('value', '')
-                nums_i9 = re.findall(r'\d+', val_i9 or '')
-                if nums_i9:
-                    wait_min_i9 = max(int(n) for n in nums_i9)
+            url_v2 = f"{SUPABASE_URL}/rest/v1/store_settings"
+            params_v2 = {"company_id": f"eq.{pedido.get('company_id')}", "key": "eq.estimated_wait_time"}
+            rv2 = requests.get(url_v2, headers=HEADERS, params=params_v2, timeout=3)
+            if rv2.ok and rv2.json():
+                val_v2 = rv2.json()[0].get('value', '')
+                nums_v2 = re.findall(r'\d+', val_v2 or '')
+                if nums_v2:
+                    wait_min_v2 = max(int(n) for n in nums_v2)
         except Exception:
             pass
         try:
-            dt_utc_i9 = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
-            dt_sp_i9 = dt_utc_i9.astimezone(timezone(timedelta(hours=-3)))
-            offset_i9 = max(1, wait_min_i9 - 10)
-            ready_i9 = dt_sp_i9 + timedelta(minutes=offset_i9)
-            pronto_ate_html = f'<div class="date" style="font-size:11pt;font-weight:bold;text-transform:uppercase;margin-top:1mm;">Pronto até: {ready_i9.strftime("%H:%M")}</div>'
+            dt_utc_v2 = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
+            dt_sp_v2 = dt_utc_v2.astimezone(timezone(timedelta(hours=-3)))
+            offset_v2 = max(1, wait_min_v2 - 10)
+            ready_v2 = dt_sp_v2 + timedelta(minutes=offset_v2)
+            pronto_ate_html = f'<div class="date" style="font-size:11pt;font-weight:bold;text-transform:uppercase;margin-top:1mm;">Pronto até: {ready_v2.strftime("%H:%M")}</div>'
         except Exception:
             pass
     
-    # v8.35: Modo compacto (i9) — reduz paddings/margins SEM mexer no tamanho da fonte.
-    # Rollout isolado por company_id; demais lojas mantêm o comportamento da v8.34.
-    _i9_compact = (pedido.get('company_id') == I9_COMPANY_ID)
-    _body_pad     = '1mm'      if _i9_compact else '2mm'
-    _body_lh      = '1.15'     if _i9_compact else '1.3'
-    _item_margin  = '0.5mm 0'  if _i9_compact else '1.5mm 0'
-    _add_lh       = '1.15'     if _i9_compact else '1.4'
-    _divider_mg   = '0.8mm 0'  if _i9_compact else '2mm 0'
+    # v8.38: modo compacto para todas as lojas V2 — reduz paddings/margins
+    # SEM mexer no tamanho da fonte.
+    _compact_v2_html = PRINT_LAYOUT == 'v2'
+    _body_pad     = '1mm'      if _compact_v2_html else '2mm'
+    _body_lh      = '1.15'     if _compact_v2_html else '1.3'
+    _item_margin  = '0.5mm 0'  if _compact_v2_html else '1.5mm 0'
+    _add_lh       = '1.15'     if _compact_v2_html else '1.4'
+    _divider_mg   = '0.8mm 0'  if _compact_v2_html else '2mm 0'
 
     html = f'''<!DOCTYPE html>
 <html>
@@ -973,11 +968,11 @@ def html_para_texto(html):
     text = re.sub(r' *\n *', '\n', text)
     text = re.sub(r'\n{3,}', '\n\n', text)
 
-    # v8.36: no modo compacto da I9, a impressão automática usa GDI e não CSS.
+    # v8.38: no modo compacto V2, a impressão automática usa GDI e não CSS.
     # O HTML vinha com quebras entre praticamente todos os <div>, e o GDI
     # transformava cada quebra vazia em avanço de papel. Aqui removemos essas
     # linhas vazias artificiais sem alterar tamanho de fonte nem conteúdo.
-    if PRINT_LAYOUT == 'v2' and COMPANY_ID == I9_COMPANY_ID:
+    if PRINT_LAYOUT == 'v2':
         text = re.sub(r'\n{2,}', '\n', text)
     return text.strip()
 
@@ -1018,9 +1013,8 @@ def imprimir_html(html, order_number):
             colunas = 22 if is_80mm else 18
         else:
             colunas = 24 if is_80mm else 20
-        # MODO COMPACTO V2: economia de papel isolada na Lancheria I9.
-        # O rollout não deve alterar o espaçamento das demais lojas sem validação.
-        compact_v2 = (PRINT_LAYOUT == 'v2' and COMPANY_ID == I9_COMPANY_ID)
+        # MODO COMPACTO V2: economia de papel para todas as lojas com layout V2.
+        compact_v2 = (PRINT_LAYOUT == 'v2')
         margin_factor = 0.02 if compact_v2 else 0.04  # margem cai pela metade
         margin_x = int(dpi_x * (0.12 if safe_margin else 0.04))  # ~3mm (allow-list) ou ~1mm (padrão)
         margin_y = int(dpi_y * margin_factor)
@@ -1238,8 +1232,7 @@ def imprimir_html(html, order_number):
         is_v2 = (PRINT_LAYOUT == 'v2')
 
         def limitar_retangulo_direita(rect_right_px):
-            """Evita que retângulos GDI ultrapassem a área imprimível.
-            Rollout isolado: apenas V2 compacto da Lancheria I9."""
+            """Evita que retângulos GDI ultrapassem a área imprimível no V2 compacto."""
             if compact_v2:
                 safe_gap = max(2, int(dpi_x * 0.01))
                 return min(rect_right_px, page_w - margin_x - safe_gap)
@@ -1419,10 +1412,8 @@ def imprimir_html(html, order_number):
                 continue
 
             if is_v2 and m_add:
-                # Lancheria I9: usa '+' como marcador (mais clean e semântico)
-                # em vez do '>>'. Outras lojas mantêm o '>>' original — sem regressão.
-                I9_COMPANY_ID_ADD = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
-                add_prefix = '+ ' if COMPANY_ID == I9_COMPANY_ID_ADD else '>> '
+                # V2 v8.38: usa '+' como marcador em todas as lojas V2.
+                add_prefix = '+ '
                 texto_add = add_prefix + m_add.group(1).strip().upper()
                 hDC.SelectObject(font_bold_big)
                 sublinhas_add = quebrar_linha_px(texto_add, usable_text_px)
@@ -1459,7 +1450,7 @@ def imprimir_html(html, order_number):
                 i += 1
                 continue
 
-            # ENDERECO invertido (I9, V2) — mesmo bloco preto/branco do CLIENTE.
+            # ENDERECO invertido (V2) — mesmo bloco preto/branco do CLIENTE.
             # Aparece após o nome no recibo/comanda quando o pedido é entrega.
             if m_endereco:
                 conteudo_end = m_endereco.group(1).strip().upper()
@@ -1486,7 +1477,7 @@ def imprimir_html(html, order_number):
                 i += 1
                 continue
 
-            # ADDGROUP_LABEL (I9, V2): rótulo do grupo de adicionais, prefixo ■,
+            # ADDGROUP_LABEL (V2): rótulo do grupo de adicionais, prefixo ■,
             # SUBLINHADO, capitalização original (sem CAPS). Aparece acima dos
             # itens "+ ITEM" quando há 2+ grupos no produto.
             if m_addgroup:
@@ -1799,9 +1790,8 @@ if __name__ == "__main__":
         print(f"Empresa '{slug}' não encontrada ou inativa. Verifique o slug.")
         exit(1)
 
-    # IMPORTANTE: imprimir_html() usa o COMPANY_ID global para ativar a margem
-    # segura da allow-list. Sem esta atribuição, a Lancheria I9 nunca entrava
-    # no modo anti-corte, mesmo com SAFE_MARGIN_COMPANY_IDS configurado.
+    # IMPORTANTE: imprimir_html() usa o COMPANY_ID global para configurações
+    # específicas do script e diagnóstico.
     COMPANY_ID = company_id
     
     # Busca configuração de papel e layout

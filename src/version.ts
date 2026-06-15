@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.22.1-beta";
-export const RELEASE_DATE = "2026-06-14"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Cupom secreto: validação no checkout corrigida";
+export const VERSION = "1.22.2-beta";
+export const RELEASE_DATE = "2026-06-15"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Printer V2 liberado para lojas V2";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.22.2-beta",
+    date: "2026-06-15",
+    codename: "Printer V2 liberado para lojas V2",
+    changes: [
+      "auto_printer.py v8.38: os ajustes v8.32–v8.37 foram liberados para todas as lojas com Layout V2 ativo em Configurações, incluindo Margen.",
+      "Inclui rótulo de grupo com ■ sublinhado, endereço invertido, adicionais com '+', 'Pronto até' no recibo V2 e modo compacto/economia de papel no GDI.",
+      "Lojas em V1 ou V3 continuam intactas. TEF, PinPad, NFC-e, Multi-Pagamento e cobranças não foram alterados.",
+    ],
+  },
   {
     version: "1.22.1-beta",
     date: "2026-06-14",
