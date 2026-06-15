@@ -16,9 +16,10 @@ type: feature
 - `auto_printer.py` v8.38 também aplica `Pronto até` no recibo V2, remove linhas vazias artificiais no GDI e usa modo compacto para lojas V2.
 
 ## Arquivos
+- `src/pages/Menu.tsx` e `src/components/PedidoExpressDialog.tsx` → cardápio público e Pedido Express propagam `groupedOptionals` para todas as lojas com Layout V2/V3 ativo.
 - `src/utils/printProductionTicket.ts` → V2 emite os markers no HTML.
 - `src/utils/pdvV2Print.ts` → `buildReceiptHTML` (V2) emite os markers + propaga `deliveryAddress` e `groupedOptionals`.
 - `scripts/auto_printer.py` → handlers `m_addgroup` e `m_endereco` no laço principal.
 
 ## Próximo passo
-Propagar `groupedOptionals` e `deliveryAddress` nos 5 callers de `printOnlyReceipt`/`printOnlineOrBalcao` (PDVV2, PedidoExpress, PDVV2PaymentDialog, PDVV2ClosedTabsDialog, OrderEditDialog). Hoje só funciona quando o caller passa esses campos — fallback continua plano sem regressão.
+Validar Margen com pedido real após baixar/rodar `auto_printer.py` v8.38+; se algum caminho interno do PDV V2 ainda sair plano, propagar `groupedOptionals` também nesse caller específico.
