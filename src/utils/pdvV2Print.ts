@@ -76,7 +76,6 @@ function buildReceiptHTML(payload: PrintPayload): string {
       // 1 grupo: sem rótulo; 2+ grupos: rótulo ■ sublinhado.
       if (!isV2 || !it.groupedOptionals || it.groupedOptionals.length === 0) return head;
       const groups = it.groupedOptionals;
-      const single = groups.length === 1;
       const groupsHtml = groups
         .map((g) => {
           const itensHtml = g.items
@@ -90,7 +89,8 @@ function buildReceiptHTML(payload: PrintPayload): string {
               return `<div class="add-line">&gt;&gt; ${escapeHtml(clean + priceSuffix)}</div>`;
             })
             .join('');
-          const labelHtml = single
+          const singleGenericGroup = groups.length === 1 && g.groupName.trim().toLowerCase() === 'adicionais';
+          const labelHtml = singleGenericGroup
             ? ''
             : `<div class="add-group-label">[ADDGROUP_LABEL]${escapeHtml(g.groupName)}[/ADDGROUP_LABEL]</div>`;
           return labelHtml + itensHtml;
