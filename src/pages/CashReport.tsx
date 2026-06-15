@@ -265,8 +265,16 @@ export default function CashReport() {
             {items.map((reg) => {
               const isOpen = expandedId === reg.id;
               const sales = salesByRegister[reg.id] || [];
+              const movements = movementsByRegister[reg.id] || [];
               const totalVendas = sales.reduce((a, s) => a + s.final_total, 0);
-              const expected = getCashSalesTotal(sales);
+              const cashSalesTotal = getCashSalesTotal(sales);
+              const suprimentos = movements
+                .filter((m) => m.type === 'suprimento')
+                .reduce((acc, m) => acc + Number(m.amount || 0), 0);
+              const sangrias = movements
+                .filter((m) => m.type === 'sangria')
+                .reduce((acc, m) => acc + Number(m.amount || 0), 0);
+              const expected = getExpectedCashDrawer(Number(reg.opening_amount || 0), sales, movements);
 
               // Agrupa para visualização
               const byOrigin: Record<string, Record<string, { total: number; count: number }>> = {};
