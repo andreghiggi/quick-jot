@@ -15,7 +15,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { printCashClosingDetailed } from '@/utils/cashClosingPrint';
 import type { CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
-import { getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
+import { getCashSalesTotal, loadCashClosingSales } from '@/utils/cashClosingSales';
 import { toast } from 'sonner';
 
 interface RegisterRow {
@@ -165,8 +165,7 @@ export default function CashReport() {
 
   async function handlePrint(reg: RegisterRow) {
     const sales = await loadSales(reg.id);
-    const movements = movementsByRegister[reg.id] || [];
-    const expected = getExpectedCashDrawer(Number(reg.opening_amount), sales, movements);
+    const expected = getCashSalesTotal(sales);
     printCashClosingDetailed({
       companyName: company?.name,
       paperSize,
@@ -247,11 +246,7 @@ export default function CashReport() {
               const isOpen = expandedId === reg.id;
               const sales = salesByRegister[reg.id] || [];
               const totalVendas = sales.reduce((a, s) => a + s.final_total, 0);
-              const expected = getExpectedCashDrawer(
-                Number(reg.opening_amount),
-                sales,
-                movementsByRegister[reg.id] || [],
-              );
+              const expected = getCashSalesTotal(sales);
 
               // Agrupa para visualização
               const byOrigin: Record<string, Record<string, { total: number; count: number }>> = {};
