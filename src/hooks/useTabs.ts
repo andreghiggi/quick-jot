@@ -55,6 +55,19 @@ export function useTabs(options: UseTabsOptions = {}) {
     if (companyId) {
       fetchTabs();
       
+      // Debounced refetch para mudanças de tab_items vindas de OUTROS terminais
+      // (garçom no celular, cliente via QR Code, outro caixa). Debounce de 1.5s
+      // evita "tempestade de fetch" e também dá tempo do optimistic update local
+      // (addItem/removeItem) se consolidar antes de re-sincronizar — assim o item
+      // adicionado pelo próprio caixa não "pisca/some" momentaneamente.
+      let itemsRefetchTimer: ReturnType<typeof setTimeout> | null = null;
+      const scheduleItemsRefetch = () => {
+        if (itemsRefetchTimer) clearTimeout(itemsRefetchTimer);
+        itemsRefetchTimer = setTimeout(() => {
+          fetchTabs();
+        }, 1500);
+      };
+
       // Subscribe to realtime changes
       const channel = supabase
         .channel('tabs-changes')
@@ -70,14 +83,26 @@ export function useTabs(options: UseTabsOptions = {}) {
             fetchTabs();
           }
         )
-        // tab_items: subscription sem filtro causa tempestades de fetch que
-        // competem com inserts (item adicionado pelo garçom "some" temporariamente).
-        // Usamos atualização otimista local em addItem/removeItem e refetch
-        // disparado pela tabela `tabs`. Para mudanças vindas de outros terminais,
-        // o refetch periódico (ao reabrir comanda) cobre o caso.
+        // tab_items: escutamos INSERT/UPDATE/DELETE com refetch DEBOUNCED (1.5s).
+        // Sem isso, quando o garçom (app mobile) ou o cliente (QR da mesa) adiciona
+        // item, o caixa no PDV V2 não recebia notificação e precisava apertar
+        // "Atualizar". O debounce evita o bug antigo do item próprio "piscar"
+        // porque o optimistic update local já populou a UI antes do refetch rodar.
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'tab_items',
+          },
+          () => {
+            scheduleItemsRefetch();
+          }
+        )
         .subscribe();
 
       return () => {
+        if (itemsRefetchTimer) clearTimeout(itemsRefetchTimer);
         supabase.removeChannel(channel);
       };
     } else {
