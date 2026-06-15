@@ -53,6 +53,24 @@ function getPresetRange(p: PeriodPreset): { start: Date; end: Date } {
 
 const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+const formatReferenceCode = (code: string) => {
+  if (/^(#|Comanda|PDV|Venda)/i.test(code)) return code;
+  return `#${code}`;
+};
+
+const referenceFromSale = (sale: { id: string; notes: string | null }, linkedOrder?: { order_code?: string | null }) => {
+  if (linkedOrder?.order_code) return linkedOrder.order_code;
+  const comanda = sale.notes?.match(/Comanda\s*#\s*([A-Za-z0-9-]+)/i);
+  if (comanda?.[1]) return `Comanda #${comanda[1]}`;
+  const cardapio = sale.notes?.match(/\[CARDAPIO\s*#\s*([A-Za-z0-9-]+)\]/i);
+  if (cardapio?.[1]) return cardapio[1].toUpperCase();
+  return `PDV ${sale.id.slice(0, 8).toUpperCase()}`;
+};
+
+const tefRowKey = (tef: { type: string; nsu: string; authCode: string }, fallbackId: string) => (
+  `${tef.type}:${tef.nsu || fallbackId}:${tef.authCode || ''}`
+);
+
 export default function TefReport() {
   const { company } = useAuthContext();
   const [preset, setPreset] = useState<PeriodPreset>('today');
@@ -74,28 +92,41 @@ export default function TefReport() {
     queryKey: ['tef-report', company?.id, range.start.toISOString(), range.end.toISOString()],
     queryFn: async (): Promise<TefTxRow[]> => {
       if (!company?.id) return [];
-      const { data, error } = await supabase
+      const tefNotesFilter = 'notes.ilike.%TEF PinPad:%,notes.ilike.%TEF: NSU%';
+      const orderFields = 'id, order_code, created_at, updated_at, total, customer_name, notes';
+      const buildOrdersQuery = (dateField: 'created_at' | 'updated_at') => supabase
         .from('orders')
-        .select('id, order_code, created_at, total, customer_name, notes')
+        .select(orderFields)
         .eq('company_id', company.id)
-        .gte('created_at', range.start.toISOString())
-        .lte('created_at', range.end.toISOString())
-        .or('notes.ilike.%TEF PinPad:%,notes.ilike.%TEF: NSU%')
-        .order('created_at', { ascending: false });
+        .gte(dateField, range.start.toISOString())
+        .lte(dateField, range.end.toISOString())
+        .or(tefNotesFilter);
 
-      if (error) {
-        console.error('TEF report fetch error:', error);
+      const [ordersByCreated, ordersByUpdated, pdvSales] = await Promise.all([
+        buildOrdersQuery('created_at'),
+        buildOrdersQuery('updated_at'),
+        supabase
+          .from('pdv_sales')
+          .select('id, created_at, final_total, customer_name, notes, order_id')
+          .eq('company_id', company.id)
+          .gte('created_at', range.start.toISOString())
+          .lte('created_at', range.end.toISOString())
+          .or(tefNotesFilter),
+      ]);
+
+      if (ordersByCreated.error || ordersByUpdated.error || pdvSales.error) {
+        console.error('TEF report fetch error:', ordersByCreated.error || ordersByUpdated.error || pdvSales.error);
         return [];
       }
 
-      const result: TefTxRow[] = [];
-      for (const o of data ?? []) {
+      const result = new Map<string, TefTxRow>();
+      const addOrderRow = (o: any) => {
         const tef = parseTefDataFromNotes(o.notes);
-        if (!tef) continue;
-        result.push({
+        if (!tef) return;
+        result.set(tefRowKey(tef, o.id), {
           id: o.id,
           order_code: o.order_code,
-          created_at: o.created_at,
+          created_at: o.updated_at || o.created_at,
           total: Number(o.total) || 0,
           customer_name: o.customer_name,
           notes: o.notes,
@@ -108,8 +139,47 @@ export default function TefReport() {
           cancelled: isOrderTefCancelled(o.notes),
           hasReceipt: !!tef.receipt,
         });
+      };
+
+      const orderRows = Array.from(
+        new Map([...(ordersByCreated.data || []), ...(ordersByUpdated.data || [])].map((o: any) => [o.id, o])).values(),
+      );
+      orderRows.forEach(addOrderRow);
+
+      const linkedOrderIds = Array.from(new Set((pdvSales.data || []).map((s: any) => s.order_id).filter(Boolean)));
+      let linkedOrders = new Map<string, { order_code?: string | null; notes?: string | null }>();
+      if (linkedOrderIds.length) {
+        const { data: linked, error: linkedError } = await supabase
+          .from('orders')
+          .select('id, order_code, notes')
+          .in('id', linkedOrderIds);
+        if (linkedError) console.error('TEF report linked orders fetch error:', linkedError);
+        linkedOrders = new Map((linked || []).map((o: any) => [o.id, { order_code: o.order_code, notes: o.notes }]));
       }
-      return result;
+
+      for (const s of pdvSales.data || []) {
+        const tef = parseTefDataFromNotes(s.notes);
+        if (!tef) continue;
+        const linkedOrder = s.order_id ? linkedOrders.get(s.order_id) : undefined;
+        result.set(tefRowKey(tef, s.id), {
+          id: s.id,
+          order_code: referenceFromSale(s, linkedOrder),
+          created_at: s.created_at,
+          total: Number(s.final_total) || 0,
+          customer_name: s.customer_name || 'Cliente Loja',
+          notes: s.notes,
+          type: tef.type,
+          nsu: tef.nsu,
+          authCode: tef.authCode,
+          cardBrand: tef.cardBrand,
+          acquirer: tef.acquirer,
+          operationType: tef.operationType,
+          cancelled: isOrderTefCancelled(s.notes) || isOrderTefCancelled(linkedOrder?.notes),
+          hasReceipt: !!tef.receipt,
+        });
+      }
+
+      return Array.from(result.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
     enabled: !!company?.id,
   });
