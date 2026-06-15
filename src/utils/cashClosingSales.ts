@@ -29,11 +29,22 @@ export function getExpectedCashDrawer(
 }
 
 function originFromOrder(order: { origin?: string | null; delivery_address?: string | null }): CloseCashSale['origin'] {
-  if (order.origin === 'mesa') return 'mesa';
+  if (order.origin === 'mesa' || order.origin === 'mesa_qr') return 'mesa';
   if (order.origin === 'balcao') return 'balcao';
   return order.delivery_address && order.delivery_address.trim().length > 0
     ? 'cardapio_delivery'
     : 'cardapio_retirada';
+}
+
+function paymentNameFromNotes(notes?: string | null): string | null {
+  const paymentMatch = notes?.match(/Pagamento:\s*([^|()\n]*)/i);
+  const paymentName = paymentMatch?.[1]?.trim();
+  return paymentName || null;
+}
+
+function appendTefSubtype(paymentName: string, notes?: string | null) {
+  const tefMatch = notes?.match(/\|\s*(Débito|Crédito à Vista|PIX|\d+x\s*(?:Cartão\s*(?:ADM|Loja)|Crédito))/i);
+  return tefMatch ? `${paymentName} (${tefMatch[1]})` : paymentName;
 }
 
 export async function loadCashClosingSales(params: {
