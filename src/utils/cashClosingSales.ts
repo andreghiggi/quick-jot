@@ -101,17 +101,28 @@ export async function loadCashClosingSales(params: {
   const mapped = await expandSalesWithSplits(base);
 
   if (!openedAt) return mapped;
-  let missingQuery = supabase
-    .from('orders')
-    .select('id, total, paid_amount, payment_status, customer_name, created_at, updated_at, origin, delivery_address, notes, status')
-    .eq('company_id', companyId)
-    .eq('status', 'delivered')
-    .gte('updated_at', openedAt)
-    .or('payment_status.in.(paid,partial),notes.ilike.%Pagamento:%');
-  if (closedAt) missingQuery = missingQuery.lte('updated_at', closedAt);
+  const selectMissingOrderFields = 'id, total, paid_amount, payment_status, customer_name, created_at, updated_at, origin, delivery_address, notes, status';
+  const buildMissingOrdersQuery = (dateField: 'created_at' | 'updated_at') => {
+    let query = supabase
+      .from('orders')
+      .select(selectMissingOrderFields)
+      .eq('company_id', companyId)
+      .eq('status', 'delivered')
+      .gte(dateField, openedAt)
+      .or('payment_status.in.(paid,partial),notes.ilike.%Pagamento:%');
+    if (closedAt) query = query.lte(dateField, closedAt);
+    return query;
+  };
 
-  const { data: missingOrders, error: missingError } = await missingQuery;
-  if (missingError) throw missingError;
+  const [{ data: missingByCreated, error: missingCreatedError }, { data: missingByUpdated, error: missingUpdatedError }] = await Promise.all([
+    buildMissingOrdersQuery('created_at'),
+    buildMissingOrdersQuery('updated_at'),
+  ]);
+  if (missingCreatedError) throw missingCreatedError;
+  if (missingUpdatedError) throw missingUpdatedError;
+  const missingOrders = Array.from(
+    new Map([...(missingByCreated || []), ...(missingByUpdated || [])].map((o: any) => [o.id, o])).values(),
+  );
 
   const soldOrderIds = new Set(orderIds);
   const missingCashSales: CloseCashSale[] = (missingOrders || [])
