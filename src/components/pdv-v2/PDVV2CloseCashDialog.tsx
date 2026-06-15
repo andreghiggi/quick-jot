@@ -180,6 +180,9 @@ export function PDVV2CloseCashDialog({
   const showDetailedPrint = true;
 
   function printDetailedClosing() {
+    const informedAmount = useCurrencyMask
+      ? parseCurrencyInput(closingAmount)
+      : parseFloat(closingAmount.replace(',', '.')) || 0;
     printCashClosingDetailed({
       companyName,
       paperSize,
@@ -189,9 +192,9 @@ export function PDVV2CloseCashDialog({
         type: m.type,
         amount: Number(m.amount || 0),
       })),
-      physicalCash: [
-        { species: 'DINHEIRO', systemAmount: expectedAmount, operatorAmount: 0 },
-      ],
+      physicalCash: closingAmount
+        ? [{ species: 'DINHEIRO', systemAmount: expectedAmount, operatorAmount: informedAmount }]
+        : undefined,
     });
   }
 
