@@ -108,3 +108,4 @@
 - [Frente de Caixa Pré-venda + NFC-e](mem://features/frente-caixa-pre-venda-nfce) — `pdv_sales.fiscal_mode` + `pdv_settings.default_fiscal_mode`. Checkout com botões "Salvar pré-venda"/"Salvar + NFC-e"; emissão retroativa pela Lista do PDV. Isolado ao módulo Mercado. Versão 1.21.0-beta.
 - [Print V3 Grouped Optionals](mem://features/print-grouped-optionals-v3) — Comanda + recibo V3 (I9) mostram adicionais com rótulo do grupo em negrito; rollout isolado por company_id da Lancheria I9. Versão 1.21.1-beta.
 - [Print V2 Group/Address](mem://features/print-group-label-address-v2) — Ajustes v8.32–v8.37 liberados para todas as lojas com layout V2; requer auto_printer.py v8.38+.
+- [Sale Cancellation Audit](mem://features/sale-cancellation-audit) — Cancelamento de venda exige motivo (>=20 chars), grava log em `pdv_sale_cancellations`; nova página `/pdv-v2/comandas-historico` lista comandas após fechamento do caixa (sem botão Cancelar Venda). v1.22.8-beta.

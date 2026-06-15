@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.22.7-beta";
+export const VERSION = "1.22.8-beta";
 export const RELEASE_DATE = "2026-06-15"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Relatório TEF consolida PDV V2";
+export const CODENAME = "Histórico de comandas + auditoria de cancelamento";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.22.8-beta",
+    date: "2026-06-15",
+    codename: "Histórico de comandas + auditoria de cancelamento",
+    changes: [
+      "Nova página 'Histórico de Comandas' no PDV V2 (logo abaixo de Pedidos), com filtro de data e busca, para acessar comandas finalizadas mesmo após o fechamento do caixa. Permite reimprimir venda, comprovante TEF, reimprimir/cancelar NFC-e — sem permitir cancelar a venda (regra: só dentro do caixa atual).",
+      "Cancelamento de venda no diálogo 'Comandas Finalizadas' agora exige motivo (mínimo 20 caracteres) e registra automaticamente quem cancelou, data/hora e se houve estorno TEF na nova tabela `pdv_sale_cancellations`.",
+      "Cards de vendas canceladas (no PDV e no Histórico) passam a exibir Motivo / Por / Em e, quando aplicável, a marca 'TEF estornado'.",
+      "Nenhuma mudança em TEF, PinPad, NFC-e ou no fluxo de cobrança; o histórico é somente leitura para caixas já fechados.",
+    ],
+  },
   {
     version: "1.22.7-beta",
     date: "2026-06-15",

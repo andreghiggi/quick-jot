@@ -1372,6 +1372,67 @@ export type Database = {
           },
         ]
       }
+      pdv_sale_cancellations: {
+        Row: {
+          cancelled_at: string
+          cancelled_by: string | null
+          cancelled_by_name: string | null
+          company_id: string
+          created_at: string
+          id: string
+          reason: string
+          register_id: string | null
+          sale_id: string
+          tef_reversed: boolean
+        }
+        Insert: {
+          cancelled_at?: string
+          cancelled_by?: string | null
+          cancelled_by_name?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          reason: string
+          register_id?: string | null
+          sale_id: string
+          tef_reversed?: boolean
+        }
+        Update: {
+          cancelled_at?: string
+          cancelled_by?: string | null
+          cancelled_by_name?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          register_id?: string | null
+          sale_id?: string
+          tef_reversed?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_sale_cancellations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_sale_cancellations_register_id_fkey"
+            columns: ["register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_sale_cancellations_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_sale_items: {
         Row: {
           created_at: string | null

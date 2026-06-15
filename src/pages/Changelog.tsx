@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '15/06/2026',
+    version: '1.22.8-beta',
+    type: 'feature',
+    description: 'Novo "Histórico de Comandas" no PDV V2 (logo abaixo de Pedidos): acesse comandas finalizadas mesmo após o fechamento do caixa, com filtro de data e busca por cliente/observação. Ações disponíveis: reimprimir venda, reimprimir comprovante TEF, reimprimir/cancelar NFC-e. Cancelar venda continua restrito ao caixa atual aberto. Cancelamento de venda agora exige motivo (mínimo 20 caracteres) e grava automaticamente em log próprio quem cancelou, data/hora e se houve estorno TEF — vendas canceladas mostram esses dados no card. Sem alteração em TEF, PinPad, NFC-e ou no fluxo de cobrança.',
+  },
+  {
+    date: '15/06/2026',
     version: '1.22.7-beta',
     type: 'fix',
     description: 'Relatório TEF PinPad: corrigida a consolidação para incluir também vendas finalizadas direto no PDV V2, além dos pedidos. As transações TEF do dia 14/06 gravadas apenas na venda PDV agora entram no relatório, sem depender se a origem foi cardápio, Pedido Express, balcão ou mesa. Maquininha móvel não é classificada como TEF. Sem alteração em TEF, PinPad, NFC-e, cobrança ou estorno.',

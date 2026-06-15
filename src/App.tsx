@@ -51,6 +51,7 @@ import SalesCampaigns from "./pages/SalesCampaigns";
 import Customers from "./pages/Customers";
 import Suppliers from "./pages/Suppliers";
 import PDVV2 from "./pages/PDVV2";
+import PDVV2ComandasHistorico from "./pages/PDVV2ComandasHistorico";
 import CouponsPage from "./pages/Coupons";
 import MesaQR from "./pages/MesaQR";
 import FrenteCaixa from "./pages/FrenteCaixa";
@@ -189,6 +190,14 @@ function AppRoutes() {
         <ProtectedRoute requireCompany>
           <PDVV2Guard>
             <PDVV2 />
+          </PDVV2Guard>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/pdv-v2/comandas-historico" element={
+        <ProtectedRoute requireCompany>
+          <PDVV2Guard>
+            <PDVV2ComandasHistorico />
           </PDVV2Guard>
         </ProtectedRoute>
       } />
