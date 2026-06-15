@@ -17,7 +17,7 @@ interface PrintItem {
   quantity: number;
   price: number;
   notes?: string;
-  /** Adicionais agrupados (I9). Quando presente, recibo V2 e comanda V2
+  /** Adicionais agrupados. Quando presente, recibo V2 e comanda V2
    *  renderizam rótulo do grupo (■ sublinhado) + itens (+ CAPS). 1 grupo
    *  esconde o rótulo. Quando ausente, comportamento legado preservado. */
   groupedOptionals?: { groupName: string; items: string }[];
@@ -291,7 +291,7 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
   out.push('__BOLD__' + rightCol('TOTAL GERAL', money(payload.total)));
   // Meta direto, sem espaço
   out.push(pipeRow(`COD: ${(payload.orderCode || '').slice(0, 7).toLowerCase()}`, 'App Pedidos'));
-  // I9 (V2): remove "Criado em" (redundante com "Impresso em") e adiciona
+  // V3: remove "Criado em" (redundante com "Impresso em") e adiciona
   // "Pronto até" logo abaixo da data/hora do recibo.
   out.push(pipeRow('Impresso em', ts));
   // V3 layout (atualmente só I9, mas mantém compat se outras lojas marcarem V3).
