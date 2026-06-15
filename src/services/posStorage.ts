@@ -89,8 +89,7 @@ export async function getPendingSyncTransactions(): Promise<POSTransaction[]> {
   return new Promise((resolve, reject) => {
     const tx = database.transaction(STORE_NAME, 'readonly');
     const store = tx.objectStore(STORE_NAME);
-    const index = store.index('syncedAt');
-    const request = index.getAll(IDBKeyRange.only(null));
+    const request = store.getAll();
     
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {

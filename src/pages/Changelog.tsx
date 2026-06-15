@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '15/06/2026',
+    version: '1.22.7-beta',
+    type: 'fix',
+    description: 'Relatório TEF: corrigida a consolidação para incluir também vendas finalizadas direto no PDV V2, além dos pedidos. As transações TEF do dia 14/06 gravadas apenas na venda PDV agora entram no relatório, sem depender se a origem foi cardápio, Pedido Express, balcão ou mesa. Sem alteração em TEF, PinPad, NFC-e, cobrança ou estorno.',
+  },
+  {
+    date: '15/06/2026',
     version: '1.22.6-beta',
     type: 'fix',
     description: 'Fechamento de caixa: todo pagamento cobrado/finalizado agora entra na base do relatório, independentemente da origem (balcão, Pedido Express, online/cardápio, retirada, delivery ou mesa). Pedidos cobrados sem venda PDV vinculada também são consolidados pela forma de pagamento registrada. Sem alteração em TEF, PinPad, NFC-e ou no fluxo de cobrança.',

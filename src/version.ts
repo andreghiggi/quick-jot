@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.22.6-beta";
+export const VERSION = "1.22.7-beta";
 export const RELEASE_DATE = "2026-06-15"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Fechamento consolida todo pagamento";
+export const CODENAME = "Relatório TEF consolida PDV V2";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.22.7-beta",
+    date: "2026-06-15",
+    codename: "Relatório TEF consolida PDV V2",
+    changes: [
+      "Corrigido o Relatório TEF para consolidar também vendas finalizadas direto no PDV V2, além dos pedidos da tabela de pedidos.",
+      "No dia 14/06, transações TEF gravadas apenas na venda PDV agora aparecem no relatório junto das transações vinculadas a pedidos, sem depender da origem da cobrança.",
+      "Ajuste restrito ao relatório: não altera TEF, PinPad, NFC-e, cobrança ou estorno.",
+    ],
+  },
   {
     version: "1.22.6-beta",
     date: "2026-06-15",
