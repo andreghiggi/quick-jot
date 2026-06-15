@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.22.8-beta";
+export const VERSION = "1.22.9-beta";
 export const RELEASE_DATE = "2026-06-15"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Histórico de comandas + auditoria de cancelamento";
+export const CODENAME = "Comandas: sync realtime do garçom/QR no caixa";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.22.9-beta",
+    date: "2026-06-15",
+    codename: "Comandas: sync realtime do garçom/QR no caixa",
+    changes: [
+      "Corrigido: quando o garçom (app mobile) ou o cliente (Cardápio Mesa QR) adicionava um item na comanda, o PDV V2 do operador de caixa não atualizava sozinho — era preciso apertar 'Atualizar' manualmente.",
+      "Agora a lista de itens da comanda (`tab_items`) também é escutada em tempo real, com um pequeno atraso de 1,5s para evitar o bug antigo de o item próprio 'piscar' ao ser adicionado pelo próprio caixa.",
+      "Vale para todas as lojas com módulo de Garçom e/ou Cardápio Mesa QR ativos. Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, impressão ou cobrança.",
+    ],
+  },
   {
     version: "1.22.8-beta",
     date: "2026-06-15",
