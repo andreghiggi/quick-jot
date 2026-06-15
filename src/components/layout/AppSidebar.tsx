@@ -38,6 +38,7 @@ import {
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
+import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
 import { cn } from '@/lib/utils';
 import {
@@ -63,9 +64,9 @@ import logoIcon from '@/assets/logo-icon.png';
 export function AppSidebar() {
   const location = useLocation();
   const { user, profile, company, signOut, isSuperAdmin, isWaiter, isCompanyAdmin } = useAuthContext();
-  const { isModuleEnabled, loading: modulesLoading } = useCompanyModules({ companyId: company?.id });
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
-  const mercadoEnabled = modulesLoading ? false : isModuleEnabled('mercado');
+  const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
 
   // Waiter-only menu
   const waiterMenuItems = [
