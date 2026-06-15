@@ -73,8 +73,8 @@ export async function printCurrentCashClosing(params: {
   const systemCash = getExpectedCashDrawer(opening, mappedSales, (movs || []) as any);
   const operatorCash = (reg as any)?.closing_amount != null ? Number((reg as any).closing_amount) : 0;
 
-  // Valor esperado em dinheiro recebido: vendas em dinheiro, sem somar abertura.
-  const expected = cashSales;
+  // Valor esperado no caixa físico: abertura + dinheiro recebido + suprimentos − sangrias.
+  const expected = systemCash;
 
   printCashClosingDetailed({
     companyName: (company as any)?.name || 'LOJA',
