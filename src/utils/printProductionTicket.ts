@@ -289,8 +289,9 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
               .filter(Boolean)
               .map((it) => `<div class="add-line">&gt;&gt; ${it}</div>`)
               .join('');
-            const single = item.groupedOptionals!.length === 1;
-            const labelHtml = single
+            const singleGenericGroup =
+              item.groupedOptionals!.length === 1 && g.groupName.trim().toLowerCase() === 'adicionais';
+            const labelHtml = singleGenericGroup
               ? ''
               : `<div class="add-group-label">[ADDGROUP_LABEL]${g.groupName}[/ADDGROUP_LABEL]</div>`;
             return labelHtml + itensHtml;
