@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.22.3-beta";
+export const VERSION = "1.22.4-beta";
 export const RELEASE_DATE = "2026-06-15"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Printer V2: grupos liberados na origem";
+export const CODENAME = "Caixa: dinheiro esperado corrigido";
 
 export interface Release {
   version: string;
@@ -19,6 +19,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.22.4-beta",
+    date: "2026-06-15",
+    codename: "Caixa: dinheiro esperado corrigido",
+    changes: [
+      "Corrigido o Relatório de Caixa/fechamento para calcular o esperado em Dinheiro pelas vendas em dinheiro reais, incluindo pedidos em dinheiro entregues que apareceram no filtro mas ainda não tinham lançamento PDV vinculado.",
+      "A abertura do caixa permanece separada do total de vendas em dinheiro, evitando misturar saldo inicial com recebimentos do dia.",
+    ],
+  },
   {
     version: "1.22.3-beta",
     date: "2026-06-15",

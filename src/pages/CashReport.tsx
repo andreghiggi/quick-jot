@@ -15,6 +15,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { printCashClosingDetailed } from '@/utils/cashClosingPrint';
 import type { CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
+import { getCashSalesTotal, loadCashClosingSales } from '@/utils/cashClosingSales';
 import { toast } from 'sonner';
 
 interface RegisterRow {
@@ -77,6 +78,17 @@ export default function CashReport() {
 
   const paperSize = (settings?.printerPaperSize as '58mm' | '80mm') || '80mm';
 
+  async function loadRegisterDetails(reg: RegisterRow): Promise<CloseCashSale[]> {
+    const mapped = await loadCashClosingSales({
+      companyId: companyId!,
+      registerId: reg.id,
+      openedAt: reg.opened_at,
+      closedAt: reg.closed_at,
+    });
+    setSalesByRegister((prev) => ({ ...prev, [reg.id]: mapped }));
+    return mapped;
+  }
+
   async function fetchRegisters() {
     if (!companyId) return;
     setLoading(true);
@@ -102,6 +114,7 @@ export default function CashReport() {
         rows.forEach((r) => { r.operator_name = map.get(r.opened_by) || null; });
       }
       setRegisters(rows);
+      await Promise.all(rows.map((r) => loadRegisterDetails(r)));
     } catch (e: any) {
       console.error(e);
       toast.error('Erro ao carregar caixas');
@@ -119,66 +132,9 @@ export default function CashReport() {
     if (salesByRegister[registerId]) return salesByRegister[registerId];
     setLoadingSales(registerId);
     try {
-      const { data: sales, error } = await supabase
-        .from('pdv_sales')
-        .select('id, final_total, payment_method_id, customer_name, notes, created_at, order_id, payment_method:payment_methods(name)')
-        .eq('cash_register_id', registerId)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-
-      const orderIds = Array.from(new Set((sales || []).map((s: any) => s.order_id).filter(Boolean)));
-      let ordersMap = new Map<string, { origin: string; delivery_address: string | null; notes: string | null }>();
-      if (orderIds.length) {
-        const { data: ord } = await supabase
-          .from('orders')
-          .select('id, origin, delivery_address, notes')
-          .in('id', orderIds);
-        ordersMap = new Map((ord || []).map((o: any) => [o.id, { origin: o.origin, delivery_address: o.delivery_address, notes: o.notes }]));
-      }
-
-      const base: CloseCashSale[] = (sales || []).flatMap((s: any) => {
-        // Exclui vendas canceladas — elas ficam no histórico mas não devem
-        // somar no relatório/fechamento de caixa.
-        const saleCancelled = !!s.notes?.includes('[CANCELADA]');
-        const linkedOrder = s.order_id ? ordersMap.get(s.order_id) : undefined;
-        if (saleCancelled || linkedOrder?.notes?.includes('[CANCELADA]')) {
-          return [];
-        }
-        let origin: CloseCashSale['origin'] = 'balcao';
-        let pmName = s.payment_method?.name || 'Sem forma';
-        if (s.notes) {
-          const tefMatch = s.notes.match(/\|\s*(Débito|Crédito à Vista|PIX|\d+x\s*(?:Cartão\s*(?:ADM|Loja)|Crédito))/i);
-          if (tefMatch) pmName = `${pmName} (${tefMatch[1]})`;
-        }
-        if (s.order_id) {
-          if (linkedOrder) {
-            if (linkedOrder.origin === 'mesa') origin = 'mesa';
-            else if (linkedOrder.origin === 'balcao') origin = 'balcao';
-            else origin = (linkedOrder.delivery_address && linkedOrder.delivery_address.trim().length > 0)
-              ? 'cardapio_delivery' : 'cardapio_retirada';
-          } else {
-            origin = 'outros';
-          }
-        } else {
-          if (s.notes?.toLowerCase().includes('comanda')) origin = 'mesa';
-          else origin = 'balcao';
-        }
-        return [{
-          id: s.id,
-          final_total: Number(s.final_total) || 0,
-          payment_method_id: s.payment_method_id || null,
-          payment_method_name: pmName,
-          customer_name: s.customer_name || null,
-          created_at: s.created_at,
-          origin,
-        }];
-      });
-      // Expande vendas multi-pagamento em uma linha por forma.
-      const { expandSalesWithSplits } = await import('@/utils/expandSalesWithSplits');
-      const mapped: CloseCashSale[] = await expandSalesWithSplits(base);
-
-      setSalesByRegister((prev) => ({ ...prev, [registerId]: mapped }));
-      return mapped;
+      const reg = registers.find((r) => r.id === registerId);
+      if (!reg) return [];
+      return await loadRegisterDetails(reg);
     } catch (e: any) {
       console.error(e);
       toast.error('Erro ao carregar vendas do caixa');
@@ -199,9 +155,7 @@ export default function CashReport() {
 
   async function handlePrint(reg: RegisterRow) {
     const sales = await loadSales(reg.id);
-    const expected = reg.expected_amount != null
-      ? Number(reg.expected_amount)
-      : Number(reg.opening_amount) + sales.reduce((a, s) => a + s.final_total, 0);
+    const expected = getCashSalesTotal(sales);
     printCashClosingDetailed({
       companyName: company?.name,
       paperSize,
@@ -282,9 +236,7 @@ export default function CashReport() {
               const isOpen = expandedId === reg.id;
               const sales = salesByRegister[reg.id] || [];
               const totalVendas = sales.reduce((a, s) => a + s.final_total, 0);
-              const expected = reg.expected_amount != null
-                ? Number(reg.expected_amount)
-                : Number(reg.opening_amount) + totalVendas;
+              const expected = getCashSalesTotal(sales);
 
               // Agrupa para visualização
               const byOrigin: Record<string, Record<string, { total: number; count: number }>> = {};

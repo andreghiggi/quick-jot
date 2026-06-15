@@ -44,6 +44,7 @@ import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog
 import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import { recordSalePayments } from '@/utils/recordSalePayments';
+import { getCashSalesTotal } from '@/utils/cashClosingSales';
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
 }
@@ -317,7 +318,7 @@ export default function PDVV2() {
 
   // Mapeia vendas do caixa atual em estrutura para o fechamento
   const closeCashSales: CloseCashSale[] = useMemo(() => {
-    return sales.flatMap((s) => {
+    const mappedSales = sales.flatMap((s) => {
       // Exclui vendas canceladas do fechamento de caixa — elas continuam
       // existindo na base e visíveis em outras telas (Comandas Finalizadas,
       // histórico), mas não somam no valor esperado de fechamento.
@@ -422,7 +423,28 @@ export default function PDVV2() {
         origin,
       }];
     });
-  }, [sales, orders]);
+    const soldOrderIds = new Set(sales.map((s) => (s as any).order_id).filter(Boolean));
+    const openedAt = currentRegister?.opened_at ? new Date(currentRegister.opened_at) : null;
+    const missingDeliveredCashOrders = orders
+      .filter((o) =>
+        o.status === 'delivered' &&
+        /dinheiro/i.test(o.notes || '') &&
+        !soldOrderIds.has(o.id) &&
+        (!openedAt || o.createdAt >= openedAt) &&
+        !o.notes?.includes('[CANCELADA]')
+      )
+      .map((o) => ({
+        id: `order-${o.id}`,
+        final_total: Number(o.total) || 0,
+        payment_method_id: null,
+        payment_method_name: 'Dinheiro',
+        customer_name: o.customerName || null,
+        created_at: o.createdAt.toISOString(),
+        origin: isDelivery(o) ? 'cardapio_delivery' as const : 'cardapio_retirada' as const,
+      }));
+    return [...mappedSales, ...missingDeliveredCashOrders];
+  }, [sales, orders, currentRegister?.opened_at]);
+  const expectedCashSalesAmount = useMemo(() => getCashSalesTotal(closeCashSales), [closeCashSales]);
 
   function handleAdvance(order: Order) {
     const next: Record<OrderStatus, OrderStatus | null> = {
@@ -1384,7 +1406,7 @@ export default function PDVV2() {
         companyId={companyId}
         companyName={company?.name}
         paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
-        expectedAmount={cashAmount}
+        expectedAmount={expectedCashSalesAmount}
         sales={closeCashSales}
         paymentMethods={activePaymentMethods.map((p) => ({ id: p.id, name: p.name }))}
         deliveryPaymentMethods={menuPaymentMethods.map((p) => ({ id: p.id, name: p.name }))}
