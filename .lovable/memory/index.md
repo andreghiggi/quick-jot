@@ -11,6 +11,7 @@
 - Printing rollout must be isolated per store until validated; never change all stores at once.
 - TEF v1.0 (Multiplus) está homologado e CONGELADO como beta — não alterar nada de TEF/PinPad sem autorização explícita.
 - TEF v1.1 consolidado (Lancheria I9): TEF restaurado no PDV V2, reimpressão/via cancelada nos cards, formas de pagamento completas no Pedido Express e cancelamento de venda dispara estorno PinPad automático — não regredir.
+- TEF reports: PinPad is TEF; maquininha móvel/SmartPOS is not TEF. Consolidate TEF from orders + `pdv_sales`.
 
 ## Memories
 - [Role Hierarchy](mem://auth/role-hierarchy-and-permissions) — Permissions for super_admin, reseller, company_admin, waiter
@@ -92,6 +93,7 @@
 - [TEF v1.0 Beta Fechada](mem://features/tef-v1-beta-frozen) — Integração Multiplus homologada e congelada; não mexer em pinpadService, tef-webservice, TefAdm, TefReport ou itens de menu sem autorização.
 - [TEF v1.1](mem://features/tef-v1-1) — TEF restaurado no PDV V2, reimpressão/via cancelada do TEF, Pedido Express com todas as formas de pagamento na Lancheria I9 e cancelamento de venda com estorno PinPad automático.
 - [TEF v1.2 Beta](mem://features/tef-v1-2-beta) — 5 correções da homologação Multiplus aplicadas (CNF pós-CNC, 023-000 ecoado, ATV numérico, 800-003 só em parcelado, 003-000 sem vírgula). Enviado para re-análise — CONGELADO até retorno.
+- [TEF Report Consolidation](mem://features/tef-report-consolidation) — Relatório TEF deve buscar PinPad em `orders` + `pdv_sales`, sem SmartPOS/maquininha móvel.
 - [WhatsApp Cleanup Cron](mem://features/whatsapp-messages-cleanup) — Cron diário 03:00 BRT que apaga logs WhatsApp > 90 dias via função SQL.
 - [Cardápio Mesa QR](mem://features/cardapio-mesa-qr) — Módulo `cardapio_mesa` com rota pública `/mesa/:slug`, cliente informa mesa e pedido entra como `origin='mesa_qr'`. Inicialmente só Lancheria da I9.
 - [Product Cost Tracking](mem://features/product-cost-tracking) — `products.cost_price` + `product_cost_history` com trigger automático; UI mostra Margem% e Markup% no cadastro/edição.
