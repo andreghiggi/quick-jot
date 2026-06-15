@@ -15,7 +15,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { printCashClosingDetailed } from '@/utils/cashClosingPrint';
 import type { CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
-import { getCashSalesTotal, loadCashClosingSales } from '@/utils/cashClosingSales';
+import { getCashSalesTotal, getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
 import { toast } from 'sonner';
 
 interface RegisterRow {
@@ -30,6 +30,13 @@ interface RegisterRow {
   closed_at: string | null;
   opened_by: string;
   operator_name?: string | null;
+}
+
+interface CashMovementRow {
+  type: string;
+  amount: number | string | null;
+  reason?: string | null;
+  created_at?: string | null;
 }
 
 function startOfDayLocalISO(d: string): string {
@@ -74,6 +81,7 @@ export default function CashReport() {
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [salesByRegister, setSalesByRegister] = useState<Record<string, CloseCashSale[]>>({});
+  const [movementsByRegister, setMovementsByRegister] = useState<Record<string, CashMovementRow[]>>({});
   const [loadingSales, setLoadingSales] = useState<string | null>(null);
 
   const paperSize = (settings?.printerPaperSize as '58mm' | '80mm') || '80mm';
