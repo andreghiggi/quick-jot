@@ -264,6 +264,7 @@ export default function PDVV2() {
     for (const s of sales) {
       const isFromTab = s.notes?.toLowerCase().includes('comanda');
       if (!isFromTab) continue;
+      if (s.notes?.includes('[CANCELADA]')) continue;
       closedToday++;
       revenueToday += Number(s.final_total) || 0;
     }
