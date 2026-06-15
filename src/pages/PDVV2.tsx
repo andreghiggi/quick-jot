@@ -316,6 +316,25 @@ export default function PDVV2() {
   // piscar nem "Caixa Fechado" nem o conteúdo errado.
   const cashStateUnknown = cashLoading && cashOpenKnown === null;
 
+  useEffect(() => {
+    async function loadCashMovements() {
+      if (!currentRegister?.id) {
+        setCashMovements([]);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('cash_movements')
+        .select('type, amount')
+        .eq('cash_register_id', currentRegister.id);
+      if (error) {
+        console.error('[PDVV2] Error loading cash movements:', error);
+        return;
+      }
+      setCashMovements((data || []) as any);
+    }
+    loadCashMovements();
+  }, [currentRegister?.id]);
+
   // Mapeia vendas do caixa atual em estrutura para o fechamento
   const closeCashSales: CloseCashSale[] = useMemo(() => {
     const mappedSales = sales.flatMap((s) => {
@@ -444,7 +463,12 @@ export default function PDVV2() {
       }));
     return [...mappedSales, ...missingDeliveredCashOrders];
   }, [sales, orders, currentRegister?.opened_at]);
-  const expectedCashSalesAmount = useMemo(() => getCashSalesTotal(closeCashSales), [closeCashSales]);
+  const cashSalesAmount = useMemo(() => getCashSalesTotal(closeCashSales), [closeCashSales]);
+  const expectedCashDrawerAmount = useMemo(
+    () => getExpectedCashDrawer(Number(currentRegister?.opening_amount || 0), closeCashSales, cashMovements),
+    [currentRegister?.opening_amount, closeCashSales, cashMovements],
+  );
+  const cashAmount = expectedCashDrawerAmount;
 
   function handleAdvance(order: Order) {
     const next: Record<OrderStatus, OrderStatus | null> = {
