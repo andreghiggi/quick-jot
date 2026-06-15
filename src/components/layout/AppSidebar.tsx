@@ -32,15 +32,12 @@ import {
   Ticket,
   Truck,
   ClipboardEdit,
-  FolderTree,
   ScanBarcode,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
-import { LANCHERIA_I9_COMPANY_ID } from '@/components/pdv-v2/_format';
-import { cn } from '@/lib/utils';
 import {
   Sidebar,
   SidebarContent,
