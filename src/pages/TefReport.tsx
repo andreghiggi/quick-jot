@@ -92,7 +92,6 @@ export default function TefReport() {
     queryKey: ['tef-report', company?.id, range.start.toISOString(), range.end.toISOString()],
     queryFn: async (): Promise<TefTxRow[]> => {
       if (!company?.id) return [];
-      const tefNotesFilter = 'notes.ilike.%TEF PinPad:%';
       const orderFields = 'id, order_code, created_at, updated_at, total, customer_name, notes';
       const buildOrdersQuery = (dateField: 'created_at' | 'updated_at') => supabase
         .from('orders')
