@@ -79,6 +79,26 @@ export default function CashReport() {
 
   const paperSize = (settings?.printerPaperSize as '58mm' | '80mm') || '80mm';
 
+  async function loadRegisterDetails(reg: RegisterRow): Promise<CloseCashSale[]> {
+    const mapped = await loadCashClosingSales({
+      companyId: companyId!,
+      registerId: reg.id,
+      openedAt: reg.opened_at,
+      closedAt: reg.closed_at,
+    });
+    const { data: movs } = await supabase
+      .from('cash_movements')
+      .select('type, amount')
+      .eq('cash_register_id', reg.id);
+
+    setSalesByRegister((prev) => ({ ...prev, [reg.id]: mapped }));
+    setMovementsByRegister((prev) => ({
+      ...prev,
+      [reg.id]: (movs || []).map((m: any) => ({ type: m.type, amount: Number(m.amount || 0) })),
+    }));
+    return mapped;
+  }
+
   async function fetchRegisters() {
     if (!companyId) return;
     setLoading(true);
@@ -104,6 +124,7 @@ export default function CashReport() {
         rows.forEach((r) => { r.operator_name = map.get(r.opened_by) || null; });
       }
       setRegisters(rows);
+      await Promise.all(rows.map((r) => loadRegisterDetails(r)));
     } catch (e: any) {
       console.error(e);
       toast.error('Erro ao carregar caixas');
@@ -122,23 +143,8 @@ export default function CashReport() {
     setLoadingSales(registerId);
     try {
       const reg = registers.find((r) => r.id === registerId);
-      const mapped = await loadCashClosingSales({
-        companyId: companyId!,
-        registerId,
-        openedAt: reg?.opened_at,
-        closedAt: reg?.closed_at,
-      });
-      const { data: movs } = await supabase
-        .from('cash_movements')
-        .select('type, amount')
-        .eq('cash_register_id', registerId);
-
-      setSalesByRegister((prev) => ({ ...prev, [registerId]: mapped }));
-      setMovementsByRegister((prev) => ({
-        ...prev,
-        [registerId]: (movs || []).map((m: any) => ({ type: m.type, amount: Number(m.amount || 0) })),
-      }));
-      return mapped;
+      if (!reg) return [];
+      return await loadRegisterDetails(reg);
     } catch (e: any) {
       console.error(e);
       toast.error('Erro ao carregar vendas do caixa');
