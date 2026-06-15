@@ -264,6 +264,7 @@ export default function PDVV2() {
     for (const s of sales) {
       const isFromTab = s.notes?.toLowerCase().includes('comanda');
       if (!isFromTab) continue;
+      if (s.notes?.includes('[CANCELADA]')) continue;
       closedToday++;
       revenueToday += Number(s.final_total) || 0;
     }
@@ -279,7 +280,7 @@ export default function PDVV2() {
   // Vendas finalizadas vindas de comandas (caixa atual)
   const closedTabSales: ClosedTabSale[] = useMemo(() => {
     return sales
-      .filter((s) => s.notes?.toLowerCase().includes('comanda'))
+      .filter((s) => s.notes?.toLowerCase().includes('comanda') && !s.notes?.includes('[CANCELADA]'))
       .map((s) => ({
         id: s.id,
         final_total: Number(s.final_total) || 0,
