@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.22.4-beta";
+export const VERSION = "1.22.5-beta";
 export const RELEASE_DATE = "2026-06-15"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Caixa: dinheiro esperado corrigido";
+export const CODENAME = "Fechamento espelha movimento de caixa";
 
 export interface Release {
   version: string;
@@ -19,6 +19,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.22.5-beta",
+    date: "2026-06-15",
+    codename: "Fechamento espelha movimento de caixa",
+    changes: [
+      "Corrigido o fechamento/relatório de caixa para usar o movimento físico completo: abertura + vendas em dinheiro + suprimentos - sangrias.",
+      "A tela, o valor gravado no fechamento, a diferença e a impressão detalhada agora usam a mesma conta, evitando divergência entre Relatório de Caixa e Movimento de Caixa.",
+    ],
+  },
   {
     version: "1.22.4-beta",
     date: "2026-06-15",

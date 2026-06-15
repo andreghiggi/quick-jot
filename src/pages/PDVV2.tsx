@@ -44,7 +44,7 @@ import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog
 import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import { recordSalePayments } from '@/utils/recordSalePayments';
-import { getCashSalesTotal } from '@/utils/cashClosingSales';
+import { getExpectedCashDrawer } from '@/utils/cashClosingSales';
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
 }
@@ -85,7 +85,6 @@ export default function PDVV2() {
   );
   const {
     currentRegister,
-    totalSales,
     sales,
     openRegister,
     closeRegister,
@@ -148,6 +147,7 @@ export default function PDVV2() {
     }
   }, [filter, filterStorageKey, storageHydrated]);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [cashMovements, setCashMovements] = useState<{ type: string; amount: number | string | null }[]>([]);
   const [openCashOpen, setOpenCashOpen] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
   const [newOrderOpen, setNewOrderOpen] = useState(false);
@@ -289,24 +289,6 @@ export default function PDVV2() {
       }));
   }, [sales]);
 
-  // Soma das vendas canceladas (venda com [CANCELADA] nas notes OU
-  // pedido vinculado marcado como [CANCELADA]). Essas vendas não devem
-  // contar no valor esperado em caixa nem no fechamento, mas continuam
-  // visíveis nos registros (histórico/Comandas Finalizadas).
-  const cancelledSalesTotal = useMemo(() => {
-    return sales.reduce((acc, s) => {
-      const saleCancelled = !!s.notes?.includes('[CANCELADA]');
-      let orderCancelled = false;
-      const orderId = (s as any).order_id as string | undefined;
-      if (orderId) {
-        const linked = orders.find((o) => o.id === orderId);
-        if (linked?.notes?.includes('[CANCELADA]')) orderCancelled = true;
-      }
-      return saleCancelled || orderCancelled ? acc + (Number(s.final_total) || 0) : acc;
-    }, 0);
-  }, [sales, orders]);
-
-  const cashAmount = (currentRegister?.opening_amount || 0) + totalSales - cancelledSalesTotal;
   const cashOpen = !!currentRegister;
   // Estado a ser exibido na UI: prefere o cache otimista enquanto a query
   // inicial não retornou, evitando o flash de "Caixa Fechado".
@@ -315,6 +297,25 @@ export default function PDVV2() {
   // carregando, suprimimos completamente os blocos condicionais para não
   // piscar nem "Caixa Fechado" nem o conteúdo errado.
   const cashStateUnknown = cashLoading && cashOpenKnown === null;
+
+  useEffect(() => {
+    async function loadCashMovements() {
+      if (!currentRegister?.id) {
+        setCashMovements([]);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('cash_movements')
+        .select('type, amount')
+        .eq('cash_register_id', currentRegister.id);
+      if (error) {
+        console.error('[PDVV2] Error loading cash movements:', error);
+        return;
+      }
+      setCashMovements((data || []) as any);
+    }
+    loadCashMovements();
+  }, [currentRegister?.id]);
 
   // Mapeia vendas do caixa atual em estrutura para o fechamento
   const closeCashSales: CloseCashSale[] = useMemo(() => {
@@ -444,7 +445,11 @@ export default function PDVV2() {
       }));
     return [...mappedSales, ...missingDeliveredCashOrders];
   }, [sales, orders, currentRegister?.opened_at]);
-  const expectedCashSalesAmount = useMemo(() => getCashSalesTotal(closeCashSales), [closeCashSales]);
+  const expectedCashDrawerAmount = useMemo(
+    () => getExpectedCashDrawer(Number(currentRegister?.opening_amount || 0), closeCashSales, cashMovements),
+    [currentRegister?.opening_amount, closeCashSales, cashMovements],
+  );
+  const cashAmount = expectedCashDrawerAmount;
 
   function handleAdvance(order: Order) {
     const next: Record<OrderStatus, OrderStatus | null> = {
@@ -1196,6 +1201,21 @@ export default function PDVV2() {
     await closeRegister(closingAmount, user.id, notes);
   }
 
+  async function openCloseCashDialog() {
+    if (currentRegister?.id) {
+      const { data, error } = await supabase
+        .from('cash_movements')
+        .select('type, amount')
+        .eq('cash_register_id', currentRegister.id);
+      if (error) {
+        console.error('[PDVV2] Error refreshing cash movements:', error);
+      } else {
+        setCashMovements((data || []) as any);
+      }
+    }
+    setCloseOpen(true);
+  }
+
   async function handleChangeSalePaymentMethod(saleId: string, paymentMethodId: string) {
     try {
       const { error } = await supabase
@@ -1222,7 +1242,7 @@ export default function PDVV2() {
           cashAmount={cashAmount}
           showCashAmount={showCash}
           onToggleCashAmount={() => setShowCash((v) => !v)}
-          onCloseCash={() => setCloseOpen(true)}
+          onCloseCash={openCloseCashDialog}
           onNewOrder={() => setNewOrderOpen(true)}
           companyId={company?.id}
         />
@@ -1406,7 +1426,9 @@ export default function PDVV2() {
         companyId={companyId}
         companyName={company?.name}
         paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
-        expectedAmount={expectedCashSalesAmount}
+        expectedAmount={expectedCashDrawerAmount}
+        openingAmount={Number(currentRegister?.opening_amount || 0)}
+        cashMovements={cashMovements}
         sales={closeCashSales}
         paymentMethods={activePaymentMethods.map((p) => ({ id: p.id, name: p.name }))}
         deliveryPaymentMethods={menuPaymentMethods.map((p) => ({ id: p.id, name: p.name }))}

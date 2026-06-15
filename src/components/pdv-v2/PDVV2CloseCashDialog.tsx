@@ -31,10 +31,17 @@ export interface CloseCashPaymentMethod {
   name: string;
 }
 
+interface CloseCashMovement {
+  type: string;
+  amount: number | string | null;
+}
+
 interface PDVV2CloseCashDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   expectedAmount: number;
+  openingAmount?: number;
+  cashMovements?: CloseCashMovement[];
   sales: CloseCashSale[];
   paymentMethods?: CloseCashPaymentMethod[];
   /** Formas de pagamento do cardápio online (channel='menu'). Usadas no select de Deliveries quando informadas. */
@@ -61,6 +68,8 @@ export function PDVV2CloseCashDialog({
   open,
   onOpenChange,
   expectedAmount,
+  openingAmount = 0,
+  cashMovements = [],
   sales,
   paymentMethods = [],
   deliveryPaymentMethods,
@@ -99,6 +108,19 @@ export function PDVV2CloseCashDialog({
     }
     return out;
   }, [sales]);
+
+  const cashBreakdown = useMemo(() => {
+    const cashSales = sales
+      .filter((s) => /dinheiro/i.test(s.payment_method_name || ''))
+      .reduce((acc, s) => acc + (Number(s.final_total) || 0), 0);
+    const suprimentos = cashMovements
+      .filter((m) => m.type === 'suprimento')
+      .reduce((acc, m) => acc + Number(m.amount || 0), 0);
+    const sangrias = cashMovements
+      .filter((m) => m.type === 'sangria')
+      .reduce((acc, m) => acc + Number(m.amount || 0), 0);
+    return { opening: Number(openingAmount || 0), cashSales, suprimentos, sangrias };
+  }, [openingAmount, sales, cashMovements]);
 
   const salesByOrigin = useMemo(() => {
     const out: Record<string, CloseCashSale[]> = {};
@@ -158,11 +180,21 @@ export function PDVV2CloseCashDialog({
   const showDetailedPrint = true;
 
   function printDetailedClosing() {
+    const informedAmount = useCurrencyMask
+      ? parseCurrencyInput(closingAmount)
+      : parseFloat(closingAmount.replace(',', '.')) || 0;
     printCashClosingDetailed({
       companyName,
       paperSize,
       expectedAmount,
       sales,
+      cashMovements: cashMovements.map((m) => ({
+        type: m.type,
+        amount: Number(m.amount || 0),
+      })),
+      physicalCash: closingAmount
+        ? [{ species: 'DINHEIRO', systemAmount: expectedAmount, operatorAmount: informedAmount }]
+        : undefined,
     });
   }
 
@@ -171,6 +203,12 @@ export function PDVV2CloseCashDialog({
       <div className="rounded-md border p-3 bg-muted/40">
         <p className="text-sm text-muted-foreground">Valor esperado em caixa</p>
         <p className="text-2xl font-bold tabular-nums">{formatPrice(expectedAmount)}</p>
+        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <div className="flex justify-between gap-2"><span>Abertura</span><span>{formatPrice(cashBreakdown.opening)}</span></div>
+          <div className="flex justify-between gap-2"><span>Dinheiro</span><span>{formatPrice(cashBreakdown.cashSales)}</span></div>
+          <div className="flex justify-between gap-2"><span>Suprimento</span><span>{formatPrice(cashBreakdown.suprimentos)}</span></div>
+          <div className="flex justify-between gap-2"><span>Sangria</span><span>-{formatPrice(cashBreakdown.sangrias)}</span></div>
+        </div>
       </div>
 
       {/* Resumo por origem */}

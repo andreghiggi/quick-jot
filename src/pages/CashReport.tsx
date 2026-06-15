@@ -15,7 +15,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { printCashClosingDetailed } from '@/utils/cashClosingPrint';
 import type { CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
-import { getCashSalesTotal, loadCashClosingSales } from '@/utils/cashClosingSales';
+import { getCashSalesTotal, getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
 import { toast } from 'sonner';
 
 interface RegisterRow {
@@ -30,6 +30,13 @@ interface RegisterRow {
   closed_at: string | null;
   opened_by: string;
   operator_name?: string | null;
+}
+
+interface CashMovementRow {
+  type: string;
+  amount: number | string | null;
+  reason?: string | null;
+  created_at?: string | null;
 }
 
 function startOfDayLocalISO(d: string): string {
@@ -74,6 +81,7 @@ export default function CashReport() {
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [salesByRegister, setSalesByRegister] = useState<Record<string, CloseCashSale[]>>({});
+  const [movementsByRegister, setMovementsByRegister] = useState<Record<string, CashMovementRow[]>>({});
   const [loadingSales, setLoadingSales] = useState<string | null>(null);
 
   const paperSize = (settings?.printerPaperSize as '58mm' | '80mm') || '80mm';
@@ -87,6 +95,18 @@ export default function CashReport() {
     });
     setSalesByRegister((prev) => ({ ...prev, [reg.id]: mapped }));
     return mapped;
+  }
+
+  async function loadRegisterMovements(registerId: string): Promise<CashMovementRow[]> {
+    const { data, error } = await supabase
+      .from('cash_movements')
+      .select('type, amount, reason, created_at')
+      .eq('cash_register_id', registerId)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    const rows = (data || []) as CashMovementRow[];
+    setMovementsByRegister((prev) => ({ ...prev, [registerId]: rows }));
+    return rows;
   }
 
   async function fetchRegisters() {
@@ -114,7 +134,7 @@ export default function CashReport() {
         rows.forEach((r) => { r.operator_name = map.get(r.opened_by) || null; });
       }
       setRegisters(rows);
-      await Promise.all(rows.map((r) => loadRegisterDetails(r)));
+      await Promise.all(rows.flatMap((r) => [loadRegisterDetails(r), loadRegisterMovements(r.id)]));
     } catch (e: any) {
       console.error(e);
       toast.error('Erro ao carregar caixas');
@@ -155,7 +175,9 @@ export default function CashReport() {
 
   async function handlePrint(reg: RegisterRow) {
     const sales = await loadSales(reg.id);
-    const expected = getCashSalesTotal(sales);
+    const movements = movementsByRegister[reg.id] || await loadRegisterMovements(reg.id);
+    const expected = getExpectedCashDrawer(Number(reg.opening_amount || 0), sales, movements);
+    const difference = reg.closing_amount != null ? Number(reg.closing_amount) - expected : null;
     printCashClosingDetailed({
       companyName: company?.name,
       paperSize,
@@ -166,11 +188,20 @@ export default function CashReport() {
         closedAt: reg.closed_at,
         openingAmount: reg.opening_amount,
         closingAmount: reg.closing_amount,
-        difference: reg.difference,
+        difference,
         operatorName: reg.operator_name,
         notes: reg.notes,
         status: reg.status,
       },
+      cashMovements: movements.map((m) => ({
+        type: m.type,
+        amount: Number(m.amount || 0),
+        reason: m.reason,
+        created_at: m.created_at,
+      })),
+      physicalCash: [
+        { species: 'DINHEIRO', systemAmount: expected, operatorAmount: Number(reg.closing_amount || 0) },
+      ],
     });
   }
 
@@ -235,8 +266,17 @@ export default function CashReport() {
             {items.map((reg) => {
               const isOpen = expandedId === reg.id;
               const sales = salesByRegister[reg.id] || [];
+              const movements = movementsByRegister[reg.id] || [];
               const totalVendas = sales.reduce((a, s) => a + s.final_total, 0);
-              const expected = getCashSalesTotal(sales);
+              const cashSalesTotal = getCashSalesTotal(sales);
+              const suprimentos = movements
+                .filter((m) => m.type === 'suprimento')
+                .reduce((acc, m) => acc + Number(m.amount || 0), 0);
+              const sangrias = movements
+                .filter((m) => m.type === 'sangria')
+                .reduce((acc, m) => acc + Number(m.amount || 0), 0);
+              const expected = getExpectedCashDrawer(Number(reg.opening_amount || 0), sales, movements);
+              const difference = reg.closing_amount != null ? Number(reg.closing_amount) - expected : null;
 
               // Agrupa para visualização
               const byOrigin: Record<string, Record<string, { total: number; count: number }>> = {};
@@ -296,10 +336,22 @@ export default function CashReport() {
                   {isOpen && (
                     <CardContent className="p-4 pt-0 space-y-4">
                       {/* Resumo do caixa */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
                         <div>
                           <p className="text-xs text-muted-foreground">Abertura</p>
                           <p className="tabular-nums font-medium">{brl(Number(reg.opening_amount))}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Vendas dinheiro</p>
+                          <p className="tabular-nums font-medium">{brl(cashSalesTotal)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Suprimentos</p>
+                          <p className="tabular-nums font-medium">{brl(suprimentos)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Sangrias</p>
+                          <p className="tabular-nums font-medium">{brl(sangrias)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Esperado</p>
@@ -314,11 +366,11 @@ export default function CashReport() {
                         <div>
                           <p className="text-xs text-muted-foreground">Diferença</p>
                           <p className={`tabular-nums font-medium ${
-                            reg.difference == null ? '' :
-                            Number(reg.difference) === 0 ? 'text-green-600' :
-                            Number(reg.difference) > 0 ? 'text-blue-600' : 'text-destructive'
+                            difference == null ? '' :
+                            difference === 0 ? 'text-green-600' :
+                            difference > 0 ? 'text-blue-600' : 'text-destructive'
                           }`}>
-                            {reg.difference != null ? brl(Number(reg.difference)) : '—'}
+                            {difference != null ? brl(difference) : '—'}
                           </p>
                         </div>
                       </div>

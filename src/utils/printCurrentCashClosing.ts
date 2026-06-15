@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { printCashClosingDetailed } from '@/utils/cashClosingPrint';
 import type { CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
-import { getCashSalesTotal, getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
+import { getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
 
 /**
  * Carrega tudo necessário (empresa, vendas, movimentações, dados do caixa)
@@ -68,13 +68,12 @@ export async function printCurrentCashClosing(params: {
     .order('created_at', { ascending: true });
 
   // 5) Caixa físico (Dinheiro = vendas em dinheiro + abertura + suprimentos − sangrias)
-  const cashSales = getCashSalesTotal(mappedSales);
   const opening = Number((reg as any)?.opening_amount || 0);
   const systemCash = getExpectedCashDrawer(opening, mappedSales, (movs || []) as any);
   const operatorCash = (reg as any)?.closing_amount != null ? Number((reg as any).closing_amount) : 0;
 
-  // Valor esperado em dinheiro recebido: vendas em dinheiro, sem somar abertura.
-  const expected = cashSales;
+  // Valor esperado no caixa físico: abertura + dinheiro recebido + suprimentos − sangrias.
+  const expected = systemCash;
 
   printCashClosingDetailed({
     companyName: (company as any)?.name || 'LOJA',
