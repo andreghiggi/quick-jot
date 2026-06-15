@@ -44,7 +44,7 @@ import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog
 import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import { recordSalePayments } from '@/utils/recordSalePayments';
-import { getExpectedCashDrawer, getCashSalesTotal } from '@/utils/cashClosingSales';
+import { getExpectedCashDrawer } from '@/utils/cashClosingSales';
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
 }
@@ -445,7 +445,6 @@ export default function PDVV2() {
       }));
     return [...mappedSales, ...missingDeliveredCashOrders];
   }, [sales, orders, currentRegister?.opened_at]);
-  const cashSalesAmount = useMemo(() => getCashSalesTotal(closeCashSales), [closeCashSales]);
   const expectedCashDrawerAmount = useMemo(
     () => getExpectedCashDrawer(Number(currentRegister?.opening_amount || 0), closeCashSales, cashMovements),
     [currentRegister?.opening_amount, closeCashSales, cashMovements],
