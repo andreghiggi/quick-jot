@@ -24,9 +24,9 @@ export const RELEASES: Release[] = [
     date: "2026-06-15",
     codename: "Relatório TEF consolida PDV V2",
     changes: [
-      "Corrigido o Relatório TEF para consolidar também vendas finalizadas direto no PDV V2, além dos pedidos da tabela de pedidos.",
+      "Corrigido o Relatório TEF PinPad para consolidar também vendas finalizadas direto no PDV V2, além dos pedidos da tabela de pedidos.",
       "No dia 14/06, transações TEF gravadas apenas na venda PDV agora aparecem no relatório junto das transações vinculadas a pedidos, sem depender da origem da cobrança.",
-      "Ajuste restrito ao relatório: não altera TEF, PinPad, NFC-e, cobrança ou estorno.",
+      "Ajuste restrito ao relatório: não altera TEF, PinPad, NFC-e, cobrança ou estorno; maquininha móvel não é classificada como TEF.",
     ],
   },
   {

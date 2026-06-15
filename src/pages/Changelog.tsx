@@ -16,7 +16,7 @@ const changelog: ChangelogEntry[] = [
     date: '15/06/2026',
     version: '1.22.7-beta',
     type: 'fix',
-    description: 'Relatório TEF: corrigida a consolidação para incluir também vendas finalizadas direto no PDV V2, além dos pedidos. As transações TEF do dia 14/06 gravadas apenas na venda PDV agora entram no relatório, sem depender se a origem foi cardápio, Pedido Express, balcão ou mesa. Sem alteração em TEF, PinPad, NFC-e, cobrança ou estorno.',
+    description: 'Relatório TEF PinPad: corrigida a consolidação para incluir também vendas finalizadas direto no PDV V2, além dos pedidos. As transações TEF do dia 14/06 gravadas apenas na venda PDV agora entram no relatório, sem depender se a origem foi cardápio, Pedido Express, balcão ou mesa. Maquininha móvel não é classificada como TEF. Sem alteração em TEF, PinPad, NFC-e, cobrança ou estorno.',
   },
   {
     date: '15/06/2026',
