@@ -100,7 +100,7 @@ export default function TefReport() {
         .eq('company_id', company.id)
         .gte(dateField, range.start.toISOString())
         .lte(dateField, range.end.toISOString())
-        .or(tefNotesFilter);
+        .ilike('notes', '%TEF PinPad:%');
 
       const [ordersByCreated, ordersByUpdated, pdvSales] = await Promise.all([
         buildOrdersQuery('created_at'),
@@ -111,7 +111,7 @@ export default function TefReport() {
           .eq('company_id', company.id)
           .gte('created_at', range.start.toISOString())
           .lte('created_at', range.end.toISOString())
-          .or(tefNotesFilter),
+          .ilike('notes', '%TEF PinPad:%'),
       ]);
 
       if (ordersByCreated.error || ordersByUpdated.error || pdvSales.error) {
