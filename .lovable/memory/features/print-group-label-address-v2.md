@@ -4,13 +4,14 @@ description: Comanda/recibo V2 com ■ sublinhado, endereço invertido, + adicio
 type: feature
 ---
 
-## Markers V2 (auto_printer.py v8.32+)
+## Markers V2 (auto_printer.py v8.39+)
 - `[ADDGROUP_LABEL]Nome[/ADDGROUP_LABEL]` → `■ Nome` em **sublinhado**, capitalização original (sem CAPS).
 - `[ENDERECO]endereço[/ENDERECO]` → bloco invertido (fundo preto, texto branco), mesmo estilo de `[CLIENTE]`.
 - `[ADD]item[/ADD]` (já existia) → `+ ITEM` em CAPS para lojas com layout V2.
 
 ## Regras de renderização (todas as lojas com layout V2 ativo)
-- **1 grupo só** → não emite `[ADDGROUP_LABEL]`, lista direto `+ ITEM`.
+- **1 grupo genérico `Adicionais`** → não emite `[ADDGROUP_LABEL]`, lista direto `+ ITEM`.
+- **1 grupo real (ex.: Sabores, Borda)** → emite `[ADDGROUP_LABEL]Nome[/ADDGROUP_LABEL]` para não misturar sabor/borda na comanda.
 - **2+ grupos** → emite `[ADDGROUP_LABEL]Nome[/ADDGROUP_LABEL]` antes de cada bloco de itens.
 - Endereço é emitido quando `deliveryAddress` presente e layout V2.
 - `auto_printer.py` v8.38 também aplica `Pronto até` no recibo V2, remove linhas vazias artificiais no GDI e usa modo compacto para lojas V2.
