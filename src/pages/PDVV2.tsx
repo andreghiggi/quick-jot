@@ -1201,6 +1201,21 @@ export default function PDVV2() {
     await closeRegister(closingAmount, user.id, notes);
   }
 
+  async function openCloseCashDialog() {
+    if (currentRegister?.id) {
+      const { data, error } = await supabase
+        .from('cash_movements')
+        .select('type, amount')
+        .eq('cash_register_id', currentRegister.id);
+      if (error) {
+        console.error('[PDVV2] Error refreshing cash movements:', error);
+      } else {
+        setCashMovements((data || []) as any);
+      }
+    }
+    setCloseOpen(true);
+  }
+
   async function handleChangeSalePaymentMethod(saleId: string, paymentMethodId: string) {
     try {
       const { error } = await supabase
@@ -1227,7 +1242,7 @@ export default function PDVV2() {
           cashAmount={cashAmount}
           showCashAmount={showCash}
           onToggleCashAmount={() => setShowCash((v) => !v)}
-          onCloseCash={() => setCloseOpen(true)}
+          onCloseCash={openCloseCashDialog}
           onNewOrder={() => setNewOrderOpen(true)}
           companyId={company?.id}
         />
