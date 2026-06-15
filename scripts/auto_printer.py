@@ -284,16 +284,14 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
                 extras_resto = extras
 
         if PRINT_LAYOUT == 'v2':
-            # V2: extrai adicionais. I9 v8.32+: preserva grupos e emite
-            # [ADDGROUP_LABEL] quando há 2+ grupos (■ sublinhado, sem CAPS).
-            # Demais lojas: comportamento legado (lista plana com "+ ITEM").
-            I9_COMPANY_ID_V2 = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
-            is_i9_v2 = COMPANY_ID == I9_COMPANY_ID_V2
+            # V2 v8.38: preserva grupos e emite [ADDGROUP_LABEL] quando há
+            # 2+ grupos (■ sublinhado, sem CAPS) para todas as lojas V2.
+            use_v2_enhancements = PRINT_LAYOUT == 'v2'
             grupos_estruturados = []  # [(nome, [itens])]
             v2_adicionais = []
             if adicionais_list:
                 v2_adicionais.extend(adicionais_list)
-                if is_i9_v2 and adicionais_list:
+                if use_v2_enhancements and adicionais_list:
                     grupos_estruturados.append(('Adicionais', list(adicionais_list)))
             if extras_resto:
                 grupos = [g.strip() for g in extras_resto.split('|') if g.strip()]
@@ -302,15 +300,15 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
                         nome_g, after = grupo.split(':', 1)
                         partes = [p.strip() for p in after.split(',') if p.strip()]
                         v2_adicionais.extend(partes)
-                        if is_i9_v2 and partes:
+                        if use_v2_enhancements and partes:
                             grupos_estruturados.append((nome_g.strip(), partes))
                     else:
                         partes = [p.strip() for p in grupo.split(',') if p.strip()]
                         v2_adicionais.extend(partes)
-                        if is_i9_v2 and partes:
+                        if use_v2_enhancements and partes:
                             grupos_estruturados.append(('Adicionais', partes))
 
-            if is_i9_v2 and grupos_estruturados:
+            if use_v2_enhancements and grupos_estruturados:
                 items_html += '  <div class="additionals">\n'
                 single = len(grupos_estruturados) == 1
                 for nome_g, itens_g in grupos_estruturados:
