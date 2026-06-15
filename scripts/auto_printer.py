@@ -418,24 +418,24 @@ def formatar_recibo_html(pedido, itens, store_name="Comanda Tech"):
     # Fórmula: criação + (máximo do estimated_wait_time − 10 min). Fallback 30 min.
     pronto_ate_html = ''
     if PRINT_LAYOUT == 'v2':
-        wait_min_i9 = 30
+        wait_min_v2 = 30
         try:
-            url_si9 = f"{SUPABASE_URL}/rest/v1/store_settings"
-            params_si9 = {"company_id": f"eq.{pedido.get('company_id')}", "key": "eq.estimated_wait_time"}
-            rsi9 = requests.get(url_si9, headers=HEADERS, params=params_si9, timeout=3)
-            if rsi9.ok and rsi9.json():
-                val_i9 = rsi9.json()[0].get('value', '')
-                nums_i9 = re.findall(r'\d+', val_i9 or '')
-                if nums_i9:
-                    wait_min_i9 = max(int(n) for n in nums_i9)
+            url_v2 = f"{SUPABASE_URL}/rest/v1/store_settings"
+            params_v2 = {"company_id": f"eq.{pedido.get('company_id')}", "key": "eq.estimated_wait_time"}
+            rv2 = requests.get(url_v2, headers=HEADERS, params=params_v2, timeout=3)
+            if rv2.ok and rv2.json():
+                val_v2 = rv2.json()[0].get('value', '')
+                nums_v2 = re.findall(r'\d+', val_v2 or '')
+                if nums_v2:
+                    wait_min_v2 = max(int(n) for n in nums_v2)
         except Exception:
             pass
         try:
-            dt_utc_i9 = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
-            dt_sp_i9 = dt_utc_i9.astimezone(timezone(timedelta(hours=-3)))
-            offset_i9 = max(1, wait_min_i9 - 10)
-            ready_i9 = dt_sp_i9 + timedelta(minutes=offset_i9)
-            pronto_ate_html = f'<div class="date" style="font-size:11pt;font-weight:bold;text-transform:uppercase;margin-top:1mm;">Pronto até: {ready_i9.strftime("%H:%M")}</div>'
+            dt_utc_v2 = datetime.fromisoformat(pedido['created_at'].replace('Z', '+00:00'))
+            dt_sp_v2 = dt_utc_v2.astimezone(timezone(timedelta(hours=-3)))
+            offset_v2 = max(1, wait_min_v2 - 10)
+            ready_v2 = dt_sp_v2 + timedelta(minutes=offset_v2)
+            pronto_ate_html = f'<div class="date" style="font-size:11pt;font-weight:bold;text-transform:uppercase;margin-top:1mm;">Pronto até: {ready_v2.strftime("%H:%M")}</div>'
         except Exception:
             pass
     
