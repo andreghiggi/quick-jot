@@ -85,7 +85,6 @@ export default function PDVV2() {
   );
   const {
     currentRegister,
-    totalSales,
     sales,
     openRegister,
     closeRegister,
@@ -289,23 +288,6 @@ export default function PDVV2() {
         payment_method_name: s.payment_method?.name || 'Sem forma',
       }));
   }, [sales]);
-
-  // Soma das vendas canceladas (venda com [CANCELADA] nas notes OU
-  // pedido vinculado marcado como [CANCELADA]). Essas vendas não devem
-  // contar no valor esperado em caixa nem no fechamento, mas continuam
-  // visíveis nos registros (histórico/Comandas Finalizadas).
-  const cancelledSalesTotal = useMemo(() => {
-    return sales.reduce((acc, s) => {
-      const saleCancelled = !!s.notes?.includes('[CANCELADA]');
-      let orderCancelled = false;
-      const orderId = (s as any).order_id as string | undefined;
-      if (orderId) {
-        const linked = orders.find((o) => o.id === orderId);
-        if (linked?.notes?.includes('[CANCELADA]')) orderCancelled = true;
-      }
-      return saleCancelled || orderCancelled ? acc + (Number(s.final_total) || 0) : acc;
-    }, 0);
-  }, [sales, orders]);
 
   const cashOpen = !!currentRegister;
   // Estado a ser exibido na UI: prefere o cache otimista enquanto a query
