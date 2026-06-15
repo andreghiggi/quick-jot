@@ -33,6 +33,7 @@ import {
   Truck,
   ClipboardEdit,
   FolderTree,
+  ScanBarcode,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -62,8 +63,9 @@ import logoIcon from '@/assets/logo-icon.png';
 export function AppSidebar() {
   const location = useLocation();
   const { user, profile, company, signOut, isSuperAdmin, isWaiter, isCompanyAdmin } = useAuthContext();
-  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const { isModuleEnabled, loading: modulesLoading } = useCompanyModules({ companyId: company?.id });
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
+  const mercadoEnabled = modulesLoading ? false : isModuleEnabled('mercado');
 
   // Waiter-only menu
   const waiterMenuItems = [
@@ -91,6 +93,12 @@ export function AppSidebar() {
       icon: ShoppingBag,
       href: '/pedidos',
     },
+    ...(pdvV2Enabled
+      ? [{ title: 'Comandas', icon: ClipboardEdit, href: '/pdv-v2/comandas-historico' }]
+      : []),
+    ...(mercadoEnabled
+      ? [{ title: 'Frente de Caixa', icon: ScanBarcode, href: '/frente-caixa' }]
+      : []),
   ];
 
   // Cadastros - bloco Produtos
