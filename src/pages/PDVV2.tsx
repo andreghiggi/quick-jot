@@ -44,6 +44,7 @@ import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog
 import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import { recordSalePayments } from '@/utils/recordSalePayments';
+import { getCashSalesTotal } from '@/utils/cashClosingSales';
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
 }
@@ -423,6 +424,7 @@ export default function PDVV2() {
       }];
     });
   }, [sales, orders]);
+  const expectedCashSalesAmount = useMemo(() => getCashSalesTotal(closeCashSales), [closeCashSales]);
 
   function handleAdvance(order: Order) {
     const next: Record<OrderStatus, OrderStatus | null> = {
@@ -1384,7 +1386,7 @@ export default function PDVV2() {
         companyId={companyId}
         companyName={company?.name}
         paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
-        expectedAmount={cashAmount}
+        expectedAmount={expectedCashSalesAmount}
         sales={closeCashSales}
         paymentMethods={activePaymentMethods.map((p) => ({ id: p.id, name: p.name }))}
         deliveryPaymentMethods={menuPaymentMethods.map((p) => ({ id: p.id, name: p.name }))}
