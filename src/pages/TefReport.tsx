@@ -235,7 +235,7 @@ export default function TefReport() {
       r.cardBrand,
       r.acquirer,
       r.operationType ?? '',
-      r.type === 'pinpad' ? 'PinPad' : 'SmartPOS',
+      'TEF PinPad',
       r.customer_name,
       r.total.toFixed(2).replace('.', ','),
       r.cancelled ? 'Cancelada' : 'Aprovada',
