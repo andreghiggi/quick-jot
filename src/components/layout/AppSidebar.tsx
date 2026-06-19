@@ -106,9 +106,7 @@ export function AppSidebar() {
     { title: 'Subcategorias', icon: LayoutList, href: '/subcategorias' },
     { title: 'Produtos', icon: Package, href: '/produtos' },
     { title: 'Adicionais', icon: Layers, href: '/adicionais' },
-    ...(isModuleEnabled('combos_v1')
-      ? [{ title: 'Combos', icon: PackagePlus, href: '/combos' }]
-      : []),
+    { title: 'Combos', icon: PackagePlus, href: '/combos' },
     ...(mercadoEnabled
       ? [{ title: 'Estoque', icon: ClipboardEdit, href: '/estoque' }]
       : []),
