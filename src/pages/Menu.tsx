@@ -1097,7 +1097,7 @@ export default function Menu() {
         }
         return {
           order_id: newOrder.id,
-          product_id: item.product.id,
+          product_id: item.product.isCombo ? null : item.product.id,
           name: buildCartItemDisplayName(item),
           quantity: item.quantity,
           price: item.product.price + item.selectedOptionals.reduce((sum, opt) => sum + opt.price, 0),
