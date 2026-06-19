@@ -395,8 +395,8 @@ export function LateralOptionalsWizard({
               </>
             ) : comboMode === 'last' ? (
               <>
-                <ShoppingCart className="h-4 w-4 mr-1" />
-                Adicionar combo ao carrinho — R$ {formatPrice(comboAccumulatedExtras + totalPrice)}
+                <ShoppingCart className="h-4 w-4 mr-1 flex-shrink-0" />
+                <span className="truncate">Adicionar combo — R$ {formatPrice(comboAccumulatedExtras + totalPrice)}</span>
               </>
             ) : (
               <>
