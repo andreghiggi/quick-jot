@@ -1,23 +1,17 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCombos } from '@/hooks/useCombos';
-import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Pencil, Trash2, PackagePlus, ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export default function Combos() {
   const navigate = useNavigate();
   const { company } = useAuthContext();
-  const { isModuleEnabled, loading: modLoading } = useCompanyModules({ companyId: company?.id });
   const { combos, loading, deleteCombo, toggleActive, moveCombo } = useCombos({ companyId: company?.id });
-
-  if (!modLoading && !isModuleEnabled('combos_v1')) {
-    return <Navigate to="/" replace />;
-  }
 
   return (
     <AppLayout>

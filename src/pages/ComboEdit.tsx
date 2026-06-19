@@ -14,7 +14,6 @@ import { useCombos } from '@/hooks/useCombos';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useTaxRules } from '@/hooks/useTaxRules';
-import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { toast } from 'sonner';
@@ -31,7 +30,6 @@ export default function ComboEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { company } = useAuthContext();
-  const { isModuleEnabled, loading: modLoading } = useCompanyModules({ companyId: company?.id });
   const { combos, loading, saveCombo } = useCombos({ companyId: company?.id });
   const { products } = useProducts({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
@@ -94,10 +92,6 @@ export default function ComboEdit() {
       setHydrated(true);
     }
   }, [existing, isNew, hydrated]);
-
-  if (!modLoading && !isModuleEnabled('combos_v1')) {
-    return <Navigate to="/" replace />;
-  }
 
   if (!isNew && !loading && !existing) {
     return <Navigate to="/combos" replace />;
