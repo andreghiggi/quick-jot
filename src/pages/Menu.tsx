@@ -2066,7 +2066,9 @@ export default function Menu() {
             <div className="px-6 py-4 border-t flex-shrink-0 bg-background">
               <Button onClick={addToCart} className="w-full" size="lg" disabled={!allMandatoryComplete}>
                 <Plus className="h-4 w-4 mr-2" />
-                Adicionar ao carrinho
+                {comboFlow
+                  ? (comboFlow.index + 1 < comboFlow.steps.length ? 'Próximo item do combo' : 'Adicionar combo ao carrinho')
+                  : 'Adicionar ao carrinho'}
               </Button>
             </div>
           )}
