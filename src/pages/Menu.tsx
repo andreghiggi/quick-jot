@@ -169,6 +169,13 @@ export default function Menu() {
   const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set());
   const [showAddedToCart, setShowAddedToCart] = useState(false);
   const [lastAddedItem, setLastAddedItem] = useState<CartItem | null>(null);
+  // Fluxo de combo: usuário escolhe adicionais de cada componente do combo, um por vez.
+  const [comboFlow, setComboFlow] = useState<{
+    combo: Product;
+    steps: { product: Product; label: string }[];
+    index: number;
+    collected: string[][];
+  } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [reorderDismissed, setReorderDismissed] = useState(false);
   // Múltiplos endereços por cliente (aditivo — não altera o auto-fill atual de `customers.address`)
@@ -609,25 +616,67 @@ export default function Menu() {
     [baseMenuProducts, comboProducts]
   );
 
-  // Wrapper: combos vão direto ao carrinho (sem diálogo nem wizard de opcionais).
+  // Wrapper: para combos, abre fluxo passo-a-passo (escolha de adicionais por componente).
   const handleProductSelect = useCallback((product: Product) => {
     if (product.isCombo) {
-      const newItem: CartItem = {
-        product,
-        quantity: 1,
-        selectedOptionals: [],
-        notes: undefined,
-      };
-      setCart(prev => [...prev, newItem]);
-      setLastAddedItem(newItem);
-      setShowAddedToCart(true);
+      const comboId = product.id.replace(/^combo:/, '');
+      const combo = combos.find(c => c.id === comboId);
+      if (!combo) return;
+
+      // Monta a lista de etapas: 1 etapa por unidade de cada componente que tenha
+      // grupos de opcionais aplicáveis. Componentes sem opcionais não geram etapa
+      // (entram no nome do combo apenas, sem perguntas ao cliente).
+      const steps: { product: Product; label: string }[] = [];
+      const stepsLabelsForSummary: string[] = [];
+      for (const item of combo.items) {
+        const compProduct = products.find(p => p.id === item.product_id);
+        if (!compProduct) continue;
+        const groups = getGroupsForProduct(compProduct.id, compProduct.category);
+        const qty = Math.max(1, Math.floor(item.quantity || 1));
+        for (let i = 0; i < qty; i++) {
+          const label = qty > 1
+            ? `${compProduct.name} (${i + 1} de ${qty})`
+            : compProduct.name;
+          if (groups.length > 0) {
+            steps.push({ product: compProduct, label });
+          } else {
+            // Sem opcionais: registra direto no resumo do combo.
+            stepsLabelsForSummary.push(label);
+          }
+        }
+      }
+
+      if (steps.length === 0) {
+        // Combo sem nenhum componente com opcionais → adiciona direto ao carrinho.
+        const lines = stepsLabelsForSummary.map(l => `• ${l}`);
+        const newItem: CartItem = {
+          product,
+          quantity: 1,
+          selectedOptionals: [],
+          groupedOptionalNames: lines.length > 0 ? lines : undefined,
+          notes: undefined,
+        };
+        setCart(prev => [...prev, newItem]);
+        setLastAddedItem(newItem);
+        setShowAddedToCart(true);
+        return;
+      }
+
+      // Pré-popula `collected` com as linhas dos componentes sem opcionais.
+      const preCollected: string[][] = stepsLabelsForSummary.map(l => [`• ${l}`]);
+
+      setComboFlow({ combo: product, steps, index: 0, collected: preCollected });
+      setSelectedOptionals([]);
+      setSelectedGroupItems({});
+      setItemNotes('');
+      setSelectedProduct(steps[0].product);
       return;
     }
     setSelectedOptionals([]);
     setSelectedGroupItems({});
     setItemNotes('');
     setSelectedProduct(product);
-  }, []);
+  }, [combos, products, optionalGroups, categoryIdByName]);
 
   const validReorder = useMemo(() => {
     if (!savedLastOrder || reorderDismissed) return null;
