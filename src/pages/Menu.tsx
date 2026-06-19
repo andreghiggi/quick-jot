@@ -9,6 +9,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useCategories } from '@/hooks/useCategories';
 import { useSubcategories } from '@/hooks/useSubcategories';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
+import { useCombos } from '@/hooks/useCombos';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { useBusinessHours } from '@/hooks/useBusinessHours';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
@@ -121,6 +122,7 @@ export default function Menu() {
   const { neighborhoods, loading: neighborhoodsLoading, getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
   const { loading: hoursLoading, isCurrentlyOpen, willOpenLaterToday, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
+  const { combos } = useCombos({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentMethodsLoading } = usePaymentMethods({ companyId: company?.id, channel: 'menu' });
   // Divisão Entrega/Retirada nas formas de pagamento — liberado para todas as lojas.
   const isI9PaymentSplit = true;
@@ -305,6 +307,8 @@ export default function Menu() {
 
   // Get optional groups applicable to a specific product (with per-product overrides)
   function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
+    // Combos não usam grupos de opcionais (preço fixo, itens fixos).
+    if (productId.startsWith('combo:')) return [];
     const catId = categoryIdByName[productCategory];
     return optionalGroups
       .filter(g => {
@@ -570,8 +574,60 @@ export default function Menu() {
     }
   }, [customerPhone]);
 
-  const activeProducts = getMenuProducts();
+  const baseMenuProducts = getMenuProducts();
   const newProducts = getNewProducts();
+
+  // Combos → vira "Product" virtual por categoria vinculada (apenas combos ativos e visíveis no cardápio).
+  const comboProducts: Product[] = useMemo(() => {
+    if (!combos || combos.length === 0) return [];
+    const idToName = new Map(categories.map(c => [c.id, c.name] as const));
+    const out: Product[] = [];
+    for (const combo of combos) {
+      if (!combo.active || !combo.menu_item) continue;
+      const catNames = combo.category_ids.map(cid => idToName.get(cid)).filter((n): n is string => !!n);
+      const targets = catNames.length > 0 ? catNames : [];
+      for (const catName of targets) {
+        out.push({
+          id: `combo:${combo.id}`,
+          name: combo.name,
+          price: Number(combo.price) || 0,
+          category: catName,
+          description: combo.description || undefined,
+          imageUrl: combo.image_url || undefined,
+          active: true,
+          companyId: combo.company_id,
+          menuItem: true,
+          isCombo: true,
+        });
+      }
+    }
+    return out;
+  }, [combos, categories]);
+
+  const activeProducts: Product[] = useMemo(
+    () => [...baseMenuProducts, ...comboProducts],
+    [baseMenuProducts, comboProducts]
+  );
+
+  // Wrapper: combos vão direto ao carrinho (sem diálogo nem wizard de opcionais).
+  const handleProductSelect = useCallback((product: Product) => {
+    if (product.isCombo) {
+      const newItem: CartItem = {
+        product,
+        quantity: 1,
+        selectedOptionals: [],
+        notes: undefined,
+      };
+      setCart(prev => [...prev, newItem]);
+      setLastAddedItem(newItem);
+      setShowAddedToCart(true);
+      return;
+    }
+    setSelectedOptionals([]);
+    setSelectedGroupItems({});
+    setItemNotes('');
+    setSelectedProduct(product);
+  }, []);
 
   const validReorder = useMemo(() => {
     if (!savedLastOrder || reorderDismissed) return null;
@@ -1448,7 +1504,7 @@ export default function Menu() {
         isOpen={isOpen}
         formattedHours={formattedHours}
         schedulingEnabled={schedulingEnabled}
-        onProductSelect={setSelectedProduct}
+        onProductSelect={handleProductSelect}
         onCartOpen={() => setIsCartOpen(true)}
         onNavigateBack={() => navigate(-1)}
         buttonColorStyle={buttonColorStyle}
@@ -1631,14 +1687,7 @@ export default function Menu() {
                 <Card
                   key={product.id}
                   className="cursor-pointer hover:border-primary hover:shadow-md transition-all overflow-hidden"
-                  onClick={() => {
-                    // Reset optional selections before opening a new product
-                    // (defensive: avoids any chance of carryover from a previous product)
-                    setSelectedOptionals([]);
-                    setSelectedGroupItems({});
-                    setItemNotes('');
-                    setSelectedProduct(product);
-                  }}
+                  onClick={() => handleProductSelect(product)}
                 >
                   <CardContent className="p-0">
                     <div className="flex h-full">
