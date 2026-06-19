@@ -332,6 +332,18 @@ function AppRoutes() {
           <Combos />
         </ProtectedRoute>
       } />
+
+      <Route path="/combos/novo" element={
+        <ProtectedRoute requireCompany>
+          <ComboEdit />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/combos/:id" element={
+        <ProtectedRoute requireCompany>
+          <ComboEdit />
+        </ProtectedRoute>
+      } />
       
       <Route path="/categorias" element={
         <ProtectedRoute requireCompany>
