@@ -42,6 +42,7 @@ interface LateralOptionalsWizardProps {
   onNotesChange: (notes: string) => void;
   onAddToCart: () => void;
   isI9?: boolean;
+  hideBasePrice?: boolean;
 }
 
 export function LateralOptionalsWizard({
@@ -57,6 +58,7 @@ export function LateralOptionalsWizard({
   onNotesChange,
   onAddToCart,
   isI9 = false,
+  hideBasePrice = false,
 }: LateralOptionalsWizardProps) {
   const steps: { type: 'group' | 'oldOptionals' | 'confirm'; group?: OptionalGroup }[] = [];
 
@@ -104,7 +106,7 @@ export function LateralOptionalsWizard({
     return sum + groupSum;
   }, 0);
   const oldOptionalsPrices = selectedOptionals.reduce((sum, o) => sum + o.price, 0);
-  const totalPrice = product.price + groupOptionalsPrices + oldOptionalsPrices;
+  const totalPrice = (hideBasePrice ? 0 : product.price) + groupOptionalsPrices + oldOptionalsPrices;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -338,7 +340,9 @@ export function LateralOptionalsWizard({
             {/* Summary */}
             <div className="border rounded-lg p-3 space-y-1 bg-muted/30">
               <p className="font-semibold text-sm">{product.name}</p>
-              <p className="text-xs text-muted-foreground">R$ {formatPrice(product.price)}</p>
+              {!hideBasePrice && (
+                <p className="text-xs text-muted-foreground">R$ {formatPrice(product.price)}</p>
+              )}
               {groups.map((g) => {
                 const sel = selectedGroupItems[g.id];
                 if (!sel || sel.size === 0) return null;

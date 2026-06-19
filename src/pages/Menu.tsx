@@ -1899,6 +1899,7 @@ export default function Menu() {
                       onNotesChange={setItemNotes}
                       onAddToCart={addToCart}
                       isI9={isMenuI9}
+                      hideBasePrice={!!comboFlow}
                     />
                   ) : (
                     <div className="space-y-4">
