@@ -1844,10 +1844,17 @@ export default function Menu() {
     )}
 
       {/* Product Detail Dialog */}
-      <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) { setSelectedProduct(null); setSelectedOptionals([]); setSelectedGroupItems({}); setItemNotes(''); } }}>
+      <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) { setSelectedProduct(null); setSelectedOptionals([]); setSelectedGroupItems({}); setItemNotes(''); setComboFlow(null); } }}>
         <DialogContent style={buttonColorStyle} className="h-[85dvh] flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
-            <DialogTitle className="pr-6">{selectedProduct?.name}</DialogTitle>
+            {comboFlow && (
+              <Badge variant="secondary" className="self-start mb-1">
+                {comboFlow.combo.name} · Etapa {comboFlow.index + 1} de {comboFlow.steps.length}
+              </Badge>
+            )}
+            <DialogTitle className="pr-6">
+              {comboFlow ? comboFlow.steps[comboFlow.index].label : selectedProduct?.name}
+            </DialogTitle>
             {/* Progress bar for mandatory groups - I9 only */}
             {selectedProduct && mandatoryGroups.length > 0 && (
               <div className="mt-3 space-y-1">
