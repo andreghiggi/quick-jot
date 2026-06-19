@@ -2140,6 +2140,23 @@ export default function Menu() {
                           <p className="font-medium line-clamp-2">{item.product.name}</p>
                           <p className="font-semibold flex-shrink-0 ml-2">R$ {formatPrice(calculateItemTotal(item))}</p>
                         </div>
+                        {item.product.isCombo && item.groupedOptionalNames && item.groupedOptionalNames.length > 0 && (
+                          <div className="mt-1 space-y-0.5">
+                            {item.groupedOptionalNames.map((line, i) => (
+                              <p
+                                key={i}
+                                className={cn(
+                                  'text-xs whitespace-pre-wrap',
+                                  line.trim().startsWith('•')
+                                    ? 'font-medium text-foreground mt-1'
+                                    : 'text-muted-foreground pl-3'
+                                )}
+                              >
+                                {line}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                         {item.selectedOptionals.length > 0 && !item.product.isCombo && (
                           <div className="mt-1 space-y-0.5">
                             {item.selectedOptionals.map((o) => (
