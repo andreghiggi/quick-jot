@@ -211,18 +211,16 @@ export function useCombos({ companyId }: UseCombosOptions = {}) {
     if (idx === -1) return;
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= combos.length) return;
-    const a = combos[idx];
-    const b = combos[swapIdx];
-    // Optimistic UI
     const newList = [...combos];
-    newList[idx] = b;
-    newList[swapIdx] = a;
+    [newList[idx], newList[swapIdx]] = [newList[swapIdx], newList[idx]];
     setCombos(newList.map((c, i) => ({ ...c, display_order: i })));
     try {
-      await Promise.all([
-        supabase.from('combos' as any).update({ display_order: b.display_order }).eq('id', a.id),
-        supabase.from('combos' as any).update({ display_order: a.display_order }).eq('id', b.id),
-      ]);
+      // Normaliza display_order de todos para garantir ordenação consistente
+      await Promise.all(
+        newList.map((c, i) =>
+          supabase.from('combos' as any).update({ display_order: i }).eq('id', c.id)
+        )
+      );
       await fetchCombos();
     } catch (e) {
       toast.error('Erro ao reordenar combos');
