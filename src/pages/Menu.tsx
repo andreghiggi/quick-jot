@@ -175,6 +175,7 @@ export default function Menu() {
     steps: { product: Product; label: string }[];
     index: number;
     collected: string[][];
+    extrasPrice: number;
   } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [reorderDismissed, setReorderDismissed] = useState(false);
