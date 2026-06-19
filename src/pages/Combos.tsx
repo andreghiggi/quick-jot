@@ -6,14 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, PackagePlus, ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, PackagePlus, ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
 export default function Combos() {
   const navigate = useNavigate();
   const { company } = useAuthContext();
   const { isModuleEnabled, loading: modLoading } = useCompanyModules({ companyId: company?.id });
-  const { combos, loading, deleteCombo, toggleActive } = useCombos({ companyId: company?.id });
+  const { combos, loading, deleteCombo, toggleActive, moveCombo } = useCombos({ companyId: company?.id });
 
   if (!modLoading && !isModuleEnabled('combos_v1')) {
     return <Navigate to="/" replace />;
@@ -50,7 +50,7 @@ export default function Combos() {
               </div>
             ) : (
               <div className="space-y-2">
-                {combos.map((c) => (
+                {combos.map((c, idx) => (
                   <div key={c.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="w-12 h-12 rounded bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -72,6 +72,28 @@ export default function Combos() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <div className="flex flex-col">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          disabled={idx === 0}
+                          onClick={() => moveCombo(c.id, 'up')}
+                          title="Mover para cima"
+                        >
+                          <ArrowUp className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          disabled={idx === combos.length - 1}
+                          onClick={() => moveCombo(c.id, 'down')}
+                          title="Mover para baixo"
+                        >
+                          <ArrowDown className="h-3 w-3" />
+                        </Button>
+                      </div>
                       <Switch checked={c.active} onCheckedChange={(v) => toggleActive(c.id, v)} />
                       <Button variant="ghost" size="icon" onClick={() => navigate(`/combos/${c.id}`)}>
                         <Pencil className="h-4 w-4" />
