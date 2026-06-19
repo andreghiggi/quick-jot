@@ -1907,6 +1907,8 @@ export default function Menu() {
                       onAddToCart={addToCart}
                       isI9={isMenuI9}
                       hideBasePrice={!!comboFlow}
+                      comboMode={comboFlow ? (comboFlow.index + 1 < comboFlow.steps.length ? 'middle' : 'last') : null}
+                      comboAccumulatedExtras={comboFlow?.extrasPrice ?? 0}
                     />
                   ) : (
                     <div className="space-y-4">
