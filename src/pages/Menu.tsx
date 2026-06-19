@@ -666,7 +666,7 @@ export default function Menu() {
       // Pré-popula `collected` com as linhas dos componentes sem opcionais.
       const preCollected: string[][] = stepsLabelsForSummary.map(l => [`• ${l}`]);
 
-      setComboFlow({ combo: product, steps, index: 0, collected: preCollected });
+      setComboFlow({ combo: product, steps, index: 0, collected: preCollected, extrasPrice: 0 });
       setSelectedOptionals([]);
       setSelectedGroupItems({});
       setItemNotes('');
