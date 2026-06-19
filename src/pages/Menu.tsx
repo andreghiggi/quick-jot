@@ -860,6 +860,12 @@ export default function Menu() {
       const block = [`• ${current.label}`, ...groupedOptionalNames.map(l => `   ${l}`)];
       const newCollected = [...comboFlow.collected, block];
 
+      // Soma os adicionais pagos desta etapa (grupos + antigos)
+      const stepExtras =
+        groupOptionals.reduce((s, o) => s + (o.price || 0), 0) +
+        selectedOptionals.reduce((s, o) => s + (o.price || 0), 0);
+      const newExtrasPrice = comboFlow.extrasPrice + stepExtras;
+
       // Limpa seleções para a próxima etapa
       setSelectedOptionals([]);
       setSelectedGroupItems({});
@@ -867,7 +873,7 @@ export default function Menu() {
 
       const nextIndex = comboFlow.index + 1;
       if (nextIndex < comboFlow.steps.length) {
-        setComboFlow({ ...comboFlow, index: nextIndex, collected: newCollected });
+        setComboFlow({ ...comboFlow, index: nextIndex, collected: newCollected, extrasPrice: newExtrasPrice });
         setSelectedProduct(comboFlow.steps[nextIndex].product);
         return;
       }
