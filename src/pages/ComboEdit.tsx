@@ -95,10 +95,6 @@ export default function ComboEdit() {
     }
   }, [existing, isNew, hydrated]);
 
-  if (!modLoading && !isModuleEnabled('combos_v1')) {
-    return <Navigate to="/" replace />;
-  }
-
   if (!isNew && !loading && !existing) {
     return <Navigate to="/combos" replace />;
   }
