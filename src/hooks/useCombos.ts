@@ -206,5 +206,27 @@ export function useCombos({ companyId }: UseCombosOptions = {}) {
     }
   }
 
-  return { combos, loading, refetch: fetchCombos, saveCombo, deleteCombo, toggleActive };
+  async function moveCombo(id: string, direction: 'up' | 'down') {
+    const idx = combos.findIndex((c) => c.id === id);
+    if (idx === -1) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= combos.length) return;
+    const newList = [...combos];
+    [newList[idx], newList[swapIdx]] = [newList[swapIdx], newList[idx]];
+    setCombos(newList.map((c, i) => ({ ...c, display_order: i })));
+    try {
+      // Normaliza display_order de todos para garantir ordenação consistente
+      await Promise.all(
+        newList.map((c, i) =>
+          supabase.from('combos' as any).update({ display_order: i }).eq('id', c.id)
+        )
+      );
+      await fetchCombos();
+    } catch (e) {
+      toast.error('Erro ao reordenar combos');
+      await fetchCombos();
+    }
+  }
+
+  return { combos, loading, refetch: fetchCombos, saveCombo, deleteCombo, toggleActive, moveCombo };
 }
