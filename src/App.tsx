@@ -45,6 +45,7 @@ import MenuImport from "./pages/MenuImport";
 import OptionalGroups from "./pages/OptionalGroups";
 import Categories from "./pages/Categories";
 import Subcategories from "./pages/Subcategories";
+import Combos from "./pages/Combos";
 import CustomerReport from "./pages/CustomerReport";
 import ABCReport from "./pages/ABCReport";
 import SalesCampaigns from "./pages/SalesCampaigns";
@@ -322,6 +323,12 @@ function AppRoutes() {
       <Route path="/adicionais" element={
         <ProtectedRoute requireCompany>
           <OptionalGroups />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/combos" element={
+        <ProtectedRoute requireCompany>
+          <Combos />
         </ProtectedRoute>
       } />
       
