@@ -477,23 +477,7 @@ export default function Combos() {
               <div className="p-3 bg-muted/50 border rounded text-sm">
                 <strong>Modo padrão: Kit explodido.</strong> Na NFC-e, cada item componente sai como uma linha
                 fiscal própria com sua tributação. O preço do combo é rateado proporcionalmente entre os itens.
-                Os campos abaixo só são usados se o combo for emitido como "kit comercial" (item único na nota).
-              </div>
-
-              <div>
-                <Label>Modo fiscal</Label>
-                <Select
-                  value={draft.fiscal_mode}
-                  onValueChange={(v: any) => setDraft({ ...draft, fiscal_mode: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="explodido">Explodido (padrão) — recomendado</SelectItem>
-                    <SelectItem value="kit_comercial">Kit comercial (1 item fiscal)</SelectItem>
-                  </SelectContent>
-                </Select>
+                Os campos abaixo servem como fallback fiscal caso algum componente não tenha NCM/CFOP próprio.
               </div>
 
               <div className="grid grid-cols-3 gap-3">
