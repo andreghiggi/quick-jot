@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.22.10-beta";
-export const RELEASE_DATE = "2026-06-15"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Menu lateral: operação e fiscal reorganizados";
+export const VERSION = "1.23.0-beta";
+export const RELEASE_DATE = "2026-06-19"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Cadastros > Combos (Beta — piloto Rei do Açaí)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.23.0-beta",
+    date: "2026-06-19",
+    codename: "Cadastros > Combos (Beta — piloto Rei do Açaí)",
+    changes: [
+      "Nova aba 'Cadastros > Combos' (irmã de Categorias, Produtos e Adicionais) para montar combos a partir de produtos existentes — cada combo tem foto, nome, código, GTIN, preço fixo, categorias do cardápio e visibilidade independente em PDV, Cardápio e Garçom.",
+      "Editor com 3 abas: Geral (dados básicos e foto), Itens (busca por nome/código + quantidade) e Fiscal (NCM/CFOP/CEST/regra tributária, usados só no modo 'kit comercial').",
+      "Modo fiscal padrão: 'Kit explodido' — na NFC-e cada item componente sai como uma linha fiscal própria com a tributação do produto original (regra correta para combos com itens de tributação diferente, ex.: açaí + bebida). Preço do combo é rateado proporcionalmente entre os itens.",
+      "Aviso suave quando os itens têm regras tributárias diferentes (não bloqueia).",
+      "Rollout isolado: novo módulo 'Combos (Beta)' no painel do Super Admin. Liberado manualmente apenas para a loja Rei do Açaí no piloto. Nas demais lojas, nada muda.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e (somente leitura de combos quando o módulo estiver ativo), Multi-Pagamento, impressão, PDV V2, Pedido Express, Frente de Caixa ou cobrança.",
+    ],
+  },
   {
     version: "1.22.10-beta",
     date: "2026-06-15",

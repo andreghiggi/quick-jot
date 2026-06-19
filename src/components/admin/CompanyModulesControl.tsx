@@ -52,6 +52,11 @@ const AVAILABLE_MODULES = [
     name: 'mercado',
     label: 'Mercado / Frente de Caixa',
     description: 'Habilita recursos para mini mercados: busca por código de barras (GTIN) e SKU no PDV, leitura de etiquetas EAN-13 pesáveis e (em breve) Frente de Caixa dedicado. Não altera nada do fluxo atual — só adiciona.'
+  },
+  {
+    name: 'combos_v1',
+    label: 'Combos (Beta)',
+    description: 'Habilita a aba Cadastros > Combos para montar combos a partir de produtos existentes. Na NFC-e os itens saem como kit explodido (cada item com sua tributação). Piloto isolado — ative apenas para a loja que vai testar.'
   }
 ];
 

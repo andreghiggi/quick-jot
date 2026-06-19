@@ -356,6 +356,165 @@ export type Database = {
           },
         ]
       }
+      combo_categories: {
+        Row: {
+          category_id: string
+          combo_id: string
+        }
+        Insert: {
+          category_id: string
+          combo_id: string
+        }
+        Update: {
+          category_id?: string
+          combo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combo_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combo_categories_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "combos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combo_items: {
+        Row: {
+          combo_id: string
+          created_at: string
+          display_order: number
+          id: string
+          product_id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          combo_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          product_id: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          combo_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          product_id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combo_items_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "combos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combo_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combos: {
+        Row: {
+          active: boolean
+          cest: string | null
+          cfop: string | null
+          code: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          display_order: number
+          fiscal_mode: string
+          gtin: string | null
+          id: string
+          image_url: string | null
+          menu_item: boolean
+          name: string
+          ncm: string | null
+          pdv_item: boolean
+          price: number
+          tax_rule_id: string | null
+          updated_at: string
+          waiter_item: boolean
+        }
+        Insert: {
+          active?: boolean
+          cest?: string | null
+          cfop?: string | null
+          code?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          fiscal_mode?: string
+          gtin?: string | null
+          id?: string
+          image_url?: string | null
+          menu_item?: boolean
+          name: string
+          ncm?: string | null
+          pdv_item?: boolean
+          price?: number
+          tax_rule_id?: string | null
+          updated_at?: string
+          waiter_item?: boolean
+        }
+        Update: {
+          active?: boolean
+          cest?: string | null
+          cfop?: string | null
+          code?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          fiscal_mode?: string
+          gtin?: string | null
+          id?: string
+          image_url?: string | null
+          menu_item?: boolean
+          name?: string
+          ncm?: string | null
+          pdv_item?: boolean
+          price?: number
+          tax_rule_id?: string | null
+          updated_at?: string
+          waiter_item?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combos_tax_rule_id_fkey"
+            columns: ["tax_rule_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           active: boolean | null
