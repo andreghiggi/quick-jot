@@ -279,7 +279,7 @@ export function MenuV2({
               <CardContent className="p-0">
                 <div className="flex h-full">
                   {product.imageUrl ? (
-                    <div className="w-28 h-28 flex-shrink-0 overflow-hidden">
+                    <div className="w-28 self-stretch flex-shrink-0 overflow-hidden">
                       <img
                         src={product.imageUrl}
                         alt={product.name}
@@ -289,7 +289,7 @@ export function MenuV2({
                       />
                     </div>
                   ) : (
-                    <div className="w-28 h-28 flex-shrink-0 bg-muted flex items-center justify-center">
+                    <div className="w-28 self-stretch flex-shrink-0 bg-muted flex items-center justify-center">
                       <span className="text-3xl">{getCategoryEmoji(selectedCategory, categoryEmojiMap)}</span>
                     </div>
                   )}
