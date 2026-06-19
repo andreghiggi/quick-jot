@@ -66,7 +66,7 @@ export default function Combos() {
                           {!c.active && <Badge variant="secondary">Inativo</Badge>}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {c.items.length} item(ns) · R$ {c.price.toFixed(2).replace('.', ',')}
+                          {c.items.reduce((s, it) => s + (Number(it.quantity) || 0), 0)} item(ns) · R$ {c.price.toFixed(2).replace('.', ',')}
                           {c.code ? ` · ${c.code}` : ''}
                         </div>
                       </div>
