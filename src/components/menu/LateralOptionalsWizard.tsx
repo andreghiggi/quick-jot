@@ -43,6 +43,8 @@ interface LateralOptionalsWizardProps {
   onAddToCart: () => void;
   isI9?: boolean;
   hideBasePrice?: boolean;
+  comboMode?: 'middle' | 'last' | null;
+  comboAccumulatedExtras?: number;
 }
 
 export function LateralOptionalsWizard({
@@ -59,6 +61,8 @@ export function LateralOptionalsWizard({
   onAddToCart,
   isI9 = false,
   hideBasePrice = false,
+  comboMode = null,
+  comboAccumulatedExtras = 0,
 }: LateralOptionalsWizardProps) {
   const steps: { type: 'group' | 'oldOptionals' | 'confirm'; group?: OptionalGroup }[] = [];
 
@@ -384,8 +388,22 @@ export function LateralOptionalsWizard({
         )}
         {isLast ? (
           <Button onClick={onAddToCart} className="min-w-0 flex-1 whitespace-nowrap px-3 text-sm sm:px-8 sm:text-base" size="lg">
-            <ShoppingCart className="h-4 w-4 mr-1" />
-            Adicionar — R$ {formatPrice(totalPrice)}
+            {comboMode === 'middle' ? (
+              <>
+                Próximo item do combo
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </>
+            ) : comboMode === 'last' ? (
+              <>
+                <ShoppingCart className="h-4 w-4 mr-1" />
+                Adicionar combo ao carrinho — R$ {formatPrice(comboAccumulatedExtras + totalPrice)}
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="h-4 w-4 mr-1" />
+                Adicionar — R$ {formatPrice(totalPrice)}
+              </>
+            )}
           </Button>
         ) : (
           <Button

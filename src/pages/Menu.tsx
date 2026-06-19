@@ -175,6 +175,7 @@ export default function Menu() {
     steps: { product: Product; label: string }[];
     index: number;
     collected: string[][];
+    extrasPrice: number;
   } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [reorderDismissed, setReorderDismissed] = useState(false);
@@ -665,7 +666,7 @@ export default function Menu() {
       // Pré-popula `collected` com as linhas dos componentes sem opcionais.
       const preCollected: string[][] = stepsLabelsForSummary.map(l => [`• ${l}`]);
 
-      setComboFlow({ combo: product, steps, index: 0, collected: preCollected });
+      setComboFlow({ combo: product, steps, index: 0, collected: preCollected, extrasPrice: 0 });
       setSelectedOptionals([]);
       setSelectedGroupItems({});
       setItemNotes('');
@@ -859,6 +860,12 @@ export default function Menu() {
       const block = [`• ${current.label}`, ...groupedOptionalNames.map(l => `   ${l}`)];
       const newCollected = [...comboFlow.collected, block];
 
+      // Soma os adicionais pagos desta etapa (grupos + antigos)
+      const stepExtras =
+        groupOptionals.reduce((s, o) => s + (o.price || 0), 0) +
+        selectedOptionals.reduce((s, o) => s + (o.price || 0), 0);
+      const newExtrasPrice = comboFlow.extrasPrice + stepExtras;
+
       // Limpa seleções para a próxima etapa
       setSelectedOptionals([]);
       setSelectedGroupItems({});
@@ -866,7 +873,7 @@ export default function Menu() {
 
       const nextIndex = comboFlow.index + 1;
       if (nextIndex < comboFlow.steps.length) {
-        setComboFlow({ ...comboFlow, index: nextIndex, collected: newCollected });
+        setComboFlow({ ...comboFlow, index: nextIndex, collected: newCollected, extrasPrice: newExtrasPrice });
         setSelectedProduct(comboFlow.steps[nextIndex].product);
         return;
       }
@@ -1900,6 +1907,8 @@ export default function Menu() {
                       onAddToCart={addToCart}
                       isI9={isMenuI9}
                       hideBasePrice={!!comboFlow}
+                      comboMode={comboFlow ? (comboFlow.index + 1 < comboFlow.steps.length ? 'middle' : 'last') : null}
+                      comboAccumulatedExtras={comboFlow?.extrasPrice ?? 0}
                     />
                   ) : (
                     <div className="space-y-4">
