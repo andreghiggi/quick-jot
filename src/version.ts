@@ -24,6 +24,7 @@ export const RELEASES: Release[] = [
     date: "2026-06-19",
     codename: "Cadastros > Combos (Beta — piloto Rei do Açaí)",
     changes: [
+      "Corrigido no cardápio público: adicionais pagos escolhidos dentro do fluxo de combo agora são somados ao valor do combo no carrinho, subtotal, total do pedido e envio do pedido.",
       "Nova aba 'Cadastros > Combos' (irmã de Categorias, Produtos e Adicionais) para montar combos a partir de produtos existentes — cada combo tem foto, nome, código, GTIN, preço fixo, categorias do cardápio e visibilidade independente em PDV, Cardápio e Garçom.",
       "Editor com 3 abas: Geral (dados básicos e foto), Itens (busca por nome/código + quantidade) e Fiscal (NCM/CFOP/CEST/regra tributária, usados só no modo 'kit comercial').",
       "Modo fiscal padrão: 'Kit explodido' — na NFC-e cada item componente sai como uma linha fiscal própria com a tributação do produto original (regra correta para combos com itens de tributação diferente, ex.: açaí + bebida). Preço do combo é rateado proporcionalmente entre os itens.",

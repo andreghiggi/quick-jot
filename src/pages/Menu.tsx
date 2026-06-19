@@ -880,10 +880,20 @@ export default function Menu() {
 
       // Última etapa: monta o item do combo no carrinho
       const comboLines = newCollected.flat();
+      const comboPaidExtras: ProductOptional[] = newExtrasPrice > 0
+        ? [{
+            id: `${comboFlow.combo.id}:paid-extras`,
+            productId: comboFlow.combo.id,
+            name: 'Adicionais pagos do combo',
+            price: newExtrasPrice,
+            type: 'extra',
+            active: true,
+          }]
+        : [];
       const finalItem: CartItem = {
         product: comboFlow.combo,
         quantity: 1,
-        selectedOptionals: [],
+        selectedOptionals: comboPaidExtras,
         groupedOptionalNames: comboLines.length > 0 ? comboLines : undefined,
         notes: undefined,
       };
@@ -2130,7 +2140,7 @@ export default function Menu() {
                           <p className="font-medium line-clamp-2">{item.product.name}</p>
                           <p className="font-semibold flex-shrink-0 ml-2">R$ {formatPrice(calculateItemTotal(item))}</p>
                         </div>
-                        {item.selectedOptionals.length > 0 && (
+                        {item.selectedOptionals.length > 0 && !item.product.isCombo && (
                           <div className="mt-1 space-y-0.5">
                             {item.selectedOptionals.map((o) => (
                               <p key={o.id} className="text-xs text-muted-foreground flex justify-between pr-2">
