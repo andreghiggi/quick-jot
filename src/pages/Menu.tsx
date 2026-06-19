@@ -1894,6 +1894,7 @@ export default function Menu() {
                 <div className="px-6 py-4">
                   {settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0)) ? (
                     <LateralOptionalsWizard
+                      key={comboFlow ? `combo-step-${comboFlow.index}` : `prod-${selectedProduct.id}`}
                       product={selectedProduct}
                       groups={selectedProductGroups}
                       oldStyleOptionals={selectedProduct.optionals?.filter(o => o.active) || []}
