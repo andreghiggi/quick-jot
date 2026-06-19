@@ -853,6 +853,41 @@ export default function Menu() {
       groupedOptionalNames.push(`Adicionais: ${oldStyleStr}`);
     }
 
+    // === Fluxo de combo: agrupa as escolhas deste componente e avança/finaliza. ===
+    if (comboFlow) {
+      const current = comboFlow.steps[comboFlow.index];
+      const block = [`• ${current.label}`, ...groupedOptionalNames.map(l => `   ${l}`)];
+      const newCollected = [...comboFlow.collected, block];
+
+      // Limpa seleções para a próxima etapa
+      setSelectedOptionals([]);
+      setSelectedGroupItems({});
+      setItemNotes('');
+
+      const nextIndex = comboFlow.index + 1;
+      if (nextIndex < comboFlow.steps.length) {
+        setComboFlow({ ...comboFlow, index: nextIndex, collected: newCollected });
+        setSelectedProduct(comboFlow.steps[nextIndex].product);
+        return;
+      }
+
+      // Última etapa: monta o item do combo no carrinho
+      const comboLines = newCollected.flat();
+      const finalItem: CartItem = {
+        product: comboFlow.combo,
+        quantity: 1,
+        selectedOptionals: [],
+        groupedOptionalNames: comboLines.length > 0 ? comboLines : undefined,
+        notes: undefined,
+      };
+      setCart(prev => [...prev, finalItem]);
+      setLastAddedItem(finalItem);
+      setSelectedProduct(null);
+      setComboFlow(null);
+      setShowAddedToCart(true);
+      return;
+    }
+
     const newItem: CartItem = {
       product: selectedProduct,
       quantity: 1,
