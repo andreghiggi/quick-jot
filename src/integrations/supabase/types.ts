@@ -1795,6 +1795,7 @@ export type Database = {
       pdv_settings: {
         Row: {
           allow_price_change_on_sale: boolean
+          auto_generate_gtin: boolean
           auto_open_drawer_cash: boolean
           auto_print_closing_report: boolean
           auto_print_on_finish: boolean
@@ -1827,6 +1828,7 @@ export type Database = {
         }
         Insert: {
           allow_price_change_on_sale?: boolean
+          auto_generate_gtin?: boolean
           auto_open_drawer_cash?: boolean
           auto_print_closing_report?: boolean
           auto_print_on_finish?: boolean
@@ -1859,6 +1861,7 @@ export type Database = {
         }
         Update: {
           allow_price_change_on_sale?: boolean
+          auto_generate_gtin?: boolean
           auto_open_drawer_cash?: boolean
           auto_print_closing_report?: boolean
           auto_print_on_finish?: boolean
@@ -3486,6 +3489,10 @@ export type Database = {
       cleanup_old_whatsapp_messages: { Args: never; Returns: Json }
       generate_clean_subdomain: { Args: { _input: string }; Returns: string }
       generate_company_serial: { Args: never; Returns: string }
+      generate_internal_ean13: {
+        Args: { _company_id: string }
+        Returns: string
+      }
       get_next_daily_order_number: { Args: never; Returns: number }
       get_reseller_id: { Args: { _user_id: string }; Returns: string }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }

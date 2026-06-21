@@ -136,6 +136,11 @@ export function AppSidebar() {
     { title: 'Fornecedores', icon: Truck, href: '/fornecedores' },
   ];
 
+  // Cadastros - bloco Configurações (visível só para admin da empresa)
+  const cadastrosConfigItems = isCompanyAdmin() ? [
+    { title: 'Configurações', icon: Settings2, href: '/cadastros/configuracoes' },
+  ] : [];
+
   // Ações de vendas
   const acoesVendasItems = mercadoOnly ? [] : [
     { title: 'Cupons', icon: Ticket, href: '/cupons' },
@@ -438,6 +443,19 @@ export function AppSidebar() {
                           </CollapsibleContent>
                         </SidebarMenuItem>
                       </Collapsible>
+                      {cadastrosConfigItems.map((item) => (
+                        <SidebarMenuItem key={item.href}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location.pathname === item.href}
+                          >
+                            <Link to={item.href}>
+                              <item.icon className="w-4 h-4" />
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </CollapsibleContent>
