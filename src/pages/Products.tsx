@@ -788,7 +788,7 @@ export default function Products() {
             {isModuleEnabled('mercado') && (
               <div className="rounded-md border bg-muted/30 p-3 space-y-3">
                 <div>
-                  <h4 className="text-sm font-semibold">Dados de mercado</h4>
+                  <h4 className="text-sm font-semibold">Dados de loja</h4>
                   <p className="text-xs text-muted-foreground">
                     Necessários para bipar no Frente de Caixa e emitir NFC-e.
                   </p>
@@ -905,7 +905,7 @@ export default function Products() {
           const cardapioOn = cardapioEnabled;
           const chips = [
             cardapioOn && { v: 'cardapio' as const, label: `🍔 Cardápio (${products.filter((p) => ((p as any).productType ?? 'cardapio') === 'cardapio').length})` },
-            { v: 'mercado' as const, label: `🛒 Mercado (${products.filter((p) => (p as any).productType === 'mercado').length})` },
+            { v: 'mercado' as const, label: `🛒 Loja (${products.filter((p) => (p as any).productType === 'mercado').length})` },
             cardapioOn && { v: 'ambos' as const, label: `🔄 Ambos (${products.filter((p) => (p as any).productType === 'ambos').length})` },
           ].filter(Boolean) as Array<{ v: 'cardapio' | 'mercado' | 'ambos'; label: string }>;
           if (chips.length < 2) return null;
@@ -977,7 +977,7 @@ export default function Products() {
                           {product.isNew && <Badge variant="default" className="bg-amber-500 text-white text-xs">⭐ {storeSettings.featuredSectionName}</Badge>}
                           {isModuleEnabled('mercado') && (() => {
                             const t = (product as any).productType ?? 'cardapio';
-                            if (t === 'mercado') return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs" variant="outline">🛒 Mercado</Badge>;
+                            if (t === 'mercado') return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs" variant="outline">🛒 Loja</Badge>;
                             if (t === 'ambos') return <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs" variant="outline">🔄 Ambos</Badge>;
                             return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs" variant="outline">🍔 Cardápio</Badge>;
                           })()}
@@ -1679,8 +1679,8 @@ export default function Products() {
           <div className="grid grid-cols-1 gap-2 pt-2">
             {([
               { v: 'cardapio', label: 'Cardápio', desc: 'Pratos, lanches, bebidas preparadas', Icon: UtensilsCrossed },
-              { v: 'mercado', label: 'Mercado', desc: 'Refrigerantes, salgadinhos, conveniência', Icon: ShoppingCart },
-              { v: 'ambos', label: 'Ambos', desc: 'Vendido em cardápio e mercado', Icon: Repeat },
+              { v: 'mercado', label: 'Loja', desc: 'Refrigerantes, salgadinhos, conveniência', Icon: ShoppingCart },
+              { v: 'ambos', label: 'Ambos', desc: 'Vendido em cardápio e loja', Icon: Repeat },
             ] as const).map(({ v, label, desc, Icon }) => (
               <button
                 key={v}

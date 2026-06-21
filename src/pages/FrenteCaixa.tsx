@@ -718,7 +718,7 @@ export default function FrenteCaixa() {
           <div className="flex items-center gap-2">
             <ScanBarcode className="h-5 w-5 text-primary" />
             <span className="font-semibold">Frente de Caixa</span>
-            <Badge variant="outline" className="ml-2">Mercado</Badge>
+            <Badge variant="outline" className="ml-2">Loja</Badge>
             {currentRegister && (
               <Badge variant="secondary" className="ml-1">Caixa aberto</Badge>
             )}

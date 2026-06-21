@@ -442,7 +442,7 @@ export default function ProductEdit() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {([
                 { v: 'cardapio', label: 'Cardápio', desc: 'Pratos, lanches, bebidas preparadas', Icon: UtensilsCrossed },
-                { v: 'mercado', label: 'Mercado', desc: 'Refrigerantes, salgadinhos, conveniência', Icon: ShoppingCart },
+                { v: 'mercado', label: 'Loja', desc: 'Refrigerantes, salgadinhos, conveniência', Icon: ShoppingCart },
                 { v: 'ambos', label: 'Ambos', desc: 'Vendido nos dois canais', Icon: Repeat },
               ] as const).map(({ v, label, desc, Icon }) => {
                 const active = productType === v;
@@ -467,7 +467,7 @@ export default function ProductEdit() {
             </div>
             {productType === 'mercado' && (
               <p className="text-xs text-muted-foreground mt-3">
-                Categoria é opcional para itens de mercado — se você não escolher, cai em <strong>Geral</strong> automaticamente.
+                Categoria é opcional para itens de loja — se você não escolher, cai em <strong>Geral</strong> automaticamente.
               </p>
             )}
           </Section>
@@ -930,7 +930,7 @@ export default function ProductEdit() {
         {/* ===================== OPCIONAIS ===================== */}
         {mercadoEnabled && (
           <Section
-            title="Mercado / Varejo"
+            title="Loja / Varejo"
             description="Marca, fornecedor, atacado, validade e balança."
           >
             {/* Marca + fornecedor */}
@@ -944,7 +944,7 @@ export default function ProductEdit() {
               </Field>
               <Field
                 label="Fornecedor padrão"
-                hint={suppliersList.length === 0 ? 'Cadastre fornecedores em Mercado › Fornecedores.' : undefined}
+                hint={suppliersList.length === 0 ? 'Cadastre fornecedores em Loja › Fornecedores.' : undefined}
               >
                 <Select
                   value={supplierId || '__none'}
