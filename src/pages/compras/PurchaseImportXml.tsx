@@ -157,13 +157,13 @@ export default function PurchaseImportXml() {
       // 1) supplier: busca por CNPJ, cria se não existir
       let supplierId: string | null = null;
       if (header.cnpj_emit) {
-        const { data: sup } = await supabase.from('suppliers')
+        const { data: sup } = await (supabase.from('suppliers') as any)
           .select('id').eq('company_id', company.id).eq('cnpj', header.cnpj_emit).maybeSingle();
         if (sup) supplierId = (sup as any).id;
         else {
-          const { data: novo } = await supabase.from('suppliers').insert({
+          const { data: novo } = await (supabase.from('suppliers') as any).insert({
             company_id: company.id, name: header.nome_emit || 'Fornecedor', cnpj: header.cnpj_emit,
-          } as any).select('id').single();
+          }).select('id').single();
           supplierId = (novo as any)?.id || null;
         }
       }
