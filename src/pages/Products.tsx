@@ -968,6 +968,12 @@ export default function Products() {
                           <h3 className="font-medium">{product.name}</h3>
                           {!product.active && <Badge variant="secondary">Inativo</Badge>}
                           {product.isNew && <Badge variant="default" className="bg-amber-500 text-white text-xs">⭐ {storeSettings.featuredSectionName}</Badge>}
+                          {isModuleEnabled('mercado') && (() => {
+                            const t = (product as any).productType ?? 'cardapio';
+                            if (t === 'mercado') return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs" variant="outline">🛒 Mercado</Badge>;
+                            if (t === 'ambos') return <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs" variant="outline">🔄 Ambos</Badge>;
+                            return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs" variant="outline">🍔 Cardápio</Badge>;
+                          })()}
                         </div>
                         {product.description && (
                           <p className="text-sm text-muted-foreground">{product.description}</p>
