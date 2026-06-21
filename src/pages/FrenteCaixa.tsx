@@ -1061,6 +1061,8 @@ export default function FrenteCaixa() {
                   setQuery('');
                   setSearchMatches([]);
                   setLastTouchedId(null);
+                  setImportedOrderId(null);
+                  setImportedLabel(null);
                   setConfirmCancel(false);
                   setTimeout(() => inputRef.current?.focus(), 50);
                 }}
