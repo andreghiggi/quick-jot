@@ -93,12 +93,20 @@ export default function Products() {
     try { sessionStorage.setItem('products:tab', productsTab); } catch {}
   }, [productsTab]);
   // Filtro de tipo de produto (cardapio / mercado / ambos) — só ativo quando módulo Mercado está on.
+  // Default dinâmico: se a loja só tem Mercado ativo, abre direto em 'mercado' (evita tela vazia).
+  const mercadoOnlyDefault = isModuleEnabled('mercado') && !isModuleEnabled('cardapio');
   const [typeFilter, setTypeFilter] = useState<'cardapio' | 'mercado' | 'ambos'>(() => {
     try {
       const v = sessionStorage.getItem('products:typeFilter');
-      return v === 'mercado' || v === 'ambos' ? (v as any) : 'cardapio';
-    } catch { return 'cardapio'; }
+      if (v === 'mercado' || v === 'ambos' || v === 'cardapio') return v as any;
+    } catch {}
+    return mercadoOnlyDefault ? 'mercado' : 'cardapio';
   });
+  // Se o filtro salvo for incompatível com os módulos ativos, corrige.
+  useEffect(() => {
+    if (typeFilter === 'cardapio' && mercadoOnlyDefault) setTypeFilter('mercado');
+    if (typeFilter === 'mercado' && isModuleEnabled('cardapio') && !isModuleEnabled('mercado')) setTypeFilter('cardapio');
+  }, [mercadoOnlyDefault, typeFilter, isModuleEnabled]);
   useEffect(() => { try { sessionStorage.setItem('products:typeFilter', typeFilter); } catch {} }, [typeFilter]);
   // Mini-picker do tipo ao criar produto novo
   const [typePickerOpen, setTypePickerOpen] = useState(false);
