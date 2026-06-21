@@ -168,10 +168,14 @@ export default function FrenteCaixa() {
   // a aba (popup nativo do navegador) e antes de navegar para outra rota
   // dentro do app (AlertDialog customizado).
   const hasUnsavedSale = lines.length > 0;
+  // Quando o usuário confirma sair/recarregar pelo nosso dialog, suprimimos
+  // o beforeunload nativo para não aparecer o popup do navegador em cima.
+  const suppressBeforeUnloadRef = useRef(false);
 
   useEffect(() => {
     if (!hasUnsavedSale) return;
     const handler = (e: BeforeUnloadEvent) => {
+      if (suppressBeforeUnloadRef.current) return;
       e.preventDefault();
       // Texto é ignorado pelos navegadores modernos, mas é necessário para disparar o popup.
       e.returnValue = '';
