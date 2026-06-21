@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { PDVV2Layout } from '@/components/layout/PDVV2Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Receipt, DollarSign, Users, BarChart3, CreditCard } from 'lucide-react';
+import { Receipt, DollarSign, Users, BarChart3, CreditCard, Package } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 
 type ReportCard = {
   id: string;
@@ -57,17 +58,26 @@ const BASE_REPORTS: ReportCard[] = [
     href: '/relatorios/tef',
     filters: ['Período', 'Bandeira', 'Adquirente'],
   },
+  {
+    id: 'estoque',
+    title: 'Estoque',
+    description: 'Posição de estoque, movimentações e itens com saldo crítico (módulo Mercado).',
+    icon: Package,
+    href: '/estoque',
+    filters: ['Categoria', 'Saldo'],
+  },
 ];
 
 export default function RelatoriosHub() {
   const navigate = useNavigate();
   const { user } = useAuthContext();
+  const companyId = (user as any)?.user_metadata?.company_id as string | undefined;
+  const { enabled: mercadoEnabled } = useMercadoEnabled(companyId);
   const [hasTef, setHasTef] = useState<boolean | null>(null);
 
   useEffect(() => {
     let cancel = false;
     (async () => {
-      const companyId = (user as any)?.user_metadata?.company_id;
       if (!companyId) { setHasTef(false); return; }
       const { data } = await supabase
         .from('store_settings')
@@ -80,9 +90,13 @@ export default function RelatoriosHub() {
       setHasTef(!!(map.pinpad_tef_token && map.pinpad_tef_cnpj && map.pinpad_tef_pdv));
     })();
     return () => { cancel = true; };
-  }, [user]);
+  }, [companyId]);
 
-  const reports = BASE_REPORTS.filter((r) => r.id !== 'tef' || hasTef);
+  const reports = BASE_REPORTS.filter((r) => {
+    if (r.id === 'tef') return !!hasTef;
+    if (r.id === 'estoque') return mercadoEnabled;
+    return true;
+  });
 
   return (
     <PDVV2Layout>
