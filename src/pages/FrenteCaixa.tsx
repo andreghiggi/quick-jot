@@ -447,6 +447,14 @@ export default function FrenteCaixa() {
   }
 
   function changeQty(id: string, delta: number) {
+    // Se for diminuir e a linha está com qty 1, abrir confirmação.
+    if (delta < 0) {
+      const line = lines.find((l) => l.id === id);
+      if (line && !line.imported && line.quantity + delta <= 0) {
+        setConfirmDelete(line);
+        return;
+      }
+    }
     setLines((prev) =>
       prev
         .map((l) => (l.id === id && !l.imported ? { ...l, quantity: l.quantity + delta } : l))
@@ -464,8 +472,7 @@ export default function FrenteCaixa() {
       return;
     }
     if (line.quantity <= 1) {
-      removeLine(line.id);
-      setLastTouchedId((curr) => (curr === line.id ? null : curr));
+      setConfirmDelete(line);
       return;
     }
     setRemoveTarget(line);
