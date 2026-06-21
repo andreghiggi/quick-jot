@@ -53,12 +53,12 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   nao_realizada: { label: 'Não realizada', cls: 'bg-rose-500/15 text-rose-700 border-rose-500/30' },
 };
 
-const TIPO_MANIFESTACAO = [
+const TIPO_MANIFESTACAO: { key: string; label: string; needsJust?: boolean }[] = [
   { key: 'ciencia', label: 'Ciência da operação' },
   { key: 'confirmacao', label: 'Confirmação da operação' },
   { key: 'desconhecimento', label: 'Desconhecimento da operação', needsJust: true },
   { key: 'nao_realizada', label: 'Operação não realizada', needsJust: true },
-] as const;
+];
 
 export default function DfeManifestacao() {
   const { company } = useAuthContext();
