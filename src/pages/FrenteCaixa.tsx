@@ -674,6 +674,8 @@ export default function FrenteCaixa() {
       setLines([]);
       setQuery('');
       setLastTouchedId(null);
+      setImportedOrderId(null);
+      setImportedLabel(null);
       setPaymentOpen(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
