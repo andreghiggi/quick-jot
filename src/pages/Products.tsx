@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star, Camera, Check, X, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star, Camera, Check, X, Sparkles, UtensilsCrossed, ShoppingCart, Repeat } from 'lucide-react';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
 import { ProductsMercadoView } from '@/components/products/ProductsMercadoView';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -92,6 +92,16 @@ export default function Products() {
   useEffect(() => {
     try { sessionStorage.setItem('products:tab', productsTab); } catch {}
   }, [productsTab]);
+  // Filtro de tipo de produto (cardapio / mercado / ambos / todos) — só ativo quando módulo Mercado está on.
+  const [typeFilter, setTypeFilter] = useState<'todos' | 'cardapio' | 'mercado' | 'ambos'>(() => {
+    try {
+      const v = sessionStorage.getItem('products:typeFilter');
+      return v === 'mercado' || v === 'ambos' || v === 'todos' ? (v as any) : 'cardapio';
+    } catch { return 'cardapio'; }
+  });
+  useEffect(() => { try { sessionStorage.setItem('products:typeFilter', typeFilter); } catch {} }, [typeFilter]);
+  // Mini-picker do tipo ao criar produto novo
+  const [typePickerOpen, setTypePickerOpen] = useState(false);
   const menuLink = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
 
   // AI import state
