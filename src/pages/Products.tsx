@@ -902,7 +902,7 @@ export default function Products() {
             (loja precisa ter Mercado + pelo menos mais um tipo disponível).
             O layout é derivado automaticamente: tipo "mercado" → tabela densa. */}
         {isModuleEnabled('mercado') && (() => {
-          const cardapioOn = isModuleEnabled('cardapio');
+          const cardapioOn = cardapioEnabled;
           const chips = [
             cardapioOn && { v: 'cardapio' as const, label: `🍔 Cardápio (${products.filter((p) => ((p as any).productType ?? 'cardapio') === 'cardapio').length})` },
             { v: 'mercado' as const, label: `🛒 Mercado (${products.filter((p) => (p as any).productType === 'mercado').length})` },
