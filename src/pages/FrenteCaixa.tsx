@@ -110,6 +110,7 @@ export default function FrenteCaixa() {
   } = useCashRegister({ companyId: company?.id });
 
   const [query, setQuery] = useState('');
+  const navigate = useNavigate();
   const [lines, setLines] = useState<CartLine[]>([]);
   const [lastTouchedId, setLastTouchedId] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
