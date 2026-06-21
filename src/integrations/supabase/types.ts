@@ -529,6 +529,7 @@ export type Database = {
           address_street: string | null
           cnpj: string | null
           created_at: string | null
+          fiscalflow_empresa_id: string | null
           id: string
           initial_password: string | null
           license_block_message: string | null
@@ -570,6 +571,7 @@ export type Database = {
           address_street?: string | null
           cnpj?: string | null
           created_at?: string | null
+          fiscalflow_empresa_id?: string | null
           id?: string
           initial_password?: string | null
           license_block_message?: string | null
@@ -611,6 +613,7 @@ export type Database = {
           address_street?: string | null
           cnpj?: string | null
           created_at?: string | null
+          fiscalflow_empresa_id?: string | null
           id?: string
           initial_password?: string | null
           license_block_message?: string | null
@@ -963,6 +966,146 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dfe_documentos: {
+        Row: {
+          chave_acesso: string
+          cnpj_emitente: string | null
+          company_id: string
+          created_at: string
+          data_emissao: string | null
+          data_manifestacao: string | null
+          fiscalflow_id: string | null
+          id: string
+          ignored: boolean
+          imported_at: string | null
+          imported_invoice_id: string | null
+          nome_emitente: string | null
+          nsu: number | null
+          numero_nfe: string | null
+          raw: Json | null
+          serie: string | null
+          situacao_nfe: string | null
+          status_manifestacao: string
+          tipo: string
+          tp_nf: number | null
+          updated_at: string
+          valor_total: number | null
+          xml_path: string | null
+        }
+        Insert: {
+          chave_acesso: string
+          cnpj_emitente?: string | null
+          company_id: string
+          created_at?: string
+          data_emissao?: string | null
+          data_manifestacao?: string | null
+          fiscalflow_id?: string | null
+          id?: string
+          ignored?: boolean
+          imported_at?: string | null
+          imported_invoice_id?: string | null
+          nome_emitente?: string | null
+          nsu?: number | null
+          numero_nfe?: string | null
+          raw?: Json | null
+          serie?: string | null
+          situacao_nfe?: string | null
+          status_manifestacao?: string
+          tipo?: string
+          tp_nf?: number | null
+          updated_at?: string
+          valor_total?: number | null
+          xml_path?: string | null
+        }
+        Update: {
+          chave_acesso?: string
+          cnpj_emitente?: string | null
+          company_id?: string
+          created_at?: string
+          data_emissao?: string | null
+          data_manifestacao?: string | null
+          fiscalflow_id?: string | null
+          id?: string
+          ignored?: boolean
+          imported_at?: string | null
+          imported_invoice_id?: string | null
+          nome_emitente?: string | null
+          nsu?: number | null
+          numero_nfe?: string | null
+          raw?: Json | null
+          serie?: string | null
+          situacao_nfe?: string | null
+          status_manifestacao?: string
+          tipo?: string
+          tp_nf?: number | null
+          updated_at?: string
+          valor_total?: number | null
+          xml_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dfe_documentos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dfe_eventos: {
+        Row: {
+          company_id: string
+          created_at: string
+          cstat: string | null
+          documento_id: string
+          id: string
+          justificativa: string | null
+          nprot: string | null
+          payload: Json | null
+          tipo: string
+          xmotivo: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          cstat?: string | null
+          documento_id: string
+          id?: string
+          justificativa?: string | null
+          nprot?: string | null
+          payload?: Json | null
+          tipo: string
+          xmotivo?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          cstat?: string | null
+          documento_id?: string
+          id?: string
+          justificativa?: string | null
+          nprot?: string | null
+          payload?: Json | null
+          tipo?: string
+          xmotivo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dfe_eventos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dfe_eventos_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "dfe_documentos"
             referencedColumns: ["id"]
           },
         ]
@@ -2303,6 +2446,164 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      purchase_invoice_items: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          invoice_id: string
+          product_id: string | null
+          quantidade: number
+          stock_applied: boolean
+          valor_total: number
+          valor_unitario: number
+          xml_cfop: string | null
+          xml_codigo: string | null
+          xml_descricao: string | null
+          xml_ean: string | null
+          xml_ncm: string | null
+          xml_unidade: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          invoice_id: string
+          product_id?: string | null
+          quantidade?: number
+          stock_applied?: boolean
+          valor_total?: number
+          valor_unitario?: number
+          xml_cfop?: string | null
+          xml_codigo?: string | null
+          xml_descricao?: string | null
+          xml_ean?: string | null
+          xml_ncm?: string | null
+          xml_unidade?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          product_id?: string | null
+          quantidade?: number
+          stock_applied?: boolean
+          valor_total?: number
+          valor_unitario?: number
+          xml_cfop?: string | null
+          xml_codigo?: string | null
+          xml_descricao?: string | null
+          xml_ean?: string | null
+          xml_ncm?: string | null
+          xml_unidade?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_invoice_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_invoices: {
+        Row: {
+          chave_acesso: string | null
+          cnpj_emitente: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          data_emissao: string | null
+          dfe_documento_id: string | null
+          id: string
+          nome_emitente: string | null
+          notes: string | null
+          numero_nfe: string | null
+          serie: string | null
+          status: string
+          supplier_id: string | null
+          updated_at: string
+          valor_total: number | null
+          xml_path: string | null
+        }
+        Insert: {
+          chave_acesso?: string | null
+          cnpj_emitente?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          data_emissao?: string | null
+          dfe_documento_id?: string | null
+          id?: string
+          nome_emitente?: string | null
+          notes?: string | null
+          numero_nfe?: string | null
+          serie?: string | null
+          status?: string
+          supplier_id?: string | null
+          updated_at?: string
+          valor_total?: number | null
+          xml_path?: string | null
+        }
+        Update: {
+          chave_acesso?: string | null
+          cnpj_emitente?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          data_emissao?: string | null
+          dfe_documento_id?: string | null
+          id?: string
+          nome_emitente?: string | null
+          notes?: string | null
+          numero_nfe?: string | null
+          serie?: string | null
+          status?: string
+          supplier_id?: string | null
+          updated_at?: string
+          valor_total?: number | null
+          xml_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoices_dfe_documento_id_fkey"
+            columns: ["dfe_documento_id"]
+            isOneToOne: false
+            referencedRelation: "dfe_documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reseller_companies: {
         Row: {
