@@ -884,18 +884,45 @@ export default function Products() {
     <AppLayout title="Produtos" actions={headerActions}>
       <div className="space-y-6">
 
-        {/* Abas Cardápio | Mercado — só aparecem quando módulo `mercado` está ativo */}
+        {/* Abas por tipo do produto — só aparecem quando módulo `mercado` está ativo */}
         {isModuleEnabled('mercado') && (
           <Tabs value={productsTab} onValueChange={(v) => setProductsTab(v as 'cardapio' | 'mercado')}>
             <TabsList>
-              <TabsTrigger value="cardapio">Cardápio</TabsTrigger>
-              <TabsTrigger value="mercado">Mercado</TabsTrigger>
+              <TabsTrigger value="cardapio">Lista por categoria</TabsTrigger>
+              <TabsTrigger value="mercado">Tabela densa (Mercado)</TabsTrigger>
             </TabsList>
           </Tabs>
         )}
 
+        {/* Filtro por tipo do produto (só com módulo Mercado on) */}
+        {isModuleEnabled('mercado') && productsTab === 'cardapio' && (
+          <div className="flex gap-2 flex-wrap">
+            {([
+              { v: 'todos', label: `Todos (${products.length})` },
+              { v: 'cardapio', label: `🍔 Cardápio (${products.filter((p) => ((p as any).productType ?? 'cardapio') === 'cardapio').length})` },
+              { v: 'mercado', label: `🛒 Mercado (${products.filter((p) => (p as any).productType === 'mercado').length})` },
+              { v: 'ambos', label: `🔄 Ambos (${products.filter((p) => (p as any).productType === 'ambos').length})` },
+            ] as const).map(({ v, label }) => (
+              <Badge
+                key={v}
+                variant={typeFilter === v ? 'default' : 'outline'}
+                className="cursor-pointer px-3 py-1.5 text-sm"
+                onClick={() => setTypeFilter(v)}
+              >
+                {label}
+              </Badge>
+            ))}
+          </div>
+        )}
+
         {isModuleEnabled('mercado') && productsTab === 'mercado' ? (
-          <ProductsMercadoView products={products} onEdit={openEditDialog} />
+          <ProductsMercadoView
+            products={products.filter((p) => {
+              const t = (p as any).productType ?? 'cardapio';
+              return t === 'mercado' || t === 'ambos';
+            })}
+            onEdit={openEditDialog}
+          />
         ) : (
         <>
         {/* Category filter chips */}
