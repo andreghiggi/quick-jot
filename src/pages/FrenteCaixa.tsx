@@ -184,6 +184,21 @@ export default function FrenteCaixa() {
   // Intercepta cliques em links internos (<a href="/...">) quando há venda
   // em andamento, abrindo um dialog de confirmação.
   const [pendingNavPath, setPendingNavPath] = useState<string | null>(null);
+  // Confirmação customizada para F5 / Ctrl+R / Cmd+R.
+  const [confirmReload, setConfirmReload] = useState(false);
+  useEffect(() => {
+    if (!hasUnsavedSale) return;
+    const onKey = (e: KeyboardEvent) => {
+      const isF5 = e.key === 'F5';
+      const isCtrlR = (e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R');
+      if (!isF5 && !isCtrlR) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setConfirmReload(true);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [hasUnsavedSale]);
   useEffect(() => {
     if (!hasUnsavedSale) return;
     const onClick = (e: MouseEvent) => {
