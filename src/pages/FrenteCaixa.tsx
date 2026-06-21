@@ -836,18 +836,25 @@ export default function FrenteCaixa() {
                         l.line_surcharge > 0;
                       return (
                       <ContextMenu key={l.id}>
-                        <ContextMenuTrigger asChild>
+                        <ContextMenuTrigger asChild disabled={l.imported}>
                           <li
                             onClick={() => setLastTouchedId(l.id)}
                             className={`flex items-center gap-3 px-3 py-2 transition-colors cursor-default ${
                               isLast ? 'bg-primary/5 ring-2 ring-primary ring-inset' : ''
-                            }`}
+                            } ${l.imported ? 'bg-amber-50 dark:bg-amber-950/20' : ''}`}
                           >
                             <span className="w-6 text-right text-xs font-semibold tabular-nums text-muted-foreground shrink-0">
                               {idx + 1}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{l.product_name}</p>
+                              <p className="text-sm font-medium truncate flex items-center gap-2">
+                                {l.product_name}
+                                {l.imported && (
+                                  <Badge variant="outline" className="text-[9px] border-amber-500 text-amber-700 dark:text-amber-400 shrink-0">
+                                    IMPORTADO
+                                  </Badge>
+                                )}
+                              </p>
                               <p className="text-xs text-muted-foreground tabular-nums">
                                 R$ {l.effective_unit_price.toFixed(3).replace('.', ',')} × {l.quantity} {l.unit}
                                 {l.effective_unit_price !== l.unit_price && (
@@ -856,6 +863,11 @@ export default function FrenteCaixa() {
                                   </span>
                                 )}
                               </p>
+                              {l.imported_notes && (
+                                <p className="text-[11px] text-muted-foreground italic truncate">
+                                  {l.imported_notes}
+                                </p>
+                              )}
                               {hasAdjust && (
                                 <p className="text-[11px] tabular-nums mt-0.5 flex flex-wrap gap-2">
                                   {l.line_discount > 0 && (
@@ -871,41 +883,53 @@ export default function FrenteCaixa() {
                                 </p>
                               )}
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="outline"
-                                className="h-7 w-7"
-                                onClick={() => changeQty(l.id, -1)}
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <span className="w-8 text-center text-sm tabular-nums font-medium">
-                                {l.quantity}
-                              </span>
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="outline"
-                                className="h-7 w-7"
-                                onClick={() => changeQty(l.id, +1)}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
+                            {l.imported ? (
+                              <div className="flex items-center px-2">
+                                <span className="w-16 text-center text-sm tabular-nums font-medium text-muted-foreground">
+                                  {l.quantity} {l.unit}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-7 w-7"
+                                  onClick={() => changeQty(l.id, -1)}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="w-8 text-center text-sm tabular-nums font-medium">
+                                  {l.quantity}
+                                </span>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-7 w-7"
+                                  onClick={() => changeQty(l.id, +1)}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
                             <span className="w-24 text-right tabular-nums text-sm font-semibold text-emerald-600">
                               {formatPrice(lineTotal).replace('.', ',')}
                             </span>
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 text-destructive"
-                              onClick={() => requestRemoveLine(l)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                            {l.imported ? (
+                              <span className="h-7 w-7" aria-hidden />
+                            ) : (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-destructive"
+                                onClick={() => requestRemoveLine(l)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
                           </li>
                         </ContextMenuTrigger>
                         <ContextMenuContent className="w-64">
