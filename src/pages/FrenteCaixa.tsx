@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useBlocker } from 'react-router-dom';
 import { ScanBarcode, X, Plus, Minus, Loader2, AlertTriangle, Trash2, Tag, MoreHorizontal, Maximize2, Minimize2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -119,6 +119,8 @@ export default function FrenteCaixa() {
   const [highlightIdx, setHighlightIdx] = useState(0);
   const [removeTarget, setRemoveTarget] = useState<CartLine | null>(null);
   const [removeQty, setRemoveQty] = useState<string>('1');
+  // Confirmação ao remover/zerar uma linha do carrinho (atalho ↓, botão −, lixeira).
+  const [confirmDelete, setConfirmDelete] = useState<CartLine | null>(null);
   const [priceTarget, setPriceTarget] = useState<CartLine | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<CartLine | null>(null);
   const [cashMovementOpen, setCashMovementOpen] = useState<null | CashMovementType>(null);
