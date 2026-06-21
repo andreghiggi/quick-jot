@@ -2120,6 +2120,7 @@ export type Database = {
           pdv_item: boolean
           price: number
           price_per_kg: boolean
+          product_type: string
           scale_barcode: string | null
           shelf_life_days: number | null
           stock_quantity: number
@@ -2163,6 +2164,7 @@ export type Database = {
           pdv_item?: boolean
           price: number
           price_per_kg?: boolean
+          product_type?: string
           scale_barcode?: string | null
           shelf_life_days?: number | null
           stock_quantity?: number
@@ -2206,6 +2208,7 @@ export type Database = {
           pdv_item?: boolean
           price?: number
           price_per_kg?: boolean
+          product_type?: string
           scale_barcode?: string | null
           shelf_life_days?: number | null
           stock_quantity?: number
