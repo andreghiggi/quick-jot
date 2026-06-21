@@ -24,6 +24,14 @@ export interface Product {
   waiterItem?: boolean;
   isNew?: boolean;
   subcategoryId?: string | null;
+  /**
+   * Tipo do produto. Define onde ele aparece por padrão e como o formulário se comporta.
+   * - `cardapio`: prato/lanche (categoria obrigatória, sem foco em estoque/GTIN).
+   * - `mercado`: item de conveniência (categoria opcional, foco em GTIN/estoque/unidade).
+   * - `ambos`: aparece em cardápio + caixa/mercado.
+   * Compatibilidade: lojas existentes continuam funcionando — esse campo só ajusta UX.
+   */
+  productType?: 'cardapio' | 'mercado' | 'ambos';
   code?: string | null;
   gtin?: string | null;
   unit?: string;

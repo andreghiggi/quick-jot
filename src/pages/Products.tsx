@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star, Camera, Check, X, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star, Camera, Check, X, Sparkles, UtensilsCrossed, ShoppingCart, Repeat } from 'lucide-react';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
 import { ProductsMercadoView } from '@/components/products/ProductsMercadoView';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -92,6 +92,16 @@ export default function Products() {
   useEffect(() => {
     try { sessionStorage.setItem('products:tab', productsTab); } catch {}
   }, [productsTab]);
+  // Filtro de tipo de produto (cardapio / mercado / ambos / todos) — só ativo quando módulo Mercado está on.
+  const [typeFilter, setTypeFilter] = useState<'todos' | 'cardapio' | 'mercado' | 'ambos'>(() => {
+    try {
+      const v = sessionStorage.getItem('products:typeFilter');
+      return v === 'mercado' || v === 'ambos' || v === 'todos' ? (v as any) : 'cardapio';
+    } catch { return 'cardapio'; }
+  });
+  useEffect(() => { try { sessionStorage.setItem('products:typeFilter', typeFilter); } catch {} }, [typeFilter]);
+  // Mini-picker do tipo ao criar produto novo
+  const [typePickerOpen, setTypePickerOpen] = useState(false);
   const menuLink = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
 
   // AI import state
@@ -556,9 +566,17 @@ export default function Products() {
   }, [products, categories]);
 
   const filteredGroupedProducts = useMemo(() => {
-    if (!selectedCategoryFilter) return groupedProducts;
-    return groupedProducts.filter(([category]) => category === selectedCategoryFilter);
-  }, [groupedProducts, selectedCategoryFilter]);
+    const mercadoOn = isModuleEnabled('mercado');
+    // 1) Filtro por tipo (Cardápio / Mercado / Ambos / Todos) — só vale quando módulo Mercado está on.
+    const byType = mercadoOn && typeFilter !== 'todos'
+      ? groupedProducts
+          .map(([cat, prods]) => [cat, prods.filter((p) => ((p as any).productType ?? 'cardapio') === typeFilter)] as [string, Product[]])
+          .filter(([, prods]) => prods.length > 0)
+      : groupedProducts;
+    // 2) Filtro por categoria (chip).
+    if (!selectedCategoryFilter) return byType;
+    return byType.filter(([category]) => category === selectedCategoryFilter);
+  }, [groupedProducts, selectedCategoryFilter, typeFilter, isModuleEnabled]);
 
   if (loading) {
     return (
@@ -586,7 +604,10 @@ export default function Products() {
           <span className="hidden sm:inline">Tributação em massa</span>
         </Button>
       )}
-      <Button onClick={() => navigate('/produtos/novo')}>
+      <Button onClick={() => {
+        if (isModuleEnabled('mercado')) setTypePickerOpen(true);
+        else navigate('/produtos/novo');
+      }}>
         <Plus className="h-4 w-4 mr-2" />
         <span className="hidden sm:inline">Novo Produto</span>
       </Button>
@@ -863,18 +884,45 @@ export default function Products() {
     <AppLayout title="Produtos" actions={headerActions}>
       <div className="space-y-6">
 
-        {/* Abas Cardápio | Mercado — só aparecem quando módulo `mercado` está ativo */}
+        {/* Abas por tipo do produto — só aparecem quando módulo `mercado` está ativo */}
         {isModuleEnabled('mercado') && (
           <Tabs value={productsTab} onValueChange={(v) => setProductsTab(v as 'cardapio' | 'mercado')}>
             <TabsList>
-              <TabsTrigger value="cardapio">Cardápio</TabsTrigger>
-              <TabsTrigger value="mercado">Mercado</TabsTrigger>
+              <TabsTrigger value="cardapio">Lista por categoria</TabsTrigger>
+              <TabsTrigger value="mercado">Tabela densa (Mercado)</TabsTrigger>
             </TabsList>
           </Tabs>
         )}
 
+        {/* Filtro por tipo do produto (só com módulo Mercado on) */}
+        {isModuleEnabled('mercado') && productsTab === 'cardapio' && (
+          <div className="flex gap-2 flex-wrap">
+            {([
+              { v: 'todos', label: `Todos (${products.length})` },
+              { v: 'cardapio', label: `🍔 Cardápio (${products.filter((p) => ((p as any).productType ?? 'cardapio') === 'cardapio').length})` },
+              { v: 'mercado', label: `🛒 Mercado (${products.filter((p) => (p as any).productType === 'mercado').length})` },
+              { v: 'ambos', label: `🔄 Ambos (${products.filter((p) => (p as any).productType === 'ambos').length})` },
+            ] as const).map(({ v, label }) => (
+              <Badge
+                key={v}
+                variant={typeFilter === v ? 'default' : 'outline'}
+                className="cursor-pointer px-3 py-1.5 text-sm"
+                onClick={() => setTypeFilter(v)}
+              >
+                {label}
+              </Badge>
+            ))}
+          </div>
+        )}
+
         {isModuleEnabled('mercado') && productsTab === 'mercado' ? (
-          <ProductsMercadoView products={products} onEdit={openEditDialog} />
+          <ProductsMercadoView
+            products={products.filter((p) => {
+              const t = (p as any).productType ?? 'cardapio';
+              return t === 'mercado' || t === 'ambos';
+            })}
+            onEdit={openEditDialog}
+          />
         ) : (
         <>
         {/* Category filter chips */}
@@ -920,6 +968,12 @@ export default function Products() {
                           <h3 className="font-medium">{product.name}</h3>
                           {!product.active && <Badge variant="secondary">Inativo</Badge>}
                           {product.isNew && <Badge variant="default" className="bg-amber-500 text-white text-xs">⭐ {storeSettings.featuredSectionName}</Badge>}
+                          {isModuleEnabled('mercado') && (() => {
+                            const t = (product as any).productType ?? 'cardapio';
+                            if (t === 'mercado') return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs" variant="outline">🛒 Mercado</Badge>;
+                            if (t === 'ambos') return <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs" variant="outline">🔄 Ambos</Badge>;
+                            return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs" variant="outline">🍔 Cardápio</Badge>;
+                          })()}
                         </div>
                         {product.description && (
                           <p className="text-sm text-muted-foreground">{product.description}</p>
@@ -1606,6 +1660,38 @@ export default function Products() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Mini-picker: tipo do produto ao criar */}
+      <Dialog open={typePickerOpen} onOpenChange={setTypePickerOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Qual tipo de produto?</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-2 pt-2">
+            {([
+              { v: 'cardapio', label: 'Cardápio', desc: 'Pratos, lanches, bebidas preparadas', Icon: UtensilsCrossed },
+              { v: 'mercado', label: 'Mercado', desc: 'Refrigerantes, salgadinhos, conveniência', Icon: ShoppingCart },
+              { v: 'ambos', label: 'Ambos', desc: 'Vendido em cardápio e mercado', Icon: Repeat },
+            ] as const).map(({ v, label, desc, Icon }) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => {
+                  setTypePickerOpen(false);
+                  navigate(`/produtos/novo?tipo=${v}`);
+                }}
+                className="text-left rounded-lg border p-4 hover:bg-muted/40 transition flex items-start gap-3"
+              >
+                <Icon className="h-5 w-5 mt-0.5 text-primary" />
+                <div>
+                  <div className="font-medium">{label}</div>
+                  <div className="text-xs text-muted-foreground">{desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
     </AppLayout>
