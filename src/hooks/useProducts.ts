@@ -64,6 +64,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         waiterItem: (product as any).waiter_item ?? true,
         isNew: (product as any).is_new ?? false,
         subcategoryId: (product as any).subcategory_id || null,
+        productType: ((product as any).product_type as 'cardapio'|'mercado'|'ambos') || 'cardapio',
         code: (product as any).code || null,
         gtin: (product as any).gtin || null,
         unit: (product as any).unit || 'UN',
@@ -149,6 +150,7 @@ export function useProducts(options: UseProductsOptions = {}) {
           subcategory_id: (productData as any).subcategoryId || null,
           pdv_item: productData.pdvItem ?? true,
           menu_item: productData.menuItem ?? true,
+          product_type: (productData as any).productType ?? 'cardapio',
           code: codeToUse,
           cost_price: (productData as any).costPrice ?? null,
           // Campos do módulo Mercado (opcionais; permanecem null/default quando não enviados)
@@ -201,6 +203,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       if (productData.menuItem !== undefined) (updateData as any).menu_item = productData.menuItem;
       if (productData.waiterItem !== undefined) (updateData as any).waiter_item = productData.waiterItem;
       if (productData.subcategoryId !== undefined) updateData.subcategory_id = productData.subcategoryId || null;
+      if ((productData as any).productType !== undefined) (updateData as any).product_type = (productData as any).productType;
       if ((productData as any).code !== undefined) (updateData as any).code = (productData as any).code || null;
       if ((productData as any).gtin !== undefined) (updateData as any).gtin = (productData as any).gtin || null;
       if ((productData as any).unit !== undefined) (updateData as any).unit = (productData as any).unit || 'UN';
