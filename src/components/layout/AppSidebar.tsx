@@ -36,6 +36,7 @@ import {
   PackagePlus,
   ShoppingCart,
   FileCheck,
+  FileInput,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
