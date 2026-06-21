@@ -181,6 +181,33 @@ export default function FrenteCaixa() {
     [products],
   );
 
+  // Auto-adicionar ao bipar: se o que está no campo bater EXATAMENTE com um GTIN
+  // de produto ativo, adiciona direto (sem precisar de Enter). Aceita também o
+  // padrão "N*GTIN" para múltiplas unidades. Só dispara para valores numéricos
+  // com 8+ dígitos para não conflitar com busca por código curto ou nome.
+  useEffect(() => {
+    const raw = query.trim();
+    if (!raw) return;
+    let qty = 1;
+    let code = raw;
+    const m = /^(\d{1,3})\s*\*\s*(.+)$/.exec(raw);
+    if (m) {
+      qty = Math.max(1, parseInt(m[1], 10));
+      code = m[2].trim();
+    }
+    if (!/^\d{8,14}$/.test(code)) return;
+    const match = activeProducts.find(
+      (p) => ((p as any).gtin || '').toString() === code,
+    );
+    if (match) {
+      addProductToCart(match, qty);
+      setQuery('');
+      setSearchMatches([]);
+      setHighlightIdx(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, activeProducts]);
+
   const total = useMemo(
     () =>
       lines.reduce(
