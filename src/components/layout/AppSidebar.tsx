@@ -443,6 +443,19 @@ export function AppSidebar() {
                           </CollapsibleContent>
                         </SidebarMenuItem>
                       </Collapsible>
+                      {cadastrosConfigItems.map((item) => (
+                        <SidebarMenuItem key={item.href}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location.pathname === item.href}
+                          >
+                            <Link to={item.href}>
+                              <item.icon className="w-4 h-4" />
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </CollapsibleContent>
