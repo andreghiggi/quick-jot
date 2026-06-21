@@ -228,32 +228,42 @@ function AppRoutes() {
       {/* Frente de Caixa (módulo mercado) — guard interno via useMercadoEnabled */}
       <Route path="/frente-caixa" element={
         <ProtectedRoute requireCompany>
-          <FrenteCaixa />
+          <FrenteCaixaGuard>
+            <FrenteCaixa />
+          </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
 
       <Route path="/frente-caixa/lista" element={
         <ProtectedRoute requireCompany>
-          <FrenteCaixaLista />
+          <FrenteCaixaGuard>
+            <FrenteCaixaLista />
+          </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
 
       <Route path="/frente-caixa/recebimento" element={
         <ProtectedRoute requireCompany>
-          <FrenteCaixaRecebimento />
+          <FrenteCaixaGuard>
+            <FrenteCaixaRecebimento />
+          </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
 
       <Route path="/frente-caixa/configuracoes" element={
         <ProtectedRoute requireCompany>
-          <FrenteCaixaConfiguracoes />
+          <FrenteCaixaGuard>
+            <FrenteCaixaConfiguracoes />
+          </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
 
       {/* Estoque (módulo mercado) — guard interno via useMercadoEnabled */}
       <Route path="/estoque" element={
         <ProtectedRoute requireCompany>
-          <EstoqueRelatorio />
+          <FrenteCaixaGuard>
+            <EstoqueRelatorio />
+          </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
 
