@@ -637,7 +637,7 @@ export default function ProductEdit() {
         {/* ===================== VISIBILIDADE ===================== */}
         <Section
           title="Visibilidade"
-          description="Defina onde este produto deve aparecer."
+          description="Por padrão, o produto aparece automaticamente conforme o tipo escolhido."
         >
           <div className="space-y-3">
             <ToggleRow
@@ -645,24 +645,6 @@ export default function ProductEdit() {
               description="Quando desligado, o produto fica oculto em todos os canais."
               checked={active}
               onCheckedChange={setActive}
-            />
-            <ToggleRow
-              label="Cardápio digital"
-              description="Exibe no cardápio online para clientes."
-              checked={menuItem}
-              onCheckedChange={setMenuItem}
-            />
-            <ToggleRow
-              label="PDV"
-              description="Disponível para venda no PDV."
-              checked={pdvItem}
-              onCheckedChange={setPdvItem}
-            />
-            <ToggleRow
-              label="Garçom / Mesas"
-              description="Disponível no app do garçom e no cardápio de mesa."
-              checked={waiterItem}
-              onCheckedChange={setWaiterItem}
             />
             {!isNew && (
               <ToggleRow
@@ -672,6 +654,40 @@ export default function ProductEdit() {
                 onCheckedChange={setIsFeatured}
               />
             )}
+            <Collapsible open={visibilityAdvancedOpen} onOpenChange={setVisibilityAdvancedOpen}>
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground pt-2"
+                >
+                  <ChevronDown className={`h-4 w-4 transition-transform ${visibilityAdvancedOpen ? 'rotate-180' : ''}`} />
+                  Visibilidade avançada (por canal)
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3 pt-3">
+                <p className="text-xs text-muted-foreground">
+                  Use para exceções. Em geral, basta escolher o <strong>Tipo do produto</strong> acima.
+                </p>
+                <ToggleRow
+                  label="Cardápio digital"
+                  description="Exibe no cardápio online para clientes."
+                  checked={menuItem}
+                  onCheckedChange={setMenuItem}
+                />
+                <ToggleRow
+                  label="PDV"
+                  description="Disponível para venda no PDV."
+                  checked={pdvItem}
+                  onCheckedChange={setPdvItem}
+                />
+                <ToggleRow
+                  label="Garçom / Mesas"
+                  description="Disponível no app do garçom e no cardápio de mesa."
+                  checked={waiterItem}
+                  onCheckedChange={setWaiterItem}
+                />
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         </Section>
 
@@ -771,12 +787,28 @@ export default function ProductEdit() {
           )}
         </Section>
 
-        {/* ===================== TRIBUTAÇÃO ===================== */}
+        {/* ===================== TRIBUTAÇÃO (colapsável) ===================== */}
         <Section
-          title="Tributação"
-          description="Regra fiscal aplicada na emissão de NFC-e / NF-e."
+          title="Dados fiscais"
+          description="NCM, CFOP, CEST, origem e regra tributária. Aplicados na NFC-e / NF-e."
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <Collapsible open={fiscalOpen} onOpenChange={setFiscalOpen}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm hover:bg-muted/50"
+              >
+                <span className="flex items-center gap-2">
+                  <ChevronDown className={`h-4 w-4 transition-transform ${fiscalOpen ? 'rotate-180' : ''}`} />
+                  {fiscalOpen ? 'Recolher dados fiscais' : 'Editar dados fiscais'}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {ncm || cfop || cest || taxRuleId ? 'Preenchido' : 'Vazio'}
+                </span>
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <Field label="NCM" hint="8 dígitos. Ex.: 22021000">
               <Input
                 value={ncm}
@@ -891,6 +923,8 @@ export default function ProductEdit() {
               </Select>
             </Field>
           </div>
+            </CollapsibleContent>
+          </Collapsible>
         </Section>
 
         {/* ===================== OPCIONAIS ===================== */}
