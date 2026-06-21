@@ -892,27 +892,32 @@ export default function Products() {
     <AppLayout title="Produtos" actions={headerActions}>
       <div className="space-y-6">
 
-        {/* Filtro por tipo do produto (só com módulo Mercado on).
-            O layout é derivado automaticamente: tipo "mercado" → tabela densa;
-            qualquer outro tipo → lista por categoria. */}
-        {isModuleEnabled('mercado') && (
-          <div className="flex gap-2 flex-wrap">
-            {([
-              { v: 'cardapio', label: `🍔 Cardápio (${products.filter((p) => ((p as any).productType ?? 'cardapio') === 'cardapio').length})` },
-              { v: 'mercado', label: `🛒 Mercado (${products.filter((p) => (p as any).productType === 'mercado').length})` },
-              { v: 'ambos', label: `🔄 Ambos (${products.filter((p) => (p as any).productType === 'ambos').length})` },
-            ] as const).map(({ v, label }) => (
-              <Badge
-                key={v}
-                variant={typeFilter === v ? 'default' : 'outline'}
-                className="cursor-pointer px-3 py-1.5 text-sm"
-                onClick={() => setTypeFilter(v)}
-              >
-                {label}
-              </Badge>
-            ))}
-          </div>
-        )}
+        {/* Filtro por tipo do produto. Só aparece quando faz sentido escolher
+            (loja precisa ter Mercado + pelo menos mais um tipo disponível).
+            O layout é derivado automaticamente: tipo "mercado" → tabela densa. */}
+        {isModuleEnabled('mercado') && (() => {
+          const cardapioOn = isModuleEnabled('cardapio');
+          const chips = [
+            cardapioOn && { v: 'cardapio' as const, label: `🍔 Cardápio (${products.filter((p) => ((p as any).productType ?? 'cardapio') === 'cardapio').length})` },
+            { v: 'mercado' as const, label: `🛒 Mercado (${products.filter((p) => (p as any).productType === 'mercado').length})` },
+            cardapioOn && { v: 'ambos' as const, label: `🔄 Ambos (${products.filter((p) => (p as any).productType === 'ambos').length})` },
+          ].filter(Boolean) as Array<{ v: 'cardapio' | 'mercado' | 'ambos'; label: string }>;
+          if (chips.length < 2) return null;
+          return (
+            <div className="flex gap-2 flex-wrap">
+              {chips.map(({ v, label }) => (
+                <Badge
+                  key={v}
+                  variant={typeFilter === v ? 'default' : 'outline'}
+                  className="cursor-pointer px-3 py-1.5 text-sm"
+                  onClick={() => setTypeFilter(v)}
+                >
+                  {label}
+                </Badge>
+              ))}
+            </div>
+          );
+        })()}
 
         {isModuleEnabled('mercado') && typeFilter === 'mercado' ? (
           <ProductsMercadoView
