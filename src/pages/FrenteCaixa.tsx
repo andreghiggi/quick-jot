@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useBlocker } from 'react-router-dom';
 import { ScanBarcode, X, Plus, Minus, Loader2, AlertTriangle, Trash2, Tag, MoreHorizontal, Maximize2, Minimize2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -119,6 +119,8 @@ export default function FrenteCaixa() {
   const [highlightIdx, setHighlightIdx] = useState(0);
   const [removeTarget, setRemoveTarget] = useState<CartLine | null>(null);
   const [removeQty, setRemoveQty] = useState<string>('1');
+  // Confirmação ao remover/zerar uma linha do carrinho (atalho ↓, botão −, lixeira).
+  const [confirmDelete, setConfirmDelete] = useState<CartLine | null>(null);
   const [priceTarget, setPriceTarget] = useState<CartLine | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<CartLine | null>(null);
   const [cashMovementOpen, setCashMovementOpen] = useState<null | CashMovementType>(null);
@@ -158,6 +160,31 @@ export default function FrenteCaixa() {
       }
     } catch {/*noop*/}
   }, [lines.length]);
+
+  // ---------------------------------------------------------------
+  // Proteção contra perda de venda em andamento
+  // ---------------------------------------------------------------
+  // Quando há itens no carrinho, avisa antes do usuário recarregar/fechar
+  // a aba (popup nativo do navegador) e antes de navegar para outra rota
+  // dentro do app (AlertDialog customizado).
+  const hasUnsavedSale = lines.length > 0;
+
+  useEffect(() => {
+    if (!hasUnsavedSale) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Texto é ignorado pelos navegadores modernos, mas é necessário para disparar o popup.
+      e.returnValue = '';
+      return '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasUnsavedSale]);
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsavedSale && currentLocation.pathname !== nextLocation.pathname,
+  );
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -302,6 +329,12 @@ export default function FrenteCaixa() {
         const target = lines.find((l) => l.id === lastTouchedId) ?? lines[lines.length - 1];
         if (!target) return;
         const delta = e.key === 'ArrowUp' ? 1 : -1;
+        // Se for diminuir e a qty atual já está em 1, pedir confirmação
+        // ao invés de remover silenciosamente a linha.
+        if (delta === -1 && target.quantity <= 1) {
+          setConfirmDelete(target);
+          return;
+        }
         setLines((prev) =>
           prev
             .map((l) => (l.id === target.id ? { ...l, quantity: l.quantity + delta } : l))
@@ -439,6 +472,14 @@ export default function FrenteCaixa() {
   }
 
   function changeQty(id: string, delta: number) {
+    // Se for diminuir e a linha está com qty 1, abrir confirmação.
+    if (delta < 0) {
+      const line = lines.find((l) => l.id === id);
+      if (line && !line.imported && line.quantity + delta <= 0) {
+        setConfirmDelete(line);
+        return;
+      }
+    }
     setLines((prev) =>
       prev
         .map((l) => (l.id === id && !l.imported ? { ...l, quantity: l.quantity + delta } : l))
@@ -456,8 +497,7 @@ export default function FrenteCaixa() {
       return;
     }
     if (line.quantity <= 1) {
-      removeLine(line.id);
-      setLastTouchedId((curr) => (curr === line.id ? null : curr));
+      setConfirmDelete(line);
       return;
     }
     setRemoveTarget(line);
@@ -1218,6 +1258,63 @@ export default function FrenteCaixa() {
               <AlertDialogCancel className="uppercase">Cancelar</AlertDialogCancel>
               <AlertDialogAction onClick={confirmRemoveQty} className="uppercase">
                 Confirmar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Confirmação ao remover/zerar uma linha do carrinho */}
+        <AlertDialog
+          open={!!confirmDelete}
+          onOpenChange={(o) => { if (!o) setConfirmDelete(null); }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Deseja realmente excluir esse item?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmDelete ? (
+                  <>O item <strong className="uppercase">{confirmDelete.product_name}</strong> será removido do carrinho.</>
+                ) : null}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (confirmDelete) {
+                    const id = confirmDelete.id;
+                    setLines((prev) => prev.filter((l) => l.id !== id));
+                    setLastTouchedId((curr) => (curr === id ? null : curr));
+                  }
+                  setConfirmDelete(null);
+                }}
+              >
+                Remover
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Bloqueio de navegação interna quando há venda em andamento */}
+        <AlertDialog
+          open={blocker.state === 'blocked'}
+          onOpenChange={(o) => {
+            if (!o && blocker.state === 'blocked') blocker.reset?.();
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Sair sem finalizar a venda?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Há itens no carrinho que ainda não foram finalizados. Se sair desta tela agora, os itens serão perdidos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => blocker.reset?.()}>
+                Continuar venda
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={() => blocker.proceed?.()}>
+                Sair mesmo assim
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
