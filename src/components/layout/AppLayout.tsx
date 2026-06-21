@@ -2,7 +2,6 @@ import { ReactNode, useMemo } from 'react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Separator } from '@/components/ui/separator';
-import { FrenteCaixaFAB } from './FrenteCaixaFAB';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -35,7 +34,6 @@ export function AppLayout({ children, title, subtitle, actions }: AppLayoutProps
         <main className="flex-1 p-4 md:p-6">
           {children}
         </main>
-        <FrenteCaixaFAB />
       </SidebarInset>
     </SidebarProvider>
   );
