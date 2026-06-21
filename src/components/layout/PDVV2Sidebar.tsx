@@ -122,6 +122,9 @@ export function PDVV2Sidebar() {
     { title: 'Relatório de Clientes', icon: BarChart3, href: '/relatorios/clientes' },
     { title: 'Curva ABC', icon: BarChart3, href: '/relatorios/curva-abc' },
     { title: 'Relatório TEF', icon: CreditCard, href: '/relatorios/tef' },
+    ...(isModuleEnabled('mercado')
+      ? [{ title: 'Relatório de Estoque', icon: Package, href: '/estoque' }]
+      : []),
   ];
 
   const settings = [
