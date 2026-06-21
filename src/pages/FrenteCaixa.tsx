@@ -486,6 +486,35 @@ export default function FrenteCaixa() {
     beep(true);
   }
 
+  // ---- importação de pedido/mesa ----
+  function handleImportOrder(order: ImportableOrder) {
+    if (importedOrderId) {
+      toast.error('Já existe um pedido importado neste carrinho.');
+      return;
+    }
+    const newLines: CartLine[] = order.items.map((it) => ({
+      id: crypto.randomUUID(),
+      product_id: it.product_id,
+      product_name: it.name,
+      quantity: it.quantity,
+      unit_price: it.price,
+      effective_unit_price: it.price,
+      line_discount: 0,
+      line_surcharge: 0,
+      unit: 'UN',
+      imported: true,
+      imported_notes: it.notes || undefined,
+    }));
+    // Itens importados vão sempre no topo do carrinho
+    setLines((prev) => [...newLines, ...prev]);
+    setImportedOrderId(order.id);
+    setImportedLabel(order.short_code || 'Importado');
+    toast.success(
+      `${order.short_code || 'Pedido'} importado (${newLines.length} ${newLines.length === 1 ? 'item' : 'itens'}).`,
+    );
+    beep(true);
+  }
+
   function productCode(l: CartLine): string {
     const p = products.find((pp) => pp.id === l.product_id) as any;
     return (p?.gtin || p?.code || p?.sku || l.product_id || '—').toString();
