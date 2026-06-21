@@ -63,6 +63,9 @@ import FrenteCaixaConfiguracoes from "./pages/FrenteCaixaConfiguracoes";
 import FrenteCaixaRecebimento from "./pages/FrenteCaixaRecebimento";
 import EstoqueRelatorio from "./pages/EstoqueRelatorio";
 import RelatoriosHub from "./pages/RelatoriosHub";
+import DfeManifestacao from "./pages/compras/DfeManifestacao";
+import PurchaseImportXml from "./pages/compras/PurchaseImportXml";
+import PurchaseInvoices from "./pages/compras/PurchaseInvoices";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
 import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
@@ -270,6 +273,29 @@ function AppRoutes() {
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
             <EstoqueRelatorio />
+          </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
+
+      {/* Compras: Manifestação Eletrônica + NF-e de Entrada (módulo mercado) */}
+      <Route path="/compras/manifestacao" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaGuard>
+            <DfeManifestacao />
+          </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/compras/importar-xml" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaGuard>
+            <PurchaseImportXml />
+          </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/compras/entradas" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaGuard>
+            <PurchaseInvoices />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />

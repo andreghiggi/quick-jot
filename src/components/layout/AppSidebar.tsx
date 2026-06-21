@@ -34,6 +34,8 @@ import {
   ClipboardEdit,
   ScanBarcode,
   PackagePlus,
+  ShoppingCart,
+  FileCheck,
 } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -207,6 +209,13 @@ export function AppSidebar() {
       icon: FileText,
       href: '/nfce',
     },
+  ] : [];
+
+  // Compras → Manifestação Eletrônica + NF-e de Entrada (módulo mercado)
+  const comprasMenuItems = mercadoEnabled ? [
+    { title: 'Manifestação Eletrônica', icon: FileCheck, href: '/compras/manifestacao' },
+    { title: 'NF-e de Entrada', icon: FileInput, href: '/compras/entradas' },
+    { title: 'Importar XML', icon: Upload, href: '/compras/importar-xml' },
   ] : [];
 
   const whatsappConfigItems = mercadoOnly ? [] : [
