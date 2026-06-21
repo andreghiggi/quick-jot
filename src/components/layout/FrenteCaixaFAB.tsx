@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { ShoppingCart } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -20,12 +21,14 @@ export function FrenteCaixaFAB() {
   const { company } = useAuthContext();
   const { enabled: mercadoOn } = useMercadoEnabled(company?.id);
   const isMobile = useIsMobile();
+  const { pathname } = useLocation();
 
   const open = useCallback(() => {
     window.open('/frente-caixa', 'comandatech-frente-caixa');
   }, []);
 
-  const shouldRender = mercadoOn && !isMobile;
+  const onFrenteCaixa = pathname.startsWith('/frente-caixa');
+  const shouldRender = mercadoOn && !isMobile && !onFrenteCaixa;
 
   // Hook precisa ser chamado incondicionalmente; só dispara se renderizar.
   useGlobalShortcut('F8', () => {

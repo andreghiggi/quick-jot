@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { PDVV2Sidebar } from './PDVV2Sidebar';
+import { FrenteCaixaFAB } from './FrenteCaixaFAB';
 
 /**
  * Layout exclusivo das páginas servidas a lojas com PDV V2.
@@ -17,6 +18,7 @@ export function PDVV2Layout({ children }: { children: ReactNode }) {
           </header>
           <main className="flex-1 min-h-0 overflow-hidden">{children}</main>
         </div>
+        <FrenteCaixaFAB />
       </div>
     </SidebarProvider>
   );
