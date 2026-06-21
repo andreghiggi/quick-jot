@@ -1408,6 +1408,7 @@ export type Database = {
           paid_amount: number
           paid_items: Json | null
           payment_status: string
+          pdv_sale_id: string | null
           printed: boolean | null
           printed_at: string | null
           short_code: string | null
@@ -1434,6 +1435,7 @@ export type Database = {
           paid_amount?: number
           paid_items?: Json | null
           payment_status?: string
+          pdv_sale_id?: string | null
           printed?: boolean | null
           printed_at?: string | null
           short_code?: string | null
@@ -1460,6 +1462,7 @@ export type Database = {
           paid_amount?: number
           paid_items?: Json | null
           payment_status?: string
+          pdv_sale_id?: string | null
           printed?: boolean | null
           printed_at?: string | null
           short_code?: string | null
@@ -1474,6 +1477,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_pdv_sale_id_fkey"
+            columns: ["pdv_sale_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_sales"
             referencedColumns: ["id"]
           },
         ]
@@ -1706,6 +1716,7 @@ export type Database = {
           final_total: number
           fiscal_mode: string
           id: string
+          imported_order_id: string | null
           notes: string | null
           order_id: string | null
           payment_method_id: string | null
@@ -1721,6 +1732,7 @@ export type Database = {
           final_total?: number
           fiscal_mode?: string
           id?: string
+          imported_order_id?: string | null
           notes?: string | null
           order_id?: string | null
           payment_method_id?: string | null
@@ -1736,6 +1748,7 @@ export type Database = {
           final_total?: number
           fiscal_mode?: string
           id?: string
+          imported_order_id?: string | null
           notes?: string | null
           order_id?: string | null
           payment_method_id?: string | null
@@ -1754,6 +1767,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_sales_imported_order_id_fkey"
+            columns: ["imported_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
