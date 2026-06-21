@@ -8,6 +8,10 @@ interface Props {
   onInutilizarNfce?: () => void;
   onXmlMes?: () => void;
   onRelFechamento?: () => void;
+  /** Quando definido, exibe "Importar pedido" (módulo Cardápio ativo). */
+  onImportPedido?: () => void;
+  /** Quando definido, exibe "Importar mesa" (módulo Mesa QR ativo). */
+  onImportMesa?: () => void;
   open?: boolean;
   onOpenChange?: (o: boolean) => void;
 }
@@ -58,6 +62,8 @@ export function FrenteCaixaActionsMenu({
   onInutilizarNfce,
   onXmlMes,
   onRelFechamento,
+  onImportPedido,
+  onImportMesa,
   open = false,
   onOpenChange,
 }: Props) {
@@ -133,6 +139,12 @@ export function FrenteCaixaActionsMenu({
           <Section
             title="Ações"
             items={[
+              ...(onImportPedido
+                ? [{ label: 'Importar pedido', accel: 0, onClick: onImportPedido } as Item]
+                : []),
+              ...(onImportMesa
+                ? [{ label: 'Importar mesa', accel: 0, onClick: onImportMesa } as Item]
+                : []),
               { label: 'Inutilizar numeração', accel: 0, onClick: onInutilizarNfce ?? (() => {}), disabled: !onInutilizarNfce },
               { label: 'XML do mês', accel: 0, onClick: onXmlMes ?? (() => {}), disabled: !onXmlMes },
               { label: 'Contingência', accel: 0, onClick: () => {}, disabled: true, hint: 'Desativado' },
