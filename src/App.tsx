@@ -256,6 +256,12 @@ function AppRoutes() {
       } />
       <Route path="/financeiro/relatorios" element={<Navigate to="/relatorios/vendas" replace />} />
 
+      <Route path="/relatorios" element={
+        <ProtectedRoute requireCompany>
+          <RelatoriosHub />
+        </ProtectedRoute>
+      } />
+
       <Route path="/relatorios/caixa" element={
         <ProtectedRoute requireCompany>
           <CashReport />
