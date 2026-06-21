@@ -890,7 +890,6 @@ export default function Products() {
         {isModuleEnabled('mercado') && (
           <div className="flex gap-2 flex-wrap">
             {([
-              { v: 'todos', label: `Todos (${products.length})` },
               { v: 'cardapio', label: `🍔 Cardápio (${products.filter((p) => ((p as any).productType ?? 'cardapio') === 'cardapio').length})` },
               { v: 'mercado', label: `🛒 Mercado (${products.filter((p) => (p as any).productType === 'mercado').length})` },
               { v: 'ambos', label: `🔄 Ambos (${products.filter((p) => (p as any).productType === 'ambos').length})` },
