@@ -884,18 +884,10 @@ export default function Products() {
     <AppLayout title="Produtos" actions={headerActions}>
       <div className="space-y-6">
 
-        {/* Abas por tipo do produto — só aparecem quando módulo `mercado` está ativo */}
+        {/* Filtro por tipo do produto (só com módulo Mercado on).
+            O layout é derivado automaticamente: tipo "mercado" → tabela densa;
+            qualquer outro tipo → lista por categoria. */}
         {isModuleEnabled('mercado') && (
-          <Tabs value={productsTab} onValueChange={(v) => setProductsTab(v as 'cardapio' | 'mercado')}>
-            <TabsList>
-              <TabsTrigger value="cardapio">Cardápio</TabsTrigger>
-              <TabsTrigger value="mercado">Mercado</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        )}
-
-        {/* Filtro por tipo do produto (só com módulo Mercado on) */}
-        {isModuleEnabled('mercado') && productsTab === 'cardapio' && (
           <div className="flex gap-2 flex-wrap">
             {([
               { v: 'todos', label: `Todos (${products.length})` },
@@ -915,12 +907,9 @@ export default function Products() {
           </div>
         )}
 
-        {isModuleEnabled('mercado') && productsTab === 'mercado' ? (
+        {isModuleEnabled('mercado') && typeFilter === 'mercado' ? (
           <ProductsMercadoView
-            products={products.filter((p) => {
-              const t = (p as any).productType ?? 'cardapio';
-              return t === 'mercado' || t === 'ambos';
-            })}
+            products={products.filter((p) => (p as any).productType === 'mercado')}
             onEdit={openEditDialog}
           />
         ) : (
