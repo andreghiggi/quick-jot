@@ -92,11 +92,11 @@ export default function Products() {
   useEffect(() => {
     try { sessionStorage.setItem('products:tab', productsTab); } catch {}
   }, [productsTab]);
-  // Filtro de tipo de produto (cardapio / mercado / ambos / todos) — só ativo quando módulo Mercado está on.
-  const [typeFilter, setTypeFilter] = useState<'todos' | 'cardapio' | 'mercado' | 'ambos'>(() => {
+  // Filtro de tipo de produto (cardapio / mercado / ambos) — só ativo quando módulo Mercado está on.
+  const [typeFilter, setTypeFilter] = useState<'cardapio' | 'mercado' | 'ambos'>(() => {
     try {
       const v = sessionStorage.getItem('products:typeFilter');
-      return v === 'mercado' || v === 'ambos' || v === 'todos' ? (v as any) : 'cardapio';
+      return v === 'mercado' || v === 'ambos' ? (v as any) : 'cardapio';
     } catch { return 'cardapio'; }
   });
   useEffect(() => { try { sessionStorage.setItem('products:typeFilter', typeFilter); } catch {} }, [typeFilter]);
@@ -568,7 +568,7 @@ export default function Products() {
   const filteredGroupedProducts = useMemo(() => {
     const mercadoOn = isModuleEnabled('mercado');
     // 1) Filtro por tipo (Cardápio / Mercado / Ambos / Todos) — só vale quando módulo Mercado está on.
-    const byType = mercadoOn && typeFilter !== 'todos'
+    const byType = mercadoOn
       ? groupedProducts
           .map(([cat, prods]) => [cat, prods.filter((p) => ((p as any).productType ?? 'cardapio') === typeFilter)] as [string, Product[]])
           .filter(([, prods]) => prods.length > 0)
