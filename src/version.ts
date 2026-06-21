@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.23.0-beta";
-export const RELEASE_DATE = "2026-06-19"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Cadastros > Combos (Beta — piloto Rei do Açaí)";
+export const VERSION = "1.24.0-beta";
+export const RELEASE_DATE = "2026-06-21"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Atalho rápido para Frente de Caixa (FAB + F8)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.24.0-beta",
+    date: "2026-06-21",
+    codename: "Atalho rápido para Frente de Caixa (FAB + F8)",
+    changes: [
+      "Novo botão flutuante de carrinho 🛒 no canto inferior direito para lojas com módulo Mercado ativo — abre a Frente de Caixa em uma aba dedicada com um clique.",
+      "Atalho de teclado global F8 abre a Frente de Caixa de qualquer tela do painel (ignorado quando o foco está em campos de texto).",
+      "A aba da Frente de Caixa é nomeada e reaproveitada: apertar F8 várias vezes foca a aba existente em vez de abrir novas. Ideal para operação multi-monitor (gerente em pedidos, operador no caixa).",
+      "Escondido automaticamente em telas mobile e em lojas sem o módulo Mercado.",
+      "Nenhuma alteração em rotas, sidebar, TEF, PinPad, NFC-e, Multi-Pagamento, PDV V2, Pedido Express ou impressão — é apenas um atalho de UI.",
+    ],
+  },
   {
     version: "1.23.0-beta",
     date: "2026-06-19",
