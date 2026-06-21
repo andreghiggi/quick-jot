@@ -1347,6 +1347,7 @@ export default function FrenteCaixa() {
                 onClick={() => {
                   const path = pendingNavPath;
                   setPendingNavPath(null);
+                  suppressBeforeUnloadRef.current = true;
                   if (path) navigate(path);
                 }}
               >
@@ -1372,7 +1373,12 @@ export default function FrenteCaixa() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogAction onClick={() => window.location.reload()}>
+              <AlertDialogAction
+                onClick={() => {
+                  suppressBeforeUnloadRef.current = true;
+                  window.location.reload();
+                }}
+              >
                 Recarregar
               </AlertDialogAction>
               <AlertDialogCancel onClick={() => setConfirmReload(false)}>
