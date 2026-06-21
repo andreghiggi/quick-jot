@@ -1662,6 +1662,38 @@ export default function Products() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Mini-picker: tipo do produto ao criar */}
+      <Dialog open={typePickerOpen} onOpenChange={setTypePickerOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Qual tipo de produto?</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-2 pt-2">
+            {([
+              { v: 'cardapio', label: 'Cardápio', desc: 'Pratos, lanches, bebidas preparadas', Icon: UtensilsCrossed },
+              { v: 'mercado', label: 'Mercado', desc: 'Refrigerantes, salgadinhos, conveniência', Icon: ShoppingCart },
+              { v: 'ambos', label: 'Ambos', desc: 'Vendido em cardápio e mercado', Icon: Repeat },
+            ] as const).map(({ v, label, desc, Icon }) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => {
+                  setTypePickerOpen(false);
+                  navigate(`/produtos/novo?tipo=${v}`);
+                }}
+                className="text-left rounded-lg border p-4 hover:bg-muted/40 transition flex items-start gap-3"
+              >
+                <Icon className="h-5 w-5 mt-0.5 text-primary" />
+                <div>
+                  <div className="font-medium">{label}</div>
+                  <div className="text-xs text-muted-foreground">{desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
