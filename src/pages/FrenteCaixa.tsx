@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { ScanBarcode, X, Plus, Minus, Loader2, AlertTriangle, Trash2, Tag, MoreHorizontal, Maximize2, Minimize2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -110,6 +110,7 @@ export default function FrenteCaixa() {
   } = useCashRegister({ companyId: company?.id });
 
   const [query, setQuery] = useState('');
+  const navigate = useNavigate();
   const [lines, setLines] = useState<CartLine[]>([]);
   const [lastTouchedId, setLastTouchedId] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -684,21 +685,7 @@ export default function FrenteCaixa() {
   }
 
   async function handleRelFechamento() {
-    if (!company?.id) return;
-    if (!currentRegister?.id) {
-      toast.error('Nenhum caixa aberto. Abra um caixa para gerar o relatório.');
-      return;
-    }
-    try {
-      await printCurrentCashClosing({
-        companyId: company.id,
-        registerId: currentRegister.id,
-        blindClose: pdvSettings.blind_close_enabled,
-      });
-    } catch (e: any) {
-      console.error(e);
-      toast.error('Erro ao gerar Relatório de Fechamento: ' + (e?.message || e));
-    }
+    navigate('/relatorios/caixa');
   }
 
   // ---- guards ----
