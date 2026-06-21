@@ -684,21 +684,7 @@ export default function FrenteCaixa() {
   }
 
   async function handleRelFechamento() {
-    if (!company?.id) return;
-    if (!currentRegister?.id) {
-      toast.error('Nenhum caixa aberto. Abra um caixa para gerar o relatório.');
-      return;
-    }
-    try {
-      await printCurrentCashClosing({
-        companyId: company.id,
-        registerId: currentRegister.id,
-        blindClose: pdvSettings.blind_close_enabled,
-      });
-    } catch (e: any) {
-      console.error(e);
-      toast.error('Erro ao gerar Relatório de Fechamento: ' + (e?.message || e));
-    }
+    navigate('/relatorios/caixa');
   }
 
   // ---- guards ----
