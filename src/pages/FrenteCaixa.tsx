@@ -27,6 +27,7 @@ import {
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useProducts } from '@/hooks/useProducts';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { brl as formatPrice } from '@/components/pdv-v2/_format';
@@ -49,6 +50,10 @@ import {
 } from '@/components/frente-caixa/FrenteCaixaCashMovementDialog';
 import { FrenteCaixaInutilizarNfceDialog } from '@/components/frente-caixa/FrenteCaixaInutilizarNfceDialog';
 import { FrenteCaixaXmlMesDialog } from '@/components/frente-caixa/FrenteCaixaXmlMesDialog';
+import {
+  FrenteCaixaImportDialog,
+  type ImportableOrder,
+} from '@/components/frente-caixa/FrenteCaixaImportDialog';
 import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { printCurrentCashClosing } from '@/utils/printCurrentCashClosing';
@@ -73,6 +78,10 @@ interface CartLine {
   /** Acréscimo em R$ aplicado à linha inteira */
   line_surcharge: number;
   unit: string;
+  /** Itens importados de um pedido/mesa são imutáveis no carrinho do FC. */
+  imported?: boolean;
+  /** Observações originais do pedido importado (não editáveis). */
+  imported_notes?: string;
 }
 
 /**
@@ -85,6 +94,9 @@ interface CartLine {
 export default function FrenteCaixa() {
   const { user, company } = useAuthContext();
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const cardapioModuleEnabled = isModuleEnabled('cardapio');
+  const mesaQrModuleEnabled = isModuleEnabled('cardapio_mesa');
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
   const { settings: pdvSettings } = usePdvSettings(company?.id);
   const { taxRules } = useTaxRules({ companyId: company?.id });
@@ -125,6 +137,12 @@ export default function FrenteCaixa() {
   const [inutOpen, setInutOpen] = useState(false);
   const [xmlMesOpen, setXmlMesOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Importação de pedido/mesa
+  const [importDialog, setImportDialog] = useState<null | 'pedido' | 'mesa'>(null);
+  /** ID do pedido em `orders` que foi importado para o carrinho. */
+  const [importedOrderId, setImportedOrderId] = useState<string | null>(null);
+  /** Rótulo curto para a UI (ex.: "M-001" ou "R-023"). */
+  const [importedLabel, setImportedLabel] = useState<string | null>(null);
 
   // Persiste o carrinho em localStorage para que outras telas (ex.: Caixas)
   // possam detectar venda pendente antes de fechar o caixa.
@@ -376,7 +394,7 @@ export default function FrenteCaixa() {
   function changeQty(id: string, delta: number) {
     setLines((prev) =>
       prev
-        .map((l) => (l.id === id ? { ...l, quantity: l.quantity + delta } : l))
+        .map((l) => (l.id === id && !l.imported ? { ...l, quantity: l.quantity + delta } : l))
         .filter((l) => l.quantity > 0),
     );
   }
@@ -386,6 +404,10 @@ export default function FrenteCaixa() {
   }
 
   function requestRemoveLine(line: CartLine) {
+    if (line.imported) {
+      toast.error('Item importado não pode ser removido.');
+      return;
+    }
     if (line.quantity <= 1) {
       removeLine(line.id);
       setLastTouchedId((curr) => (curr === line.id ? null : curr));
@@ -428,6 +450,7 @@ export default function FrenteCaixa() {
   }
 
   function applyPriceChange(target: CartLine, change: PriceChange) {
+    if (target.imported) return;
     setLines((prev) =>
       prev.map((l) => {
         if (l.id !== target.id) return l;
@@ -446,6 +469,7 @@ export default function FrenteCaixa() {
   }
 
   function applyDetailsChange(target: CartLine, result: ItemDetailsResult) {
+    if (target.imported) return;
     setLines((prev) =>
       prev.map((l) =>
         l.id === target.id
@@ -459,6 +483,35 @@ export default function FrenteCaixa() {
       ),
     );
     setLastTouchedId(target.id);
+    beep(true);
+  }
+
+  // ---- importação de pedido/mesa ----
+  function handleImportOrder(order: ImportableOrder) {
+    if (importedOrderId) {
+      toast.error('Já existe um pedido importado neste carrinho.');
+      return;
+    }
+    const newLines: CartLine[] = order.items.map((it) => ({
+      id: crypto.randomUUID(),
+      product_id: it.product_id,
+      product_name: it.name,
+      quantity: it.quantity,
+      unit_price: it.price,
+      effective_unit_price: it.price,
+      line_discount: 0,
+      line_surcharge: 0,
+      unit: 'UN',
+      imported: true,
+      imported_notes: it.notes || undefined,
+    }));
+    // Itens importados vão sempre no topo do carrinho
+    setLines((prev) => [...newLines, ...prev]);
+    setImportedOrderId(order.id);
+    setImportedLabel(order.short_code || 'Importado');
+    toast.success(
+      `${order.short_code || 'Pedido'} importado (${newLines.length} ${newLines.length === 1 ? 'item' : 'itens'}).`,
+    );
     beep(true);
   }
 
@@ -514,6 +567,24 @@ export default function FrenteCaixa() {
       params.fiscalMode,
     );
     if (saleId) {
+      // Importação: vincula o pedido original à venda do FC e marca como entregue.
+      // Itens importados são imutáveis, então a soma bate com o pedido original.
+      if (importedOrderId) {
+        try {
+          await supabase
+            .from('orders')
+            .update({ status: 'delivered', pdv_sale_id: saleId })
+            .eq('id', importedOrderId);
+          await supabase
+            .from('pdv_sales')
+            .update({ imported_order_id: importedOrderId })
+            .eq('id', saleId);
+        } catch (err) {
+          console.error('[FrenteCaixa] vínculo pedido importado falhou:', err);
+          toast.error('Venda salva, mas falha ao marcar o pedido como pago.');
+        }
+      }
+
       // Baixa automática de estoque (no-op para produtos sem track_stock).
       // Fase A.2: quando `stock_move_on_fiscal_only` está ligado, NÃO baixa
       // estoque aqui — a baixa fica reservada à emissão fiscal (NFC-e).
@@ -603,6 +674,8 @@ export default function FrenteCaixa() {
       setLines([]);
       setQuery('');
       setLastTouchedId(null);
+      setImportedOrderId(null);
+      setImportedLabel(null);
       setPaymentOpen(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
@@ -741,7 +814,14 @@ export default function FrenteCaixa() {
 
             <div className="flex-1 min-h-0 border rounded-md bg-card overflow-hidden flex flex-col">
               <div className="px-3 py-2 border-b text-xs font-medium text-muted-foreground flex items-center justify-between">
-                <span>Itens da venda</span>
+                <span className="flex items-center gap-2">
+                  Itens da venda
+                  {importedLabel && (
+                    <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400 text-[10px]">
+                      Pedido {importedLabel} importado
+                    </Badge>
+                  )}
+                </span>
                 <span>{itemsCount} {itemsCount === 1 ? 'item' : 'itens'}</span>
               </div>
               <ScrollArea className="flex-1">
@@ -763,18 +843,25 @@ export default function FrenteCaixa() {
                         l.line_surcharge > 0;
                       return (
                       <ContextMenu key={l.id}>
-                        <ContextMenuTrigger asChild>
+                        <ContextMenuTrigger asChild disabled={l.imported}>
                           <li
                             onClick={() => setLastTouchedId(l.id)}
                             className={`flex items-center gap-3 px-3 py-2 transition-colors cursor-default ${
                               isLast ? 'bg-primary/5 ring-2 ring-primary ring-inset' : ''
-                            }`}
+                            } ${l.imported ? 'bg-amber-50 dark:bg-amber-950/20' : ''}`}
                           >
                             <span className="w-6 text-right text-xs font-semibold tabular-nums text-muted-foreground shrink-0">
                               {idx + 1}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{l.product_name}</p>
+                              <p className="text-sm font-medium truncate flex items-center gap-2">
+                                {l.product_name}
+                                {l.imported && (
+                                  <Badge variant="outline" className="text-[9px] border-amber-500 text-amber-700 dark:text-amber-400 shrink-0">
+                                    IMPORTADO
+                                  </Badge>
+                                )}
+                              </p>
                               <p className="text-xs text-muted-foreground tabular-nums">
                                 R$ {l.effective_unit_price.toFixed(3).replace('.', ',')} × {l.quantity} {l.unit}
                                 {l.effective_unit_price !== l.unit_price && (
@@ -783,6 +870,11 @@ export default function FrenteCaixa() {
                                   </span>
                                 )}
                               </p>
+                              {l.imported_notes && (
+                                <p className="text-[11px] text-muted-foreground italic truncate">
+                                  {l.imported_notes}
+                                </p>
+                              )}
                               {hasAdjust && (
                                 <p className="text-[11px] tabular-nums mt-0.5 flex flex-wrap gap-2">
                                   {l.line_discount > 0 && (
@@ -798,41 +890,53 @@ export default function FrenteCaixa() {
                                 </p>
                               )}
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="outline"
-                                className="h-7 w-7"
-                                onClick={() => changeQty(l.id, -1)}
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <span className="w-8 text-center text-sm tabular-nums font-medium">
-                                {l.quantity}
-                              </span>
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="outline"
-                                className="h-7 w-7"
-                                onClick={() => changeQty(l.id, +1)}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
+                            {l.imported ? (
+                              <div className="flex items-center px-2">
+                                <span className="w-16 text-center text-sm tabular-nums font-medium text-muted-foreground">
+                                  {l.quantity} {l.unit}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-7 w-7"
+                                  onClick={() => changeQty(l.id, -1)}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="w-8 text-center text-sm tabular-nums font-medium">
+                                  {l.quantity}
+                                </span>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-7 w-7"
+                                  onClick={() => changeQty(l.id, +1)}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
                             <span className="w-24 text-right tabular-nums text-sm font-semibold text-emerald-600">
                               {formatPrice(lineTotal).replace('.', ',')}
                             </span>
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 text-destructive"
-                              onClick={() => requestRemoveLine(l)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                            {l.imported ? (
+                              <span className="h-7 w-7" aria-hidden />
+                            ) : (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-destructive"
+                                onClick={() => requestRemoveLine(l)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
                           </li>
                         </ContextMenuTrigger>
                         <ContextMenuContent className="w-64">
@@ -988,6 +1092,8 @@ export default function FrenteCaixa() {
                   setQuery('');
                   setSearchMatches([]);
                   setLastTouchedId(null);
+                  setImportedOrderId(null);
+                  setImportedLabel(null);
                   setConfirmCancel(false);
                   setTimeout(() => inputRef.current?.focus(), 50);
                 }}
@@ -1121,6 +1227,20 @@ export default function FrenteCaixa() {
           onInutilizarNfce={() => setInutOpen(true)}
           onXmlMes={() => setXmlMesOpen(true)}
           onRelFechamento={handleRelFechamento}
+          onImportPedido={
+            cardapioModuleEnabled ? () => setImportDialog('pedido') : undefined
+          }
+          onImportMesa={
+            mesaQrModuleEnabled ? () => setImportDialog('mesa') : undefined
+          }
+        />
+
+        <FrenteCaixaImportDialog
+          open={importDialog !== null}
+          onOpenChange={(o) => !o && setImportDialog(null)}
+          companyId={company?.id}
+          type={importDialog ?? 'pedido'}
+          onImport={handleImportOrder}
         />
 
         {/* FAB vermelho — atalho contextual (foca scanner ou abre pagamento) */}
