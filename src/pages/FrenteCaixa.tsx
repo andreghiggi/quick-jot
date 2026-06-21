@@ -27,6 +27,7 @@ import {
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { useCardapioEnabled } from '@/hooks/useCardapioEnabled';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useProducts } from '@/hooks/useProducts';
 import { useCashRegister } from '@/hooks/useCashRegister';
@@ -95,7 +96,8 @@ export default function FrenteCaixa() {
   const { user, company } = useAuthContext();
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
-  const cardapioModuleEnabled = isModuleEnabled('cardapio');
+  // Cardápio é "ligado por padrão" (sem registro = ativo). Usa o hook dedicado.
+  const { enabled: cardapioModuleEnabled } = useCardapioEnabled(company?.id);
   const mesaQrModuleEnabled = isModuleEnabled('cardapio_mesa');
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
   const { settings: pdvSettings } = usePdvSettings(company?.id);
