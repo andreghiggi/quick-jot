@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.26.0-beta";
+export const VERSION = "1.27.0-beta";
 export const RELEASE_DATE = "2026-06-21"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Cadastro de produtos por tipo (Cardápio / Mercado / Ambos)";
+export const CODENAME = "Compras: Manifestação Eletrônica DF-e + NF-e de Entrada";
 
 export interface Release {
   version: string;
@@ -19,6 +19,22 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.27.0-beta",
+    date: "2026-06-21",
+    codename: "Compras: Manifestação Eletrônica DF-e + NF-e de Entrada",
+    changes: [
+      "Novo menu 'Compras' (visível em lojas com módulo Mercado ativo) com três itens: Manifestação Eletrônica, NF-e de Entrada e Importar XML.",
+      "Manifestação Eletrônica (/compras/manifestacao): lista todas as NF-e recebidas contra o CNPJ da loja (DF-e) com filtros (status, busca por chave/emitente/CNPJ), badges de status (Pendente/Ciência/Confirmada/Desconhecida/Não realizada/Entrada/Cancelada), menu de ações por documento (Ciência, Confirmação, Desconhecimento, Não realizada, Download XML, Importar pro estoque, Copiar chave, Ignorar) e FAB 'Sincronizar SEFAZ' que dispara um loop até esgotar a fila da FiscalFlow.",
+      "Importar XML (/compras/importar-xml): wizard que aceita XML já manifestado (a partir do DF-e) ou upload manual do computador, faz parse 100% no navegador (DOMParser), exibe cabeçalho do fornecedor + grid de itens. Para cada item, permite mapear a um produto existente (por GTIN/descrição) ou criar produto novo (preenche nome, GTIN, NCM, CFOP, unidade e custo do XML automaticamente).",
+      "Ao confirmar entrada: cria fornecedor (se novo, vincula por CNPJ), grava purchase_invoices + purchase_invoice_items e dispara apply_stock_movement para cada item mapeado (tipo 'entrada', referência ao purchase_invoice). XML é arquivado no bucket privado 'dfe-xmls'.",
+      "NF-e de Entrada (/compras/entradas): histórico de notas lançadas com fornecedor, número, série, valor e data.",
+      "Integrações ganhou novo campo 'ID da Empresa na Fiscal Flow' (companies.fiscalflow_empresa_id) ao lado do token. Necessário para usar a Manifestação. Token FiscalFlow é reaproveitado.",
+      "Novo edge function 'dfe-fiscalflow-proxy' (ações: sync, mirror, manifestar, download_xml) — token nunca é exposto ao navegador. Multi-tenancy validado por user_belongs_to_company em todas as chamadas.",
+      "Tabelas novas (RLS por company_id): dfe_documentos, dfe_eventos, purchase_invoices, purchase_invoice_items. Bucket privado dfe-xmls.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, impressão, PDV V2, Pedido Express, Frente de Caixa, Garçom ou cobrança — fluxos de venda intocados.",
+    ],
+  },
   {
     version: "1.26.0-beta",
     date: "2026-06-21",
