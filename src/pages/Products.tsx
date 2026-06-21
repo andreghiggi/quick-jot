@@ -6,6 +6,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { useSubcategories } from '@/hooks/useSubcategories';
 import { Product, ProductOptional } from '@/types/product';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
+import { useCardapioEnabled } from '@/hooks/useCardapioEnabled';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,6 +47,11 @@ export default function Products() {
   const { products, loading, addProduct, updateProduct, deleteProduct, addOptional, deleteOptional, moveProduct, duplicateProduct, toggleNewProduct, refetch: refetchProducts } = useProducts({ companyId: company?.id });
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  // Cardápio: usa o hook dedicado, que considera LIGADO por padrão quando
+  // não há linha em company_modules (mesma regra da sidebar). Evita que
+  // lojas antigas (sem registro do módulo `cardapio`) caiam erroneamente
+  // no perfil "só Mercado" só na página de Produtos.
+  const { enabled: cardapioEnabled } = useCardapioEnabled(company?.id);
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { categories, addCategory, refetch: refetchCategories } = useCategories({ companyId: company?.id });
   const { subcategories, getSubcategoriesByCategoryId } = useSubcategories({ companyId: company?.id });
@@ -94,7 +100,7 @@ export default function Products() {
   }, [productsTab]);
   // Filtro de tipo de produto (cardapio / mercado / ambos) — só ativo quando módulo Mercado está on.
   // Default dinâmico: se a loja só tem Mercado ativo, abre direto em 'mercado' (evita tela vazia).
-  const mercadoOnlyDefault = isModuleEnabled('mercado') && !isModuleEnabled('cardapio');
+  const mercadoOnlyDefault = isModuleEnabled('mercado') && !cardapioEnabled;
   const [typeFilter, setTypeFilter] = useState<'cardapio' | 'mercado' | 'ambos'>(() => {
     try {
       const v = sessionStorage.getItem('products:typeFilter');
@@ -105,8 +111,8 @@ export default function Products() {
   // Se o filtro salvo for incompatível com os módulos ativos, corrige.
   useEffect(() => {
     if (typeFilter === 'cardapio' && mercadoOnlyDefault) setTypeFilter('mercado');
-    if (typeFilter === 'mercado' && isModuleEnabled('cardapio') && !isModuleEnabled('mercado')) setTypeFilter('cardapio');
-  }, [mercadoOnlyDefault, typeFilter, isModuleEnabled]);
+    if (typeFilter === 'mercado' && cardapioEnabled && !isModuleEnabled('mercado')) setTypeFilter('cardapio');
+  }, [mercadoOnlyDefault, typeFilter, isModuleEnabled, cardapioEnabled]);
   useEffect(() => { try { sessionStorage.setItem('products:typeFilter', typeFilter); } catch {} }, [typeFilter]);
   // Mini-picker do tipo ao criar produto novo
   const [typePickerOpen, setTypePickerOpen] = useState(false);
