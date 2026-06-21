@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { ScanBarcode, X, Plus, Minus, Loader2, AlertTriangle, Trash2, Tag, MoreHorizontal, Maximize2, Minimize2 } from 'lucide-react';
 import { toast } from 'sonner';
 
