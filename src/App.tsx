@@ -61,6 +61,7 @@ import FrenteCaixaLista from "./pages/FrenteCaixaLista";
 import FrenteCaixaConfiguracoes from "./pages/FrenteCaixaConfiguracoes";
 import FrenteCaixaRecebimento from "./pages/FrenteCaixaRecebimento";
 import EstoqueRelatorio from "./pages/EstoqueRelatorio";
+import RelatoriosHub from "./pages/RelatoriosHub";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 
 // Admin Pages
