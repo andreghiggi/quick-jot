@@ -183,7 +183,7 @@ export default function EstoqueRelatorio() {
           <div className="flex items-center gap-2">
             <Boxes className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold">Estoque</h1>
-            <Badge variant="outline">Mercado</Badge>
+            <Badge variant="outline">Loja</Badge>
           </div>
           <Button variant="outline" onClick={exportCSV} disabled={filtered.length === 0}>
             <Download className="h-4 w-4 mr-2" />

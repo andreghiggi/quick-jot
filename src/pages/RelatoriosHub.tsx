@@ -63,7 +63,7 @@ const BASE_REPORTS: ReportCard[] = [
   {
     id: 'estoque',
     title: 'Estoque',
-    description: 'Posição de estoque, movimentações e itens com saldo crítico (módulo Mercado).',
+    description: 'Posição de estoque, movimentações e itens com saldo crítico (módulo Loja).',
     icon: Package,
     href: '/estoque',
     filters: ['Categoria', 'Saldo'],
