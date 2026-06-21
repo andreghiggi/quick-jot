@@ -814,7 +814,14 @@ export default function FrenteCaixa() {
 
             <div className="flex-1 min-h-0 border rounded-md bg-card overflow-hidden flex flex-col">
               <div className="px-3 py-2 border-b text-xs font-medium text-muted-foreground flex items-center justify-between">
-                <span>Itens da venda</span>
+                <span className="flex items-center gap-2">
+                  Itens da venda
+                  {importedLabel && (
+                    <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400 text-[10px]">
+                      Pedido {importedLabel} importado
+                    </Badge>
+                  )}
+                </span>
                 <span>{itemsCount} {itemsCount === 1 ? 'item' : 'itens'}</span>
               </div>
               <ScrollArea className="flex-1">
