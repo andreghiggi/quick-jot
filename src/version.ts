@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.25.0-beta";
+export const VERSION = "1.26.0-beta";
 export const RELEASE_DATE = "2026-06-21"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Perfil Só-Mercado + Hub de Relatórios";
+export const CODENAME = "Cadastro de produtos por tipo (Cardápio / Mercado / Ambos)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,21 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.26.0-beta",
+    date: "2026-06-21",
+    codename: "Cadastro de produtos por tipo (Cardápio / Mercado / Ambos)",
+    changes: [
+      "Novo campo 'Tipo do produto' no cadastro: Cardápio (pratos/lanches), Mercado (conveniência) ou Ambos. Para lojas existentes, todos os produtos foram migrados automaticamente baseando-se na visibilidade atual — zero impacto.",
+      "Categoria agora é OPCIONAL para itens de tipo Mercado — se não escolher, cai em 'Geral' automaticamente. Pratos do Cardápio seguem com categoria obrigatória.",
+      "Botão 'Novo Produto' (em lojas com Mercado ativo) abre um seletor: Cardápio / Mercado / Ambos. Cada tipo abre o formulário com defaults apropriados (estoque pré-ativado no Mercado, etc).",
+      "Botão inline '+ Criar nova categoria' direto no formulário de produto — sem precisar sair da tela.",
+      "Bloco 'Dados Fiscais' (NCM, CFOP, CEST, origem, regra tributária) agora é recolhível, abrindo só quando precisar editar. Continua disponível para Cardápio e Mercado — qualquer item pode emitir NFC-e.",
+      "As 3 toggles antigas (Cardápio digital / PDV / Garçom) viraram 'Visibilidade avançada', recolhida por padrão. A visibilidade é derivada automaticamente do tipo escolhido.",
+      "Lista de produtos: novos chips de filtro Todos / Cardápio / Mercado / Ambos, e cada produto recebe um badge colorido indicando o tipo.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, impressão, PDV V2, Pedido Express ou cobrança.",
+    ],
+  },
   {
     version: "1.25.0-beta",
     date: "2026-06-21",
