@@ -1263,6 +1263,63 @@ export default function FrenteCaixa() {
           </AlertDialogContent>
         </AlertDialog>
 
+        {/* Confirmação ao remover/zerar uma linha do carrinho */}
+        <AlertDialog
+          open={!!confirmDelete}
+          onOpenChange={(o) => { if (!o) setConfirmDelete(null); }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Deseja realmente excluir esse item?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmDelete ? (
+                  <>O item <strong className="uppercase">{confirmDelete.product_name}</strong> será removido do carrinho.</>
+                ) : null}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (confirmDelete) {
+                    const id = confirmDelete.id;
+                    setLines((prev) => prev.filter((l) => l.id !== id));
+                    setLastTouchedId((curr) => (curr === id ? null : curr));
+                  }
+                  setConfirmDelete(null);
+                }}
+              >
+                Remover
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Bloqueio de navegação interna quando há venda em andamento */}
+        <AlertDialog
+          open={blocker.state === 'blocked'}
+          onOpenChange={(o) => {
+            if (!o && blocker.state === 'blocked') blocker.reset?.();
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Sair sem finalizar a venda?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Há itens no carrinho que ainda não foram finalizados. Se sair desta tela agora, os itens serão perdidos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => blocker.reset?.()}>
+                Continuar venda
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={() => blocker.proceed?.()}>
+                Sair mesmo assim
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         <FrenteCaixaCashMovementDialog
           open={cashMovementOpen !== null}
           type={cashMovementOpen ?? 'sangria'}
