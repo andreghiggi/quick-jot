@@ -93,12 +93,20 @@ export default function Products() {
     try { sessionStorage.setItem('products:tab', productsTab); } catch {}
   }, [productsTab]);
   // Filtro de tipo de produto (cardapio / mercado / ambos) — só ativo quando módulo Mercado está on.
+  // Default dinâmico: se a loja só tem Mercado ativo, abre direto em 'mercado' (evita tela vazia).
+  const mercadoOnlyDefault = isModuleEnabled('mercado') && !isModuleEnabled('cardapio');
   const [typeFilter, setTypeFilter] = useState<'cardapio' | 'mercado' | 'ambos'>(() => {
     try {
       const v = sessionStorage.getItem('products:typeFilter');
-      return v === 'mercado' || v === 'ambos' ? (v as any) : 'cardapio';
-    } catch { return 'cardapio'; }
+      if (v === 'mercado' || v === 'ambos' || v === 'cardapio') return v as any;
+    } catch {}
+    return mercadoOnlyDefault ? 'mercado' : 'cardapio';
   });
+  // Se o filtro salvo for incompatível com os módulos ativos, corrige.
+  useEffect(() => {
+    if (typeFilter === 'cardapio' && mercadoOnlyDefault) setTypeFilter('mercado');
+    if (typeFilter === 'mercado' && isModuleEnabled('cardapio') && !isModuleEnabled('mercado')) setTypeFilter('cardapio');
+  }, [mercadoOnlyDefault, typeFilter, isModuleEnabled]);
   useEffect(() => { try { sessionStorage.setItem('products:typeFilter', typeFilter); } catch {} }, [typeFilter]);
   // Mini-picker do tipo ao criar produto novo
   const [typePickerOpen, setTypePickerOpen] = useState(false);
@@ -884,27 +892,32 @@ export default function Products() {
     <AppLayout title="Produtos" actions={headerActions}>
       <div className="space-y-6">
 
-        {/* Filtro por tipo do produto (só com módulo Mercado on).
-            O layout é derivado automaticamente: tipo "mercado" → tabela densa;
-            qualquer outro tipo → lista por categoria. */}
-        {isModuleEnabled('mercado') && (
-          <div className="flex gap-2 flex-wrap">
-            {([
-              { v: 'cardapio', label: `🍔 Cardápio (${products.filter((p) => ((p as any).productType ?? 'cardapio') === 'cardapio').length})` },
-              { v: 'mercado', label: `🛒 Mercado (${products.filter((p) => (p as any).productType === 'mercado').length})` },
-              { v: 'ambos', label: `🔄 Ambos (${products.filter((p) => (p as any).productType === 'ambos').length})` },
-            ] as const).map(({ v, label }) => (
-              <Badge
-                key={v}
-                variant={typeFilter === v ? 'default' : 'outline'}
-                className="cursor-pointer px-3 py-1.5 text-sm"
-                onClick={() => setTypeFilter(v)}
-              >
-                {label}
-              </Badge>
-            ))}
-          </div>
-        )}
+        {/* Filtro por tipo do produto. Só aparece quando faz sentido escolher
+            (loja precisa ter Mercado + pelo menos mais um tipo disponível).
+            O layout é derivado automaticamente: tipo "mercado" → tabela densa. */}
+        {isModuleEnabled('mercado') && (() => {
+          const cardapioOn = isModuleEnabled('cardapio');
+          const chips = [
+            cardapioOn && { v: 'cardapio' as const, label: `🍔 Cardápio (${products.filter((p) => ((p as any).productType ?? 'cardapio') === 'cardapio').length})` },
+            { v: 'mercado' as const, label: `🛒 Mercado (${products.filter((p) => (p as any).productType === 'mercado').length})` },
+            cardapioOn && { v: 'ambos' as const, label: `🔄 Ambos (${products.filter((p) => (p as any).productType === 'ambos').length})` },
+          ].filter(Boolean) as Array<{ v: 'cardapio' | 'mercado' | 'ambos'; label: string }>;
+          if (chips.length < 2) return null;
+          return (
+            <div className="flex gap-2 flex-wrap">
+              {chips.map(({ v, label }) => (
+                <Badge
+                  key={v}
+                  variant={typeFilter === v ? 'default' : 'outline'}
+                  className="cursor-pointer px-3 py-1.5 text-sm"
+                  onClick={() => setTypeFilter(v)}
+                >
+                  {label}
+                </Badge>
+              ))}
+            </div>
+          );
+        })()}
 
         {isModuleEnabled('mercado') && typeFilter === 'mercado' ? (
           <ProductsMercadoView
