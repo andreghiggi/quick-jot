@@ -433,6 +433,46 @@ export default function ProductEdit() {
           <h1 className="text-2xl font-semibold truncate">{title}</h1>
         </div>
 
+        {/* ===================== TIPO DO PRODUTO ===================== */}
+        {mercadoEnabled && (
+          <Section
+            title="Tipo do produto"
+            description="Define onde o produto aparece por padrão. Você pode ajustar visibilidades específicas mais abaixo."
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {([
+                { v: 'cardapio', label: 'Cardápio', desc: 'Pratos, lanches, bebidas preparadas', Icon: UtensilsCrossed },
+                { v: 'mercado', label: 'Mercado', desc: 'Refrigerantes, salgadinhos, conveniência', Icon: ShoppingCart },
+                { v: 'ambos', label: 'Ambos', desc: 'Vendido nos dois canais', Icon: Repeat },
+              ] as const).map(({ v, label, desc, Icon }) => {
+                const active = productType === v;
+                return (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setProductType(v)}
+                    className={`text-left rounded-lg border p-3 transition ${
+                      active
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-border hover:bg-muted/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 font-medium text-sm">
+                      <Icon className="h-4 w-4" /> {label}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">{desc}</div>
+                  </button>
+                );
+              })}
+            </div>
+            {productType === 'mercado' && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Categoria é opcional para itens de mercado — se você não escolher, cai em <strong>Geral</strong> automaticamente.
+              </p>
+            )}
+          </Section>
+        )}
+
         {/* ===================== IDENTIFICAÇÃO ===================== */}
         <Section title="Identificação" description="Nome, descrição e imagem do produto.">
           <div className="grid grid-cols-1 md:grid-cols-[160px_1fr] gap-6">
@@ -514,7 +554,7 @@ export default function ProductEdit() {
         {/* ===================== CATEGORIA ===================== */}
         <Section title="Categoria" description="Onde o produto aparece no cardápio.">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Categoria" required>
+            <Field label="Categoria" required={productType !== 'mercado'} hint={productType === 'mercado' ? 'Opcional — sem categoria cai em "Geral".' : undefined}>
               <Select
                 value={categoryName}
                 onValueChange={(v) => {
@@ -523,7 +563,7 @@ export default function ProductEdit() {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
+                  <SelectValue placeholder={productType === 'mercado' ? 'Sem categoria (Geral)' : 'Selecione...'} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((c) => (
@@ -533,6 +573,47 @@ export default function ProductEdit() {
                   ))}
                 </SelectContent>
               </Select>
+              {/* "+ Nova categoria" inline */}
+              <div className="flex gap-2 mt-2">
+                <Input
+                  value={newCategoryInline}
+                  onChange={(e) => setNewCategoryInline(e.target.value)}
+                  placeholder="+ Criar nova categoria"
+                  className="h-9 text-sm"
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter' && newCategoryInline.trim()) {
+                      e.preventDefault();
+                      setCreatingCategory(true);
+                      const name = newCategoryInline.trim();
+                      const ok = await addCategory(name);
+                      setCreatingCategory(false);
+                      if (ok) {
+                        setCategoryName(name);
+                        setNewCategoryInline('');
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  disabled={!newCategoryInline.trim() || creatingCategory}
+                  onClick={async () => {
+                    setCreatingCategory(true);
+                    const name = newCategoryInline.trim();
+                    const ok = await addCategory(name);
+                    setCreatingCategory(false);
+                    if (ok) {
+                      setCategoryName(name);
+                      setNewCategoryInline('');
+                    }
+                  }}
+                >
+                  {creatingCategory ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
             </Field>
             {availableSubcategories.length > 0 && (
               <Field label="Subcategoria" required>
