@@ -566,9 +566,17 @@ export default function Products() {
   }, [products, categories]);
 
   const filteredGroupedProducts = useMemo(() => {
-    if (!selectedCategoryFilter) return groupedProducts;
-    return groupedProducts.filter(([category]) => category === selectedCategoryFilter);
-  }, [groupedProducts, selectedCategoryFilter]);
+    const mercadoOn = isModuleEnabled('mercado');
+    // 1) Filtro por tipo (Cardápio / Mercado / Ambos / Todos) — só vale quando módulo Mercado está on.
+    const byType = mercadoOn && typeFilter !== 'todos'
+      ? groupedProducts
+          .map(([cat, prods]) => [cat, prods.filter((p) => ((p as any).productType ?? 'cardapio') === typeFilter)] as [string, Product[]])
+          .filter(([, prods]) => prods.length > 0)
+      : groupedProducts;
+    // 2) Filtro por categoria (chip).
+    if (!selectedCategoryFilter) return byType;
+    return byType.filter(([category]) => category === selectedCategoryFilter);
+  }, [groupedProducts, selectedCategoryFilter, typeFilter, isModuleEnabled]);
 
   if (loading) {
     return (
