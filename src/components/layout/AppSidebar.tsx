@@ -136,6 +136,11 @@ export function AppSidebar() {
     { title: 'Fornecedores', icon: Truck, href: '/fornecedores' },
   ];
 
+  // Cadastros - bloco Configurações (visível só para admin da empresa)
+  const cadastrosConfigItems = isCompanyAdmin() ? [
+    { title: 'Configurações', icon: Settings2, href: '/cadastros/configuracoes' },
+  ] : [];
+
   // Ações de vendas
   const acoesVendasItems = mercadoOnly ? [] : [
     { title: 'Cupons', icon: Ticket, href: '/cupons' },
