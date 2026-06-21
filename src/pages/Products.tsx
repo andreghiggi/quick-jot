@@ -888,8 +888,8 @@ export default function Products() {
         {isModuleEnabled('mercado') && (
           <Tabs value={productsTab} onValueChange={(v) => setProductsTab(v as 'cardapio' | 'mercado')}>
             <TabsList>
-              <TabsTrigger value="cardapio">Lista por categoria</TabsTrigger>
-              <TabsTrigger value="mercado">Tabela densa (Mercado)</TabsTrigger>
+              <TabsTrigger value="cardapio">Cardápio</TabsTrigger>
+              <TabsTrigger value="mercado">Mercado</TabsTrigger>
             </TabsList>
           </Tabs>
         )}
