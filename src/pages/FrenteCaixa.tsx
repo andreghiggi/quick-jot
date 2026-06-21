@@ -1311,9 +1311,9 @@ export default function FrenteCaixa() {
 
         {/* Bloqueio de navegação interna quando há venda em andamento */}
         <AlertDialog
-          open={blocker.state === 'blocked'}
+          open={!!pendingNavPath}
           onOpenChange={(o) => {
-            if (!o && blocker.state === 'blocked') blocker.reset?.();
+            if (!o) setPendingNavPath(null);
           }}
         >
           <AlertDialogContent>
@@ -1324,10 +1324,16 @@ export default function FrenteCaixa() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => blocker.reset?.()}>
+              <AlertDialogCancel onClick={() => setPendingNavPath(null)}>
                 Continuar venda
               </AlertDialogCancel>
-              <AlertDialogAction onClick={() => blocker.proceed?.()}>
+              <AlertDialogAction
+                onClick={() => {
+                  const path = pendingNavPath;
+                  setPendingNavPath(null);
+                  if (path) navigate(path);
+                }}
+              >
                 Sair mesmo assim
               </AlertDialogAction>
             </AlertDialogFooter>
