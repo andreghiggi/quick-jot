@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useNavigate, useBlocker } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { ScanBarcode, X, Plus, Minus, Loader2, AlertTriangle, Trash2, Tag, MoreHorizontal, Maximize2, Minimize2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -181,10 +181,24 @@ export default function FrenteCaixa() {
     return () => window.removeEventListener('beforeunload', handler);
   }, [hasUnsavedSale]);
 
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      hasUnsavedSale && currentLocation.pathname !== nextLocation.pathname,
-  );
+  // Intercepta cliques em links internos (<a href="/...">) quando há venda
+  // em andamento, abrindo um dialog de confirmação.
+  const [pendingNavPath, setPendingNavPath] = useState<string | null>(null);
+  useEffect(() => {
+    if (!hasUnsavedSale) return;
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const anchor = (e.target as HTMLElement | null)?.closest('a');
+      if (!anchor) return;
+      const href = anchor.getAttribute('href');
+      if (!href || href.startsWith('http') || href.startsWith('#') || anchor.target === '_blank') return;
+      e.preventDefault();
+      e.stopPropagation();
+      setPendingNavPath(href);
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [hasUnsavedSale]);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
