@@ -604,7 +604,10 @@ export default function Products() {
           <span className="hidden sm:inline">Tributação em massa</span>
         </Button>
       )}
-      <Button onClick={() => navigate('/produtos/novo')}>
+      <Button onClick={() => {
+        if (isModuleEnabled('mercado')) setTypePickerOpen(true);
+        else navigate('/produtos/novo');
+      }}>
         <Plus className="h-4 w-4 mr-2" />
         <span className="hidden sm:inline">Novo Produto</span>
       </Button>
