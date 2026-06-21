@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Navigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Navigate, Link, useSearchParams } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Camera, ExternalLink, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Camera, ChevronDown, ExternalLink, Loader2, Plus, UtensilsCrossed, ShoppingCart, Repeat, X } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
@@ -45,9 +46,10 @@ import { toast } from 'sonner';
 export default function ProductEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { company } = useAuthContext();
   const { products, loading, addProduct, updateProduct } = useProducts({ companyId: company?.id });
-  const { categories } = useCategories({ companyId: company?.id });
+  const { categories, addCategory } = useCategories({ companyId: company?.id });
   const { subcategories } = useSubcategories({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
   const { groups: optionalGroups } = useOptionalGroups({ companyId: company?.id });
@@ -61,6 +63,16 @@ export default function ProductEdit() {
 
   const mercadoEnabled = isModuleEnabled('mercado');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Tipo do produto (cardapio / mercado / ambos). Define UX e visibilidade automática.
+  // Quando a loja NÃO tem o módulo Mercado, todo produto é tratado como `cardapio` (UX antiga).
+  const initialTypeFromUrl = (() => {
+    const t = searchParams.get('tipo');
+    return t === 'mercado' || t === 'ambos' || t === 'cardapio' ? t : null;
+  })();
+  const [productType, setProductType] = useState<'cardapio' | 'mercado' | 'ambos'>(
+    initialTypeFromUrl || 'cardapio',
+  );
 
   // ---------- form state ----------
   const [name, setName] = useState('');
@@ -113,14 +125,24 @@ export default function ProductEdit() {
   const [hydrated, setHydrated] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [fiscalOpen, setFiscalOpen] = useState(false);
+  const [visibilityAdvancedOpen, setVisibilityAdvancedOpen] = useState(false);
+  // Inline "+ Nova categoria"
+  const [newCategoryInline, setNewCategoryInline] = useState('');
+  const [creatingCategory, setCreatingCategory] = useState(false);
 
   // Hydrate form once the product is loaded (edit mode) or when new
   useEffect(() => {
     if (hydrated) return;
     if (isNew) {
       // Pré-seleciona a primeira categoria, se existir, para reduzir cliques
-      if (categories.length > 0 && !categoryName) {
+      // Exceção: tipo `mercado` deixa categoria vazia (opcional → cai em "Geral" ao salvar).
+      if (categories.length > 0 && !categoryName && productType !== 'mercado') {
         setCategoryName(categories[0].name);
+      }
+      // Default de estoque por tipo: mercado já vem com saldo inicial 0 visível.
+      if (productType === 'mercado' && stockQuantity === '') {
+        setStockQuantity('0');
       }
       setHydrated(true);
       return;
@@ -135,6 +157,7 @@ export default function ProductEdit() {
       setMenuItem(existing.menuItem ?? true);
       setPdvItem(existing.pdvItem ?? true);
       setWaiterItem(existing.waiterItem ?? true);
+      setProductType((existing as any).productType ?? 'cardapio');
       setIsFeatured(!!existing.isNew);
       setCode(existing.code || '');
       setGtin(existing.gtin || '');
@@ -161,7 +184,13 @@ export default function ProductEdit() {
       setPricePerKg(!!existing.pricePerKg);
       setHydrated(true);
     }
-  }, [existing, isNew, hydrated, categories, categoryName]);
+  }, [existing, isNew, hydrated, categories, categoryName, productType, stockQuantity]);
+
+  // Pré-carrega o estado de "fiscal aberto" quando há valores fiscais (UX: não esconder dados já preenchidos)
+  useEffect(() => {
+    if (!hydrated) return;
+    if (ncm || cest || cfop || taxRuleId) setFiscalOpen(true);
+  }, [hydrated, ncm, cest, cfop, taxRuleId]);
 
   // Carrega lista de fornecedores quando módulo Mercado está ativo
   useEffect(() => {
@@ -243,7 +272,8 @@ export default function ProductEdit() {
   function validate(): string | null {
     if (!name.trim()) return 'Informe o nome do produto';
     if (!price || isNaN(parseFloat(price))) return 'Informe o preço de venda';
-    if (!categoryName) return 'Selecione uma categoria';
+    // Categoria é opcional para tipo `mercado` — cai em "Geral" automaticamente.
+    if (productType !== 'mercado' && !categoryName) return 'Selecione uma categoria';
     if (availableSubcategories.length > 0 && !subcategoryId) {
       return 'Selecione uma subcategoria';
     }
@@ -271,16 +301,38 @@ export default function ProductEdit() {
   async function doSave() {
     setIsSaving(true);
     try {
+      // Categoria automática "Geral" para itens de mercado sem categoria.
+      let finalCategoryName = categoryName.trim();
+      if (productType === 'mercado' && !finalCategoryName) {
+        const existingGeral = categories.find((c) => c.name.toLowerCase() === 'geral');
+        if (existingGeral) {
+          finalCategoryName = existingGeral.name;
+        } else {
+          const ok = await addCategory('Geral');
+          finalCategoryName = ok ? 'Geral' : (categories[0]?.name || 'Geral');
+        }
+      }
+      // Visibilidade automática derivada do tipo.
+      // Em modo avançado, o usuário pode ter ajustado os toggles manualmente — nesse caso,
+      // o estado dos toggles prevalece (não sobrescrevemos se já abriu o avançado).
+      const derivedMenu = productType === 'mercado' ? false : true;
+      const derivedPdv = true; // produto vendável no PDV/caixa por padrão
+      const derivedWaiter = productType === 'mercado' ? false : true;
+      const finalMenuItem = visibilityAdvancedOpen ? menuItem : derivedMenu;
+      const finalPdvItem = visibilityAdvancedOpen ? pdvItem : derivedPdv;
+      const finalWaiterItem = visibilityAdvancedOpen ? waiterItem : derivedWaiter;
+
       const payload: any = {
         name: name.trim(),
         price: parseFloat(price),
-        category: categoryName,
+        category: finalCategoryName,
         description: description.trim() || undefined,
         imageUrl: imageUrl || undefined,
         active,
-        menuItem,
-        pdvItem,
-        waiterItem,
+        menuItem: finalMenuItem,
+        pdvItem: finalPdvItem,
+        waiterItem: finalWaiterItem,
+        productType,
         subcategoryId: subcategoryId || null,
         code: code.trim() || null,
         gtin: gtin.trim() || null,
