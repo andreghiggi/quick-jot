@@ -1333,15 +1333,12 @@ export default function FrenteCaixa() {
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Sair sem finalizar a venda?</AlertDialogTitle>
+              <AlertDialogTitle>Quer sair desta tela?</AlertDialogTitle>
               <AlertDialogDescription>
-                Há itens no carrinho que ainda não foram finalizados. Se sair desta tela agora, os itens serão perdidos.
+                É possível que as alterações não tenham sido efetuadas.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPendingNavPath(null)}>
-                Continuar venda
-              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
                   const path = pendingNavPath;
@@ -1349,8 +1346,34 @@ export default function FrenteCaixa() {
                   if (path) navigate(path);
                 }}
               >
-                Sair mesmo assim
+                Sair
               </AlertDialogAction>
+              <AlertDialogCancel onClick={() => setPendingNavPath(null)}>
+                Cancelar
+              </AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Confirmação customizada para F5 / Ctrl+R / Cmd+R */}
+        <AlertDialog
+          open={confirmReload}
+          onOpenChange={(o) => { if (!o) setConfirmReload(false); }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Quer atualizar o site?</AlertDialogTitle>
+              <AlertDialogDescription>
+                É possível que as alterações não tenham sido efetuadas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => window.location.reload()}>
+                Recarregar
+              </AlertDialogAction>
+              <AlertDialogCancel onClick={() => setConfirmReload(false)}>
+                Cancelar
+              </AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
