@@ -650,6 +650,19 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {mercadoEnabled && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/estoque'}
+                  >
+                    <Link to="/estoque">
+                      <Package className="w-4 h-4" />
+                      <span>Relatório de Estoque</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </CollapsibleContent>
