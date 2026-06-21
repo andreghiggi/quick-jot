@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.24.0-beta";
+export const VERSION = "1.25.0-beta";
 export const RELEASE_DATE = "2026-06-21"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Atalho rápido para Frente de Caixa (FAB + F8)";
+export const CODENAME = "Perfil Só-Mercado + Hub de Relatórios";
 
 export interface Release {
   version: string;
@@ -19,6 +19,21 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.25.0-beta",
+    date: "2026-06-21",
+    codename: "Perfil Só-Mercado + Hub de Relatórios",
+    changes: [
+      "Novo hub de Relatórios (cards em /relatorios) acessível pelo menu 'Relatórios' do Frente de Caixa — escolha visual entre Vendas, Caixa, Clientes, Curva ABC, TEF (oculto se PinPad não configurado) e Estoque (oculto se Mercado desativado).",
+      "Hub adapta a sidebar automaticamente: lojas com PDV V2 veem a sidebar do PDV V2; demais usam a sidebar padrão.",
+      "Novo item 'Relatório de Estoque' no submenu Relatórios das sidebars (AppSidebar e PDV V2), exibido apenas quando o módulo Mercado está ativo.",
+      "Novo módulo 'Cardápio Digital / Pedidos' no painel do Super Admin — ATIVO por padrão em todas as lojas existentes (zero impacto). Desativar apenas em lojas que serão SÓ Mercado.",
+      "Perfil 'Só Mercado' (Mercado ativo + Cardápio desativado): a home cai direto na Frente de Caixa e a sidebar fica enxuta, escondendo Pedidos, Cardápio, Mesas, Garçom, Cupons, Combos, Adicionais, Subcategorias, WhatsApp Ordering e Importar Cardápio.",
+      "Carrinho 🛒 (F8) agora aparece também no AppLayout para lojas híbridas (Mercado + Cardápio) que não usam PDV V2 — antes só funcionava dentro do PDV V2.",
+      "Rotas /frente-caixa/* e /estoque agora são protegidas: redirecionam para a home se a loja não tem o módulo Mercado ativo.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, impressão, Pedido Express, PDV V2 ou cobrança.",
+    ],
+  },
   {
     version: "1.24.0-beta",
     date: "2026-06-21",

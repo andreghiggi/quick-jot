@@ -39,6 +39,7 @@ import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { useCardapioEnabled } from '@/hooks/useCardapioEnabled';
 import {
   Sidebar,
   SidebarContent,
@@ -65,6 +66,11 @@ export function AppSidebar() {
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
+  const { enabled: cardapioEnabled } = useCardapioEnabled(company?.id);
+  // Perfil "só Mercado": esconde Pedidos, Cardápio, Mesas, Cupons, Combos,
+  // Adicionais, Subcategorias e WhatsApp Ordering. Mantém Frente de Caixa,
+  // Produtos, Estoque, Clientes, Fornecedores, Caixa, Fiscal e Relatórios.
+  const mercadoOnly = mercadoEnabled && !cardapioEnabled;
 
   // Waiter-only menu
   const waiterMenuItems = [
@@ -76,7 +82,13 @@ export function AppSidebar() {
   ];
 
   const mainMenuItems = [
-    pdvV2Enabled
+    mercadoOnly
+      ? {
+          title: 'Frente de Caixa',
+          icon: ScanBarcode,
+          href: '/frente-caixa',
+        }
+      : pdvV2Enabled
       ? {
           title: 'PDV',
           icon: Monitor,
@@ -87,26 +99,32 @@ export function AppSidebar() {
           icon: LayoutDashboard,
           href: '/',
         },
-    {
-      title: 'Pedidos',
-      icon: ShoppingBag,
-      href: '/pedidos',
-    },
-    ...(pdvV2Enabled
+    ...(mercadoOnly
+      ? []
+      : [{
+          title: 'Pedidos',
+          icon: ShoppingBag,
+          href: '/pedidos',
+        }]),
+    ...(pdvV2Enabled && !mercadoOnly
       ? [{ title: 'Comandas', icon: ClipboardEdit, href: '/pdv-v2/comandas-historico' }]
       : []),
-    ...(mercadoEnabled
+    ...(mercadoEnabled && !mercadoOnly
       ? [{ title: 'Frente de Caixa', icon: ScanBarcode, href: '/frente-caixa' }]
       : []),
   ];
 
   // Cadastros - bloco Produtos
   const cadastrosProdutosItems = [
-    { title: 'Categorias', icon: FolderOpen, href: '/categorias' },
-    { title: 'Subcategorias', icon: LayoutList, href: '/subcategorias' },
+    ...(mercadoOnly ? [] : [
+      { title: 'Categorias', icon: FolderOpen, href: '/categorias' },
+      { title: 'Subcategorias', icon: LayoutList, href: '/subcategorias' },
+    ]),
     { title: 'Produtos', icon: Package, href: '/produtos' },
-    { title: 'Adicionais', icon: Layers, href: '/adicionais' },
-    { title: 'Combos', icon: PackagePlus, href: '/combos' },
+    ...(mercadoOnly ? [] : [
+      { title: 'Adicionais', icon: Layers, href: '/adicionais' },
+      { title: 'Combos', icon: PackagePlus, href: '/combos' },
+    ]),
     ...(mercadoEnabled
       ? [{ title: 'Estoque', icon: ClipboardEdit, href: '/estoque' }]
       : []),
@@ -119,7 +137,7 @@ export function AppSidebar() {
   ];
 
   // Ações de vendas
-  const acoesVendasItems = [
+  const acoesVendasItems = mercadoOnly ? [] : [
     { title: 'Cupons', icon: Ticket, href: '/cupons' },
     ...(isModuleEnabled('sales_campaigns')
       ? [{ title: 'Campanhas de Vendas', icon: Megaphone, href: '/campanhas' }]
@@ -127,7 +145,7 @@ export function AppSidebar() {
     { title: 'Ver cardápio', icon: ChefHat, href: `/cardapio/${company?.slug || ''}` },
   ];
 
-  const pdvMenuItems = isModuleEnabled('pdv') && !pdvV2Enabled ? [
+  const pdvMenuItems = isModuleEnabled('pdv') && !pdvV2Enabled && !mercadoOnly ? [
     {
       title: 'PDV',
       icon: Monitor,
@@ -135,7 +153,7 @@ export function AppSidebar() {
     },
   ] : [];
 
-  const mesasMenuItems = isModuleEnabled('mesas') && !isWaiter() ? [
+  const mesasMenuItems = isModuleEnabled('mesas') && !isWaiter() && !mercadoOnly ? [
     {
       title: 'Garçom',
       icon: UtensilsCrossed,
@@ -160,7 +178,7 @@ export function AppSidebar() {
     },
   ];
 
-  const mesasConfigItems = isModuleEnabled('mesas') && isCompanyAdmin() ? [
+  const mesasConfigItems = isModuleEnabled('mesas') && isCompanyAdmin() && !mercadoOnly ? [
     {
       title: 'Mesas',
       icon: Table2,
@@ -186,7 +204,7 @@ export function AppSidebar() {
     },
   ] : [];
 
-  const whatsappConfigItems = [
+  const whatsappConfigItems = mercadoOnly ? [] : [
     {
       title: 'WhatsApp',
       icon: MessageCircle,
@@ -426,6 +444,7 @@ export function AppSidebar() {
           </SidebarGroup>
         </Collapsible>
 
+        {acoesVendasItems.length > 0 && (
         <Collapsible className="group/grp-acoes">
           <SidebarGroup>
             <SidebarGroupLabel asChild>
@@ -455,6 +474,7 @@ export function AppSidebar() {
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
+        )}
 
         {(mesasMenuItems.length > 0 || mesasConfigItems.length > 0) && (
           <Collapsible className="group/grp-salao">
@@ -780,6 +800,7 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {!mercadoOnly && (
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
@@ -791,6 +812,7 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </CollapsibleContent>

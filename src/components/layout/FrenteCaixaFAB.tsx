@@ -3,6 +3,7 @@ import { ShoppingCart } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { useCardapioEnabled } from '@/hooks/useCardapioEnabled';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useGlobalShortcut } from '@/hooks/useGlobalShortcut';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -20,6 +21,7 @@ import { cn } from '@/lib/utils';
 export function FrenteCaixaFAB() {
   const { company } = useAuthContext();
   const { enabled: mercadoOn } = useMercadoEnabled(company?.id);
+  const { enabled: cardapioOn } = useCardapioEnabled(company?.id);
   const isMobile = useIsMobile();
   const { pathname } = useLocation();
 
@@ -28,7 +30,9 @@ export function FrenteCaixaFAB() {
   }, []);
 
   const onFrenteCaixa = pathname.startsWith('/frente-caixa');
-  const shouldRender = mercadoOn && !isMobile && !onFrenteCaixa;
+  // Só faz sentido para LOJA HÍBRIDA (Mercado + Cardápio).
+  // Loja só-mercado já abre direto na Frente de Caixa, não precisa de atalho.
+  const shouldRender = mercadoOn && cardapioOn && !isMobile && !onFrenteCaixa;
 
   // Hook precisa ser chamado incondicionalmente; só dispara se renderizar.
   useGlobalShortcut('F8', () => {

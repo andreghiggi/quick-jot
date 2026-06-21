@@ -52,6 +52,11 @@ const AVAILABLE_MODULES = [
     name: 'mercado',
     label: 'Mercado / Frente de Caixa',
     description: 'Habilita recursos para mini mercados: busca por código de barras (GTIN) e SKU no PDV, leitura de etiquetas EAN-13 pesáveis e (em breve) Frente de Caixa dedicado. Não altera nada do fluxo atual — só adiciona.'
+  },
+  {
+    name: 'cardapio',
+    label: 'Cardápio Digital / Pedidos',
+    description: 'Liga o módulo de cardápio e pedidos online (Dashboard de Pedidos, Cardápio público, Cupons, Combos, WhatsApp Ordering, Mesas). DESLIGAR apenas em lojas que serão SÓ mercado (sem cardápio digital) — a sidebar fica enxuta e a home cai direto na Frente de Caixa. Lojas existentes mantêm este módulo ATIVO por padrão.'
   }
 ];
 

@@ -63,6 +63,8 @@ import FrenteCaixaRecebimento from "./pages/FrenteCaixaRecebimento";
 import EstoqueRelatorio from "./pages/EstoqueRelatorio";
 import RelatoriosHub from "./pages/RelatoriosHub";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
+import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
+import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -81,6 +83,8 @@ const queryClient = new QueryClient();
 function RootRedirect() {
   const { user, loading, isSuperAdmin, isWaiter, isReseller, company } = useAuthContext();
   const { enabled: pdvV2Enabled, loading: pdvV2Loading } = usePdvV2Enabled(company?.id);
+  const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
+  const { enabled: cardapioEnabled, loading: cardapioLoading } = useCardapioEnabled(company?.id);
 
   if (loading) return null;
   if (!user) return <Navigate to="/auth" replace />;
@@ -88,6 +92,10 @@ function RootRedirect() {
   if (isReseller()) return <Navigate to="/revendedor/home" replace />;
   if (isWaiter()) return <Navigate to="/garcom" replace />;
   if (!pdvV2Loading && pdvV2Enabled) return <Navigate to="/pdv-v2" replace />;
+  // Loja SÓ Mercado (sem Cardápio e sem PDV V2) → abre direto na Frente de Caixa.
+  if (!mercadoLoading && !cardapioLoading && mercadoEnabled && !cardapioEnabled) {
+    return <Navigate to="/frente-caixa" replace />;
+  }
 
   return <Index />;
 }
@@ -99,6 +107,18 @@ function RootRedirect() {
 function PDVV2Guard({ children }: { children: ReactNode }) {
   const { company } = useAuthContext();
   const { enabled, loading } = usePdvV2Enabled(company?.id);
+  if (loading) return null;
+  if (!enabled) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+/**
+ * Guard das rotas /frente-caixa/*: bloqueia acesso quando a loja não tem o
+ * módulo `mercado` ativo, evitando acesso indevido via URL/bookmark.
+ */
+function FrenteCaixaGuard({ children }: { children: ReactNode }) {
+  const { company } = useAuthContext();
+  const { enabled, loading } = useMercadoEnabled(company?.id);
   if (loading) return null;
   if (!enabled) return <Navigate to="/" replace />;
   return <>{children}</>;
@@ -208,32 +228,42 @@ function AppRoutes() {
       {/* Frente de Caixa (módulo mercado) — guard interno via useMercadoEnabled */}
       <Route path="/frente-caixa" element={
         <ProtectedRoute requireCompany>
-          <FrenteCaixa />
+          <FrenteCaixaGuard>
+            <FrenteCaixa />
+          </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
 
       <Route path="/frente-caixa/lista" element={
         <ProtectedRoute requireCompany>
-          <FrenteCaixaLista />
+          <FrenteCaixaGuard>
+            <FrenteCaixaLista />
+          </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
 
       <Route path="/frente-caixa/recebimento" element={
         <ProtectedRoute requireCompany>
-          <FrenteCaixaRecebimento />
+          <FrenteCaixaGuard>
+            <FrenteCaixaRecebimento />
+          </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
 
       <Route path="/frente-caixa/configuracoes" element={
         <ProtectedRoute requireCompany>
-          <FrenteCaixaConfiguracoes />
+          <FrenteCaixaGuard>
+            <FrenteCaixaConfiguracoes />
+          </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
 
       {/* Estoque (módulo mercado) — guard interno via useMercadoEnabled */}
       <Route path="/estoque" element={
         <ProtectedRoute requireCompany>
-          <EstoqueRelatorio />
+          <FrenteCaixaGuard>
+            <EstoqueRelatorio />
+          </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
 

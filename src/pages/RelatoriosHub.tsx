@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PDVV2Layout } from '@/components/layout/PDVV2Layout';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Receipt, DollarSign, Users, BarChart3, CreditCard, Package } from 'lucide-react';
@@ -73,6 +75,7 @@ export default function RelatoriosHub() {
   const { user } = useAuthContext();
   const companyId = (user as any)?.user_metadata?.company_id as string | undefined;
   const { enabled: mercadoEnabled } = useMercadoEnabled(companyId);
+  const { enabled: pdvV2Enabled } = usePdvV2Enabled(companyId);
   const [hasTef, setHasTef] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -98,8 +101,9 @@ export default function RelatoriosHub() {
     return true;
   });
 
+  const Layout = pdvV2Enabled ? PDVV2Layout : AppLayout;
   return (
-    <PDVV2Layout>
+    <Layout>
       <div className="h-full overflow-y-auto p-4 md:p-6">
         <div className="max-w-6xl mx-auto">
           <div className="mb-6">
@@ -145,6 +149,6 @@ export default function RelatoriosHub() {
           </div>
         </div>
       </div>
-    </PDVV2Layout>
+    </Layout>
   );
 }
