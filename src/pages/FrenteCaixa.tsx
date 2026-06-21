@@ -567,6 +567,24 @@ export default function FrenteCaixa() {
       params.fiscalMode,
     );
     if (saleId) {
+      // Importação: vincula o pedido original à venda do FC e marca como entregue.
+      // Itens importados são imutáveis, então a soma bate com o pedido original.
+      if (importedOrderId) {
+        try {
+          await supabase
+            .from('orders')
+            .update({ status: 'delivered', pdv_sale_id: saleId })
+            .eq('id', importedOrderId);
+          await supabase
+            .from('pdv_sales')
+            .update({ imported_order_id: importedOrderId })
+            .eq('id', saleId);
+        } catch (err) {
+          console.error('[FrenteCaixa] vínculo pedido importado falhou:', err);
+          toast.error('Venda salva, mas falha ao marcar o pedido como pago.');
+        }
+      }
+
       // Baixa automática de estoque (no-op para produtos sem track_stock).
       // Fase A.2: quando `stock_move_on_fiscal_only` está ligado, NÃO baixa
       // estoque aqui — a baixa fica reservada à emissão fiscal (NFC-e).
