@@ -292,12 +292,29 @@ export default function FrenteCaixa() {
       } else if (e.key === 'F10') {
         e.preventDefault();
         setMenuOpen((o) => !o);
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        // Aumenta/diminui qty da última linha mexida.
+        // Só age quando NÃO há sugestões de busca abertas (senão as setas
+        // continuam navegando o dropdown, como hoje).
+        if (searchMatches.length > 0) return;
+        if (lines.length === 0) return;
+        e.preventDefault();
+        const target = lines.find((l) => l.id === lastTouchedId) ?? lines[lines.length - 1];
+        if (!target) return;
+        const delta = e.key === 'ArrowUp' ? 1 : -1;
+        setLines((prev) =>
+          prev
+            .map((l) => (l.id === target.id ? { ...l, quantity: l.quantity + delta } : l))
+            .filter((l) => l.quantity > 0),
+        );
+        setLastTouchedId(target.id);
+        beep(true);
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lines, paymentOpen, confirmCancel, priceTarget, detailsTarget, removeTarget, lastTouchedId, currentRegister]);
+  }, [lines, paymentOpen, confirmCancel, priceTarget, detailsTarget, removeTarget, lastTouchedId, currentRegister, searchMatches]);
 
   // ---- lookup ----
   function findProduct(raw: string): { product: Product | null; multiple: Product[] } {
