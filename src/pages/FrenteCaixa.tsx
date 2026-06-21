@@ -27,6 +27,7 @@ import {
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useProducts } from '@/hooks/useProducts';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { brl as formatPrice } from '@/components/pdv-v2/_format';
@@ -49,6 +50,10 @@ import {
 } from '@/components/frente-caixa/FrenteCaixaCashMovementDialog';
 import { FrenteCaixaInutilizarNfceDialog } from '@/components/frente-caixa/FrenteCaixaInutilizarNfceDialog';
 import { FrenteCaixaXmlMesDialog } from '@/components/frente-caixa/FrenteCaixaXmlMesDialog';
+import {
+  FrenteCaixaImportDialog,
+  type ImportableOrder,
+} from '@/components/frente-caixa/FrenteCaixaImportDialog';
 import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { printCurrentCashClosing } from '@/utils/printCurrentCashClosing';
@@ -73,6 +78,10 @@ interface CartLine {
   /** Acréscimo em R$ aplicado à linha inteira */
   line_surcharge: number;
   unit: string;
+  /** Itens importados de um pedido/mesa são imutáveis no carrinho do FC. */
+  imported?: boolean;
+  /** Observações originais do pedido importado (não editáveis). */
+  imported_notes?: string;
 }
 
 /**
@@ -85,6 +94,9 @@ interface CartLine {
 export default function FrenteCaixa() {
   const { user, company } = useAuthContext();
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const cardapioModuleEnabled = isModuleEnabled('cardapio');
+  const mesaQrModuleEnabled = isModuleEnabled('cardapio_mesa');
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
   const { settings: pdvSettings } = usePdvSettings(company?.id);
   const { taxRules } = useTaxRules({ companyId: company?.id });
@@ -125,6 +137,12 @@ export default function FrenteCaixa() {
   const [inutOpen, setInutOpen] = useState(false);
   const [xmlMesOpen, setXmlMesOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Importação de pedido/mesa
+  const [importDialog, setImportDialog] = useState<null | 'pedido' | 'mesa'>(null);
+  /** ID do pedido em `orders` que foi importado para o carrinho. */
+  const [importedOrderId, setImportedOrderId] = useState<string | null>(null);
+  /** Rótulo curto para a UI (ex.: "M-001" ou "R-023"). */
+  const [importedLabel, setImportedLabel] = useState<string | null>(null);
 
   // Persiste o carrinho em localStorage para que outras telas (ex.: Caixas)
   // possam detectar venda pendente antes de fechar o caixa.
@@ -376,7 +394,7 @@ export default function FrenteCaixa() {
   function changeQty(id: string, delta: number) {
     setLines((prev) =>
       prev
-        .map((l) => (l.id === id ? { ...l, quantity: l.quantity + delta } : l))
+        .map((l) => (l.id === id && !l.imported ? { ...l, quantity: l.quantity + delta } : l))
         .filter((l) => l.quantity > 0),
     );
   }
@@ -386,6 +404,10 @@ export default function FrenteCaixa() {
   }
 
   function requestRemoveLine(line: CartLine) {
+    if (line.imported) {
+      toast.error('Item importado não pode ser removido.');
+      return;
+    }
     if (line.quantity <= 1) {
       removeLine(line.id);
       setLastTouchedId((curr) => (curr === line.id ? null : curr));
@@ -428,6 +450,7 @@ export default function FrenteCaixa() {
   }
 
   function applyPriceChange(target: CartLine, change: PriceChange) {
+    if (target.imported) return;
     setLines((prev) =>
       prev.map((l) => {
         if (l.id !== target.id) return l;
@@ -446,6 +469,7 @@ export default function FrenteCaixa() {
   }
 
   function applyDetailsChange(target: CartLine, result: ItemDetailsResult) {
+    if (target.imported) return;
     setLines((prev) =>
       prev.map((l) =>
         l.id === target.id
