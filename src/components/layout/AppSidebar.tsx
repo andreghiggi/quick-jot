@@ -800,6 +800,7 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {!mercadoOnly && (
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
@@ -811,6 +812,7 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </CollapsibleContent>
