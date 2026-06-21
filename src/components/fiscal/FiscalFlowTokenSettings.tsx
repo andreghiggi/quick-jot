@@ -17,6 +17,8 @@ const SETTING_KEY = 'fiscal_flow_api_token';
 export function FiscalFlowTokenSettings({ companyId }: FiscalFlowTokenSettingsProps) {
   const [token, setToken] = useState('');
   const [savedToken, setSavedToken] = useState('');
+  const [empresaId, setEmpresaId] = useState('');
+  const [savedEmpresaId, setSavedEmpresaId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [show, setShow] = useState(false);
@@ -34,6 +36,15 @@ export function FiscalFlowTokenSettings({ companyId }: FiscalFlowTokenSettingsPr
         const v = data?.value || '';
         setSavedToken(v);
         setToken(v);
+
+        const { data: comp } = await supabase
+          .from('companies')
+          .select('fiscalflow_empresa_id')
+          .eq('id', companyId)
+          .maybeSingle();
+        const eid = (comp as any)?.fiscalflow_empresa_id || '';
+        setSavedEmpresaId(eid);
+        setEmpresaId(eid);
       } catch (error) {
         console.error('Error loading Fiscal Flow token:', error);
       } finally {
@@ -56,6 +67,15 @@ export function FiscalFlowTokenSettings({ companyId }: FiscalFlowTokenSettingsPr
       );
       if (error) throw error;
       setSavedToken(token.trim());
+
+      if (empresaId.trim() !== savedEmpresaId) {
+        const { error: e2 } = await supabase
+          .from('companies')
+          .update({ fiscalflow_empresa_id: empresaId.trim() || null } as any)
+          .eq('id', companyId);
+        if (e2) throw e2;
+        setSavedEmpresaId(empresaId.trim());
+      }
       toast.success('Token salvo com sucesso!');
     } catch (error) {
       console.error(error);
@@ -85,7 +105,7 @@ export function FiscalFlowTokenSettings({ companyId }: FiscalFlowTokenSettingsPr
           Token da API Fiscal Flow
         </CardTitle>
         <CardDescription>
-          Informe o token de acesso fornecido pela plataforma Fiscal Flow para emissão de NFC-e.
+          Informe o token de acesso da Fiscal Flow (usado em NFC-e e Manifestação Eletrônica) e o ID da empresa cadastrada na plataforma.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -122,12 +142,25 @@ export function FiscalFlowTokenSettings({ companyId }: FiscalFlowTokenSettingsPr
                 {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <Button onClick={save} disabled={saving || token.trim() === savedToken}>
+            <Button onClick={save} disabled={saving || (token.trim() === savedToken && empresaId.trim() === savedEmpresaId)}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
             O token é armazenado de forma segura por loja e usado nas chamadas à API Fiscal Flow.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>ID da Empresa na Fiscal Flow</Label>
+          <Input
+            value={empresaId}
+            onChange={(e) => setEmpresaId(e.target.value)}
+            placeholder="UUID da empresa cadastrada na Fiscal Flow"
+            className="font-mono"
+          />
+          <p className="text-xs text-muted-foreground">
+            Necessário para a Manifestação Eletrônica (DF-e). Solicite ao suporte da Fiscal Flow.
           </p>
         </div>
       </CardContent>
