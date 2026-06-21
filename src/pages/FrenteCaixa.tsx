@@ -1196,6 +1196,20 @@ export default function FrenteCaixa() {
           onInutilizarNfce={() => setInutOpen(true)}
           onXmlMes={() => setXmlMesOpen(true)}
           onRelFechamento={handleRelFechamento}
+          onImportPedido={
+            cardapioModuleEnabled ? () => setImportDialog('pedido') : undefined
+          }
+          onImportMesa={
+            mesaQrModuleEnabled ? () => setImportDialog('mesa') : undefined
+          }
+        />
+
+        <FrenteCaixaImportDialog
+          open={importDialog !== null}
+          onOpenChange={(o) => !o && setImportDialog(null)}
+          companyId={company?.id}
+          type={importDialog ?? 'pedido'}
+          onImport={handleImportOrder}
         />
 
         {/* FAB vermelho — atalho contextual (foca scanner ou abre pagamento) */}
