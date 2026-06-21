@@ -61,6 +61,7 @@ import FrenteCaixaLista from "./pages/FrenteCaixaLista";
 import FrenteCaixaConfiguracoes from "./pages/FrenteCaixaConfiguracoes";
 import FrenteCaixaRecebimento from "./pages/FrenteCaixaRecebimento";
 import EstoqueRelatorio from "./pages/EstoqueRelatorio";
+import RelatoriosHub from "./pages/RelatoriosHub";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 
 // Admin Pages
@@ -254,6 +255,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       <Route path="/financeiro/relatorios" element={<Navigate to="/relatorios/vendas" replace />} />
+
+      <Route path="/relatorios" element={
+        <ProtectedRoute requireCompany>
+          <RelatoriosHub />
+        </ProtectedRoute>
+      } />
 
       <Route path="/relatorios/caixa" element={
         <ProtectedRoute requireCompany>

@@ -124,7 +124,7 @@ export function FrenteCaixaActionsMenu({
             title="Acessar"
             items={[
               { label: 'Lista', accel: 0, onClick: () => navigate('/frente-caixa/lista') },
-              { label: 'Relatórios', accel: 0, onClick: () => navigate('/relatorios/vendas') },
+              { label: 'Relatórios', accel: 0, onClick: () => navigate('/relatorios') },
               { label: 'Recebimento', accel: 0, onClick: () => navigate('/frente-caixa/recebimento') },
               { label: 'ECONF', accel: 0, onClick: () => {}, disabled: true, hint: 'Em breve' },
             ]}
