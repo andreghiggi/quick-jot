@@ -444,6 +444,7 @@ export function AppSidebar() {
           </SidebarGroup>
         </Collapsible>
 
+        {acoesVendasItems.length > 0 && (
         <Collapsible className="group/grp-acoes">
           <SidebarGroup>
             <SidebarGroupLabel asChild>
@@ -473,6 +474,7 @@ export function AppSidebar() {
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
+        )}
 
         {(mesasMenuItems.length > 0 || mesasConfigItems.length > 0) && (
           <Collapsible className="group/grp-salao">
