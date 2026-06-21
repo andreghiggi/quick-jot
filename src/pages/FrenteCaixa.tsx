@@ -304,6 +304,12 @@ export default function FrenteCaixa() {
         const target = lines.find((l) => l.id === lastTouchedId) ?? lines[lines.length - 1];
         if (!target) return;
         const delta = e.key === 'ArrowUp' ? 1 : -1;
+        // Se for diminuir e a qty atual já está em 1, pedir confirmação
+        // ao invés de remover silenciosamente a linha.
+        if (delta === -1 && target.quantity <= 1) {
+          setConfirmDelete(target);
+          return;
+        }
         setLines((prev) =>
           prev
             .map((l) => (l.id === target.id ? { ...l, quantity: l.quantity + delta } : l))
