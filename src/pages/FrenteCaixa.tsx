@@ -161,6 +161,31 @@ export default function FrenteCaixa() {
     } catch {/*noop*/}
   }, [lines.length]);
 
+  // ---------------------------------------------------------------
+  // Proteção contra perda de venda em andamento
+  // ---------------------------------------------------------------
+  // Quando há itens no carrinho, avisa antes do usuário recarregar/fechar
+  // a aba (popup nativo do navegador) e antes de navegar para outra rota
+  // dentro do app (AlertDialog customizado).
+  const hasUnsavedSale = lines.length > 0;
+
+  useEffect(() => {
+    if (!hasUnsavedSale) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Texto é ignorado pelos navegadores modernos, mas é necessário para disparar o popup.
+      e.returnValue = '';
+      return '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasUnsavedSale]);
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsavedSale && currentLocation.pathname !== nextLocation.pathname,
+  );
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   // ---- fullscreen ----
