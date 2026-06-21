@@ -27,6 +27,7 @@ import {
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { useCardapioEnabled } from '@/hooks/useCardapioEnabled';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useProducts } from '@/hooks/useProducts';
 import { useCashRegister } from '@/hooks/useCashRegister';
