@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.32.3-beta";
+export const VERSION = "1.32.4-beta";
 export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Checkout FC: Enter avança com tolerância de centavos";
+export const CODENAME = "Checkout FC: Enter não pula Cliente";
 
 export interface Release {
   version: string;
@@ -19,6 +19,22 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.32.4-beta",
+    date: "2026-06-22",
+    codename: "Checkout FC: Enter não pula Cliente",
+    changes: [
+      "Checkout da Frente de Caixa: corrigido Enter no campo de pagamento para avançar para Cliente sem disparar o atalho global que pulava direto para Informações adicionais.",
+    ],
+  },
+  {
+    version: "1.32.3-beta",
+    date: "2026-06-22",
+    codename: "Checkout FC: Enter avança com tolerância de centavos",
+    changes: [
+      "Checkout FC: Enter agora considera tolerância de centavos ao validar se o valor pago já cobre o total, evitando falha por arredondamento decimal.",
+    ],
+  },
   {
     version: "1.32.2-beta",
     date: "2026-06-22",
