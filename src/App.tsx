@@ -60,7 +60,6 @@ import MesaQR from "./pages/MesaQR";
 import FrenteCaixa from "./pages/FrenteCaixa";
 import FrenteCaixaLista from "./pages/FrenteCaixaLista";
 import FrenteCaixaConfiguracoes from "./pages/FrenteCaixaConfiguracoes";
-import FrenteCaixaRecebimento from "./pages/FrenteCaixaRecebimento";
 import EstoqueRelatorio from "./pages/EstoqueRelatorio";
 import RelatoriosHub from "./pages/RelatoriosHub";
 import DfeManifestacao from "./pages/compras/DfeManifestacao";
@@ -252,14 +251,6 @@ function AppRoutes() {
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
             <FrenteCaixaLista />
-          </FrenteCaixaGuard>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/frente-caixa/recebimento" element={
-        <ProtectedRoute requireCompany>
-          <FrenteCaixaGuard>
-            <FrenteCaixaRecebimento />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
