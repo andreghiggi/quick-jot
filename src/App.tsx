@@ -309,6 +309,20 @@ function AppRoutes() {
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
+      <Route path="/compras/relatorios" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaGuard>
+            <ComprasRelatorios />
+          </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/compras/configuracoes" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaGuard>
+            <ComprasConfiguracoes />
+          </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
 
       <Route path="/formas-pagamento" element={
         <ProtectedRoute requireCompany>
