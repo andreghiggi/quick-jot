@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.31.3-beta";
+export const VERSION = "1.32.0-beta";
 export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Relatório de Vendas: tipo NFC-e × Pré-venda";
+export const CODENAME = "Lista do Frente de Caixa em cards (estilo Gweb)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.32.0-beta",
+    date: "2026-06-22",
+    codename: "Lista do Frente de Caixa em cards (estilo Gweb)",
+    changes: [
+      "Lista do PDV (Frente de Caixa › Lista) reformulada para o layout em cards do Gweb: avatar do cliente, linha de metadados (Número / Série / Emissão / Total + forma de pagamento entre parênteses) e linha de badges abaixo.",
+      "Novo badge de TIPO de documento: laranja 'PV' para pré-venda e amarelo 'NFC-e' para venda fiscal — antes o tipo ficava implícito no badge de status fiscal.",
+      "Novo badge verde 'Pré-venda concluída' nas vendas sem NFC-e (espelha o Gweb).",
+      "Status fiscal agora aparece como badge sólido colorido: verde 'Autorizado o uso da NF-e' / vermelho 'Pendente de emissão do documento fiscal' / âmbar pendente / cinza cancelada / vermelho destrutivo rejeitada.",
+      "Numeração sequencial humana por loja: nova coluna pv_numero em pdv_sales preenchida automaticamente por trigger (contador por company_id). Cada nova venda do PDV recebe número 1, 2, 3… independente do número da NFC-e. Vendas antigas seguem mostrando o id curto (#ABC123) como fallback.",
+      "Ações inline (Ver detalhes, Emitir NFC-e retroativo, Reimprimir DANFE) preservadas — nenhuma mudança em TEF, PinPad, NFC-e, Multi-Pagamento, impressão ou checkout.",
+    ],
+  },
   {
     version: "1.31.3-beta",
     date: "2026-06-22",
