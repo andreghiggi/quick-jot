@@ -66,6 +66,7 @@ import RelatoriosHub from "./pages/RelatoriosHub";
 import DfeManifestacao from "./pages/compras/DfeManifestacao";
 import PurchaseImportXml from "./pages/compras/PurchaseImportXml";
 import PurchaseInvoices from "./pages/compras/PurchaseInvoices";
+import Compras from "./pages/compras/Compras";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
 import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
@@ -278,6 +279,13 @@ function AppRoutes() {
       } />
 
       {/* Compras: Manifestação Eletrônica + NF-e de Entrada (módulo mercado) */}
+      <Route path="/compras" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaGuard>
+            <Compras />
+          </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
       <Route path="/compras/manifestacao" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>

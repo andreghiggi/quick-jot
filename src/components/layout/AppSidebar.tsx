@@ -102,18 +102,22 @@ export function AppSidebar() {
           icon: LayoutDashboard,
           href: '/',
         },
-    ...(mercadoOnly
-      ? []
-      : [{
-          title: 'Pedidos',
-          icon: ShoppingBag,
-          href: '/pedidos',
-        }]),
+  ];
+
+  // Movimentações (estilo GWeb): Pedidos · Comandas · PDV · Frente de Caixa · Compras
+  const movimentacoesItems = [
+    ...(mercadoOnly ? [] : [{ title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' }]),
     ...(pdvV2Enabled && !mercadoOnly
       ? [{ title: 'Comandas', icon: ClipboardEdit, href: '/pdv-v2/comandas-historico' }]
       : []),
+    ...(isModuleEnabled('pdv') && !pdvV2Enabled && !mercadoOnly
+      ? [{ title: 'PDV', icon: Monitor, href: '/pdv' }]
+      : []),
     ...(mercadoEnabled && !mercadoOnly
       ? [{ title: 'Frente de Caixa', icon: ScanBarcode, href: '/frente-caixa' }]
+      : []),
+    ...(mercadoEnabled
+      ? [{ title: 'Compras', icon: ShoppingCart, href: '/compras' }]
       : []),
   ];
 
@@ -153,13 +157,8 @@ export function AppSidebar() {
     { title: 'Ver cardápio', icon: ChefHat, href: `/cardapio/${company?.slug || ''}` },
   ];
 
-  const pdvMenuItems = isModuleEnabled('pdv') && !pdvV2Enabled && !mercadoOnly ? [
-    {
-      title: 'PDV',
-      icon: Monitor,
-      href: '/pdv',
-    },
-  ] : [];
+  // PDV legado agora vive dentro de "Movimentações"
+  const pdvMenuItems: { title: string; icon: any; href: string }[] = [];
 
   const mesasMenuItems = isModuleEnabled('mesas') && !isWaiter() && !mercadoOnly ? [
     {
@@ -212,12 +211,8 @@ export function AppSidebar() {
     },
   ] : [];
 
-  // Compras → Manifestação Eletrônica + NF-e de Entrada (módulo mercado)
-  const comprasMenuItems = mercadoEnabled ? [
-    { title: 'Manifestação Eletrônica', icon: FileCheck, href: '/compras/manifestacao' },
-    { title: 'NF-e de Entrada', icon: FileInput, href: '/compras/entradas' },
-    { title: 'Importar XML', icon: Upload, href: '/compras/importar-xml' },
-  ] : [];
+  // O grupo "Compras" foi removido — agora há um único link "Compras" dentro de Movimentações
+  // que abre o hub `/compras` (com sidebar GWeb: Manifestação, Importar XML, XML do mês).
 
   const whatsappConfigItems = mercadoOnly ? [] : [
     {
@@ -385,6 +380,45 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {movimentacoesItems.length > 0 && (
+          <Collapsible
+            className="group/grp-mov"
+            defaultOpen={movimentacoesItems.some(i => location.pathname === i.href || location.pathname.startsWith(i.href + '/'))}
+          >
+            <SidebarGroup>
+              <SidebarGroupLabel asChild>
+                <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
+                  <span>Movimentações</span>
+                  <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-mov:rotate-180" />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {movimentacoesItems.map((item) => (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={
+                            item.href === '/compras'
+                              ? location.pathname.startsWith('/compras')
+                              : location.pathname === item.href
+                          }
+                        >
+                          <Link to={item.href}>
+                            <item.icon className="w-4 h-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
+        )}
 
         <Collapsible className="group/grp-cadastros">
           <SidebarGroup>
@@ -614,35 +648,6 @@ export function AppSidebar() {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {fiscalMenuItems.map((item) => (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton asChild isActive={location.pathname === item.href}>
-                          <Link to={item.href}>
-                            <item.icon className="w-4 h-4" />
-                            <span>{item.title}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </SidebarGroup>
-          </Collapsible>
-        )}
-
-        {comprasMenuItems.length > 0 && (
-          <Collapsible className="group/grp-compras">
-            <SidebarGroup>
-              <SidebarGroupLabel asChild>
-                <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
-                  <span>Compras</span>
-                  <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-compras:rotate-180" />
-                </CollapsibleTrigger>
-              </SidebarGroupLabel>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {comprasMenuItems.map((item) => (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton asChild isActive={location.pathname === item.href}>
                           <Link to={item.href}>

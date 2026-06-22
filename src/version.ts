@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.27.0-beta";
-export const RELEASE_DATE = "2026-06-21"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Compras: Manifestação Eletrônica DF-e + NF-e de Entrada";
+export const VERSION = "1.28.0-beta";
+export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Movimentações + Hub Compras (estilo GWeb)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.28.0-beta",
+    date: "2026-06-22",
+    codename: "Movimentações + Hub Compras (estilo GWeb)",
+    changes: [
+      "Novo menu lateral 'Movimentações' agrupando Pedidos, Comandas, PDV, Frente de Caixa e Compras — alinhado ao padrão do GWeb. Os itens continuam exatamente onde estavam, só ficaram reunidos num único bloco.",
+      "Novo hub /compras (lojas com Mercado ativo): tela única estilo GWeb com sidebar de Acesso (Compras / Manifestação eletrônica) e Ações (Importar XML / XML do mês). A coluna principal lista as NF-e de entrada com busca, ordenação e paginação.",
+      "Botão 'XML do mês' nas Compras: baixa em .zip todos os XMLs das NF-e de entrada importadas no mês escolhido (reaproveita o diálogo do Frente de Caixa, agora com fonte 'NFC-e' ou 'NF-e de Entrada').",
+      "Grupo 'Compras' antigo (com 3 sub-itens) foi removido do menu — virou um único atalho 'Compras' dentro de Movimentações que abre o novo hub. Rotas antigas (/compras/manifestacao, /compras/importar-xml, /compras/entradas) continuam funcionando.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, impressão, PDV V2, Pedido Express ou cobrança — fluxos de venda intocados.",
+    ],
+  },
   {
     version: "1.27.0-beta",
     date: "2026-06-21",
