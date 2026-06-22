@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.32.0-beta";
+export const VERSION = "1.32.1-beta";
 export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Lista do Frente de Caixa em cards (estilo Gweb)";
+export const CODENAME = "Checkout FC: Enter só preenche + etapas anteriores ficam visíveis";
 
 export interface Release {
   version: string;
@@ -19,6 +19,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.32.1-beta",
+    date: "2026-06-22",
+    codename: "Checkout FC: Enter só preenche + etapas anteriores ficam visíveis",
+    changes: [
+      "Checkout da Frente de Caixa: ao pressionar uma letra (A/B/C…) e Enter no campo de pagamento, agora o valor restante é apenas preenchido — o wizard NÃO avança mais automaticamente para a etapa Cliente. Para avançar use o botão 'Próximo' ou Ctrl+2.",
+      "Etapas anteriores do checkout permanecem visíveis acima da etapa atual (estilo Gweb): ao avançar para Cliente, o resumo dos pagamentos fica fixo logo abaixo do passo 1; ao avançar para Observações, o cliente selecionado também fica visível.",
+    ],
+  },
   {
     version: "1.32.0-beta",
     date: "2026-06-22",
