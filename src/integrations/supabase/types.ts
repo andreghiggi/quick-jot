@@ -1793,6 +1793,32 @@ export type Database = {
           },
         ]
       }
+      pdv_sale_number_counters: {
+        Row: {
+          company_id: string
+          next_value: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          next_value?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          next_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_sale_number_counters_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_sale_payments: {
         Row: {
           amount: number
@@ -1863,6 +1889,7 @@ export type Database = {
           notes: string | null
           order_id: string | null
           payment_method_id: string | null
+          pv_numero: number | null
           source_module: string
           total: number
         }
@@ -1880,6 +1907,7 @@ export type Database = {
           notes?: string | null
           order_id?: string | null
           payment_method_id?: string | null
+          pv_numero?: number | null
           source_module?: string
           total?: number
         }
@@ -1897,6 +1925,7 @@ export type Database = {
           notes?: string | null
           order_id?: string | null
           payment_method_id?: string | null
+          pv_numero?: number | null
           source_module?: string
           total?: number
         }

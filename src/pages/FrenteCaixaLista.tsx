@@ -23,14 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { User } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -59,6 +52,8 @@ interface SaleRow {
   discount: number;
   customer_name: string | null;
   notes: string | null;
+  pv_numero: number | null;
+  fiscal_mode: string | null;
   payment_method?: { name: string } | null;
   nfce?: {
     id: string;
@@ -115,7 +110,7 @@ export default function FrenteCaixaLista() {
       const { data: sales, error } = await supabase
         .from('pdv_sales')
         .select(
-          'id, created_at, final_total, discount, customer_name, notes, payment_method:payment_methods(name)'
+          'id, created_at, final_total, discount, customer_name, notes, pv_numero, fiscal_mode, payment_method:payment_methods(name)'
         )
         .eq('company_id', company.id)
         .gte('created_at', from)
@@ -403,93 +398,133 @@ export default function FrenteCaixaLista() {
               Nenhuma venda no período selecionado.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[120px]">Horário</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Pagamento</TableHead>
-                  <TableHead>Fiscal</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right w-[160px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((r) => {
-                  const cfg = r.nfce ? STATUS_BADGE[r.nfce.status] : null;
-                  const Icon = cfg?.icon ?? FileMinus;
-                  return (
-                    <TableRow key={r.id} className="cursor-default hover:bg-muted/40">
-                      <TableCell className="tabular-nums text-xs text-muted-foreground">
-                        {format(new Date(r.created_at), 'dd/MM HH:mm', { locale: ptBR })}
-                      </TableCell>
-                      <TableCell className="text-sm">{r.customer_name || '—'}</TableCell>
-                      <TableCell className="text-sm">{r.payment_method?.name || '—'}</TableCell>
-                      <TableCell>
-                        {cfg ? (
-                          <Badge variant="outline" className={`${cfg.className} text-[11px]`}>
-                            <Icon className="h-3 w-3 mr-1" />
-                            {cfg.label}
-                            {r.nfce?.numero ? ` #${r.nfce.numero}` : ''}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[11px] text-muted-foreground">
-                            <FileMinus className="h-3 w-3 mr-1" />
-                            Sem NFC-e
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums font-semibold text-emerald-600">
-                        {brl(Number(r.final_total) || 0)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => openSaleDetails(r)}
-                            title="Ver detalhes"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {(!r.nfce || (r.nfce.status !== 'autorizada' && r.nfce.status !== 'processando' && r.nfce.status !== 'cancelada')) && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-primary"
-                              onClick={() => emitNfceRetroativa(r)}
-                              disabled={emittingId === r.id}
-                              title="Emitir NFC-e desta venda"
-                            >
-                              {emittingId === r.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <FileText className="h-4 w-4" />
-                              )}
-                            </Button>
+            <ul className="divide-y">
+              {filtered.map((r) => {
+                const isFiscal = r.nfce?.status === 'autorizada' || r.nfce?.status === 'processando';
+                const hasNfce = !!r.nfce;
+                const cfg = hasNfce ? STATUS_BADGE[r.nfce!.status] : null;
+                const StatusIcon = cfg?.icon ?? FileMinus;
+                const numero = hasNfce
+                  ? (r.nfce!.numero || '—')
+                  : (r.pv_numero != null ? String(r.pv_numero) : `#${r.id.slice(0, 6).toUpperCase()}`);
+                const canEmit = !r.nfce || (r.nfce.status !== 'autorizada' && r.nfce.status !== 'processando' && r.nfce.status !== 'cancelada');
+                return (
+                  <li key={r.id} className="px-4 py-3 hover:bg-muted/40 transition-colors">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <User className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">
+                          {r.customer_name || 'Consumidor final'}
+                        </p>
+                        <p className="text-xs italic text-muted-foreground mt-0.5">
+                          <span className="font-medium not-italic">Número:</span> {numero}
+                          {hasNfce && r.nfce!.serie && (
+                            <>
+                              {' '}|{' '}
+                              <span className="font-medium not-italic">Série:</span> {r.nfce!.serie}
+                            </>
                           )}
+                          {' '}|{' '}
+                          <span className="font-medium not-italic">Emissão:</span>{' '}
+                          {format(new Date(r.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                          {' '}|{' '}
+                          <span className="font-medium not-italic">Total:</span>{' '}
+                          <span className="font-semibold text-emerald-600 not-italic">
+                            {brl(Number(r.final_total) || 0)}
+                          </span>
+                          {r.payment_method?.name && (
+                            <span className="not-italic"> ({r.payment_method.name})</span>
+                          )}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                          {/* Tipo do documento */}
+                          {isFiscal ? (
+                            <Badge className="bg-amber-400 hover:bg-amber-400 text-amber-950 border-0 text-[10px] font-bold uppercase">
+                              NFC-e
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-orange-500 hover:bg-orange-500 text-white border-0 text-[10px] font-bold uppercase">
+                              PV
+                            </Badge>
+                          )}
+                          {/* Status fiscal */}
+                          {hasNfce ? (
+                            <Badge
+                              className={
+                                r.nfce!.status === 'autorizada'
+                                  ? 'bg-emerald-600 hover:bg-emerald-600 text-white border-0 text-[10px]'
+                                  : r.nfce!.status === 'cancelada'
+                                  ? 'bg-muted text-muted-foreground border text-[10px]'
+                                  : r.nfce!.status === 'rejeitada' || r.nfce!.status === 'denegada'
+                                  ? 'bg-destructive hover:bg-destructive text-white border-0 text-[10px]'
+                                  : 'bg-amber-500 hover:bg-amber-500 text-white border-0 text-[10px]'
+                              }
+                            >
+                              <StatusIcon className="h-3 w-3 mr-1" />
+                              {cfg?.label ?? r.nfce!.status}
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-red-500 hover:bg-red-500 text-white border-0 text-[10px]">
+                              Pendente de emissão do documento fiscal
+                            </Badge>
+                          )}
+                          {/* Status operacional (só pré-venda) */}
+                          {!isFiscal && (
+                            <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white border-0 text-[10px]">
+                              Pré-venda concluída
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {/* Ações */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => openSaleDetails(r)}
+                          title="Ver detalhes"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {canEmit && (
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => reprintDanfe(r)}
-                            disabled={r.nfce?.status !== 'autorizada'}
-                            title={
-                              r.nfce?.status === 'autorizada'
-                                ? 'Reimprimir DANFE'
-                                : 'Sem NFC-e autorizada para reimprimir'
-                            }
+                            className="h-8 w-8 text-primary"
+                            onClick={() => emitNfceRetroativa(r)}
+                            disabled={emittingId === r.id}
+                            title="Emitir NFC-e desta venda"
                           >
-                            <Printer className="h-4 w-4" />
+                            {emittingId === r.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <FileText className="h-4 w-4" />
+                            )}
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                        )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => reprintDanfe(r)}
+                          disabled={r.nfce?.status !== 'autorizada'}
+                          title={
+                            r.nfce?.status === 'autorizada'
+                              ? 'Reimprimir DANFE'
+                              : 'Sem NFC-e autorizada para reimprimir'
+                          }
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </ScrollArea>
 
