@@ -23,6 +23,12 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   companyId: string;
   companyName?: string;
+  /**
+   * Fonte dos XMLs:
+   * - 'nfce' (default): NFC-e autorizadas (tabela `nfce_records`, `xml_url` público)
+   * - 'compras': NF-e de entrada importadas (`purchase_invoices`, `xml_path` no bucket `dfe-xmls`)
+   */
+  source?: 'nfce' | 'compras';
 }
 
 const MONTHS = [
@@ -36,7 +42,7 @@ const MONTHS = [
  * de datas (America/Sao_Paulo). Faz download direto via `xml_url` quando
  * disponível e empacota com JSZip.
  */
-export function FrenteCaixaXmlMesDialog({ open, onOpenChange, companyId, companyName }: Props) {
+export function FrenteCaixaXmlMesDialog({ open, onOpenChange, companyId, companyName, source = 'nfce' }: Props) {
   const now = new Date();
   const [year, setYear] = useState<number>(now.getFullYear());
   const [month, setMonth] = useState<number>(now.getMonth() + 1); // 1-12
@@ -61,20 +67,51 @@ export function FrenteCaixaXmlMesDialog({ open, onOpenChange, companyId, company
       const start = new Date(Date.UTC(year, month - 1, 1, 3, 0, 0));
       const end = new Date(Date.UTC(year, month, 1, 3, 0, 0));
 
-      const { data: records, error } = await supabase
-        .from('nfce_records')
-        .select('id, numero, serie, chave_acesso, xml_url, status, created_at')
-        .eq('company_id', companyId)
-        .eq('status', 'autorizada')
-        .gte('created_at', start.toISOString())
-        .lt('created_at', end.toISOString())
-        .order('created_at', { ascending: true });
+      let withXml: Array<{ id: string; baseName: string; xmlPath: string; isStorage: boolean }> = [];
 
-      if (error) throw error;
+      if (source === 'nfce') {
+        const { data: records, error } = await supabase
+          .from('nfce_records')
+          .select('id, numero, serie, chave_acesso, xml_url, status, created_at')
+          .eq('company_id', companyId)
+          .eq('status', 'autorizada')
+          .gte('created_at', start.toISOString())
+          .lt('created_at', end.toISOString())
+          .order('created_at', { ascending: true });
+        if (error) throw error;
+        withXml = (records || [])
+          .filter((r: any) => !!r.xml_url)
+          .map((r: any) => ({
+            id: r.id,
+            baseName: r.chave_acesso || `nfce-${r.serie ?? 'X'}-${r.numero ?? r.id.slice(0, 8)}`,
+            xmlPath: r.xml_url as string,
+            isStorage: false,
+          }));
+      } else {
+        const { data: records, error } = await supabase
+          .from('purchase_invoices')
+          .select('id, chave_acesso, numero_nfe, serie, xml_path, created_at')
+          .eq('company_id', companyId)
+          .gte('created_at', start.toISOString())
+          .lt('created_at', end.toISOString())
+          .order('created_at', { ascending: true });
+        if (error) throw error;
+        withXml = (records || [])
+          .filter((r: any) => !!r.xml_path)
+          .map((r: any) => ({
+            id: r.id,
+            baseName: r.chave_acesso || `nfe-${r.serie ?? 'X'}-${r.numero_nfe ?? r.id.slice(0, 8)}`,
+            xmlPath: r.xml_path as string,
+            isStorage: true,
+          }));
+      }
 
-      const withXml = (records || []).filter((r) => !!r.xml_url);
       if (withXml.length === 0) {
-        toast.warning('Nenhuma NFC-e autorizada com XML encontrada no período.');
+        toast.warning(
+          source === 'compras'
+            ? 'Nenhuma NF-e de entrada com XML encontrada no período.'
+            : 'Nenhuma NFC-e autorizada com XML encontrada no período.',
+        );
         setLoading(false);
         return;
       }
@@ -82,7 +119,8 @@ export function FrenteCaixaXmlMesDialog({ open, onOpenChange, companyId, company
       setProgressTotal(withXml.length);
 
       const zip = new JSZip();
-      const folder = zip.folder(`NFCe_${year}-${String(month).padStart(2, '0')}`)!;
+      const folderName = source === 'compras' ? 'NFe_Entrada' : 'NFCe';
+      const folder = zip.folder(`${folderName}_${year}-${String(month).padStart(2, '0')}`)!;
 
       let okCount = 0;
       let failCount = 0;
@@ -94,12 +132,19 @@ export function FrenteCaixaXmlMesDialog({ open, onOpenChange, companyId, company
         await Promise.all(
           batch.map(async (rec) => {
             try {
-              const resp = await fetch(rec.xml_url as string);
-              if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-              const text = await resp.text();
-              const baseName = rec.chave_acesso
-                || `nfce-${rec.serie ?? 'X'}-${rec.numero ?? rec.id.slice(0, 8)}`;
-              folder.file(`${baseName}.xml`, text);
+              let text: string;
+              if (rec.isStorage) {
+                const { data: file, error: dlErr } = await supabase.storage
+                  .from('dfe-xmls')
+                  .download(rec.xmlPath);
+                if (dlErr || !file) throw dlErr || new Error('download falhou');
+                text = await file.text();
+              } else {
+                const resp = await fetch(rec.xmlPath);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                text = await resp.text();
+              }
+              folder.file(`${rec.baseName}.xml`, text);
               okCount++;
             } catch (err) {
               console.error('[XmlMes] Falha em', rec.id, err);
@@ -119,7 +164,8 @@ export function FrenteCaixaXmlMesDialog({ open, onOpenChange, companyId, company
 
       const blob = await zip.generateAsync({ type: 'blob' });
       const safeName = (companyName || 'loja').replace(/[^a-z0-9]+/gi, '_').toLowerCase();
-      const fileName = `xmls_${safeName}_${year}-${String(month).padStart(2, '0')}.zip`;
+      const prefix = source === 'compras' ? 'xmls_entrada' : 'xmls';
+      const fileName = `${prefix}_${safeName}_${year}-${String(month).padStart(2, '0')}.zip`;
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -154,7 +200,9 @@ export function FrenteCaixaXmlMesDialog({ open, onOpenChange, companyId, company
             XML do mês
           </DialogTitle>
           <DialogDescription>
-            Baixe um arquivo .zip com todos os XMLs das NFC-e <strong>autorizadas</strong> do mês selecionado.
+            {source === 'compras'
+              ? <>Baixe um arquivo .zip com todos os XMLs das <strong>NF-e de entrada</strong> importadas no mês selecionado.</>
+              : <>Baixe um arquivo .zip com todos os XMLs das NFC-e <strong>autorizadas</strong> do mês selecionado.</>}
           </DialogDescription>
         </DialogHeader>
 
