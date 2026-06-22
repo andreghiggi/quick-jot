@@ -143,12 +143,15 @@ export function FrenteCaixaCheckoutDialog({
     }
   }, [open]);
 
-  // foco inicial no primeiro método quando entra na etapa 1
+  // foco inicial no primeiro método quando entra na etapa 1 (uma vez por entrada)
   useEffect(() => {
-    if (!open || step !== 1 || activePaymentMethods.length === 0) return;
-    const first = activePaymentMethods[0];
-    setTimeout(() => lineRefs.current[first.id]?.focus(), 50);
-  }, [open, step, activePaymentMethods]);
+    if (!open || step !== 1) return;
+    const firstId = activePaymentMethods[0]?.id;
+    if (!firstId) return;
+    const t = setTimeout(() => lineRefs.current[firstId]?.focus(), 50);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, step]);
 
   function focusMethodByIndex(idx: number) {
     const m = activePaymentMethods[idx];
