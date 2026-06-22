@@ -335,7 +335,6 @@ export default function DfeManifestacao() {
           <aside className="space-y-4">
             <SidePanel title="Acesso">
               <SideLink to="/compras/manifestacao" active>Manifestação eletrônica</SideLink>
-              <SideLink to="/compras/entradas">NF-e de Entrada</SideLink>
             </SidePanel>
 
             <SidePanel title="Ações">
@@ -347,10 +346,6 @@ export default function DfeManifestacao() {
               >
                 {syncing ? 'Sincronizando…' : 'Sincronizar SEFAZ'}
               </button>
-            </SidePanel>
-
-            <SidePanel title="Configurações">
-              <SideLink to="/configuracoes?tab=integracoes">Token Fiscal Flow</SideLink>
             </SidePanel>
           </aside>
         </div>
