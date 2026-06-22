@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.32.2-beta";
+export const VERSION = "1.32.3-beta";
 export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Checkout FC: Enter avança quando valor já preenchido";
+export const CODENAME = "Checkout FC: Enter avança com tolerância de centavos";
 
 export interface Release {
   version: string;
