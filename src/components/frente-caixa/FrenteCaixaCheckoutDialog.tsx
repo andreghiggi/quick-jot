@@ -217,9 +217,9 @@ export function FrenteCaixaCheckoutDialog({
         const isTextarea = target?.tagName === 'TEXTAREA';
         if (isTextarea) return; // permitir quebra de linha em observação
         if (step === 1) {
-          if (!exact) return; // deixa o handler do input cuidar (auto-preencher)
-          e.preventDefault();
-          setStep(2);
+          // Na etapa 1, Enter NUNCA avança automaticamente.
+          // O handler do input cuida de auto-preencher o valor.
+          // Para avançar, usar o botão "Próximo" ou Ctrl+2.
           return;
         }
         if (step === 2) {
@@ -444,10 +444,9 @@ export function FrenteCaixaCheckoutDialog({
                                 const cur = parseCurrencyInput(lines[m.id]?.text || '');
                                 if (cur === 0 && remaining > 0) {
                                   fillRemainingOnLine(m.id);
-                                  // apenas preenche o valor; usuário avança manualmente (Enter de novo ou Ctrl+2)
-                                } else if (remaining === 0) {
-                                  setStep(2);
+                                  // apenas preenche; usuário avança manualmente (botão Próximo ou Ctrl+2)
                                 }
+                                // se já há valor digitado, Enter não faz nada — usuário decide avançar.
                               }
                             }}
                             placeholder="R$ 0,00"
