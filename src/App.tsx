@@ -324,6 +324,13 @@ function AppRoutes() {
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
+      <Route path="/compras/nova" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaGuard>
+            <NovaCompra />
+          </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
 
       <Route path="/formas-pagamento" element={
         <ProtectedRoute requireCompany>
