@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.30.0-beta";
+export const VERSION = "1.31.0-beta";
 export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Nova Compra manual (estilo GWeb)";
+export const CODENAME = "Frente de Caixa: abertura de caixa + fechamento por módulo";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.31.0-beta",
+    date: "2026-06-22",
+    codename: "Frente de Caixa: abertura de caixa + fechamento por módulo",
+    changes: [
+      "Frente de Caixa: o banner 'Nenhum caixa aberto' agora tem um botão 'Abrir Caixa' inline — o operador da loja só-Mercado abre o caixa sem precisar ir em Financeiro → Caixa.",
+      "Modelo confirmado: um caixa por loja. Quando a loja tem PDV + Mercado, o mesmo caixa é compartilhado (já garantido pelo índice cash_registers_one_open_per_company); abrir pelo PDV libera o Frente de Caixa e vice-versa.",
+      "Vendas do Frente de Caixa agora são marcadas com source_module='mercado' em pdv_sales; vendas do PDV V2, Pedido Express e Cobrança continuam como 'pdv' (default).",
+      "Relatório de fechamento de caixa ganhou seção 'Totais por módulo' (PDV / Comandas × Mercado / Frente de Caixa) — aparece apenas quando há vendas dos dois módulos no mesmo caixa.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, impressão, PDV V2, Pedido Express ou cobrança.",
+    ],
+  },
   {
     version: "1.30.0-beta",
     date: "2026-06-22",
