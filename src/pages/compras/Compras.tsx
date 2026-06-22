@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,9 +11,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Loader2, Inbox, Search, RefreshCw, ArrowUpDown,
-  ChevronLeft, ChevronRight, Package, Upload, FileArchive, FileCheck,
+  Loader2, Search, RefreshCw, ArrowUpDown,
+  ChevronLeft, ChevronRight, Package, Plus,
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { FrenteCaixaXmlMesDialog } from '@/components/frente-caixa/FrenteCaixaXmlMesDialog';
 
 type Inv = {
@@ -36,6 +37,7 @@ type Inv = {
  */
 export default function Compras() {
   const { company } = useAuthContext();
+  const navigate = useNavigate();
   const [items, setItems] = useState<Inv[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -83,10 +85,7 @@ export default function Compras() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-6">
           {/* COLUNA PRINCIPAL */}
           <div className="min-w-0">
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-1">Compras</h1>
-            <p className="text-muted-foreground text-sm mb-4">
-              Notas fiscais de compra (NF-e de entrada) já lançadas no estoque.
-            </p>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">Compras</h1>
 
             {/* Barra de busca + ações inline (estilo GWeb) */}
             <div className="flex items-center gap-1 border-b border-border pb-2 mb-3">
@@ -105,42 +104,23 @@ export default function Compras() {
               </Button>
             </div>
 
-            {/* Paginação topo */}
-            <div className="flex items-center justify-end gap-4 text-sm text-muted-foreground mb-2">
-              <div className="flex items-center gap-2">
-                <span>Por página</span>
-                <Select value={String(perPage)} onValueChange={(v) => setPerPage(Number(v))}>
-                  <SelectTrigger className="h-7 w-[64px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {[10, 25, 50, 100].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <span>
-                {filtered.length === 0 ? '0' : `${pageStart + 1} – ${Math.min(pageStart + perPage, filtered.length)}`} / {filtered.length}
-              </span>
-              <div className="flex">
-                <Button size="icon" variant="ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <Button size="icon" variant="ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
             {loading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
             ) : pageItems.length === 0 ? (
-              <Card><CardContent className="py-16 text-center text-muted-foreground">
-                <Inbox className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                <p>Nenhuma NF-e de entrada lançada ainda.</p>
-                <p className="text-xs mt-1">
-                  Use <b>Importar XML</b> ou <b>Manifestação eletrônica</b> ao lado para começar.
-                </p>
-              </CardContent></Card>
+              <Card>
+                <CardContent className="py-20 text-center text-muted-foreground flex flex-col items-center gap-4">
+                  <div className="text-6xl opacity-30 select-none">📦</div>
+                  <p className="text-base">Não há nada a exibir por aqui…</p>
+                  <Button
+                    onClick={() => navigate('/compras/nova')}
+                    className="mt-2 uppercase tracking-wide font-semibold"
+                  >
+                    Nova compra
+                  </Button>
+                </CardContent>
+              </Card>
             ) : (
               <div className="space-y-2">
                 {pageItems.map(i => (
@@ -170,13 +150,40 @@ export default function Compras() {
                 ))}
               </div>
             )}
+
+            {/* Paginação rodapé (estilo GWeb) */}
+            {pageItems.length > 0 && (
+              <div className="flex items-center justify-end gap-4 text-sm text-muted-foreground mt-4">
+                <div className="flex items-center gap-2">
+                  <span>Por página</span>
+                  <Select value={String(perPage)} onValueChange={(v) => setPerPage(Number(v))}>
+                    <SelectTrigger className="h-7 w-[64px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50, 100].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span>
+                  {filtered.length === 0 ? '0' : `${pageStart + 1} – ${Math.min(pageStart + perPage, filtered.length)}`} / {filtered.length}
+                </span>
+                <div className="flex">
+                  <Button size="icon" variant="ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* SIDEBAR DIREITA (estilo GWeb) */}
           <aside className="space-y-4">
             <SidePanel title="Acesso">
-              <SideLink to="/compras" active>Compras</SideLink>
+              <SideLink to="/compras" active>Lista</SideLink>
               <SideLink to="/compras/manifestacao">Manifestação eletrônica</SideLink>
+              <SideLink to="/compras/relatorios">Relatórios</SideLink>
             </SidePanel>
 
             <SidePanel title="Ações">
@@ -188,9 +195,29 @@ export default function Compras() {
                 XML do mês
               </button>
             </SidePanel>
+
+            <SidePanel title="Configurações">
+              <SideLink to="/compras/configuracoes">Configurações</SideLink>
+            </SidePanel>
           </aside>
         </div>
       </div>
+
+      {/* FAB "Cadastrar nota de compra" (estilo GWeb) */}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => navigate('/compras/nova')}
+              aria-label="Cadastrar nota de compra"
+              className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-105 active:scale-95 transition-transform flex items-center justify-center"
+            >
+              <Plus className="w-7 h-7" strokeWidth={2.5} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left">Cadastrar nota de compra</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       {company?.id && (
         <FrenteCaixaXmlMesDialog

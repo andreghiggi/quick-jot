@@ -67,6 +67,8 @@ import DfeManifestacao from "./pages/compras/DfeManifestacao";
 import PurchaseImportXml from "./pages/compras/PurchaseImportXml";
 import PurchaseInvoices from "./pages/compras/PurchaseInvoices";
 import Compras from "./pages/compras/Compras";
+import ComprasRelatorios from "./pages/compras/ComprasRelatorios";
+import ComprasConfiguracoes from "./pages/compras/ComprasConfiguracoes";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
 import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
@@ -304,6 +306,20 @@ function AppRoutes() {
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
             <PurchaseInvoices />
+          </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/compras/relatorios" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaGuard>
+            <ComprasRelatorios />
+          </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/compras/configuracoes" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaGuard>
+            <ComprasConfiguracoes />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
