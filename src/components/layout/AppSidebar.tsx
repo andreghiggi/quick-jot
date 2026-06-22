@@ -381,6 +381,45 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {movimentacoesItems.length > 0 && (
+          <Collapsible
+            className="group/grp-mov"
+            defaultOpen={movimentacoesItems.some(i => location.pathname === i.href || location.pathname.startsWith(i.href + '/'))}
+          >
+            <SidebarGroup>
+              <SidebarGroupLabel asChild>
+                <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
+                  <span>Movimentações</span>
+                  <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-mov:rotate-180" />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {movimentacoesItems.map((item) => (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={
+                            item.href === '/compras'
+                              ? location.pathname.startsWith('/compras')
+                              : location.pathname === item.href
+                          }
+                        >
+                          <Link to={item.href}>
+                            <item.icon className="w-4 h-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
+        )}
+
         <Collapsible className="group/grp-cadastros">
           <SidebarGroup>
             <SidebarGroupLabel asChild>
