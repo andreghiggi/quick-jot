@@ -69,7 +69,13 @@ import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { printCurrentCashClosing } from '@/utils/printCurrentCashClosing';
 import { usePdvSettings } from '@/hooks/usePdvSettings';
 import { useTaxRules } from '@/hooks/useTaxRules';
-import { emitirNFCe, type NFCeItem } from '@/services/nfceService';
+import {
+  emitirNFCe,
+  getNFCeRecordBySaleId,
+  type NFCeItem,
+  type NFCeRecord,
+} from '@/services/nfceService';
+import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { buildPagamentosSplit } from '@/utils/pdvV2MultiPayment';
 import { supabase } from '@/integrations/supabase/client';
@@ -126,6 +132,12 @@ export default function FrenteCaixa() {
   const [lastTouchedId, setLastTouchedId] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  // Pós-venda NFC-e (espelha o fluxo do PDV V2):
+  // 1) mostra overlay "Emitindo NFC-e…" enquanto aguarda a resposta inicial da API
+  // 2) abre o PDVV2NFCePostSaleDialog que faz polling SEFAZ + auto-print + retry
+  const [nfceEmitting, setNfceEmitting] = useState(false);
+  const [postSaleOpen, setPostSaleOpen] = useState(false);
+  const [postSaleRecord, setPostSaleRecord] = useState<NFCeRecord | null>(null);
   // Diálogo de abertura de caixa (acessível direto pelo banner do FC).
   const [openCashOpen, setOpenCashOpen] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
@@ -744,11 +756,10 @@ export default function FrenteCaixa() {
         })();
       }
 
-      // Fase 1+2 fiscal: se o operador escolheu emitir NFC-e, dispara agora.
-      // Não bloqueia o fechamento do checkout — toast informa rejeição.
-      if (params.fiscalMode === 'fiscal' && company?.id) {
-        (async () => {
-          try {
+      // Fase 1+2 fiscal: prepara payload da NFC-e — emissão real é feita
+      // depois de fechar o checkout (await + diálogo pós-venda com polling).
+      const nfcePayload = (params.fiscalMode === 'fiscal' && company?.id)
+        ? (() => {
             const nfceItems: NFCeItem[] = lines.map((l) => {
               const product = l.product_id ? products.find((p) => p.id === l.product_id) : null;
               const taxRule = (product as any)?.taxRuleId
@@ -776,7 +787,7 @@ export default function FrenteCaixa() {
                 ? { cnpj: cleanDoc, nome: params.customerName || undefined }
                 : undefined;
             const externalId = `FCX-${currentRegister?.id?.substring(0, 8) || 'NOCR'}-${Date.now()}`;
-            await emitirNFCe(company.id, saleId, {
+            return {
               external_id: externalId,
               itens: nfceItems,
               valor_desconto: params.discount || 0,
@@ -784,14 +795,9 @@ export default function FrenteCaixa() {
               observacoes: params.customerName ? `Cliente: ${params.customerName}` : undefined,
               destinatario,
               pagamentos_split: buildPagamentosSplit(params.mpLines),
-            } as any);
-            toast.success('NFC-e enviada para processamento.');
-          } catch (err: any) {
-            console.error('[FrenteCaixa] NFC-e error:', err);
-            toast.error(`Venda salva, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
-          }
-        })();
-      }
+            } as any;
+          })()
+        : null;
 
       // Fase A.2: ação ao salvar a venda (impressão do cupom).
       const mode = pdvSettings.print_on_finish_mode;
@@ -812,6 +818,36 @@ export default function FrenteCaixa() {
       setImportedOrderId(null);
       setImportedLabel(null);
       setPaymentOpen(false);
+
+      // Pós-venda NFC-e: emite agora (await), abre dialog de status com polling.
+      // TEF já emite NFC-e automaticamente via pipeline próprio em outros fluxos,
+      // mas aqui no Frente de Caixa o disparo é único — o `auto_print_on_finish`
+      // das configurações controla se o DANFE imprime automaticamente.
+      if (nfcePayload && company?.id) {
+        setNfceEmitting(true);
+        (async () => {
+          try {
+            await emitirNFCe(company.id, saleId, nfcePayload);
+            // Pequeno delay pro `nfce_records` materializar após a resposta da API.
+            await new Promise((r) => setTimeout(r, 400));
+            const rec = await getNFCeRecordBySaleId(saleId);
+            if (rec) {
+              setPostSaleRecord(rec);
+              setPostSaleOpen(true);
+            } else {
+              toast.success('NFC-e enviada. Acompanhe no Monitor NFC-e.');
+            }
+          } catch (err: any) {
+            console.error('[FrenteCaixa] NFC-e error:', err);
+            toast.error(
+              `Venda salva, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`,
+            );
+          } finally {
+            setNfceEmitting(false);
+          }
+        })();
+      }
+
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }
@@ -1528,6 +1564,43 @@ export default function FrenteCaixa() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Overlay "Emitindo NFC-e…" — fica entre o fechar do checkout e a
+          abertura do diálogo pós-venda com polling SEFAZ. */}
+      <Dialog open={nfceEmitting}>
+        <DialogContent
+          className="max-w-xs"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Emitindo NFC-e…
+            </DialogTitle>
+            <DialogDescription>
+              Aguardando resposta da SEFAZ. Não feche essa janela.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo pós-venda da NFC-e (reaproveita o do PDV V2):
+          - faz polling até autorizar/rejeitar
+          - imprime DANFE automaticamente se `auto_print_on_finish` estiver ligado
+          - reenvia 1x automaticamente em caso de rejeição
+          - fecha sozinho após 3s (auto-print) ou 10s (manual) */}
+      <PDVV2NFCePostSaleDialog
+        open={postSaleOpen}
+        onOpenChange={setPostSaleOpen}
+        companyId={company?.id}
+        initialRecord={postSaleRecord}
+        autoPrint={!!pdvSettings.auto_print_on_finish}
+        onClosed={() => {
+          setPostSaleRecord(null);
+          setTimeout(() => inputRef.current?.focus(), 100);
+        }}
+      />
     </PDVV2Layout>
   );
 }
