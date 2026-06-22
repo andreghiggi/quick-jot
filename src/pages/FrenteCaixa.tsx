@@ -19,6 +19,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
@@ -107,6 +116,8 @@ export default function FrenteCaixa() {
     cashOpenKnown,
     loading: cashLoading,
     addSale,
+    openRegister,
+    isOpening,
   } = useCashRegister({ companyId: company?.id });
 
   const [query, setQuery] = useState('');
@@ -115,6 +126,9 @@ export default function FrenteCaixa() {
   const [lastTouchedId, setLastTouchedId] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  // Diálogo de abertura de caixa (acessível direto pelo banner do FC).
+  const [openCashOpen, setOpenCashOpen] = useState(false);
+  const [openingAmount, setOpeningAmount] = useState('');
   const [searchMatches, setSearchMatches] = useState<Product[]>([]);
   const [highlightIdx, setHighlightIdx] = useState(0);
   const [removeTarget, setRemoveTarget] = useState<CartLine | null>(null);
@@ -685,6 +699,7 @@ export default function FrenteCaixa() {
       noteParts.join(' | '),
       undefined,
       params.fiscalMode,
+      'mercado',
     );
     if (saleId) {
       // Importação: vincula o pedido original à venda do FC e marca como entregue.
