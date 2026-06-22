@@ -45,12 +45,8 @@ Deno.serve(async (req) => {
     })
     if (!belongs) return j({ error: 'Acesso negado' }, 403)
 
-    // company config (token + fiscalflow_empresa_id)
-    const { data: comp } = await admin
-      .from('companies').select('fiscalflow_empresa_id').eq('id', companyId).maybeSingle()
-    const ffEmpresaId = (comp?.fiscalflow_empresa_id || '').trim()
-    if (!ffEmpresaId) return j({ error: 'ID da empresa na FiscalFlow não configurado em Integrações.' }, 400)
-
+    // FiscalFlow identifica a empresa pelo próprio token (x-api-key).
+    // Não enviamos mais empresa_id (UUID) — basta o token configurado por loja.
     const { data: tokRow } = await admin
       .from('store_settings').select('value')
       .eq('company_id', companyId).eq('key', 'fiscal_flow_api_token').maybeSingle()
@@ -65,7 +61,7 @@ Deno.serve(async (req) => {
       for (let i = 0; i < 30; i++) {
         const r = await fetch(`${FF_BASE}/sync`, {
           method: 'POST', headers: ffHeaders,
-          body: JSON.stringify({ empresa_id: ffEmpresaId }),
+          body: JSON.stringify({}),
         })
         const data = await r.json().catch(() => ({}))
         if (!r.ok || !data?.success) {
@@ -78,13 +74,13 @@ Deno.serve(async (req) => {
         if (ultimoNsu != null && maxNsu != null && ultimoNsu >= maxNsu) break
       }
       // Buscar lista pra espelhar no banco local
-      await mirrorList(admin, ffHeaders, ffEmpresaId, companyId)
+      await mirrorList(admin, ffHeaders, companyId)
       return j({ success: true, total_processados: total, ultimo_nsu: ultimoNsu, max_nsu: maxNsu })
     }
 
     // ---------- MIRROR (refresh lista local sem chamar /sync) ----------
     if (action === 'mirror') {
-      const count = await mirrorList(admin, ffHeaders, ffEmpresaId, companyId)
+      const count = await mirrorList(admin, ffHeaders, companyId)
       return j({ success: true, mirrored: count })
     }
 
@@ -102,7 +98,7 @@ Deno.serve(async (req) => {
 
       const r = await fetch(`${FF_BASE}/${doc.fiscalflow_id}/manifestar`, {
         method: 'POST', headers: ffHeaders,
-        body: JSON.stringify({ empresa_id: ffEmpresaId, tipo, justificativa: justificativa || '' }),
+        body: JSON.stringify({ tipo, justificativa: justificativa || '' }),
       })
       const data = await r.json().catch(() => ({}))
       if (!r.ok || !data?.success) {
@@ -133,7 +129,7 @@ Deno.serve(async (req) => {
       if (!doc || doc.company_id !== companyId) return j({ error: 'Documento não encontrado' }, 404)
 
       const r = await fetch(
-        `${FF_BASE}/${doc.fiscalflow_id}/xml?empresa_id=${encodeURIComponent(ffEmpresaId)}`,
+        `${FF_BASE}/${doc.fiscalflow_id}/xml`,
         { method: 'GET', headers: { 'x-api-key': token } }
       )
       if (!r.ok) {
@@ -163,10 +159,10 @@ Deno.serve(async (req) => {
 })
 
 // ---- helpers ----------------------------------------------------------------
-async function mirrorList(admin: ReturnType<typeof createClient>, ffHeaders: Record<string,string>, ffEmpresaId: string, companyId: string): Promise<number> {
+async function mirrorList(admin: ReturnType<typeof createClient>, ffHeaders: Record<string,string>, companyId: string): Promise<number> {
   let offset = 0, total = 0
   for (let i = 0; i < 20; i++) {
-    const url = `${FF_BASE}/?empresa_id=${encodeURIComponent(ffEmpresaId)}&limit=200&offset=${offset}`
+    const url = `${FF_BASE}/?limit=200&offset=${offset}`
     const r = await fetch(url, { method: 'GET', headers: { 'x-api-key': ffHeaders['x-api-key'] } })
     const data = await r.json().catch(() => ({}))
     if (!r.ok || !data?.success) break
