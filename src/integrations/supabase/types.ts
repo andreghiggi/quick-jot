@@ -2531,14 +2531,20 @@ export type Database = {
           created_at: string
           created_by: string | null
           data_emissao: string | null
+          data_entrada: string | null
           dfe_documento_id: string | null
           id: string
+          modelo: string | null
+          natureza_operacao: string | null
           nome_emitente: string | null
           notes: string | null
           numero_nfe: string | null
+          origem: string
+          pagamentos: Json
           serie: string | null
           status: string
           supplier_id: string | null
+          tipo_frete: string | null
           updated_at: string
           valor_total: number | null
           xml_path: string | null
@@ -2550,14 +2556,20 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data_emissao?: string | null
+          data_entrada?: string | null
           dfe_documento_id?: string | null
           id?: string
+          modelo?: string | null
+          natureza_operacao?: string | null
           nome_emitente?: string | null
           notes?: string | null
           numero_nfe?: string | null
+          origem?: string
+          pagamentos?: Json
           serie?: string | null
           status?: string
           supplier_id?: string | null
+          tipo_frete?: string | null
           updated_at?: string
           valor_total?: number | null
           xml_path?: string | null
@@ -2569,14 +2581,20 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data_emissao?: string | null
+          data_entrada?: string | null
           dfe_documento_id?: string | null
           id?: string
+          modelo?: string | null
+          natureza_operacao?: string | null
           nome_emitente?: string | null
           notes?: string | null
           numero_nfe?: string | null
+          origem?: string
+          pagamentos?: Json
           serie?: string | null
           status?: string
           supplier_id?: string | null
+          tipo_frete?: string | null
           updated_at?: string
           valor_total?: number | null
           xml_path?: string | null
