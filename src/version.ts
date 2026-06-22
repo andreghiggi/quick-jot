@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.28.0-beta";
+export const VERSION = "1.29.0-beta";
 export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Movimentações + Hub Compras (estilo GWeb)";
+export const CODENAME = "Hub Compras estilo GWeb (Fase 2)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,20 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.29.0-beta",
+    date: "2026-06-22",
+    codename: "Hub Compras estilo GWeb (Fase 2)",
+    changes: [
+      "Hub /compras alinhado 1:1 ao GWeb: removidos subtítulo e barra de paginação do topo; paginação agora aparece só no rodapé (estilo GWeb).",
+      "Sidebar direita ganhou 'Relatórios' em Acesso (placeholder 'em breve') e bloco 'Configurações' separado (placeholder 'em breve'). Item 'Compras' renomeado para 'Lista' (mesma rota).",
+      "Empty state redesenhado: mascote + texto 'Não há nada a exibir por aqui…' + botão 'Nova compra' que leva direto pra tela de cadastro manual.",
+      "Novo FAB '+' laranja flutuante no canto inferior direito da tela /compras com tooltip 'Cadastrar nota de compra' (atalho pra /compras/nova).",
+      "Rotas /compras/relatorios e /compras/configuracoes registradas, protegidas pelo FrenteCaixaGuard, exibindo placeholder até a Fase 2B/2C entrar.",
+      "Tela /compras/nova (cadastro manual de nota de compra estilo GWeb) entra na próxima etapa — esta release entrega apenas os ajustes de UI da lista.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, impressão, PDV V2, Pedido Express, Frente de Caixa ou cobrança — apenas UI do hub /compras.",
+    ],
+  },
   {
     version: "1.28.0-beta",
     date: "2026-06-22",
