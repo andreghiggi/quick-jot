@@ -111,6 +111,21 @@ export function printCashClosingDetailed(input: CashClosingPrintInput) {
     byPayment[p].count += 1;
   }
 
+  // Agrupamento por módulo de origem (PDV/Comandas vs Mercado/Frente de Caixa).
+  // Só renderiza a seção quando há mais de um módulo presente, para não poluir
+  // lojas que usam apenas PDV.
+  const MODULE_LABEL: Record<string, string> = {
+    pdv: 'PDV / Comandas',
+    mercado: 'Mercado (Frente de Caixa)',
+  };
+  const byModule: Record<string, { total: number; count: number }> = {};
+  for (const s of sales) {
+    const m = (s as any).source_module || 'pdv';
+    if (!byModule[m]) byModule[m] = { total: 0, count: 0 };
+    byModule[m].total += s.final_total;
+    byModule[m].count += 1;
+  }
+
   const totalGeral = sales.reduce((acc, s) => acc + s.final_total, 0);
   const totalVendas = sales.length;
 
@@ -140,6 +155,17 @@ export function printCashClosingDetailed(input: CashClosingPrintInput) {
         <span>${pay} <small>(${v.count})</small></span>
         <span>R$ ${fmt(v.total)}</span>
       </div>`).join('');
+
+  const moduleRows = Object.entries(byModule)
+    .map(([mod, v]) => `
+      <div class="row">
+        <span>${MODULE_LABEL[mod] || mod} <small>(${v.count})</small></span>
+        <span>R$ ${fmt(v.total)}</span>
+      </div>`).join('');
+  const moduleBlock = Object.keys(byModule).length > 1 ? `
+    <div class="group-title">Totais por módulo</div>
+    <div class="section">${moduleRows}</div>
+    <div class="divider"></div>` : '';
 
   const headerInfoBlock = registerInfo ? `
     <div class="section">
@@ -248,6 +274,7 @@ export function printCashClosingDetailed(input: CashClosingPrintInput) {
       <div class="group-title">Totais por forma de pagamento</div>
       <div class="section">${paymentRows || '<p style="font-size:10px;text-align:center;">—</p>'}</div>
       <div class="divider"></div>
+      ${moduleBlock}
       ${movementsBlock}
       ${physicalCashBlock}
       ${notesBlock}
