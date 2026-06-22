@@ -342,14 +342,6 @@ export function FrenteCaixaCheckoutDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2 className="text-xl font-semibold">Finalizando venda</h2>
-          <button
-            type="button"
-            onClick={() => !processing && onOpenChange(false)}
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Fechar"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
         {processingStatus && (
