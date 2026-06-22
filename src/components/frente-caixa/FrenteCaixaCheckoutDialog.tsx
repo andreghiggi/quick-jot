@@ -448,7 +448,7 @@ export function FrenteCaixaCheckoutDialog({
                                   return;
                                 }
                                 // Se já há valor e nada mais a alocar, Enter avança para o cliente.
-                                if (remaining === 0 && allocated > 0) {
+                                if (total > 0 && allocated + 0.005 >= total && !over) {
                                   setStep(2);
                                 }
                               }
