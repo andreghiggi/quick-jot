@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.29.0-beta";
+export const VERSION = "1.30.0-beta";
 export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Hub Compras estilo GWeb (Fase 2)";
+export const CODENAME = "Nova Compra manual (estilo GWeb)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,22 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.30.0-beta",
+    date: "2026-06-22",
+    codename: "Nova Compra manual (estilo GWeb)",
+    changes: [
+      "Nova tela /compras/nova: cadastro manual de nota de compra alinhado 1:1 ao GWeb, com 5 seções (Cabeçalho, Fornecedor, Produtos, Pagamentos, Transporte) e rodapé fixo Voltar / Salvar e concluir / Salvar.",
+      "Cabeçalho: Número, Modelo (default 55), Série, Chave de acesso (44 dígitos, opcional), Emissão (data+hora), Entrada (data+hora) e Natureza da operação com badge 'Entrada'.",
+      "Fornecedor: combobox com busca por nome ou CNPJ na lista de fornecedores ativos. Quando nenhum é encontrado, atalho direto pra /fornecedores.",
+      "Produtos: bloqueado até o fornecedor ser informado. Após: linhas editáveis com combobox de produto, quantidade, valor unitário e total por linha (verde) + total geral no cabeçalho da seção.",
+      "Pagamentos: aparece apenas quando o total dos produtos > 0. Linhas com forma de pagamento (da lista cadastrada) + valor. Botão 'Adicionar pagamento' já sugere o valor restante. Aviso visual se a soma não bater (amarelo) ou se bater (verde).",
+      "Transporte: select com 6 tipos de frete (Sem Transporte default, emitente, destinatário, terceiros, próprios).",
+      "'Salvar e concluir' grava a nota (status='lancada', origem='manual') e dispara apply_stock_movement (entrada) pra cada item com produto vinculado — mesmo mecanismo do Importar XML.",
+      "'Salvar' grava como rascunho (status='rascunho') sem mexer em estoque, permitindo retomar depois.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, impressão, PDV V2, Pedido Express, Frente de Caixa ou cobrança — apenas nova tela de entrada de compras.",
+    ],
+  },
   {
     version: "1.29.0-beta",
     date: "2026-06-22",
