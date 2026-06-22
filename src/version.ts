@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.31.1-beta";
+export const VERSION = "1.31.2-beta";
 export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: pós-venda NFC-e com status na tela";
+export const CODENAME = "Frente de Caixa: remoção do menu Receitas (placeholder)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.31.2-beta",
+    date: "2026-06-22",
+    codename: "Frente de Caixa: remoção do menu Receitas (placeholder)",
+    changes: [
+      "Removido o item 'Recebimento' do rail lateral do Frente de Caixa e a rota /frente-caixa/recebimento — a tela era um placeholder inspirado no Gweb antigo, prometia 'Receitas' mas só listava vendas já finalizadas (e duplicava PV + NFC-e da mesma venda).",
+      "Os dados úteis dessa tela já estão disponíveis no Relatório de Fechamento de Caixa (totais por forma de pagamento) e no Relatório de Vendas — nada se perde.",
+      "Quando o módulo de Contas a Receber for implementado, criaremos uma tela 'Receitas' de verdade (parcelas, vencimentos, baixas, juros/multa).",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, impressão, PDV V2, Pedido Express, Frente de Caixa (venda) ou cobrança.",
+    ],
+  },
   {
     version: "1.31.1-beta",
     date: "2026-06-22",
