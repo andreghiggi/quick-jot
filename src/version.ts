@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.31.2-beta";
+export const VERSION = "1.31.3-beta";
 export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: remoção do menu Receitas (placeholder)";
+export const CODENAME = "Relatório de Vendas: tipo NFC-e × Pré-venda";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.31.3-beta",
+    date: "2026-06-22",
+    codename: "Relatório de Vendas: tipo NFC-e × Pré-venda",
+    changes: [
+      "Relatório de Vendas agora identifica cada venda como 'NFC-e' (operador escolheu emitir nota) ou 'Pré-venda' (sem NFC-e). A classificação usa o fiscal_mode gravado em pdv_sales.",
+      "Novo bloco de resumo: contagem e faturamento separados para 'Vendas com NFC-e' e 'Pré-vendas (sem NFC-e)'.",
+      "Nova coluna 'Tipo' na lista 'Vendas no Período' com badge colorido (verde = NFC-e, âmbar = Pré-venda) ao lado da Origem.",
+      "Pedidos do cardápio entregues herdam o fiscal_mode da pdv_sale vinculada; pedidos sem pdv_sale são tratados como pré-venda.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, impressão, PDV V2, Pedido Express, Frente de Caixa (venda) ou cobrança — apenas leitura no relatório.",
+    ],
+  },
   {
     version: "1.31.2-beta",
     date: "2026-06-22",

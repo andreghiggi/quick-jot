@@ -50,6 +50,15 @@ interface SaleData {
   origin: OriginKey;
   table_number?: string | null;
   short_code?: string | null;
+  /**
+   * Tipo fiscal da venda:
+   *  - 'fiscal'    → venda com NFC-e emitida (operador escolheu "Venda")
+   *  - 'nao_fiscal'→ pré-venda (sem NFC-e)
+   * Origem: `pdv_sales.fiscal_mode`. Para pedidos do cardápio entregues,
+   * busca a pdv_sale vinculada (order_id) e usa o fiscal_mode dela;
+   * pedidos sem pdv_sale são considerados pré-venda.
+   */
+  fiscal: 'fiscal' | 'nao_fiscal';
 }
 
 function getPeriodDates(period: PeriodType, customStart?: Date, customEnd?: Date) {
@@ -97,7 +106,7 @@ export default function SalesReport() {
       // 1. Fetch PDV sales
       const { data: pdvSales, error: pdvError } = await supabase
         .from('pdv_sales')
-        .select('id, created_at, final_total, customer_name, notes')
+        .select('id, created_at, final_total, customer_name, notes, fiscal_mode')
         .eq('company_id', company.id)
         .gte('created_at', periodDates.start.toISOString())
         .lte('created_at', periodDates.end.toISOString())
@@ -129,6 +138,7 @@ export default function SalesReport() {
         origin: OriginKey;
         table_number?: string | null;
         short_code?: string | null;
+        fiscal: 'fiscal' | 'nao_fiscal';
       }[] = [];
 
       (pdvSales || []).forEach((s: any) => {
@@ -146,8 +156,26 @@ export default function SalesReport() {
           origin: isComanda ? (customerName.includes('(QR)') ? 'mesa_qr' : 'mesa') : 'balcao',
           table_number: tableMatch?.[1] ?? null,
           short_code: tabMatch?.[1] ? `Comanda ${tabMatch[1]}` : null,
+          fiscal: s.fiscal_mode === 'fiscal' ? 'fiscal' : 'nao_fiscal',
         });
       });
+
+      // Mapeia pedidos entregues → fiscal_mode da pdv_sale vinculada (se houver).
+      // Pedidos sem pdv_sale = pré-venda.
+      const orderIdsForFiscal = (orders || []).map((o: any) => o.id);
+      const orderFiscalMap: Record<string, 'fiscal' | 'nao_fiscal'> = {};
+      if (orderIdsForFiscal.length > 0) {
+        const { data: orderSales } = await supabase
+          .from('pdv_sales')
+          .select('order_id, fiscal_mode')
+          .eq('company_id', company.id)
+          .in('order_id', orderIdsForFiscal);
+        (orderSales || []).forEach((s: any) => {
+          if (s.order_id) {
+            orderFiscalMap[s.order_id] = s.fiscal_mode === 'fiscal' ? 'fiscal' : 'nao_fiscal';
+          }
+        });
+      }
 
       (orders || []).forEach((o: any) => {
         let originBucket: OriginKey = 'balcao';
@@ -166,6 +194,7 @@ export default function SalesReport() {
           origin: originBucket,
           table_number: null,
           short_code: o.short_code ?? null,
+          fiscal: orderFiscalMap[o.id] || 'nao_fiscal',
         });
       });
 
@@ -227,6 +256,7 @@ export default function SalesReport() {
             origin: sale.origin,
             table_number: sale.table_number,
             short_code: sale.short_code,
+            fiscal: sale.fiscal,
           };
         });
       
@@ -291,7 +321,26 @@ export default function SalesReport() {
 
     const totalProducts = productsSold.reduce((sum, p) => sum + p.quantity, 0);
 
-    return { totalSales, totalRevenue, productsSold, totalProducts };
+    // Quebra fiscal: NFC-e × Pré-venda (com base no fiscal_mode da venda).
+    const fiscalCount = filteredSales.filter((s) => s.fiscal === 'fiscal').length;
+    const preSaleCount = filteredSales.length - fiscalCount;
+    const fiscalRevenue = filteredSales
+      .filter((s) => s.fiscal === 'fiscal')
+      .reduce((sum, s) => sum + s.final_total, 0);
+    const preSaleRevenue = filteredSales
+      .filter((s) => s.fiscal !== 'fiscal')
+      .reduce((sum, s) => sum + s.final_total, 0);
+
+    return {
+      totalSales,
+      totalRevenue,
+      productsSold,
+      totalProducts,
+      fiscalCount,
+      preSaleCount,
+      fiscalRevenue,
+      preSaleRevenue,
+    };
   }, [salesData, productFilter, selectedOrigins]);
 
   // Individual sales list (respecting filters), for the per-sale breakdown card
@@ -503,6 +552,46 @@ export default function SalesReport() {
               </Card>
             </div>
 
+            {/* Quebra fiscal: NFC-e × Pré-venda */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Vendas com NFC-e</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {reportData.fiscalCount}
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          · R$ {reportData.fiscalRevenue.toFixed(2).replace('.', ',')}
+                        </span>
+                      </p>
+                    </div>
+                    <Badge className="bg-emerald-100 text-emerald-700 border-transparent dark:bg-emerald-500/15 dark:text-emerald-300">
+                      NFC-e
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Pré-vendas (sem NFC-e)</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {reportData.preSaleCount}
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          · R$ {reportData.preSaleRevenue.toFixed(2).replace('.', ',')}
+                        </span>
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                      Pré-venda
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Products Table */}
             <Card>
               <CardHeader>
@@ -571,6 +660,7 @@ export default function SalesReport() {
                       <TableRow>
                         <TableHead>Identificação</TableHead>
                         <TableHead>Origem</TableHead>
+                        <TableHead>Tipo</TableHead>
                         <TableHead>Data/Hora</TableHead>
                         <TableHead className="text-right">Total</TableHead>
                       </TableRow>
@@ -590,6 +680,17 @@ export default function SalesReport() {
                                   ? `${originLabel(sale.origin)}${sale.table_number ? ` ${sale.table_number}` : ''}`
                                   : originLabel(sale.origin)}
                               </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {sale.fiscal === 'fiscal' ? (
+                                <Badge className="bg-emerald-100 text-emerald-700 border-transparent dark:bg-emerald-500/15 dark:text-emerald-300">
+                                  NFC-e
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                                  Pré-venda
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {format(new Date(sale.created_at), "dd/MM HH:mm", { locale: ptBR })}
