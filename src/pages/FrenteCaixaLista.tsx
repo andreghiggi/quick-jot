@@ -59,6 +59,8 @@ interface SaleRow {
   discount: number;
   customer_name: string | null;
   notes: string | null;
+  pv_numero: number | null;
+  fiscal_mode: string | null;
   payment_method?: { name: string } | null;
   nfce?: {
     id: string;
@@ -115,7 +117,7 @@ export default function FrenteCaixaLista() {
       const { data: sales, error } = await supabase
         .from('pdv_sales')
         .select(
-          'id, created_at, final_total, discount, customer_name, notes, payment_method:payment_methods(name)'
+          'id, created_at, final_total, discount, customer_name, notes, pv_numero, fiscal_mode, payment_method:payment_methods(name)'
         )
         .eq('company_id', company.id)
         .gte('created_at', from)
