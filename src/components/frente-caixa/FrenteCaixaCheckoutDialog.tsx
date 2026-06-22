@@ -444,9 +444,13 @@ export function FrenteCaixaCheckoutDialog({
                                 const cur = parseCurrencyInput(lines[m.id]?.text || '');
                                 if (cur === 0 && remaining > 0) {
                                   fillRemainingOnLine(m.id);
-                                  // apenas preenche; usuário avança manualmente (botão Próximo ou Ctrl+2)
+                                  // apenas preenche; usuário dá Enter de novo para avançar.
+                                  return;
                                 }
-                                // se já há valor digitado, Enter não faz nada — usuário decide avançar.
+                                // Se já há valor e nada mais a alocar, Enter avança para o cliente.
+                                if (remaining === 0 && allocated > 0) {
+                                  setStep(2);
+                                }
                               }
                             }}
                             placeholder="R$ 0,00"
