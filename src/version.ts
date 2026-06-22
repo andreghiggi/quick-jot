@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.32.1-beta";
+export const VERSION = "1.32.2-beta";
 export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Checkout FC: Enter só preenche + etapas anteriores ficam visíveis";
+export const CODENAME = "Checkout FC: Enter avança quando valor já preenchido";
 
 export interface Release {
   version: string;
@@ -19,6 +19,14 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.32.2-beta",
+    date: "2026-06-22",
+    codename: "Checkout FC: Enter avança quando valor já preenchido",
+    changes: [
+      "Checkout FC etapa 1: Enter com campo vazio preenche o valor restante; Enter novamente (ou com valor já lançado e nada mais a alocar) avança para a etapa Cliente.",
+    ],
+  },
   {
     version: "1.32.1-beta",
     date: "2026-06-22",
