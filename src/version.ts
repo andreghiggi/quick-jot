@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.31.0-beta";
+export const VERSION = "1.31.1-beta";
 export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: abertura de caixa + fechamento por módulo";
+export const CODENAME = "Frente de Caixa: pós-venda NFC-e com status na tela";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.31.1-beta",
+    date: "2026-06-22",
+    codename: "Frente de Caixa: pós-venda NFC-e com status na tela",
+    changes: [
+      "Frente de Caixa: ao clicar 'Salvar NFC-e', o checkout fecha e abre um overlay 'Emitindo NFC-e…' enquanto aguarda a SEFAZ — antes a tela ficava em branco e o operador não sabia se a nota tinha saído.",
+      "Logo depois abre o mesmo diálogo pós-venda do PDV V2: faz polling SEFAZ até autorizar/rejeitar, exibe nº da NFC-e e oferece 'Imprimir DANFE'. Em rejeição, tenta reenviar 1x automaticamente.",
+      "Respeita a configuração 'Imprimir cupom ao finalizar' (auto_print_on_finish) do PDV/Frente de Caixa: quando ligada, o DANFE imprime sozinho e a janela fecha em 3s; quando desligada, o operador escolhe imprimir e fecha em 10s.",
+      "TEF segue inalterado: vendas com cartão/PIX via maquininha continuam emitindo NFC-e automaticamente no fluxo TEF próprio (v1.0/v1.1/v1.2-beta).",
+      "Nenhuma mudança em PDV V2, Pedido Express, Cobrança, OrderCardChargeDialog, Multi-Pagamento (v1.6/v1.7) nem nos payloads enviados ao nfce-proxy.",
+    ],
+  },
   {
     version: "1.31.0-beta",
     date: "2026-06-22",
