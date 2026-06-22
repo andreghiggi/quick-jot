@@ -69,7 +69,13 @@ import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { printCurrentCashClosing } from '@/utils/printCurrentCashClosing';
 import { usePdvSettings } from '@/hooks/usePdvSettings';
 import { useTaxRules } from '@/hooks/useTaxRules';
-import { emitirNFCe, type NFCeItem } from '@/services/nfceService';
+import {
+  emitirNFCe,
+  getNFCeRecordBySaleId,
+  type NFCeItem,
+  type NFCeRecord,
+} from '@/services/nfceService';
+import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { buildPagamentosSplit } from '@/utils/pdvV2MultiPayment';
 import { supabase } from '@/integrations/supabase/client';
