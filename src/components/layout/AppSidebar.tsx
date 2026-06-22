@@ -102,18 +102,22 @@ export function AppSidebar() {
           icon: LayoutDashboard,
           href: '/',
         },
-    ...(mercadoOnly
-      ? []
-      : [{
-          title: 'Pedidos',
-          icon: ShoppingBag,
-          href: '/pedidos',
-        }]),
+  ];
+
+  // Movimentações (estilo GWeb): Pedidos · Comandas · PDV · Frente de Caixa · Compras
+  const movimentacoesItems = [
+    ...(mercadoOnly ? [] : [{ title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' }]),
     ...(pdvV2Enabled && !mercadoOnly
       ? [{ title: 'Comandas', icon: ClipboardEdit, href: '/pdv-v2/comandas-historico' }]
       : []),
+    ...(isModuleEnabled('pdv') && !pdvV2Enabled && !mercadoOnly
+      ? [{ title: 'PDV', icon: Monitor, href: '/pdv' }]
+      : []),
     ...(mercadoEnabled && !mercadoOnly
       ? [{ title: 'Frente de Caixa', icon: ScanBarcode, href: '/frente-caixa' }]
+      : []),
+    ...(mercadoEnabled
+      ? [{ title: 'Compras', icon: ShoppingCart, href: '/compras' }]
       : []),
   ];
 
@@ -153,13 +157,8 @@ export function AppSidebar() {
     { title: 'Ver cardápio', icon: ChefHat, href: `/cardapio/${company?.slug || ''}` },
   ];
 
-  const pdvMenuItems = isModuleEnabled('pdv') && !pdvV2Enabled && !mercadoOnly ? [
-    {
-      title: 'PDV',
-      icon: Monitor,
-      href: '/pdv',
-    },
-  ] : [];
+  // PDV legado agora vive dentro de "Movimentações"
+  const pdvMenuItems: { title: string; icon: any; href: string }[] = [];
 
   const mesasMenuItems = isModuleEnabled('mesas') && !isWaiter() && !mercadoOnly ? [
     {
@@ -212,12 +211,8 @@ export function AppSidebar() {
     },
   ] : [];
 
-  // Compras → Manifestação Eletrônica + NF-e de Entrada (módulo mercado)
-  const comprasMenuItems = mercadoEnabled ? [
-    { title: 'Manifestação Eletrônica', icon: FileCheck, href: '/compras/manifestacao' },
-    { title: 'NF-e de Entrada', icon: FileInput, href: '/compras/entradas' },
-    { title: 'Importar XML', icon: Upload, href: '/compras/importar-xml' },
-  ] : [];
+  // O grupo "Compras" foi removido — agora há um único link "Compras" dentro de Movimentações
+  // que abre o hub `/compras` (com sidebar GWeb: Manifestação, Importar XML, XML do mês).
 
   const whatsappConfigItems = mercadoOnly ? [] : [
     {
