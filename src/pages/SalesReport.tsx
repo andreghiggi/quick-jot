@@ -321,7 +321,26 @@ export default function SalesReport() {
 
     const totalProducts = productsSold.reduce((sum, p) => sum + p.quantity, 0);
 
-    return { totalSales, totalRevenue, productsSold, totalProducts };
+    // Quebra fiscal: NFC-e × Pré-venda (com base no fiscal_mode da venda).
+    const fiscalCount = filteredSales.filter((s) => s.fiscal === 'fiscal').length;
+    const preSaleCount = filteredSales.length - fiscalCount;
+    const fiscalRevenue = filteredSales
+      .filter((s) => s.fiscal === 'fiscal')
+      .reduce((sum, s) => sum + s.final_total, 0);
+    const preSaleRevenue = filteredSales
+      .filter((s) => s.fiscal !== 'fiscal')
+      .reduce((sum, s) => sum + s.final_total, 0);
+
+    return {
+      totalSales,
+      totalRevenue,
+      productsSold,
+      totalProducts,
+      fiscalCount,
+      preSaleCount,
+      fiscalRevenue,
+      preSaleRevenue,
+    };
   }, [salesData, productFilter, selectedOrigins]);
 
   // Individual sales list (respecting filters), for the per-sale breakdown card
@@ -533,6 +552,46 @@ export default function SalesReport() {
               </Card>
             </div>
 
+            {/* Quebra fiscal: NFC-e × Pré-venda */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Vendas com NFC-e</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {reportData.fiscalCount}
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          · R$ {reportData.fiscalRevenue.toFixed(2).replace('.', ',')}
+                        </span>
+                      </p>
+                    </div>
+                    <Badge className="bg-emerald-100 text-emerald-700 border-transparent dark:bg-emerald-500/15 dark:text-emerald-300">
+                      NFC-e
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Pré-vendas (sem NFC-e)</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {reportData.preSaleCount}
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          · R$ {reportData.preSaleRevenue.toFixed(2).replace('.', ',')}
+                        </span>
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                      Pré-venda
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Products Table */}
             <Card>
               <CardHeader>
@@ -601,6 +660,7 @@ export default function SalesReport() {
                       <TableRow>
                         <TableHead>Identificação</TableHead>
                         <TableHead>Origem</TableHead>
+                        <TableHead>Tipo</TableHead>
                         <TableHead>Data/Hora</TableHead>
                         <TableHead className="text-right">Total</TableHead>
                       </TableRow>
@@ -620,6 +680,17 @@ export default function SalesReport() {
                                   ? `${originLabel(sale.origin)}${sale.table_number ? ` ${sale.table_number}` : ''}`
                                   : originLabel(sale.origin)}
                               </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {sale.fiscal === 'fiscal' ? (
+                                <Badge className="bg-emerald-100 text-emerald-700 border-transparent dark:bg-emerald-500/15 dark:text-emerald-300">
+                                  NFC-e
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                                  Pré-venda
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {format(new Date(sale.created_at), "dd/MM HH:mm", { locale: ptBR })}
