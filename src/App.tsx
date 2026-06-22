@@ -69,6 +69,7 @@ import PurchaseInvoices from "./pages/compras/PurchaseInvoices";
 import Compras from "./pages/compras/Compras";
 import ComprasRelatorios from "./pages/compras/ComprasRelatorios";
 import ComprasConfiguracoes from "./pages/compras/ComprasConfiguracoes";
+import NovaCompra from "./pages/compras/NovaCompra";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
 import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
@@ -320,6 +321,13 @@ function AppRoutes() {
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
             <ComprasConfiguracoes />
+          </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/compras/nova" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaGuard>
+            <NovaCompra />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
