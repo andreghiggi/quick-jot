@@ -1564,6 +1564,43 @@ export default function FrenteCaixa() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Overlay "Emitindo NFC-e…" — fica entre o fechar do checkout e a
+          abertura do diálogo pós-venda com polling SEFAZ. */}
+      <Dialog open={nfceEmitting}>
+        <DialogContent
+          className="max-w-xs"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Emitindo NFC-e…
+            </DialogTitle>
+            <DialogDescription>
+              Aguardando resposta da SEFAZ. Não feche essa janela.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo pós-venda da NFC-e (reaproveita o do PDV V2):
+          - faz polling até autorizar/rejeitar
+          - imprime DANFE automaticamente se `auto_print_on_finish` estiver ligado
+          - reenvia 1x automaticamente em caso de rejeição
+          - fecha sozinho após 3s (auto-print) ou 10s (manual) */}
+      <PDVV2NFCePostSaleDialog
+        open={postSaleOpen}
+        onOpenChange={setPostSaleOpen}
+        companyId={company?.id}
+        initialRecord={postSaleRecord}
+        autoPrint={!!pdvSettings.auto_print_on_finish}
+        onClosed={() => {
+          setPostSaleRecord(null);
+          setTimeout(() => inputRef.current?.focus(), 100);
+        }}
+      />
     </PDVV2Layout>
   );
 }
