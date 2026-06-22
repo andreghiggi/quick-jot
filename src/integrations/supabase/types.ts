@@ -1863,6 +1863,7 @@ export type Database = {
           notes: string | null
           order_id: string | null
           payment_method_id: string | null
+          source_module: string
           total: number
         }
         Insert: {
@@ -1879,6 +1880,7 @@ export type Database = {
           notes?: string | null
           order_id?: string | null
           payment_method_id?: string | null
+          source_module?: string
           total?: number
         }
         Update: {
@@ -1895,6 +1897,7 @@ export type Database = {
           notes?: string | null
           order_id?: string | null
           payment_method_id?: string | null
+          source_module?: string
           total?: number
         }
         Relationships: [

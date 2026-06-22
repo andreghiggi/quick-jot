@@ -19,6 +19,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
@@ -107,6 +116,8 @@ export default function FrenteCaixa() {
     cashOpenKnown,
     loading: cashLoading,
     addSale,
+    openRegister,
+    isOpening,
   } = useCashRegister({ companyId: company?.id });
 
   const [query, setQuery] = useState('');
@@ -115,6 +126,9 @@ export default function FrenteCaixa() {
   const [lastTouchedId, setLastTouchedId] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  // Diálogo de abertura de caixa (acessível direto pelo banner do FC).
+  const [openCashOpen, setOpenCashOpen] = useState(false);
+  const [openingAmount, setOpeningAmount] = useState('');
   const [searchMatches, setSearchMatches] = useState<Product[]>([]);
   const [highlightIdx, setHighlightIdx] = useState(0);
   const [removeTarget, setRemoveTarget] = useState<CartLine | null>(null);
@@ -685,6 +699,7 @@ export default function FrenteCaixa() {
       noteParts.join(' | '),
       undefined,
       params.fiscalMode,
+      'mercado',
     );
     if (saleId) {
       // Importação: vincula o pedido original à venda do FC e marca como entregue.
@@ -860,9 +875,18 @@ export default function FrenteCaixa() {
         </div>
 
         {cashClosed && (
-          <div className="bg-destructive/10 border-b border-destructive/30 px-4 py-2 text-sm text-destructive flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Nenhum caixa aberto. Abra o caixa em <strong>Financeiro → Caixa</strong> para vender.
+          <div className="bg-destructive/10 border-b border-destructive/30 px-4 py-2 text-sm text-destructive flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Nenhum caixa aberto. Abra o caixa para começar a vender.</span>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => setOpenCashOpen(true)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Abrir Caixa
+            </Button>
           </div>
         )}
 
@@ -1457,6 +1481,53 @@ export default function FrenteCaixa() {
           <Plus className="h-6 w-6" />
         </button>
       </div>
+
+      {/* Dialog — Abrir Caixa direto pelo Frente de Caixa.
+          Reaproveita exatamente o mesmo `openRegister` do PDV V2 e da tela de
+          Caixas, garantindo um único caixa por loja (índice
+          `cash_registers_one_open_per_company`). */}
+      <Dialog open={openCashOpen} onOpenChange={setOpenCashOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Abrir Caixa</DialogTitle>
+            <DialogDescription>
+              Informe o valor de abertura (troco inicial). Use 0 se não houver troco.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="fc-opening-amount">Valor de abertura (R$)</Label>
+            <Input
+              id="fc-opening-amount"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              placeholder="0,00"
+              value={openingAmount}
+              onChange={(e) => setOpeningAmount(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenCashOpen(false)} disabled={isOpening}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={isOpening}
+              onClick={async () => {
+                if (!user) return;
+                const amount = parseFloat(openingAmount.replace(',', '.')) || 0;
+                const ok = await openRegister(amount, user.id);
+                if (ok) {
+                  setOpenCashOpen(false);
+                  setOpeningAmount('');
+                }
+              }}
+            >
+              {isOpening ? 'Abrindo...' : 'Abrir Caixa'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PDVV2Layout>
   );
 }

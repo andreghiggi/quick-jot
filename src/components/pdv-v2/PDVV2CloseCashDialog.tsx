@@ -24,6 +24,8 @@ export interface CloseCashSale {
   customer_name: string | null;
   created_at: string;
   origin: 'balcao' | 'cardapio_retirada' | 'cardapio_delivery' | 'mesa' | 'outros';
+  /** Módulo de origem da venda no caixa: PDV/Comandas ou Mercado/Frente de Caixa. */
+  source_module?: 'pdv' | 'mercado';
 }
 
 export interface CloseCashPaymentMethod {
