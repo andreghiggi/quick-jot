@@ -104,15 +104,8 @@ export function AppSidebar() {
         },
   ];
 
-  // Movimentações (estilo GWeb): Pedidos · Comandas · PDV · Frente de Caixa · Compras
+  // Movimentações (estilo GWeb): apenas Frente de Caixa · Compras
   const movimentacoesItems = [
-    ...(mercadoOnly ? [] : [{ title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' }]),
-    ...(pdvV2Enabled && !mercadoOnly
-      ? [{ title: 'Comandas', icon: ClipboardEdit, href: '/pdv-v2/comandas-historico' }]
-      : []),
-    ...(isModuleEnabled('pdv') && !pdvV2Enabled && !mercadoOnly
-      ? [{ title: 'PDV', icon: Monitor, href: '/pdv' }]
-      : []),
     ...(mercadoEnabled && !mercadoOnly
       ? [{ title: 'Frente de Caixa', icon: ScanBarcode, href: '/frente-caixa' }]
       : []),
@@ -157,8 +150,16 @@ export function AppSidebar() {
     { title: 'Ver cardápio', icon: ChefHat, href: `/cardapio/${company?.slug || ''}` },
   ];
 
-  // PDV legado agora vive dentro de "Movimentações"
-  const pdvMenuItems: { title: string; icon: any; href: string }[] = [];
+  // Itens top-level: Pedidos, Comandas, PDV legado (fora de Movimentações)
+  const pdvMenuItems: { title: string; icon: any; href: string }[] = [
+    ...(mercadoOnly ? [] : [{ title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' }]),
+    ...(pdvV2Enabled && !mercadoOnly
+      ? [{ title: 'Comandas', icon: ClipboardEdit, href: '/pdv-v2/comandas-historico' }]
+      : []),
+    ...(isModuleEnabled('pdv') && !pdvV2Enabled && !mercadoOnly
+      ? [{ title: 'PDV', icon: Monitor, href: '/pdv' }]
+      : []),
+  ];
 
   const mesasMenuItems = isModuleEnabled('mesas') && !isWaiter() && !mercadoOnly ? [
     {
