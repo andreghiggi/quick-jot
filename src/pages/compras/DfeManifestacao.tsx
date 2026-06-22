@@ -21,8 +21,9 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import {
-  RefreshCw, MoreVertical, Copy, Download, FileInput, Loader2,
-  CheckCircle2, AlertCircle, Inbox, Search, ChevronRight,
+  RefreshCw, Copy, Download, FileInput, Loader2,
+  CheckCircle2, AlertCircle, Inbox, Search, CloudDownload,
+  ArrowUpDown, SlidersHorizontal, ChevronLeft, ChevronRight, User,
 } from 'lucide-react';
 
 type Doc = {
@@ -71,6 +72,9 @@ export default function DfeManifestacao() {
   const [manifestDialog, setManifestDialog] = useState<{ doc: Doc; tipo: string } | null>(null);
   const [justificativa, setJustificativa] = useState('');
   const [acting, setActing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [sortAsc, setSortAsc] = useState(false);
 
   useEffect(() => { if (company?.id) load(); }, [company?.id, statusFilter]);
 
@@ -92,13 +96,23 @@ export default function DfeManifestacao() {
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
-    if (!s) return docs;
-    return docs.filter(d =>
+    const arr = !s ? docs : docs.filter(d =>
       (d.chave_acesso || '').toLowerCase().includes(s) ||
       (d.nome_emitente || '').toLowerCase().includes(s) ||
       (d.cnpj_emitente || '').includes(s.replace(/\D/g, '')),
     );
-  }, [docs, search]);
+    return [...arr].sort((a, b) => {
+      const ax = a.data_emissao ? new Date(a.data_emissao).getTime() : 0;
+      const bx = b.data_emissao ? new Date(b.data_emissao).getTime() : 0;
+      return sortAsc ? ax - bx : bx - ax;
+    });
+  }, [docs, search, sortAsc]);
+
+  useEffect(() => { setPage(1); }, [search, statusFilter, perPage]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+  const pageStart = (page - 1) * perPage;
+  const pageItems = filtered.slice(pageStart, pageStart + perPage);
 
   async function callProxy(payload: Record<string, unknown>) {
     const { data, error } = await supabase.functions.invoke('dfe-fiscalflow-proxy', {
@@ -179,114 +193,179 @@ export default function DfeManifestacao() {
 
   return (
     <AppLayout>
-      <div className="container py-6 max-w-6xl">
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Manifestação Eletrônica</h1>
-            <p className="text-muted-foreground text-sm">
-              NF-e recebidas contra o CNPJ da loja (DF-e). Manifeste para liberar o XML completo e dar entrada no estoque.
-            </p>
+      <div className="container py-6 max-w-7xl">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-6">
+          {/* COLUNA PRINCIPAL */}
+          <div className="min-w-0">
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">
+              Manifestação do Destinatário eletrônica
+            </h1>
+
+            {/* Barra de busca + ações inline (estilo GWeb) */}
+            <div className="flex items-center gap-1 border-b border-border pb-2 mb-3">
+              <Search className="w-4 h-4 text-muted-foreground shrink-0 mx-2" />
+              <Input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Digite para buscar..."
+                className="border-0 shadow-none focus-visible:ring-0 px-0 bg-transparent flex-1"
+              />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="border-0 shadow-none w-auto gap-1 px-2 hover:bg-muted">
+                  <SlidersHorizontal className="w-4 h-4" />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="todos">Todos status</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="ciente">Ciência</SelectItem>
+                  <SelectItem value="confirmada">Confirmada</SelectItem>
+                  <SelectItem value="desconhecida">Desconhecida</SelectItem>
+                  <SelectItem value="nao_realizada">Não realizada</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button size="icon" variant="ghost" onClick={() => setSortAsc(s => !s)} title="Ordenar por data">
+                <ArrowUpDown className="w-4 h-4" />
+              </Button>
+              <Button size="icon" variant="ghost" onClick={load} disabled={loading} title="Atualizar lista">
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+
+            {/* Paginação topo */}
+            <div className="flex items-center justify-end gap-4 text-sm text-muted-foreground mb-2">
+              <div className="flex items-center gap-2">
+                <span>Por página</span>
+                <Select value={String(perPage)} onValueChange={(v) => setPerPage(Number(v))}>
+                  <SelectTrigger className="h-7 w-[64px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50, 100].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <span>
+                {filtered.length === 0 ? '0' : `${pageStart + 1} – ${Math.min(pageStart + perPage, filtered.length)}`} / {filtered.length}
+              </span>
+              <div className="flex">
+                <Button size="icon" variant="ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Lista */}
+            {loading ? (
+              <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+            ) : pageItems.length === 0 ? (
+              <Card><CardContent className="py-16 text-center text-muted-foreground">
+                <Inbox className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <p>Nenhuma NF-e recebida ainda.</p>
+                <p className="text-xs mt-1">Clique em <b>Sincronizar SEFAZ</b> no canto inferior direito.</p>
+              </CardContent></Card>
+            ) : (
+              <div className="divide-y divide-border border-y border-border">
+                {pageItems.map((d) => {
+                  const st = STATUS_LABEL[d.status_manifestacao] || STATUS_LABEL.pendente;
+                  const importada = d.tipo === 'completo' || !!d.xml_path;
+                  const title = d.tipo === 'resumo'
+                    ? `Resumo de NF-e ${d.numero_nfe || '—'}`
+                    : `NF-e ${d.numero_nfe || '—'}`;
+                  return (
+                    <div key={d.id} className="flex items-center gap-4 py-4 px-1 hover:bg-muted/40 transition-colors">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted-foreground/10 transition-colors shrink-0"
+                            aria-label="Ações"
+                          >
+                            <User className="w-5 h-5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-56">
+                          {TIPO_MANIFESTACAO.map(t => (
+                            <DropdownMenuItem key={t.key} onClick={() => { setJustificativa(''); setManifestDialog({ doc: d, tipo: t.key }); }}>
+                              <CheckCircle2 className="w-4 h-4 mr-2" /> {t.label}
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleDownloadXml(d)}><Download className="w-4 h-4 mr-2" /> Download XML</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleImport(d)} disabled={!importada}>
+                            <FileInput className="w-4 h-4 mr-2" /> Importar pro estoque
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => copyChave(d)}><Copy className="w-4 h-4 mr-2" /> Copiar chave</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleIgnore(d)} className="text-destructive">
+                            <AlertCircle className="w-4 h-4 mr-2" /> Ignorar / ocultar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm">
+                          <span className="font-semibold">{title}</span>
+                          <span className="text-muted-foreground"> de {formatDateTime(d.data_emissao)}</span>
+                        </div>
+                        <div className="font-medium truncate">{d.nome_emitente || 'Emitente desconhecido'}</div>
+                        <div className="text-xs text-muted-foreground italic font-mono mt-0.5 truncate">
+                          <span className="font-semibold not-italic">NSU:</span> {d.nsu ?? '—'} &nbsp;
+                          <span className="font-semibold not-italic">Chave:</span> {d.chave_acesso} &nbsp;
+                          <span className="font-semibold not-italic">Valor:</span>{' '}
+                          <span className="text-emerald-600 font-semibold not-italic">{formatBRL(d.valor_total)}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        {importada ? (
+                          <Badge className="bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 rounded-full px-3">Importada</Badge>
+                        ) : (
+                          <Badge className="bg-rose-500/15 text-rose-700 border border-rose-500/30 rounded-full px-3">Não importada</Badge>
+                        )}
+                        <Badge variant="outline" className={`${st.cls} rounded-full text-[10px]`}>{st.label}</Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
+
+          {/* SIDEBAR DIREITA (estilo GWeb) */}
+          <aside className="space-y-4">
+            <SidePanel title="Acesso">
+              <SideLink to="/compras/manifestacao" active>Manifestação eletrônica</SideLink>
+              <SideLink to="/compras/entradas">NF-e de Entrada</SideLink>
+            </SidePanel>
+
+            <SidePanel title="Ações">
+              <SideLink to="/compras/importar-xml">Importar XML</SideLink>
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                {syncing ? 'Sincronizando…' : 'Sincronizar SEFAZ'}
+              </button>
+            </SidePanel>
+
+            <SidePanel title="Configurações">
+              <SideLink to="/configuracoes?tab=integracoes">Token Fiscal Flow</SideLink>
+            </SidePanel>
+          </aside>
         </div>
 
-        <Card className="mb-4">
-          <CardContent className="p-4 flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[220px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input className="pl-9" placeholder="Buscar por chave, emitente ou CNPJ" value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos status</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="ciente">Ciência</SelectItem>
-                <SelectItem value="confirmada">Confirmada</SelectItem>
-                <SelectItem value="desconhecida">Desconhecida</SelectItem>
-                <SelectItem value="nao_realizada">Não realizada</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={load} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Atualizar
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/compras/entradas">NF-e de Entrada <ChevronRight className="w-4 h-4 ml-1" /></Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-        ) : filtered.length === 0 ? (
-          <Card><CardContent className="py-16 text-center text-muted-foreground">
-            <Inbox className="w-10 h-10 mx-auto mb-2 opacity-50" />
-            <p>Nenhuma NF-e recebida ainda.</p>
-            <p className="text-xs mt-1">Clique em <b>Sincronizar SEFAZ</b> no canto inferior direito.</p>
-          </CardContent></Card>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map((d) => {
-              const st = STATUS_LABEL[d.status_manifestacao] || STATUS_LABEL.pendente;
-              return (
-                <Card key={d.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4 flex flex-wrap items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <Badge variant="outline" className={st.cls}>{st.label}</Badge>
-                        {d.tp_nf === 1 && <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/30">Entrada</Badge>}
-                        {d.tp_nf === 2 && <Badge variant="outline">Saída</Badge>}
-                        {d.situacao_nfe === '2' && <Badge variant="destructive">Cancelada</Badge>}
-                        {d.tipo === 'completo' && <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30">XML disponível</Badge>}
-                        <span className="text-xs text-muted-foreground">NSU {d.nsu ?? '—'}</span>
-                      </div>
-                      <div className="font-semibold truncate">{d.nome_emitente || 'Emitente desconhecido'}</div>
-                      <div className="text-xs text-muted-foreground">
-                        CNPJ {formatCnpj(d.cnpj_emitente)} · NF-e {d.numero_nfe || '—'} série {d.serie || '—'}
-                      </div>
-                      <div className="text-[11px] font-mono text-muted-foreground truncate mt-0.5">{d.chave_acesso}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-emerald-600">{formatBRL(d.valor_total)}</div>
-                      <div className="text-xs text-muted-foreground">{formatDate(d.data_emissao)}</div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost"><MoreVertical className="w-4 h-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        {TIPO_MANIFESTACAO.map(t => (
-                          <DropdownMenuItem key={t.key} onClick={() => { setJustificativa(''); setManifestDialog({ doc: d, tipo: t.key }); }}>
-                            <CheckCircle2 className="w-4 h-4 mr-2" /> {t.label}
-                          </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleDownloadXml(d)}><Download className="w-4 h-4 mr-2" /> Download XML</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleImport(d)} disabled={d.tipo !== 'completo' && !d.xml_path}>
-                          <FileInput className="w-4 h-4 mr-2" /> Importar pro estoque
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => copyChave(d)}><Copy className="w-4 h-4 mr-2" /> Copiar chave</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleIgnore(d)} className="text-destructive">
-                          <AlertCircle className="w-4 h-4 mr-2" /> Ignorar / ocultar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-
-        {/* FAB sincronizar */}
+        {/* FAB sincronizar (laranja, igual GWeb) */}
         <Button
-          size="lg"
-          className="fixed bottom-6 right-6 shadow-2xl rounded-full h-14 px-6 gap-2"
+          size="icon"
+          className="fixed bottom-6 right-6 shadow-2xl rounded-full h-14 w-14 bg-orange-500 hover:bg-orange-600 text-white"
           onClick={handleSync}
           disabled={syncing}
+          title="Sincronizar SEFAZ"
         >
-          <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? 'Sincronizando…' : 'Sincronizar SEFAZ'}
+          {syncing
+            ? <Loader2 className="w-6 h-6 animate-spin" />
+            : <CloudDownload className="w-6 h-6" />}
         </Button>
       </div>
 
@@ -318,6 +397,32 @@ export default function DfeManifestacao() {
   );
 }
 
+function SidePanel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="px-3 py-2 text-xs uppercase tracking-wider text-muted-foreground border-b border-border bg-muted/30">
+        {title}
+      </div>
+      <div className="py-1">{children}</div>
+    </div>
+  );
+}
+
+function SideLink({ to, active, children }: { to: string; active?: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className={`block px-3 py-2 text-sm transition-colors rounded-md mx-1 ${
+        active
+          ? 'bg-primary/10 text-primary font-medium border-l-2 border-primary'
+          : 'hover:bg-muted text-foreground/80 hover:text-foreground'
+      }`}
+    >
+      {children}
+    </Link>
+  );
+}
+
 function formatCnpj(c?: string | null) {
   if (!c) return '—';
   const v = c.replace(/\D/g, '').padStart(14, '0');
@@ -330,4 +435,11 @@ function formatBRL(v?: number | null) {
 function formatDate(s?: string | null) {
   if (!s) return '—';
   return new Date(s).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+}
+function formatDateTime(s?: string | null) {
+  if (!s) return '—';
+  const d = new Date(s);
+  const date = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const time = d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+  return `${date} ${time}`;
 }
