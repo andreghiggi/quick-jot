@@ -433,6 +433,8 @@ export function FrenteCaixaCheckoutDialog({
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 e.preventDefault();
+                                e.stopPropagation();
+                                e.nativeEvent.stopImmediatePropagation?.();
                                 const cur = parseCurrencyInput(lines[m.id]?.text || '');
                                 if (cur === 0 && remaining > 0) {
                                   fillRemainingOnLine(m.id);
