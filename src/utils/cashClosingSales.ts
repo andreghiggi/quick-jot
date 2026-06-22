@@ -57,7 +57,7 @@ export async function loadCashClosingSales(params: {
 
   const { data: sales, error } = await supabase
     .from('pdv_sales')
-    .select('id, final_total, payment_method_id, customer_name, notes, created_at, order_id, payment_method:payment_methods(name)')
+    .select('id, final_total, payment_method_id, customer_name, notes, created_at, order_id, source_module, payment_method:payment_methods(name)')
     .eq('cash_register_id', registerId)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -95,6 +95,7 @@ export async function loadCashClosingSales(params: {
       customer_name: s.customer_name || null,
       created_at: s.created_at,
       origin: s.order_id && linkedOrder ? originFromOrder(linkedOrder) : (s.notes?.toLowerCase().includes('comanda') ? 'mesa' : 'balcao'),
+      source_module: (s.source_module === 'mercado' ? 'mercado' : 'pdv'),
     }];
   });
 

@@ -350,7 +350,8 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
     customerName?: string,
     notes?: string,
     orderId?: string,
-    fiscalMode?: 'fiscal' | 'nao_fiscal'
+    fiscalMode?: 'fiscal' | 'nao_fiscal',
+    sourceModule?: 'pdv' | 'mercado'
   ): Promise<string | null> {
     if (!currentRegister || !companyId) {
       toast.error('Nenhum caixa aberto!');
@@ -378,6 +379,9 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
       }
       if (fiscalMode) {
         insertData.fiscal_mode = fiscalMode;
+      }
+      if (sourceModule) {
+        insertData.source_module = sourceModule;
       }
 
       const { data: saleData, error: saleError } = await supabase
