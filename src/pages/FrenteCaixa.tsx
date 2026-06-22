@@ -132,6 +132,12 @@ export default function FrenteCaixa() {
   const [lastTouchedId, setLastTouchedId] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  // Pós-venda NFC-e (espelha o fluxo do PDV V2):
+  // 1) mostra overlay "Emitindo NFC-e…" enquanto aguarda a resposta inicial da API
+  // 2) abre o PDVV2NFCePostSaleDialog que faz polling SEFAZ + auto-print + retry
+  const [nfceEmitting, setNfceEmitting] = useState(false);
+  const [postSaleOpen, setPostSaleOpen] = useState(false);
+  const [postSaleRecord, setPostSaleRecord] = useState<NFCeRecord | null>(null);
   // Diálogo de abertura de caixa (acessível direto pelo banner do FC).
   const [openCashOpen, setOpenCashOpen] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
