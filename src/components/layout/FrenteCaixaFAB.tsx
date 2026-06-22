@@ -30,9 +30,12 @@ export function FrenteCaixaFAB() {
   }, []);
 
   const onFrenteCaixa = pathname.startsWith('/frente-caixa');
+  // Dentro do hub de Compras, esse atalho cede o canto pro FAB "+" de
+  // "Cadastrar nota de compra" — evita sobreposição de dois botões redondos.
+  const onCompras = pathname.startsWith('/compras');
   // Só faz sentido para LOJA HÍBRIDA (Mercado + Cardápio).
   // Loja só-mercado já abre direto na Frente de Caixa, não precisa de atalho.
-  const shouldRender = mercadoOn && cardapioOn && !isMobile && !onFrenteCaixa;
+  const shouldRender = mercadoOn && cardapioOn && !isMobile && !onFrenteCaixa && !onCompras;
 
   // Hook precisa ser chamado incondicionalmente; só dispara se renderizar.
   useGlobalShortcut('F8', () => {
