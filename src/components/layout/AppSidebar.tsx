@@ -625,35 +625,6 @@ export function AppSidebar() {
           </Collapsible>
         )}
 
-        {comprasMenuItems.length > 0 && (
-          <Collapsible className="group/grp-compras">
-            <SidebarGroup>
-              <SidebarGroupLabel asChild>
-                <CollapsibleTrigger className="flex w-full items-center cursor-pointer bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">
-                  <span>Compras</span>
-                  <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/grp-compras:rotate-180" />
-                </CollapsibleTrigger>
-              </SidebarGroupLabel>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {comprasMenuItems.map((item) => (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton asChild isActive={location.pathname === item.href}>
-                          <Link to={item.href}>
-                            <item.icon className="w-4 h-4" />
-                            <span>{item.title}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </SidebarGroup>
-          </Collapsible>
-        )}
-
         <Collapsible className="group/grp-rel">
           <SidebarGroup>
             <SidebarGroupLabel asChild>
