@@ -54,11 +54,11 @@ interface SaleData {
    * Tipo fiscal da venda:
    *  - 'fiscal'    → venda com NFC-e emitida (operador escolheu "Venda")
    *  - 'nao_fiscal'→ pré-venda (sem NFC-e)
-   * Origem: `pdv_sales.fiscal_mode`. Para pedidos do cardápio entregues,
-   * busca a pdv_sale vinculada (order_id) e usa o fiscal_mode dela;
-   * pedidos sem pdv_sale são considerados pré-venda.
+   *  - 'nfce_cancelled' → NFC-e foi cancelada na SEFAZ mas a venda continua ativa como pré-venda
+   *  - 'cancelled' → venda cancelada (notes contém [CANCELADA])
+   * Origem: `pdv_sales.fiscal_mode` + `nfce_records.status` + `notes`.
    */
-  fiscal: 'fiscal' | 'nao_fiscal';
+  fiscal: 'fiscal' | 'nao_fiscal' | 'nfce_cancelled' | 'cancelled';
 }
 
 function getPeriodDates(period: PeriodType, customStart?: Date, customEnd?: Date) {
