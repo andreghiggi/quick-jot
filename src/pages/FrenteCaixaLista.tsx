@@ -15,6 +15,11 @@ import {
   Printer,
   Eye,
   RefreshCw,
+  MoreVertical,
+  Copy,
+  RotateCcw,
+  Code2,
+  Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,12 +37,38 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { supabase } from '@/integrations/supabase/client';
 import { brl } from '@/components/pdv-v2/_format';
-import { printDanfeFromRecord, emitirNFCe, type NFCeItem } from '@/services/nfceService';
+import {
+  printDanfeFromRecord,
+  emitirNFCe,
+  consultarNFCe,
+  cancelarNFCe,
+  type NFCeItem,
+} from '@/services/nfceService';
 import { useProducts } from '@/hooks/useProducts';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
@@ -99,6 +130,170 @@ export default function FrenteCaixaLista() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected] = useState<SaleRow | null>(null);
+  const [marked, setMarked] = useState<Set<string>>(new Set());
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<SaleRow | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+
+  function toggleMark(id: string) {
+    setMarked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function copyChaveAcesso(sale: SaleRow) {
+    const chave = sale.nfce?.chave_acesso;
+    if (!chave) {
+      toast.info('Esta venda não possui chave de acesso.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(chave);
+      toast.success('Chave de acesso copiada.');
+    } catch {
+      toast.error('Não foi possível copiar a chave.');
+    }
+  }
+
+  async function consultarStatus(sale: SaleRow) {
+    if (!company?.id) return;
+    const rec = sale.nfce;
+    if (!rec?.id) {
+      toast.info('Esta venda não possui NFC-e para consultar.');
+      return;
+    }
+    setActionLoadingId(sale.id);
+    try {
+      // Busca nfce_id (id da Fiscal Flow) — o consultarNFCe espera ele
+      const { data: full } = await supabase
+        .from('nfce_records')
+        .select('nfce_id, status')
+        .eq('id', rec.id)
+        .maybeSingle();
+      const nfceId = (full as any)?.nfce_id;
+      if (!nfceId) {
+        toast.error('NFC-e ainda sem identificador da SEFAZ.');
+        return;
+      }
+      await consultarNFCe(company.id, nfceId);
+      toast.success('Status atualizado.');
+      await load();
+    } catch (e: any) {
+      toast.error('Falha ao consultar: ' + (e?.message || e));
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  async function fetchXmlText(sale: SaleRow): Promise<string | null> {
+    const xmlUrl = (sale.nfce as any)?.xml_url;
+    if (!xmlUrl) {
+      // Tenta buscar do banco caso não tenha vindo no select
+      const { data } = await supabase
+        .from('nfce_records')
+        .select('xml_url')
+        .eq('id', sale.nfce!.id)
+        .maybeSingle();
+      if (!data?.xml_url) return null;
+      const res = await fetch(data.xml_url);
+      if (!res.ok) return null;
+      return await res.text();
+    }
+    const res = await fetch(xmlUrl);
+    if (!res.ok) return null;
+    return await res.text();
+  }
+
+  async function visualizarXml(sale: SaleRow) {
+    if (!sale.nfce?.id || sale.nfce.status !== 'autorizada') {
+      toast.info('Sem XML disponível para esta venda.');
+      return;
+    }
+    setActionLoadingId(sale.id);
+    try {
+      const xml = await fetchXmlText(sale);
+      if (!xml) {
+        toast.error('XML não disponível.');
+        return;
+      }
+      const blob = new Blob([xml], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e: any) {
+      toast.error('Falha ao abrir XML: ' + (e?.message || e));
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  async function salvarDocumento(sale: SaleRow) {
+    if (!sale.nfce?.id || sale.nfce.status !== 'autorizada') {
+      toast.info('Sem documento disponível para salvar.');
+      return;
+    }
+    setActionLoadingId(sale.id);
+    try {
+      const xml = await fetchXmlText(sale);
+      if (!xml) {
+        toast.error('XML não disponível.');
+        return;
+      }
+      const blob = new Blob([xml], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `NFCe-${sale.nfce.chave_acesso || sale.nfce.numero || sale.id.slice(0, 8)}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5_000);
+      toast.success('Documento baixado.');
+    } catch (e: any) {
+      toast.error('Falha ao salvar: ' + (e?.message || e));
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  function openCancelDialog(sale: SaleRow) {
+    if (!sale.nfce?.id || sale.nfce.status !== 'autorizada') {
+      toast.info('Apenas NFC-e autorizada pode ser cancelada.');
+      return;
+    }
+    setCancelTarget(sale);
+    setCancelReason('');
+  }
+
+  async function confirmCancelNfce() {
+    if (!company?.id || !cancelTarget?.nfce?.id) return;
+    if (cancelReason.trim().length < 15) {
+      toast.error('Justificativa deve ter pelo menos 15 caracteres.');
+      return;
+    }
+    setCancelling(true);
+    try {
+      const { data: full } = await supabase
+        .from('nfce_records')
+        .select('nfce_id')
+        .eq('id', cancelTarget.nfce.id)
+        .maybeSingle();
+      const nfceId = (full as any)?.nfce_id;
+      if (!nfceId) throw new Error('NFC-e sem identificador da SEFAZ.');
+      await cancelarNFCe(company.id, nfceId, cancelReason.trim());
+      toast.success('Cancelamento solicitado à SEFAZ.');
+      setCancelTarget(null);
+      setCancelReason('');
+      await load();
+    } catch (e: any) {
+      toast.error('Falha ao cancelar: ' + (e?.message || e));
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   async function load() {
     if (!company?.id) return;
@@ -381,7 +576,7 @@ export default function FrenteCaixaLista() {
           </div>
           <div className="text-right ml-auto">
             <p className="text-xs text-muted-foreground">
-              {totals.count} venda(s)
+              {totals.count} venda(s){marked.size > 0 && ` · ${marked.size} marcada(s)`}
             </p>
             <p className="text-lg font-bold tabular-nums text-emerald-600">{brl(totals.sum)}</p>
           </div>
@@ -411,6 +606,12 @@ export default function FrenteCaixaLista() {
                 return (
                   <li key={r.id} className="px-4 py-3 hover:bg-muted/40 transition-colors">
                     <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={marked.has(r.id)}
+                        onCheckedChange={() => toggleMark(r.id)}
+                        className="mt-3"
+                        aria-label="Marcar venda"
+                      />
                       <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
                         <User className="h-5 w-5 text-muted-foreground" />
                       </div>
@@ -489,36 +690,77 @@ export default function FrenteCaixaLista() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {canEmit && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-primary"
-                            onClick={() => emitNfceRetroativa(r)}
-                            disabled={emittingId === r.id}
-                            title="Emitir NFC-e desta venda"
-                          >
-                            {emittingId === r.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <FileText className="h-4 w-4" />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              title="Mais ações"
+                              disabled={actionLoadingId === r.id || emittingId === r.id}
+                            >
+                              {actionLoadingId === r.id || emittingId === r.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <MoreVertical className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel className="text-xs">Venda</DropdownMenuLabel>
+                            {canEmit && (
+                              <DropdownMenuItem onClick={() => emitNfceRetroativa(r)}>
+                                <FileText className="h-4 w-4 mr-2" /> Emitir NFC-e
+                              </DropdownMenuItem>
                             )}
-                          </Button>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => reprintDanfe(r)}
-                          disabled={r.nfce?.status !== 'autorizada'}
-                          title={
-                            r.nfce?.status === 'autorizada'
-                              ? 'Reimprimir DANFE'
-                              : 'Sem NFC-e autorizada para reimprimir'
-                          }
-                        >
-                          <Printer className="h-4 w-4" />
-                        </Button>
+                            {hasNfce && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => consultarStatus(r)}
+                                  disabled={!r.nfce?.id}
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-2" /> Consultar status
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => copyChaveAcesso(r)}
+                                  disabled={!r.nfce?.chave_acesso}
+                                >
+                                  <Copy className="h-4 w-4 mr-2" /> Copiar chave de acesso
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => reprintDanfe(r)}
+                                  disabled={r.nfce?.status !== 'autorizada'}
+                                >
+                                  <Printer className="h-4 w-4 mr-2" /> Visualizar DANFCE
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => visualizarXml(r)}
+                                  disabled={r.nfce?.status !== 'autorizada'}
+                                >
+                                  <Code2 className="h-4 w-4 mr-2" /> Visualizar XML
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => salvarDocumento(r)}
+                                  disabled={r.nfce?.status !== 'autorizada'}
+                                >
+                                  <Download className="h-4 w-4 mr-2" /> Salvar documento
+                                </DropdownMenuItem>
+                                {r.nfce?.status === 'autorizada' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => openCancelDialog(r)}
+                                      className="text-destructive focus:text-destructive"
+                                    >
+                                      <Ban className="h-4 w-4 mr-2" /> Cancelar NFC-e
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </li>
@@ -591,6 +833,44 @@ export default function FrenteCaixaLista() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Cancelar NFC-e */}
+        <AlertDialog open={!!cancelTarget} onOpenChange={(o) => { if (!o) { setCancelTarget(null); setCancelReason(''); } }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancelar NFC-e</AlertDialogTitle>
+              <AlertDialogDescription>
+                Informe a justificativa do cancelamento junto à SEFAZ. Mínimo de 15 caracteres.
+                Esta operação só é permitida até 30 minutos após a autorização.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-2">
+              <Textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Ex.: Venda cancelada a pedido do cliente"
+                rows={3}
+                disabled={cancelling}
+              />
+              <p className="text-[11px] text-muted-foreground text-right">
+                {cancelReason.trim().length}/15
+              </p>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={cancelling}>Voltar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); confirmCancelNfce(); }}
+                disabled={cancelling || cancelReason.trim().length < 15}
+              >
+                {cancelling ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Cancelando...</>
+                ) : (
+                  'Confirmar cancelamento'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </PDVV2Layout>
   );
