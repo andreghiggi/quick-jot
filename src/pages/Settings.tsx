@@ -1503,6 +1503,72 @@ pause
                   Salve ambos em C:\ComandaTech e execute o .bat
                 </p>
               </div>
+
+              <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-lg space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                  <div>
+                    <h4 className="font-medium">Windows 11 — Correção pywin32 (v1.3 / auto_printer v8.41)</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Use estes arquivos <strong>apenas se o Windows 11 não reconhecer o .bat acima</strong> ou
+                      exibir o erro <code className="bg-background px-1 rounded">DLL load failed while importing win32print</code>.
+                      Não substitui os arquivos acima — é um pacote alternativo.
+                    </p>
+                  </div>
+                </div>
+
+                <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>Crie/abra a pasta <code className="bg-background px-1 py-0.5 rounded">C:\ComandaTech</code></li>
+                  <li>Baixe os 4 arquivos abaixo e salve nessa pasta (mantendo os nomes)</li>
+                  <li>Clique com o botão direito em <code className="bg-background px-1 py-0.5 rounded">instalar_impressao.cmd</code> → <strong>Executar como administrador</strong></li>
+                  <li>Depois, dê duplo-clique em <code className="bg-background px-1 py-0.5 rounded">iniciar_impressao.cmd</code> para iniciar a impressão automática</li>
+                </ol>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    onClick={() => downloadTextFile(instalarImpressaoCmd, 'instalar_impressao.cmd')}
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    instalar_impressao.cmd
+                  </Button>
+                  <Button
+                    onClick={() => downloadTextFile(iniciarImpressaoCmd, 'iniciar_impressao.cmd')}
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    iniciar_impressao.cmd
+                  </Button>
+                  <Button
+                    onClick={() => downloadTextFile(verificarPywin32Py, 'verificar_pywin32.py')}
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    verificar_pywin32.py
+                  </Button>
+                  <Button
+                    onClick={() => downloadTextFile(autoPrinterWin11Py, 'auto_printer.py')}
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    auto_printer.py
+                  </Button>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  O instalador reinstala o <strong>pywin32</strong> limpo, valida as DLLs e registra o
+                  post-install. O launcher (<code className="bg-background px-1 rounded">iniciar_impressao.cmd</code>) auto-repara
+                  dependências antes de subir o serviço.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
