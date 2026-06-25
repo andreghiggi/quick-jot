@@ -143,8 +143,8 @@ if !PYMAJOR! GEQ 3 if !PYMINOR! GEQ 14 (
     echo  1. Configuracoes ^> Apps ^> Apps Instalados
     echo     Desinstale TODAS as versoes "Python 3.14" e
     echo     "Python Launcher" relacionadas.
-    echo  2. Acesse:  https://www.python.org/downloads/release/python-3127/
-    echo  3. Baixe "Windows installer ^(64-bit^)" do Python 3.12.7.
+    echo  2. Acesse:  https://www.python.org/downloads/release/python-3122/
+    echo  3. Baixe "Windows installer ^(64-bit^)" do Python 3.12.2.
     echo  4. Marque [x] Add python.exe to PATH  e  [x] py launcher
     echo  5. Clique em Install Now.
     echo  6. Rode este instalador novamente.
