@@ -2,9 +2,13 @@
 Comanda Tech - Impressão Automática de Pedidos (Windows)
 
 COMO USAR:
-1. Instale Python: https://python.org (marque "Add to PATH")
-2. Abra o CMD e rode: pip install requests pywin32
-3. Dê duplo clique neste arquivo OU rode: python auto_printer.py
+1. Instale o Python em https://python.org
+   (marque "Add python.exe to PATH" na tela inicial do instalador).
+2. Dê duplo clique em  instalar_impressao.bat
+   (instala automaticamente as dependências requests e pywin32 -
+    usa "py -m pip" porque o comando "pip" não existe por padrão
+    no Windows 11).
+3. Para começar a imprimir, dê duplo clique em  iniciar_impressao.bat
 """
 
 import requests
