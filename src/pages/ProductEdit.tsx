@@ -192,6 +192,25 @@ export default function ProductEdit() {
     if (ncm || cest || cfop || taxRuleId) setFiscalOpen(true);
   }, [hydrated, ncm, cest, cfop, taxRuleId]);
 
+  // Sincroniza visibilidade automaticamente conforme o tipo do produto, desde que o usuário
+  // ainda não tenha aberto "Visibilidade avançada" para fazer ajustes manuais.
+  // - mercado  → só PDV/Frente de Caixa marcado (cardápio digital e garçom desligados)
+  // - cardapio → tudo marcado por padrão
+  // - ambos    → tudo marcado por padrão
+  useEffect(() => {
+    if (!hydrated) return;
+    if (visibilityAdvancedOpen) return; // respeita marcação manual
+    if (productType === 'mercado') {
+      setMenuItem(false);
+      setPdvItem(true);
+      setWaiterItem(false);
+    } else {
+      setMenuItem(true);
+      setPdvItem(true);
+      setWaiterItem(true);
+    }
+  }, [productType, hydrated, visibilityAdvancedOpen]);
+
   // Carrega lista de fornecedores quando módulo Mercado está ativo
   useEffect(() => {
     if (!mercadoEnabled || !company?.id) return;
