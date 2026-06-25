@@ -27,13 +27,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 
 const CHANNEL_LABELS: Record<PaymentChannel, string> = {
-  pdv: 'PDV',
+  pdv: 'PDV / Frente de Caixa',
   express: 'Pedido Express',
   menu: 'Cardápio Online',
 };
 
 const CHANNEL_DESCRIPTIONS: Record<PaymentChannel, string> = {
-  pdv: 'Formas de pagamento exibidas no caixa do PDV',
+  pdv: 'Formas de pagamento exibidas no PDV e no Frente de Caixa',
   express: 'Formas de pagamento exibidas no fluxo de Pedido Express',
   menu: 'Formas de pagamento exibidas para clientes no cardápio público',
 };
