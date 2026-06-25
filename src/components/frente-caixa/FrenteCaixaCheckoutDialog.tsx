@@ -96,6 +96,11 @@ export function FrenteCaixaCheckoutDialog({
   const [showAdjust, setShowAdjust] = useState(false);
   const [lines, setLines] = useState<Record<string, LineState>>({});
 
+  // Por linha de TEF: modalidade + parcelas (default crédito à vista)
+  const [tefMod, setTefMod] = useState<
+    Record<string, { modality: 'avista' | 'debit' | 'parcelado'; installments: number }>
+  >({});
+
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerDocument, setCustomerDocument] = useState('');
@@ -132,6 +137,7 @@ export function FrenteCaixaCheckoutDialog({
       setLines({});
       setDiscountText('');
       setSurchargeText('');
+      setTefMod({});
       setShowAdjust(false);
       setCustomerName('');
       setCustomerPhone('');
@@ -280,12 +286,19 @@ export function FrenteCaixaCheckoutDialog({
           if (amount <= 0) return null;
           const itg = (m as any).integration_type as string | undefined;
           const isTef = itg === 'tef_pinpad' || itg === 'tef_smartpos';
+          const mod = tefMod[m.id] || { modality: 'avista' as const, installments: 2 };
           return {
             payment_method_id: m.id,
             payment_name: m.name,
             amount,
             integration: isTef ? (itg as 'tef_pinpad' | 'tef_smartpos') : undefined,
-            tef_options: isTef ? { modality: 'avista' as const } : undefined,
+            tef_options: isTef
+              ? {
+                  modality: mod.modality,
+                  installments:
+                    mod.modality === 'parcelado' ? Math.max(2, mod.installments || 2) : undefined,
+                }
+              : undefined,
           } as MultiPaymentInputLine;
         })
         .filter((l): l is MultiPaymentInputLine => l !== null);
@@ -411,8 +424,11 @@ export function FrenteCaixaCheckoutDialog({
                       const letter = LETTERS[idx] || '';
                       const itg = (m as any).integration_type as string | undefined;
                       const isTef = itg === 'tef_pinpad' || itg === 'tef_smartpos';
+                      const lineAmount = parseCurrencyInput(lines[m.id]?.text || '');
+                      const mod = tefMod[m.id] || { modality: 'avista' as const, installments: 2 };
                       return (
-                        <li key={m.id} className="flex items-center gap-3 py-3">
+                        <li key={m.id} className="py-3 space-y-2">
+                          <div className="flex items-center gap-3">
                           <span className="flex-1 flex items-center gap-2 text-sm">
                             <span>{m.name}</span>
                             {isTef && (
@@ -452,6 +468,65 @@ export function FrenteCaixaCheckoutDialog({
                             disabled={processing}
                             className="w-40 text-right bg-muted/40 border-border focus:border-primary"
                           />
+                          </div>
+                          {isTef && lineAmount > 0 && (
+                            <div className="ml-0 flex flex-wrap items-center gap-2 text-xs">
+                              <span className="text-muted-foreground">Modalidade:</span>
+                              {([
+                                { id: 'avista', label: 'Crédito à vista' },
+                                { id: 'debit', label: 'Débito' },
+                                { id: 'parcelado', label: 'Parcelado' },
+                              ] as const).map((opt) => (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  disabled={processing}
+                                  onClick={() =>
+                                    setTefMod((prev) => ({
+                                      ...prev,
+                                      [m.id]: {
+                                        modality: opt.id,
+                                        installments: prev[m.id]?.installments || 2,
+                                      },
+                                    }))
+                                  }
+                                  className={`px-2 py-1 rounded border text-xs transition-colors ${
+                                    mod.modality === opt.id
+                                      ? 'border-primary bg-primary/10 text-primary'
+                                      : 'border-border bg-muted/40 hover:bg-muted'
+                                  }`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                              {mod.modality === 'parcelado' && (
+                                <span className="flex items-center gap-1">
+                                  <span className="text-muted-foreground">Parcelas:</span>
+                                  <Input
+                                    type="number"
+                                    min={2}
+                                    max={18}
+                                    value={mod.installments || 2}
+                                    onChange={(e) =>
+                                      setTefMod((prev) => ({
+                                        ...prev,
+                                        [m.id]: {
+                                          modality: 'parcelado',
+                                          installments: Math.max(
+                                            2,
+                                            Math.min(18, Number(e.target.value) || 2),
+                                          ),
+                                        },
+                                      }))
+                                    }
+                                    disabled={processing}
+                                    className="w-16 h-7 text-right bg-background border-border"
+                                  />
+                                  <span className="text-muted-foreground">x</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </li>
                       );
                     })}

@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.32.4-beta";
-export const RELEASE_DATE = "2026-06-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Checkout FC: Enter não pula Cliente";
+export const VERSION = "1.36.0-beta";
+export const RELEASE_DATE = "2026-06-25"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Frente de Caixa: seletor TEF (Crédito/Débito/Parcelado)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.36.0-beta",
+    date: "2026-06-25",
+    codename: "Frente de Caixa: seletor TEF (Crédito/Débito/Parcelado)",
+    changes: [
+      "Checkout do Frente de Caixa: linha de pagamento TEF agora mostra um seletor de modalidade (Crédito à vista / Débito / Parcelado) assim que recebe valor > 0 — antes toda venda TEF era enviada fixa como 'Crédito à vista', sem perguntar.",
+      "Quando 'Parcelado' é escolhido, aparece campo numérico de parcelas (2 a 18, default 2). A modalidade e o número de parcelas são repassados ao runTefPayment via tef_options.",
+      "Estado por linha: cada linha TEF (caso haja mais de uma) tem sua própria modalidade/parcelas, idêntico ao PDV V2.",
+      "Nenhuma alteração em runTefPayment, pinpadService, tef-webservice, TEF v1.0/v1.1/v1.2-beta, PDV V2, Pedido Express, Cobrança, Multi-Pagamento ou NFC-e — apenas UI do FrenteCaixaCheckoutDialog.",
+    ],
+  },
   {
     version: "1.32.4-beta",
     date: "2026-06-22",
