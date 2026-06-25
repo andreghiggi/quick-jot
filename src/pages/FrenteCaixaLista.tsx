@@ -75,6 +75,8 @@ import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { usePdvSettings } from '@/hooks/usePdvSettings';
 import { FileText } from 'lucide-react';
+import { PDVV2CancelSaleDialog, type CancelSaleTarget } from '@/components/pdv-v2/PDVV2CancelSaleDialog';
+import { parseTefDataFromNotes, estornarTefPedido, isOrderTefCancelled } from '@/utils/tefOrderActions';
 
 interface SaleRow {
   id: string;
@@ -114,7 +116,7 @@ const STATUS_BADGE: Record<string, { label: string; icon: any; className: string
  */
 export default function FrenteCaixaLista() {
   const navigate = useNavigate();
-  const { company } = useAuthContext();
+  const { company, user, profile } = useAuthContext();
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { products } = useProducts({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
@@ -135,6 +137,10 @@ export default function FrenteCaixaLista() {
   const [cancelTarget, setCancelTarget] = useState<SaleRow | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  // Pós-cancelamento de NFC-e: pergunta o destino da venda (cancelar ou manter como pré-venda).
+  const [postCancelTarget, setPostCancelTarget] = useState<SaleRow | null>(null);
+  // Diálogo reutilizável de cancelamento de venda (PDV V2).
+  const [cancelSaleTarget, setCancelSaleTarget] = useState<CancelSaleTarget | null>(null);
 
   function toggleMark(id: string) {
     setMarked((prev) => {
@@ -285,14 +291,85 @@ export default function FrenteCaixaLista() {
       if (!nfceId) throw new Error('NFC-e sem identificador da SEFAZ.');
       await cancelarNFCe(company.id, nfceId, cancelReason.trim());
       toast.success('Cancelamento solicitado à SEFAZ.');
+
+      // Estorno TEF automático (se a venda foi paga em PinPad e ainda não foi estornada).
+      const tefInfo = parseTefDataFromNotes(cancelTarget.notes);
+      const hasPinpadTef = tefInfo?.type === 'pinpad' && !isOrderTefCancelled(cancelTarget.notes);
+      if (hasPinpadTef) {
+        try {
+          const estorno = await estornarTefPedido({
+            companyId: company.id,
+            amount: cancelTarget.final_total,
+            createdAt: cancelTarget.created_at,
+            notes: cancelTarget.notes,
+          });
+          if (estorno.success) {
+            toast.success(estorno.message || 'TEF estornado com sucesso.');
+            if (estorno.cancelledNotes) {
+              await supabase
+                .from('pdv_sales')
+                .update({ notes: estorno.cancelledNotes })
+                .eq('id', cancelTarget.id);
+            }
+          } else {
+            toast.error(estorno.message || 'Falha ao estornar TEF — verifique no gerenciador.');
+          }
+        } catch (err: any) {
+          toast.error('Falha ao estornar TEF: ' + (err?.message || err));
+        }
+      }
+
+      const decisionTarget = cancelTarget;
       setCancelTarget(null);
       setCancelReason('');
       await load();
+      // Abre a pergunta: cancelar a venda também ou manter como pré-venda?
+      setPostCancelTarget(decisionTarget);
     } catch (e: any) {
       toast.error('Falha ao cancelar: ' + (e?.message || e));
     } finally {
       setCancelling(false);
     }
+  }
+
+  async function manterComoPreVenda() {
+    if (!postCancelTarget) return;
+    try {
+      await supabase
+        .from('pdv_sales')
+        .update({ fiscal_mode: 'nao_fiscal' } as any)
+        .eq('id', postCancelTarget.id);
+      toast.success('Venda mantida como pré-venda.');
+    } catch (e: any) {
+      toast.error('Falha ao atualizar venda: ' + (e?.message || e));
+    } finally {
+      setPostCancelTarget(null);
+      await load();
+    }
+  }
+
+  function abrirCancelarVendaDoPos() {
+    if (!postCancelTarget) return;
+    setCancelSaleTarget({
+      id: postCancelTarget.id,
+      final_total: postCancelTarget.final_total,
+      notes: postCancelTarget.notes,
+      created_at: postCancelTarget.created_at,
+    });
+    setPostCancelTarget(null);
+  }
+
+  function abrirCancelarPreVenda(sale: SaleRow) {
+    if ((sale.notes || '').includes('[CANCELADA]')) {
+      toast.info('Esta venda já está cancelada.');
+      return;
+    }
+    setCancelSaleTarget({
+      id: sale.id,
+      final_total: sale.final_total,
+      notes: sale.notes,
+      created_at: sale.created_at,
+    });
   }
 
   async function load() {
@@ -759,6 +836,18 @@ export default function FrenteCaixaLista() {
                                 )}
                               </>
                             )}
+                            {/* Cancelar pré-venda: aparece quando não há NFC-e válida e a venda ainda está ativa */}
+                            {(!hasNfce || r.nfce?.status === 'cancelada') && !(r.notes || '').includes('[CANCELADA]') && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => abrirCancelarPreVenda(r)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Ban className="h-4 w-4 mr-2" /> Cancelar pré-venda
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -871,6 +960,39 @@ export default function FrenteCaixaLista() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Pós-cancelamento NFC-e: o que fazer com a venda? */}
+        <AlertDialog open={!!postCancelTarget} onOpenChange={(o) => { if (!o) setPostCancelTarget(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>NFC-e cancelada. E a venda?</AlertDialogTitle>
+              <AlertDialogDescription>
+                A NFC-e foi cancelada na SEFAZ{postCancelTarget && parseTefDataFromNotes(postCancelTarget.notes)?.type === 'pinpad' ? ' e o pagamento TEF foi estornado automaticamente' : ''}.
+                {' '}Você quer cancelar a venda completamente (reverter caixa e estoque) ou mantê-la registrada como pré-venda?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2">
+              <Button variant="outline" onClick={manterComoPreVenda}>
+                Manter como pré-venda
+              </Button>
+              <Button variant="destructive" onClick={abrirCancelarVendaDoPos}>
+                <Ban className="h-4 w-4 mr-1" /> Cancelar venda também
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Diálogo de cancelamento de venda (reutilizado do PDV V2) */}
+        <PDVV2CancelSaleDialog
+          open={!!cancelSaleTarget}
+          onOpenChange={(v) => { if (!v) setCancelSaleTarget(null); }}
+          sale={cancelSaleTarget}
+          companyId={company?.id}
+          registerId={null}
+          userId={user?.id || null}
+          userName={profile?.full_name || user?.email || null}
+          onConfirmed={() => { setCancelSaleTarget(null); load(); }}
+        />
       </div>
     </PDVV2Layout>
   );

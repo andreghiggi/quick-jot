@@ -54,11 +54,11 @@ interface SaleData {
    * Tipo fiscal da venda:
    *  - 'fiscal'    → venda com NFC-e emitida (operador escolheu "Venda")
    *  - 'nao_fiscal'→ pré-venda (sem NFC-e)
-   * Origem: `pdv_sales.fiscal_mode`. Para pedidos do cardápio entregues,
-   * busca a pdv_sale vinculada (order_id) e usa o fiscal_mode dela;
-   * pedidos sem pdv_sale são considerados pré-venda.
+   *  - 'nfce_cancelled' → NFC-e foi cancelada na SEFAZ mas a venda continua ativa como pré-venda
+   *  - 'cancelled' → venda cancelada (notes contém [CANCELADA])
+   * Origem: `pdv_sales.fiscal_mode` + `nfce_records.status` + `notes`.
    */
-  fiscal: 'fiscal' | 'nao_fiscal';
+  fiscal: 'fiscal' | 'nao_fiscal' | 'nfce_cancelled' | 'cancelled';
 }
 
 function getPeriodDates(period: PeriodType, customStart?: Date, customEnd?: Date) {
@@ -138,8 +138,30 @@ export default function SalesReport() {
         origin: OriginKey;
         table_number?: string | null;
         short_code?: string | null;
-        fiscal: 'fiscal' | 'nao_fiscal';
+        fiscal: 'fiscal' | 'nao_fiscal' | 'nfce_cancelled' | 'cancelled';
       }[] = [];
+
+      // Busca status de NFC-e para detectar canceladas
+      const pdvIdsRaw = (pdvSales || []).map((s: any) => s.id);
+      const nfceStatusMap: Record<string, string> = {};
+      if (pdvIdsRaw.length > 0) {
+        const { data: nfces } = await supabase
+          .from('nfce_records')
+          .select('sale_id, status')
+          .eq('company_id', company.id)
+          .in('sale_id', pdvIdsRaw);
+        (nfces || []).forEach((n: any) => {
+          if (n.sale_id) nfceStatusMap[n.sale_id] = n.status;
+        });
+      }
+
+      const classifyFiscal = (s: any): 'fiscal' | 'nao_fiscal' | 'nfce_cancelled' | 'cancelled' => {
+        if (String(s.notes || '').includes('[CANCELADA]')) return 'cancelled';
+        const nfceStatus = nfceStatusMap[s.id];
+        if (nfceStatus === 'autorizada' || s.fiscal_mode === 'fiscal') return 'fiscal';
+        if (nfceStatus === 'cancelada') return 'nfce_cancelled';
+        return 'nao_fiscal';
+      };
 
       (pdvSales || []).forEach((s: any) => {
         const customerName = String(s.customer_name || '');
@@ -156,7 +178,7 @@ export default function SalesReport() {
           origin: isComanda ? (customerName.includes('(QR)') ? 'mesa_qr' : 'mesa') : 'balcao',
           table_number: tableMatch?.[1] ?? null,
           short_code: tabMatch?.[1] ? `Comanda ${tabMatch[1]}` : null,
-          fiscal: s.fiscal_mode === 'fiscal' ? 'fiscal' : 'nao_fiscal',
+          fiscal: classifyFiscal(s),
         });
       });
 
@@ -289,8 +311,10 @@ export default function SalesReport() {
       );
     }
 
-    const totalSales = filteredSales.length;
-    const totalRevenue = filteredSales.reduce((sum, sale) => {
+    // Excluir vendas canceladas dos totais principais.
+    const activeSales = filteredSales.filter((s) => s.fiscal !== 'cancelled');
+    const totalSales = activeSales.length;
+    const totalRevenue = activeSales.reduce((sum, sale) => {
       if (productFilter === 'all') {
         return sum + sale.final_total;
       }
@@ -321,14 +345,24 @@ export default function SalesReport() {
 
     const totalProducts = productsSold.reduce((sum, p) => sum + p.quantity, 0);
 
-    // Quebra fiscal: NFC-e × Pré-venda (com base no fiscal_mode da venda).
+    // Quebra fiscal: NFC-e × NFC-e cancelada × Pré-venda × Cancelada.
+    // Vendas canceladas ficam fora dos totais "Total de Vendas" / "Total Faturado"
+    // — só aparecem na quebra fiscal e na listagem detalhada.
     const fiscalCount = filteredSales.filter((s) => s.fiscal === 'fiscal').length;
-    const preSaleCount = filteredSales.length - fiscalCount;
     const fiscalRevenue = filteredSales
       .filter((s) => s.fiscal === 'fiscal')
       .reduce((sum, s) => sum + s.final_total, 0);
+    const nfceCancelledCount = filteredSales.filter((s) => s.fiscal === 'nfce_cancelled').length;
+    const nfceCancelledRevenue = filteredSales
+      .filter((s) => s.fiscal === 'nfce_cancelled')
+      .reduce((sum, s) => sum + s.final_total, 0);
+    const preSaleCount = filteredSales.filter((s) => s.fiscal === 'nao_fiscal').length;
     const preSaleRevenue = filteredSales
-      .filter((s) => s.fiscal !== 'fiscal')
+      .filter((s) => s.fiscal === 'nao_fiscal')
+      .reduce((sum, s) => sum + s.final_total, 0);
+    const cancelledCount = filteredSales.filter((s) => s.fiscal === 'cancelled').length;
+    const cancelledRevenue = filteredSales
+      .filter((s) => s.fiscal === 'cancelled')
       .reduce((sum, s) => sum + s.final_total, 0);
 
     return {
@@ -337,9 +371,13 @@ export default function SalesReport() {
       productsSold,
       totalProducts,
       fiscalCount,
-      preSaleCount,
       fiscalRevenue,
+      nfceCancelledCount,
+      nfceCancelledRevenue,
+      preSaleCount,
       preSaleRevenue,
+      cancelledCount,
+      cancelledRevenue,
     };
   }, [salesData, productFilter, selectedOrigins]);
 
@@ -552,8 +590,8 @@ export default function SalesReport() {
               </Card>
             </div>
 
-            {/* Quebra fiscal: NFC-e × Pré-venda */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Quebra fiscal: NFC-e × NFC-e cancelada × Pré-venda × Cancelada */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -576,6 +614,24 @@ export default function SalesReport() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
+                      <p className="text-sm text-muted-foreground">NFC-e canceladas</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {reportData.nfceCancelledCount}
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          · R$ {reportData.nfceCancelledRevenue.toFixed(2).replace('.', ',')}
+                        </span>
+                      </p>
+                    </div>
+                    <Badge className="bg-amber-100 text-amber-700 border-transparent dark:bg-amber-500/15 dark:text-amber-300">
+                      NFC-e cancelada
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
                       <p className="text-sm text-muted-foreground">Pré-vendas (sem NFC-e)</p>
                       <p className="text-2xl font-bold text-foreground">
                         {reportData.preSaleCount}
@@ -584,8 +640,27 @@ export default function SalesReport() {
                         </span>
                       </p>
                     </div>
-                    <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                    <Badge variant="outline" className="border-blue-300 text-blue-700 dark:border-blue-500/40 dark:text-blue-300">
                       Pré-venda
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Canceladas</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {reportData.cancelledCount}
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          · R$ {reportData.cancelledRevenue.toFixed(2).replace('.', ',')}
+                        </span>
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-1">(fora do faturamento)</p>
+                    </div>
+                    <Badge className="bg-destructive/15 text-destructive border-transparent">
+                      Cancelada
                     </Badge>
                   </div>
                 </CardContent>
@@ -682,13 +757,24 @@ export default function SalesReport() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              {sale.fiscal === 'fiscal' ? (
+                              {sale.fiscal === 'fiscal' && (
                                 <Badge className="bg-emerald-100 text-emerald-700 border-transparent dark:bg-emerald-500/15 dark:text-emerald-300">
                                   NFC-e
                                 </Badge>
-                              ) : (
-                                <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                              )}
+                              {sale.fiscal === 'nfce_cancelled' && (
+                                <Badge className="bg-amber-100 text-amber-700 border-transparent dark:bg-amber-500/15 dark:text-amber-300">
+                                  NFC-e cancelada
+                                </Badge>
+                              )}
+                              {sale.fiscal === 'nao_fiscal' && (
+                                <Badge variant="outline" className="border-blue-300 text-blue-700 dark:border-blue-500/40 dark:text-blue-300">
                                   Pré-venda
+                                </Badge>
+                              )}
+                              {sale.fiscal === 'cancelled' && (
+                                <Badge className="bg-destructive/15 text-destructive border-transparent">
+                                  Cancelada
                                 </Badge>
                               )}
                             </TableCell>
