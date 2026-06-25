@@ -39,6 +39,11 @@ const AVAILABLE_MODULES = [
     description: 'Configuração de regras tributárias (Simples Nacional) para emissão de NFC-e'
   },
   {
+    name: 'nfe',
+    label: 'Fiscal - NF-e (modelo 55)',
+    description: 'Habilita emissão de NF-e modelo 55 (avulsa e a partir de vendas). Módulo independente do NFC-e — usa o mesmo token Fiscal Flow, mas com série/numeração/monitor próprios.'
+  },
+  {
     name: 'sales_campaigns',
     label: 'Campanhas de Vendas',
     description: 'Envio em massa de mensagens promocionais para a base de clientes via WhatsApp'
