@@ -112,6 +112,9 @@ export function AppSidebar() {
     ...(mercadoEnabled
       ? [{ title: 'Compras', icon: ShoppingCart, href: '/compras' }]
       : []),
+    ...(isModuleEnabled('nfe')
+      ? [{ title: 'NF-e', icon: FileText, href: '/nfe' }]
+      : []),
   ];
 
   // Cadastros - bloco Produtos
