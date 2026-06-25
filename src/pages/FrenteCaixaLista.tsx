@@ -576,7 +576,7 @@ export default function FrenteCaixaLista() {
           </div>
           <div className="text-right ml-auto">
             <p className="text-xs text-muted-foreground">
-              {totals.count} venda(s)
+              {totals.count} venda(s){marked.size > 0 && ` · ${marked.size} marcada(s)`}
             </p>
             <p className="text-lg font-bold tabular-nums text-emerald-600">{brl(totals.sum)}</p>
           </div>
@@ -833,6 +833,44 @@ export default function FrenteCaixaLista() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Cancelar NFC-e */}
+        <AlertDialog open={!!cancelTarget} onOpenChange={(o) => { if (!o) { setCancelTarget(null); setCancelReason(''); } }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancelar NFC-e</AlertDialogTitle>
+              <AlertDialogDescription>
+                Informe a justificativa do cancelamento junto à SEFAZ. Mínimo de 15 caracteres.
+                Esta operação só é permitida até 30 minutos após a autorização.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-2">
+              <Textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Ex.: Venda cancelada a pedido do cliente"
+                rows={3}
+                disabled={cancelling}
+              />
+              <p className="text-[11px] text-muted-foreground text-right">
+                {cancelReason.trim().length}/15
+              </p>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={cancelling}>Voltar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); confirmCancelNfce(); }}
+                disabled={cancelling || cancelReason.trim().length < 15}
+              >
+                {cancelling ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Cancelando...</>
+                ) : (
+                  'Confirmar cancelamento'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </PDVV2Layout>
   );
