@@ -153,7 +153,7 @@ export function AppSidebar() {
   // Itens top-level: Pedidos, Comandas, PDV legado (fora de Movimentações)
   const pdvMenuItems: { title: string; icon: any; href: string }[] = [
     ...(mercadoOnly ? [] : [{ title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' }]),
-    ...(pdvV2Enabled && !mercadoOnly
+    ...(pdvV2Enabled && !mercadoOnly && isModuleEnabled('mesas')
       ? [{ title: 'Comandas', icon: ClipboardEdit, href: '/pdv-v2/comandas-historico' }]
       : []),
     ...(isModuleEnabled('pdv') && !pdvV2Enabled && !mercadoOnly
