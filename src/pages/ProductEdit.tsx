@@ -738,14 +738,14 @@ export default function ProductEdit() {
             <Field label="Custo (R$)">
               <CurrencyInput
                 value={costPrice}
-                onValueChange={(_, text) => setCostPrice(text)}
+                onValueChange={(n, text) => setCostPrice(text === '' ? '' : String(n))}
                 placeholder="0,00"
               />
             </Field>
             <Field label="Preço de venda (R$)" required>
               <CurrencyInput
                 value={price}
-                onValueChange={(_, text) => setPrice(text)}
+                onValueChange={(n, text) => setPrice(text === '' ? '' : String(n))}
                 placeholder="0,00"
               />
             </Field>
@@ -999,7 +999,7 @@ export default function ProductEdit() {
                 <Field label="Preço de atacado (R$)">
                   <CurrencyInput
                     value={wholesalePrice}
-                    onValueChange={(_, text) => setWholesalePrice(text)}
+                    onValueChange={(n, text) => setWholesalePrice(text === '' ? '' : String(n))}
                     placeholder="0,00"
                   />
                 </Field>
