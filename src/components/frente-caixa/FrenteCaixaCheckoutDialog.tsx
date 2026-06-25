@@ -96,6 +96,11 @@ export function FrenteCaixaCheckoutDialog({
   const [showAdjust, setShowAdjust] = useState(false);
   const [lines, setLines] = useState<Record<string, LineState>>({});
 
+  // Por linha de TEF: modalidade + parcelas (default crédito à vista)
+  const [tefMod, setTefMod] = useState<
+    Record<string, { modality: 'avista' | 'debit' | 'parcelado'; installments: number }>
+  >({});
+
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerDocument, setCustomerDocument] = useState('');
@@ -132,6 +137,7 @@ export function FrenteCaixaCheckoutDialog({
       setLines({});
       setDiscountText('');
       setSurchargeText('');
+      setTefMod({});
       setShowAdjust(false);
       setCustomerName('');
       setCustomerPhone('');
