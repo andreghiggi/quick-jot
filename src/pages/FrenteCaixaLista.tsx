@@ -606,6 +606,12 @@ export default function FrenteCaixaLista() {
                 return (
                   <li key={r.id} className="px-4 py-3 hover:bg-muted/40 transition-colors">
                     <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={marked.has(r.id)}
+                        onCheckedChange={() => toggleMark(r.id)}
+                        className="mt-3"
+                        aria-label="Marcar venda"
+                      />
                       <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
                         <User className="h-5 w-5 text-muted-foreground" />
                       </div>
@@ -684,36 +690,77 @@ export default function FrenteCaixaLista() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {canEmit && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-primary"
-                            onClick={() => emitNfceRetroativa(r)}
-                            disabled={emittingId === r.id}
-                            title="Emitir NFC-e desta venda"
-                          >
-                            {emittingId === r.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <FileText className="h-4 w-4" />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              title="Mais ações"
+                              disabled={actionLoadingId === r.id || emittingId === r.id}
+                            >
+                              {actionLoadingId === r.id || emittingId === r.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <MoreVertical className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel className="text-xs">Venda</DropdownMenuLabel>
+                            {canEmit && (
+                              <DropdownMenuItem onClick={() => emitNfceRetroativa(r)}>
+                                <FileText className="h-4 w-4 mr-2" /> Emitir NFC-e
+                              </DropdownMenuItem>
                             )}
-                          </Button>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => reprintDanfe(r)}
-                          disabled={r.nfce?.status !== 'autorizada'}
-                          title={
-                            r.nfce?.status === 'autorizada'
-                              ? 'Reimprimir DANFE'
-                              : 'Sem NFC-e autorizada para reimprimir'
-                          }
-                        >
-                          <Printer className="h-4 w-4" />
-                        </Button>
+                            {hasNfce && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => consultarStatus(r)}
+                                  disabled={!r.nfce?.id}
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-2" /> Consultar status
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => copyChaveAcesso(r)}
+                                  disabled={!r.nfce?.chave_acesso}
+                                >
+                                  <Copy className="h-4 w-4 mr-2" /> Copiar chave de acesso
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => reprintDanfe(r)}
+                                  disabled={r.nfce?.status !== 'autorizada'}
+                                >
+                                  <Printer className="h-4 w-4 mr-2" /> Visualizar DANFCE
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => visualizarXml(r)}
+                                  disabled={r.nfce?.status !== 'autorizada'}
+                                >
+                                  <Code2 className="h-4 w-4 mr-2" /> Visualizar XML
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => salvarDocumento(r)}
+                                  disabled={r.nfce?.status !== 'autorizada'}
+                                >
+                                  <Download className="h-4 w-4 mr-2" /> Salvar documento
+                                </DropdownMenuItem>
+                                {r.nfce?.status === 'autorizada' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => openCancelDialog(r)}
+                                      className="text-destructive focus:text-destructive"
+                                    >
+                                      <Ban className="h-4 w-4 mr-2" /> Cancelar NFC-e
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </li>
