@@ -1,35 +1,62 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-title Comanda Tech - Iniciar Impressao Alternativo CMD v1.3
+set "LAUNCHER_VERSION=v1.3-cmd"
+title Comanda Tech - Impressao Automatica (.cmd) %LAUNCHER_VERSION%
 color 0A
 
 cd /d "%~dp0"
 
-echo ==========================================================
-echo   Comanda Tech - Iniciar Impressao Alternativo (.cmd)
-echo   Versao: v1.3
-echo ==========================================================
-echo  Use este arquivo quando o Windows 11 nao reconhecer .bat.
-echo  Ele executa o inicializador principal usando cmd.exe diretamente.
-echo ==========================================================
-echo.
+REM Le qual Python o instalador detectou
+set "PY="
+if exist "%~dp0python_detectado.txt" (
+    set /p PY=<"%~dp0python_detectado.txt"
+)
 
-if not exist "%~dp0iniciar_impressao.bat" (
-    echo [ERRO] iniciar_impressao.bat nao encontrado nesta pasta.
-    echo Baixe a pasta scripts completa novamente.
+REM Fallback: detecta de novo se o arquivo nao existir
+if not defined PY (
+    where py >nul 2>nul && set "PY=py -3"
+    if not defined PY ( where python >nul 2>nul && set "PY=python" )
+    if not defined PY ( where python3 >nul 2>nul && set "PY=python3" )
+)
+
+if not defined PY (
+    echo [ERRO] Python nao encontrado.
+    echo Rode primeiro o arquivo  instalar_impressao.bat
     pause
     exit /b 1
 )
 
-cmd.exe /d /c ""%~dp0iniciar_impressao.bat""
-set "RC=%ERRORLEVEL%"
+echo ==========================================================
+echo   Comanda Tech - Impressao Automatica em execucao
+echo ==========================================================
+echo  Versao do inicializador: %LAUNCHER_VERSION%
+echo  Python: %PY%
+echo  Mantenha esta janela ABERTA enquanto a loja estiver
+echo  funcionando. Para parar, feche esta janela.
+echo ==========================================================
+echo.
 
-if not "%RC%"=="0" (
+if exist "%~dp0verificar_pywin32.py" (
+    %PY% "%~dp0verificar_pywin32.py" >nul 2>nul
+) else (
+    %PY% -c "import requests, win32print" >nul 2>nul
+)
+if errorlevel 1 (
+    echo [AVISO] Dependencias da impressao nao estao prontas.
+    echo Rodando instalador automaticamente antes de iniciar...
     echo.
-    echo [ERRO] A impressao foi encerrada com falha. Codigo: %RC%
-    echo Veja os arquivos auto_printer.log e instalar_impressao.log nesta pasta.
-    pause
+    cmd.exe /d /c ""%~dp0instalar_impressao.cmd""
+    if errorlevel 1 (
+        echo.
+        echo [ERRO] Instalacao automatica falhou.
+        echo Abra o arquivo instalar_impressao.log e envie o conteudo para suporte.
+        pause
+        exit /b 1
+    )
 )
 
-exit /b %RC%
+%PY% "%~dp0auto_printer.py"
+echo.
+echo [Servico encerrado] - pressione qualquer tecla para fechar.
+pause >nul
