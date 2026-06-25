@@ -21,6 +21,10 @@ import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
 import { ButtonColorPicker } from '@/components/settings/ButtonColorPicker';
 import autoPrinterTemplate from '../../scripts/auto_printer.py?raw';
+import instalarImpressaoCmd from '../../scripts/instalar_impressao.cmd?raw';
+import iniciarImpressaoCmd from '../../scripts/iniciar_impressao.cmd?raw';
+import verificarPywin32Py from '../../scripts/verificar_pywin32.py?raw';
+import autoPrinterWin11Py from '../../scripts/auto_printer.py?raw';
 
 const escapePythonString = (value: string) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
