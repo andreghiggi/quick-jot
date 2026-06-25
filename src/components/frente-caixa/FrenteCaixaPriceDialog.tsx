@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput, parseDecimalLivre } from '@/components/ui/currency-input';
 import { Button } from '@/components/ui/button';
 import { brl as formatPrice } from '@/components/pdv-v2/_format';
 
@@ -45,7 +46,7 @@ export function FrenteCaixaPriceDialog({
   }, [open]);
 
   function parseValue(): number {
-    const n = Number(raw.replace(/\./g, '').replace(',', '.'));
+    const n = parseDecimalLivre(raw);
     return isFinite(n) && n >= 0 ? n : 0;
   }
 
@@ -101,13 +102,13 @@ export function FrenteCaixaPriceDialog({
 
           <div className="space-y-1 pt-2">
             <div className="text-xs text-muted-foreground">{label}</div>
-            <Input
+            <CurrencyInput
               autoFocus
               value={raw}
-              onChange={(e) => setRaw(e.target.value)}
+              onValueChange={(_, text) => setRaw(text)}
+              formatEmptyAsZero
               onFocus={(e) => e.currentTarget.select()}
               className="h-12 text-lg text-right tabular-nums"
-              inputMode="decimal"
             />
           </div>
         </div>
