@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-set "INSTALLER_VERSION=v1.3"
+set "INSTALLER_VERSION=v1.4"
 title Comanda Tech - Instalacao da Impressao Automatica %INSTALLER_VERSION%
 color 0B
 
