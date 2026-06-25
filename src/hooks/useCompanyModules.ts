@@ -17,6 +17,15 @@ interface UseCompanyModulesOptions {
   companyId?: string;
 }
 
+const COMPANY_MODULES_CHANGED_EVENT = 'company-modules-changed';
+
+function notifyCompanyModulesChanged(companyId: string) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent(COMPANY_MODULES_CHANGED_EVENT, { detail: { companyId } })
+  );
+}
+
 export function useCompanyModules(options: UseCompanyModulesOptions = {}) {
   const { companyId } = options;
   const [modules, setModules] = useState<CompanyModule[]>([]);
@@ -28,6 +37,20 @@ export function useCompanyModules(options: UseCompanyModulesOptions = {}) {
     } else {
       setLoading(false);
     }
+  }, [companyId]);
+
+  useEffect(() => {
+    if (!companyId || typeof window === 'undefined') return;
+
+    const handleModulesChanged = (event: Event) => {
+      const changedCompanyId = (event as CustomEvent<{ companyId?: string }>).detail?.companyId;
+      if (changedCompanyId === companyId) {
+        fetchModules();
+      }
+    };
+
+    window.addEventListener(COMPANY_MODULES_CHANGED_EVENT, handleModulesChanged);
+    return () => window.removeEventListener(COMPANY_MODULES_CHANGED_EVENT, handleModulesChanged);
   }, [companyId]);
 
   async function fetchModules() {
@@ -75,6 +98,7 @@ export function useCompanyModules(options: UseCompanyModulesOptions = {}) {
       }
 
       await fetchModules();
+      notifyCompanyModulesChanged(companyId);
       // Invalida o cache do redirect/guard de PDV V2 sempre que algum dos
       // dois PDVs muda (o trigger no banco também desativa o "outro").
       if (moduleName === 'pdv_v1' || moduleName === 'pdv_v2') {
