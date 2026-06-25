@@ -1508,11 +1508,26 @@ pause
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
                   <div>
-                    <h4 className="font-medium">Windows 11 — Correção pywin32 (v1.3 / auto_printer v8.41)</h4>
+                    <h4 className="font-medium">Windows 11 — Correção pywin32 (v1.4 / auto_printer v8.41)</h4>
                     <p className="text-xs text-muted-foreground mt-1">
                       Use estes arquivos <strong>apenas se o Windows 11 não reconhecer o .bat acima</strong> ou
                       exibir o erro <code className="bg-background px-1 rounded">DLL load failed while importing win32print</code>.
                       Não substitui os arquivos acima — é um pacote alternativo.
+                    </p>
+                    <p className="text-xs text-destructive mt-2">
+                      ⚠️ Requer <strong>Python 3.12 ou 3.13</strong>. O <strong>Python 3.14</strong> ainda
+                      não é suportado pela biblioteca de impressão (pywin32) — se a máquina tiver 3.14,
+                      desinstale e baixe o 3.12 em
+                      {' '}
+                      <a
+                        href="https://www.python.org/downloads/release/python-3127/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline"
+                      >
+                        python.org/3.12.7
+                      </a>
+                      .
                     </p>
                   </div>
                 </div>

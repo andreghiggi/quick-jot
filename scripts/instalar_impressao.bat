@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-set "INSTALLER_VERSION=v1.3"
+set "INSTALLER_VERSION=v1.4"
 title Comanda Tech - Instalacao da Impressao Automatica %INSTALLER_VERSION%
 color 0B
 
@@ -115,6 +115,44 @@ echo [OK] Python encontrado: !PY!  (!PYPATH!)
 echo [OK] Python: !PY! em !PYPATH! >> "%LOG%"
 !PY! --version
 !PY! --version >> "%LOG%" 2>&1
+echo.
+
+REM ==========================================================
+REM  ETAPA 2.5 - Bloqueia Python sem suporte do pywin32
+REM  pywin32 hoje so tem wheel ate Python 3.13.
+REM  Python 3.14+ ainda nao e suportado.
+REM ==========================================================
+set "PYMAJOR=0"
+set "PYMINOR=0"
+for /f "tokens=1,2 delims=." %%a in ('!PY! -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2^>nul') do (
+    set "PYMAJOR=%%a"
+    set "PYMINOR=%%b"
+)
+echo [OK] Versao detectada: !PYMAJOR!.!PYMINOR! >> "%LOG%"
+if !PYMAJOR! GEQ 3 if !PYMINOR! GEQ 14 (
+    echo.
+    echo ==========================================================
+    echo [ERRO] Python !PYMAJOR!.!PYMINOR! nao e compativel.
+    echo ==========================================================
+    echo  A biblioteca pywin32 ^(usada para imprimir^) ainda NAO
+    echo  tem versao para Python 3.14 ou superior.
+    echo.
+    echo  Use Python 3.12 ^(recomendado^) ou 3.13.
+    echo.
+    echo  ====== O QUE FAZER ======
+    echo  1. Configuracoes ^> Apps ^> Apps Instalados
+    echo     Desinstale TODAS as versoes "Python 3.14" e
+    echo     "Python Launcher" relacionadas.
+    echo  2. Acesse:  https://www.python.org/downloads/release/python-3127/
+    echo  3. Baixe "Windows installer ^(64-bit^)" do Python 3.12.7.
+    echo  4. Marque [x] Add python.exe to PATH  e  [x] py launcher
+    echo  5. Clique em Install Now.
+    echo  6. Rode este instalador novamente.
+    echo ==========================================================
+    echo [ERRO] Python !PYMAJOR!.!PYMINOR! sem suporte do pywin32 >> "%LOG%"
+    pause
+    exit /b 1
+)
 echo.
 
 REM ==========================================================
