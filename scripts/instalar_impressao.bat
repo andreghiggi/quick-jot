@@ -1,17 +1,21 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-title Comanda Tech - Instalacao da Impressao Automatica
+set "INSTALLER_VERSION=v1.2"
+title Comanda Tech - Instalacao da Impressao Automatica %INSTALLER_VERSION%
 color 0B
+
+cd /d "%~dp0"
 
 set "LOG=%~dp0instalar_impressao.log"
 echo ============================================== > "%LOG%"
-echo  Comanda Tech - Log de instalacao >> "%LOG%"
+echo  Comanda Tech - Log de instalacao %INSTALLER_VERSION% >> "%LOG%"
 echo  Data: %DATE% %TIME% >> "%LOG%"
 echo ============================================== >> "%LOG%"
 
 echo ==========================================================
 echo   Comanda Tech - Instalacao da Impressao Automatica
+echo   Versao do instalador: %INSTALLER_VERSION%
 echo ==========================================================
 echo  (log detalhado sera salvo em instalar_impressao.log)
 echo.
@@ -168,8 +172,13 @@ REM ==========================================================
 REM  ETAPA 6 - Pos-instalacao do pywin32 (registra DLLs)
 REM ==========================================================
 echo [5/6] Registrando DLLs do pywin32 (necessario para impressao)...
-!PY! Scripts\pywin32_postinstall.py -install >> "%LOG%" 2>&1
+set "POSTINSTALL="
+for /f "delims=" %%i in ('!PY! -c "import os, sysconfig; print(os.path.join(sysconfig.get_path('scripts'), 'pywin32_postinstall.py'))" 2^>nul') do set "POSTINSTALL=%%i"
+if defined POSTINSTALL if exist "!POSTINSTALL!" (
+    !PY! "!POSTINSTALL!" -install >> "%LOG%" 2>&1
+)
 if errorlevel 1 (
+    echo [AVISO] Registro via script falhou. Tentando registro via modulo... >> "%LOG%"
     !PY! -m pywin32_postinstall -install >> "%LOG%" 2>&1
 )
 echo [OK] Pos-instalacao do pywin32 concluida. >> "%LOG%"
