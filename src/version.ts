@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.36.0-beta";
+export const VERSION = "1.37.0-beta";
 export const RELEASE_DATE = "2026-06-25"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: seletor TEF (Crédito/Débito/Parcelado)";
+export const CODENAME = "Frente de Caixa: menu de ações por venda (estilo GWeb)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.37.0-beta",
+    date: "2026-06-25",
+    codename: "Frente de Caixa: menu de ações por venda (estilo GWeb)",
+    changes: [
+      "Lista do PDV: cada venda agora tem um menu de ações (três pontinhos) com Marcar, Emitir NFC-e, Consultar status, Copiar chave de acesso, Visualizar DANFCE, Visualizar XML, Salvar documento e Cancelar NFC-e.",
+      "Checkbox de marcação por linha (preparado para futuras ações em massa).",
+      "Cancelamento de NFC-e com diálogo dedicado pedindo justificativa de no mínimo 15 caracteres.",
+      "Visualizar XML abre o arquivo em nova aba; Salvar documento baixa o XML autorizado.",
+      "Consultar status sincroniza o registro com a SEFAZ via nfce-proxy.",
+      "Nenhuma alteração em nfce-proxy, runTefPayment, pinpadService, tef-webservice, TEF v1.0/v1.1/v1.2-beta, Multi-Pagamento v1.6/v1.7, PDV V2 ou Pedido Express.",
+    ],
+  },
   {
     version: "1.36.0-beta",
     date: "2026-06-25",
