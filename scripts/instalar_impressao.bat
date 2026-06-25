@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-set "INSTALLER_VERSION=v1.2"
+set "INSTALLER_VERSION=v1.3"
 title Comanda Tech - Instalacao da Impressao Automatica %INSTALLER_VERSION%
 color 0B
 
@@ -44,7 +44,7 @@ REM ==========================================================
 REM  ETAPA 2 - Detecta Python
 REM  Prioridade: py launcher (oficial) > python > python3
 REM ==========================================================
-echo [1/6] Procurando Python instalado...
+echo [1/7] Procurando Python instalado...
 set "PY="
 set "PYPATH="
 
@@ -120,7 +120,7 @@ echo.
 REM ==========================================================
 REM  ETAPA 3 - Garante pip
 REM ==========================================================
-echo [2/6] Verificando o pip...
+echo [2/7] Verificando o pip...
 !PY! -m ensurepip --upgrade >> "%LOG%" 2>&1
 !PY! -m pip --version
 if errorlevel 1 (
@@ -137,19 +137,29 @@ echo.
 REM ==========================================================
 REM  ETAPA 4 - Atualiza pip
 REM ==========================================================
-echo [3/6] Atualizando pip...
+echo [3/7] Atualizando pip...
 !PY! -m pip install --upgrade pip >> "%LOG%" 2>&1
 echo.
 
 REM ==========================================================
-REM  ETAPA 5 - Instala requests + pywin32
-REM  Tenta global; se falhar permissao, tenta --user
+REM  ETAPA 5 - Limpa pywin32 antigo/quebrado
+REM  O erro "DLL load failed while importing win32print" normalmente
+REM  vem de instalacao parcial ou DLL de versao antiga no Python.
 REM ==========================================================
-echo [4/6] Instalando dependencias (requests e pywin32)...
-!PY! -m pip install --upgrade requests pywin32 >> "%LOG%" 2>&1
+echo [4/7] Limpando instalacao antiga do pywin32...
+!PY! -m pip uninstall -y pywin32 >> "%LOG%" 2>&1
+!PY! -m pip cache purge >> "%LOG%" 2>&1
+echo.
+
+REM ==========================================================
+REM  ETAPA 6 - Instala requests + pywin32
+REM  Reinstala sem cache; se falhar permissao, tenta --user
+REM ==========================================================
+echo [5/7] Instalando dependencias (requests e pywin32)...
+!PY! -m pip install --upgrade --force-reinstall --no-cache-dir requests pywin32 >> "%LOG%" 2>&1
 if errorlevel 1 (
     echo [AVISO] Instalacao global falhou. Tentando instalar apenas para este usuario...
-    !PY! -m pip install --user --upgrade requests pywin32 >> "%LOG%" 2>&1
+    !PY! -m pip install --user --upgrade --force-reinstall --no-cache-dir requests pywin32 >> "%LOG%" 2>&1
     if errorlevel 1 (
         echo.
         echo [ERRO] Nao foi possivel instalar as dependencias.
@@ -169,15 +179,17 @@ echo [OK] requests e pywin32 instalados. >> "%LOG%"
 echo.
 
 REM ==========================================================
-REM  ETAPA 6 - Pos-instalacao do pywin32 (registra DLLs)
+REM  ETAPA 7 - Pos-instalacao do pywin32 (registra DLLs)
 REM ==========================================================
-echo [5/6] Registrando DLLs do pywin32 (necessario para impressao)...
+echo [6/7] Registrando DLLs do pywin32 (necessario para impressao)...
 set "POSTINSTALL="
+set "POSTINSTALL_RC=0"
 for /f "delims=" %%i in ('!PY! -c "import os, sysconfig; print(os.path.join(sysconfig.get_path('scripts'), 'pywin32_postinstall.py'))" 2^>nul') do set "POSTINSTALL=%%i"
 if defined POSTINSTALL if exist "!POSTINSTALL!" (
     !PY! "!POSTINSTALL!" -install >> "%LOG%" 2>&1
+    set "POSTINSTALL_RC=!ERRORLEVEL!"
 )
-if errorlevel 1 (
+if not "!POSTINSTALL_RC!"=="0" (
     echo [AVISO] Registro via script falhou. Tentando registro via modulo... >> "%LOG%"
     !PY! -m pywin32_postinstall -install >> "%LOG%" 2>&1
 )
@@ -185,15 +197,20 @@ echo [OK] Pos-instalacao do pywin32 concluida. >> "%LOG%"
 echo.
 
 REM ==========================================================
-REM  ETAPA 7 - Teste final: importa win32print
+REM  ETAPA 8 - Teste final: importa win32print e DLLs
 REM ==========================================================
-echo [6/6] Testando importacao do modulo de impressao...
-!PY! -c "import win32print; print('Impressora padrao:', win32print.GetDefaultPrinter())"
+echo [7/7] Testando importacao do modulo de impressao...
+if exist "%~dp0verificar_pywin32.py" (
+    !PY! "%~dp0verificar_pywin32.py"
+) else (
+    !PY! -c "import win32print; print('Impressora padrao:', win32print.GetDefaultPrinter())"
+)
 if errorlevel 1 (
     echo.
     echo [ERRO] O modulo win32print nao funcionou apos a instalacao.
-    echo Causa mais comum: pywin32 nao registrou as DLLs.
-    echo Tente reiniciar o computador e rodar este .bat novamente.
+    echo Causa: DLL do pywin32 nao carregou no Python usado por este launcher.
+    echo Tente reiniciar o computador e rode instalar_impressao.cmd novamente.
+    echo Se persistir, envie o arquivo instalar_impressao.log para suporte.
     echo [ERRO] import win32print falhou no teste final >> "%LOG%"
     pause
     exit /b 1
@@ -212,7 +229,7 @@ echo.
 echo  Para comecar a imprimir pedidos automaticamente,
 echo  de duplo clique em:
 echo.
-echo      iniciar_impressao.bat
+echo      iniciar_impressao.cmd
 echo.
 echo ==========================================================
 echo [OK] Instalacao concluida com sucesso >> "%LOG%"

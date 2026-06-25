@@ -1,13 +1,14 @@
 @echo off
 setlocal EnableExtensions
 chcp 65001 >nul
-title Comanda Tech - Instalador Alternativo CMD
+title Comanda Tech - Instalador Alternativo CMD v1.3
 color 0B
 
 cd /d "%~dp0"
 
 echo ==========================================================
 echo   Comanda Tech - Instalador Alternativo (.cmd)
+echo   Versao: v1.3
 echo ==========================================================
 echo  Use este arquivo quando o Windows 11 nao reconhecer .bat.
 echo  Ele executa o instalador principal usando cmd.exe diretamente.

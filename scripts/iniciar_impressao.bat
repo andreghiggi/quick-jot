@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-set "LAUNCHER_VERSION=v1.2"
+set "LAUNCHER_VERSION=v1.3"
 title Comanda Tech - Impressao Automatica %LAUNCHER_VERSION%
 color 0A
 
@@ -37,12 +37,16 @@ echo  funcionando. Para parar, feche esta janela.
 echo ==========================================================
 echo.
 
-%PY% -c "import requests, win32print" >nul 2>nul
+if exist "%~dp0verificar_pywin32.py" (
+    %PY% "%~dp0verificar_pywin32.py" >nul 2>nul
+) else (
+    %PY% -c "import requests, win32print" >nul 2>nul
+)
 if errorlevel 1 (
     echo [AVISO] Dependencias da impressao nao estao prontas.
     echo Rodando instalador automaticamente antes de iniciar...
     echo.
-    cmd.exe /d /c ""%~dp0instalar_impressao.bat""
+    cmd.exe /d /c ""%~dp0instalar_impressao.cmd""
     if errorlevel 1 (
         echo.
         echo [ERRO] Instalacao automatica falhou.
