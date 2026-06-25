@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -353,12 +354,9 @@ export default function ComboEdit() {
               <Input value={gtin} onChange={(e) => setGtin(e.target.value)} placeholder="7891234567890" />
             </Field>
             <Field label="Preço do combo (R$)" required>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
+              <CurrencyInput
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                onValueChange={(n, text) => setPrice(text === '' ? '' : String(n))}
                 placeholder="0,00"
               />
             </Field>
