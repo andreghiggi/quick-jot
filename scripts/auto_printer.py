@@ -4,11 +4,14 @@ Comanda Tech - Impressão Automática de Pedidos (Windows)
 COMO USAR:
 1. Instale o Python em https://python.org
    (marque "Add python.exe to PATH" na tela inicial do instalador).
-2. Dê duplo clique em  instalar_impressao.bat
+2. Dê duplo clique em  instalar_impressao.cmd
+   (alternativa para Windows 11 que não reconhece arquivos .bat)
+   ou em  instalar_impressao.bat
    (instala automaticamente as dependências requests e pywin32 -
     usa "py -m pip" porque o comando "pip" não existe por padrão
     no Windows 11).
-3. Para começar a imprimir, dê duplo clique em  iniciar_impressao.bat
+3. Para começar a imprimir, dê duplo clique em  iniciar_impressao.cmd
+   ou em  iniciar_impressao.bat
 """
 
 import requests
@@ -37,7 +40,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.39"  # V2: grupos estruturados liberados e rótulo preservado quando não é genérico
+SCRIPT_VERSION = "v8.40"  # Pacote Windows: .cmd alternativo, instalador v1.2 e auto-reparo de dependências
 I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 

@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.38.0-beta";
+export const VERSION = "1.38.1-beta";
 export const RELEASE_DATE = "2026-06-25"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Cancelar NFC-e + venda: estorno TEF automático e badges no relatório";
+export const CODENAME = "Impressão Windows 11: instalador alternativo CMD";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.38.1-beta",
+    date: "2026-06-25",
+    codename: "Impressão Windows 11: instalador alternativo CMD",
+    changes: [
+      "Pacote de impressão local atualizado para Windows 11: novos arquivos instalar_impressao.cmd e iniciar_impressao.cmd para máquinas que não reconhecem .bat ao dar duplo clique.",
+      "Instalador de impressão agora exibe versão v1.2, entra automaticamente na pasta correta e localiza o pywin32_postinstall pelo caminho real do Python detectado.",
+      "Inicializador de impressão agora exibe versão v1.2 e tenta auto-reparar dependências (requests/pywin32) antes de iniciar o auto_printer.py.",
+      "auto_printer.py atualizado para v8.40, documentando o uso preferencial dos arquivos .cmd no Windows 11 problemático.",
+    ],
+  },
   {
     version: "1.38.0-beta",
     date: "2026-06-25",
