@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '25/06/2026',
+    version: '1.35.1-beta',
+    type: 'fix',
+    description: 'Menu lateral: ao ativar/desativar módulos no painel administrativo, a sidebar agora sincroniza imediatamente a lista de módulos da empresa atual. Isso corrige o caso em que o módulo NF-e já estava ativo, mas o grupo Movimentações ainda não aparecia até recarregar ou trocar de contexto.',
+  },
+  {
     date: '15/06/2026',
     version: '1.22.10-beta',
     type: 'fix',
