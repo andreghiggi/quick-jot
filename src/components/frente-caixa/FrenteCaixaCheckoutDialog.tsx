@@ -286,12 +286,19 @@ export function FrenteCaixaCheckoutDialog({
           if (amount <= 0) return null;
           const itg = (m as any).integration_type as string | undefined;
           const isTef = itg === 'tef_pinpad' || itg === 'tef_smartpos';
+          const mod = tefMod[m.id] || { modality: 'avista' as const, installments: 2 };
           return {
             payment_method_id: m.id,
             payment_name: m.name,
             amount,
             integration: isTef ? (itg as 'tef_pinpad' | 'tef_smartpos') : undefined,
-            tef_options: isTef ? { modality: 'avista' as const } : undefined,
+            tef_options: isTef
+              ? {
+                  modality: mod.modality,
+                  installments:
+                    mod.modality === 'parcelado' ? Math.max(2, mod.installments || 2) : undefined,
+                }
+              : undefined,
           } as MultiPaymentInputLine;
         })
         .filter((l): l is MultiPaymentInputLine => l !== null);
