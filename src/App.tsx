@@ -69,6 +69,8 @@ import Compras from "./pages/compras/Compras";
 import ComprasRelatorios from "./pages/compras/ComprasRelatorios";
 import ComprasConfiguracoes from "./pages/compras/ComprasConfiguracoes";
 import NovaCompra from "./pages/compras/NovaCompra";
+import NFeList from "./pages/nfe/NFeList";
+import NFeEmissaoAvulsa from "./pages/nfe/NFeEmissaoAvulsa";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
 import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
@@ -320,6 +322,18 @@ function AppRoutes() {
           <FrenteCaixaGuard>
             <NovaCompra />
           </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
+
+      {/* NF-e (modelo 55) — módulo `nfe`. Isolado do fluxo NFC-e. */}
+      <Route path="/nfe" element={
+        <ProtectedRoute requireCompany>
+          <NFeList />
+        </ProtectedRoute>
+      } />
+      <Route path="/nfe/nova" element={
+        <ProtectedRoute requireCompany>
+          <NFeEmissaoAvulsa />
         </ProtectedRoute>
       } />
 
