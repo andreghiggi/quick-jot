@@ -69,6 +69,8 @@ import Compras from "./pages/compras/Compras";
 import ComprasRelatorios from "./pages/compras/ComprasRelatorios";
 import ComprasConfiguracoes from "./pages/compras/ComprasConfiguracoes";
 import NovaCompra from "./pages/compras/NovaCompra";
+import NFeList from "./pages/nfe/NFeList";
+import NFeEmissaoAvulsa from "./pages/nfe/NFeEmissaoAvulsa";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
 import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
