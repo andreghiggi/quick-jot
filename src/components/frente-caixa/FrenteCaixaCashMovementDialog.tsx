@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput, parseDecimalLivre } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -70,7 +71,7 @@ export function FrenteCaixaCashMovementDialog({
 
   async function handleConfirm() {
     if (savingGuardRef.current) return;
-    const parsed = Number(amount.replace(',', '.'));
+    const parsed = parseDecimalLivre(amount);
     if (!Number.isFinite(parsed) || parsed <= 0) {
       toast.error('Informe um valor maior que zero');
       return;
@@ -118,13 +119,11 @@ export function FrenteCaixaCashMovementDialog({
         <div className="space-y-4 py-2">
           <div className="space-y-2">
             <Label htmlFor="cm-amount">Valor (R$)</Label>
-            <Input
+            <CurrencyInput
               id="cm-amount"
-              type="text"
-              inputMode="decimal"
               placeholder="0,00"
               value={amount}
-              onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ''))}
+              onValueChange={(_, text) => setAmount(text)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();

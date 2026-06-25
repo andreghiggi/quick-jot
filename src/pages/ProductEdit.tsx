@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput, parseDecimalLivre } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -735,22 +736,16 @@ export default function ProductEdit() {
             </Field>
 
             <Field label="Custo (R$)">
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
+              <CurrencyInput
                 value={costPrice}
-                onChange={(e) => setCostPrice(e.target.value)}
+                onValueChange={(n, text) => setCostPrice(text === '' ? '' : String(n))}
                 placeholder="0,00"
               />
             </Field>
             <Field label="Preço de venda (R$)" required>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
+              <CurrencyInput
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                onValueChange={(n, text) => setPrice(text === '' ? '' : String(n))}
                 placeholder="0,00"
               />
             </Field>
@@ -1002,12 +997,9 @@ export default function ProductEdit() {
                   />
                 </Field>
                 <Field label="Preço de atacado (R$)">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  <CurrencyInput
                     value={wholesalePrice}
-                    onChange={(e) => setWholesalePrice(e.target.value)}
+                    onValueChange={(n, text) => setWholesalePrice(text === '' ? '' : String(n))}
                     placeholder="0,00"
                   />
                 </Field>

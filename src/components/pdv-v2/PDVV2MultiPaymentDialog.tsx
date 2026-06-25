@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput, parseDecimalLivre } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Split, Loader2 } from 'lucide-react';
 import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
-import { brl, maskCurrencyInput, parseCurrencyInput } from './_format';
+import { brl } from './_format';
 import type { MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 
 /**
@@ -73,7 +74,10 @@ export function PDVV2MultiPaymentDialog({
   }, [open]);
 
   const sum = useMemo(
-    () => lines.reduce((s, l) => s + parseCurrencyInput(l.amount_text), 0),
+    () => lines.reduce((s, l) => {
+      const n = parseDecimalLivre(l.amount_text);
+      return s + (Number.isFinite(n) ? n : 0);
+    }, 0),
     [lines],
   );
   const remaining = Math.max(0, total - sum);
@@ -84,7 +88,7 @@ export function PDVV2MultiPaymentDialog({
     if (lines.length >= 6) return;
     const first = methods[0]?.id || '';
     // pré-preenche o valor restante para acelerar o lojista
-    const preFill = remaining > 0 ? maskCurrencyInput(remaining.toFixed(2).replace('.', ',')) : '';
+    const preFill = remaining > 0 ? remaining.toFixed(2).replace('.', ',') : '';
     setLines((prev) => [...prev, { uid: genUid(), payment_method_id: first, amount_text: preFill }]);
   }
 
@@ -102,7 +106,8 @@ export function PDVV2MultiPaymentDialog({
       .map((l) => {
         const method = methods.find((m) => m.id === l.payment_method_id);
         if (!method) return null;
-        const amount = parseCurrencyInput(l.amount_text);
+        const parsed = parseDecimalLivre(l.amount_text);
+        const amount = Number.isFinite(parsed) ? parsed : 0;
         if (amount <= 0) return null;
         const integration = (method as any).integration_type as string | undefined;
         const isTef = integration === 'tef_pinpad' || integration === 'tef_smartpos';
@@ -170,12 +175,11 @@ export function PDVV2MultiPaymentDialog({
                 </div>
                 <div className="w-36">
                   <Label className="text-xs text-muted-foreground">Valor</Label>
-                  <Input
-                    inputMode="decimal"
+                  <CurrencyInput
                     placeholder="0,00"
                     value={line.amount_text}
-                    onChange={(e) =>
-                      updateLine(line.uid, { amount_text: maskCurrencyInput(e.target.value) })
+                    onValueChange={(_, text) =>
+                      updateLine(line.uid, { amount_text: text })
                     }
                     disabled={processing}
                   />
