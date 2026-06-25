@@ -15,6 +15,11 @@ import {
   Printer,
   Eye,
   RefreshCw,
+  MoreVertical,
+  Copy,
+  RotateCcw,
+  Code2,
+  Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,12 +37,38 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { supabase } from '@/integrations/supabase/client';
 import { brl } from '@/components/pdv-v2/_format';
-import { printDanfeFromRecord, emitirNFCe, type NFCeItem } from '@/services/nfceService';
+import {
+  printDanfeFromRecord,
+  emitirNFCe,
+  consultarNFCe,
+  cancelarNFCe,
+  type NFCeItem,
+} from '@/services/nfceService';
 import { useProducts } from '@/hooks/useProducts';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
@@ -99,6 +130,170 @@ export default function FrenteCaixaLista() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected] = useState<SaleRow | null>(null);
+  const [marked, setMarked] = useState<Set<string>>(new Set());
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<SaleRow | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+
+  function toggleMark(id: string) {
+    setMarked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function copyChaveAcesso(sale: SaleRow) {
+    const chave = sale.nfce?.chave_acesso;
+    if (!chave) {
+      toast.info('Esta venda não possui chave de acesso.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(chave);
+      toast.success('Chave de acesso copiada.');
+    } catch {
+      toast.error('Não foi possível copiar a chave.');
+    }
+  }
+
+  async function consultarStatus(sale: SaleRow) {
+    if (!company?.id) return;
+    const rec = sale.nfce;
+    if (!rec?.id) {
+      toast.info('Esta venda não possui NFC-e para consultar.');
+      return;
+    }
+    setActionLoadingId(sale.id);
+    try {
+      // Busca nfce_id (id da Fiscal Flow) — o consultarNFCe espera ele
+      const { data: full } = await supabase
+        .from('nfce_records')
+        .select('nfce_id, status')
+        .eq('id', rec.id)
+        .maybeSingle();
+      const nfceId = (full as any)?.nfce_id;
+      if (!nfceId) {
+        toast.error('NFC-e ainda sem identificador da SEFAZ.');
+        return;
+      }
+      await consultarNFCe(company.id, nfceId);
+      toast.success('Status atualizado.');
+      await load();
+    } catch (e: any) {
+      toast.error('Falha ao consultar: ' + (e?.message || e));
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  async function fetchXmlText(sale: SaleRow): Promise<string | null> {
+    const xmlUrl = (sale.nfce as any)?.xml_url;
+    if (!xmlUrl) {
+      // Tenta buscar do banco caso não tenha vindo no select
+      const { data } = await supabase
+        .from('nfce_records')
+        .select('xml_url')
+        .eq('id', sale.nfce!.id)
+        .maybeSingle();
+      if (!data?.xml_url) return null;
+      const res = await fetch(data.xml_url);
+      if (!res.ok) return null;
+      return await res.text();
+    }
+    const res = await fetch(xmlUrl);
+    if (!res.ok) return null;
+    return await res.text();
+  }
+
+  async function visualizarXml(sale: SaleRow) {
+    if (!sale.nfce?.id || sale.nfce.status !== 'autorizada') {
+      toast.info('Sem XML disponível para esta venda.');
+      return;
+    }
+    setActionLoadingId(sale.id);
+    try {
+      const xml = await fetchXmlText(sale);
+      if (!xml) {
+        toast.error('XML não disponível.');
+        return;
+      }
+      const blob = new Blob([xml], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e: any) {
+      toast.error('Falha ao abrir XML: ' + (e?.message || e));
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  async function salvarDocumento(sale: SaleRow) {
+    if (!sale.nfce?.id || sale.nfce.status !== 'autorizada') {
+      toast.info('Sem documento disponível para salvar.');
+      return;
+    }
+    setActionLoadingId(sale.id);
+    try {
+      const xml = await fetchXmlText(sale);
+      if (!xml) {
+        toast.error('XML não disponível.');
+        return;
+      }
+      const blob = new Blob([xml], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `NFCe-${sale.nfce.chave_acesso || sale.nfce.numero || sale.id.slice(0, 8)}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5_000);
+      toast.success('Documento baixado.');
+    } catch (e: any) {
+      toast.error('Falha ao salvar: ' + (e?.message || e));
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  function openCancelDialog(sale: SaleRow) {
+    if (!sale.nfce?.id || sale.nfce.status !== 'autorizada') {
+      toast.info('Apenas NFC-e autorizada pode ser cancelada.');
+      return;
+    }
+    setCancelTarget(sale);
+    setCancelReason('');
+  }
+
+  async function confirmCancelNfce() {
+    if (!company?.id || !cancelTarget?.nfce?.id) return;
+    if (cancelReason.trim().length < 15) {
+      toast.error('Justificativa deve ter pelo menos 15 caracteres.');
+      return;
+    }
+    setCancelling(true);
+    try {
+      const { data: full } = await supabase
+        .from('nfce_records')
+        .select('nfce_id')
+        .eq('id', cancelTarget.nfce.id)
+        .maybeSingle();
+      const nfceId = (full as any)?.nfce_id;
+      if (!nfceId) throw new Error('NFC-e sem identificador da SEFAZ.');
+      await cancelarNFCe(company.id, nfceId, cancelReason.trim());
+      toast.success('Cancelamento solicitado à SEFAZ.');
+      setCancelTarget(null);
+      setCancelReason('');
+      await load();
+    } catch (e: any) {
+      toast.error('Falha ao cancelar: ' + (e?.message || e));
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   async function load() {
     if (!company?.id) return;
