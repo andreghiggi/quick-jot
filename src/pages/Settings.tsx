@@ -1520,12 +1520,12 @@ pause
                       desinstale e baixe o 3.12 em
                       {' '}
                       <a
-                        href="https://www.python.org/downloads/release/python-3127/"
+                        href="https://www.python.org/downloads/release/python-3122/"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline"
                       >
-                        python.org/3.12.7
+                        python.org/3.12.2
                       </a>
                       .
                     </p>
