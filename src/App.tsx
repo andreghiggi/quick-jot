@@ -325,6 +325,18 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      {/* NF-e (modelo 55) — módulo `nfe`. Isolado do fluxo NFC-e. */}
+      <Route path="/nfe" element={
+        <ProtectedRoute requireCompany>
+          <NFeList />
+        </ProtectedRoute>
+      } />
+      <Route path="/nfe/nova" element={
+        <ProtectedRoute requireCompany>
+          <NFeEmissaoAvulsa />
+        </ProtectedRoute>
+      } />
+
       <Route path="/formas-pagamento" element={
         <ProtectedRoute requireCompany>
           <PaymentMethods />
