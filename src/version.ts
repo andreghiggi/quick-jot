@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.37.0-beta";
+export const VERSION = "1.38.0-beta";
 export const RELEASE_DATE = "2026-06-25"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: menu de ações por venda (estilo GWeb)";
+export const CODENAME = "Cancelar NFC-e + venda: estorno TEF automático e badges no relatório";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.38.0-beta",
+    date: "2026-06-25",
+    codename: "Cancelar NFC-e + venda: estorno TEF automático e badges no relatório",
+    changes: [
+      "Cancelar NFC-e na Lista do PDV: se o pagamento foi via TEF (PinPad), o estorno é disparado automaticamente após o cancelamento na SEFAZ.",
+      "Após cancelar a NFC-e, o sistema pergunta: 'Cancelar venda também (reverte caixa e estoque)' ou 'Manter como pré-venda'.",
+      "Novo item no menu de ações: 'Cancelar pré-venda', disponível quando a venda não tem NFC-e válida — também estorna TEF e exige motivo (mínimo 20 caracteres).",
+      "Relatório de Vendas: 4 badges distintos — NFC-e (verde), NFC-e cancelada (âmbar), Pré-venda (azul) e Cancelada (vermelho).",
+      "Vendas canceladas saem dos totais de 'Total de Vendas' e 'Total Faturado', mas continuam visíveis na quebra fiscal e na listagem.",
+    ],
+  },
   {
     version: "1.37.0-beta",
     date: "2026-06-25",
