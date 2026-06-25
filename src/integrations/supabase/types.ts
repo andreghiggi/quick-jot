@@ -1262,6 +1262,144 @@ export type Database = {
           },
         ]
       }
+      nfe_inutilizacoes: {
+        Row: {
+          ambiente: string | null
+          ano: number
+          company_id: string
+          created_at: string
+          created_by: string
+          external_id: string | null
+          id: string
+          justificativa: string
+          motivo_rejeicao: string | null
+          numero_final: number
+          numero_inicial: number
+          protocolo: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          serie: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ambiente?: string | null
+          ano: number
+          company_id: string
+          created_at?: string
+          created_by: string
+          external_id?: string | null
+          id?: string
+          justificativa: string
+          motivo_rejeicao?: string | null
+          numero_final: number
+          numero_inicial: number
+          protocolo?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          serie: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ambiente?: string | null
+          ano?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          external_id?: string | null
+          id?: string
+          justificativa?: string
+          motivo_rejeicao?: string | null
+          numero_final?: number
+          numero_inicial?: number
+          protocolo?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          serie?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      nfe_records: {
+        Row: {
+          ambiente: string | null
+          chave_acesso: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          danfe_url: string | null
+          destinatario: Json | null
+          external_id: string
+          finalidade: number | null
+          id: string
+          motivo_rejeicao: string | null
+          natureza_operacao: string | null
+          nfe_id: string | null
+          numero: string | null
+          protocolo: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          serie: string | null
+          status: string
+          updated_at: string
+          valor_total: number
+          webhook_payload: Json | null
+          xml_url: string | null
+        }
+        Insert: {
+          ambiente?: string | null
+          chave_acesso?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          danfe_url?: string | null
+          destinatario?: Json | null
+          external_id: string
+          finalidade?: number | null
+          id?: string
+          motivo_rejeicao?: string | null
+          natureza_operacao?: string | null
+          nfe_id?: string | null
+          numero?: string | null
+          protocolo?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          serie?: string | null
+          status?: string
+          updated_at?: string
+          valor_total?: number
+          webhook_payload?: Json | null
+          xml_url?: string | null
+        }
+        Update: {
+          ambiente?: string | null
+          chave_acesso?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          danfe_url?: string | null
+          destinatario?: Json | null
+          external_id?: string
+          finalidade?: number | null
+          id?: string
+          motivo_rejeicao?: string | null
+          natureza_operacao?: string | null
+          nfe_id?: string | null
+          numero?: string | null
+          protocolo?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          serie?: string | null
+          status?: string
+          updated_at?: string
+          valor_total?: number
+          webhook_payload?: Json | null
+          xml_url?: string | null
+        }
+        Relationships: []
+      }
       optional_group_categories: {
         Row: {
           category_id: string
@@ -1985,6 +2123,13 @@ export type Database = {
           created_at: string
           default_fiscal_mode: string
           id: string
+          nfe_ambiente: string | null
+          nfe_finalidade: number | null
+          nfe_natureza_operacao: string | null
+          nfe_print_danfe: boolean | null
+          nfe_print_format: string | null
+          nfe_proximo_numero: number | null
+          nfe_serie: string | null
           print_on_finish_mode: string
           print_show_customer: boolean
           print_show_discount: boolean
@@ -2018,6 +2163,13 @@ export type Database = {
           created_at?: string
           default_fiscal_mode?: string
           id?: string
+          nfe_ambiente?: string | null
+          nfe_finalidade?: number | null
+          nfe_natureza_operacao?: string | null
+          nfe_print_danfe?: boolean | null
+          nfe_print_format?: string | null
+          nfe_proximo_numero?: number | null
+          nfe_serie?: string | null
           print_on_finish_mode?: string
           print_show_customer?: boolean
           print_show_discount?: boolean
@@ -2051,6 +2203,13 @@ export type Database = {
           created_at?: string
           default_fiscal_mode?: string
           id?: string
+          nfe_ambiente?: string | null
+          nfe_finalidade?: number | null
+          nfe_natureza_operacao?: string | null
+          nfe_print_danfe?: boolean | null
+          nfe_print_format?: string | null
+          nfe_proximo_numero?: number | null
+          nfe_serie?: string | null
           print_on_finish_mode?: string
           print_show_customer?: boolean
           print_show_discount?: boolean
