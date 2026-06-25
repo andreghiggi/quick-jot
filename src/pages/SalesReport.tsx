@@ -138,8 +138,30 @@ export default function SalesReport() {
         origin: OriginKey;
         table_number?: string | null;
         short_code?: string | null;
-        fiscal: 'fiscal' | 'nao_fiscal';
+        fiscal: 'fiscal' | 'nao_fiscal' | 'nfce_cancelled' | 'cancelled';
       }[] = [];
+
+      // Busca status de NFC-e para detectar canceladas
+      const pdvIdsRaw = (pdvSales || []).map((s: any) => s.id);
+      const nfceStatusMap: Record<string, string> = {};
+      if (pdvIdsRaw.length > 0) {
+        const { data: nfces } = await supabase
+          .from('nfce_records')
+          .select('sale_id, status')
+          .eq('company_id', company.id)
+          .in('sale_id', pdvIdsRaw);
+        (nfces || []).forEach((n: any) => {
+          if (n.sale_id) nfceStatusMap[n.sale_id] = n.status;
+        });
+      }
+
+      const classifyFiscal = (s: any): 'fiscal' | 'nao_fiscal' | 'nfce_cancelled' | 'cancelled' => {
+        if (String(s.notes || '').includes('[CANCELADA]')) return 'cancelled';
+        const nfceStatus = nfceStatusMap[s.id];
+        if (nfceStatus === 'autorizada' || s.fiscal_mode === 'fiscal') return 'fiscal';
+        if (nfceStatus === 'cancelada') return 'nfce_cancelled';
+        return 'nao_fiscal';
+      };
 
       (pdvSales || []).forEach((s: any) => {
         const customerName = String(s.customer_name || '');
@@ -156,7 +178,7 @@ export default function SalesReport() {
           origin: isComanda ? (customerName.includes('(QR)') ? 'mesa_qr' : 'mesa') : 'balcao',
           table_number: tableMatch?.[1] ?? null,
           short_code: tabMatch?.[1] ? `Comanda ${tabMatch[1]}` : null,
-          fiscal: s.fiscal_mode === 'fiscal' ? 'fiscal' : 'nao_fiscal',
+          fiscal: classifyFiscal(s),
         });
       });
 
