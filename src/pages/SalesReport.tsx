@@ -311,8 +311,10 @@ export default function SalesReport() {
       );
     }
 
-    const totalSales = filteredSales.length;
-    const totalRevenue = filteredSales.reduce((sum, sale) => {
+    // Excluir vendas canceladas dos totais principais.
+    const activeSales = filteredSales.filter((s) => s.fiscal !== 'cancelled');
+    const totalSales = activeSales.length;
+    const totalRevenue = activeSales.reduce((sum, sale) => {
       if (productFilter === 'all') {
         return sum + sale.final_total;
       }
