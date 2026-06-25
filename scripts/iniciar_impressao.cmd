@@ -1,13 +1,14 @@
 @echo off
 setlocal EnableExtensions
 chcp 65001 >nul
-title Comanda Tech - Iniciar Impressao Alternativo CMD
+title Comanda Tech - Iniciar Impressao Alternativo CMD v1.3
 color 0A
 
 cd /d "%~dp0"
 
 echo ==========================================================
 echo   Comanda Tech - Iniciar Impressao Alternativo (.cmd)
+echo   Versao: v1.3
 echo ==========================================================
 echo  Use este arquivo quando o Windows 11 nao reconhecer .bat.
 echo  Ele executa o inicializador principal usando cmd.exe diretamente.

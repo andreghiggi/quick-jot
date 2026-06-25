@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.38.1-beta";
+export const VERSION = "1.38.2-beta";
 export const RELEASE_DATE = "2026-06-25"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão Windows 11: instalador alternativo CMD";
+export const CODENAME = "Impressão Windows 11: correção DLL pywin32";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.38.2-beta",
+    date: "2026-06-25",
+    codename: "Impressão Windows 11: correção DLL pywin32",
+    changes: [
+      "Pacote de impressão local atualizado para corrigir o erro 'DLL load failed while importing win32print' no Windows 11: o instalador agora remove pywin32 antigo, limpa cache e reinstala pywin32 sem cache.",
+      "Novo verificador verificar_pywin32.py valida requests, win32print, win32ui, win32gui e carrega automaticamente a pasta pywin32_system32 no caminho de DLLs do processo.",
+      "Inicializador de impressão v1.3 executa o verificador antes de iniciar e dispara o instalador v1.3 automaticamente se detectar dependência quebrada.",
+      "auto_printer.py atualizado para v8.41 com preparação runtime das DLLs do pywin32 antes de imprimir, evitando loop de falha na fila por importação parcial do pywin32.",
+    ],
+  },
   {
     version: "1.38.1-beta",
     date: "2026-06-25",
