@@ -343,14 +343,24 @@ export default function SalesReport() {
 
     const totalProducts = productsSold.reduce((sum, p) => sum + p.quantity, 0);
 
-    // Quebra fiscal: NFC-e × Pré-venda (com base no fiscal_mode da venda).
+    // Quebra fiscal: NFC-e × NFC-e cancelada × Pré-venda × Cancelada.
+    // Vendas canceladas ficam fora dos totais "Total de Vendas" / "Total Faturado"
+    // — só aparecem na quebra fiscal e na listagem detalhada.
     const fiscalCount = filteredSales.filter((s) => s.fiscal === 'fiscal').length;
-    const preSaleCount = filteredSales.length - fiscalCount;
     const fiscalRevenue = filteredSales
       .filter((s) => s.fiscal === 'fiscal')
       .reduce((sum, s) => sum + s.final_total, 0);
+    const nfceCancelledCount = filteredSales.filter((s) => s.fiscal === 'nfce_cancelled').length;
+    const nfceCancelledRevenue = filteredSales
+      .filter((s) => s.fiscal === 'nfce_cancelled')
+      .reduce((sum, s) => sum + s.final_total, 0);
+    const preSaleCount = filteredSales.filter((s) => s.fiscal === 'nao_fiscal').length;
     const preSaleRevenue = filteredSales
-      .filter((s) => s.fiscal !== 'fiscal')
+      .filter((s) => s.fiscal === 'nao_fiscal')
+      .reduce((sum, s) => sum + s.final_total, 0);
+    const cancelledCount = filteredSales.filter((s) => s.fiscal === 'cancelled').length;
+    const cancelledRevenue = filteredSales
+      .filter((s) => s.fiscal === 'cancelled')
       .reduce((sum, s) => sum + s.final_total, 0);
 
     return {
@@ -359,9 +369,13 @@ export default function SalesReport() {
       productsSold,
       totalProducts,
       fiscalCount,
-      preSaleCount,
       fiscalRevenue,
+      nfceCancelledCount,
+      nfceCancelledRevenue,
+      preSaleCount,
       preSaleRevenue,
+      cancelledCount,
+      cancelledRevenue,
     };
   }, [salesData, productFilter, selectedOrigins]);
 
