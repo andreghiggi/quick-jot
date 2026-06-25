@@ -735,22 +735,16 @@ export default function ProductEdit() {
             </Field>
 
             <Field label="Custo (R$)">
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
+              <CurrencyInput
                 value={costPrice}
-                onChange={(e) => setCostPrice(e.target.value)}
+                onValueChange={(_, text) => setCostPrice(text)}
                 placeholder="0,00"
               />
             </Field>
             <Field label="Preço de venda (R$)" required>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
+              <CurrencyInput
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                onValueChange={(_, text) => setPrice(text)}
                 placeholder="0,00"
               />
             </Field>
@@ -1002,12 +996,9 @@ export default function ProductEdit() {
                   />
                 </Field>
                 <Field label="Preço de atacado (R$)">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  <CurrencyInput
                     value={wholesalePrice}
-                    onChange={(e) => setWholesalePrice(e.target.value)}
+                    onValueChange={(_, text) => setWholesalePrice(text)}
                     placeholder="0,00"
                   />
                 </Field>
