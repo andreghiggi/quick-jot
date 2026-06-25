@@ -590,8 +590,8 @@ export default function SalesReport() {
               </Card>
             </div>
 
-            {/* Quebra fiscal: NFC-e × Pré-venda */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Quebra fiscal: NFC-e × NFC-e cancelada × Pré-venda × Cancelada */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -614,6 +614,24 @@ export default function SalesReport() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
+                      <p className="text-sm text-muted-foreground">NFC-e canceladas</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {reportData.nfceCancelledCount}
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          · R$ {reportData.nfceCancelledRevenue.toFixed(2).replace('.', ',')}
+                        </span>
+                      </p>
+                    </div>
+                    <Badge className="bg-amber-100 text-amber-700 border-transparent dark:bg-amber-500/15 dark:text-amber-300">
+                      NFC-e cancelada
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
                       <p className="text-sm text-muted-foreground">Pré-vendas (sem NFC-e)</p>
                       <p className="text-2xl font-bold text-foreground">
                         {reportData.preSaleCount}
@@ -622,8 +640,27 @@ export default function SalesReport() {
                         </span>
                       </p>
                     </div>
-                    <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                    <Badge variant="outline" className="border-blue-300 text-blue-700 dark:border-blue-500/40 dark:text-blue-300">
                       Pré-venda
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Canceladas</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {reportData.cancelledCount}
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          · R$ {reportData.cancelledRevenue.toFixed(2).replace('.', ',')}
+                        </span>
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-1">(fora do faturamento)</p>
+                    </div>
+                    <Badge className="bg-destructive/15 text-destructive border-transparent">
+                      Cancelada
                     </Badge>
                   </div>
                 </CardContent>
@@ -720,13 +757,24 @@ export default function SalesReport() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              {sale.fiscal === 'fiscal' ? (
+                              {sale.fiscal === 'fiscal' && (
                                 <Badge className="bg-emerald-100 text-emerald-700 border-transparent dark:bg-emerald-500/15 dark:text-emerald-300">
                                   NFC-e
                                 </Badge>
-                              ) : (
-                                <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                              )}
+                              {sale.fiscal === 'nfce_cancelled' && (
+                                <Badge className="bg-amber-100 text-amber-700 border-transparent dark:bg-amber-500/15 dark:text-amber-300">
+                                  NFC-e cancelada
+                                </Badge>
+                              )}
+                              {sale.fiscal === 'nao_fiscal' && (
+                                <Badge variant="outline" className="border-blue-300 text-blue-700 dark:border-blue-500/40 dark:text-blue-300">
                                   Pré-venda
+                                </Badge>
+                              )}
+                              {sale.fiscal === 'cancelled' && (
+                                <Badge className="bg-destructive/15 text-destructive border-transparent">
+                                  Cancelada
                                 </Badge>
                               )}
                             </TableCell>
