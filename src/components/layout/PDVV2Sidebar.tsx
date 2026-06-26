@@ -28,6 +28,7 @@ import {
   History,
   ChevronDown,
 } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
 import {
@@ -69,8 +70,18 @@ export function PDVV2Sidebar() {
   const operations = [
     { title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' },
     { title: 'Comandas', icon: History, href: '/pdv-v2/comandas-historico' },
+  ];
+
+  // Movimentações (idêntico à AppSidebar): Frente de Caixa · Compras · NF-e
+  const movimentacoes = [
     ...(isModuleEnabled('mercado')
-      ? [{ title: 'Frente de Caixa', icon: ScanBarcode, href: '/frente-caixa' }]
+      ? [
+          { title: 'Frente de Caixa', icon: ScanBarcode, href: '/frente-caixa' },
+          { title: 'Compras', icon: ShoppingCart, href: '/compras' },
+        ]
+      : []),
+    ...(isModuleEnabled('nfe')
+      ? [{ title: 'NF-e', icon: FileText, href: '/nfe' }]
       : []),
   ];
 
@@ -199,6 +210,7 @@ export function PDVV2Sidebar() {
       <SidebarContent>
         {renderGroup('Operação', [...home, ...operations], false)}
         {renderGroup('Mesas', tables)}
+        {renderGroup('Movimentações', movimentacoes)}
         <Collapsible className="group/grp-cadastros">
           <SidebarGroup>
             <SidebarGroupLabel asChild>
