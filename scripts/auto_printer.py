@@ -37,7 +37,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.39"  # V2: grupos estruturados liberados e rótulo preservado quando não é genérico
+SCRIPT_VERSION = "v8.39.1"  # v8.39 + charset DEFAULT (1) nas fontes — fix Windows 11 (Cozinha da Ruiva)
 I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 
@@ -1034,21 +1034,25 @@ def imprimir_html(html, order_number):
             'name': 'Courier New',
             'height': font_height,
             'weight': 900,  # padrão V1: tudo bold
+            'charset': 1,   # DEFAULT_CHARSET — Win11 precisa pra renderizar glyphs raster
         })
         font_regular = win32ui.CreateFont({
             'name': 'Courier New',
             'height': font_height,
             'weight': 400,  # peso normal (para nome do produto no V2)
+            'charset': 1,
         })
         font_bold_big = win32ui.CreateFont({
             'name': 'Courier New',
             'height': int(font_height * 1.05),
             'weight': 900,  # adicionais V2 — negrito forte
+            'charset': 1,
         })
         font_obs = win32ui.CreateFont({
             'name': 'Courier New',
             'height': font_height,
             'weight': 900,
+            'charset': 1,
         })
         hDC.SelectObject(font_normal)
 
@@ -1351,6 +1355,7 @@ def imprimir_html(html, order_number):
                         'height': int(font_height * 0.85),
                         'weight': 400,
                         'italic': True,
+                        'charset': 1,
                     })
                 except Exception:
                     font_desc = font_regular
@@ -1497,6 +1502,7 @@ def imprimir_html(html, order_number):
                         'height': font_height,
                         'weight': 700,
                         'underline': True,
+                        'charset': 1,
                     })
                 except Exception:
                     font_grp = font_normal
