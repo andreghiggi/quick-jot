@@ -70,10 +70,14 @@ export function AppSidebar() {
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
   const { enabled: cardapioEnabled } = useCardapioEnabled(company?.id);
+  // Fallback robusto: useMercadoEnabled depende de cache em localStorage e pode
+  // ficar momentaneamente desatualizado. O useCompanyModules tem realtime e é a
+  // fonte da verdade — combinamos os dois para evitar sumiço do grupo Movimentações.
+  const mercadoActive = mercadoEnabled || isModuleEnabled('mercado');
   // Perfil "só Mercado": esconde Pedidos, Cardápio, Mesas, Cupons, Combos,
   // Adicionais, Subcategorias e WhatsApp Ordering. Mantém Frente de Caixa,
   // Produtos, Estoque, Clientes, Fornecedores, Caixa, Fiscal e Relatórios.
-  const mercadoOnly = mercadoEnabled && !cardapioEnabled;
+  const mercadoOnly = mercadoActive && !cardapioEnabled;
 
   // Waiter-only menu
   const waiterMenuItems = [
@@ -106,10 +110,10 @@ export function AppSidebar() {
 
   // Movimentações (estilo GWeb): apenas Frente de Caixa · Compras
   const movimentacoesItems = [
-    ...(mercadoEnabled && !mercadoOnly
+    ...(mercadoActive && !mercadoOnly
       ? [{ title: 'Frente de Caixa', icon: ScanBarcode, href: '/frente-caixa' }]
       : []),
-    ...(mercadoEnabled
+    ...(mercadoActive
       ? [{ title: 'Compras', icon: ShoppingCart, href: '/compras' }]
       : []),
     ...(isModuleEnabled('nfe')
