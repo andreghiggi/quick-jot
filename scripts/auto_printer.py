@@ -1033,6 +1033,7 @@ def html_para_texto(html):
 def imprimir_html(html, order_number):
     """Imprime direto na impressora padrão via GDI (win32ui) — 100% silencioso, sem navegador"""
     try:
+        preparar_pywin32_runtime()
         import win32print
         import win32ui
         import win32con
