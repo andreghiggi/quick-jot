@@ -114,6 +114,10 @@ export default function FrenteCaixa() {
   // Cardápio é "ligado por padrão" (sem registro = ativo). Usa o hook dedicado.
   const { enabled: cardapioModuleEnabled } = useCardapioEnabled(company?.id);
   const mesaQrModuleEnabled = isModuleEnabled('cardapio_mesa');
+  const mesasPdvModuleEnabled = isModuleEnabled('mesas');
+  /** "Importar mesa" cobre tanto mesas do QR público quanto mesas/comandas
+   *  abertas direto no PDV V2 (tabela `tabs`). */
+  const importMesaEnabled = mesaQrModuleEnabled || mesasPdvModuleEnabled;
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
   const { settings: pdvSettings } = usePdvSettings(company?.id);
   const { taxRules } = useTaxRules({ companyId: company?.id });
