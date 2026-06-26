@@ -39,7 +39,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.39.3"  # v8.39 + charset DEFAULT + fallback win32gui quando win32ui falha no Windows 11
+SCRIPT_VERSION = "v8.39.4"  # v8.39.3 + normalização de GetTextMetrics no fallback win32gui (tmHeight/tmExternalLeading)
 I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 _PYWIN32_DLL_HANDLES = []
@@ -151,7 +151,20 @@ def criar_win32gui_shim(win32gui, win32print, win32con):
             return win32gui.SelectObject(self.hdc, obj)
 
         def GetTextMetrics(self):
-            return win32gui.GetTextMetrics(self.hdc)
+            tm = win32gui.GetTextMetrics(self.hdc)
+            # win32gui retorna chaves sem prefixo 'tm' (Height, Ascent, ExternalLeading...).
+            # Normaliza para o formato esperado pelo restante do script (tmHeight, tmExternalLeading...).
+            if isinstance(tm, dict):
+                normalized = dict(tm)
+                for key, value in list(tm.items()):
+                    if not key.startswith('tm'):
+                        normalized['tm' + key] = value
+                normalized.setdefault('tmHeight', normalized.get('Height', 0))
+                normalized.setdefault('tmExternalLeading', normalized.get('ExternalLeading', 0))
+                normalized.setdefault('tmAscent', normalized.get('Ascent', 0))
+                normalized.setdefault('tmDescent', normalized.get('Descent', 0))
+                return normalized
+            return tm
 
         def GetTextExtent(self, text):
             return win32gui.GetTextExtentPoint32(self.hdc, str(text))
