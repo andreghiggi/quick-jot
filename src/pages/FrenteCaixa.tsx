@@ -172,6 +172,8 @@ export default function FrenteCaixa() {
   const [importDialog, setImportDialog] = useState<null | 'pedido' | 'mesa'>(null);
   /** ID do pedido em `orders` que foi importado para o carrinho. */
   const [importedOrderId, setImportedOrderId] = useState<string | null>(null);
+  /** Origem do importado — usado para fechar `tabs` ao invés de `orders`. */
+  const [importedOrderSource, setImportedOrderSource] = useState<'order' | 'tab'>('order');
   /** Rótulo curto para a UI (ex.: "M-001" ou "R-023"). */
   const [importedLabel, setImportedLabel] = useState<string | null>(null);
 
