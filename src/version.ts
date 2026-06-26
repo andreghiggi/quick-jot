@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.38.2-beta";
-export const RELEASE_DATE = "2026-06-25"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão Windows 11: correção DLL pywin32";
+export const VERSION = "1.38.3-beta";
+export const RELEASE_DATE = "2026-06-26"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Impressão: acentos voltam a sair corretos (Unicode no GDI)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.38.3-beta",
+    date: "2026-06-26",
+    codename: "Impressão: acentos voltam a sair corretos (Unicode no GDI)",
+    changes: [
+      "auto_printer.py v8.42: corrige cupons com acentos saindo como 'Cafª', 'Sandu\u00d8che', 'Opt\u0131es', 'AM\u207fNDOAS' em máquinas com Python 3.12 + pywin32 novo (caso da Cozinha da Ruiva).",
+      "Todas as chamadas hDC.TextOut(...) foram trocadas por hDC.TextOutW(...) (variante Unicode explícita do GDI) e todas as fontes do recibo (Courier New normal, regular, bold-big, obs, descrição e grupo) ganharam 'charset': 1 (DEFAULT_CHARSET).",
+      "Resultado: o cupom sai exatamente como na v8.39 — mesmo layout, mesma fonte, mesmas margens, mesmos negritos — só com os acentos certos novamente.",
+      "Nenhuma mudança em layout, espaçamento, fontes, tamanhos, observações invertidas ou bordas; nenhuma alteração em TEF, PinPad, NFC-e, PDV V2, Pedido Express, Frente de Caixa ou cobrança.",
+    ],
+  },
   {
     version: "1.38.2-beta",
     date: "2026-06-25",
