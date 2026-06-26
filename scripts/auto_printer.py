@@ -1115,8 +1115,13 @@ def imprimir_html(html, order_number):
     try:
         preparar_pywin32_runtime()
         import win32print
-        import win32ui
         import win32con
+        try:
+            import win32ui
+        except ImportError as win32ui_error:
+            import win32gui
+            log(f"win32ui indisponível; usando fallback win32gui ({win32ui_error})", "AVISO")
+            win32ui = criar_win32gui_shim(win32gui, win32print, win32con)
 
         # Converte HTML para texto plano (agora sem CSS vazando)
         texto = html_para_texto(html)
