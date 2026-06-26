@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.38.3-beta";
+export const VERSION = "1.38.4-beta";
 export const RELEASE_DATE = "2026-06-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão: acentos voltam a sair corretos (Unicode no GDI)";
+export const CODENAME = "Impressão: hotfix v8.43 (TextOut volta a funcionar)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.38.4-beta",
+    date: "2026-06-26",
+    codename: "Impressão: hotfix v8.43 (TextOut volta a funcionar)",
+    changes: [
+      "auto_printer.py v8.43: corrige regressão da v8.42 que parava a impressão automática no Windows — o método hDC.TextOutW não existe no PyCDC do pywin32 e gerava AttributeError silencioso a cada cupom.",
+      "Trocadas todas as chamadas hDC.TextOutW(...) por hDC.TextOut(...). No Python 3 todas as strings já são Unicode, então o TextOut do pywin32 chama internamente a variante Unicode do GDI — junto com o 'charset': 1 das fontes (mantido), os acentos continuam saindo corretos.",
+      "Nenhuma mudança em layout, fontes, margens, TEF, PinPad, NFC-e, PDV V2, Pedido Express, Frente de Caixa ou cobrança. Basta baixar o auto_printer.py v8.43 em Configurações → Impressão e reiniciar o iniciar_impressao.cmd.",
+    ],
+  },
   {
     version: "1.38.3-beta",
     date: "2026-06-26",
