@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.38.4-beta";
+export const VERSION = "1.38.5-beta";
 export const RELEASE_DATE = "2026-06-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão: hotfix v8.43 (TextOut volta a funcionar)";
+export const CODENAME = "Impressão: rollback para v8.39 (estável em produção)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.38.5-beta",
+    date: "2026-06-26",
+    codename: "Impressão: rollback para v8.39 (estável em produção)",
+    changes: [
+      "auto_printer.py revertido para v8.39 — versão estável e validada em vários clientes em produção. v8.40/v8.41/v8.42/v8.43 (tentativas de correção para Windows 11 com Python 3.12) foram descartadas.",
+      "Lojas que estavam estáveis na v8.39 não precisam baixar nada novo — continuam exatamente como estavam.",
+      "Cozinha da Ruiva e demais máquinas com Windows 11 quebrado: baixar o auto_printer.py v8.39 em Configurações → Impressão e substituir em C:\\ComandaTech.",
+    ],
+  },
   {
     version: "1.38.4-beta",
     date: "2026-06-26",
