@@ -209,7 +209,7 @@ export function PDVV2Sidebar() {
 
       <SidebarContent>
         {renderGroup('Operação', [...home, ...operations], false)}
-        {renderGroup('Mesas', tables)}
+        {renderGroup('Salão', tables)}
         {renderGroup('Movimentações', movimentacoes)}
         <Collapsible className="group/grp-cadastros">
           <SidebarGroup>
