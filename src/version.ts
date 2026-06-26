@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.38.5-beta";
+export const VERSION = "1.39.0-beta";
 export const RELEASE_DATE = "2026-06-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão: rollback para v8.39 (estável em produção)";
+export const CODENAME = "Frente de Caixa: importar mesa/comanda do PDV V2";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.39.0-beta",
+    date: "2026-06-26",
+    codename: "Frente de Caixa: importar mesa/comanda do PDV V2",
+    changes: [
+      "Frente de Caixa › Importar mesa: agora lista também as mesas/comandas abertas direto no PDV V2 (tabela tabs), e não apenas as mesas abertas via QR Code público (origin='mesa_qr'). Resolve o caso em que a mesa estava aberta no PDV V2 e não aparecia para importar.",
+      "Cada item da lista mostra 'Mesa N' (quando há mesa física vinculada) ou 'Comanda N', com o total somado dos itens ainda não pagos da comanda.",
+      "Ao finalizar a venda no Frente de Caixa com uma mesa importada do PDV V2: a comanda é fechada (status='closed') e a mesa física é liberada (status='available') — mesmo comportamento do botão 'Fechar comanda' do PDV V2.",
+      "Botão 'Importar mesa' agora também aparece para lojas com o módulo Mesas (PDV V2) ativo, não só para quem tem Cardápio Mesa QR.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, Multi-Pagamento, impressão, PDV V2 (venda), Pedido Express ou cobrança — apenas no diálogo de importação do FC e no fechamento pós-venda quando a fonte é uma comanda.",
+    ],
+  },
   {
     version: "1.38.5-beta",
     date: "2026-06-26",

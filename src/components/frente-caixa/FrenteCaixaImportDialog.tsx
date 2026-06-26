@@ -30,6 +30,11 @@ export interface ImportableOrder {
   created_at: string;
   origin: string | null;
   items: ImportableOrderItem[];
+  /** Origem do registro: `order` = tabela orders (cardápio/mesa QR);
+   *  `tab` = tabela tabs (mesa/comanda aberta no PDV V2). */
+  source: 'order' | 'tab';
+  /** Número da mesa física quando aplicável (mesas do PDV V2). */
+  table_number?: number | null;
 }
 
 interface Props {
@@ -107,6 +112,7 @@ export function FrenteCaixaImportDialog({
           status: row.status,
           created_at: row.created_at,
           origin: row.origin,
+          source: 'order' as const,
           items: (row.items || []).map((it: any) => ({
             id: it.id,
             product_id: it.product_id,
@@ -116,7 +122,63 @@ export function FrenteCaixaImportDialog({
             notes: it.notes,
           })),
         }));
-        setOrders(mapped);
+
+        // Para "Importar mesa", também busca comandas abertas no PDV V2
+        // (tabela `tabs`). Mesas abertas direto no PDV (sem QR) só vivem aqui.
+        let tabsMapped: ImportableOrder[] = [];
+        if (type === 'mesa') {
+          const { data: tabsData, error: tabsErr } = await supabase
+            .from('tabs')
+            .select(
+              `id, tab_number, customer_name, status, created_at, table_id,
+               table:tables(number),
+               items:tab_items(id, product_id, product_name, quantity, unit_price, total_price, notes, paid)`,
+            )
+            .eq('company_id', companyId)
+            .eq('status', 'open')
+            .order('created_at', { ascending: false });
+
+          if (tabsErr) {
+            console.error('[FrenteCaixaImportDialog] tabs fetch error:', tabsErr);
+          } else {
+            tabsMapped = (tabsData || []).map((row: any) => {
+              const items = (row.items || []).filter((it: any) => !it.paid);
+              const total = items.reduce(
+                (s: number, it: any) => s + (Number(it.total_price) || 0),
+                0,
+              );
+              const tableNum = row.table?.number ?? null;
+              const label = tableNum
+                ? `Mesa ${tableNum}`
+                : `Comanda ${row.tab_number}`;
+              return {
+                id: row.id,
+                short_code: label,
+                customer_name: row.customer_name,
+                total,
+                status: row.status,
+                created_at: row.created_at,
+                origin: 'pdv_v2_tab',
+                source: 'tab' as const,
+                table_number: tableNum,
+                items: items.map((it: any) => ({
+                  id: it.id,
+                  product_id: it.product_id,
+                  name: it.product_name,
+                  quantity: Number(it.quantity) || 0,
+                  price: Number(it.unit_price) || 0,
+                  notes: it.notes,
+                })),
+              };
+            });
+          }
+        }
+
+        // Ordena por created_at desc combinando as duas fontes
+        const combined = [...mapped, ...tabsMapped].sort((a, b) =>
+          (b.created_at || '').localeCompare(a.created_at || ''),
+        );
+        setOrders(combined);
       } catch (err) {
         console.error('[FrenteCaixaImportDialog] fetch error:', err);
       } finally {
