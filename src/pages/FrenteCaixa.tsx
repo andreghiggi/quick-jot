@@ -721,14 +721,34 @@ export default function FrenteCaixa() {
       // Itens importados são imutáveis, então a soma bate com o pedido original.
       if (importedOrderId) {
         try {
-          await supabase
-            .from('orders')
-            .update({ status: 'delivered', pdv_sale_id: saleId })
-            .eq('id', importedOrderId);
-          await supabase
-            .from('pdv_sales')
-            .update({ imported_order_id: importedOrderId })
-            .eq('id', saleId);
+          if (importedOrderSource === 'tab') {
+            // Mesa/comanda aberta direto no PDV V2 — fecha a comanda e
+            // libera a mesa física (se houver).
+            const { data: tabRow } = await supabase
+              .from('tabs')
+              .select('table_id')
+              .eq('id', importedOrderId)
+              .maybeSingle();
+            await supabase
+              .from('tabs')
+              .update({ status: 'closed', closed_at: new Date().toISOString() })
+              .eq('id', importedOrderId);
+            if (tabRow?.table_id) {
+              await supabase
+                .from('tables')
+                .update({ status: 'available' })
+                .eq('id', tabRow.table_id);
+            }
+          } else {
+            await supabase
+              .from('orders')
+              .update({ status: 'delivered', pdv_sale_id: saleId })
+              .eq('id', importedOrderId);
+            await supabase
+              .from('pdv_sales')
+              .update({ imported_order_id: importedOrderId })
+              .eq('id', saleId);
+          }
         } catch (err) {
           console.error('[FrenteCaixa] vínculo pedido importado falhou:', err);
           toast.error('Venda salva, mas falha ao marcar o pedido como pago.');
