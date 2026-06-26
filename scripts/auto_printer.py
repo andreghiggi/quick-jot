@@ -39,7 +39,7 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.39.2"  # v8.39 + charset DEFAULT + preparar_pywin32_runtime — fix DLL win32ui no Windows 11
+SCRIPT_VERSION = "v8.39.3"  # v8.39 + charset DEFAULT + fallback win32gui quando win32ui falha no Windows 11
 I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
 _PYWIN32_DLL_HANDLES = []
@@ -109,12 +109,92 @@ def preparar_pywin32_runtime():
             os.environ['PATH'] = path_str + os.pathsep + os.environ.get('PATH', '')
         if path.name.lower() in {'win32', 'pythonwin'} and path_str not in sys.path:
             sys.path.insert(0, path_str)
-        if hasattr(os, 'add_dll_directory') and path.name.lower() == 'pywin32_system32':
+        if hasattr(os, 'add_dll_directory'):
             try:
                 _PYWIN32_DLL_HANDLES.append(os.add_dll_directory(path_str))
             except OSError:
                 pass
     return candidatos
+
+def criar_win32gui_shim(win32gui, win32print, win32con):
+    """Fallback sem win32ui.
+
+    Em alguns Windows 11 o módulo win32ui falha por dependência MFC/DLL, mas
+    win32print + win32gui funcionam normalmente. Este adaptador expõe apenas os
+    métodos usados abaixo, mantendo o layout v8.39 exatamente igual.
+    """
+    def criar_fonte(spec):
+        lf = win32gui.LOGFONT()
+        lf.lfFaceName = spec.get('name', 'Courier New')
+        lf.lfHeight = int(spec.get('height', 0))
+        lf.lfWeight = int(spec.get('weight', 400))
+        lf.lfItalic = 1 if spec.get('italic') else 0
+        lf.lfUnderline = 1 if spec.get('underline') else 0
+        lf.lfStrikeOut = 1 if spec.get('strikeout') else 0
+        lf.lfCharSet = int(spec.get('charset', 1))
+        return win32gui.CreateFontIndirect(lf)
+
+    class GuiDC:
+        def __init__(self):
+            self.hdc = None
+
+        def CreatePrinterDC(self, printer_name):
+            try:
+                self.hdc = win32gui.CreateDC('WINSPOOL', printer_name, None)
+            except Exception:
+                self.hdc = win32gui.CreateDC('', printer_name, None)
+
+        def GetDeviceCaps(self, cap):
+            return win32print.GetDeviceCaps(self.hdc, cap)
+
+        def SelectObject(self, obj):
+            return win32gui.SelectObject(self.hdc, obj)
+
+        def GetTextMetrics(self):
+            return win32gui.GetTextMetrics(self.hdc)
+
+        def GetTextExtent(self, text):
+            return win32gui.GetTextExtentPoint32(self.hdc, str(text))
+
+        def StartDoc(self, title):
+            return win32print.StartDoc(self.hdc, (title, None, None, 0))
+
+        def StartPage(self):
+            return win32print.StartPage(self.hdc)
+
+        def EndPage(self):
+            return win32print.EndPage(self.hdc)
+
+        def EndDoc(self):
+            return win32print.EndDoc(self.hdc)
+
+        def DeleteDC(self):
+            if self.hdc:
+                win32gui.DeleteDC(self.hdc)
+                self.hdc = None
+
+        def GetSafeHdc(self):
+            return self.hdc
+
+        def SetTextColor(self, color):
+            return win32gui.SetTextColor(self.hdc, color)
+
+        def SetBkMode(self, mode):
+            return win32gui.SetBkMode(self.hdc, mode)
+
+        def TextOut(self, x, y, text):
+            return win32gui.ExtTextOut(self.hdc, int(x), int(y), 0, None, str(text))
+
+    class GuiShim:
+        @staticmethod
+        def CreateDC():
+            return GuiDC()
+
+        @staticmethod
+        def CreateFont(spec):
+            return criar_fonte(spec)
+
+    return GuiShim
 
 def buscar_empresa_por_slug(slug):
     """Busca empresa pelo slug e retorna id, nome, endereço e dict completo (V3)."""
@@ -1035,8 +1115,13 @@ def imprimir_html(html, order_number):
     try:
         preparar_pywin32_runtime()
         import win32print
-        import win32ui
         import win32con
+        try:
+            import win32ui
+        except ImportError as win32ui_error:
+            import win32gui
+            log(f"win32ui indisponível; usando fallback win32gui ({win32ui_error})", "AVISO")
+            win32ui = criar_win32gui_shim(win32gui, win32print, win32con)
 
         # Converte HTML para texto plano (agora sem CSS vazando)
         texto = html_para_texto(html)
