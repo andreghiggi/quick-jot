@@ -151,7 +151,20 @@ def criar_win32gui_shim(win32gui, win32print, win32con):
             return win32gui.SelectObject(self.hdc, obj)
 
         def GetTextMetrics(self):
-            return win32gui.GetTextMetrics(self.hdc)
+            tm = win32gui.GetTextMetrics(self.hdc)
+            # win32gui retorna chaves sem prefixo 'tm' (Height, Ascent, ExternalLeading...).
+            # Normaliza para o formato esperado pelo restante do script (tmHeight, tmExternalLeading...).
+            if isinstance(tm, dict):
+                normalized = dict(tm)
+                for key, value in list(tm.items()):
+                    if not key.startswith('tm'):
+                        normalized['tm' + key] = value
+                normalized.setdefault('tmHeight', normalized.get('Height', 0))
+                normalized.setdefault('tmExternalLeading', normalized.get('ExternalLeading', 0))
+                normalized.setdefault('tmAscent', normalized.get('Ascent', 0))
+                normalized.setdefault('tmDescent', normalized.get('Descent', 0))
+                return normalized
+            return tm
 
         def GetTextExtent(self, text):
             return win32gui.GetTextExtentPoint32(self.hdc, str(text))
