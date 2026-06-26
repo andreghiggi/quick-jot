@@ -1355,6 +1355,7 @@ def imprimir_html(html, order_number):
                         'height': int(font_height * 0.85),
                         'weight': 400,
                         'italic': True,
+                        'charset': 1,
                     })
                 except Exception:
                     font_desc = font_regular
