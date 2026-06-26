@@ -4,14 +4,11 @@ Comanda Tech - Impressão Automática de Pedidos (Windows)
 COMO USAR:
 1. Instale o Python em https://python.org
    (marque "Add python.exe to PATH" na tela inicial do instalador).
-2. Dê duplo clique em  instalar_impressao.cmd
-   (alternativa para Windows 11 que não reconhece arquivos .bat)
-   ou em  instalar_impressao.bat
+2. Dê duplo clique em  instalar_impressao.bat
    (instala automaticamente as dependências requests e pywin32 -
     usa "py -m pip" porque o comando "pip" não existe por padrão
     no Windows 11).
-3. Para começar a imprimir, dê duplo clique em  iniciar_impressao.cmd
-   ou em  iniciar_impressao.bat
+3. Para começar a imprimir, dê duplo clique em  iniciar_impressao.bat
 """
 
 import requests
@@ -20,8 +17,6 @@ import tempfile
 import subprocess
 import re
 import os
-import sys
-import site
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -42,10 +37,9 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.43"  # Fix: pywin32 PyCDC nao tem TextOutW — usa TextOut (Unicode no Python 3) + charset=1
+SCRIPT_VERSION = "v8.39"  # V2: grupos estruturados liberados e rótulo preservado quando não é genérico
 I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
-_PYWIN32_DLL_HANDLES = []
 
 # ============================================
 # HEADERS para API
@@ -72,63 +66,6 @@ def log(msg, tipo="INFO"):
             f.write(linha + "\n")
     except Exception:
         pass
-
-def preparar_pywin32_runtime():
-    """Garante que as DLLs do pywin32 sejam encontradas no Windows 11.
-
-    Em algumas instalações o pacote pywin32 existe, mas o Windows não encontra
-    pywintypes/pythoncom ao importar win32print, gerando:
-    "DLL load failed while importing win32print".
-    """
-    candidatos = []
-    roots = []
-    try:
-        roots.extend(site.getsitepackages())
-    except Exception:
-        pass
-    try:
-        roots.append(site.getusersitepackages())
-    except Exception:
-        pass
-    roots.extend([p for p in sys.path if p and 'site-packages' in p.lower()])
-    roots.append(str(Path(sys.prefix) / 'Lib' / 'site-packages'))
-    roots.append(str(Path(sys.base_prefix) / 'Lib' / 'site-packages'))
-
-    vistos = set()
-    for root_raw in roots:
-        try:
-            root = Path(root_raw).resolve()
-        except Exception:
-            continue
-        for rel in ('pywin32_system32', 'win32', 'win32/lib', 'Pythonwin'):
-            path = root / rel
-            key = str(path).lower()
-            if key in vistos or not path.exists():
-                continue
-            vistos.add(key)
-            candidatos.append(path)
-
-    for path in candidatos:
-        path_str = str(path)
-        path_parts = [p.lower() for p in os.environ.get('PATH', '').split(os.pathsep) if p]
-        if path_str.lower() not in path_parts:
-            os.environ['PATH'] = path_str + os.pathsep + os.environ.get('PATH', '')
-        if path.name.lower() in {'win32', 'pythonwin'} and path_str not in sys.path:
-            sys.path.insert(0, path_str)
-        if hasattr(os, 'add_dll_directory') and path.name.lower() == 'pywin32_system32':
-            try:
-                _PYWIN32_DLL_HANDLES.append(os.add_dll_directory(path_str))
-            except OSError:
-                pass
-
-    return candidatos
-
-def carregar_pywin32_para_impressao():
-    preparar_pywin32_runtime()
-    import win32print
-    import win32ui
-    import win32con
-    return win32print, win32ui, win32con
 
 def buscar_empresa_por_slug(slug):
     """Busca empresa pelo slug e retorna id, nome, endereço e dict completo (V3)."""
@@ -1047,7 +984,9 @@ def html_para_texto(html):
 def imprimir_html(html, order_number):
     """Imprime direto na impressora padrão via GDI (win32ui) — 100% silencioso, sem navegador"""
     try:
-        win32print, win32ui, win32con = carregar_pywin32_para_impressao()
+        import win32print
+        import win32ui
+        import win32con
 
         # Converte HTML para texto plano (agora sem CSS vazando)
         texto = html_para_texto(html)
@@ -1095,25 +1034,21 @@ def imprimir_html(html, order_number):
             'name': 'Courier New',
             'height': font_height,
             'weight': 900,  # padrão V1: tudo bold
-            'charset': 1,   # DEFAULT_CHARSET — força GDI a tratar fonte como Unicode
         })
         font_regular = win32ui.CreateFont({
             'name': 'Courier New',
             'height': font_height,
             'weight': 400,  # peso normal (para nome do produto no V2)
-            'charset': 1,
         })
         font_bold_big = win32ui.CreateFont({
             'name': 'Courier New',
             'height': int(font_height * 1.05),
             'weight': 900,  # adicionais V2 — negrito forte
-            'charset': 1,
         })
         font_obs = win32ui.CreateFont({
             'name': 'Courier New',
             'height': font_height,
             'weight': 900,
-            'charset': 1,
         })
         hDC.SelectObject(font_normal)
 
@@ -1416,7 +1351,6 @@ def imprimir_html(html, order_number):
                         'height': int(font_height * 0.85),
                         'weight': 400,
                         'italic': True,
-                        'charset': 1,
                     })
                 except Exception:
                     font_desc = font_regular
@@ -1563,7 +1497,6 @@ def imprimir_html(html, order_number):
                         'height': font_height,
                         'weight': 700,
                         'underline': True,
-                        'charset': 1,
                     })
                 except Exception:
                     font_grp = font_normal
@@ -1647,7 +1580,7 @@ def imprimir_html(html, order_number):
         return True
 
     except ImportError as ie:
-        log(f"pywin32/win32print não carregou. Rode instalar_impressao.cmd novamente. Detalhe: {ie}", "ERRO")
+        log(f"pywin32 não instalado! Rode: pip install pywin32  ({ie})", "ERRO")
         return False
     except Exception as e:
         log(f"Falha na impressão GDI: {e}", "ERRO")
@@ -1673,11 +1606,10 @@ def diagnosticar_impressora():
     
     # Verifica pywin32
     try:
-        preparar_pywin32_runtime()
         import win32print
-        log(f"pywin32/win32print carregado ✓", "DIAG")
-    except ImportError as e:
-        log(f"pywin32/win32print NÃO carregou. Rode instalar_impressao.cmd. Detalhe: {e}", "AVISO")
+        log(f"pywin32 instalado ✓", "DIAG")
+    except ImportError:
+        log("pywin32 NÃO instalado. Rode: pip install pywin32", "AVISO")
     
     try:
         resultado = subprocess.run(
