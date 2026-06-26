@@ -1511,7 +1511,7 @@ pause
                     <h4 className="font-medium">Windows 11 — Correção pywin32 (v1.4 / auto_printer v8.39.3)</h4>
                     <p className="text-xs text-muted-foreground mt-1">
                       Use estes arquivos <strong>apenas se o Windows 11 não reconhecer o .bat acima</strong> ou
-                      exibir o erro <code className="bg-background px-1 rounded">DLL load failed while importing win32print</code>.
+                      exibir o erro <code className="bg-background px-1 rounded">DLL load failed while importing win32print/win32ui</code>.
                       Não substitui os arquivos acima — é um pacote alternativo.
                     </p>
                     <p className="text-xs text-destructive mt-2">
