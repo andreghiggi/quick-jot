@@ -17,6 +17,8 @@ import tempfile
 import subprocess
 import re
 import os
+import sys
+import site
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -37,9 +39,10 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.39.1"  # v8.39 + charset DEFAULT (1) nas fontes — fix Windows 11 (Cozinha da Ruiva)
+SCRIPT_VERSION = "v8.39.2"  # v8.39 + charset DEFAULT + preparar_pywin32_runtime — fix DLL win32ui no Windows 11
 I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
+_PYWIN32_DLL_HANDLES = []
 
 # ============================================
 # HEADERS para API
@@ -66,6 +69,52 @@ def log(msg, tipo="INFO"):
             f.write(linha + "\n")
     except Exception:
         pass
+
+def preparar_pywin32_runtime():
+    """Garante que as DLLs do pywin32 sejam encontradas no Windows 11.
+    Sem isso, `import win32ui` falha com 'DLL load failed'.
+    """
+    candidatos = []
+    roots = []
+    try:
+        roots.extend(site.getsitepackages())
+    except Exception:
+        pass
+    try:
+        roots.append(site.getusersitepackages())
+    except Exception:
+        pass
+    roots.extend([p for p in sys.path if p and 'site-packages' in p.lower()])
+    roots.append(str(Path(sys.prefix) / 'Lib' / 'site-packages'))
+    roots.append(str(Path(sys.base_prefix) / 'Lib' / 'site-packages'))
+
+    vistos = set()
+    for root_raw in roots:
+        try:
+            root = Path(root_raw).resolve()
+        except Exception:
+            continue
+        for rel in ('pywin32_system32', 'win32', 'win32/lib', 'Pythonwin'):
+            path = root / rel
+            key = str(path).lower()
+            if key in vistos or not path.exists():
+                continue
+            vistos.add(key)
+            candidatos.append(path)
+
+    for path in candidatos:
+        path_str = str(path)
+        path_parts = [p.lower() for p in os.environ.get('PATH', '').split(os.pathsep) if p]
+        if path_str.lower() not in path_parts:
+            os.environ['PATH'] = path_str + os.pathsep + os.environ.get('PATH', '')
+        if path.name.lower() in {'win32', 'pythonwin'} and path_str not in sys.path:
+            sys.path.insert(0, path_str)
+        if hasattr(os, 'add_dll_directory') and path.name.lower() == 'pywin32_system32':
+            try:
+                _PYWIN32_DLL_HANDLES.append(os.add_dll_directory(path_str))
+            except OSError:
+                pass
+    return candidatos
 
 def buscar_empresa_por_slug(slug):
     """Busca empresa pelo slug e retorna id, nome, endereço e dict completo (V3)."""
@@ -984,6 +1033,7 @@ def html_para_texto(html):
 def imprimir_html(html, order_number):
     """Imprime direto na impressora padrão via GDI (win32ui) — 100% silencioso, sem navegador"""
     try:
+        preparar_pywin32_runtime()
         import win32print
         import win32ui
         import win32con
