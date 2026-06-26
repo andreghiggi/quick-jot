@@ -1516,7 +1516,7 @@ export default function FrenteCaixa() {
             cardapioModuleEnabled ? () => setImportDialog('pedido') : undefined
           }
           onImportMesa={
-            mesaQrModuleEnabled ? () => setImportDialog('mesa') : undefined
+            importMesaEnabled ? () => setImportDialog('mesa') : undefined
           }
         />
 
