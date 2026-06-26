@@ -17,6 +17,8 @@ import tempfile
 import subprocess
 import re
 import os
+import sys
+import site
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -37,9 +39,10 @@ SAFE_MARGIN_COMPANY_IDS = None  # None = aplicar para todas as lojas
 COMPANY_SLUG = ""  # Preencha aqui para não precisar digitar (ex: "bon-appetit")
 PAPER_SIZE = "58mm"  # Será carregado das configurações
 PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
-SCRIPT_VERSION = "v8.39.1"  # v8.39 + charset DEFAULT (1) nas fontes — fix Windows 11 (Cozinha da Ruiva)
+SCRIPT_VERSION = "v8.39.2"  # v8.39 + charset DEFAULT + preparar_pywin32_runtime — fix DLL win32ui no Windows 11
 I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
+_PYWIN32_DLL_HANDLES = []
 
 # ============================================
 # HEADERS para API
