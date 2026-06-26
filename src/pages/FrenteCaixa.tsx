@@ -656,6 +656,7 @@ export default function FrenteCaixa() {
     // Itens importados vão sempre no topo do carrinho
     setLines((prev) => [...newLines, ...prev]);
     setImportedOrderId(order.id);
+    setImportedOrderSource(order.source || 'order');
     setImportedLabel(order.short_code || 'Importado');
     toast.success(
       `${order.short_code || 'Pedido'} importado (${newLines.length} ${newLines.length === 1 ? 'item' : 'itens'}).`,
