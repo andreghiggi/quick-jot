@@ -1502,6 +1502,7 @@ def imprimir_html(html, order_number):
                         'height': font_height,
                         'weight': 700,
                         'underline': True,
+                        'charset': 1,
                     })
                 except Exception:
                     font_grp = font_normal
