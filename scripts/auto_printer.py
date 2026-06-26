@@ -1385,7 +1385,7 @@ def imprimir_html(html, order_number):
                 hDC.SelectObject(font_normal)
                 hDC.SetTextColor(0x000000)
                 hDC.SetBkMode(win32con.TRANSPARENT)
-                hDC.TextOut(margin_x, y, '-' * colunas)
+                hDC.TextOutW(margin_x, y, '-' * colunas)
                 y += line_h
                 i += 1
                 continue
@@ -1422,7 +1422,7 @@ def imprimir_html(html, order_number):
                 hDC.SetTextColor(0x000000)
                 hDC.SetBkMode(win32con.TRANSPARENT)
                 for sub in sublinhas_desc:
-                    hDC.TextOut(margin_x, y, sub)
+                    hDC.TextOutW(margin_x, y, sub)
                     y += line_h
                 hDC.SelectObject(font_normal)
                 i += 1
@@ -1435,7 +1435,7 @@ def imprimir_html(html, order_number):
                 hDC.SetTextColor(0x000000)
                 hDC.SetBkMode(win32con.TRANSPARENT)
                 y += int(line_h * 0.2)
-                hDC.TextOut(margin_x, y, '.' * colunas)
+                hDC.TextOutW(margin_x, y, '.' * colunas)
                 y += line_h
                 y += int(line_h * 0.2)
                 i += 1
@@ -1462,14 +1462,14 @@ def imprimir_html(html, order_number):
                     hDC.SelectObject(font_normal)
                     hDC.SetTextColor(0x000000)
                     hDC.SetBkMode(win32con.TRANSPARENT)
-                    hDC.TextOut(margin_x, y, qty_text)
+                    hDC.TextOutW(margin_x, y, qty_text)
 
                 for idx, sub in enumerate(nome_linhas):
                     hDC.SelectObject(font_regular)
                     hDC.SetTextColor(0x000000)
                     hDC.SetBkMode(win32con.TRANSPARENT)
                     current_x = nome_x if idx == 0 and qty_text else margin_x
-                    hDC.TextOut(current_x, y, sub)
+                    hDC.TextOutW(current_x, y, sub)
                     y += line_h
 
                 hDC.SelectObject(font_normal)
@@ -1486,7 +1486,7 @@ def imprimir_html(html, order_number):
                 hDC.SetTextColor(0x000000)
                 hDC.SetBkMode(win32con.TRANSPARENT)
                 for sub in sublinhas_add:
-                    hDC.TextOut(margin_x, y, sub)
+                    hDC.TextOutW(margin_x, y, sub)
                     y += line_h
                 hDC.SelectObject(font_normal)
                 i += 1
@@ -1507,7 +1507,7 @@ def imprimir_html(html, order_number):
                 hDC.SetTextColor(0xFFFFFF)
                 hDC.SetBkMode(win32con.TRANSPARENT)
                 for sub in sublinhas:
-                    hDC.TextOut(margin_x + pad_x, y, sub)
+                    hDC.TextOutW(margin_x + pad_x, y, sub)
                     y += line_h
                 hDC.SetTextColor(0x000000)
                 hDC.SelectObject(font_normal)
@@ -1534,7 +1534,7 @@ def imprimir_html(html, order_number):
                 hDC.SetTextColor(0xFFFFFF)
                 hDC.SetBkMode(win32con.TRANSPARENT)
                 for sub in sublinhas:
-                    hDC.TextOut(margin_x + pad_x, y, sub)
+                    hDC.TextOutW(margin_x + pad_x, y, sub)
                     y += line_h
                 hDC.SetTextColor(0x000000)
                 hDC.SelectObject(font_normal)
@@ -1567,7 +1567,7 @@ def imprimir_html(html, order_number):
                 hDC.SetTextColor(0x000000)
                 hDC.SetBkMode(win32con.TRANSPARENT)
                 for sub in sublinhas_grp:
-                    hDC.TextOut(margin_x, y, sub)
+                    hDC.TextOutW(margin_x, y, sub)
                     y += line_h
                 hDC.SelectObject(font_normal)
                 i += 1
@@ -1589,7 +1589,7 @@ def imprimir_html(html, order_number):
                 hDC.SetTextColor(0xFFFFFF)
                 hDC.SetBkMode(win32con.TRANSPARENT)
                 for sub in sublinhas:
-                    hDC.TextOut(margin_x + pad_x, y, sub)
+                    hDC.TextOutW(margin_x + pad_x, y, sub)
                     y += line_h
                 hDC.SetTextColor(0x000000)
                 hDC.SelectObject(font_normal)
@@ -1603,7 +1603,7 @@ def imprimir_html(html, order_number):
                 hDC.SetTextColor(0x000000)
                 hDC.SetBkMode(win32con.TRANSPARENT)
                 for sub in quebrar_linha_px(texto_nome, usable_text_px):
-                    hDC.TextOut(margin_x, y, sub)
+                    hDC.TextOutW(margin_x, y, sub)
                     y += line_h
                 hDC.SelectObject(font_normal)
                 i += 1
@@ -1620,7 +1620,7 @@ def imprimir_html(html, order_number):
             hDC.SetTextColor(0x000000)
             hDC.SetBkMode(win32con.TRANSPARENT)
             for sublinha in sublinhas_normais:
-                hDC.TextOut(margin_x, y, sublinha)
+                hDC.TextOutW(margin_x, y, sublinha)
                 y += line_h
             i += 1
 
