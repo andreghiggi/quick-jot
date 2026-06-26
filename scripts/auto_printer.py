@@ -70,6 +70,52 @@ def log(msg, tipo="INFO"):
     except Exception:
         pass
 
+def preparar_pywin32_runtime():
+    """Garante que as DLLs do pywin32 sejam encontradas no Windows 11.
+    Sem isso, `import win32ui` falha com 'DLL load failed'.
+    """
+    candidatos = []
+    roots = []
+    try:
+        roots.extend(site.getsitepackages())
+    except Exception:
+        pass
+    try:
+        roots.append(site.getusersitepackages())
+    except Exception:
+        pass
+    roots.extend([p for p in sys.path if p and 'site-packages' in p.lower()])
+    roots.append(str(Path(sys.prefix) / 'Lib' / 'site-packages'))
+    roots.append(str(Path(sys.base_prefix) / 'Lib' / 'site-packages'))
+
+    vistos = set()
+    for root_raw in roots:
+        try:
+            root = Path(root_raw).resolve()
+        except Exception:
+            continue
+        for rel in ('pywin32_system32', 'win32', 'win32/lib', 'Pythonwin'):
+            path = root / rel
+            key = str(path).lower()
+            if key in vistos or not path.exists():
+                continue
+            vistos.add(key)
+            candidatos.append(path)
+
+    for path in candidatos:
+        path_str = str(path)
+        path_parts = [p.lower() for p in os.environ.get('PATH', '').split(os.pathsep) if p]
+        if path_str.lower() not in path_parts:
+            os.environ['PATH'] = path_str + os.pathsep + os.environ.get('PATH', '')
+        if path.name.lower() in {'win32', 'pythonwin'} and path_str not in sys.path:
+            sys.path.insert(0, path_str)
+        if hasattr(os, 'add_dll_directory') and path.name.lower() == 'pywin32_system32':
+            try:
+                _PYWIN32_DLL_HANDLES.append(os.add_dll_directory(path_str))
+            except OSError:
+                pass
+    return candidatos
+
 def buscar_empresa_por_slug(slug):
     """Busca empresa pelo slug e retorna id, nome, endereço e dict completo (V3)."""
     try:
