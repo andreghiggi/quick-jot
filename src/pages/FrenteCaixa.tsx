@@ -1492,6 +1492,36 @@ export default function FrenteCaixa() {
           </AlertDialogContent>
         </AlertDialog>
 
+        {/* Pesagem manual (produtos sell_by_weight) */}
+        <FrenteCaixaWeightDialog
+          product={weightPrompt}
+          open={!!weightPrompt}
+          onCancel={() => setWeightPrompt(null)}
+          onConfirm={(weightKg) => {
+            const p = weightPrompt;
+            if (!p) return;
+            const price = Number(p.price) || 0;
+            const newId = crypto.randomUUID();
+            setLines((prev) => [
+              ...prev,
+              {
+                id: newId,
+                product_id: p.id,
+                product_name: p.name,
+                quantity: weightKg,
+                unit_price: price,
+                effective_unit_price: price,
+                line_discount: 0,
+                line_surcharge: 0,
+                unit: 'KG',
+              },
+            ]);
+            setLastTouchedId(newId);
+            setWeightPrompt(null);
+            beep(true);
+          }}
+        />
+
         {/* Bloqueio de navegação interna quando há venda em andamento */}
         <AlertDialog
           open={!!pendingNavPath}
