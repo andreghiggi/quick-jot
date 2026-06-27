@@ -82,6 +82,7 @@ export default function DfeManifestacao() {
   const [batchDialog, setBatchDialog] = useState<{ tipo: string } | null>(null);
   const [batchJust, setBatchJust] = useState('');
   const [batchActing, setBatchActing] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
 
   useEffect(() => { if (company?.id) load(); }, [company?.id, statusFilter]);
 
