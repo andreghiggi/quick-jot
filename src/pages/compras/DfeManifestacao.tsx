@@ -46,6 +46,8 @@ type Doc = {
   status_manifestacao: string;
   data_manifestacao: string | null;
   xml_path: string | null;
+  imported_at: string | null;
+  imported_invoice_id: string | null;
   ignored: boolean;
 };
 
