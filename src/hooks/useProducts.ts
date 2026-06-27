@@ -89,6 +89,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         isScaleItem: (product as any).is_scale_item ?? false,
         scaleBarcode: (product as any).scale_barcode ?? null,
         pricePerKg: (product as any).price_per_kg ?? false,
+        sellByWeight: (product as any).sell_by_weight ?? false,
         optionals: optionalsData
           .filter((opt) => opt.product_id === product.id)
           .map((opt) => ({
