@@ -327,7 +327,7 @@ export default function DfeManifestacao() {
             </div>
 
             {/* Barra de ações em lote */}
-            {selected.size > 0 && (
+            {selectionMode && selected.size > 0 && (
               <div className="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-md bg-primary/10 border border-primary/30">
                 <div className="text-sm font-medium">{selected.size} selecionada(s)</div>
                 <div className="flex items-center gap-2">
@@ -348,7 +348,7 @@ export default function DfeManifestacao() {
                   <Button size="sm" variant="outline" onClick={handleBatchIgnore}>
                     <Ban className="w-4 h-4 mr-1" /> Ignorar
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+                  <Button size="sm" variant="ghost" onClick={() => { setSelected(new Set()); setSelectionMode(false); }}>
                     Limpar
                   </Button>
                 </div>
