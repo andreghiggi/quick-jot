@@ -1058,6 +1058,12 @@ export default function ProductEdit() {
                 checked={isScaleItem}
                 onCheckedChange={setIsScaleItem}
               />
+              <ToggleRow
+                label="Vender por peso (entrada manual)"
+                description="No Frente de Caixa, ao adicionar o item, abre um campo para informar o peso (em kg). O preço é calculado por kg."
+                checked={sellByWeight}
+                onCheckedChange={setSellByWeight}
+              />
               {isScaleItem && (
                 <>
                   <ToggleRow
