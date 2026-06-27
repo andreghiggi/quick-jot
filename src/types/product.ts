@@ -65,6 +65,8 @@ export interface Product {
   isScaleItem?: boolean;
   scaleBarcode?: string | null;
   pricePerKg?: boolean;
+  /** Vender por peso no Frente de Caixa: ao adicionar, abre modal para informar peso (KG/G). */
+  sellByWeight?: boolean;
   /** Combo virtual exibido no cardápio. id no formato `combo:<uuid>`; em order_items, salvar product_id=null. */
   isCombo?: boolean;
 }
