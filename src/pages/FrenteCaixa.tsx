@@ -188,6 +188,7 @@ export default function FrenteCaixa() {
   const [removeQty, setRemoveQty] = useState<string>('1');
   // Confirmação ao remover/zerar uma linha do carrinho (atalho ↓, botão −, lixeira).
   const [confirmDelete, setConfirmDelete] = useState<CartLine | null>(null);
+  const [weightPrompt, setWeightPrompt] = useState<Product | null>(null);
   const [priceTarget, setPriceTarget] = useState<CartLine | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<CartLine | null>(null);
   const [cashMovementOpen, setCashMovementOpen] = useState<null | CashMovementType>(null);
