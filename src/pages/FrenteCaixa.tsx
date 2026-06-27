@@ -76,6 +76,12 @@ import {
   type NFCeRecord,
 } from '@/services/nfceService';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
+import { FrenteCaixaPostSaleDialog } from '@/components/frente-caixa/FrenteCaixaPostSaleDialog';
+import {
+  setTefPromptCapture,
+  type TefAutoPrintMode,
+  type TefPrintPromptPayload,
+} from '@/utils/tefAutoPrint';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { buildPagamentosSplit } from '@/utils/pdvV2MultiPayment';
 import { supabase } from '@/integrations/supabase/client';
@@ -142,6 +148,36 @@ export default function FrenteCaixa() {
   const [nfceEmitting, setNfceEmitting] = useState(false);
   const [postSaleOpen, setPostSaleOpen] = useState(false);
   const [postSaleRecord, setPostSaleRecord] = useState<NFCeRecord | null>(null);
+  // ── Pós-venda consolidado (v1.39.x) — só nas lojas piloto ───────────────
+  const FC_CONSOLIDATED_POST_SALE_ALLOW: ReadonlySet<string> = useMemo(
+    () =>
+      new Set([
+        '55181771-8b10-4af1-afc3-472c090a49be', // Cozinha da Ruiva
+        '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da i9
+      ]),
+    [],
+  );
+  const useConsolidatedPostSale = !!company?.id && FC_CONSOLIDATED_POST_SALE_ALLOW.has(company.id);
+  const tefCapturedRef = useRef<TefPrintPromptPayload | null>(null);
+  const [consolidatedOpen, setConsolidatedOpen] = useState(false);
+  const [consolidatedTef, setConsolidatedTef] = useState<TefPrintPromptPayload | null>(null);
+  const [consolidatedRecord, setConsolidatedRecord] = useState<NFCeRecord | null>(null);
+  const [consolidatedNfceError, setConsolidatedNfceError] = useState<string | null>(null);
+  const [consolidatedEmitting, setConsolidatedEmitting] = useState(false);
+
+  // Instala/desinstala o interceptor do prompt TEF enquanto a página está
+  // montada e a loja está na allow-list. Fora dessa condição, o fluxo atual
+  // do TefPrintPromptDialog global é preservado intacto.
+  useEffect(() => {
+    if (!useConsolidatedPostSale) return;
+    setTefPromptCapture((payload) => {
+      tefCapturedRef.current = payload;
+    });
+    return () => {
+      setTefPromptCapture(null);
+      tefCapturedRef.current = null;
+    };
+  }, [useConsolidatedPostSale]);
   // Diálogo de abertura de caixa (acessível direto pelo banner do FC).
   const [openCashOpen, setOpenCashOpen] = useState(false);
   const [openingAmount, setOpeningAmount] = useState('');
