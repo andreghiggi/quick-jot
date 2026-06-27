@@ -27,6 +27,11 @@ type ItemRow = {
   product_id: string | null; // null => criar novo
   createNew: boolean;
   newName: string;
+  // --- Conversão / preço (Fase 1) ---
+  conversion_factor: number;   // ex.: fardo c/ 15 → 15
+  stock_unit: string;          // unidade que entra no estoque
+  sale_price: number;          // preço sugerido de venda
+  unit_weight_kg: number | null; // opcional, p/ KG→UN
 };
 
 type Header = {
@@ -39,7 +44,7 @@ type Header = {
   valor_total: number;
 };
 
-type ProductSlim = { id: string; name: string; gtin: string | null };
+type ProductSlim = { id: string; name: string; gtin: string | null; price: number | null; unit: string | null };
 
 export default function PurchaseImportXml() {
   const { company } = useAuthContext();
@@ -57,7 +62,7 @@ export default function PurchaseImportXml() {
 
   useEffect(() => {
     if (!company?.id) return;
-    supabase.from('products').select('id,name,gtin').eq('company_id', company.id).then(({ data }) => {
+    supabase.from('products').select('id,name,gtin,price,unit').eq('company_id', company.id).then(({ data }) => {
       setProducts((data as any) || []);
     });
     if (documentoId) loadFromDfe(documentoId);
@@ -126,19 +131,25 @@ export default function PurchaseImportXml() {
         const ean = get(prod, 'cEAN');
         const descricao = get(prod, 'xProd');
         const matched = products.find(p => (ean && p.gtin === ean));
+        const uCom = get(prod, 'uCom');
+        const vUn = Number(get(prod, 'vUnCom') || 0);
         return {
           xml_codigo: get(prod, 'cProd'),
           xml_descricao: descricao,
           xml_ean: ean && ean !== 'SEM GTIN' ? ean : '',
           xml_ncm: get(prod, 'NCM'),
           xml_cfop: get(prod, 'CFOP'),
-          xml_unidade: get(prod, 'uCom'),
+          xml_unidade: uCom,
           quantidade: Number(get(prod, 'qCom') || 0),
-          valor_unitario: Number(get(prod, 'vUnCom') || 0),
+          valor_unitario: vUn,
           valor_total: Number(get(prod, 'vProd') || 0),
           product_id: matched?.id || null,
           createNew: !matched,
           newName: descricao,
+          conversion_factor: 1,
+          stock_unit: matched?.unit || uCom || 'UN',
+          sale_price: matched?.price ?? vUn,
+          unit_weight_kg: null,
         };
       });
       setItems(its);
@@ -149,6 +160,21 @@ export default function PurchaseImportXml() {
   }
 
   const totalCalc = useMemo(() => items.reduce((s, i) => s + i.valor_total, 0), [items]);
+
+  function updateItem(idx: number, patch: Partial<ItemRow>) {
+    const copy = [...items];
+    copy[idx] = { ...copy[idx], ...patch };
+    setItems(copy);
+  }
+
+  function applyMarkupToAll(percent: number) {
+    setItems(prev => prev.map((it) => {
+      const factor = it.conversion_factor > 0 ? it.conversion_factor : 1;
+      const realCost = it.valor_unitario / factor;
+      return { ...it, sale_price: Number((realCost * (1 + percent / 100)).toFixed(2)) };
+    }));
+    toast.success(`Markup de ${percent}% aplicado a todos os itens`);
+  }
 
   async function handleConfirm() {
     if (!company?.id || !header) return;
@@ -198,17 +224,20 @@ export default function PurchaseImportXml() {
 
       // 4) itens + criar produtos novos + movimentar estoque
       for (const it of items) {
+        const factor = it.conversion_factor > 0 ? it.conversion_factor : 1;
+        const stockQty = it.quantidade * factor;
+        const realCost = it.valor_unitario / factor;
         let productId = it.product_id;
         if (!productId && it.createNew) {
           const { data: prod, error: pErr } = await supabase.from('products').insert({
             company_id: company.id,
             name: it.newName || it.xml_descricao,
-            price: it.valor_unitario,
-            cost_price: it.valor_unitario,
+            price: it.sale_price || realCost,
+            cost_price: realCost,
             gtin: it.xml_ean || null,
             ncm: it.xml_ncm || null,
             cfop: it.xml_cfop || null,
-            unit: it.xml_unidade || null,
+            unit: it.stock_unit || it.xml_unidade || null,
             track_stock: true,
             product_type: 'mercado',
             active: true,
@@ -216,20 +245,30 @@ export default function PurchaseImportXml() {
           } as any).select('id').single();
           if (pErr) throw pErr;
           productId = (prod as any).id;
+        } else if (productId) {
+          // Atualiza custo e preço do produto existente
+          await (supabase.from('products') as any).update({
+            cost_price: realCost,
+            price: it.sale_price || undefined,
+          }).eq('id', productId);
         }
         const { data: itemRow } = await supabase.from('purchase_invoice_items').insert({
           invoice_id: invoiceId, company_id: company.id, product_id: productId,
           xml_codigo: it.xml_codigo, xml_descricao: it.xml_descricao,
           xml_ean: it.xml_ean, xml_ncm: it.xml_ncm, xml_cfop: it.xml_cfop, xml_unidade: it.xml_unidade,
           quantidade: it.quantidade, valor_unitario: it.valor_unitario, valor_total: it.valor_total,
+          conversion_factor: factor,
+          stock_unit: it.stock_unit,
+          sale_price: it.sale_price,
+          unit_weight_kg: it.unit_weight_kg,
           stock_applied: !!productId,
         } as any).select('id').single();
 
         if (productId) {
           await supabase.rpc('apply_stock_movement', {
-            _product_id: productId, _qty: it.quantidade, _type: 'entrada',
+            _product_id: productId, _qty: stockQty, _type: 'entrada',
             _reference_type: 'purchase_invoice', _reference_id: invoiceId,
-            _notes: `NF-e ${header.numero}/${header.serie} - ${header.nome_emit}`,
+            _notes: `NF-e ${header.numero}/${header.serie} - ${header.nome_emit}${factor !== 1 ? ` (fator ${factor})` : ''}`,
           });
         }
       }
@@ -288,7 +327,13 @@ export default function PurchaseImportXml() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Itens ({items.length})</CardTitle>
-                <Badge variant="outline">Soma: {totalCalc.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</Badge>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Markup rápido:</span>
+                  <Button size="sm" variant="outline" onClick={() => applyMarkupToAll(30)}>+30%</Button>
+                  <Button size="sm" variant="outline" onClick={() => applyMarkupToAll(50)}>+50%</Button>
+                  <Button size="sm" variant="outline" onClick={() => applyMarkupToAll(100)}>+100%</Button>
+                  <Badge variant="outline">Soma: {totalCalc.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</Badge>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 {items.map((it, idx) => (
@@ -340,6 +385,60 @@ export default function PurchaseImportXml() {
                         </div>
                       )}
                     </div>
+                    {/* Conversão + preço */}
+                    {(it.product_id || it.createNew) && (() => {
+                      const factor = it.conversion_factor > 0 ? it.conversion_factor : 1;
+                      const stockQty = it.quantidade * factor;
+                      const realCost = it.valor_unitario / factor;
+                      const margin = it.sale_price > 0 && realCost > 0
+                        ? ((it.sale_price - realCost) / it.sale_price) * 100
+                        : 0;
+                      return (
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 pt-2 border-t bg-muted/30 -mx-3 px-3 pb-2 rounded-b-lg">
+                          <div>
+                            <Label className="text-xs">Fator de conversão</Label>
+                            <Input
+                              type="number" step="0.0001" min="0.0001"
+                              value={it.conversion_factor}
+                              onChange={(e) => updateItem(idx, { conversion_factor: Number(e.target.value) || 1 })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Un. estoque</Label>
+                            <Select value={it.stock_unit} onValueChange={(v) => updateItem(idx, { stock_unit: v })}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {['UN','KG','G','L','ML','PCT','CX','FD','DZ'].map(u => (
+                                  <SelectItem key={u} value={u}>{u}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Qtd. p/ estoque</Label>
+                            <Input value={`${stockQty.toLocaleString('pt-BR')} ${it.stock_unit}`} readOnly className="bg-background" />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Custo real</Label>
+                            <Input
+                              value={realCost.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+                              readOnly className="bg-background"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">
+                              Preço de venda
+                              {margin > 0 && <span className="text-emerald-600 ml-1">({margin.toFixed(0)}%)</span>}
+                            </Label>
+                            <Input
+                              type="number" step="0.01" min="0"
+                              value={it.sale_price}
+                              onChange={(e) => updateItem(idx, { sale_price: Number(e.target.value) || 0 })}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ))}
 

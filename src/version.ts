@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.40.0-beta";
-export const RELEASE_DATE = "2026-06-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: pós-venda consolidado (TEF + DANFE)";
+export const VERSION = "1.41.0-beta";
+export const RELEASE_DATE = "2026-06-27"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Importação XML: fator de conversão + preço de venda";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.41.0-beta",
+    date: "2026-06-27",
+    codename: "Importação XML: fator de conversão + preço de venda",
+    changes: [
+      "Compras → Importar XML: cada item agora tem Fator de conversão, Unidade de estoque, Qtd. p/ estoque (calculada), Custo real (calculado) e Preço de venda editável.",
+      "Exemplo: fardo c/ 15 unidades por R$ 80,40 → fator 15 → entra 15 un no estoque com custo real de R$ 5,36 cada.",
+      "Atalhos de markup rápido (+30%, +50%, +100%) aplicam preço de venda em massa baseado no custo real.",
+      "Ao confirmar, o produto vinculado tem cost_price e price atualizados automaticamente; produtos novos já nascem com unidade e preços corretos.",
+      "Migration: purchase_invoice_items ganhou conversion_factor, stock_unit, sale_price, unit_weight_kg.",
+    ],
+  },
   {
     version: "1.40.0-beta",
     date: "2026-06-26",
