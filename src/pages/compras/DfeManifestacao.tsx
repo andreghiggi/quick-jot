@@ -85,6 +85,7 @@ export default function DfeManifestacao() {
   const [batchJust, setBatchJust] = useState('');
   const [batchActing, setBatchActing] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [postManifestImport, setPostManifestImport] = useState<Doc | null>(null);
 
   useEffect(() => { if (company?.id) load(); }, [company?.id, statusFilter]);
 
@@ -165,8 +166,14 @@ export default function DfeManifestacao() {
         justificativa: justificativa.trim(),
       });
       toast.success('Manifestação enviada com sucesso');
+      const doc = manifestDialog.doc;
+      const tipo = manifestDialog.tipo;
       setManifestDialog(null); setJustificativa('');
       await load();
+      // Padrão GWeb: após "Ciência da operação", pergunta se quer importar o XML
+      if (tipo === 'ciencia') {
+        setPostManifestImport(doc);
+      }
     } catch (e: any) {
       toast.error(e.message || 'Falha ao manifestar');
     } finally { setActing(false); }
