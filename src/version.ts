@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.39.0-beta";
+export const VERSION = "1.40.0-beta";
 export const RELEASE_DATE = "2026-06-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: importar mesa/comanda do PDV V2";
+export const CODENAME = "Frente de Caixa: pós-venda consolidado (TEF + DANFE)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.40.0-beta",
+    date: "2026-06-26",
+    codename: "Frente de Caixa: pós-venda consolidado (TEF + DANFE)",
+    changes: [
+      "Frente de Caixa: novo diálogo pós-venda CONSOLIDADO — após o pagamento e a emissão da NFC-e, abre uma única tela perguntando o que imprimir (Via Estabelecimento TEF, Via Cliente TEF e DANFE NFC-e), em vez de 2 ou 3 prompts encadeados.",
+      "Antes o operador via: prompt do TEF → 'Emitindo NFC-e…' → prompt do DANFE. Agora vê: 'Emitindo NFC-e…' → uma única tela com checkboxes pré-selecionados conforme as configurações da loja (tef_auto_print_vias + auto_print_on_finish).",
+      "Implementado via interceptor no `imprimirComprovanteTefAutomatico` (setTefPromptCapture): quando a Frente de Caixa está montada, o evento global do prompt TEF é capturado em vez de disparado. Fora da FC, nada muda.",
+      "Escopo: APENAS lojas piloto (Lancheria da I9 e Cozinha da Ruiva). Demais lojas continuam com o TefPrintPromptDialog global + PDVV2NFCePostSaleDialog separado.",
+      "PDV V2, Pedido Express, Cobrança, OrderCardChargeDialog, runTefPayment, pinpadService, tef-webservice, nfce-proxy e Multi-Pagamento: NENHUMA alteração.",
+    ],
+  },
   {
     version: "1.39.0-beta",
     date: "2026-06-26",
