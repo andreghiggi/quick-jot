@@ -483,6 +483,11 @@ export default function FrenteCaixa() {
       beep(false);
       return;
     }
+    // Produto vendido por peso (KG): abrir modal de peso. O preço é por kg.
+    if ((p as any).sellByWeight) {
+      setWeightPrompt(p);
+      return;
+    }
     if (
       pdvSettings.confirm_quantity_above > 0 &&
       qty > pdvSettings.confirm_quantity_above
