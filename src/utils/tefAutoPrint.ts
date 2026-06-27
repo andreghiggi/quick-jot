@@ -192,6 +192,31 @@ export interface TefPrintPromptPayload {
 export const TEF_PRINT_PROMPT_EVENT = 'tef-auto-print-prompt';
 
 /**
+ * Hook de interceptação do prompt TEF. Quando setado, `imprimirComprovanteTefAutomatico`
+ * NÃO dispara o evento global — em vez disso entrega o payload para o capturador.
+ * Usado pela Frente de Caixa (v1.39.x) para consolidar o prompt de impressão TEF
+ * com o pós-venda NFC-e em um único diálogo. Não afeta PDV V2/Pedido Express/Cobrança.
+ */
+let tefPromptCapture: ((payload: TefPrintPromptPayload) => void) | null = null;
+
+export function setTefPromptCapture(
+  capture: ((payload: TefPrintPromptPayload) => void) | null,
+) {
+  tefPromptCapture = capture;
+}
+
+/** Exporta o splitVias para reuso pela Frente de Caixa (prompt consolidado). */
+export function splitTefVias(receiptLines: string[]): {
+  estabelecimento: string;
+  cliente: string | null;
+  full: string;
+} {
+  const full = normalizeReceipt(receiptLines);
+  const { estabelecimento, cliente } = splitVias(full);
+  return { estabelecimento, cliente, full };
+}
+
+/**
  * Após TEF aprovado, dispara o modal perguntando quais vias imprimir.
  * Mantém o nome antigo para preservar os call-sites em pdvV2Tef e
  * PedidoExpressDialog. Se a empresa não estiver na allow-list ou não houver
@@ -207,10 +232,24 @@ export async function imprimirComprovanteTefAutomatico(
 
   const defaultMode = await fetchAutoPrintMode(companyId);
 
+  const payload: TefPrintPromptPayload = { receiptLines, orderCode, defaultMode };
+
+  // Interceptação opcional (Frente de Caixa): consome o payload sem disparar
+  // o diálogo global. Isolado: se nenhum capturador estiver registrado, o
+  // comportamento original (evento global) é preservado.
+  if (tefPromptCapture) {
+    try {
+      tefPromptCapture(payload);
+      return;
+    } catch (e) {
+      console.error('[tefAutoPrint] captura falhou, caindo para evento global:', e);
+    }
+  }
+
   try {
     window.dispatchEvent(
       new CustomEvent<TefPrintPromptPayload>(TEF_PRINT_PROMPT_EVENT, {
-        detail: { receiptLines, orderCode, defaultMode },
+        detail: payload,
       }),
     );
   } catch (e) {
