@@ -1698,6 +1698,28 @@ export default function FrenteCaixa() {
           setTimeout(() => inputRef.current?.focus(), 100);
         }}
       />
+
+      {/* Diálogo CONSOLIDADO (lojas piloto v1.39.x):
+          junta o prompt de vias TEF e o pós-venda NFC-e em uma única tela. */}
+      <FrenteCaixaPostSaleDialog
+        open={consolidatedOpen}
+        onOpenChange={setConsolidatedOpen}
+        companyId={company?.id}
+        tefReceiptLines={consolidatedTef?.receiptLines || null}
+        tefDefaultMode={(consolidatedTef?.defaultMode as TefAutoPrintMode) || 'ambas'}
+        tefOrderCode={consolidatedTef?.orderCode}
+        initialNfceRecord={consolidatedRecord}
+        nfceError={consolidatedNfceError}
+        emittingNfce={consolidatedEmitting}
+        autoPrintDanfe={!!pdvSettings.auto_print_on_finish}
+        onClosed={() => {
+          setConsolidatedRecord(null);
+          setConsolidatedTef(null);
+          setConsolidatedNfceError(null);
+          setConsolidatedEmitting(false);
+          setTimeout(() => inputRef.current?.focus(), 100);
+        }}
+      />
     </PDVV2Layout>
   );
 }
