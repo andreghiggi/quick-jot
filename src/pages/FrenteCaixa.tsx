@@ -882,11 +882,45 @@ export default function FrenteCaixa() {
       setImportedLabel(null);
       setPaymentOpen(false);
 
-      // Pós-venda NFC-e: emite agora (await), abre dialog de status com polling.
-      // TEF já emite NFC-e automaticamente via pipeline próprio em outros fluxos,
-      // mas aqui no Frente de Caixa o disparo é único — o `auto_print_on_finish`
-      // das configurações controla se o DANFE imprime automaticamente.
-      if (nfcePayload && company?.id) {
+      // ── Fluxo CONSOLIDADO (Frente de Caixa, allow-list) ────────────────
+      // Junta TEF + DANFE em um único prompt no final. Captura prévia do TEF
+      // veio pelo interceptor `setTefPromptCapture` instalado no useEffect.
+      if (useConsolidatedPostSale) {
+        const capturedTef = tefCapturedRef.current;
+        tefCapturedRef.current = null;
+        const hasNfce = !!(nfcePayload && company?.id);
+        const hasTef = !!(capturedTef && capturedTef.receiptLines?.length);
+        if (hasTef || hasNfce) {
+          setConsolidatedTef(capturedTef);
+          setConsolidatedRecord(null);
+          setConsolidatedNfceError(null);
+          setConsolidatedEmitting(hasNfce);
+          setConsolidatedOpen(true);
+        }
+        if (hasNfce) {
+          (async () => {
+            try {
+              await emitirNFCe(company!.id, saleId, nfcePayload!);
+              await new Promise((r) => setTimeout(r, 400));
+              const rec = await getNFCeRecordBySaleId(saleId);
+              if (rec) {
+                setConsolidatedRecord(rec);
+              } else {
+                setConsolidatedNfceError('NFC-e enviada. Acompanhe no Monitor NFC-e.');
+              }
+            } catch (err: any) {
+              console.error('[FrenteCaixa] NFC-e error:', err);
+              setConsolidatedNfceError(err?.message || 'Erro ao emitir NFC-e');
+              toast.error(
+                `Venda salva, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`,
+              );
+            } finally {
+              setConsolidatedEmitting(false);
+            }
+          })();
+        }
+      } else if (nfcePayload && company?.id) {
+        // Fluxo legado (demais lojas) — mantém comportamento atual.
         setNfceEmitting(true);
         (async () => {
           try {
