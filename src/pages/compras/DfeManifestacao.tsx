@@ -26,7 +26,7 @@ import {
   RefreshCw, Copy, Download, FileInput, Loader2,
   CheckCircle2, AlertCircle, Inbox, Search, CloudDownload,
   ArrowUpDown, SlidersHorizontal, ChevronLeft, ChevronRight,
-  MoreVertical, FileSearch, Ban, FileText,
+  MoreVertical, FileSearch, Ban, FileText, Square, CheckSquare,
 } from 'lucide-react';
 
 type Doc = {
@@ -82,6 +82,7 @@ export default function DfeManifestacao() {
   const [batchDialog, setBatchDialog] = useState<{ tipo: string } | null>(null);
   const [batchJust, setBatchJust] = useState('');
   const [batchActing, setBatchActing] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
 
   useEffect(() => { if (company?.id) load(); }, [company?.id, statusFilter]);
 
@@ -326,7 +327,7 @@ export default function DfeManifestacao() {
             </div>
 
             {/* Barra de ações em lote */}
-            {selected.size > 0 && (
+            {selectionMode && selected.size > 0 && (
               <div className="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-md bg-primary/10 border border-primary/30">
                 <div className="text-sm font-medium">{selected.size} selecionada(s)</div>
                 <div className="flex items-center gap-2">
@@ -347,7 +348,7 @@ export default function DfeManifestacao() {
                   <Button size="sm" variant="outline" onClick={handleBatchIgnore}>
                     <Ban className="w-4 h-4 mr-1" /> Ignorar
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+                  <Button size="sm" variant="ghost" onClick={() => { setSelected(new Set()); setSelectionMode(false); }}>
                     Limpar
                   </Button>
                 </div>
@@ -366,14 +367,16 @@ export default function DfeManifestacao() {
             ) : (
               <div className="border-y border-border">
                 {/* header com master checkbox */}
-                <div className="flex items-center gap-4 px-1 py-2 border-b border-border bg-muted/30">
-                  <Checkbox
-                    checked={allPageSelected ? true : somePageSelected ? 'indeterminate' : false}
-                    onCheckedChange={togglePage}
-                    aria-label="Marcar todos"
-                  />
-                  <span className="text-xs text-muted-foreground">Marcar todos desta página</span>
-                </div>
+                {selectionMode && (
+                  <div className="flex items-center gap-4 px-1 py-2 border-b border-border bg-muted/30">
+                    <Checkbox
+                      checked={allPageSelected ? true : somePageSelected ? 'indeterminate' : false}
+                      onCheckedChange={togglePage}
+                      aria-label="Marcar todos"
+                    />
+                    <span className="text-xs text-muted-foreground">Marcar todos desta página</span>
+                  </div>
+                )}
                 <div className="divide-y divide-border">
                 {pageItems.map((d) => {
                   const st = STATUS_LABEL[d.status_manifestacao] || STATUS_LABEL.pendente;
@@ -383,13 +386,15 @@ export default function DfeManifestacao() {
                     : `NF-e ${d.numero_nfe || '—'}`;
                   const isSel = selected.has(d.id);
                   return (
-                    <div key={d.id} className={`flex items-center gap-4 py-4 px-1 hover:bg-muted/40 transition-colors ${isSel ? 'bg-primary/5' : ''}`}>
-                      <Checkbox
-                        checked={isSel}
-                        onCheckedChange={() => toggleOne(d.id)}
-                        aria-label="Marcar"
-                        className="shrink-0"
-                      />
+                    <div key={d.id} className={`flex items-center gap-4 py-4 px-1 hover:bg-muted/40 transition-colors ${isSel && selectionMode ? 'bg-primary/5' : ''}`}>
+                      {selectionMode && (
+                        <Checkbox
+                          checked={isSel}
+                          onCheckedChange={() => toggleOne(d.id)}
+                          aria-label="Marcar"
+                          className="shrink-0"
+                        />
+                      )}
 
                       <div className="flex-1 min-w-0">
                         <div className="text-sm">
@@ -424,6 +429,17 @@ export default function DfeManifestacao() {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
+                          {!selectionMode && (
+                            <DropdownMenuItem onClick={() => { setSelectionMode(true); setSelected(new Set([d.id])); }}>
+                              <Square className="w-4 h-4 mr-2" /> Marcar
+                            </DropdownMenuItem>
+                          )}
+                          {selectionMode && (
+                            <DropdownMenuItem onClick={() => { setSelectionMode(false); setSelected(new Set()); }}>
+                              <CheckSquare className="w-4 h-4 mr-2" /> Desmarcar tudo
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => copyChave(d)}>
                             <Copy className="w-4 h-4 mr-2" /> Copiar chave de acesso
                           </DropdownMenuItem>
