@@ -151,6 +151,75 @@ Deno.serve(async (req) => {
       return j({ success: true, xml_path: path, xml })
     }
 
+    // ---------- CONSULTAR NA SEFAZ ----------
+    if (action === 'consultar') {
+      const { documentoId } = body as { documentoId: string }
+      const { data: doc } = await admin.from('dfe_documentos')
+        .select('id, company_id, fiscalflow_id, chave_acesso')
+        .eq('id', documentoId).maybeSingle()
+      if (!doc || doc.company_id !== companyId) return j({ error: 'Documento não encontrado' }, 404)
+      if (!doc.fiscalflow_id) return j({ error: 'fiscalflow_id ausente (sincronize antes)' }, 400)
+
+      const r = await fetch(`${FF_BASE}/${doc.fiscalflow_id}/consultar`, {
+        method: 'POST', headers: ffHeaders, body: JSON.stringify({}),
+      })
+      const data = await r.json().catch(() => ({}))
+      if (!r.ok || !data?.success) {
+        return j({ error: data?.error || 'Falha ao consultar SEFAZ', detail: data }, 502)
+      }
+      const updates: Record<string, unknown> = {}
+      if (data.data?.situacao_nfe) updates.situacao_nfe = data.data.situacao_nfe
+      if (data.data?.status_manifestacao) updates.status_manifestacao = data.data.status_manifestacao
+      if (Object.keys(updates).length) {
+        await admin.from('dfe_documentos').update(updates).eq('id', documentoId)
+      }
+      return j({ success: true, data: data.data })
+    }
+
+    // ---------- MANIFESTAR EM LOTE ----------
+    if (action === 'manifestar_lote') {
+      const { documentoIds, tipo, justificativa } = body as {
+        documentoIds: string[]; tipo: string; justificativa?: string
+      }
+      if (!Array.isArray(documentoIds) || documentoIds.length === 0 || !tipo) {
+        return j({ error: 'documentoIds e tipo obrigatórios' }, 400)
+      }
+      const { data: docs } = await admin.from('dfe_documentos')
+        .select('id, company_id, fiscalflow_id')
+        .in('id', documentoIds)
+      const valid = (docs || []).filter(d => d.company_id === companyId && d.fiscalflow_id)
+      const statusMap: Record<string, string> = {
+        ciencia: 'ciente', confirmacao: 'confirmada',
+        desconhecimento: 'desconhecida', nao_realizada: 'nao_realizada',
+      }
+      let ok = 0; const fails: { id: string; error: string }[] = []
+      for (const d of valid) {
+        try {
+          const r = await fetch(`${FF_BASE}/${d.fiscalflow_id}/manifestar`, {
+            method: 'POST', headers: ffHeaders,
+            body: JSON.stringify({ tipo, justificativa: justificativa || '' }),
+          })
+          const data = await r.json().catch(() => ({}))
+          if (!r.ok || !data?.success) {
+            fails.push({ id: d.id, error: data?.error || `HTTP ${r.status}` }); continue
+          }
+          await admin.from('dfe_documentos').update({
+            status_manifestacao: statusMap[tipo] || 'pendente',
+            data_manifestacao: new Date().toISOString(),
+          }).eq('id', d.id)
+          await admin.from('dfe_eventos').insert({
+            documento_id: d.id, company_id: companyId,
+            tipo, cstat: data.data?.cStat, xmotivo: data.data?.xMotivo,
+            nprot: data.data?.nProt, justificativa: justificativa || null, payload: data,
+          })
+          ok++
+        } catch (e) {
+          fails.push({ id: d.id, error: (e as Error).message })
+        }
+      }
+      return j({ success: true, ok, fails })
+    }
+
     return j({ error: 'Ação desconhecida' }, 400)
   } catch (err) {
     console.error('[dfe-fiscalflow-proxy] error', err)
