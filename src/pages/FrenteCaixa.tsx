@@ -60,6 +60,7 @@ import {
 } from '@/components/frente-caixa/FrenteCaixaCashMovementDialog';
 import { FrenteCaixaInutilizarNfceDialog } from '@/components/frente-caixa/FrenteCaixaInutilizarNfceDialog';
 import { FrenteCaixaXmlMesDialog } from '@/components/frente-caixa/FrenteCaixaXmlMesDialog';
+import { FrenteCaixaWeightDialog } from '@/components/frente-caixa/FrenteCaixaWeightDialog';
 import {
   FrenteCaixaImportDialog,
   type ImportableOrder,
