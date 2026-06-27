@@ -367,14 +367,16 @@ export default function DfeManifestacao() {
             ) : (
               <div className="border-y border-border">
                 {/* header com master checkbox */}
-                <div className="flex items-center gap-4 px-1 py-2 border-b border-border bg-muted/30">
-                  <Checkbox
-                    checked={allPageSelected ? true : somePageSelected ? 'indeterminate' : false}
-                    onCheckedChange={togglePage}
-                    aria-label="Marcar todos"
-                  />
-                  <span className="text-xs text-muted-foreground">Marcar todos desta página</span>
-                </div>
+                {selectionMode && (
+                  <div className="flex items-center gap-4 px-1 py-2 border-b border-border bg-muted/30">
+                    <Checkbox
+                      checked={allPageSelected ? true : somePageSelected ? 'indeterminate' : false}
+                      onCheckedChange={togglePage}
+                      aria-label="Marcar todos"
+                    />
+                    <span className="text-xs text-muted-foreground">Marcar todos desta página</span>
+                  </div>
+                )}
                 <div className="divide-y divide-border">
                 {pageItems.map((d) => {
                   const st = STATUS_LABEL[d.status_manifestacao] || STATUS_LABEL.pendente;
@@ -384,13 +386,15 @@ export default function DfeManifestacao() {
                     : `NF-e ${d.numero_nfe || '—'}`;
                   const isSel = selected.has(d.id);
                   return (
-                    <div key={d.id} className={`flex items-center gap-4 py-4 px-1 hover:bg-muted/40 transition-colors ${isSel ? 'bg-primary/5' : ''}`}>
-                      <Checkbox
-                        checked={isSel}
-                        onCheckedChange={() => toggleOne(d.id)}
-                        aria-label="Marcar"
-                        className="shrink-0"
-                      />
+                    <div key={d.id} className={`flex items-center gap-4 py-4 px-1 hover:bg-muted/40 transition-colors ${isSel && selectionMode ? 'bg-primary/5' : ''}`}>
+                      {selectionMode && (
+                        <Checkbox
+                          checked={isSel}
+                          onCheckedChange={() => toggleOne(d.id)}
+                          aria-label="Marcar"
+                          className="shrink-0"
+                        />
+                      )}
 
                       <div className="flex-1 min-w-0">
                         <div className="text-sm">
