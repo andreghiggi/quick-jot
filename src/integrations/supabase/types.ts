@@ -2641,12 +2641,16 @@ export type Database = {
       purchase_invoice_items: {
         Row: {
           company_id: string
+          conversion_factor: number
           created_at: string
           id: string
           invoice_id: string
           product_id: string | null
           quantidade: number
+          sale_price: number | null
           stock_applied: boolean
+          stock_unit: string | null
+          unit_weight_kg: number | null
           valor_total: number
           valor_unitario: number
           xml_cfop: string | null
@@ -2658,12 +2662,16 @@ export type Database = {
         }
         Insert: {
           company_id: string
+          conversion_factor?: number
           created_at?: string
           id?: string
           invoice_id: string
           product_id?: string | null
           quantidade?: number
+          sale_price?: number | null
           stock_applied?: boolean
+          stock_unit?: string | null
+          unit_weight_kg?: number | null
           valor_total?: number
           valor_unitario?: number
           xml_cfop?: string | null
@@ -2675,12 +2683,16 @@ export type Database = {
         }
         Update: {
           company_id?: string
+          conversion_factor?: number
           created_at?: string
           id?: string
           invoice_id?: string
           product_id?: string | null
           quantidade?: number
+          sale_price?: number | null
           stock_applied?: boolean
+          stock_unit?: string | null
+          unit_weight_kg?: number | null
           valor_total?: number
           valor_unitario?: number
           xml_cfop?: string | null
