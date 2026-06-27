@@ -46,6 +46,8 @@ type Doc = {
   status_manifestacao: string;
   data_manifestacao: string | null;
   xml_path: string | null;
+  imported_at: string | null;
+  imported_invoice_id: string | null;
   ignored: boolean;
 };
 
@@ -380,7 +382,7 @@ export default function DfeManifestacao() {
                 <div className="divide-y divide-border">
                 {pageItems.map((d) => {
                   const st = STATUS_LABEL[d.status_manifestacao] || STATUS_LABEL.pendente;
-                  const importada = d.tipo === 'completo' || !!d.xml_path;
+                  const importada = !!d.imported_at || !!d.imported_invoice_id;
                   const title = d.tipo === 'resumo'
                     ? `Resumo de NF-e ${d.numero_nfe || '—'}`
                     : `NF-e ${d.numero_nfe || '—'}`;
@@ -416,7 +418,9 @@ export default function DfeManifestacao() {
                         ) : (
                           <Badge className="bg-rose-500/15 text-rose-700 border border-rose-500/30 rounded-full px-3">Não importada</Badge>
                         )}
-                        <Badge variant="outline" className={`${st.cls} rounded-full text-[10px]`}>{st.label}</Badge>
+                        {d.status_manifestacao !== 'pendente' && (
+                          <Badge variant="outline" className={`${st.cls} rounded-full text-[10px]`}>{st.label}</Badge>
+                        )}
                       </div>
 
                       <DropdownMenu>
