@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.42.0-beta";
+export const VERSION = "1.43.0-beta";
 export const RELEASE_DATE = "2026-06-27"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: venda por peso (entrada manual)";
+export const CODENAME = "Combos consumindo KG do estoque";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.43.0-beta",
+    date: "2026-06-27",
+    codename: "Combos consumindo KG do estoque",
+    changes: [
+      "Cadastro de Combos: ao adicionar um componente marcado como 'Vender por peso', o campo de quantidade passa a aceitar valor em KG com 3 casas decimais e exibe a unidade KG ao lado.",
+      "Dica visual de conversão (0,200 = 200 g) para facilitar montagem de combos como '200 g de pão de queijo'.",
+      "Baixa de estoque do componente é feita em KG (fracionada), preservando precisão. Não exige migração — combo_items.quantity já é numeric.",
+    ],
+  },
   {
     version: "1.42.0-beta",
     date: "2026-06-27",
