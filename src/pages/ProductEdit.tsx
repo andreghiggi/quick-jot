@@ -115,6 +115,7 @@ export default function ProductEdit() {
   const [isScaleItem, setIsScaleItem] = useState(false);
   const [scaleBarcode, setScaleBarcode] = useState('');
   const [pricePerKg, setPricePerKg] = useState(false);
+  const [sellByWeight, setSellByWeight] = useState(false);
   // Lista de fornecedores (para o select). Só carrega se módulo Mercado ativo.
   const [suppliersList, setSuppliersList] = useState<Array<{ id: string; name: string }>>([]);
   // Snapshot do estoque atual no carregamento — usado para detectar ajuste manual na edição.
@@ -183,6 +184,7 @@ export default function ProductEdit() {
       setIsScaleItem(!!existing.isScaleItem);
       setScaleBarcode(existing.scaleBarcode || '');
       setPricePerKg(!!existing.pricePerKg);
+      setSellByWeight(!!(existing as any).sellByWeight);
       setHydrated(true);
     }
   }, [existing, isNew, hydrated, categories, categoryName, productType, stockQuantity]);
@@ -375,6 +377,7 @@ export default function ProductEdit() {
               isScaleItem,
               scaleBarcode: scaleBarcode.trim() || null,
               pricePerKg,
+              sellByWeight,
             }
           : {}),
         ...(mercadoEnabled
