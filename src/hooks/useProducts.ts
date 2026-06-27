@@ -89,6 +89,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         isScaleItem: (product as any).is_scale_item ?? false,
         scaleBarcode: (product as any).scale_barcode ?? null,
         pricePerKg: (product as any).price_per_kg ?? false,
+        sellByWeight: (product as any).sell_by_weight ?? false,
         optionals: optionalsData
           .filter((opt) => opt.product_id === product.id)
           .map((opt) => ({
@@ -174,6 +175,7 @@ export function useProducts(options: UseProductsOptions = {}) {
           is_scale_item: (productData as any).isScaleItem ?? false,
           scale_barcode: (productData as any).scaleBarcode ?? null,
           price_per_kg: (productData as any).pricePerKg ?? false,
+          sell_by_weight: (productData as any).sellByWeight ?? false,
         } as any)
         .select()
         .single();
@@ -228,6 +230,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       if ((productData as any).isScaleItem !== undefined) (updateData as any).is_scale_item = !!(productData as any).isScaleItem;
       if ((productData as any).scaleBarcode !== undefined) (updateData as any).scale_barcode = (productData as any).scaleBarcode || null;
       if ((productData as any).pricePerKg !== undefined) (updateData as any).price_per_kg = !!(productData as any).pricePerKg;
+      if ((productData as any).sellByWeight !== undefined) (updateData as any).sell_by_weight = !!(productData as any).sellByWeight;
 
       const { error } = await supabase
         .from('products')

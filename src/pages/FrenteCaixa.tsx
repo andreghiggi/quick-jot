@@ -60,6 +60,7 @@ import {
 } from '@/components/frente-caixa/FrenteCaixaCashMovementDialog';
 import { FrenteCaixaInutilizarNfceDialog } from '@/components/frente-caixa/FrenteCaixaInutilizarNfceDialog';
 import { FrenteCaixaXmlMesDialog } from '@/components/frente-caixa/FrenteCaixaXmlMesDialog';
+import { FrenteCaixaWeightDialog } from '@/components/frente-caixa/FrenteCaixaWeightDialog';
 import {
   FrenteCaixaImportDialog,
   type ImportableOrder,
@@ -187,6 +188,7 @@ export default function FrenteCaixa() {
   const [removeQty, setRemoveQty] = useState<string>('1');
   // Confirmação ao remover/zerar uma linha do carrinho (atalho ↓, botão −, lixeira).
   const [confirmDelete, setConfirmDelete] = useState<CartLine | null>(null);
+  const [weightPrompt, setWeightPrompt] = useState<Product | null>(null);
   const [priceTarget, setPriceTarget] = useState<CartLine | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<CartLine | null>(null);
   const [cashMovementOpen, setCashMovementOpen] = useState<null | CashMovementType>(null);
@@ -480,6 +482,11 @@ export default function FrenteCaixa() {
     if (pdvSettings.block_sale_without_price && price <= 0) {
       toast.error(`Produto sem preço cadastrado: ${p.name}`);
       beep(false);
+      return;
+    }
+    // Produto vendido por peso (KG): abrir modal de peso. O preço é por kg.
+    if ((p as any).sellByWeight) {
+      setWeightPrompt(p);
       return;
     }
     if (
@@ -1484,6 +1491,36 @@ export default function FrenteCaixa() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Pesagem manual (produtos sell_by_weight) */}
+        <FrenteCaixaWeightDialog
+          product={weightPrompt}
+          open={!!weightPrompt}
+          onCancel={() => setWeightPrompt(null)}
+          onConfirm={(weightKg) => {
+            const p = weightPrompt;
+            if (!p) return;
+            const price = Number(p.price) || 0;
+            const newId = crypto.randomUUID();
+            setLines((prev) => [
+              ...prev,
+              {
+                id: newId,
+                product_id: p.id,
+                product_name: p.name,
+                quantity: weightKg,
+                unit_price: price,
+                effective_unit_price: price,
+                line_discount: 0,
+                line_surcharge: 0,
+                unit: 'KG',
+              },
+            ]);
+            setLastTouchedId(newId);
+            setWeightPrompt(null);
+            beep(true);
+          }}
+        />
 
         {/* Bloqueio de navegação interna quando há venda em andamento */}
         <AlertDialog

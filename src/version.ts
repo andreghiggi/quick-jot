@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.41.0-beta";
+export const VERSION = "1.42.0-beta";
 export const RELEASE_DATE = "2026-06-27"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Importação XML: fator de conversão + preço de venda";
+export const CODENAME = "Frente de Caixa: venda por peso (entrada manual)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.42.0-beta",
+    date: "2026-06-27",
+    codename: "Frente de Caixa: venda por peso (entrada manual)",
+    changes: [
+      "Cadastro de Produtos: novo toggle 'Vender por peso (entrada manual)' na seção Balança. Quando ativo, o preço cadastrado passa a ser interpretado como R$/kg.",
+      "Frente de Caixa: ao adicionar um produto vendido por peso, abre um modal pedindo o peso em kg (aceita vírgula ou ponto). Cada pesagem vira uma linha nova no carrinho — não soma com outra venda do mesmo item.",
+      "Total da linha = peso × preço/kg. Baixa de estoque é fracionada (kg), preservando precisão decimal.",
+      "Migration: products ganhou sell_by_weight (default false). Não afeta produtos existentes.",
+    ],
+  },
   {
     version: "1.41.0-beta",
     date: "2026-06-27",

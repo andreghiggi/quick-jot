@@ -2479,6 +2479,7 @@ export type Database = {
           price_per_kg: boolean
           product_type: string
           scale_barcode: string | null
+          sell_by_weight: boolean
           shelf_life_days: number | null
           stock_quantity: number
           subcategory_id: string | null
@@ -2523,6 +2524,7 @@ export type Database = {
           price_per_kg?: boolean
           product_type?: string
           scale_barcode?: string | null
+          sell_by_weight?: boolean
           shelf_life_days?: number | null
           stock_quantity?: number
           subcategory_id?: string | null
@@ -2567,6 +2569,7 @@ export type Database = {
           price_per_kg?: boolean
           product_type?: string
           scale_barcode?: string | null
+          sell_by_weight?: boolean
           shelf_life_days?: number | null
           stock_quantity?: number
           subcategory_id?: string | null
