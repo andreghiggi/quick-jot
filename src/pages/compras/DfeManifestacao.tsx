@@ -575,6 +575,40 @@ export default function DfeManifestacao() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Pós-manifestação "Ciência": perguntar se deseja importar XML (padrão GWeb) */}
+      <Dialog open={!!postManifestImport} onOpenChange={(o) => !o && setPostManifestImport(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importar XML desta NF-e?</DialogTitle>
+            <DialogDescription>
+              A manifestação foi registrada como <strong>Ciência da operação</strong>.
+              Deseja importar o XML agora e dar entrada no estoque?
+            </DialogDescription>
+          </DialogHeader>
+          {postManifestImport && (
+            <div className="text-sm text-muted-foreground space-y-1">
+              <div><strong>Emitente:</strong> {postManifestImport.nome_emitente || '—'}</div>
+              <div><strong>NF-e:</strong> {postManifestImport.numero_nfe || '—'} / Série {postManifestImport.serie || '—'}</div>
+              <div><strong>Valor:</strong> {formatBRL(postManifestImport.valor_total)}</div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPostManifestImport(null)}>
+              Agora não
+            </Button>
+            <Button
+              onClick={() => {
+                const d = postManifestImport!;
+                setPostManifestImport(null);
+                navigate(`/compras/importar-xml?documentoId=${d.id}`);
+              }}
+            >
+              <FileInput className="w-4 h-4 mr-2" /> Importar XML
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
