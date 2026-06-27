@@ -429,6 +429,17 @@ export default function DfeManifestacao() {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
+                          {!selectionMode && (
+                            <DropdownMenuItem onClick={() => { setSelectionMode(true); setSelected(new Set([d.id])); }}>
+                              <Square className="w-4 h-4 mr-2" /> Marcar
+                            </DropdownMenuItem>
+                          )}
+                          {selectionMode && (
+                            <DropdownMenuItem onClick={() => { setSelectionMode(false); setSelected(new Set()); }}>
+                              <CheckSquare className="w-4 h-4 mr-2" /> Desmarcar tudo
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => copyChave(d)}>
                             <Copy className="w-4 h-4 mr-2" /> Copiar chave de acesso
                           </DropdownMenuItem>
