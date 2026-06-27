@@ -464,8 +464,8 @@ export default function DfeManifestacao() {
                           <DropdownMenuItem onClick={() => handleDownloadXml(d)}>
                             <Download className="w-4 h-4 mr-2" /> Download XML
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleImport(d)} disabled={!importada}>
-                            <FileInput className="w-4 h-4 mr-2" /> Importar XML
+                          <DropdownMenuItem onClick={() => handleImport(d)} disabled={importada}>
+                            <FileInput className="w-4 h-4 mr-2" /> {importada ? 'XML já importado' : 'Importar XML'}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleConsultarSefaz(d)}>
                             <FileSearch className="w-4 h-4 mr-2" /> Consultar na SEFAZ
