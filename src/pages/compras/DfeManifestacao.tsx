@@ -13,17 +13,20 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import {
   RefreshCw, Copy, Download, FileInput, Loader2,
   CheckCircle2, AlertCircle, Inbox, Search, CloudDownload,
-  ArrowUpDown, SlidersHorizontal, ChevronLeft, ChevronRight, User,
+  ArrowUpDown, SlidersHorizontal, ChevronLeft, ChevronRight,
+  MoreVertical, FileSearch, Ban, FileText,
 } from 'lucide-react';
 
 type Doc = {
@@ -75,6 +78,10 @@ export default function DfeManifestacao() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [sortAsc, setSortAsc] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [batchDialog, setBatchDialog] = useState<{ tipo: string } | null>(null);
+  const [batchJust, setBatchJust] = useState('');
+  const [batchActing, setBatchActing] = useState(false);
 
   useEffect(() => { if (company?.id) load(); }, [company?.id, statusFilter]);
 
@@ -109,10 +116,14 @@ export default function DfeManifestacao() {
   }, [docs, search, sortAsc]);
 
   useEffect(() => { setPage(1); }, [search, statusFilter, perPage]);
+  useEffect(() => { setSelected(new Set()); }, [search, statusFilter, page, perPage]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const pageStart = (page - 1) * perPage;
   const pageItems = filtered.slice(pageStart, pageStart + perPage);
+  const pageIds = pageItems.map(d => d.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every(id => selected.has(id));
+  const somePageSelected = pageIds.some(id => selected.has(id));
 
   async function callProxy(payload: Record<string, unknown>) {
     const { data, error } = await supabase.functions.invoke('dfe-fiscalflow-proxy', {
@@ -156,6 +167,65 @@ export default function DfeManifestacao() {
     } catch (e: any) {
       toast.error(e.message || 'Falha ao manifestar');
     } finally { setActing(false); }
+  }
+
+  function toggleOne(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+  function togglePage() {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (allPageSelected) pageIds.forEach(id => next.delete(id));
+      else pageIds.forEach(id => next.add(id));
+      return next;
+    });
+  }
+
+  async function handleBatchManifestar() {
+    if (!batchDialog) return;
+    const t = TIPO_MANIFESTACAO.find(x => x.key === batchDialog.tipo)!;
+    if (t.needsJust && batchJust.trim().length < 15) {
+      toast.error('Justificativa deve ter no mínimo 15 caracteres');
+      return;
+    }
+    setBatchActing(true);
+    try {
+      const ids = Array.from(selected);
+      const r = await callProxy({
+        action: 'manifestar_lote',
+        documentoIds: ids,
+        tipo: batchDialog.tipo,
+        justificativa: batchJust.trim(),
+      });
+      toast.success(`${r?.ok || 0} manifestada(s)${r?.fails?.length ? `, ${r.fails.length} falha(s)` : ''}`);
+      setBatchDialog(null); setBatchJust(''); setSelected(new Set());
+      await load();
+    } catch (e: any) {
+      toast.error(e.message || 'Falha em lote');
+    } finally { setBatchActing(false); }
+  }
+
+  async function handleBatchIgnore() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    await supabase.from('dfe_documentos').update({ ignored: true }).in('id', ids);
+    toast.success(`${ids.length} documento(s) ocultado(s)`);
+    setSelected(new Set());
+    await load();
+  }
+
+  async function handleConsultarSefaz(doc: Doc) {
+    try {
+      await callProxy({ action: 'consultar', documentoId: doc.id });
+      toast.success('Consulta SEFAZ concluída');
+      await load();
+    } catch (e: any) {
+      toast.error(e.message || 'Falha ao consultar SEFAZ');
+    }
   }
 
   async function handleDownloadXml(doc: Doc) {
@@ -255,6 +325,35 @@ export default function DfeManifestacao() {
               </div>
             </div>
 
+            {/* Barra de ações em lote */}
+            {selected.size > 0 && (
+              <div className="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-md bg-primary/10 border border-primary/30">
+                <div className="text-sm font-medium">{selected.size} selecionada(s)</div>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="default">
+                        <CheckCircle2 className="w-4 h-4 mr-1" /> Manifestar-se em lote
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {TIPO_MANIFESTACAO.map(t => (
+                        <DropdownMenuItem key={t.key} onClick={() => { setBatchJust(''); setBatchDialog({ tipo: t.key }); }}>
+                          {t.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button size="sm" variant="outline" onClick={handleBatchIgnore}>
+                    <Ban className="w-4 h-4 mr-1" /> Ignorar
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+                    Limpar
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Lista */}
             {loading ? (
               <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
@@ -265,42 +364,32 @@ export default function DfeManifestacao() {
                 <p className="text-xs mt-1">Clique em <b>Sincronizar SEFAZ</b> no canto inferior direito.</p>
               </CardContent></Card>
             ) : (
-              <div className="divide-y divide-border border-y border-border">
+              <div className="border-y border-border">
+                {/* header com master checkbox */}
+                <div className="flex items-center gap-4 px-1 py-2 border-b border-border bg-muted/30">
+                  <Checkbox
+                    checked={allPageSelected ? true : somePageSelected ? 'indeterminate' : false}
+                    onCheckedChange={togglePage}
+                    aria-label="Marcar todos"
+                  />
+                  <span className="text-xs text-muted-foreground">Marcar todos desta página</span>
+                </div>
+                <div className="divide-y divide-border">
                 {pageItems.map((d) => {
                   const st = STATUS_LABEL[d.status_manifestacao] || STATUS_LABEL.pendente;
                   const importada = d.tipo === 'completo' || !!d.xml_path;
                   const title = d.tipo === 'resumo'
                     ? `Resumo de NF-e ${d.numero_nfe || '—'}`
                     : `NF-e ${d.numero_nfe || '—'}`;
+                  const isSel = selected.has(d.id);
                   return (
-                    <div key={d.id} className="flex items-center gap-4 py-4 px-1 hover:bg-muted/40 transition-colors">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted-foreground/10 transition-colors shrink-0"
-                            aria-label="Ações"
-                          >
-                            <User className="w-5 h-5" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-56">
-                          {TIPO_MANIFESTACAO.map(t => (
-                            <DropdownMenuItem key={t.key} onClick={() => { setJustificativa(''); setManifestDialog({ doc: d, tipo: t.key }); }}>
-                              <CheckCircle2 className="w-4 h-4 mr-2" /> {t.label}
-                            </DropdownMenuItem>
-                          ))}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleDownloadXml(d)}><Download className="w-4 h-4 mr-2" /> Download XML</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleImport(d)} disabled={!importada}>
-                            <FileInput className="w-4 h-4 mr-2" /> Importar pro estoque
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => copyChave(d)}><Copy className="w-4 h-4 mr-2" /> Copiar chave</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleIgnore(d)} className="text-destructive">
-                            <AlertCircle className="w-4 h-4 mr-2" /> Ignorar / ocultar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <div key={d.id} className={`flex items-center gap-4 py-4 px-1 hover:bg-muted/40 transition-colors ${isSel ? 'bg-primary/5' : ''}`}>
+                      <Checkbox
+                        checked={isSel}
+                        onCheckedChange={() => toggleOne(d.id)}
+                        aria-label="Marcar"
+                        className="shrink-0"
+                      />
 
                       <div className="flex-1 min-w-0">
                         <div className="text-sm">
@@ -324,9 +413,56 @@ export default function DfeManifestacao() {
                         )}
                         <Badge variant="outline" className={`${st.cls} rounded-full text-[10px]`}>{st.label}</Badge>
                       </div>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors shrink-0"
+                            aria-label="Ações"
+                          >
+                            <MoreVertical className="w-5 h-5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuItem onClick={() => toggleOne(d.id)}>
+                            <CheckCircle2 className="w-4 h-4 mr-2" /> {isSel ? 'Desmarcar' : 'Marcar'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => copyChave(d)}>
+                            <Copy className="w-4 h-4 mr-2" /> Copiar chave de acesso
+                          </DropdownMenuItem>
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              <FileText className="w-4 h-4 mr-2" /> Manifestar-se
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuPortal>
+                              <DropdownMenuSubContent className="w-56">
+                                {TIPO_MANIFESTACAO.map(t => (
+                                  <DropdownMenuItem key={t.key} onClick={() => { setJustificativa(''); setManifestDialog({ doc: d, tipo: t.key }); }}>
+                                    {t.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuPortal>
+                          </DropdownMenuSub>
+                          <DropdownMenuItem onClick={() => handleDownloadXml(d)}>
+                            <Download className="w-4 h-4 mr-2" /> Download XML
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleImport(d)} disabled={!importada}>
+                            <FileInput className="w-4 h-4 mr-2" /> Importar XML
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleConsultarSefaz(d)}>
+                            <FileSearch className="w-4 h-4 mr-2" /> Consultar na SEFAZ
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleIgnore(d)} className="text-destructive">
+                            <Ban className="w-4 h-4 mr-2" /> Ignorar NF-e
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   );
                 })}
+                </div>
               </div>
             )}
           </div>
@@ -383,6 +519,33 @@ export default function DfeManifestacao() {
             <Button variant="outline" onClick={() => setManifestDialog(null)}>Cancelar</Button>
             <Button onClick={handleManifestar} disabled={acting}>
               {acting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo manifestação em lote */}
+      <Dialog open={!!batchDialog} onOpenChange={(o) => !o && setBatchDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Manifestar {selected.size} nota(s) como {TIPO_MANIFESTACAO.find(t => t.key === batchDialog?.tipo)?.label}
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação é registrada na SEFAZ e não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          {TIPO_MANIFESTACAO.find(t => t.key === batchDialog?.tipo)?.needsJust && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Justificativa (mín. 15 caracteres, aplicada a todas)</label>
+              <Textarea value={batchJust} onChange={e => setBatchJust(e.target.value)} rows={3} />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBatchDialog(null)}>Cancelar</Button>
+            <Button onClick={handleBatchManifestar} disabled={batchActing}>
+              {batchActing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
               Confirmar
             </Button>
           </DialogFooter>
