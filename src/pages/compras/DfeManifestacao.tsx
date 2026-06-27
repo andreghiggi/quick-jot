@@ -424,9 +424,6 @@ export default function DfeManifestacao() {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
-                          <DropdownMenuItem onClick={() => toggleOne(d.id)}>
-                            <CheckCircle2 className="w-4 h-4 mr-2" /> {isSel ? 'Desmarcar' : 'Marcar'}
-                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => copyChave(d)}>
                             <Copy className="w-4 h-4 mr-2" /> Copiar chave de acesso
                           </DropdownMenuItem>
