@@ -418,22 +418,33 @@ export default function ComboEdit() {
               <ul className="divide-y border rounded-md">
                 {items.map((it) => {
                   const p = products.find((x) => x.id === it.product_id);
+                  const byWeight = !!(p as any)?.sellByWeight;
+                  const unit = byWeight ? 'KG' : ((p as any)?.unit || 'UN');
                   return (
                     <li key={it.product_id} className="flex items-center gap-3 p-3">
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-sm truncate">{p?.name || it.product_id}</div>
                         <div className="text-xs text-muted-foreground">
                           {p?.code ? `${p.code} · ` : ''}R$ {(p?.price ?? 0).toFixed(2).replace('.', ',')}
+                          {byWeight ? ' / kg' : ''}
                         </div>
+                        {byWeight ? (
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            Dica: 0,200 = 200 g · 0,050 = 50 g
+                          </div>
+                        ) : null}
                       </div>
-                      <Input
-                        type="number"
-                        min="0.001"
-                        step="0.001"
-                        value={it.quantity}
-                        onChange={(e) => updateItemQty(it.product_id, Number(e.target.value))}
-                        className="w-24"
-                      />
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          min="0.001"
+                          step={byWeight ? '0.001' : '1'}
+                          value={it.quantity}
+                          onChange={(e) => updateItemQty(it.product_id, Number(e.target.value))}
+                          className="w-24"
+                        />
+                        <span className="text-xs text-muted-foreground w-7 text-left">{unit}</span>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
