@@ -26,7 +26,7 @@ import {
   RefreshCw, Copy, Download, FileInput, Loader2,
   CheckCircle2, AlertCircle, Inbox, Search, CloudDownload,
   ArrowUpDown, SlidersHorizontal, ChevronLeft, ChevronRight,
-  MoreVertical, FileSearch, Ban, FileText,
+  MoreVertical, FileSearch, Ban, FileText, Square, CheckSquare,
 } from 'lucide-react';
 
 type Doc = {
