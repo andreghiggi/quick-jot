@@ -19,7 +19,52 @@ serve(async (req) => {
   }
 
   try {
-    const { imageUrl, fileType, existingCategories, existingSubcategories } = await req.json();
+    const body = await req.json();
+    const { imageUrl, fileType, existingCategories, existingSubcategories, mode, productNames } = body || {};
+
+    // ---- Modo 'fiscal_only': sugere tipo / unidade / NCM a partir de nomes ----
+    if (mode === 'fiscal_only') {
+      if (!Array.isArray(productNames) || productNames.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'productNames is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const sys = `Você é um assistente fiscal brasileiro. Dado um array de nomes de produtos, sugira para cada um:
+- suggested_type: "cardapio" (pratos preparados, lanches, pizzas, sobremesas servidas), "mercado" (bebidas embaladas, doces, salgadinhos, conveniência) ou "ambos"
+- suggested_unit: "UN", "KG", "L", "G", "ML" (use KG se for vendido por peso, L para bebidas em garrafa grande, UN como padrão)
+- ncm_suggestion: NCM de 8 dígitos mais provável (ex: refrigerante=22021000, cerveja=22030000, água=22011000, pão de queijo=19059090, hambúrguer pronto=21069090). Se não souber, retorne null.
+Retorne APENAS JSON: {"suggestions":[{"name":"...","suggested_type":"...","suggested_unit":"...","ncm_suggestion":"..."}]}`;
+      const r = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LOVABLE_API_KEY}` },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: sys },
+            { role: 'user', content: 'Produtos: ' + JSON.stringify(productNames) },
+          ],
+          temperature: 0.1,
+        }),
+      });
+      if (!r.ok) {
+        const t = await r.text();
+        console.error('AI fiscal error:', t);
+        throw new Error('Erro ao consultar IA fiscal');
+      }
+      const aiR = await r.json();
+      const c = aiR.choices?.[0]?.message?.content || '';
+      let suggestions: any[] = [];
+      try {
+        const m = c.match(/\{[\s\S]*"suggestions"[\s\S]*\}/);
+        if (m) suggestions = (JSON.parse(m[0]).suggestions) || [];
+      } catch (e) {
+        console.error('Parse fiscal error:', c);
+      }
+      return new Response(JSON.stringify({ suggestions }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (!imageUrl) {
       return new Response(
@@ -56,10 +101,13 @@ Para cada produto, retorne:
 - subcategory_id: id da subcategoria existente se houver match (ou null)
 - description: descrição breve se visível
 - is_new_category: true se a categoria é nova (não existe na lista), false se é existente
+- suggested_type: "cardapio" (prato/lanche preparado), "mercado" (bebida embalada, conveniência) ou "ambos". Default "cardapio".
+- suggested_unit: "UN", "KG", "L" — default "UN". Use KG se for granel/peso.
+- ncm_suggestion: NCM de 8 dígitos provável quando for item de mercado (ex: refrigerante=22021000, cerveja=22030000, água=22011000). null para itens preparados.
 ${categoryContext}
 
 Retorne APENAS um JSON válido no formato:
-{"products": [{"name": "...", "price": 0.00, "category": "...", "category_id": "..." ou null, "subcategory_id": "..." ou null, "description": "...", "is_new_category": true/false}]}
+{"products": [{"name": "...", "price": 0.00, "category": "...", "category_id": "..." ou null, "subcategory_id": "..." ou null, "description": "...", "is_new_category": true/false, "suggested_type": "cardapio|mercado|ambos", "suggested_unit": "UN|KG|L", "ncm_suggestion": "..." ou null}]}
 
 Se não conseguir identificar o preço, use 0.
 Se não conseguir identificar a categoria, crie uma nova com nome apropriado baseado no tipo de produto.
