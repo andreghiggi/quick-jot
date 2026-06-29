@@ -546,14 +546,74 @@ export default function MenuImport() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Barra de ações em massa */}
+              <div className="rounded-lg border bg-muted/40 p-3 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Checkbox
+                    checked={extractedProducts.length > 0 && extractedProducts.every(p => p.selected)}
+                    onCheckedChange={(v) => toggleSelectAll(!!v)}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {selectedCount > 0 ? `${selectedCount} selecionado(s) — ações aplicam apenas aos selecionados` : 'Nenhum selecionado — ações aplicam a todos'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="flex items-end gap-2">
+                    <div>
+                      <Label className="text-xs">Regra tributária</Label>
+                      <Select value={bulkTaxRuleId} onValueChange={setBulkTaxRuleId}>
+                        <SelectTrigger className="h-9 w-56"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectContent>
+                          {taxRules.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button size="sm" variant="secondary" onClick={bulkApplyTaxRule}>Aplicar</Button>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <div>
+                      <Label className="text-xs">Tipo do produto</Label>
+                      <Select value={bulkType} onValueChange={(v) => setBulkType(v as any)}>
+                        <SelectTrigger className="h-9 w-40"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cardapio">Cardápio</SelectItem>
+                          <SelectItem value="mercado">Mercado</SelectItem>
+                          <SelectItem value="ambos">Ambos</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button size="sm" variant="secondary" onClick={bulkApplyType}>Aplicar</Button>
+                  </div>
+                  <div className="flex gap-2 ml-auto">
+                    <Button size="sm" variant="outline" onClick={() => bulkToggleActive(true)}>Ativar</Button>
+                    <Button size="sm" variant="outline" onClick={() => bulkToggleActive(false)}>Desativar</Button>
+                    <Button size="sm" variant="outline" onClick={handleApplyFiscalAI} disabled={isApplyingFiscalAI} className="gap-1">
+                      {isApplyingFiscalAI ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                      IA fiscal
+                    </Button>
+                    {selectedCount > 0 && (
+                      <Button size="sm" variant="destructive" onClick={bulkRemove} className="gap-1">
+                        <Trash2 className="w-3 h-3" /> Remover
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <ScrollArea className="h-[60vh]">
                 <div className="space-y-3 pr-4">
                   {extractedProducts.map((product, index) => {
                     const subcatOptions = getSubcategoryOptions(product.categoryId);
+                    const issues = rowIssues(product);
+                    const isMercadoLike = product.productType !== 'cardapio';
                     return (
-                      <div key={index} className="border rounded-lg p-4 space-y-3">
+                      <div key={index} className={`border rounded-lg p-4 space-y-3 ${hasBlockingError(product) ? 'border-destructive/60' : ''}`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={product.selected}
+                              onCheckedChange={(v) => updateProduct(index, 'selected', !!v)}
+                            />
                             <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
                             {product.isNewCategory && (
                               <Badge variant="secondary" className="bg-accent text-accent-foreground text-xs">
@@ -561,14 +621,30 @@ export default function MenuImport() {
                                 Nova categoria
                               </Badge>
                             )}
+                            {issues.map((iss, i) => (
+                              <Badge
+                                key={i}
+                                variant={iss.level === 'error' ? 'destructive' : 'secondary'}
+                                className="text-xs gap-1"
+                              >
+                                <AlertTriangle className="w-3 h-3" />
+                                {iss.label}
+                              </Badge>
+                            ))}
                           </div>
-                          <Button variant="ghost" size="icon" onClick={() => removeProduct(index)}>
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
+                          <div className="flex items-center gap-3">
+                            <label className="flex items-center gap-2 text-xs">
+                              <Switch checked={product.active} onCheckedChange={(v) => updateProduct(index, 'active', v)} />
+                              Ativo
+                            </label>
+                            <Button variant="ghost" size="icon" onClick={() => removeProduct(index)}>
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div className="sm:col-span-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
+                          <div className="sm:col-span-3">
                             <Label className="text-xs">Nome</Label>
                             <Input
                               value={product.name}
@@ -578,7 +654,7 @@ export default function MenuImport() {
                             />
                           </div>
                           <div>
-                            <Label className="text-xs">Preço (R$)</Label>
+                            <Label className="text-xs">Preço venda (R$)</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -587,9 +663,53 @@ export default function MenuImport() {
                               className="h-9"
                             />
                           </div>
+                          <div>
+                            <Label className="text-xs">Custo (R$)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={product.costPrice ?? ''}
+                              onChange={(e) => updateProduct(index, 'costPrice', e.target.value === '' ? null : parseFloat(e.target.value))}
+                              className="h-9"
+                              placeholder="Opcional"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Unidade</Label>
+                            <Select value={product.unit || 'UN'} onValueChange={(v) => updateProduct(index, 'unit', v)}>
+                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {['UN','KG','G','L','ML','CX','PCT','DZ'].map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                          <div>
+                            <Label className="text-xs">Tipo</Label>
+                            <Select value={product.productType} onValueChange={(v) => updateProduct(index, 'productType', v as any)}>
+                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="cardapio">Cardápio</SelectItem>
+                                <SelectItem value="mercado">Mercado</SelectItem>
+                                <SelectItem value="ambos">Ambos</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Regra tributária</Label>
+                            <Select
+                              value={product.taxRuleId || 'none'}
+                              onValueChange={(v) => updateProduct(index, 'taxRuleId', v === 'none' ? null : v)}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Sem regra</SelectItem>
+                                {taxRules.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <div>
                             <Label className="text-xs">Categoria</Label>
                             <Select
@@ -639,6 +759,22 @@ export default function MenuImport() {
                           </div>
                         </div>
 
+                        {/* Visibilidade */}
+                        <div className="flex flex-wrap gap-4 text-xs">
+                          <label className="flex items-center gap-2">
+                            <Switch checked={product.pdvItem} onCheckedChange={(v) => updateProduct(index, 'pdvItem', v)} />
+                            Visível no PDV
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Switch checked={product.menuItem} onCheckedChange={(v) => updateProduct(index, 'menuItem', v)} />
+                            Visível no Cardápio
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Switch checked={product.waiterItem} onCheckedChange={(v) => updateProduct(index, 'waiterItem', v)} />
+                            Visível no Garçom
+                          </label>
+                        </div>
+
                         <div>
                           <Label className="text-xs">Descrição</Label>
                           <Input
@@ -648,6 +784,90 @@ export default function MenuImport() {
                             placeholder="Opcional"
                           />
                         </div>
+
+                        {/* Mercado: campos extras */}
+                        {isMercadoLike && (
+                          <div className="rounded-md border border-dashed p-3 space-y-3 bg-muted/30">
+                            <div className="text-xs font-medium text-muted-foreground">Campos de Mercado (fiscal/estoque)</div>
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                              <div className="sm:col-span-2">
+                                <Label className="text-xs">GTIN / EAN</Label>
+                                <div className="flex gap-2">
+                                  <Input
+                                    value={product.gtin}
+                                    onChange={(e) => updateProduct(index, 'gtin', e.target.value)}
+                                    className="h-9"
+                                    placeholder="Sem GTIN"
+                                  />
+                                  <Button type="button" size="sm" variant="outline" onClick={() => handleGenerateGtin(index)}>
+                                    Gerar
+                                  </Button>
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="text-xs">NCM</Label>
+                                <Input
+                                  value={product.ncm}
+                                  onChange={(e) => updateProduct(index, 'ncm', e.target.value)}
+                                  className="h-9"
+                                  placeholder="8 dígitos"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">CFOP</Label>
+                                <Input
+                                  value={product.cfop}
+                                  onChange={(e) => updateProduct(index, 'cfop', e.target.value)}
+                                  className="h-9"
+                                  placeholder="5102"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                              <div>
+                                <Label className="text-xs">CEST</Label>
+                                <Input
+                                  value={product.cest}
+                                  onChange={(e) => updateProduct(index, 'cest', e.target.value)}
+                                  className="h-9"
+                                  placeholder="Opcional"
+                                />
+                              </div>
+                              <label className="flex items-center gap-2 text-xs pt-5">
+                                <Switch checked={product.trackStock} onCheckedChange={(v) => updateProduct(index, 'trackStock', v)} />
+                                Controla estoque
+                              </label>
+                              {product.trackStock && (
+                                <>
+                                  <div>
+                                    <Label className="text-xs">Estoque mínimo</Label>
+                                    <Input
+                                      type="number"
+                                      step="1"
+                                      value={product.minStock}
+                                      onChange={(e) => updateProduct(index, 'minStock', parseFloat(e.target.value) || 0)}
+                                      className="h-9"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs">Estoque inicial</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.001"
+                                      value={product.stockQuantity}
+                                      onChange={(e) => updateProduct(index, 'stockQuantity', parseFloat(e.target.value) || 0)}
+                                      className="h-9"
+                                    />
+                                  </div>
+                                </>
+                              )}
+                              <label className="flex items-center gap-2 text-xs pt-5">
+                                <Switch checked={product.sellByWeight} onCheckedChange={(v) => updateProduct(index, 'sellByWeight', v)} />
+                                Vender por peso
+                              </label>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
