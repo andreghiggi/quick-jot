@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.44.0-beta";
+export const VERSION = "1.45.0-beta";
 export const RELEASE_DATE = "2026-06-29"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: DANFE impresso automaticamente";
+export const CODENAME = "Importar Cardápio IA: revisão fiscal + visibilidade + tipo";
 
 export interface Release {
   version: string;
@@ -19,6 +19,21 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.45.0-beta",
+    date: "2026-06-29",
+    codename: "Importar Cardápio IA: revisão fiscal + visibilidade + tipo",
+    changes: [
+      "Importar Cardápio (IA): o grid de revisão agora deixa o operador ajustar TUDO antes de salvar em massa — Tipo (Cardápio/Mercado/Ambos), Regra tributária, Visibilidade (PDV/Cardápio/Garçom), Ativo, Custo, Unidade e Descrição.",
+      "Quando o Tipo for Mercado ou Ambos, a linha expande campos fiscais/estoque: GTIN (com botão Gerar EAN interno), NCM, CFOP, CEST, Controla estoque, Estoque mínimo, Estoque inicial e Vender por peso.",
+      "Ações em massa no topo: aplicar regra tributária, aplicar tipo, ativar/desativar e remover — atuam só nas linhas selecionadas via checkbox, ou em todas quando nenhuma estiver marcada.",
+      "Botão IA fiscal: envia os nomes dos produtos para a IA sugerir Tipo (cardapio/mercado/ambos), Unidade (UN/KG/L) e NCM — útil para enriquecer importações antigas.",
+      "Validação por linha com badges: 'Definir preço' (vermelho, bloqueia), 'Revisar fiscal' (amarelo, p/ Mercado sem NCM) e 'Sem tributação' (amarelo, não bloqueia).",
+      "Import parcial: ao confirmar, produtos válidos são criados; linhas com erro permanecem no grid com o badge para correção — não perde trabalho.",
+      "Edge Function extract-menu passou a sugerir suggested_type, suggested_unit e ncm_suggestion direto na extração, além de aceitar mode='fiscal_only' para enriquecimento por nome.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, NFe, Multi-Pagamento, PDV V2, Pedido Express, Frente de Caixa, auto_printer.py ou Manifestação Eletrônica.",
+    ],
+  },
   {
     version: "1.44.0-beta",
     date: "2026-06-29",
