@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.43.0-beta";
-export const RELEASE_DATE = "2026-06-27"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Combos consumindo KG do estoque";
+export const VERSION = "1.44.0-beta";
+export const RELEASE_DATE = "2026-06-29"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Frente de Caixa: DANFE impresso automaticamente";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.44.0-beta",
+    date: "2026-06-29",
+    codename: "Frente de Caixa: DANFE impresso automaticamente",
+    changes: [
+      "Frente de Caixa: o toggle 'Ação ao salvar a venda' (Configurações → Comportamento) agora controla de fato a impressão automática do DANFE NFC-e. Em modo 'Automático', assim que a SEFAZ autoriza a nota o DANFE é enviado para a impressora padrão sem intervenção do operador.",
+      "Notificação visível: o diálogo pós-venda passa a exibir um aviso azul 'DANFE sendo impressa automaticamente' + toast confirmando o envio, para que o operador saiba o que está acontecendo.",
+      "Wiring corrigido: o diálogo pós-venda da Frente de Caixa (consolidado e legado) passou a ler print_on_finish_mode em vez do boolean legado auto_print_on_finish — alinhado com a aba Comportamento.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e (nfce-proxy), Multi-Pagamento, PDV V2, Pedido Express, Cobrança, auto_printer.py ou no fluxo de impressão de comandas/produção.",
+    ],
+  },
   {
     version: "1.43.0-beta",
     date: "2026-06-27",

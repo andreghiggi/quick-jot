@@ -285,6 +285,19 @@ export function FrenteCaixaPostSaleDialog({
               </div>
             ) : null}
 
+            {/* Aviso de impressão automática (config: print_on_finish_mode = 'auto') */}
+            {autoFired && nfceAuthorized && (
+              <div className="rounded border border-primary/40 bg-primary/5 p-3 text-sm flex items-start gap-2">
+                <Printer className="w-4 h-4 text-primary mt-0.5 shrink-0 animate-pulse" />
+                <div className="flex-1">
+                  <p className="font-medium">DANFE sendo impressa automaticamente</p>
+                  <p className="text-xs text-muted-foreground">
+                    Configuração "Ação ao salvar a venda" está em modo automático.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Checkboxes */}
             <div className="space-y-2">
               {hasTef && (

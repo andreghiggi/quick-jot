@@ -1721,7 +1721,7 @@ export default function FrenteCaixa() {
 
       {/* Diálogo pós-venda da NFC-e (reaproveita o do PDV V2):
           - faz polling até autorizar/rejeitar
-          - imprime DANFE automaticamente se `auto_print_on_finish` estiver ligado
+          - imprime DANFE automaticamente se `print_on_finish_mode === 'auto'`
           - reenvia 1x automaticamente em caso de rejeição
           - fecha sozinho após 3s (auto-print) ou 10s (manual) */}
       <PDVV2NFCePostSaleDialog
@@ -1729,7 +1729,7 @@ export default function FrenteCaixa() {
         onOpenChange={setPostSaleOpen}
         companyId={company?.id}
         initialRecord={postSaleRecord}
-        autoPrint={!!pdvSettings.auto_print_on_finish}
+        autoPrint={pdvSettings.print_on_finish_mode === 'auto'}
         onClosed={() => {
           setPostSaleRecord(null);
           setTimeout(() => inputRef.current?.focus(), 100);
@@ -1748,7 +1748,7 @@ export default function FrenteCaixa() {
         initialNfceRecord={consolidatedRecord}
         nfceError={consolidatedNfceError}
         emittingNfce={consolidatedEmitting}
-        autoPrintDanfe={!!pdvSettings.auto_print_on_finish}
+        autoPrintDanfe={pdvSettings.print_on_finish_mode === 'auto'}
         onClosed={() => {
           setConsolidatedRecord(null);
           setConsolidatedTef(null);
