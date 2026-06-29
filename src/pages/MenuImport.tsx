@@ -388,7 +388,7 @@ export default function MenuImport() {
             ? product.categoryId 
             : freshCatMap.get(product.category) || null;
           
-          await addProduct({
+          const newId = await addProduct({
             name: product.name,
             price: product.price,
             category: product.category,
@@ -411,11 +411,19 @@ export default function MenuImport() {
             sellByWeight: product.sellByWeight,
           } as any);
           // Estoque inicial via movimentação (mantém histórico)
-          if (product.trackStock && product.stockQuantity > 0) {
-            // best-effort: ignora falha silenciosa para não travar o lote
+          if (newId && product.trackStock && product.stockQuantity > 0) {
             try {
-              // addProduct retornou id? não estamos capturando aqui — sem perda crítica
-            } catch {}
+              await supabase.rpc('apply_stock_movement', {
+                _product_id: newId,
+                _qty: product.stockQuantity,
+                _type: 'entrada',
+                _reference_type: 'menu_import',
+                _reference_id: null,
+                _notes: 'Estoque inicial via Importar Cardápio',
+              });
+            } catch (e) {
+              console.warn('Falha no estoque inicial', product.name, e);
+            }
           }
           successCount++;
         } catch (err) {
