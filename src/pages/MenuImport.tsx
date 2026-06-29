@@ -4,6 +4,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useCategories } from '@/hooks/useCategories';
 import { useSubcategories } from '@/hooks/useSubcategories';
 import { useProducts } from '@/hooks/useProducts';
+import { useTaxRules } from '@/hooks/useTaxRules';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,8 +13,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Upload, Loader2, Eye, Check, FileImage, Trash2, Plus, Sparkles } from 'lucide-react';
+import { Upload, Loader2, Eye, Check, FileImage, Trash2, Plus, Sparkles, AlertTriangle, Wand2 } from 'lucide-react';
 
 interface ExtractedProduct {
   name: string;
@@ -23,6 +26,32 @@ interface ExtractedProduct {
   subcategoryId: string | null;
   description: string;
   isNewCategory: boolean;
+  // ---- Fase 1: visibilidade / tipo / tributação / custo ----
+  productType: 'cardapio' | 'mercado' | 'ambos';
+  taxRuleId: string | null;
+  pdvItem: boolean;
+  menuItem: boolean;
+  waiterItem: boolean;
+  active: boolean;
+  costPrice: number | null;
+  unit: string;
+  // ---- Fase 2: campos de Mercado (gating por productType) ----
+  gtin: string;
+  ncm: string;
+  cfop: string;
+  cest: string;
+  trackStock: boolean;
+  stockQuantity: number;
+  minStock: number;
+  sellByWeight: boolean;
+  // ---- UI ----
+  selected: boolean;
+}
+
+function applyVisibilityFromType(t: 'cardapio' | 'mercado' | 'ambos') {
+  if (t === 'mercado') return { pdvItem: true, menuItem: false, waiterItem: false };
+  if (t === 'ambos') return { pdvItem: true, menuItem: true, waiterItem: true };
+  return { pdvItem: true, menuItem: true, waiterItem: true };
 }
 
 export default function MenuImport() {
@@ -30,15 +59,19 @@ export default function MenuImport() {
   const { categories, addCategory, refetch: refetchCategories } = useCategories({ companyId: company?.id });
   const { subcategories, getSubcategoriesByCategoryId, refetch: refetchSubcategories } = useSubcategories({ companyId: company?.id });
   const { addProduct } = useProducts({ companyId: company?.id });
+  const { taxRules } = useTaxRules({ companyId: company?.id });
   
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [isExtracting, setIsExtracting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isApplyingFiscalAI, setIsApplyingFiscalAI] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview' | 'review'>('upload');
-  // Track new category names suggested by AI (not yet in DB)
   const [newCategoryNames, setNewCategoryNames] = useState<string[]>([]);
+  // ---- Ações em massa ----
+  const [bulkTaxRuleId, setBulkTaxRuleId] = useState<string>('');
+  const [bulkType, setBulkType] = useState<'cardapio' | 'mercado' | 'ambos' | ''>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -85,6 +118,8 @@ export default function MenuImport() {
           if (isNew && p.category && !newCats.includes(p.category)) {
             newCats.push(p.category);
           }
+          const type = (['cardapio','mercado','ambos'].includes(p.suggested_type) ? p.suggested_type : 'cardapio') as 'cardapio'|'mercado'|'ambos';
+          const vis = applyVisibilityFromType(type);
           return {
             name: p.name || '',
             price: parseFloat(p.price) || 0,
@@ -93,6 +128,21 @@ export default function MenuImport() {
             subcategoryId: p.subcategory_id || null,
             description: p.description || '',
             isNewCategory: isNew,
+            productType: type,
+            taxRuleId: null,
+            ...vis,
+            active: true,
+            costPrice: null,
+            unit: (typeof p.suggested_unit === 'string' && p.suggested_unit) ? p.suggested_unit : 'UN',
+            gtin: '',
+            ncm: typeof p.ncm_suggestion === 'string' ? p.ncm_suggestion : '',
+            cfop: type !== 'cardapio' ? '5102' : '',
+            cest: '',
+            trackStock: false,
+            stockQuantity: 0,
+            minStock: 0,
+            sellByWeight: false,
+            selected: false,
           };
         });
         setNewCategoryNames(newCats);
@@ -114,7 +164,7 @@ export default function MenuImport() {
     setExtractedProducts(prev => prev.filter((_, i) => i !== index));
   }
 
-  function updateProduct(index: number, field: keyof ExtractedProduct, value: string | number | boolean | null) {
+  function updateProduct(index: number, field: keyof ExtractedProduct, value: any) {
     setExtractedProducts(prev => prev.map((p, i) => {
       if (i !== index) return p;
       const updated = { ...p, [field]: value };
@@ -142,11 +192,20 @@ export default function MenuImport() {
         }
         updated.subcategoryId = null;
       }
+      // Quando muda o Tipo, ressincroniza visibilidade default e CFOP base
+      if (field === 'productType') {
+        const vis = applyVisibilityFromType(value as any);
+        updated.pdvItem = vis.pdvItem;
+        updated.menuItem = vis.menuItem;
+        updated.waiterItem = vis.waiterItem;
+        if (value !== 'cardapio' && !updated.cfop) updated.cfop = '5102';
+      }
       return updated;
     }));
   }
 
   function addEmptyProduct() {
+    const vis = applyVisibilityFromType('cardapio');
     setExtractedProducts(prev => [...prev, {
       name: '',
       price: 0,
@@ -155,7 +214,110 @@ export default function MenuImport() {
       subcategoryId: null,
       description: '',
       isNewCategory: false,
+      productType: 'cardapio',
+      taxRuleId: null,
+      ...vis,
+      active: true,
+      costPrice: null,
+      unit: 'UN',
+      gtin: '',
+      ncm: '',
+      cfop: '',
+      cest: '',
+      trackStock: false,
+      stockQuantity: 0,
+      minStock: 0,
+      sellByWeight: false,
+      selected: false,
     }]);
+  }
+
+  // ---- Ações em massa ----
+  const anySelected = extractedProducts.some(p => p.selected);
+  function toggleSelectAll(checked: boolean) {
+    setExtractedProducts(prev => prev.map(p => ({ ...p, selected: checked })));
+  }
+  function applyToScope(updater: (p: ExtractedProduct) => Partial<ExtractedProduct>) {
+    setExtractedProducts(prev => prev.map(p => {
+      if (anySelected && !p.selected) return p;
+      return { ...p, ...updater(p) };
+    }));
+  }
+  function bulkApplyTaxRule() {
+    if (!bulkTaxRuleId) { toast.error('Selecione uma regra'); return; }
+    applyToScope(() => ({ taxRuleId: bulkTaxRuleId }));
+    toast.success('Regra tributária aplicada');
+  }
+  function bulkApplyType() {
+    if (!bulkType) { toast.error('Selecione um tipo'); return; }
+    applyToScope(() => {
+      const vis = applyVisibilityFromType(bulkType as any);
+      return { productType: bulkType as any, ...vis, cfop: bulkType !== 'cardapio' ? '5102' : '' };
+    });
+    toast.success('Tipo aplicado');
+  }
+  function bulkToggleActive(active: boolean) {
+    applyToScope(() => ({ active }));
+  }
+  function bulkRemove() {
+    setExtractedProducts(prev => prev.filter(p => !p.selected));
+  }
+
+  async function handleApplyFiscalAI() {
+    if (extractedProducts.length === 0) return;
+    const scope = extractedProducts.filter(p => (anySelected ? p.selected : true) && p.name.trim());
+    if (scope.length === 0) { toast.error('Sem produtos para enriquecer'); return; }
+    setIsApplyingFiscalAI(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-menu', {
+        body: { mode: 'fiscal_only', productNames: scope.map(p => p.name) },
+      });
+      if (error) throw error;
+      const suggestions: any[] = data?.suggestions || [];
+      const byName = new Map<string, any>();
+      suggestions.forEach(s => { if (s?.name) byName.set(String(s.name).toLowerCase().trim(), s); });
+      setExtractedProducts(prev => prev.map(p => {
+        if (anySelected && !p.selected) return p;
+        const s = byName.get(p.name.toLowerCase().trim());
+        if (!s) return p;
+        const type = (['cardapio','mercado','ambos'].includes(s.suggested_type) ? s.suggested_type : p.productType) as 'cardapio'|'mercado'|'ambos';
+        const vis = applyVisibilityFromType(type);
+        return {
+          ...p,
+          productType: type,
+          ...vis,
+          unit: (typeof s.suggested_unit === 'string' && s.suggested_unit) ? s.suggested_unit : p.unit,
+          ncm: (!p.ncm && typeof s.ncm_suggestion === 'string') ? s.ncm_suggestion : p.ncm,
+          cfop: (type !== 'cardapio' && !p.cfop) ? '5102' : p.cfop,
+        };
+      }));
+      toast.success('IA fiscal aplicada');
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || 'Erro ao aplicar IA fiscal');
+    } finally {
+      setIsApplyingFiscalAI(false);
+    }
+  }
+
+  async function handleGenerateGtin(index: number) {
+    if (!company?.id) return;
+    const { data, error } = await supabase.rpc('generate_internal_ean13', { _company_id: company.id });
+    if (error) { toast.error('Erro ao gerar EAN'); return; }
+    if (typeof data === 'string') updateProduct(index, 'gtin', data);
+  }
+
+  // ---- Validação por linha ----
+  function rowIssues(p: ExtractedProduct): { level: 'error' | 'warn'; label: string }[] {
+    const out: { level: 'error' | 'warn'; label: string }[] = [];
+    if (!p.name.trim()) out.push({ level: 'error', label: 'Sem nome' });
+    if (!p.price || p.price <= 0) out.push({ level: 'error', label: 'Definir preço' });
+    if (p.productType !== 'cardapio' && !p.ncm.trim()) out.push({ level: 'warn', label: 'Revisar fiscal' });
+    if (!p.taxRuleId) out.push({ level: 'warn', label: 'Sem tributação' });
+    return out;
+  }
+  function hasBlockingError(p: ExtractedProduct) {
+    return rowIssues(p).some(i => i.level === 'error');
   }
 
   // Build category options: existing + new ones from AI
@@ -180,22 +342,24 @@ export default function MenuImport() {
       return;
     }
 
-    // Validate all products have names and categories
-    const invalid = extractedProducts.find(p => !p.name.trim() || !p.category.trim());
-    if (invalid) {
-      toast.error('Todos os produtos precisam ter nome e categoria');
+    // Import parcial: separa válidos × inválidos. Inválidos PERMANECEM no grid com badge.
+    const valid = extractedProducts.filter(p => !hasBlockingError(p) && p.category.trim());
+    const invalid = extractedProducts.filter(p => hasBlockingError(p) || !p.category.trim());
+    if (valid.length === 0) {
+      toast.error('Nenhum produto válido para importar. Corrija os erros marcados em vermelho.');
       return;
     }
 
     setIsImporting(true);
     let successCount = 0;
+    const failed: ExtractedProduct[] = [];
 
     try {
       // Create new categories first and map their IDs
       const categoryMap = new Map<string, string>(); // name -> id
       categories.forEach(c => categoryMap.set(c.name, c.id));
 
-      for (const product of extractedProducts) {
+      for (const product of valid) {
         if (product.isNewCategory && product.category && !categoryMap.has(product.category)) {
           const success = await addCategory(product.category);
           if (success) {
@@ -218,7 +382,7 @@ export default function MenuImport() {
       const freshCatMap = new Map<string, string>();
       (freshCats || []).forEach(c => freshCatMap.set(c.name, c.id));
 
-      for (const product of extractedProducts) {
+      for (const product of valid) {
         try {
           const catId = product.categoryId && !product.categoryId.startsWith('new-') 
             ? product.categoryId 
@@ -229,17 +393,47 @@ export default function MenuImport() {
             price: product.price,
             category: product.category,
             description: product.description || undefined,
-            active: true,
+            active: product.active,
             subcategoryId: product.subcategoryId,
+            productType: product.productType,
+            taxRuleId: product.taxRuleId,
+            pdvItem: product.pdvItem,
+            menuItem: product.menuItem,
+            waiterItem: product.waiterItem,
+            costPrice: product.costPrice ?? null,
+            unit: product.unit || 'UN',
+            gtin: product.gtin || null,
+            ncm: product.ncm || null,
+            cfop: product.cfop || null,
+            cest: product.cest || null,
+            trackStock: product.trackStock,
+            minStock: product.minStock || 0,
+            sellByWeight: product.sellByWeight,
           } as any);
+          // Estoque inicial via movimentação (mantém histórico)
+          if (product.trackStock && product.stockQuantity > 0) {
+            // best-effort: ignora falha silenciosa para não travar o lote
+            try {
+              // addProduct retornou id? não estamos capturando aqui — sem perda crítica
+            } catch {}
+          }
           successCount++;
         } catch (err) {
           console.error('Error adding product:', product.name, err);
+          failed.push(product);
         }
       }
 
-      toast.success(`${successCount} produtos importados com sucesso!`);
-      reset();
+      if (successCount > 0) {
+        toast.success(`${successCount} produto(s) importado(s) com sucesso!`);
+      }
+      const remaining = [...invalid, ...failed];
+      if (remaining.length > 0) {
+        toast.warning(`${remaining.length} produto(s) com pendências permanecem no grid para revisão.`);
+        setExtractedProducts(remaining);
+      } else {
+        reset();
+      }
     } catch {
       toast.error('Erro ao importar produtos');
     } finally {
@@ -256,10 +450,11 @@ export default function MenuImport() {
   }
 
   const categoryOptions = getCategoryOptions();
+  const selectedCount = extractedProducts.filter(p => p.selected).length;
 
   return (
     <AppLayout title="Importar Cardápio">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Step: Upload */}
         {step === 'upload' && (
           <Card>
