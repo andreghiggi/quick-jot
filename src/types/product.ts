@@ -22,6 +22,8 @@ export interface Product {
   pdvItem?: boolean;
   menuItem?: boolean;
   waiterItem?: boolean;
+  /** Visível no QR de Mesa (cardápio /mesa/:slug). Independente de menuItem/waiterItem. */
+  qrItem?: boolean;
   isNew?: boolean;
   subcategoryId?: string | null;
   /**

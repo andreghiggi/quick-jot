@@ -85,6 +85,7 @@ export default function ProductEdit() {
   const [menuItem, setMenuItem] = useState(true);
   const [pdvItem, setPdvItem] = useState(true);
   const [waiterItem, setWaiterItem] = useState(true);
+  const [qrItem, setQrItem] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
   const [code, setCode] = useState('');
   const [gtin, setGtin] = useState('');
@@ -159,6 +160,7 @@ export default function ProductEdit() {
       setMenuItem(existing.menuItem ?? true);
       setPdvItem(existing.pdvItem ?? true);
       setWaiterItem(existing.waiterItem ?? true);
+      setQrItem((existing as any).qrItem ?? true);
       setProductType((existing as any).productType ?? 'cardapio');
       setIsFeatured(!!existing.isNew);
       setCode(existing.code || '');
@@ -343,6 +345,8 @@ export default function ProductEdit() {
       const finalMenuItem = visibilityAdvancedOpen ? menuItem : derivedMenu;
       const finalPdvItem = visibilityAdvancedOpen ? pdvItem : derivedPdv;
       const finalWaiterItem = visibilityAdvancedOpen ? waiterItem : derivedWaiter;
+      const derivedQr = productType === 'mercado' ? false : true;
+      const finalQrItem = visibilityAdvancedOpen ? qrItem : derivedQr;
 
       const payload: any = {
         name: name.trim(),
@@ -354,6 +358,7 @@ export default function ProductEdit() {
         menuItem: finalMenuItem,
         pdvItem: finalPdvItem,
         waiterItem: finalWaiterItem,
+        qrItem: finalQrItem,
         productType,
         subcategoryId: subcategoryId || null,
         code: code.trim() || null,
@@ -708,6 +713,12 @@ export default function ProductEdit() {
                   description="Disponível no app do garçom e no cardápio de mesa."
                   checked={waiterItem}
                   onCheckedChange={setWaiterItem}
+                />
+                <ToggleRow
+                  label="QR de Mesa"
+                  description="Exibe no cardápio público acessado pelo QR Code da mesa (/mesa)."
+                  checked={qrItem}
+                  onCheckedChange={setQrItem}
                 />
               </CollapsibleContent>
             </Collapsible>

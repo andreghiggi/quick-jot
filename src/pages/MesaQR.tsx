@@ -86,7 +86,10 @@ export default function MesaQR() {
         categories.filter(c => (c as any).waiterItem === false).map(c => c.name)
       );
       return products.filter(
-        p => p.active && p.waiterItem !== false && !hiddenWaiterCategoryNames.has(p.category)
+        p => p.active
+          && p.waiterItem !== false
+          && (p as any).qrItem !== false
+          && !hiddenWaiterCategoryNames.has(p.category)
       );
     },
     [products, categories],

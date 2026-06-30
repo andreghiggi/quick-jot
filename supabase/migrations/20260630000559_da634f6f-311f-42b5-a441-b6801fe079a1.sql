@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS qr_item boolean NOT NULL DEFAULT true;
