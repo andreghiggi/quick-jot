@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.45.0-beta";
-export const RELEASE_DATE = "2026-06-29"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Importar Cardápio IA: revisão fiscal + visibilidade + tipo";
+export const VERSION = "1.46.1-beta";
+export const RELEASE_DATE = "2026-06-30"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Importar XML: preço do produto mapeado + auto-preenchimento de GTIN";
 
 export interface Release {
   version: string;
@@ -19,6 +19,20 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.46.1-beta",
+    date: "2026-06-30",
+    codename: "Importar XML: preço do produto mapeado + auto-preenchimento de GTIN",
+    changes: [
+      "Compras → Importar XML: ao mapear um item da nota para um produto já cadastrado, o campo Preço de venda agora puxa automaticamente o preço atual desse produto (em vez de manter o valor unitário do XML).",
+      "Se o produto cadastrado não tiver preço definido, o campo cai no fallback do custo real calculado (valor_unitario / fator de conversão). O operador continua podendo editar manualmente.",
+      "Mudar o mapeamento para 'Criar novo' ou 'Não vincular' agora também reseta o Preço de venda para o custo real, deixando claro o ponto de partida.",
+      "Auto-preenchimento de GTIN: ao confirmar a importação, produtos mapeados que estão SEM GTIN cadastrado recebem automaticamente o EAN trazido pelo XML (quando válido — 8/12/13/14 dígitos). Toast informa quantos foram atualizados.",
+      "Quando o produto já tem GTIN cadastrado diferente do XML, o cadastro NÃO é alterado e o operador é avisado por toast (X produto(s) com GTIN divergente).",
+      "Benefício prático: na próxima compra do mesmo fornecedor, o auto-match por GTIN passa a funcionar sozinho, sem precisar mapear manualmente.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, NF-e, Multi-Pagamento, PDV V2, Pedido Express, Frente de Caixa, Manifestação Eletrônica ou auto_printer.py.",
+    ],
+  },
   {
     version: "1.45.0-beta",
     date: "2026-06-29",
