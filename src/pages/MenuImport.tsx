@@ -32,6 +32,7 @@ interface ExtractedProduct {
   pdvItem: boolean;
   menuItem: boolean;
   waiterItem: boolean;
+  qrItem: boolean;
   active: boolean;
   costPrice: number | null;
   unit: string;
@@ -49,9 +50,9 @@ interface ExtractedProduct {
 }
 
 function applyVisibilityFromType(t: 'cardapio' | 'mercado' | 'ambos') {
-  if (t === 'mercado') return { pdvItem: true, menuItem: false, waiterItem: false };
-  if (t === 'ambos') return { pdvItem: true, menuItem: true, waiterItem: true };
-  return { pdvItem: true, menuItem: true, waiterItem: true };
+  if (t === 'mercado') return { pdvItem: true, menuItem: false, waiterItem: false, qrItem: false };
+  if (t === 'ambos') return { pdvItem: true, menuItem: true, waiterItem: true, qrItem: true };
+  return { pdvItem: true, menuItem: true, waiterItem: true, qrItem: true };
 }
 
 export default function MenuImport() {
@@ -198,6 +199,7 @@ export default function MenuImport() {
         updated.pdvItem = vis.pdvItem;
         updated.menuItem = vis.menuItem;
         updated.waiterItem = vis.waiterItem;
+        updated.qrItem = vis.qrItem;
         if (value !== 'cardapio' && !updated.cfop) updated.cfop = '5102';
       }
       return updated;
@@ -400,6 +402,7 @@ export default function MenuImport() {
             pdvItem: product.pdvItem,
             menuItem: product.menuItem,
             waiterItem: product.waiterItem,
+            qrItem: product.qrItem,
             costPrice: product.costPrice ?? null,
             unit: product.unit || 'UN',
             gtin: product.gtin || null,
@@ -780,6 +783,10 @@ export default function MenuImport() {
                           <label className="flex items-center gap-2">
                             <Switch checked={product.waiterItem} onCheckedChange={(v) => updateProduct(index, 'waiterItem', v)} />
                             Visível no Garçom
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Switch checked={product.qrItem} onCheckedChange={(v) => updateProduct(index, 'qrItem', v)} />
+                            Visível no QR de Mesa
                           </label>
                         </div>
 
