@@ -358,9 +358,27 @@ export default function PurchaseImportXml() {
                           value={it.product_id || (it.createNew ? '__new__' : '__skip__')}
                           onValueChange={(v) => {
                             const copy = [...items];
-                            if (v === '__new__') { copy[idx].product_id = null; copy[idx].createNew = true; }
-                            else if (v === '__skip__') { copy[idx].product_id = null; copy[idx].createNew = false; }
-                            else { copy[idx].product_id = v; copy[idx].createNew = false; }
+                            const factor = copy[idx].conversion_factor > 0 ? copy[idx].conversion_factor : 1;
+                            const realCost = copy[idx].valor_unitario / factor;
+                            if (v === '__new__') {
+                              copy[idx].product_id = null;
+                              copy[idx].createNew = true;
+                              // novo produto: sugere custo real (sem markup) como ponto de partida
+                              copy[idx].sale_price = Number(realCost.toFixed(2));
+                            } else if (v === '__skip__') {
+                              copy[idx].product_id = null;
+                              copy[idx].createNew = false;
+                              copy[idx].sale_price = Number(realCost.toFixed(2));
+                            } else {
+                              copy[idx].product_id = v;
+                              copy[idx].createNew = false;
+                              // Puxa preço de venda atual do produto cadastrado.
+                              // Fallback p/ custo real quando o produto não tem preço cadastrado.
+                              const matched = products.find((p) => p.id === v);
+                              copy[idx].sale_price = (matched?.price && matched.price > 0)
+                                ? Number(matched.price)
+                                : Number(realCost.toFixed(2));
+                            }
                             setItems(copy);
                           }}
                         >
