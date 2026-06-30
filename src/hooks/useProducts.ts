@@ -62,6 +62,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         pdvItem: product.pdv_item ?? true,
         menuItem: (product as any).menu_item ?? true,
         waiterItem: (product as any).waiter_item ?? true,
+        qrItem: (product as any).qr_item ?? true,
         isNew: (product as any).is_new ?? false,
         subcategoryId: (product as any).subcategory_id || null,
         productType: ((product as any).product_type as 'cardapio'|'mercado'|'ambos') || 'cardapio',
@@ -151,6 +152,7 @@ export function useProducts(options: UseProductsOptions = {}) {
           subcategory_id: (productData as any).subcategoryId || null,
           pdv_item: productData.pdvItem ?? true,
           menu_item: productData.menuItem ?? true,
+          qr_item: (productData as any).qrItem ?? true,
           product_type: (productData as any).productType ?? 'cardapio',
           code: codeToUse,
           cost_price: (productData as any).costPrice ?? null,
@@ -204,6 +206,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       if (productData.pdvItem !== undefined) updateData.pdv_item = productData.pdvItem;
       if (productData.menuItem !== undefined) (updateData as any).menu_item = productData.menuItem;
       if (productData.waiterItem !== undefined) (updateData as any).waiter_item = productData.waiterItem;
+      if ((productData as any).qrItem !== undefined) (updateData as any).qr_item = (productData as any).qrItem;
       if (productData.subcategoryId !== undefined) updateData.subcategory_id = productData.subcategoryId || null;
       if ((productData as any).productType !== undefined) (updateData as any).product_type = (productData as any).productType;
       if ((productData as any).code !== undefined) (updateData as any).code = (productData as any).code || null;
