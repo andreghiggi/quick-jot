@@ -223,6 +223,9 @@ export default function PurchaseImportXml() {
       const invoiceId = (inv as any).id;
 
       // 4) itens + criar produtos novos + movimentar estoque
+      const gtinUpdates: string[] = []; // nomes dos produtos que tiveram GTIN preenchido
+      const gtinDivergentes: string[] = []; // produtos com GTIN cadastrado diferente do XML
+      const isValidGtin = (g: string) => /^\d{8}$|^\d{12}$|^\d{13}$|^\d{14}$/.test(g);
       for (const it of items) {
         const factor = it.conversion_factor > 0 ? it.conversion_factor : 1;
         const stockQty = it.quantidade * factor;
@@ -251,6 +254,20 @@ export default function PurchaseImportXml() {
             cost_price: realCost,
             price: it.sale_price || undefined,
           }).eq('id', productId);
+          // Preenche GTIN no cadastro caso esteja vazio e o XML traga um EAN válido.
+          const xmlEan = (it.xml_ean || '').trim();
+          if (xmlEan && isValidGtin(xmlEan)) {
+            const matched = products.find((p) => p.id === productId);
+            const currentGtin = (matched?.gtin || '').trim();
+            if (!currentGtin) {
+              await (supabase.from('products') as any)
+                .update({ gtin: xmlEan })
+                .eq('id', productId);
+              if (matched?.name) gtinUpdates.push(matched.name);
+            } else if (currentGtin !== xmlEan) {
+              if (matched?.name) gtinDivergentes.push(matched.name);
+            }
+          }
         }
         const { data: itemRow } = await supabase.from('purchase_invoice_items').insert({
           invoice_id: invoiceId, company_id: company.id, product_id: productId,
@@ -281,6 +298,12 @@ export default function PurchaseImportXml() {
       }
 
       toast.success('NF-e de entrada lançada e estoque atualizado!');
+      if (gtinUpdates.length > 0) {
+        toast.success(`GTIN preenchido em ${gtinUpdates.length} produto(s) sem código de barras cadastrado.`);
+      }
+      if (gtinDivergentes.length > 0) {
+        toast.warning(`${gtinDivergentes.length} produto(s) com GTIN divergente do XML — não foram alterados.`);
+      }
       navigate('/compras/entradas');
     } catch (e: any) {
       console.error(e);
