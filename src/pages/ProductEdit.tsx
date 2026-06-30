@@ -714,6 +714,12 @@ export default function ProductEdit() {
                   checked={waiterItem}
                   onCheckedChange={setWaiterItem}
                 />
+                <ToggleRow
+                  label="QR de Mesa"
+                  description="Exibe no cardápio público acessado pelo QR Code da mesa (/mesa)."
+                  checked={qrItem}
+                  onCheckedChange={setQrItem}
+                />
               </CollapsibleContent>
             </Collapsible>
           </div>
