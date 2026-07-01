@@ -210,6 +210,32 @@ export default function PurchaseImportXml() {
     toast.success(`Markup de ${percent}% aplicado a todos os itens`);
   }
 
+  // ---- Bulk actions (apenas para itens que criarão produto novo) ----
+  function bulkApplyCategory() {
+    if (!bulkCategoryId) { toast.error('Selecione uma categoria'); return; }
+    const cat = categories.find(c => c.id === bulkCategoryId);
+    if (!cat) return;
+    setItems(prev => prev.map(it => it.createNew
+      ? { ...it, category_id: cat.id, category_name: cat.name }
+      : it));
+    toast.success('Categoria aplicada aos novos produtos');
+  }
+  function bulkApplyTaxRule() {
+    if (!bulkTaxRuleId) { toast.error('Selecione uma regra'); return; }
+    setItems(prev => prev.map(it => it.createNew
+      ? { ...it, tax_rule_id: bulkTaxRuleId }
+      : it));
+    toast.success('Regra tributária aplicada aos novos produtos');
+  }
+  function bulkApplyType() {
+    if (!bulkType) { toast.error('Selecione o tipo'); return; }
+    const vis = visibilityFromType(bulkType as ProductType);
+    setItems(prev => prev.map(it => it.createNew
+      ? { ...it, product_type: bulkType as ProductType, ...vis }
+      : it));
+    toast.success('Tipo aplicado aos novos produtos');
+  }
+
   async function handleConfirm() {
     if (!company?.id || !header) return;
     setSaving(true);
