@@ -381,16 +381,18 @@ export default function PurchaseImportXml() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2 border-t">
                       <div>
                         <Label className="text-xs">Mapear para produto</Label>
-                        <Select
-                          value={it.product_id || (it.createNew ? '__new__' : '__skip__')}
-                          onValueChange={(v) => {
+                        {(() => {
+                          const currentValue = it.product_id || (it.createNew ? '__new__' : '__skip__');
+                          const currentLabel = it.product_id
+                            ? (products.find(p => p.id === it.product_id)?.name || 'Produto')
+                            : it.createNew ? '+ Criar novo produto' : 'Não vincular (sem estoque)';
+                          const handleSelect = (v: string) => {
                             const copy = [...items];
                             const factor = copy[idx].conversion_factor > 0 ? copy[idx].conversion_factor : 1;
                             const realCost = copy[idx].valor_unitario / factor;
                             if (v === '__new__') {
                               copy[idx].product_id = null;
                               copy[idx].createNew = true;
-                              // novo produto: sugere custo real (sem markup) como ponto de partida
                               copy[idx].sale_price = Number(realCost.toFixed(2));
                             } else if (v === '__skip__') {
                               copy[idx].product_id = null;
@@ -399,27 +401,56 @@ export default function PurchaseImportXml() {
                             } else {
                               copy[idx].product_id = v;
                               copy[idx].createNew = false;
-                              // Puxa preço de venda atual do produto cadastrado.
-                              // Fallback p/ custo real quando o produto não tem preço cadastrado.
                               const matched = products.find((p) => p.id === v);
                               copy[idx].sale_price = (matched?.price && matched.price > 0)
                                 ? Number(matched.price)
                                 : Number(realCost.toFixed(2));
                             }
                             setItems(copy);
-                          }}
-                        >
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__new__">+ Criar novo produto</SelectItem>
-                            <SelectItem value="__skip__">Não vincular (sem estoque)</SelectItem>
-                            {products.map(p => (
-                              <SelectItem key={p.id} value={p.id}>
-                                {p.name}{p.gtin ? ` · ${p.gtin}` : ''}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                            setOpenMap((prev) => ({ ...prev, [idx]: false }));
+                          };
+                          return (
+                            <Popover open={!!openMap[idx]} onOpenChange={(o) => setOpenMap((prev) => ({ ...prev, [idx]: o }))}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                                  <span className="truncate">{currentLabel}</span>
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-w-[420px]" align="start">
+                                <Command>
+                                  <CommandInput placeholder="Pesquisar produto ou EAN..." />
+                                  <CommandList>
+                                    <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+                                    <CommandGroup>
+                                      <CommandItem value="__new__ criar novo produto" onSelect={() => handleSelect('__new__')}>
+                                        <Check className={cn('mr-2 h-4 w-4', currentValue === '__new__' ? 'opacity-100' : 'opacity-0')} />
+                                        + Criar novo produto
+                                      </CommandItem>
+                                      <CommandItem value="__skip__ nao vincular sem estoque" onSelect={() => handleSelect('__skip__')}>
+                                        <Check className={cn('mr-2 h-4 w-4', currentValue === '__skip__' ? 'opacity-100' : 'opacity-0')} />
+                                        Não vincular (sem estoque)
+                                      </CommandItem>
+                                    </CommandGroup>
+                                    <CommandGroup heading="Produtos cadastrados">
+                                      {products.map((p) => (
+                                        <CommandItem
+                                          key={p.id}
+                                          value={`${p.name} ${p.gtin || ''}`}
+                                          onSelect={() => handleSelect(p.id)}
+                                        >
+                                          <Check className={cn('mr-2 h-4 w-4', currentValue === p.id ? 'opacity-100' : 'opacity-0')} />
+                                          <span className="truncate">{p.name}</span>
+                                          {p.gtin && <span className="ml-2 text-xs text-muted-foreground">{p.gtin}</span>}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          );
+                        })()}
                       </div>
                       {it.createNew && (
                         <div>
