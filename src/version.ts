@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.51.1-beta";
+export const VERSION = "1.52.0-beta";
 export const RELEASE_DATE = "2026-07-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e: recuperar por chave — nº/série vêm da chave (fix duplicidade visual)";
+export const CODENAME = "Configurações PDV: 14 toggles funcionais (logo, cliente, promo, QR, gaveta, 2ª via, clear screen…)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,21 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.52.0-beta",
+    date: "2026-07-01",
+    codename: "Configurações PDV: 14 toggles funcionais",
+    changes: [
+      "Frente de Caixa: as 14 toggles das abas Impressão / Comportamento / Cupom que antes eram apenas decorativas passam a ter efeito real na venda e no DANFE.",
+      "DANFE (`nfceService.generateDanfeHtml`) agora respeita: Mostrar Logo (companies.logo_url), Mostrar Cliente (nome/CPF), Mostrar Desconto, Mostrar Acréscimo, Mostrar Nº de Série do produto, Mostrar Notas da Venda, Mostrar Notas do Produto, Mensagem promocional no rodapé e QR Code de avaliação (com URL configurável).",
+      "`printDanfeFromRecord` passa a aceitar `copies` — quando `auto_print_second_copy` estiver ligado, imprime 2ª via automaticamente.",
+      "Comportamento: `require_customer_above_value` bloqueia o fechamento da venda acima do valor configurado quando nenhum cliente foi informado.",
+      "Comportamento: `clear_screen_after_sale=false` mantém os itens em tela após a finalização (operador confere e limpa manualmente).",
+      "Comportamento: `auto_open_drawer_cash` enfileira um job especial `[DRAWER_OPEN]` em `print_queue` quando a venda é em dinheiro (o `auto_printer.py` local interpreta como pulso ESC/POS de gaveta).",
+      "Diálogos pós-venda (`PDVV2NFCePostSaleDialog` e `FrenteCaixaPostSaleDialog`) recebem `danfeOptions` opcional — comportamento antigo preservado quando a prop não é passada (nenhuma quebra em PDV V2 legado / demais lojas).",
+      "Nenhuma alteração em TEF, PinPad, NF-e, Pedido Express, Manifestação Eletrônica, Compras/Importar XML, Estoque ou auto_printer.py.",
+    ],
+  },
   {
     version: "1.51.1-beta",
     date: "2026-07-01",
