@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.52.0-beta";
+export const VERSION = "1.52.1-beta";
 export const RELEASE_DATE = "2026-07-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Configurações PDV: 14 toggles funcionais (logo, cliente, promo, QR, gaveta, 2ª via, clear screen…)";
+export const CODENAME = "print_on_finish_mode respeitado em todas as lojas (PDV V2, Pedido Express, Cobrar Comanda)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.52.1-beta",
+    date: "2026-07-01",
+    codename: "print_on_finish_mode respeitado em todas as lojas",
+    changes: [
+      "Correção crítica: a opção 'Ação ao salvar → Sempre perguntar / Nunca imprimir / Imprimir automaticamente' agora é respeitada em TODOS os fluxos de venda, não só na Frente de Caixa.",
+      "PDV V2 (`src/pages/PDVV2.tsx`), Pedido Express (`src/components/PedidoExpressDialog.tsx`) e Cobrar Comanda (`src/components/OrderCardChargeDialog.tsx`) agora leem `pdv_settings.print_on_finish_mode` via `usePdvSettings` — antes assumiam auto-print fixo (`printDocument !== false`).",
+      "Novo utilitário compartilhado `src/utils/resolveNfcePrintMode.ts` centraliza a regra: escolha explícita do operador (I9) prevalece; caso contrário aplica auto/ask/off da loja.",
+      "'ask' → PostSaleDialog pergunta antes de imprimir o DANFE. 'off' → não imprime automático. 'auto' → mantém o comportamento anterior.",
+    ],
+  },
   {
     version: "1.52.0-beta",
     date: "2026-07-01",
