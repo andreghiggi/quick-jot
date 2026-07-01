@@ -19,8 +19,6 @@ import { emitirNFCe, type NFCeItem, type NFCeRecord, type NFCeTefData } from '@/
 import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import { recordSalePayments } from '@/utils/recordSalePayments';
-import { usePdvSettings } from '@/hooks/usePdvSettings';
-import { resolveAutoPrintDanfe } from '@/utils/resolveNfcePrintMode';
 interface OrderCardChargeDialogProps {
   order: Order;
   open: boolean;
