@@ -51,8 +51,6 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const fiscalEnabled = isModuleEnabled('fiscal');
-  // Configurações do PDV — controla print_on_finish_mode do DANFE.
-  const { settings: pdvSettings } = usePdvSettings(company?.id);
 
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
