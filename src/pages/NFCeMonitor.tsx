@@ -13,12 +13,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText, Loader2, RefreshCw, Search, CheckCircle, XCircle, 
-  Clock, AlertTriangle, Ban, Eye, Copy, RotateCcw, X, Printer 
+  Clock, AlertTriangle, Ban, Eye, Copy, RotateCcw, X, Printer, CloudDownload 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { consultarNFCe, cancelarNFCe, reprocessarNFCe, printDanfeFromRecord } from '@/services/nfceService';
+import { consultarNFCe, cancelarNFCe, reprocessarNFCe, printDanfeFromRecord, recuperarNFCePorChave } from '@/services/nfceService';
 
 interface NFCeRecord {
   id: string;
