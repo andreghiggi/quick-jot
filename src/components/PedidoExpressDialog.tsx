@@ -18,6 +18,8 @@ import { useTaxRules } from '@/hooks/useTaxRules';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
+import { usePdvSettings } from '@/hooks/usePdvSettings';
+import { resolveAutoPrintDanfe } from '@/utils/resolveNfcePrintMode';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useOrderContext } from '@/contexts/OrderContext';
@@ -75,6 +77,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { settings } = useStoreSettings({ companyId: company?.id });
   const { getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
+  // Configurações de PDV compartilhadas — usadas para respeitar
+  // `print_on_finish_mode` (auto/ask/off) do DANFE em todas as lojas.
+  const { settings: pdvSettings } = usePdvSettings(company?.id);
   const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
   const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
@@ -1222,7 +1227,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               .maybeSingle();
             if (rec) {
               setNfceRecord(rec as unknown as NFCeRecord);
-              setNfceAutoPrint(!!override?.printDocument);
+              setNfceAutoPrint(resolveAutoPrintDanfe(override?.printDocument, pdvSettings.print_on_finish_mode));
               if (isI9Company && tefPromptOpenRef.current) {
                 setPendingNfceOpen(true);
               } else {
@@ -1893,7 +1898,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             .maybeSingle();
           if (rec) {
             setNfceRecord(rec as unknown as NFCeRecord);
-            setNfceAutoPrint(params.printDocument !== false);
+            setNfceAutoPrint(resolveAutoPrintDanfe(params.printDocument, pdvSettings.print_on_finish_mode));
             if (isI9Company && tefPromptOpenRef.current) {
               setPendingNfceOpen(true);
             } else {
@@ -2093,7 +2098,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             .maybeSingle();
           if (rec) {
             setNfceRecord(rec as unknown as NFCeRecord);
-            setNfceAutoPrint(params.printDocument !== false);
+            setNfceAutoPrint(resolveAutoPrintDanfe(params.printDocument, pdvSettings.print_on_finish_mode));
             if (isI9Company && tefPromptOpenRef.current) {
               setPendingNfceOpen(true);
             } else {
