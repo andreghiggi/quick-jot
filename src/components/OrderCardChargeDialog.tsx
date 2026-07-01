@@ -19,8 +19,6 @@ import { emitirNFCe, type NFCeItem, type NFCeRecord, type NFCeTefData } from '@/
 import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import { recordSalePayments } from '@/utils/recordSalePayments';
-import { usePdvSettings } from '@/hooks/usePdvSettings';
-import { resolveAutoPrintDanfe } from '@/utils/resolveNfcePrintMode';
 interface OrderCardChargeDialogProps {
   order: Order;
   open: boolean;
@@ -53,8 +51,6 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const fiscalEnabled = isModuleEnabled('fiscal');
-  // Configurações do PDV — controla print_on_finish_mode do DANFE.
-  const { settings: pdvSettings } = usePdvSettings(company?.id);
 
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
@@ -470,7 +466,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
 
           if (rec) {
             setNfceRecord(rec as unknown as NFCeRecord);
-            setNfceAutoPrint(resolveAutoPrintDanfe(params.printDocument, pdvSettings.print_on_finish_mode));
+            setNfceAutoPrint(!!params.printDocument);
             if (isI9Company && tefPromptOpenRef.current) {
               setPendingNfceOpen(true);
             } else {
