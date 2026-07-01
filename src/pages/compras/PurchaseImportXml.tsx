@@ -11,8 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { toast } from 'sonner';
-import { Upload, Loader2, CheckCircle2, FileInput, ChevronLeft } from 'lucide-react';
+import { Upload, Loader2, CheckCircle2, FileInput, ChevronLeft, Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type ItemRow = {
   xml_codigo: string;
@@ -59,6 +62,7 @@ export default function PurchaseImportXml() {
   const [items, setItems] = useState<ItemRow[]>([]);
   const [products, setProducts] = useState<ProductSlim[]>([]);
   const [dfeId, setDfeId] = useState<string | null>(documentoId);
+  const [openMap, setOpenMap] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     if (!company?.id) return;
