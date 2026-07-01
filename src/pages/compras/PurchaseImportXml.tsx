@@ -299,15 +299,34 @@ export default function PurchaseImportXml() {
       const gtinUpdates: string[] = []; // nomes dos produtos que tiveram GTIN preenchido
       const gtinDivergentes: string[] = []; // produtos com GTIN cadastrado diferente do XML
       const isValidGtin = (g: string) => /^\d{8}$|^\d{12}$|^\d{13}$|^\d{14}$/.test(g);
+      // Descobre próximo SKU (P0001, P0002...) para os produtos novos desta nota
+      let nextSkuNum = 0;
+      {
+        const { data: existingCodes } = await supabase
+          .from('products')
+          .select('code')
+          .eq('company_id', company.id)
+          .like('code', 'P%');
+        (existingCodes || []).forEach((row: any) => {
+          const m = /^P(\d+)$/.exec(row.code || '');
+          if (m) {
+            const n = parseInt(m[1], 10);
+            if (n > nextSkuNum) nextSkuNum = n;
+          }
+        });
+      }
       for (const it of items) {
         const factor = it.conversion_factor > 0 ? it.conversion_factor : 1;
         const stockQty = it.quantidade * factor;
         const realCost = it.valor_unitario / factor;
         let productId = it.product_id;
         if (!productId && it.createNew) {
+          nextSkuNum += 1;
+          const newSku = 'P' + String(nextSkuNum).padStart(4, '0');
           const { data: prod, error: pErr } = await supabase.from('products').insert({
             company_id: company.id,
             name: it.newName || it.xml_descricao,
+            code: newSku,
             price: it.sale_price || realCost,
             cost_price: realCost,
             category: it.category_name || 'Mercado',
