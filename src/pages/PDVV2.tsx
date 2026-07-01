@@ -1050,7 +1050,7 @@ export default function PDVV2() {
             items: saleItems,
             discount: 0,
             customerName: fullTab.customer_name || null,
-            shouldPrint: resolveAutoPrintDanfe(params.printDocument, pdvSettings.print_on_finish_mode),
+            shouldPrint: params.printDocument !== false,
             tefData,
             customerDocument: params.customerDocument,
             extraObservacoes: partialObs,
