@@ -779,6 +779,19 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
+              {mercadoEnabled && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/estoque/cmv'}
+                  >
+                    <Link to="/estoque/cmv">
+                      <Package className="w-4 h-4" />
+                      <span>Relatório de CMV</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </CollapsibleContent>
