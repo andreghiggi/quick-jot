@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.48.0-beta";
+export const VERSION = "1.49.0-beta";
 export const RELEASE_DATE = "2026-07-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Livro de Registro de Inventário anual (Fase 2 do módulo Estoque Simples Nacional)";
+export const CODENAME = "Relatório de CMV (Fase 3 do módulo Estoque Simples Nacional)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,20 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.49.0-beta",
+    date: "2026-07-01",
+    codename: "Relatório de CMV (Fase 3 do módulo Estoque Simples Nacional)",
+    changes: [
+      "Nova tela Estoque → Relatório de CMV: calcula o Custo da Mercadoria Vendida item a item no período (quantidade vendida × custo unitário atual do cadastro).",
+      "Consolida vendas do PDV/Frente de Caixa (pdv_sale_items) e do Cardápio Online (order_items, ignorando canceladas). Filtro de origem permite ver só PDV, só Cardápio ou tudo.",
+      "Cards de topo: Receita, CMV, Margem Bruta (R$) e Margem %.",
+      "Tabela resumo por categoria (Receita, CMV, Margem, Margem %) e detalhe por produto ordenado por receita.",
+      "Filtros: período (padrão mês corrente), categoria e origem das vendas.",
+      "Exportação em PDF (paisagem A4, cabeçalho contábil com totais) e Excel (.xlsx).",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, NF-e, Frente de Caixa, PDV V2, Pedido Express, Manifestação Eletrônica, Compras/Importar XML, Contagem de Inventário, Livro de Inventário ou auto_printer.py.",
+    ],
+  },
   {
     version: "1.48.0-beta",
     date: "2026-07-01",
