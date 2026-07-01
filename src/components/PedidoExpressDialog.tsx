@@ -1227,7 +1227,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               .maybeSingle();
             if (rec) {
               setNfceRecord(rec as unknown as NFCeRecord);
-              setNfceAutoPrint(!!override?.printDocument);
+              setNfceAutoPrint(resolveAutoPrintDanfe(override?.printDocument, pdvSettings.print_on_finish_mode));
               if (isI9Company && tefPromptOpenRef.current) {
                 setPendingNfceOpen(true);
               } else {
@@ -1898,7 +1898,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             .maybeSingle();
           if (rec) {
             setNfceRecord(rec as unknown as NFCeRecord);
-            setNfceAutoPrint(params.printDocument !== false);
+            setNfceAutoPrint(resolveAutoPrintDanfe(params.printDocument, pdvSettings.print_on_finish_mode));
             if (isI9Company && tefPromptOpenRef.current) {
               setPendingNfceOpen(true);
             } else {
@@ -2098,7 +2098,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             .maybeSingle();
           if (rec) {
             setNfceRecord(rec as unknown as NFCeRecord);
-            setNfceAutoPrint(params.printDocument !== false);
+            setNfceAutoPrint(resolveAutoPrintDanfe(params.printDocument, pdvSettings.print_on_finish_mode));
             if (isI9Company && tefPromptOpenRef.current) {
               setPendingNfceOpen(true);
             } else {
