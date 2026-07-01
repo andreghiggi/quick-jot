@@ -328,10 +328,11 @@ export default function PurchaseImportXml() {
           if (pErr) throw pErr;
           productId = (prod as any).id;
         } else if (productId) {
-          // Atualiza custo e preço do produto existente
+          // Atualiza custo, preço e garante rastreio de estoque no produto existente
           await (supabase.from('products') as any).update({
             cost_price: realCost,
             price: it.sale_price || undefined,
+            track_stock: true,
           }).eq('id', productId);
           // Preenche GTIN no cadastro caso esteja vazio e o XML traga um EAN válido.
           const xmlEan = (it.xml_ean || '').trim();
