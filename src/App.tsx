@@ -64,6 +64,7 @@ import EstoqueRelatorio from "./pages/EstoqueRelatorio";
 import InventarioContagem from "./pages/InventarioContagem";
 import InventarioLivro from "./pages/InventarioLivro";
 import InventarioCMV from "./pages/InventarioCMV";
+import InventarioKardex from "./pages/InventarioKardex";
 import RelatoriosHub from "./pages/RelatoriosHub";
 import DfeManifestacao from "./pages/compras/DfeManifestacao";
 import PurchaseImportXml from "./pages/compras/PurchaseImportXml";
@@ -294,6 +295,13 @@ function AppRoutes() {
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
             <InventarioCMV />
+          </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/estoque/kardex" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaGuard>
+            <InventarioKardex />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />

@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.49.0-beta";
+export const VERSION = "1.50.0-beta";
 export const RELEASE_DATE = "2026-07-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Relatório de CMV (Fase 3 do módulo Estoque Simples Nacional)";
+export const CODENAME = "Kardex por Produto (Fase 4 do módulo Estoque Simples Nacional)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,21 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.50.0-beta",
+    date: "2026-07-01",
+    codename: "Kardex por Produto (Fase 4 do módulo Estoque Simples Nacional)",
+    changes: [
+      "Nova tela Estoque → Kardex por Produto: mostra o histórico cronológico de entradas, saídas e ajustes de um produto, com saldo acumulado após cada movimento.",
+      "Fonte de dados: stock_movements (já alimentada por PDV/Frente de Caixa, Cardápio Online, Contagem de Inventário, Importação de XML e lançamentos manuais).",
+      "Filtros: produto (Combobox com busca por nome/código/GTIN, restrito a itens com controle de estoque), período (padrão mês corrente) e tipo de movimento (venda, entrada/saída manual, ajuste, compra, devolução, perda).",
+      "Resumo no topo: Saldo Inicial do período (rebobinado a partir do saldo atual), Entradas, Saídas e Saldo Atual do cadastro.",
+      "Tabela: Data/Hora, Tipo, Origem (PDV, Cardápio, Contagem, Nota de compra, Manual), Quantidade com sinal (+/−), Saldo após e Observação.",
+      "Exportação em PDF (paisagem A4) e Excel (.xlsx) com cabeçalho identificando produto, empresa e período.",
+      "Encerra o módulo Estoque para Simples Nacional (Fases 1 a 4: Contagem Cega, Livro de Inventário, CMV e Kardex).",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, NF-e, Frente de Caixa, PDV V2, Pedido Express, Manifestação Eletrônica, Compras/Importar XML, Contagem de Inventário, Livro de Inventário, Relatório de CMV ou auto_printer.py.",
+    ],
+  },
   {
     version: "1.49.0-beta",
     date: "2026-07-01",
