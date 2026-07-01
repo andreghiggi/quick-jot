@@ -102,6 +102,12 @@ export default function PDVV2() {
   const { activePaymentMethods: menuPaymentMethods } = usePaymentMethods({ companyId, channel: 'menu' });
   const { products } = useProducts({ companyId });
   const { taxRules } = useTaxRules({ companyId });
+  // Configurações do PDV (compartilhadas com Frente de Caixa).
+  // Usadas aqui para respeitar `print_on_finish_mode`:
+  //   'auto' → DANFE imprime sozinho (comportamento antigo);
+  //   'ask'  → PostSaleDialog pergunta antes de imprimir;
+  //   'off'  → não dispara impressão automática.
+  const { settings: pdvSettings } = usePdvSettings(companyId);
   const { enabled: mercadoEnabled } = useMercadoEnabled(companyId);
   const fiscalEnabled = isModuleEnabled('fiscal');
 
