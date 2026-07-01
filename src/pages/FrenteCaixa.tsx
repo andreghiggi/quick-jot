@@ -1798,6 +1798,7 @@ export default function FrenteCaixa() {
         companyId={company?.id}
         initialRecord={postSaleRecord}
         autoPrint={pdvSettings.print_on_finish_mode === 'auto'}
+        danfeOptions={danfeOpts}
         onClosed={() => {
           setPostSaleRecord(null);
           setTimeout(() => inputRef.current?.focus(), 100);
@@ -1817,6 +1818,7 @@ export default function FrenteCaixa() {
         nfceError={consolidatedNfceError}
         emittingNfce={consolidatedEmitting}
         autoPrintDanfe={pdvSettings.print_on_finish_mode === 'auto'}
+        danfeOptions={danfeOpts}
         onClosed={() => {
           setConsolidatedRecord(null);
           setConsolidatedTef(null);
