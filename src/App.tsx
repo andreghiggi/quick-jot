@@ -274,6 +274,13 @@ function AppRoutes() {
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
+      <Route path="/estoque/inventario" element={
+        <ProtectedRoute requireCompany>
+          <FrenteCaixaGuard>
+            <InventarioContagem />
+          </FrenteCaixaGuard>
+        </ProtectedRoute>
+      } />
 
       {/* Compras: Manifestação Eletrônica + NF-e de Entrada (módulo mercado) */}
       <Route path="/compras" element={
