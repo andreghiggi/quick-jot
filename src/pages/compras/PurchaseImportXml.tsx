@@ -425,6 +425,44 @@ export default function PurchaseImportXml() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
+                {items.some(i => i.createNew) && (
+                  <div className="rounded-md border border-dashed p-3 bg-muted/30">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">
+                      Ações em massa (aplicam-se apenas aos itens que criarão produto novo)
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div className="flex gap-2">
+                        <Select value={bulkCategoryId} onValueChange={setBulkCategoryId}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Categoria" /></SelectTrigger>
+                          <SelectContent>
+                            {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={bulkApplyCategory}>Aplicar</Button>
+                      </div>
+                      <div className="flex gap-2">
+                        <Select value={bulkTaxRuleId} onValueChange={setBulkTaxRuleId}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Regra tributária" /></SelectTrigger>
+                          <SelectContent>
+                            {taxRules.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={bulkApplyTaxRule}>Aplicar</Button>
+                      </div>
+                      <div className="flex gap-2">
+                        <Select value={bulkType} onValueChange={(v) => setBulkType(v as ProductType)}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Tipo do produto" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="mercado">Mercado</SelectItem>
+                            <SelectItem value="cardapio">Cardápio</SelectItem>
+                            <SelectItem value="ambos">Ambos</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={bulkApplyType}>Aplicar</Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {items.map((it, idx) => (
                   <div key={idx} className="border rounded-lg p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
