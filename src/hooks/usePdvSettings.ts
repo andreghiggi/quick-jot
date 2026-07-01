@@ -137,11 +137,18 @@ export function usePdvSettings(companyId?: string | null) {
       if (!companyId) return { error: new Error('Sem empresa') };
       setSaving(true);
       const payload = { company_id: companyId, ...next };
-      const { error } = await supabase
+      const { data: saved, error } = await supabase
         .from('pdv_settings')
-        .upsert(payload, { onConflict: 'company_id' });
+        .upsert(payload, { onConflict: 'company_id' })
+        .select()
+        .maybeSingle();
       setSaving(false);
-      if (!error) setSettings(next);
+      if (error) {
+        console.error('[usePdvSettings] save error', { error, payload });
+      } else {
+        console.log('[usePdvSettings] saved', saved);
+        setSettings(next);
+      }
       return { error };
     },
     [companyId],
