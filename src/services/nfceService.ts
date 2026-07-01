@@ -141,6 +141,23 @@ export async function reprocessarNFCe(companyId: string, nfceId: string) {
   });
 }
 
+/**
+ * Recupera na FiscalFlow uma NFC-e já AUTORIZADA no SEFAZ (via chave de 44
+ * dígitos) e sobrescreve o registro local — típico para consertar rejeição
+ * 539 (duplicidade) quando a resposta de autorização se perdeu.
+ */
+export async function recuperarNFCePorChave(
+  companyId: string,
+  chaveAcesso: string,
+  recordId?: string,
+) {
+  return callNFCeProxy({
+    action: 'recuperar_por_chave',
+    companyId,
+    payload: { chave_acesso: chaveAcesso, record_id: recordId ?? null },
+  });
+}
+
 export async function listarNFCe(companyId: string, filtros?: Record<string, string>) {
   return callNFCeProxy({
     action: 'listar',
