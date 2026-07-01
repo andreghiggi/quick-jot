@@ -52,7 +52,16 @@ export default function FrenteCaixaConfiguracoes() {
   const handleSave = async () => {
     const { error } = await save(form);
     if (error) {
-      toast.error('Falha ao salvar: ' + (error.message ?? 'erro desconhecido'));
+      const detail = [
+        (error as any)?.message,
+        (error as any)?.details,
+        (error as any)?.hint,
+        (error as any)?.code,
+      ]
+        .filter(Boolean)
+        .join(' • ');
+      console.error('[FrenteCaixaConfiguracoes] save failed', error);
+      toast.error('Falha ao salvar: ' + (detail || 'erro desconhecido'));
     } else {
       toast.success('Configurações salvas.');
     }
