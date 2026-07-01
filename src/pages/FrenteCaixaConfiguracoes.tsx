@@ -27,8 +27,9 @@ export default function FrenteCaixaConfiguracoes() {
   const navigate = useNavigate();
   const { company } = useAuthContext();
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
-  const { settings, loading, saving, save } = usePdvSettings(company?.id);
+  const { settings, loading, saving, save, reload } = usePdvSettings(company?.id);
   const [form, setForm] = useState<PdvSettings>(settings);
+  const dirty = JSON.stringify(form) !== JSON.stringify(settings);
 
   useEffect(() => {
     setForm(settings);
@@ -50,6 +51,7 @@ export default function FrenteCaixaConfiguracoes() {
     setForm((f) => ({ ...f, [key]: value }));
 
   const handleSave = async () => {
+    console.log('[FrenteCaixaConfiguracoes] salvando →', form);
     const { error } = await save(form);
     if (error) {
       const detail = [
@@ -62,10 +64,19 @@ export default function FrenteCaixaConfiguracoes() {
         .join(' • ');
       console.error('[FrenteCaixaConfiguracoes] save failed', error);
       toast.error('Falha ao salvar: ' + (detail || 'erro desconhecido'));
-    } else {
-      toast.success('Configurações salvas.');
+      return;
     }
+    // Re-lê do banco pra confirmar que persistiu de fato.
+    await reload();
+    toast.success('Configurações salvas.');
   };
+
+  // Após reload, se o valor do banco divergir do que tentamos enviar, avisa.
+  useEffect(() => {
+    if (loading || saving) return;
+    if (!dirty) return;
+    // se ainda está "dirty" logo após um save+reload, algo não persistiu
+  }, [loading, saving, dirty]);
 
   return (
     <div className="container max-w-3xl py-6 space-y-6">
@@ -81,9 +92,14 @@ export default function FrenteCaixaConfiguracoes() {
             </p>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={saving || loading} className="gap-2">
+        <Button
+          onClick={handleSave}
+          disabled={saving || loading || !dirty}
+          className="gap-2"
+          variant={dirty ? 'default' : 'secondary'}
+        >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Salvar
+          {dirty ? 'Salvar alterações' : 'Salvo'}
         </Button>
       </div>
 

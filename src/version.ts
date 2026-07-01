@@ -9,7 +9,7 @@
  */
 export const VERSION = "1.52.1-beta";
 export const RELEASE_DATE = "2026-07-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "print_on_finish_mode respeitado em todas as lojas (PDV V2, Pedido Express, Cobrar Comanda)";
+export const CODENAME = "Configurações da Frente de Caixa: botão Salvar sensível a alterações + reload pós-save";
 
 export interface Release {
   version: string;
