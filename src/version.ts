@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.46.1-beta";
+export const VERSION = "1.46.2-beta";
 export const RELEASE_DATE = "2026-06-30"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Importar XML: preço do produto mapeado + auto-preenchimento de GTIN";
+export const CODENAME = "Importar XML: revisão fiscal do novo produto (categoria, regra, tipo, visibilidade)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.46.2-beta",
+    date: "2026-06-30",
+    codename: "Importar XML: revisão fiscal do novo produto (categoria, regra, tipo, visibilidade)",
+    changes: [
+      "Compras → Importar XML: quando um item da nota vai criar produto novo, o card agora expõe Categoria, Regra tributária, Tipo (Mercado/Cardápio/Ambos) e os 4 toggles de visibilidade (Frente de Caixa, Cardápio, Garçom, QR de Mesa) — mesmo padrão de revisão da Importação de Cardápio por IA.",
+      "Barra de ações em massa no topo dos itens: aplica Categoria, Regra tributária ou Tipo a todas as linhas que criarão produto novo de uma vez.",
+      "Trocar o tipo já reajusta as toggles automaticamente: Mercado deixa só Frente de Caixa; Cardápio/Ambos habilitam Cardápio, Garçom e QR de Mesa. O operador pode ajustar manualmente depois.",
+      "Ao confirmar a entrada, os novos produtos são gravados com category (nome), tax_rule_id, product_type e as toggles conforme escolhido — não caem mais no padrão fixo 'mercado' cego.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, NF-e, Multi-Pagamento, PDV V2, Pedido Express, Frente de Caixa, Manifestação Eletrônica ou auto_printer.py.",
+    ],
+  },
   {
     version: "1.46.1-beta",
     date: "2026-06-30",
