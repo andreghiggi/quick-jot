@@ -100,12 +100,6 @@ export default function PDVV2() {
   const { activePaymentMethods: menuPaymentMethods } = usePaymentMethods({ companyId, channel: 'menu' });
   const { products } = useProducts({ companyId });
   const { taxRules } = useTaxRules({ companyId });
-  // Configurações do PDV (compartilhadas com Frente de Caixa).
-  // Usadas aqui para respeitar `print_on_finish_mode`:
-  //   'auto' → DANFE imprime sozinho (comportamento antigo);
-  //   'ask'  → PostSaleDialog pergunta antes de imprimir;
-  //   'off'  → não dispara impressão automática.
-  const { settings: pdvSettings } = usePdvSettings(companyId);
   const { enabled: mercadoEnabled } = useMercadoEnabled(companyId);
   const fiscalEnabled = isModuleEnabled('fiscal');
 
@@ -537,10 +531,8 @@ export default function PDVV2() {
     if (saleId) {
       // NFC-e: TEF força emissão (regra V1). Caso contrário, segue documentMode.
       const wantsNfce = (tefIntegration ? true : documentMode === 'sale_with_nfce') && fiscalEnabled && companyId;
-      // Auto-print respeita a configuração do PDV:
-      //   - I9 (printDocument true/false) → prevalece a escolha do operador;
-      //   - demais lojas (printDocument undefined) → segue print_on_finish_mode.
-      const shouldPrint = resolveAutoPrintDanfe(printDocument, pdvSettings.print_on_finish_mode);
+      // Imprime se: I9 escolheu "Imprimir" no pop-up, ou demais lojas (comportamento original)
+      const shouldPrint = printDocument !== false;
       if (wantsNfce) {
         // Só fecha a comanda depois que o
         // operador autorizar o fechamento do pop-up de NFC-e.
@@ -852,7 +844,7 @@ export default function PDVV2() {
             items,
             discount: 0,
             customerName: fullTab?.customer_name || null,
-            shouldPrint: resolveAutoPrintDanfe(params.printDocument, pdvSettings.print_on_finish_mode),
+            shouldPrint: params.printDocument !== false,
             tefData,
             customerDocument: params.customerDocument,
             extraObservacoes: partialObs,
