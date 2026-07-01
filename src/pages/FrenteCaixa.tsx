@@ -920,11 +920,17 @@ export default function FrenteCaixa() {
         }
       }
 
-      setLines([]);
-      setQuery('');
-      setLastTouchedId(null);
-      setImportedOrderId(null);
-      setImportedLabel(null);
+      // Toggle: clear_screen_after_sale — se desligado, mantém os itens em tela
+      // para o operador conferir antes de iniciar a próxima venda.
+      if (pdvSettings.clear_screen_after_sale !== false) {
+        setLines([]);
+        setQuery('');
+        setLastTouchedId(null);
+        setImportedOrderId(null);
+        setImportedLabel(null);
+      } else {
+        toast.info('Venda finalizada. Pressione F9 para iniciar a próxima.');
+      }
       setPaymentOpen(false);
 
       // ── Fluxo CONSOLIDADO (Frente de Caixa, allow-list) ────────────────
