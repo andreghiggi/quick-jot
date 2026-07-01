@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.46.5-beta";
+export const VERSION = "1.47.0-beta";
 export const RELEASE_DATE = "2026-07-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Produtos: aba Cardápio/Loja passa a incluir Ambos";
+export const CODENAME = "Inventário: contagem cega (Fase 1 do módulo Estoque Simples Nacional)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.47.0-beta",
+    date: "2026-07-01",
+    codename: "Inventário: contagem cega (Fase 1 do módulo Estoque Simples Nacional)",
+    changes: [
+      "Nova tela Estoque → Inventário (Contagem) para registrar contagem física do estoque.",
+      "Fluxo em 3 etapas: Abrir contagem (congela snapshot do saldo e custo atuais), Contagem cega (operador escaneia GTIN/código/nome e digita a quantidade SEM ver o esperado) e Revisão (variações destacadas, aprovação por item e resumo do ajuste em R$).",
+      "Ao fechar a contagem, ajustes de estoque são gerados automaticamente via apply_stock_movement (type='adjustment', reference='inventory_count') — histórico completo no Kardex de cada produto.",
+      "Escopo por 'Todos os produtos com controle de estoque' ou 'Por categoria'. Apenas produtos com track_stock ativo entram no snapshot.",
+      "Base para as próximas fases: Livro de Registro de Inventário anual (PDF/XLSX), Relatório de CMV e Kardex por produto.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, NF-e, Frente de Caixa, PDV V2, Pedido Express, Manifestação Eletrônica, Compras/Importar XML ou auto_printer.py.",
+    ],
+  },
   {
     version: "1.46.5-beta",
     date: "2026-07-01",
