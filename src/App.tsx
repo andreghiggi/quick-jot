@@ -61,6 +61,7 @@ import FrenteCaixa from "./pages/FrenteCaixa";
 import FrenteCaixaLista from "./pages/FrenteCaixaLista";
 import FrenteCaixaConfiguracoes from "./pages/FrenteCaixaConfiguracoes";
 import EstoqueRelatorio from "./pages/EstoqueRelatorio";
+import InventarioContagem from "./pages/InventarioContagem";
 import RelatoriosHub from "./pages/RelatoriosHub";
 import DfeManifestacao from "./pages/compras/DfeManifestacao";
 import PurchaseImportXml from "./pages/compras/PurchaseImportXml";
