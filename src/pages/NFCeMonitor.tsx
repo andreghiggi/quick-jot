@@ -439,6 +439,18 @@ export default function NFCeMonitor() {
                                   <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                                 </Button>
                               )}
+                              {(record.status === 'rejeitada' || record.status === 'erro') && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-emerald-600"
+                                  onClick={() => handleRecuperarChave(record)}
+                                  disabled={isLoading}
+                                  title="Recuperar do SEFAZ pela chave"
+                                >
+                                  <CloudDownload className={`h-4 w-4 ${isLoading ? 'animate-pulse' : ''}`} />
+                                </Button>
+                              )}
                               {record.status === 'autorizada' && (
                                 <>
                                   <Button
