@@ -1,6 +1,33 @@
 import { supabase } from '@/integrations/supabase/client';
 import QRCode from 'qrcode';
 
+/**
+ * Opções extras de renderização do DANFE — todas opcionais.
+ * Quando omitidas, mantém o comportamento original (compatibilidade total
+ * com quem já chama `printDanfeFromRecord(record)` sem argumentos).
+ *
+ * Preenchidas exclusivamente pela Frente de Caixa a partir de `pdv_settings`.
+ */
+export interface DanfePrintOptions {
+  companyLogoUrl?: string | null;
+  companyName?: string | null;
+  customerName?: string | null;
+  customerDoc?: string | null;
+  promoMessage?: string | null;
+  reviewQrUrl?: string | null;
+  copies?: number;
+  show?: {
+    logo?: boolean;
+    customer?: boolean;
+    discount?: boolean;
+    surcharge?: boolean;
+    serial?: boolean;
+    saleNotes?: boolean;
+    productNotes?: boolean;
+    reviewQr?: boolean;
+  };
+}
+
 export interface NFCeItem {
   codigo: string;
   descricao: string;
@@ -185,9 +212,23 @@ function buildQrcodeUrlFromChave(chave: string, ambiente?: string | null): strin
   return `${baseUrl}?p=${chave}|${ambienteCode}|2`;
 }
 
-export async function generateDanfeHtml(record: NFCeRecord & { request_payload?: any }): Promise<string> {
+export async function generateDanfeHtml(
+  record: NFCeRecord & { request_payload?: any },
+  opts: DanfePrintOptions = {},
+): Promise<string> {
   const items = record.request_payload?.itens || [];
   const observacoes: string = (record.request_payload?.observacoes || record.request_payload?.infCpl || '').toString().trim();
+  const show = {
+    logo: true,
+    customer: true,
+    discount: true,
+    surcharge: true,
+    serial: false,
+    saleNotes: true,
+    productNotes: true,
+    reviewQr: false,
+    ...(opts.show || {}),
+  };
   // Use qrcode_url from DB, or build from chave_acesso as fallback
   const qrcodeUrl = record.qrcode_url || buildQrcodeUrlFromChave(record.chave_acesso || '', record.ambiente) || '';
   const chaveAcesso = record.chave_acesso || '';
@@ -195,14 +236,29 @@ export async function generateDanfeHtml(record: NFCeRecord & { request_payload?:
   const dataEmissao = record.created_at ? new Date(record.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
   const ambiente = record.ambiente === 'producao' ? 'PRODUÇÃO' : 'HOMOLOGAÇÃO';
 
-  const itemsHtml = items.map((item: any, i: number) => `
+  const esc = (s: unknown) => String(s ?? '').replace(/[<>&]/g, (c) => (
+    c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;'
+  ));
+
+  const itemsHtml = items.map((item: any, i: number) => {
+    const serial = show.serial && (item.serial || item.numero_serie || item.codigo)
+      ? `<div style="font-size:9px;color:#333;">Cod/Série: ${esc(item.serial || item.numero_serie || item.codigo)}</div>`
+      : '';
+    const notes = show.productNotes && item.observacao
+      ? `<div style="font-size:10px;color:#333;font-style:italic;">Obs: ${esc(item.observacao)}</div>`
+      : '';
+    return `
     <tr>
-      <td style="text-align:left;padding:2px 4px;font-size:11px;">${String(i + 1).padStart(3, '0')} ${item.descricao || item.produto || ''}</td>
+      <td style="text-align:left;padding:2px 4px;font-size:11px;">
+        ${String(i + 1).padStart(3, '0')} ${esc(item.descricao || item.produto || '')}
+        ${serial}
+        ${notes}
+      </td>
       <td style="text-align:center;padding:2px;font-size:11px;">${item.quantidade || 1}</td>
       <td style="text-align:right;padding:2px;font-size:11px;">R$${Number(item.valor_unitario || 0).toFixed(2)}</td>
       <td style="text-align:right;padding:2px 4px;font-size:11px;">R$${(Number(item.quantidade || 1) * Number(item.valor_unitario || 0)).toFixed(2)}</td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 
   // Generate QR Code as data URL using local library
   let qrCodeImg = '<p style="font-size:10px;color:#999;">[QR Code indisponível]</p>';
@@ -213,6 +269,48 @@ export async function generateDanfeHtml(record: NFCeRecord & { request_payload?:
     } catch (e) {
       console.error('Erro ao gerar QR Code:', e);
     }
+  }
+
+  // Blocos opcionais controlados pelos toggles do PDV
+  const logoHtml = (show.logo && opts.companyLogoUrl)
+    ? `<div class="center" style="margin-bottom:4px;"><img src="${esc(opts.companyLogoUrl)}" alt="logo" style="max-height:48px;max-width:70mm;object-fit:contain;" /></div>`
+    : '';
+
+  const customerHtml = (show.customer && (opts.customerName || opts.customerDoc || record.request_payload?.destinatario))
+    ? (() => {
+        const dest = record.request_payload?.destinatario || {};
+        const nome = opts.customerName || dest.nome || '';
+        const doc = opts.customerDoc || dest.cpf || dest.cnpj || '';
+        return `<div class="small" style="padding:2px 4px;">
+          <span class="bold">Cliente:</span> ${esc(nome || 'Consumidor')}${doc ? ` — ${esc(doc)}` : ''}
+        </div><div class="separator"></div>`;
+      })()
+    : '';
+
+  const desconto = Number(record.request_payload?.valor_desconto || 0);
+  const acrescimo = Number(record.request_payload?.valor_acrescimo || record.request_payload?.valor_frete || 0);
+  const totaisExtrasHtml = `
+    ${show.discount && desconto > 0 ? `<div class="small" style="display:flex;justify-content:space-between;padding:0 4px;"><span>Desconto</span><span>- R$ ${desconto.toFixed(2)}</span></div>` : ''}
+    ${show.surcharge && acrescimo > 0 ? `<div class="small" style="display:flex;justify-content:space-between;padding:0 4px;"><span>Acréscimo</span><span>+ R$ ${acrescimo.toFixed(2)}</span></div>` : ''}
+  `;
+
+  const saleNotesHtml = (show.saleNotes && observacoes)
+    ? `<div class="small" style="padding:2px 4px;"><span class="bold">Observações:</span> ${esc(observacoes)}</div><div class="separator"></div>`
+    : '';
+
+  const promoHtml = opts.promoMessage
+    ? `<div class="center small" style="padding:4px;font-style:italic;">${esc(opts.promoMessage)}</div>`
+    : '';
+
+  let reviewQrHtml = '';
+  if (show.reviewQr && opts.reviewQrUrl) {
+    try {
+      const reviewData = await QRCode.toDataURL(opts.reviewQrUrl, { width: 120, margin: 1 });
+      reviewQrHtml = `<div class="center" style="margin:6px 0;">
+        <div class="small bold">Avalie sua compra</div>
+        <img src="${reviewData}" alt="QR avaliação" style="width:100px;height:100px;" />
+      </div>`;
+    } catch (e) { console.error('Erro QR avaliação:', e); }
   }
 
   return `<!DOCTYPE html>
@@ -234,12 +332,15 @@ export async function generateDanfeHtml(record: NFCeRecord & { request_payload?:
   .homolog-warn { font-weight:bold; font-size:11px; border:2px solid #000; padding:3px; margin:4px 0; text-align:center; }
 </style></head><body>
 
+  ${logoHtml}
   <div class="center title">DANFE NFC-e</div>
   <div class="center small">Documento Auxiliar da Nota Fiscal de Consumidor Eletrônica</div>
+  ${opts.companyName ? `<div class="center small bold">${esc(opts.companyName)}</div>` : ''}
   <div class="separator"></div>
 
   ${record.ambiente !== 'producao' ? '<div class="homolog-warn">AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL</div>' : ''}
 
+  ${customerHtml}
   <table>
     <thead>
       <tr style="border-bottom:1px solid #000;">
@@ -253,13 +354,14 @@ export async function generateDanfeHtml(record: NFCeRecord & { request_payload?:
   </table>
 
   <div class="separator"></div>
+  ${totaisExtrasHtml}
   <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px;padding:2px 4px;">
     <span>TOTAL</span>
     <span>R$ ${Number(record.valor_total).toFixed(2)}</span>
   </div>
   <div class="separator"></div>
 
-  ${observacoes ? `<div class="small" style="padding:2px 4px;"><span class="bold">Observações:</span> ${observacoes.replace(/[<>]/g, '')}</div><div class="separator"></div>` : ''}
+  ${saleNotesHtml}
 
   <div class="qrcode">
     ${qrCodeImg}
@@ -277,6 +379,8 @@ export async function generateDanfeHtml(record: NFCeRecord & { request_payload?:
     <div>Data: ${dataEmissao}</div>
     <div>Ambiente: ${ambiente}</div>
   </div>
+  ${promoHtml ? `<div class="separator"></div>${promoHtml}` : ''}
+  ${reviewQrHtml}
   <div class="separator"></div>
 
   <div class="no-print" style="text-align:center;margin-top:12px;">
@@ -286,23 +390,28 @@ export async function generateDanfeHtml(record: NFCeRecord & { request_payload?:
 </body></html>`;
 }
 
-export async function printDanfeFromRecord(record: NFCeRecord & { request_payload?: any }) {
+export async function printDanfeFromRecord(
+  record: NFCeRecord & { request_payload?: any },
+  opts: DanfePrintOptions = {},
+) {
   if (!record.chave_acesso && !record.qrcode_url) {
     throw new Error('Nota sem dados fiscais. Aguarde a autorização da SEFAZ para imprimir.');
   }
-
-  const printWindow = window.open('', '_blank', 'width=420,height=750');
-  if (!printWindow) {
-    throw new Error('Pop-up bloqueado. Permita pop-ups para imprimir o DANFE.');
-  }
-  const html = await generateDanfeHtml(record);
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
-  // Wait for content to render, then print
-  setTimeout(() => {
+  const html = await generateDanfeHtml(record, opts);
+  const copies = Math.max(1, opts.copies || 1);
+  for (let i = 0; i < copies; i++) {
+    const printWindow = window.open('', '_blank', 'width=420,height=750');
+    if (!printWindow) {
+      throw new Error('Pop-up bloqueado. Permita pop-ups para imprimir o DANFE.');
+    }
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    // Pequeno delay entre cópias para o navegador liberar a fila.
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((r) => setTimeout(r, 500));
     try { printWindow.print(); } catch (_) {}
-  }, 500);
+  }
 }
 
 export async function getNFCeRecords(companyId: string, limit = 50): Promise<NFCeRecord[]> {

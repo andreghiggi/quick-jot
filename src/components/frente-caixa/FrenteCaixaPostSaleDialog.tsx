@@ -33,6 +33,7 @@ import {
   reprocessarNFCe,
   printDanfeFromRecord,
   type NFCeRecord,
+  type DanfePrintOptions,
 } from '@/services/nfceService';
 import {
   executarImpressaoTefVias,
@@ -58,6 +59,8 @@ export interface FrenteCaixaPostSaleDialogProps {
   emittingNfce: boolean;
   /** Imprimir DANFE automaticamente quando autorizada (config do PDV). */
   autoPrintDanfe: boolean;
+  /** Opções extras de renderização do DANFE (logo, promo, cliente, QR etc.). */
+  danfeOptions?: DanfePrintOptions;
   onClosed?: () => void;
 }
 
@@ -72,6 +75,7 @@ export function FrenteCaixaPostSaleDialog({
   nfceError,
   emittingNfce,
   autoPrintDanfe,
+  danfeOptions,
   onClosed,
 }: FrenteCaixaPostSaleDialogProps) {
   const [record, setRecord] = useState<NFCeRecord | null>(initialNfceRecord);
@@ -179,11 +183,11 @@ export function FrenteCaixaPostSaleDialog({
     if (!open || autoFired || !showPrompt) return;
     if (autoPrintDanfe && status === 'autorizada' && record) {
       setAutoFired(true);
-      printDanfeFromRecord(record)
+      printDanfeFromRecord(record, danfeOptions)
         .then(() => toast.success('DANFE impressa automaticamente'))
         .catch((e: any) => toast.error(e?.message || 'Erro ao imprimir DANFE'));
     }
-  }, [open, showPrompt, status, record, autoPrintDanfe, autoFired]);
+  }, [open, showPrompt, status, record, autoPrintDanfe, autoFired, danfeOptions]);
 
   function close() {
     onOpenChange(false);
@@ -207,7 +211,7 @@ export function FrenteCaixaPostSaleDialog({
       // DANFE
       if (checkDanfe && record && status === 'autorizada' && !autoFired) {
         try {
-          await printDanfeFromRecord(record);
+          await printDanfeFromRecord(record, danfeOptions);
           toast.success('DANFE enviada para impressão');
         } catch (e: any) {
           toast.error(e?.message || 'Erro ao imprimir DANFE');

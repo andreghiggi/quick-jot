@@ -75,6 +75,7 @@ import {
   getNFCeRecordBySaleId,
   type NFCeItem,
   type NFCeRecord,
+  type DanfePrintOptions,
 } from '@/services/nfceService';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import { FrenteCaixaPostSaleDialog } from '@/components/frente-caixa/FrenteCaixaPostSaleDialog';
@@ -165,6 +166,9 @@ export default function FrenteCaixa() {
   const [consolidatedRecord, setConsolidatedRecord] = useState<NFCeRecord | null>(null);
   const [consolidatedNfceError, setConsolidatedNfceError] = useState<string | null>(null);
   const [consolidatedEmitting, setConsolidatedEmitting] = useState(false);
+  /** Opções de renderização do DANFE calculadas a partir do checkout atual
+   *  + configurações da Frente de Caixa. Recalculado em cada `handleConfirmPayment`. */
+  const [danfeOpts, setDanfeOpts] = useState<DanfePrintOptions | undefined>(undefined);
 
   // Instala/desinstala o interceptor do prompt TEF enquanto a página está
   // montada e a loja está na allow-list. Fora dessa condição, o fluxo atual
@@ -718,6 +722,40 @@ export default function FrenteCaixa() {
 
   async function handleConfirmPayment(params: FrenteCaixaCheckoutResult) {
     if (!user?.id) return;
+    // Toggle: exigir cliente acima de X reais.
+    const requireCustomerAbove = Number(pdvSettings.require_customer_above_value || 0);
+    if (requireCustomerAbove > 0 && total > requireCustomerAbove) {
+      const hasCustomer = !!(params.customerName?.trim() || params.customerDocument?.trim());
+      if (!hasCustomer) {
+        toast.error(
+          `Vendas acima de ${formatPrice(requireCustomerAbove)} exigem CPF ou nome do cliente.`,
+        );
+        return;
+      }
+    }
+
+    // Monta as opções de renderização do DANFE a partir das configurações + cliente informado.
+    const nextDanfeOpts: DanfePrintOptions = {
+      companyLogoUrl: (company as any)?.logo_url || null,
+      companyName: company?.name || null,
+      customerName: params.customerName || null,
+      customerDoc: params.customerDocument || null,
+      promoMessage: pdvSettings.promo_message || null,
+      reviewQrUrl: pdvSettings.review_qr_url || null,
+      copies: pdvSettings.auto_print_second_copy ? 2 : 1,
+      show: {
+        logo: pdvSettings.print_show_logo,
+        customer: pdvSettings.print_show_customer,
+        discount: pdvSettings.print_show_discount,
+        surcharge: pdvSettings.print_show_surcharge,
+        serial: pdvSettings.print_show_serial,
+        saleNotes: pdvSettings.print_show_sale_notes,
+        productNotes: pdvSettings.print_show_product_notes,
+        reviewQr: pdvSettings.print_show_review_qr && !!pdvSettings.review_qr_url,
+      },
+    };
+    setDanfeOpts(nextDanfeOpts);
+
     const noteParts: string[] = [`[FRENTE-CAIXA] Pagamento: ${params.paymentName}`];
     if (params.combinedNotesFragment) noteParts.push(params.combinedNotesFragment);
     if (params.customerPhone) noteParts.push(`Tel: ${params.customerPhone}`);
@@ -882,11 +920,17 @@ export default function FrenteCaixa() {
         }
       }
 
-      setLines([]);
-      setQuery('');
-      setLastTouchedId(null);
-      setImportedOrderId(null);
-      setImportedLabel(null);
+      // Toggle: clear_screen_after_sale — se desligado, mantém os itens em tela
+      // para o operador conferir antes de iniciar a próxima venda.
+      if (pdvSettings.clear_screen_after_sale !== false) {
+        setLines([]);
+        setQuery('');
+        setLastTouchedId(null);
+        setImportedOrderId(null);
+        setImportedLabel(null);
+      } else {
+        toast.info('Venda finalizada. Pressione F9 para iniciar a próxima.');
+      }
       setPaymentOpen(false);
 
       // ── Fluxo CONSOLIDADO (Frente de Caixa, allow-list) ────────────────
@@ -948,6 +992,30 @@ export default function FrenteCaixa() {
             );
           } finally {
             setNfceEmitting(false);
+          }
+        })();
+      }
+
+      // ── Toggle: auto_open_drawer_cash — abre a gaveta no pagamento em dinheiro.
+      //   Enfileiramos um job especial em `print_queue` com marcador `[DRAWER_OPEN]`,
+      //   que o script local `auto_printer.py` interpreta como pulso ESC/POS de gaveta.
+      //   Se o script ainda não reconhecer o marcador, o job cai como "impresso vazio"
+      //   e não afeta nada.
+      if (
+        pdvSettings.auto_open_drawer_cash &&
+        company?.id &&
+        /dinheiro|cash/i.test(params.paymentName || '')
+      ) {
+        (async () => {
+          try {
+            await supabase.from('print_queue').insert({
+              company_id: company.id,
+              label: 'DRAWER_OPEN',
+              html_content:
+                '<!--DRAWER_OPEN--><html><body><pre>[DRAWER_OPEN]</pre></body></html>',
+            });
+          } catch (err) {
+            console.error('[FrenteCaixa] drawer_open enqueue failed:', err);
           }
         })();
       }
@@ -1730,6 +1798,7 @@ export default function FrenteCaixa() {
         companyId={company?.id}
         initialRecord={postSaleRecord}
         autoPrint={pdvSettings.print_on_finish_mode === 'auto'}
+        danfeOptions={danfeOpts}
         onClosed={() => {
           setPostSaleRecord(null);
           setTimeout(() => inputRef.current?.focus(), 100);
@@ -1749,6 +1818,7 @@ export default function FrenteCaixa() {
         nfceError={consolidatedNfceError}
         emittingNfce={consolidatedEmitting}
         autoPrintDanfe={pdvSettings.print_on_finish_mode === 'auto'}
+        danfeOptions={danfeOpts}
         onClosed={() => {
           setConsolidatedRecord(null);
           setConsolidatedTef(null);
