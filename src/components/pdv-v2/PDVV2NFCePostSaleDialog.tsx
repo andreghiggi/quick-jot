@@ -9,6 +9,7 @@ import {
   reprocessarNFCe,
   printDanfeFromRecord,
   NFCeRecord,
+  type DanfePrintOptions,
 } from '@/services/nfceService';
 
 interface PDVV2NFCePostSaleDialogProps {
@@ -19,6 +20,8 @@ interface PDVV2NFCePostSaleDialogProps {
   initialRecord: NFCeRecord | null;
   /** Imprimir DANFE automaticamente assim que autorizada */
   autoPrint: boolean;
+  /** Opções extras de renderização do DANFE (opcional — safe default = comportamento antigo). */
+  danfeOptions?: DanfePrintOptions;
   /** Callback quando o operador fechar o diálogo (sucesso ou rejeitada) */
   onClosed?: () => void;
 }
@@ -35,6 +38,7 @@ export function PDVV2NFCePostSaleDialog({
   companyId,
   initialRecord,
   autoPrint,
+  danfeOptions,
   onClosed,
 }: PDVV2NFCePostSaleDialogProps) {
   const [record, setRecord] = useState<NFCeRecord | null>(initialRecord);
@@ -60,11 +64,11 @@ export function PDVV2NFCePostSaleDialog({
     if (!open || !record || autoPrinted) return;
     if (status === 'autorizada' && autoPrint) {
       setAutoPrinted(true);
-      printDanfeFromRecord(record)
+      printDanfeFromRecord(record, danfeOptions)
         .then(() => toast.success('DANFE impressa automaticamente'))
         .catch((e: any) => toast.error(e?.message || 'Erro ao imprimir DANFE'));
     }
-  }, [open, status, record, autoPrint, autoPrinted]);
+  }, [open, status, record, autoPrint, autoPrinted, danfeOptions]);
 
   // Polling para acompanhar status na SEFAZ
   useEffect(() => {
@@ -118,7 +122,7 @@ export function PDVV2NFCePostSaleDialog({
         if (newStatus === 'autorizada' && autoPrint && !autoPrinted) {
           setAutoPrinted(true);
           try {
-            await printDanfeFromRecord(data as unknown as NFCeRecord);
+            await printDanfeFromRecord(data as unknown as NFCeRecord, danfeOptions);
             toast.success('DANFE impressa automaticamente');
           } catch (e: any) {
             toast.error(e?.message || 'Erro ao imprimir DANFE');
@@ -212,7 +216,7 @@ export function PDVV2NFCePostSaleDialog({
                       if (!record) return;
                       setPrinting(true);
                       try {
-                        await printDanfeFromRecord(record);
+                        await printDanfeFromRecord(record, danfeOptions);
                         toast.success('DANFE enviada para impressão');
                       } catch (e: any) {
                         toast.error(e?.message || 'Erro ao imprimir DANFE');
