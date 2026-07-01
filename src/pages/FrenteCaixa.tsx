@@ -75,6 +75,7 @@ import {
   getNFCeRecordBySaleId,
   type NFCeItem,
   type NFCeRecord,
+  type DanfePrintOptions,
 } from '@/services/nfceService';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import { FrenteCaixaPostSaleDialog } from '@/components/frente-caixa/FrenteCaixaPostSaleDialog';
@@ -165,6 +166,9 @@ export default function FrenteCaixa() {
   const [consolidatedRecord, setConsolidatedRecord] = useState<NFCeRecord | null>(null);
   const [consolidatedNfceError, setConsolidatedNfceError] = useState<string | null>(null);
   const [consolidatedEmitting, setConsolidatedEmitting] = useState(false);
+  /** Opções de renderização do DANFE calculadas a partir do checkout atual
+   *  + configurações da Frente de Caixa. Recalculado em cada `handleConfirmPayment`. */
+  const [danfeOpts, setDanfeOpts] = useState<DanfePrintOptions | undefined>(undefined);
 
   // Instala/desinstala o interceptor do prompt TEF enquanto a página está
   // montada e a loja está na allow-list. Fora dessa condição, o fluxo atual
