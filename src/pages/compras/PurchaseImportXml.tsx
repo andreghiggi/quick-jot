@@ -13,9 +13,18 @@ import {
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Upload, Loader2, CheckCircle2, FileInput, ChevronLeft, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCategories } from '@/hooks/useCategories';
+import { useTaxRules } from '@/hooks/useTaxRules';
+
+type ProductType = 'cardapio' | 'mercado' | 'ambos';
+function visibilityFromType(t: ProductType) {
+  if (t === 'mercado') return { pdv_item: true, menu_item: false, waiter_item: false, qr_item: false };
+  return { pdv_item: true, menu_item: true, waiter_item: true, qr_item: true };
+}
 
 type ItemRow = {
   xml_codigo: string;
@@ -35,6 +44,15 @@ type ItemRow = {
   stock_unit: string;          // unidade que entra no estoque
   sale_price: number;          // preço sugerido de venda
   unit_weight_kg: number | null; // opcional, p/ KG→UN
+  // --- Enriquecimento fiscal para PRODUTO NOVO (v1.46.2-beta) ---
+  category_id: string | null;
+  category_name: string;
+  tax_rule_id: string | null;
+  product_type: ProductType;
+  pdv_item: boolean;
+  menu_item: boolean;
+  waiter_item: boolean;
+  qr_item: boolean;
 };
 
 type Header = {
@@ -63,6 +81,11 @@ export default function PurchaseImportXml() {
   const [products, setProducts] = useState<ProductSlim[]>([]);
   const [dfeId, setDfeId] = useState<string | null>(documentoId);
   const [openMap, setOpenMap] = useState<Record<number, boolean>>({});
+  const { categories } = useCategories({ companyId: company?.id });
+  const { taxRules } = useTaxRules({ companyId: company?.id });
+  const [bulkCategoryId, setBulkCategoryId] = useState<string>('');
+  const [bulkTaxRuleId, setBulkTaxRuleId] = useState<string>('');
+  const [bulkType, setBulkType] = useState<ProductType | ''>('');
 
   useEffect(() => {
     if (!company?.id) return;
@@ -137,6 +160,8 @@ export default function PurchaseImportXml() {
         const matched = products.find(p => (ean && p.gtin === ean));
         const uCom = get(prod, 'uCom');
         const vUn = Number(get(prod, 'vUnCom') || 0);
+        const defaultCat = categories[0];
+        const defaultVis = visibilityFromType('mercado');
         return {
           xml_codigo: get(prod, 'cProd'),
           xml_descricao: descricao,
@@ -154,6 +179,11 @@ export default function PurchaseImportXml() {
           stock_unit: matched?.unit || uCom || 'UN',
           sale_price: matched?.price ?? vUn,
           unit_weight_kg: null,
+          category_id: defaultCat?.id || null,
+          category_name: defaultCat?.name || 'Mercado',
+          tax_rule_id: null,
+          product_type: 'mercado',
+          ...defaultVis,
         };
       });
       setItems(its);
@@ -178,6 +208,32 @@ export default function PurchaseImportXml() {
       return { ...it, sale_price: Number((realCost * (1 + percent / 100)).toFixed(2)) };
     }));
     toast.success(`Markup de ${percent}% aplicado a todos os itens`);
+  }
+
+  // ---- Bulk actions (apenas para itens que criarão produto novo) ----
+  function bulkApplyCategory() {
+    if (!bulkCategoryId) { toast.error('Selecione uma categoria'); return; }
+    const cat = categories.find(c => c.id === bulkCategoryId);
+    if (!cat) return;
+    setItems(prev => prev.map(it => it.createNew
+      ? { ...it, category_id: cat.id, category_name: cat.name }
+      : it));
+    toast.success('Categoria aplicada aos novos produtos');
+  }
+  function bulkApplyTaxRule() {
+    if (!bulkTaxRuleId) { toast.error('Selecione uma regra'); return; }
+    setItems(prev => prev.map(it => it.createNew
+      ? { ...it, tax_rule_id: bulkTaxRuleId }
+      : it));
+    toast.success('Regra tributária aplicada aos novos produtos');
+  }
+  function bulkApplyType() {
+    if (!bulkType) { toast.error('Selecione o tipo'); return; }
+    const vis = visibilityFromType(bulkType as ProductType);
+    setItems(prev => prev.map(it => it.createNew
+      ? { ...it, product_type: bulkType as ProductType, ...vis }
+      : it));
+    toast.success('Tipo aplicado aos novos produtos');
   }
 
   async function handleConfirm() {
@@ -241,13 +297,18 @@ export default function PurchaseImportXml() {
             name: it.newName || it.xml_descricao,
             price: it.sale_price || realCost,
             cost_price: realCost,
-            category: 'Mercado',
+            category: it.category_name || 'Mercado',
+            tax_rule_id: it.tax_rule_id || null,
             gtin: it.xml_ean || null,
             ncm: it.xml_ncm || null,
             cfop: it.xml_cfop || null,
             unit: it.stock_unit || it.xml_unidade || null,
             track_stock: true,
-            product_type: 'mercado',
+            product_type: it.product_type || 'mercado',
+            pdv_item: it.pdv_item,
+            menu_item: it.menu_item,
+            waiter_item: it.waiter_item,
+            qr_item: it.qr_item,
             active: true,
             stock_quantity: 0,
           } as any).select('id').single();
@@ -364,6 +425,44 @@ export default function PurchaseImportXml() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
+                {items.some(i => i.createNew) && (
+                  <div className="rounded-md border border-dashed p-3 bg-muted/30">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">
+                      Ações em massa (aplicam-se apenas aos itens que criarão produto novo)
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div className="flex gap-2">
+                        <Select value={bulkCategoryId} onValueChange={setBulkCategoryId}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Categoria" /></SelectTrigger>
+                          <SelectContent>
+                            {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={bulkApplyCategory}>Aplicar</Button>
+                      </div>
+                      <div className="flex gap-2">
+                        <Select value={bulkTaxRuleId} onValueChange={setBulkTaxRuleId}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Regra tributária" /></SelectTrigger>
+                          <SelectContent>
+                            {taxRules.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={bulkApplyTaxRule}>Aplicar</Button>
+                      </div>
+                      <div className="flex gap-2">
+                        <Select value={bulkType} onValueChange={(v) => setBulkType(v as ProductType)}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Tipo do produto" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="mercado">Mercado</SelectItem>
+                            <SelectItem value="cardapio">Cardápio</SelectItem>
+                            <SelectItem value="ambos">Ambos</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={bulkApplyType}>Aplicar</Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {items.map((it, idx) => (
                   <div key={idx} className="border rounded-lg p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
@@ -462,6 +561,79 @@ export default function PurchaseImportXml() {
                         </div>
                       )}
                     </div>
+                    {it.createNew && (
+                      <div className="rounded-md border border-dashed p-3 space-y-3 bg-muted/20">
+                        <div className="text-xs font-medium text-muted-foreground">Cadastro do novo produto</div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <div>
+                            <Label className="text-xs">Categoria</Label>
+                            <Select
+                              value={it.category_id || ''}
+                              onValueChange={(v) => {
+                                const cat = categories.find(c => c.id === v);
+                                updateItem(idx, {
+                                  category_id: v,
+                                  category_name: cat?.name || it.category_name,
+                                });
+                              }}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                              <SelectContent>
+                                {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Regra tributária</Label>
+                            <Select
+                              value={it.tax_rule_id || 'none'}
+                              onValueChange={(v) => updateItem(idx, { tax_rule_id: v === 'none' ? null : v })}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue placeholder="Sem regra" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Sem regra</SelectItem>
+                                {taxRules.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Tipo do produto</Label>
+                            <Select
+                              value={it.product_type}
+                              onValueChange={(v) => {
+                                const t = v as ProductType;
+                                updateItem(idx, { product_type: t, ...visibilityFromType(t) });
+                              }}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="mercado">Mercado</SelectItem>
+                                <SelectItem value="cardapio">Cardápio</SelectItem>
+                                <SelectItem value="ambos">Ambos</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-4 text-xs">
+                          <label className="flex items-center gap-2">
+                            <Switch checked={it.pdv_item} onCheckedChange={(v) => updateItem(idx, { pdv_item: v })} />
+                            Visível na Frente de Caixa
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Switch checked={it.menu_item} onCheckedChange={(v) => updateItem(idx, { menu_item: v })} />
+                            Visível no Cardápio
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Switch checked={it.waiter_item} onCheckedChange={(v) => updateItem(idx, { waiter_item: v })} />
+                            Visível no Garçom
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Switch checked={it.qr_item} onCheckedChange={(v) => updateItem(idx, { qr_item: v })} />
+                            Visível no QR de Mesa
+                          </label>
+                        </div>
+                      </div>
+                    )}
                     {/* Conversão + preço */}
                     {(it.product_id || it.createNew) && (() => {
                       const factor = it.conversion_factor > 0 ? it.conversion_factor : 1;
