@@ -814,8 +814,12 @@ Deno.serve(async (req) => {
           status: statusResolved.includes('autoriz') ? 'autorizada' : statusResolved,
           chave_acesso: chave,
           protocolo: proto,
-          numero: d.numero || d.number || fromChaveRec.numero || null,
-          serie: d.serie || d.series || fromChaveRec.serie || null,
+          // A chave de acesso é a fonte autoritativa do nº/série da nota
+          // autorizada no SEFAZ. Priorizamos os dados extraídos dela para
+          // evitar herdar o número antigo do stub local (que pode ter sido
+          // enviado com um contador diferente antes da rejeição 539).
+          numero: fromChaveRec.numero || d.numero || d.number || null,
+          serie: fromChaveRec.serie || d.serie || d.series || null,
           ambiente: ambienteRec,
           qrcode_url: qr,
           xml_url: d.xml_url || d.url_xml || null,
