@@ -18,8 +18,6 @@ import { useTaxRules } from '@/hooks/useTaxRules';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
-import { usePdvSettings } from '@/hooks/usePdvSettings';
-import { resolveAutoPrintDanfe } from '@/utils/resolveNfcePrintMode';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useOrderContext } from '@/contexts/OrderContext';
