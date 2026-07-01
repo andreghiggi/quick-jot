@@ -582,9 +582,16 @@ export default function Products() {
   const filteredGroupedProducts = useMemo(() => {
     const mercadoOn = isModuleEnabled('mercado');
     // 1) Filtro por tipo (Cardápio / Mercado / Ambos / Todos) — só vale quando módulo Mercado está on.
+    const matchesType = (p: Product) => {
+      const t = (p as any).productType ?? 'cardapio';
+      if (typeFilter === 'cardapio') return t === 'cardapio' || t === 'ambos';
+      if (typeFilter === 'mercado') return t === 'mercado' || t === 'ambos';
+      if (typeFilter === 'ambos') return t === 'ambos';
+      return true;
+    };
     const byType = mercadoOn
       ? groupedProducts
-          .map(([cat, prods]) => [cat, prods.filter((p) => ((p as any).productType ?? 'cardapio') === typeFilter)] as [string, Product[]])
+          .map(([cat, prods]) => [cat, prods.filter(matchesType)] as [string, Product[]])
           .filter(([, prods]) => prods.length > 0)
       : groupedProducts;
     // 2) Filtro por categoria (chip).
@@ -902,8 +909,8 @@ export default function Products() {
         {isModuleEnabled('mercado') && (() => {
           const cardapioOn = cardapioEnabled;
           const chips = [
-            cardapioOn && { v: 'cardapio' as const, label: `🍔 Cardápio (${products.filter((p) => ((p as any).productType ?? 'cardapio') === 'cardapio').length})` },
-            { v: 'mercado' as const, label: `🛒 Loja (${products.filter((p) => (p as any).productType === 'mercado').length})` },
+            cardapioOn && { v: 'cardapio' as const, label: `🍔 Cardápio (${products.filter((p) => { const t = (p as any).productType ?? 'cardapio'; return t === 'cardapio' || t === 'ambos'; }).length})` },
+            { v: 'mercado' as const, label: `🛒 Loja (${products.filter((p) => { const t = (p as any).productType; return t === 'mercado' || t === 'ambos'; }).length})` },
             cardapioOn && { v: 'ambos' as const, label: `🔄 Ambos (${products.filter((p) => (p as any).productType === 'ambos').length})` },
           ].filter(Boolean) as Array<{ v: 'cardapio' | 'mercado' | 'ambos'; label: string }>;
           if (chips.length < 2) return null;

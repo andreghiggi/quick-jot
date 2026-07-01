@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.46.4-beta";
+export const VERSION = "1.46.5-beta";
 export const RELEASE_DATE = "2026-07-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Importar XML: entrada de estoque com fator de conversão";
+export const CODENAME = "Produtos: aba Cardápio/Loja passa a incluir Ambos";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.46.5-beta",
+    date: "2026-07-01",
+    codename: "Produtos: aba Cardápio/Loja passa a incluir Ambos",
+    changes: [
+      "Produtos: as abas 'Cardápio' e 'Loja' agora incluem os produtos marcados como 'Ambos'. Antes, itens 'Ambos' só apareciam na aba 'Ambos', deixando 'Cardápio' vazia em lojas onde tudo estava classificado como Ambos.",
+      "A aba 'Ambos' continua mostrando exclusivamente os itens marcados como 'Ambos', para consulta rápida.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, NF-e, Frente de Caixa, PDV V2, Pedido Express, Manifestação Eletrônica, Compras/Importar XML ou auto_printer.py.",
+    ],
+  },
   {
     version: "1.46.4-beta",
     date: "2026-07-01",
