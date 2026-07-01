@@ -240,6 +240,19 @@ export default function PurchaseImportXml() {
     if (!company?.id || !header) return;
     setSaving(true);
     try {
+      // 0) duplicidade: mesma NF (chave) já lançada?
+      if (header.chave) {
+        const { data: dup } = await (supabase.from('purchase_invoices') as any)
+          .select('id, numero_nfe')
+          .eq('company_id', company.id)
+          .eq('chave_acesso', header.chave)
+          .maybeSingle();
+        if (dup) {
+          toast.error(`Esta NF já foi importada anteriormente (nº ${(dup as any).numero_nfe}). Entrada não duplicada.`);
+          setSaving(false);
+          return;
+        }
+      }
       // 1) supplier: busca por CNPJ, cria se não existir
       let supplierId: string | null = null;
       if (header.cnpj_emit) {
