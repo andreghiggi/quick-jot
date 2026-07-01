@@ -753,6 +753,101 @@ Deno.serve(async (req) => {
         break
       }
 
+      case 'recuperar_por_chave': {
+        // Recupera na FiscalFlow uma NFC-e já AUTORIZADA no SEFAZ a partir da
+        // chave de 44 dígitos e atualiza o registro local (`nfce_records`) que
+        // ficou como "rejeitada" por duplicidade/timeout. Uso típico: quando o
+        // SEFAZ autorizou a nota, mas a resposta se perdeu, gerando rejeição
+        // 539 (duplicidade) na retransmissão.
+        const chave = String(payload?.chave_acesso ?? '').replace(/\D/g, '')
+        const localRecordId = payload?.record_id ?? null
+        if (chave.length !== 44) {
+          return new Response(
+            JSON.stringify({ error: 'Chave de acesso inválida (esperado 44 dígitos numéricos).' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // 1) Localiza na FiscalFlow via `listar?chave_acesso=`
+        console.log('[nfce-proxy] Recuperar por chave:', chave)
+        const listResp = await fetch(`${NFCE_API_URL}?chave_acesso=${chave}`, {
+          headers: { 'x-api-key': NFCE_API_KEY },
+        })
+        const listData = await safeJson(listResp)
+        const items: any[] = Array.isArray(listData)
+          ? listData
+          : (listData?.data || listData?.notas || listData?.items || [])
+        let match = items.find((it: any) =>
+          (it?.chave_acesso || it?.chave || it?.chnfe || '') === chave
+        ) || items[0]
+
+        // 2) Se veio só um resumo (sem status/protocolo), busca detalhe pelo id
+        let d: any = match || null
+        const remoteId = d?.id || d?.nfce_id
+        if (remoteId && (!d?.protocolo && !d?.status)) {
+          const detResp = await fetch(`${NFCE_API_URL}/${remoteId}`, {
+            headers: { 'x-api-key': NFCE_API_KEY },
+          })
+          const detData = await safeJson(detResp)
+          d = detData?.data || detData || d
+        }
+
+        if (!d || (!d.protocolo && !d.status && !d.chave_acesso)) {
+          apiResponse = listResp
+          result = {
+            success: false,
+            error: 'Nenhuma NFC-e encontrada na FiscalFlow para esta chave.',
+            raw: listData,
+          }
+          break
+        }
+
+        // 3) Monta update do registro local
+        const fromChaveRec = extractFromChave(chave)
+        const proto = d.protocolo || d.protocol || d.nProt || null
+        const ambienteRec = d.ambiente || d.environment || ambienteFromXml(pickXmlField(d)) || null
+        const qr = d.qrcode_url || d.qr_code_url || d.url_qrcode || d.qrcode || d.qr_code || d.url_consulta_qrcode
+                   || buildQrcodeUrl(chave, ambienteRec || 'producao')
+        const statusResolved = (d.status || d.situacao || 'autorizada').toString().toLowerCase()
+
+        const updateData: Record<string, any> = {
+          status: statusResolved.includes('autoriz') ? 'autorizada' : statusResolved,
+          chave_acesso: chave,
+          protocolo: proto,
+          numero: d.numero || d.number || fromChaveRec.numero || null,
+          serie: d.serie || d.series || fromChaveRec.serie || null,
+          ambiente: ambienteRec,
+          qrcode_url: qr,
+          xml_url: d.xml_url || d.url_xml || null,
+          nfce_id: remoteId || null,
+          motivo_rejeicao: null,
+          webhook_payload: { recovered_from: 'recuperar_por_chave', response: d },
+          updated_at: new Date().toISOString(),
+        }
+
+        let updQuery = supabase.from('nfce_records').update(updateData).eq('company_id', companyId)
+        if (localRecordId) {
+          updQuery = updQuery.eq('id', localRecordId)
+        } else {
+          updQuery = updQuery.eq('chave_acesso', chave)
+        }
+        const { error: updErr, data: updRows } = await updQuery.select('id')
+        if (updErr) {
+          apiResponse = listResp
+          result = { success: false, error: 'Falha ao atualizar registro local: ' + updErr.message }
+          break
+        }
+
+        apiResponse = listResp
+        result = {
+          success: true,
+          updated: updRows?.length ?? 0,
+          record: updateData,
+          message: 'NFC-e recuperada e sincronizada com o SEFAZ.',
+        }
+        break
+      }
+
       default:
         return new Response(JSON.stringify({ error: 'Ação inválida' }), { status: 400, headers: corsHeaders })
     }

@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.50.0-beta";
+export const VERSION = "1.51.0-beta";
 export const RELEASE_DATE = "2026-07-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Kardex por Produto (Fase 4 do módulo Estoque Simples Nacional)";
+export const CODENAME = "NFC-e: recuperar do SEFAZ pela chave (rejeição 539)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.51.0-beta",
+    date: "2026-07-01",
+    codename: "NFC-e: recuperar do SEFAZ pela chave (rejeição 539)",
+    changes: [
+      "Monitor NFC-e: novo botão 'Recuperar do SEFAZ pela chave' (ícone nuvem verde) em notas rejeitadas. Digitando a chave de 44 dígitos da NFC-e já autorizada, o sistema consulta a FiscalFlow, baixa protocolo/status/QR/ambiente e atualiza o registro local — tudo em um clique.",
+      "Uso típico: rejeição 539 (duplicidade), quando a SEFAZ autorizou a nota mas a resposta se perdeu e a retransmissão foi barrada. O motivo da rejeição costuma trazer a chave autorizada — o campo do prompt já vem preenchido com ela.",
+      "Nova action `recuperar_por_chave` no `nfce-proxy` e função `recuperarNFCePorChave()` em `src/services/nfceService.ts` (nada muda no fluxo de emissão/consulta/cancelamento).",
+      "Nenhuma alteração em TEF, PinPad, Multi-Pagamento, NF-e, Frente de Caixa, PDV V2, Pedido Express, Manifestação Eletrônica, Compras/Importar XML, Estoque ou auto_printer.py.",
+    ],
+  },
   {
     version: "1.50.0-beta",
     date: "2026-07-01",

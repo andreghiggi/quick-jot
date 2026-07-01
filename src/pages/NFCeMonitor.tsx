@@ -13,12 +13,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText, Loader2, RefreshCw, Search, CheckCircle, XCircle, 
-  Clock, AlertTriangle, Ban, Eye, Copy, RotateCcw, X, Printer 
+  Clock, AlertTriangle, Ban, Eye, Copy, RotateCcw, X, Printer, CloudDownload 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { consultarNFCe, cancelarNFCe, reprocessarNFCe, printDanfeFromRecord } from '@/services/nfceService';
+import { consultarNFCe, cancelarNFCe, reprocessarNFCe, printDanfeFromRecord, recuperarNFCePorChave } from '@/services/nfceService';
 
 interface NFCeRecord {
   id: string;
@@ -220,6 +220,38 @@ export default function NFCeMonitor() {
     }
   }
 
+  async function handleRecuperarChave(record: NFCeRecord) {
+    if (!company?.id) return;
+    let sugerida = record.chave_acesso || '';
+    const motivo = record.motivo_rejeicao || '';
+    const match = motivo.match(/\b(\d{44})\b/);
+    if (match) sugerida = match[1];
+    const chave = prompt(
+      'Informe a chave de acesso (44 dígitos) da NFC-e AUTORIZADA no SEFAZ:',
+      sugerida,
+    );
+    if (!chave) return;
+    const clean = chave.replace(/\D/g, '');
+    if (clean.length !== 44) {
+      toast.error('Chave inválida — precisa ter 44 dígitos.');
+      return;
+    }
+    setActionLoading(record.id);
+    try {
+      const r: any = await recuperarNFCePorChave(company.id, clean, record.id);
+      if (r?.success) {
+        toast.success('NFC-e recuperada do SEFAZ e sincronizada.');
+        loadRecords();
+      } else {
+        toast.error(r?.error || 'Não foi possível recuperar a NFC-e.');
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao recuperar do SEFAZ');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   async function handlePrintDanfe(record: NFCeRecord) {
     try {
       await printDanfeFromRecord(record);
@@ -405,6 +437,18 @@ export default function NFCeMonitor() {
                                   title="Reprocessar"
                                 >
                                   <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                </Button>
+                              )}
+                              {(record.status === 'rejeitada' || record.status === 'erro') && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-emerald-600"
+                                  onClick={() => handleRecuperarChave(record)}
+                                  disabled={isLoading}
+                                  title="Recuperar do SEFAZ pela chave"
+                                >
+                                  <CloudDownload className={`h-4 w-4 ${isLoading ? 'animate-pulse' : ''}`} />
                                 </Button>
                               )}
                               {record.status === 'autorizada' && (
