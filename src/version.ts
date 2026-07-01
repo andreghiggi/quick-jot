@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.51.0-beta";
+export const VERSION = "1.51.1-beta";
 export const RELEASE_DATE = "2026-07-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e: recuperar do SEFAZ pela chave (rejeição 539)";
+export const CODENAME = "NFC-e: recuperar por chave — nº/série vêm da chave (fix duplicidade visual)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.51.1-beta",
+    date: "2026-07-01",
+    codename: "NFC-e: recuperar por chave — nº/série vêm da chave (fix duplicidade visual)",
+    changes: [
+      "nfce-proxy (action recuperar_por_chave): número e série passam a ser extraídos da CHAVE de acesso (fonte autoritativa do SEFAZ), com fallback para o que a FiscalFlow devolver. Antes o proxy priorizava o valor da FiscalFlow, que às vezes herdava o número antigo do stub local — o registro recuperado aparecia com o número de outra venda, causando 'duplicidade visual' no Monitor NFC-e.",
+      "Correção retroativa aplicada na Cozinha da Ruiva: registro recuperado FCX-bd107d31-1782933055195 teve `numero` ajustado de '000013442' para '13436' (compatível com a chave ...000134361253561401 autorizada pelo SEFAZ).",
+      "Nenhuma alteração em TEF, PinPad, Multi-Pagamento, NF-e, Frente de Caixa, PDV V2, Pedido Express, Manifestação Eletrônica, Compras/Importar XML, Estoque ou auto_printer.py.",
+    ],
+  },
   {
     version: "1.51.0-beta",
     date: "2026-07-01",
