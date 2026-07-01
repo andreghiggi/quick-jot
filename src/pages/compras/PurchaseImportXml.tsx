@@ -272,7 +272,6 @@ export default function PurchaseImportXml() {
             price: it.sale_price || realCost,
             cost_price: realCost,
             category: it.category_name || 'Mercado',
-            category_id: it.category_id || null,
             tax_rule_id: it.tax_rule_id || null,
             gtin: it.xml_ean || null,
             ncm: it.xml_ncm || null,
