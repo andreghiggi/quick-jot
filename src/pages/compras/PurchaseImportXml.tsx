@@ -561,6 +561,79 @@ export default function PurchaseImportXml() {
                         </div>
                       )}
                     </div>
+                    {it.createNew && (
+                      <div className="rounded-md border border-dashed p-3 space-y-3 bg-muted/20">
+                        <div className="text-xs font-medium text-muted-foreground">Cadastro do novo produto</div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <div>
+                            <Label className="text-xs">Categoria</Label>
+                            <Select
+                              value={it.category_id || ''}
+                              onValueChange={(v) => {
+                                const cat = categories.find(c => c.id === v);
+                                updateItem(idx, {
+                                  category_id: v,
+                                  category_name: cat?.name || it.category_name,
+                                });
+                              }}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                              <SelectContent>
+                                {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Regra tributária</Label>
+                            <Select
+                              value={it.tax_rule_id || 'none'}
+                              onValueChange={(v) => updateItem(idx, { tax_rule_id: v === 'none' ? null : v })}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue placeholder="Sem regra" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Sem regra</SelectItem>
+                                {taxRules.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Tipo do produto</Label>
+                            <Select
+                              value={it.product_type}
+                              onValueChange={(v) => {
+                                const t = v as ProductType;
+                                updateItem(idx, { product_type: t, ...visibilityFromType(t) });
+                              }}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="mercado">Mercado</SelectItem>
+                                <SelectItem value="cardapio">Cardápio</SelectItem>
+                                <SelectItem value="ambos">Ambos</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-4 text-xs">
+                          <label className="flex items-center gap-2">
+                            <Switch checked={it.pdv_item} onCheckedChange={(v) => updateItem(idx, { pdv_item: v })} />
+                            Visível na Frente de Caixa
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Switch checked={it.menu_item} onCheckedChange={(v) => updateItem(idx, { menu_item: v })} />
+                            Visível no Cardápio
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Switch checked={it.waiter_item} onCheckedChange={(v) => updateItem(idx, { waiter_item: v })} />
+                            Visível no Garçom
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Switch checked={it.qr_item} onCheckedChange={(v) => updateItem(idx, { qr_item: v })} />
+                            Visível no QR de Mesa
+                          </label>
+                        </div>
+                      </div>
+                    )}
                     {/* Conversão + preço */}
                     {(it.product_id || it.createNew) && (() => {
                       const factor = it.conversion_factor > 0 ? it.conversion_factor : 1;
