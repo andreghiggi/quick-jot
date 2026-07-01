@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.47.0-beta";
+export const VERSION = "1.48.0-beta";
 export const RELEASE_DATE = "2026-07-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Inventário: contagem cega (Fase 1 do módulo Estoque Simples Nacional)";
+export const CODENAME = "Livro de Registro de Inventário anual (Fase 2 do módulo Estoque Simples Nacional)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.48.0-beta",
+    date: "2026-07-01",
+    codename: "Livro de Registro de Inventário anual (Fase 2 do módulo Estoque Simples Nacional)",
+    changes: [
+      "Nova tela Estoque → Livro de Inventário: gera o saldo dos produtos com controle de estoque em uma data de corte (padrão 31/12 do ano anterior) para atender à obrigação anual do Simples Nacional.",
+      "Cálculo do saldo por rebobinagem: parte do estoque atual e subtrai todas as movimentações registradas após a data de corte, garantindo consistência com o Kardex.",
+      "Filtros: Data de corte, Categoria e opção de incluir ou ocultar itens com saldo zero.",
+      "Totais consolidados no topo: quantidade de itens, quantidade total e valor total (Custo unitário × Quantidade).",
+      "Exportação em PDF (paisagem A4, pronto para o contador) e Excel (.xlsx), com cabeçalho identificando empresa, data de corte e data de emissão.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, NF-e, Frente de Caixa, PDV V2, Pedido Express, Manifestação Eletrônica, Compras/Importar XML, Contagem de Inventário ou auto_printer.py.",
+    ],
+  },
   {
     version: "1.47.0-beta",
     date: "2026-07-01",
