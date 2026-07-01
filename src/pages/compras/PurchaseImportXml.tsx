@@ -160,6 +160,8 @@ export default function PurchaseImportXml() {
         const matched = products.find(p => (ean && p.gtin === ean));
         const uCom = get(prod, 'uCom');
         const vUn = Number(get(prod, 'vUnCom') || 0);
+        const defaultCat = categories[0];
+        const defaultVis = visibilityFromType('mercado');
         return {
           xml_codigo: get(prod, 'cProd'),
           xml_descricao: descricao,
@@ -177,6 +179,11 @@ export default function PurchaseImportXml() {
           stock_unit: matched?.unit || uCom || 'UN',
           sale_price: matched?.price ?? vUn,
           unit_weight_kg: null,
+          category_id: defaultCat?.id || null,
+          category_name: defaultCat?.name || 'Mercado',
+          tax_rule_id: null,
+          product_type: 'mercado',
+          ...defaultVis,
         };
       });
       setItems(its);
