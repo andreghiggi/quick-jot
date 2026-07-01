@@ -466,7 +466,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
 
           if (rec) {
             setNfceRecord(rec as unknown as NFCeRecord);
-            setNfceAutoPrint(resolveAutoPrintDanfe(params.printDocument, pdvSettings.print_on_finish_mode));
+            setNfceAutoPrint(!!params.printDocument);
             if (isI9Company && tefPromptOpenRef.current) {
               setPendingNfceOpen(true);
             } else {
