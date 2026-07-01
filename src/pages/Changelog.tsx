@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '01/07/2026',
+    version: '1.46.4-beta',
+    type: 'fix',
+    description: 'Compras → Importar XML: corrigida a entrada de estoque para respeitar o fator de conversão (quantidade do XML × fator) e usar o tipo de movimento aceito pelo backend. A tela agora acusa erro se a movimentação não for gravada, evitando nota lançada com produtos zerados.',
+  },
+  {
     date: '25/06/2026',
     version: '1.35.1-beta',
     type: 'fix',
