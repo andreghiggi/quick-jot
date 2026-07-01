@@ -329,11 +329,12 @@ export default function PurchaseImportXml() {
           productId = (prod as any).id;
         } else if (productId) {
           // Atualiza custo, preço e garante rastreio de estoque no produto existente
-          await (supabase.from('products') as any).update({
+          const { error: updateProductErr } = await (supabase.from('products') as any).update({
             cost_price: realCost,
             price: it.sale_price || undefined,
             track_stock: true,
           }).eq('id', productId);
+          if (updateProductErr) throw updateProductErr;
           // Preenche GTIN no cadastro caso esteja vazio e o XML traga um EAN válido.
           const xmlEan = (it.xml_ean || '').trim();
           if (xmlEan && isValidGtin(xmlEan)) {
@@ -349,7 +350,7 @@ export default function PurchaseImportXml() {
             }
           }
         }
-        const { data: itemRow } = await supabase.from('purchase_invoice_items').insert({
+        const { error: itemErr } = await supabase.from('purchase_invoice_items').insert({
           invoice_id: invoiceId, company_id: company.id, product_id: productId,
           xml_codigo: it.xml_codigo, xml_descricao: it.xml_descricao,
           xml_ean: it.xml_ean, xml_ncm: it.xml_ncm, xml_cfop: it.xml_cfop, xml_unidade: it.xml_unidade,
@@ -360,13 +361,16 @@ export default function PurchaseImportXml() {
           unit_weight_kg: it.unit_weight_kg,
           stock_applied: !!productId,
         } as any).select('id').single();
+        if (itemErr) throw itemErr;
 
         if (productId) {
-          await supabase.rpc('apply_stock_movement', {
-            _product_id: productId, _qty: stockQty, _type: 'entrada',
+          const { data: newBalance, error: stockErr } = await supabase.rpc('apply_stock_movement', {
+            _product_id: productId, _qty: stockQty, _type: 'manual_in',
             _reference_type: 'purchase_invoice', _reference_id: invoiceId,
             _notes: `NF-e ${header.numero}/${header.serie} - ${header.nome_emit}${factor !== 1 ? ` (fator ${factor})` : ''}`,
           });
+          if (stockErr) throw stockErr;
+          if (newBalance === null) throw new Error(`Estoque não movimentado para ${it.newName || it.xml_descricao}. Verifique se o produto controla estoque.`);
         }
       }
 

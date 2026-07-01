@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.46.2-beta";
-export const RELEASE_DATE = "2026-06-30"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Importar XML: revisão fiscal do novo produto (categoria, regra, tipo, visibilidade)";
+export const VERSION = "1.46.4-beta";
+export const RELEASE_DATE = "2026-07-01"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Importar XML: entrada de estoque com fator de conversão";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.46.4-beta",
+    date: "2026-07-01",
+    codename: "Importar XML: entrada de estoque com fator de conversão",
+    changes: [
+      "Compras → Importar XML: corrigida a movimentação de estoque da entrada para usar o tipo aceito pelo backend ('manual_in'), mantendo a quantidade convertida pela fórmula quantidade do XML × fator de conversão.",
+      "A confirmação da entrada agora valida erros ao atualizar produto, gravar item da nota e aplicar movimento de estoque; se o estoque não for movimentado, o operador recebe erro em vez de a nota parecer lançada com saldo zerado.",
+      "Produtos mapeados existentes continuam tendo controle de estoque ativado antes da entrada; produtos novos já nascem com controle de estoque e recebem o saldo convertido.",
+      "Nenhuma alteração em TEF, PinPad, NFC-e, NF-e, Frente de Caixa, PDV V2, Pedido Express, impressão ou Manifestação Eletrônica.",
+    ],
+  },
   {
     version: "1.46.2-beta",
     date: "2026-06-30",
