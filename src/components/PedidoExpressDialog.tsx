@@ -77,6 +77,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { settings } = useStoreSettings({ companyId: company?.id });
   const { getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
+  // Configurações de PDV compartilhadas — usadas para respeitar
+  // `print_on_finish_mode` (auto/ask/off) do DANFE em todas as lojas.
+  const { settings: pdvSettings } = usePdvSettings(company?.id);
   const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
   const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
