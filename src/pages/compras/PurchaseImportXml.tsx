@@ -13,9 +13,18 @@ import {
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Upload, Loader2, CheckCircle2, FileInput, ChevronLeft, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCategories } from '@/hooks/useCategories';
+import { useTaxRules } from '@/hooks/useTaxRules';
+
+type ProductType = 'cardapio' | 'mercado' | 'ambos';
+function visibilityFromType(t: ProductType) {
+  if (t === 'mercado') return { pdv_item: true, menu_item: false, waiter_item: false, qr_item: false };
+  return { pdv_item: true, menu_item: true, waiter_item: true, qr_item: true };
+}
 
 type ItemRow = {
   xml_codigo: string;
@@ -35,6 +44,15 @@ type ItemRow = {
   stock_unit: string;          // unidade que entra no estoque
   sale_price: number;          // preço sugerido de venda
   unit_weight_kg: number | null; // opcional, p/ KG→UN
+  // --- Enriquecimento fiscal para PRODUTO NOVO (v1.46.2-beta) ---
+  category_id: string | null;
+  category_name: string;
+  tax_rule_id: string | null;
+  product_type: ProductType;
+  pdv_item: boolean;
+  menu_item: boolean;
+  waiter_item: boolean;
+  qr_item: boolean;
 };
 
 type Header = {
@@ -63,6 +81,11 @@ export default function PurchaseImportXml() {
   const [products, setProducts] = useState<ProductSlim[]>([]);
   const [dfeId, setDfeId] = useState<string | null>(documentoId);
   const [openMap, setOpenMap] = useState<Record<number, boolean>>({});
+  const { categories } = useCategories({ companyId: company?.id });
+  const { taxRules } = useTaxRules({ companyId: company?.id });
+  const [bulkCategoryId, setBulkCategoryId] = useState<string>('');
+  const [bulkTaxRuleId, setBulkTaxRuleId] = useState<string>('');
+  const [bulkType, setBulkType] = useState<ProductType | ''>('');
 
   useEffect(() => {
     if (!company?.id) return;
