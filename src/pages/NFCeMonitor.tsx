@@ -208,18 +208,27 @@ export default function NFCeMonitor() {
       toast.error('Justificativa deve ter pelo menos 15 caracteres');
       return;
     }
+    setActionLoading(record.id);
+    try {
+      await cancelarNFCe(company.id, record.nfce_id, justificativa);
+      toast.success('Cancelamento solicitado');
+      loadRecords();
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao cancelar');
+    } finally {
+      setActionLoading(null);
+    }
+  }
 
   async function handleRecuperarChave(record: NFCeRecord) {
     if (!company?.id) return;
-    // Tenta extrair chave sugerida do motivo (Rejeição 539 costuma trazer a
-    // chave da nota que já foi autorizada).
     let sugerida = record.chave_acesso || '';
     const motivo = record.motivo_rejeicao || '';
     const match = motivo.match(/\b(\d{44})\b/);
     if (match) sugerida = match[1];
     const chave = prompt(
       'Informe a chave de acesso (44 dígitos) da NFC-e AUTORIZADA no SEFAZ:',
-      sugerida
+      sugerida,
     );
     if (!chave) return;
     const clean = chave.replace(/\D/g, '');
@@ -238,17 +247,6 @@ export default function NFCeMonitor() {
       }
     } catch (e: any) {
       toast.error(e.message || 'Erro ao recuperar do SEFAZ');
-    } finally {
-      setActionLoading(null);
-    }
-  }
-    setActionLoading(record.id);
-    try {
-      await cancelarNFCe(company.id, record.nfce_id, justificativa);
-      toast.success('Cancelamento solicitado');
-      loadRecords();
-    } catch (e: any) {
-      toast.error(e.message || 'Erro ao cancelar');
     } finally {
       setActionLoading(null);
     }
