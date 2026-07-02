@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.52.3-beta";
+export const VERSION = "1.52.4-beta";
 export const RELEASE_DATE = "2026-07-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Configurações da Frente de Caixa: autosave dos controles";
+export const CODENAME = "Frente de Caixa: auto-print NFC-e sem diálogo";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.52.4-beta",
+    date: "2026-07-02",
+    codename: "Frente de Caixa: auto-print NFC-e sem diálogo",
+    changes: [
+      "Frente de Caixa: quando 'Ação ao salvar a venda' está em 'Imprimir automaticamente' e a venda NÃO tem vias TEF pendentes, o diálogo pós-venda deixa de aparecer. Fluxo passa a ser: toast 'Emitindo NFC-e, aguarde...' → 'NFC-e nº X autorizada — imprimindo' → DANFE sai sozinho na impressora (igual pedidos automáticos).",
+      "Vendas com TEF continuam abrindo o diálogo consolidado para confirmar vias do cliente/estabelecimento (comportamento intencional).",
+      "Modos 'Sempre perguntar' e 'Nunca imprimir' seguem inalterados — o diálogo continua sendo exibido normalmente.",
+      "Em caso de erro/rejeição da SEFAZ, o toast mostra a mensagem e a venda pode ser recuperada pelo Monitor NFC-e.",
+      "Nenhuma alteração em TEF, PinPad, PDV V2, Pedido Express, Cobrança, NF-e, Compras/Importar XML, Manifestação Eletrônica, auto_printer.py ou lojas fora do Frente de Caixa.",
+    ],
+  },
   {
     version: "1.52.3-beta",
     date: "2026-07-02",
