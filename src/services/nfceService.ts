@@ -415,6 +415,66 @@ export async function printDanfeFromRecord(
 }
 
 /**
+ * Variante que abre o diálogo de impressão do Chrome via <iframe> oculto,
+ * SEM depender de pop-up (que é bloqueado pelo navegador quando disparado
+ * fora de um gesto do usuário, como após polling assíncrono da SEFAZ).
+ *
+ * Usado no fluxo silencioso da Frente de Caixa (`print_on_finish_mode='auto'`
+ * sem TEF), onde a impressão é acionada segundos depois da finalização.
+ */
+export async function printDanfeFromRecordViaIframe(
+  record: NFCeRecord & { request_payload?: any },
+  opts: DanfePrintOptions = {},
+) {
+  if (!record.chave_acesso && !record.qrcode_url) {
+    throw new Error('Nota sem dados fiscais. Aguarde a autorização da SEFAZ para imprimir.');
+  }
+  const html = await generateDanfeHtml(record, opts);
+  const copies = Math.max(1, opts.copies || 1);
+  for (let i = 0; i < copies; i++) {
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise<void>((resolve) => {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(iframe);
+      const cleanup = () => {
+        setTimeout(() => {
+          try { document.body.removeChild(iframe); } catch (_) { /* noop */ }
+        }, 1000);
+      };
+      iframe.onload = () => {
+        try {
+          const win = iframe.contentWindow;
+          if (win) {
+            win.focus();
+            win.print();
+          }
+        } catch (_) { /* noop */ }
+        cleanup();
+        resolve();
+      };
+      const doc = iframe.contentWindow?.document;
+      if (!doc) {
+        cleanup();
+        resolve();
+        return;
+      }
+      doc.open();
+      doc.write(html);
+      doc.close();
+    });
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((r) => setTimeout(r, 500));
+  }
+}
+
+/**
  * Enfileira o DANFE em `print_queue` para impressão silenciosa pelo
  * `auto_printer.py` (mesmo caminho dos pedidos de cozinha). Não abre
  * janela do navegador, não dispara `window.print()`.
