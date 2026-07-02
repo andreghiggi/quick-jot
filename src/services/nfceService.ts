@@ -414,6 +414,35 @@ export async function printDanfeFromRecord(
   }
 }
 
+/**
+ * Enfileira o DANFE em `print_queue` para impressão silenciosa pelo
+ * `auto_printer.py` (mesmo caminho dos pedidos de cozinha). Não abre
+ * janela do navegador, não dispara `window.print()`.
+ *
+ * Usado APENAS pela Frente de Caixa quando `print_on_finish_mode === 'auto'`.
+ * Reimpressão do Monitor NFC-e e demais lojas continuam usando
+ * `printDanfeFromRecord` (comportamento original preservado).
+ */
+export async function enqueueDanfePrintJob(
+  companyId: string,
+  record: NFCeRecord & { request_payload?: any },
+  opts: DanfePrintOptions = {},
+) {
+  if (!record.chave_acesso && !record.qrcode_url) {
+    throw new Error('Nota sem dados fiscais. Aguarde a autorização da SEFAZ para imprimir.');
+  }
+  const html = await generateDanfeHtml(record, opts);
+  const copies = Math.max(1, opts.copies || 1);
+  const label = `DANFE NFC-e${record.numero ? ` nº ${record.numero}` : ''}`;
+  const rows = Array.from({ length: copies }).map(() => ({
+    company_id: companyId,
+    label,
+    html_content: html,
+  }));
+  const { error } = await supabase.from('print_queue').insert(rows);
+  if (error) throw error;
+}
+
 export async function getNFCeRecords(companyId: string, limit = 50): Promise<NFCeRecord[]> {
   const { data, error } = await supabase
     .from('nfce_records')

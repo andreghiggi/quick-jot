@@ -74,6 +74,7 @@ import {
   emitirNFCe,
   getNFCeRecordBySaleId,
   printDanfeFromRecord,
+  enqueueDanfePrintJob,
   type NFCeItem,
   type NFCeRecord,
   type DanfePrintOptions,
@@ -987,11 +988,14 @@ export default function FrenteCaixa() {
                 toast.success(`NFC-e nº ${rec.numero} autorizada — imprimindo`, {
                   id: emittingToast,
                 });
+                // Modo AUTO: enfileira na `print_queue` — o auto_printer.py
+                // local imprime silenciosamente (mesmo caminho dos pedidos
+                // de cozinha, sem diálogo do Chrome).
                 try {
-                  await printDanfeFromRecord(rec);
+                  await enqueueDanfePrintJob(company!.id, rec);
                 } catch (e: any) {
-                  console.error('[FrenteCaixa] auto-print DANFE error:', e);
-                  toast.error(e?.message || 'Erro ao imprimir DANFE');
+                  console.error('[FrenteCaixa] enqueue DANFE error:', e);
+                  toast.error(e?.message || 'Erro ao enfileirar DANFE');
                 }
               } else if (rec) {
                 // Ainda processando na SEFAZ — cai no fluxo padrão (Monitor NFC-e)
