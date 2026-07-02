@@ -73,6 +73,7 @@ import { useTaxRules } from '@/hooks/useTaxRules';
 import {
   emitirNFCe,
   getNFCeRecordBySaleId,
+  printDanfeFromRecord,
   type NFCeItem,
   type NFCeRecord,
   type DanfePrintOptions,
