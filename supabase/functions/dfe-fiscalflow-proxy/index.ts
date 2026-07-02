@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
         .eq('id', documentoId).maybeSingle()
       if (!doc || doc.company_id !== companyId) return j({ error: 'Documento não encontrado' }, 404)
 
-      const r = await fetch(
+      let r = await fetch(
         `${FF_BASE}/${doc.fiscalflow_id}/xml`,
         { method: 'GET', headers: { 'x-api-key': token } }
       )
@@ -138,7 +138,26 @@ Deno.serve(async (req) => {
         try { parsed = JSON.parse(text) } catch { /* xml or error */ }
         return j({ error: 'XML indisponível', detail: parsed }, r.status)
       }
-      const xml = await r.text()
+      let xml = await r.text()
+      if (isResumoDfe(xml)) {
+        // A API pode devolver resNFe (resumo sem itens) com HTTP 200 logo após a manifestação.
+        // Força uma sincronização e tenta baixar novamente antes de informar indisponibilidade.
+        await fetch(`${FF_BASE}/sync`, {
+          method: 'POST', headers: ffHeaders,
+          body: JSON.stringify({}),
+        }).catch(() => null)
+        r = await fetch(
+          `${FF_BASE}/${doc.fiscalflow_id}/xml`,
+          { method: 'GET', headers: { 'x-api-key': token } }
+        )
+        if (r.ok) xml = await r.text()
+      }
+      if (isResumoDfe(xml) || !isNfeCompleta(xml)) {
+        return j({
+          error: 'XML completo ainda não disponível. Faça Ciência/Confirmação e aguarde a SEFAZ liberar o procNFe antes de importar.',
+          code: 'NOT_AVAILABLE',
+        }, 404)
+      }
       const path = `${companyId}/${doc.chave_acesso}.xml`
       const { error: upErr } = await admin.storage.from('dfe-xmls').upload(
         path, new Blob([xml], { type: 'application/xml' }),
@@ -228,6 +247,45 @@ Deno.serve(async (req) => {
 })
 
 // ---- helpers ----------------------------------------------------------------
+function unwrapXml(value: string): string {
+  const trimmed = String(value || '').replace(/^\uFEFF/, '').trim()
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return trimmed
+  try {
+    const parsed = JSON.parse(trimmed)
+    const found = findXmlString(parsed)
+    return found || trimmed
+  } catch {
+    return trimmed
+  }
+}
+
+function findXmlString(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const v = value.trim()
+    return /<\??xml|<([A-Za-z_][\w.-]*:)?(nfeProc|NFe|infNFe|resNFe)\b/.test(v) ? v : null
+  }
+  if (!value || typeof value !== 'object') return null
+  const obj = value as Record<string, unknown>
+  for (const key of ['xml', 'procNFe', 'nfeProc', 'content', 'data']) {
+    const found = findXmlString(obj[key])
+    if (found) return found
+  }
+  for (const child of Object.values(obj)) {
+    const found = findXmlString(child)
+    if (found) return found
+  }
+  return null
+}
+
+function isResumoDfe(value: string): boolean {
+  const xml = unwrapXml(value)
+  return /<([A-Za-z_][\w.-]*:)?resNFe\b/i.test(xml) && !/<([A-Za-z_][\w.-]*:)?infNFe\b/i.test(xml)
+}
+
+function isNfeCompleta(value: string): boolean {
+  return /<([A-Za-z_][\w.-]*:)?infNFe\b/i.test(unwrapXml(value))
+}
+
 async function mirrorList(admin: ReturnType<typeof createClient>, ffHeaders: Record<string,string>, companyId: string): Promise<number> {
   let offset = 0, total = 0
   for (let i = 0; i < 20; i++) {
