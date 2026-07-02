@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Save, CreditCard, Printer, Settings, Receipt, Wallet, ShoppingBag, MousePointerClick } from 'lucide-react';
 import { toast } from 'sonner';
@@ -30,6 +30,7 @@ export default function FrenteCaixaConfiguracoes() {
   const { settings, loading, saving, save, reload } = usePdvSettings(company?.id);
   const [form, setForm] = useState<PdvSettings>(settings);
   const [dirty, setDirty] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
 
   useEffect(() => {
     setForm(settings);
@@ -53,9 +54,10 @@ export default function FrenteCaixaConfiguracoes() {
     setForm((f) => ({ ...f, [key]: value }));
   };
 
-  const handleSave = async () => {
-    console.log('[FrenteCaixaConfiguracoes] salvando →', form);
-    const { error } = await save(form);
+  const persist = useCallback(async (next: PdvSettings, opts?: { silent?: boolean; reloadAfter?: boolean }) => {
+    setAutoSaving(true);
+    console.log('[FrenteCaixaConfiguracoes] salvando →', next);
+    const { error } = await save(next);
     if (error) {
       const detail = [
         (error as any)?.message,
@@ -67,13 +69,32 @@ export default function FrenteCaixaConfiguracoes() {
         .join(' • ');
       console.error('[FrenteCaixaConfiguracoes] save failed', error);
       toast.error('Falha ao salvar: ' + (detail || 'erro desconhecido'));
-      return;
+      setDirty(true);
+      setAutoSaving(false);
+      return false;
     }
-    // Re-lê do banco pra confirmar que persistiu de fato.
-    await reload();
+    if (opts?.reloadAfter) {
+      // Re-lê do banco pra confirmar que persistiu de fato.
+      await reload();
+    }
     setDirty(false);
-    toast.success('Configurações salvas.');
+    setAutoSaving(false);
+    if (!opts?.silent) toast.success('Configurações salvas.');
+    return true;
+  }, [save, reload]);
+
+  const updPersist = <K extends keyof PdvSettings>(key: K, value: PdvSettings[K]) => {
+    const next = { ...form, [key]: value };
+    setForm(next);
+    setDirty(true);
+    void persist(next, { silent: true });
   };
+
+  const handleSave = async () => {
+    await persist(form, { reloadAfter: true });
+  };
+
+  const busy = saving || autoSaving;
 
   // Após reload, se o valor do banco divergir do que tentamos enviar, avisa.
   useEffect(() => {
@@ -98,12 +119,12 @@ export default function FrenteCaixaConfiguracoes() {
         </div>
         <Button
           onClick={handleSave}
-          disabled={saving || loading || !dirty}
+          disabled={busy || loading || !dirty}
           className="gap-2"
           variant={dirty ? 'default' : 'secondary'}
         >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {dirty ? 'Salvar alterações' : 'Salvo'}
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {busy ? 'Salvando…' : dirty ? 'Salvar alterações' : 'Salvo'}
         </Button>
       </div>
 
@@ -155,8 +176,8 @@ export default function FrenteCaixaConfiguracoes() {
               <Switch
                 id={key}
                 checked={form[key]}
-                onCheckedChange={(v) => upd(key, v)}
-                disabled={loading}
+                  onCheckedChange={(v) => updPersist(key, v)}
+                  disabled={loading || busy}
               />
             </div>
           ))}
@@ -205,8 +226,8 @@ export default function FrenteCaixaConfiguracoes() {
               <Switch
                 id={key}
                 checked={form[key] as boolean}
-                onCheckedChange={(v) => upd(key, v as any)}
-                disabled={loading}
+                onCheckedChange={(v) => updPersist(key, v as any)}
+                disabled={loading || busy}
               />
             </div>
           ))}
@@ -215,8 +236,8 @@ export default function FrenteCaixaConfiguracoes() {
             <Label htmlFor="print_on_finish_mode">Ação ao salvar a venda</Label>
             <Select
               value={form.print_on_finish_mode}
-              onValueChange={(v) => upd('print_on_finish_mode', v as 'off' | 'auto' | 'ask')}
-              disabled={loading}
+              onValueChange={(v) => updPersist('print_on_finish_mode', v as 'off' | 'auto' | 'ask')}
+              disabled={loading || busy}
             >
               <SelectTrigger id="print_on_finish_mode">
                 <SelectValue />
@@ -236,8 +257,8 @@ export default function FrenteCaixaConfiguracoes() {
             <Label htmlFor="default_fiscal_mode">Ação ao salvar a venda (fiscal)</Label>
             <Select
               value={form.default_fiscal_mode}
-              onValueChange={(v) => upd('default_fiscal_mode', v as 'fiscal' | 'nao_fiscal' | 'ask')}
-              disabled={loading}
+              onValueChange={(v) => updPersist('default_fiscal_mode', v as 'fiscal' | 'nao_fiscal' | 'ask')}
+              disabled={loading || busy}
             >
               <SelectTrigger id="default_fiscal_mode">
                 <SelectValue />
@@ -279,8 +300,8 @@ export default function FrenteCaixaConfiguracoes() {
               <Switch
                 id={key}
                 checked={form[key] as boolean}
-                onCheckedChange={(v) => upd(key, v as any)}
-                disabled={loading}
+                onCheckedChange={(v) => updPersist(key, v as any)}
+                disabled={loading || busy}
               />
             </div>
           ))}
@@ -307,8 +328,8 @@ export default function FrenteCaixaConfiguracoes() {
               <Switch
                 id={key}
                 checked={form[key] as boolean}
-                onCheckedChange={(v) => upd(key, v as any)}
-                disabled={loading}
+                onCheckedChange={(v) => updPersist(key, v as any)}
+                disabled={loading || busy}
               />
             </div>
           ))}
@@ -352,8 +373,8 @@ export default function FrenteCaixaConfiguracoes() {
               <Switch
                 id={key}
                 checked={form[key] as boolean}
-                onCheckedChange={(v) => upd(key, v as any)}
-                disabled={loading}
+                onCheckedChange={(v) => updPersist(key, v as any)}
+                disabled={loading || busy}
               />
             </div>
           ))}
