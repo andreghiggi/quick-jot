@@ -943,19 +943,18 @@ export default function FrenteCaixa() {
         tefCapturedRef.current = null;
         const hasNfce = !!(nfcePayload && company?.id);
         const hasTef = !!(capturedTef && capturedTef.receiptLines?.length);
-        // v1.52.4-beta — Auto-print sem diálogo:
-        // Quando o operador escolheu "imprimir automaticamente" e não há vias
-        // do TEF pendentes (que sempre exigem confirmação), pula o diálogo
-        // pós-venda e imprime o DANFE em background — igual pedidos automáticos.
-        const silentAuto = mode === 'auto' && !hasTef && hasNfce;
-        if ((hasTef || hasNfce) && !silentAuto) {
+        // v1.52.6-beta — Revertido o auto-print silencioso.
+        // Sempre abrimos o diálogo pós-venda consolidado; quando o modo é
+        // `auto`, o próprio diálogo dispara `window.print()` (o Chrome mostra
+        // a janela nativa de impressão).
+        if (hasTef || hasNfce) {
           setConsolidatedTef(capturedTef);
           setConsolidatedRecord(null);
           setConsolidatedNfceError(null);
           setConsolidatedEmitting(hasNfce);
           setConsolidatedOpen(true);
         }
-        if (hasNfce && !silentAuto) {
+        if (hasNfce) {
           (async () => {
             try {
               await emitirNFCe(company!.id, saleId, nfcePayload!);
@@ -974,45 +973,6 @@ export default function FrenteCaixa() {
               );
             } finally {
               setConsolidatedEmitting(false);
-            }
-          })();
-        }
-        if (silentAuto) {
-          const emittingToast = toast.loading('Emitindo NFC-e, aguarde...');
-          (async () => {
-            try {
-              await emitirNFCe(company!.id, saleId, nfcePayload!);
-              await new Promise((r) => setTimeout(r, 400));
-              const rec = await getNFCeRecordBySaleId(saleId);
-              if (rec && rec.status === 'autorizada') {
-                toast.success(`NFC-e nº ${rec.numero} autorizada — imprimindo`, {
-                  id: emittingToast,
-                });
-                // Modo AUTO: enfileira na `print_queue` — o auto_printer.py
-                // local imprime silenciosamente (mesmo caminho dos pedidos
-                // de cozinha, sem diálogo do Chrome).
-                try {
-                  await enqueueDanfePrintJob(company!.id, rec);
-                } catch (e: any) {
-                  console.error('[FrenteCaixa] enqueue DANFE error:', e);
-                  toast.error(e?.message || 'Erro ao enfileirar DANFE');
-                }
-              } else if (rec) {
-                // Ainda processando na SEFAZ — cai no fluxo padrão (Monitor NFC-e)
-                toast.success('NFC-e enviada. Acompanhe no Monitor NFC-e.', {
-                  id: emittingToast,
-                });
-              } else {
-                toast.success('NFC-e enviada. Acompanhe no Monitor NFC-e.', {
-                  id: emittingToast,
-                });
-              }
-            } catch (err: any) {
-              console.error('[FrenteCaixa] NFC-e error:', err);
-              toast.error(
-                `Venda salva, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`,
-                { id: emittingToast },
-              );
             }
           })();
         }
