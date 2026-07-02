@@ -172,6 +172,8 @@ export default function FrenteCaixa() {
   /** Opções de renderização do DANFE calculadas a partir do checkout atual
    *  + configurações da Frente de Caixa. Recalculado em cada `handleConfirmPayment`. */
   const [danfeOpts, setDanfeOpts] = useState<DanfePrintOptions | undefined>(undefined);
+  // Overlay bloqueante do fluxo silencioso (modo auto, sem TEF).
+  const [silentPhase, setSilentPhase] = useState<null | 'emitting' | 'printing'>(null);
 
   // Instala/desinstala o interceptor do prompt TEF enquanto a página está
   // montada e a loja está na allow-list. Fora dessa condição, o fluxo atual
