@@ -1881,6 +1881,21 @@ export default function FrenteCaixa() {
           setTimeout(() => inputRef.current?.focus(), 100);
         }}
       />
+
+      {/* Overlay bloqueante do fluxo silencioso (modo auto, sem TEF):
+          mostra "Emitindo NFC-e" e depois "Imprimindo NFC-e" enquanto a
+          venda é finalizada em background. */}
+      {silentPhase && (
+        <div className="fixed inset-0 z-[9999] bg-background/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-card border rounded-lg shadow-lg p-6 min-w-[320px] flex flex-col items-center gap-3">
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            <p className="text-lg font-semibold">
+              {silentPhase === 'emitting' ? 'Emitindo NFC-e...' : 'Imprimindo NFC-e...'}
+            </p>
+            <p className="text-sm text-muted-foreground">Aguarde, não feche esta tela.</p>
+          </div>
+        </div>
+      )}
     </PDVV2Layout>
   );
 }
