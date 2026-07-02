@@ -1002,7 +1002,10 @@ export default function FrenteCaixa() {
               if (rec?.status === 'autorizada') {
                 setSilentPhase('printing');
                 try {
-                  await printDanfeFromRecord(rec, danfeOpts);
+                  // Usa iframe (não pop-up) porque a chamada acontece após
+                  // segundos de polling assíncrono — pop-ups sem gesto do
+                  // usuário são bloqueados pelo Chrome.
+                  await printDanfeFromRecordViaIframe(rec, danfeOpts);
                   toast.success(`NFC-e nº ${rec.numero || ''} autorizada — DANFE impressa.`);
                 } catch (e: any) {
                   toast.error(e?.message || 'Erro ao imprimir DANFE');
