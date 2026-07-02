@@ -140,11 +140,13 @@ Deno.serve(async (req) => {
       }
       let xml = await r.text()
       if (isResumoDfe(xml)) {
-        // A API pode devolver resNFe (resumo sem itens) com HTTP 200 logo após a manifestação.
-        // Força uma sincronização e tenta baixar novamente antes de informar indisponibilidade.
+        // resNFe = resumo. Só vira XML completo após Confirmação da Operação (Ciência não basta).
+        // Tenta consultar/sincronizar e rebaixar antes de reportar indisponibilidade.
+        await fetch(`${FF_BASE}/${doc.fiscalflow_id}/consultar`, {
+          method: 'POST', headers: ffHeaders, body: JSON.stringify({}),
+        }).catch(() => null)
         await fetch(`${FF_BASE}/sync`, {
-          method: 'POST', headers: ffHeaders,
-          body: JSON.stringify({}),
+          method: 'POST', headers: ffHeaders, body: JSON.stringify({}),
         }).catch(() => null)
         r = await fetch(
           `${FF_BASE}/${doc.fiscalflow_id}/xml`,
@@ -154,8 +156,9 @@ Deno.serve(async (req) => {
       }
       if (isResumoDfe(xml) || !isNfeCompleta(xml)) {
         return j({
-          error: 'XML completo ainda não disponível. Faça Ciência/Confirmação e aguarde a SEFAZ liberar o procNFe antes de importar.',
+          error: 'A SEFAZ ainda não liberou o XML completo desta NF-e. A Ciência apenas registra que você tomou conhecimento do documento — para receber o XML com os itens é preciso executar a "Confirmação da Operação" e aguardar alguns minutos até a SEFAZ disponibilizar o procNFe.',
           code: 'NOT_AVAILABLE',
+          hint: 'CONFIRMACAO_REQUIRED',
         }, 404)
       }
       const path = `${companyId}/${doc.chave_acesso}.xml`
