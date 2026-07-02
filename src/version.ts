@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.52.4-beta";
+export const VERSION = "1.52.5-beta";
 export const RELEASE_DATE = "2026-07-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: auto-print NFC-e sem diálogo";
+export const CODENAME = "Frente de Caixa: DANFE via print_queue (impressão silenciosa)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.52.5-beta",
+    date: "2026-07-02",
+    codename: "Frente de Caixa: DANFE via print_queue (impressão silenciosa)",
+    changes: [
+      "Frente de Caixa (todas as lojas com módulo Mercado/Loja ativo): quando 'Ação ao salvar a venda' está em 'Imprimir automaticamente' e a venda não tem vias TEF, o DANFE da NFC-e passa a ser enfileirado em `print_queue` — o `auto_printer.py` local imprime silenciosamente, sem abrir a janela do navegador e sem o diálogo 'Imprimir / Cancelar' do Chrome (mesmo caminho dos pedidos de cozinha).",
+      "Modo 'Sempre perguntar' e 'Nunca imprimir' seguem inalterados — continuam abrindo o diálogo pós-venda com `window.print()` para permitir escolher impressora / salvar em PDF.",
+      "Reimpressão pelo Monitor NFC-e também segue inalterada (usa `printDanfeFromRecord` → `window.print()`).",
+      "Vendas com TEF continuam abrindo o diálogo consolidado para confirmar as vias — comportamento intencional.",
+      "Nova função `enqueueDanfePrintJob` em `src/services/nfceService.ts`; `printDanfeFromRecord` não foi alterado.",
+      "Nenhuma alteração em TEF, PinPad, PDV V2, Pedido Express, Cobrança, NF-e, Compras/Importar XML, Manifestação Eletrônica, Estoque ou `auto_printer.py`.",
+    ],
+  },
   {
     version: "1.52.4-beta",
     date: "2026-07-02",
