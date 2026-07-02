@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.52.10-beta";
+export const VERSION = "1.52.11-beta";
 export const RELEASE_DATE = "2026-07-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Compras: importar XML tolerante a namespace (nfe:infNFe)";
+export const CODENAME = "Compras: importação XML completa vs resumo";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.52.11-beta",
+    date: "2026-07-02",
+    codename: "Compras: importação XML completa vs resumo",
+    changes: [
+      "Correção adicional na tela Compras → Importar XML de NF-e: além de namespaces, o parser agora reconhece XML embrulhado em JSON/entidades e procura tags por `localName`, cobrindo prefixos e envelopes variados.",
+      "Quando o arquivo baixado ainda for apenas resumo `resNFe` (sem itens), a tela passa a informar corretamente que é necessário fazer Ciência/Confirmação e baixar o XML completo antes de importar, em vez de mostrar erro genérico de `infNFe ausente`.",
+      "Ao abrir uma DFe já com `xml_path`, se o XML salvo for resumo/retorno antigo, a tela força novo download do backend antes de desistir da importação.",
+    ],
+  },
   {
     version: "1.52.10-beta",
     date: "2026-07-02",

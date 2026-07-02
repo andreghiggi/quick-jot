@@ -110,12 +110,27 @@ export default function PurchaseImportXml() {
         });
         if (data?.error) throw new Error(data.error);
         xmlPath = data?.xml_path;
-        if (data?.xml) { parseXml(data.xml); setLoading(false); return; }
+        if (data?.xml) { parseXml(data.xml, { throwOnError: true }); setLoading(false); return; }
       }
       const { data: file } = await supabase.storage.from('dfe-xmls').download(xmlPath);
       if (!file) throw new Error('XML não encontrado no storage');
       const text = await file.text();
-      parseXml(text);
+      try {
+        parseXml(text, { throwOnError: true });
+      } catch (parseError: any) {
+        // Alguns XMLs antigos podem ter sido salvos como resumo (resNFe) ou retorno JSON.
+        // Força novo download do backend; se ainda vier resumo, mostra mensagem operacional correta.
+        if (isDfeSummaryOrWrapped(text) || String(parseError?.message || '').includes('infNFe')) {
+          const { data } = await supabase.functions.invoke('dfe-fiscalflow-proxy', {
+            body: { companyId: company.id, action: 'download_xml', documentoId: id },
+          });
+          if (data?.error) throw new Error(data.error);
+          if (!data?.xml) throw parseError;
+          parseXml(data.xml, { throwOnError: true });
+        } else {
+          throw parseError;
+        }
+      }
     } catch (e: any) {
       toast.error(e.message || 'Erro ao carregar XML');
     } finally { setLoading(false); }
@@ -129,25 +144,39 @@ export default function PurchaseImportXml() {
     reader.readAsText(f);
   }
 
-  function parseXml(text: string) {
-    setXmlText(text);
+  function parseXml(text: string, options?: { throwOnError?: boolean }) {
+    const normalizedText = extractXmlPayload(text);
+    setXmlText(normalizedText);
     try {
-      const doc = new DOMParser().parseFromString(text, 'text/xml');
-      // Tolerante a namespace (ex.: <nfe:infNFe>) — usa getElementsByTagNameNS('*', ...)
+      const doc = new DOMParser().parseFromString(normalizedText, 'text/xml');
+      // Tolerante a namespace (ex.: <nfe:infNFe>) e a XMLs embrulhados em JSON.
       const getEls = (el: Element | Document | null, tag: string): Element[] => {
         if (!el) return [];
         const anyEl = el as any;
-        const list = anyEl.getElementsByTagNameNS
-          ? anyEl.getElementsByTagNameNS('*', tag)
-          : anyEl.getElementsByTagName(tag);
-        return Array.from(list as HTMLCollectionOf<Element>);
+        const byNs = anyEl.getElementsByTagNameNS
+          ? Array.from(anyEl.getElementsByTagNameNS('*', tag) as HTMLCollectionOf<Element>)
+          : [];
+        const byName = anyEl.getElementsByTagName
+          ? Array.from(anyEl.getElementsByTagName(tag) as HTMLCollectionOf<Element>)
+          : [];
+        const byLocalName = anyEl.getElementsByTagName
+          ? Array.from(anyEl.getElementsByTagName('*') as HTMLCollectionOf<Element>)
+              .filter((node) => node.localName === tag || node.nodeName.split(':').pop() === tag)
+          : [];
+        return Array.from(new Set([...byNs, ...byName, ...byLocalName]));
       };
       const first = (el: Element | Document | null, tag: string): Element | null =>
         getEls(el, tag)[0] || null;
       const get = (el: Element | null, tag: string) =>
         first(el, tag)?.textContent?.trim() || '';
+      const parserError = first(doc, 'parsererror');
+      if (parserError) throw new Error('XML inválido ou retorno do servidor em formato inesperado');
+      const resNFe = first(doc, 'resNFe');
+      if (resNFe) {
+        throw new Error('Este arquivo é apenas o resumo da NF-e (resNFe), sem itens. Faça Ciência/Confirmação e baixe o XML completo antes de importar.');
+      }
       const infNFe = first(doc, 'infNFe');
-      if (!infNFe) throw new Error('XML não é uma NF-e válida (infNFe ausente)');
+      if (!infNFe) throw new Error('XML não é uma NF-e completa válida (infNFe ausente)');
       const chave = (infNFe.getAttribute('Id') || '').replace(/^NFe/, '');
       const emit = first(infNFe, 'emit') as Element | null;
       const ide = first(infNFe, 'ide') as Element | null;
@@ -199,9 +228,57 @@ export default function PurchaseImportXml() {
       });
       setItems(its);
       toast.success(`${its.length} item(ns) lido(s) do XML`);
+      return true;
     } catch (e: any) {
+      if (options?.throwOnError) throw e;
       toast.error(e.message || 'XML inválido');
+      return false;
     }
+  }
+
+  function extractXmlPayload(raw: string): string {
+    const trimmed = String(raw || '').replace(/^\uFEFF/, '').trim();
+    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return decodeXmlEntitiesIfNeeded(trimmed);
+    try {
+      const parsed = JSON.parse(trimmed);
+      const found = findXmlString(parsed);
+      return decodeXmlEntitiesIfNeeded(found || trimmed);
+    } catch {
+      return decodeXmlEntitiesIfNeeded(trimmed);
+    }
+  }
+
+  function findXmlString(value: unknown): string | null {
+    if (typeof value === 'string') {
+      const v = value.trim();
+      return /<\??xml|<([A-Za-z_][\w.-]*:)?(nfeProc|NFe|infNFe|resNFe)\b/.test(v) ? v : null;
+    }
+    if (!value || typeof value !== 'object') return null;
+    const obj = value as Record<string, unknown>;
+    for (const key of ['xml', 'procNFe', 'nfeProc', 'content', 'data']) {
+      const found = findXmlString(obj[key]);
+      if (found) return found;
+    }
+    for (const child of Object.values(obj)) {
+      const found = findXmlString(child);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function decodeXmlEntitiesIfNeeded(value: string): string {
+    if (!value.includes('&lt;')) return value;
+    return value
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&');
+  }
+
+  function isDfeSummaryOrWrapped(raw: string): boolean {
+    const normalized = extractXmlPayload(raw);
+    return /<([A-Za-z_][\w.-]*:)?resNFe\b/.test(normalized) || raw.trim().startsWith('{');
   }
 
   const totalCalc = useMemo(() => items.reduce((s, i) => s + i.valor_total, 0), [items]);
