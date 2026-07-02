@@ -297,8 +297,8 @@ export function FrenteCaixaPostSaleDialog({
                       <p className="font-medium text-destructive">
                         NFC-e {status === 'rejeitada' ? 'rejeitada' : 'com erro'}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {nfceError || record?.motivo_rejeicao || 'Verifique no Monitor NFC-e.'}
+                      <p className="text-xs text-muted-foreground break-words whitespace-pre-wrap max-h-40 overflow-auto">
+                        {formatNfceError(nfceError || record?.motivo_rejeicao)}
                       </p>
                     </>
                   )}
