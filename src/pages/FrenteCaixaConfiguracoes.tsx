@@ -91,6 +91,16 @@ export default function FrenteCaixaConfiguracoes() {
     // se ainda está "dirty" logo após um save+reload, algo não persistiu
   }, [loading, saving, dirty]);
 
+  useEffect(() => {
+    if (!dirty && !autoSaving) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [dirty, autoSaving]);
+
   if (mercadoLoading) {
     return (
       <div className="flex h-[60vh] items-center justify-center text-muted-foreground">
