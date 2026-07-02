@@ -37,18 +37,6 @@ export default function FrenteCaixaConfiguracoes() {
     setDirty(false);
   }, [settings]);
 
-  if (mercadoLoading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!mercadoEnabled) {
-    return <Navigate to="/" replace />;
-  }
-
   const upd = <K extends keyof PdvSettings>(key: K, value: PdvSettings[K]) => {
     setDirty(true);
     setForm((f) => ({ ...f, [key]: value }));
@@ -102,6 +90,18 @@ export default function FrenteCaixaConfiguracoes() {
     if (!dirty) return;
     // se ainda está "dirty" logo após um save+reload, algo não persistiu
   }, [loading, saving, dirty]);
+
+  if (mercadoLoading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!mercadoEnabled) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="container max-w-3xl py-6 space-y-6">
