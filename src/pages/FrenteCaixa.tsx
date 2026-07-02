@@ -172,6 +172,8 @@ export default function FrenteCaixa() {
   /** Opções de renderização do DANFE calculadas a partir do checkout atual
    *  + configurações da Frente de Caixa. Recalculado em cada `handleConfirmPayment`. */
   const [danfeOpts, setDanfeOpts] = useState<DanfePrintOptions | undefined>(undefined);
+  // Overlay bloqueante do fluxo silencioso (modo auto, sem TEF).
+  const [silentPhase, setSilentPhase] = useState<null | 'emitting' | 'printing'>(null);
 
   // Instala/desinstala o interceptor do prompt TEF enquanto a página está
   // montada e a loja está na allow-list. Fora dessa condição, o fluxo atual
@@ -982,6 +984,7 @@ export default function FrenteCaixa() {
         } else if (silentAutoNfce) {
           // Caminho silencioso: emite, faz polling até autorizar e imprime DANFE.
           (async () => {
+            setSilentPhase('emitting');
             try {
               await emitirNFCe(company!.id, saleId, nfcePayload!);
               await new Promise((r) => setTimeout(r, 400));
@@ -996,6 +999,7 @@ export default function FrenteCaixa() {
                 rec = await getNFCeRecordBySaleId(saleId);
               }
               if (rec?.status === 'autorizada') {
+                setSilentPhase('printing');
                 try {
                   await printDanfeFromRecord(rec, danfeOpts);
                   toast.success(`NFC-e nº ${rec.numero || ''} autorizada — DANFE impressa.`);
@@ -1015,6 +1019,8 @@ export default function FrenteCaixa() {
             } catch (err: any) {
               console.error('[FrenteCaixa] NFC-e silent error:', err);
               toast.error(`Venda salva, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
+            } finally {
+              setSilentPhase(null);
             }
           })();
         }
@@ -1875,6 +1881,21 @@ export default function FrenteCaixa() {
           setTimeout(() => inputRef.current?.focus(), 100);
         }}
       />
+
+      {/* Overlay bloqueante do fluxo silencioso (modo auto, sem TEF):
+          mostra "Emitindo NFC-e" e depois "Imprimindo NFC-e" enquanto a
+          venda é finalizada em background. */}
+      {silentPhase && (
+        <div className="fixed inset-0 z-[9999] bg-background/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-card border rounded-lg shadow-lg p-6 min-w-[320px] flex flex-col items-center gap-3">
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            <p className="text-lg font-semibold">
+              {silentPhase === 'emitting' ? 'Emitindo NFC-e...' : 'Imprimindo NFC-e...'}
+            </p>
+            <p className="text-sm text-muted-foreground">Aguarde, não feche esta tela.</p>
+          </div>
+        </div>
+      )}
     </PDVV2Layout>
   );
 }
