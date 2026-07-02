@@ -75,6 +75,7 @@ import {
   getNFCeRecordBySaleId,
   printDanfeFromRecord,
   enqueueDanfePrintJob,
+  consultarNFCe,
   type NFCeItem,
   type NFCeRecord,
   type DanfePrintOptions,
