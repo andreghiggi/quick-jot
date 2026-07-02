@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.52.5-beta";
+export const VERSION = "1.52.6-beta";
 export const RELEASE_DATE = "2026-07-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: DANFE via print_queue (impressão silenciosa)";
+export const CODENAME = "Frente de Caixa: revertido auto-print silencioso";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.52.6-beta",
+    date: "2026-07-02",
+    codename: "Frente de Caixa: revertido auto-print silencioso",
+    changes: [
+      "Frente de Caixa (lojas com módulo Mercado/Loja ativo): revertido o caminho da v1.52.5 que enviava o DANFE para `print_queue`. Motivo: o `auto_printer.py` converte o HTML em texto plano (fluxo dos pedidos de cozinha) e o cupom saía sem QR code, sem tabela e sem o layout DANFE.",
+      "Modo 'Imprimir automaticamente' (sem TEF) volta a abrir o diálogo pós-venda com auto-impressão via `window.print()` — o Chrome mostra a janela nativa de impressão (comportamento da v1.52.4-beta).",
+      "Modos 'Sempre perguntar', 'Nunca imprimir' e vendas com TEF continuam inalterados.",
+      "A função `enqueueDanfePrintJob` permanece disponível em `src/services/nfceService.ts` (sem callers) para uso futuro quando o `auto_printer.py` suportar renderização HTML.",
+      "Nenhuma alteração em TEF, PinPad, PDV V2, Pedido Express, Cobrança, NF-e, Compras/Importar XML, Manifestação Eletrônica, Estoque, Monitor NFC-e ou `auto_printer.py`.",
+    ],
+  },
   {
     version: "1.52.5-beta",
     date: "2026-07-02",
