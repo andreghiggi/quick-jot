@@ -78,6 +78,23 @@ export function FrenteCaixaPostSaleDialog({
   danfeOptions,
   onClosed,
 }: FrenteCaixaPostSaleDialogProps) {
+  // Extrai uma mensagem legível de erros que às vezes chegam como JSON cru
+  // (ex.: `{"sucesso":false,"erro":"[539] NF-e duplicada...","xMotivo":"..."}`).
+  function formatNfceError(raw?: string | null): string {
+    if (!raw) return 'Verifique no Monitor NFC-e.';
+    const s = String(raw).trim();
+    if (s.startsWith('{') || s.startsWith('[')) {
+      try {
+        const j = JSON.parse(s);
+        const msg = j?.xMotivo || j?.erro || j?.motivo || j?.message;
+        if (msg) return String(msg);
+      } catch {
+        /* noop — cai no fallback abaixo */
+      }
+    }
+    return s;
+  }
+
   const [record, setRecord] = useState<NFCeRecord | null>(initialNfceRecord);
   const [status, setStatus] = useState<string>(
     initialNfceRecord?.status || (initialNfceRecord ? 'processando' : 'sem_nfce'),
@@ -280,8 +297,8 @@ export function FrenteCaixaPostSaleDialog({
                       <p className="font-medium text-destructive">
                         NFC-e {status === 'rejeitada' ? 'rejeitada' : 'com erro'}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {nfceError || record?.motivo_rejeicao || 'Verifique no Monitor NFC-e.'}
+                      <p className="text-xs text-muted-foreground break-words whitespace-pre-wrap max-h-40 overflow-auto">
+                        {formatNfceError(nfceError || record?.motivo_rejeicao)}
                       </p>
                     </>
                   )}
