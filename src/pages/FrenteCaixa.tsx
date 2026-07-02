@@ -944,18 +944,21 @@ export default function FrenteCaixa() {
         tefCapturedRef.current = null;
         const hasNfce = !!(nfcePayload && company?.id);
         const hasTef = !!(capturedTef && capturedTef.receiptLines?.length);
-        // v1.52.6-beta — Revertido o auto-print silencioso.
-        // Sempre abrimos o diálogo pós-venda consolidado; quando o modo é
-        // `auto`, o próprio diálogo dispara `window.print()` (o Chrome mostra
-        // a janela nativa de impressão).
-        if (hasTef || hasNfce) {
+        const autoMode = pdvSettings.print_on_finish_mode === 'auto';
+        // v1.52.7-beta — Silenciar diálogo pós-venda no modo `auto` sem TEF.
+        // Se TEF: mantém o diálogo consolidado (vias cliente/estabelecimento).
+        // Se modo `ask`/`off`: mantém diálogo (operador decide).
+        // Se modo `auto` e só NFC-e: emite em background, imprime DANFE direto
+        // (janela nativa do Chrome) e não abre diálogo — a menos que dê erro.
+        const silentAutoNfce = autoMode && !hasTef && hasNfce;
+        if ((hasTef || hasNfce) && !silentAutoNfce) {
           setConsolidatedTef(capturedTef);
           setConsolidatedRecord(null);
           setConsolidatedNfceError(null);
           setConsolidatedEmitting(hasNfce);
           setConsolidatedOpen(true);
         }
-        if (hasNfce) {
+        if (hasNfce && !silentAutoNfce) {
           (async () => {
             try {
               await emitirNFCe(company!.id, saleId, nfcePayload!);
@@ -974,6 +977,44 @@ export default function FrenteCaixa() {
               );
             } finally {
               setConsolidatedEmitting(false);
+            }
+          })();
+        } else if (silentAutoNfce) {
+          // Caminho silencioso: emite, faz polling até autorizar e imprime DANFE.
+          (async () => {
+            try {
+              await emitirNFCe(company!.id, saleId, nfcePayload!);
+              await new Promise((r) => setTimeout(r, 400));
+              let rec = await getNFCeRecordBySaleId(saleId);
+              // Polling curto (até ~30s) até status resolver.
+              for (let i = 0; i < 15; i++) {
+                if (rec && (rec.status === 'autorizada' || rec.status === 'rejeitada' || rec.status === 'erro')) break;
+                if (rec?.nfce_id) {
+                  try { await consultarNFCe(company!.id, rec.nfce_id); } catch { /* noop */ }
+                }
+                await new Promise((r) => setTimeout(r, 2000));
+                rec = await getNFCeRecordBySaleId(saleId);
+              }
+              if (rec?.status === 'autorizada') {
+                try {
+                  await printDanfeFromRecord(rec, danfeOpts);
+                  toast.success(`NFC-e nº ${rec.numero || ''} autorizada — DANFE impressa.`);
+                } catch (e: any) {
+                  toast.error(e?.message || 'Erro ao imprimir DANFE');
+                }
+              } else if (rec) {
+                // Rejeitada/erro: aí sim abre o diálogo pra o operador ver.
+                setConsolidatedTef(null);
+                setConsolidatedRecord(rec);
+                setConsolidatedNfceError(rec.motivo_rejeicao || `NFC-e ${rec.status}. Verifique no Monitor NFC-e.`);
+                setConsolidatedEmitting(false);
+                setConsolidatedOpen(true);
+              } else {
+                toast.info('NFC-e enviada. Acompanhe no Monitor NFC-e.');
+              }
+            } catch (err: any) {
+              console.error('[FrenteCaixa] NFC-e silent error:', err);
+              toast.error(`Venda salva, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
             }
           })();
         }
