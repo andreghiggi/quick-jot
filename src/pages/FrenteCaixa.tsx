@@ -984,6 +984,7 @@ export default function FrenteCaixa() {
         } else if (silentAutoNfce) {
           // Caminho silencioso: emite, faz polling até autorizar e imprime DANFE.
           (async () => {
+            setSilentPhase('emitting');
             try {
               await emitirNFCe(company!.id, saleId, nfcePayload!);
               await new Promise((r) => setTimeout(r, 400));
@@ -998,6 +999,7 @@ export default function FrenteCaixa() {
                 rec = await getNFCeRecordBySaleId(saleId);
               }
               if (rec?.status === 'autorizada') {
+                setSilentPhase('printing');
                 try {
                   await printDanfeFromRecord(rec, danfeOpts);
                   toast.success(`NFC-e nº ${rec.numero || ''} autorizada — DANFE impressa.`);
@@ -1017,6 +1019,8 @@ export default function FrenteCaixa() {
             } catch (err: any) {
               console.error('[FrenteCaixa] NFC-e silent error:', err);
               toast.error(`Venda salva, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
+            } finally {
+              setSilentPhase(null);
             }
           })();
         }
