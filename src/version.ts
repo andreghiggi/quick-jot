@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.52.8-beta";
+export const VERSION = "1.52.9-beta";
 export const RELEASE_DATE = "2026-07-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "TEF: separação correta das vias Estabelecimento e Cliente";
+export const CODENAME = "Frente de Caixa: auto-print DANFE via iframe (contorna bloqueio de pop-up)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.52.9-beta",
+    date: "2026-07-02",
+    codename: "Frente de Caixa: auto-print DANFE via iframe (contorna bloqueio de pop-up)",
+    changes: [
+      "Correção do caminho silencioso da Frente de Caixa (modo 'Imprimir automaticamente' sem TEF): o diálogo nativo de impressão do Chrome não estava abrindo porque o `window.open()` era disparado segundos após a finalização da venda (fora de qualquer gesto do usuário), e o Chrome bloqueia pop-ups nesse cenário.",
+      "Nova função `printDanfeFromRecordViaIframe` em `src/services/nfceService.ts` que renderiza o DANFE em um `<iframe>` oculto e chama `contentWindow.print()` — abre o diálogo nativo do Chrome sem depender de permissão de pop-up.",
+      "`src/pages/FrenteCaixa.tsx` passa a usar essa função no caminho `silentAutoNfce` (modo `auto` + sem TEF). Reimpressão pelo Monitor NFC-e e demais fluxos continuam usando `printDanfeFromRecord` original.",
+      "Nenhuma alteração em TEF, PinPad, PDV V2, Pedido Express, Cobrança, NF-e, Compras, Manifestação Eletrônica, Estoque ou `auto_printer.py`.",
+    ],
+  },
   {
     version: "1.52.8-beta",
     date: "2026-07-02",
