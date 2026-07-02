@@ -29,10 +29,11 @@ export default function FrenteCaixaConfiguracoes() {
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { settings, loading, saving, save, reload } = usePdvSettings(company?.id);
   const [form, setForm] = useState<PdvSettings>(settings);
-  const dirty = JSON.stringify(form) !== JSON.stringify(settings);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     setForm(settings);
+    setDirty(false);
   }, [settings]);
 
   if (mercadoLoading) {
@@ -47,8 +48,10 @@ export default function FrenteCaixaConfiguracoes() {
     return <Navigate to="/" replace />;
   }
 
-  const upd = <K extends keyof PdvSettings>(key: K, value: PdvSettings[K]) =>
+  const upd = <K extends keyof PdvSettings>(key: K, value: PdvSettings[K]) => {
+    setDirty(true);
     setForm((f) => ({ ...f, [key]: value }));
+  };
 
   const handleSave = async () => {
     console.log('[FrenteCaixaConfiguracoes] salvando →', form);
@@ -68,6 +71,7 @@ export default function FrenteCaixaConfiguracoes() {
     }
     // Re-lê do banco pra confirmar que persistiu de fato.
     await reload();
+    setDirty(false);
     toast.success('Configurações salvas.');
   };
 

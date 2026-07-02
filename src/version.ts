@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.52.1-beta";
-export const RELEASE_DATE = "2026-07-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Configurações da Frente de Caixa: botão Salvar sensível a alterações + reload pós-save";
+export const VERSION = "1.52.2-beta";
+export const RELEASE_DATE = "2026-07-02"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Configurações da Frente de Caixa: persistência corrigida";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.52.2-beta",
+    date: "2026-07-02",
+    codename: "Configurações da Frente de Caixa: persistência corrigida",
+    changes: [
+      "Correção restrita à Frente de Caixa: a tela de Configurações agora salva alterações de toggles e selects da loja correta também quando acessada em modo suporte/admin.",
+      "A permissão de leitura/gravação de `pdv_settings` foi ajustada para manter isolamento por loja e permitir suporte administrativo sem afetar PDV V2, Pedido Express, Cobrança, TEF, NFC-e compartilhada ou fluxos de impressão fora da Frente de Caixa.",
+      "O botão Salvar passa a considerar alterações feitas pelo operador sem depender apenas da comparação serializada do formulário, evitando que mudanças em seleção/toggle fiquem sem envio.",
+    ],
+  },
   {
     version: "1.52.1-beta",
     date: "2026-07-01",
