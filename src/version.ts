@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.52.6-beta";
+export const VERSION = "1.52.7-beta";
 export const RELEASE_DATE = "2026-07-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: revertido auto-print silencioso";
+export const CODENAME = "Frente de Caixa: modo auto sem TEF pula o diálogo pós-venda";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.52.7-beta",
+    date: "2026-07-02",
+    codename: "Frente de Caixa: modo auto sem TEF pula o diálogo pós-venda",
+    changes: [
+      "Frente de Caixa (lojas com Mercado/Loja ativo): quando 'Ação ao salvar a venda' está em 'Imprimir automaticamente' e a venda NÃO tem vias TEF, o diálogo 'Finalização da venda' deixa de aparecer. A NFC-e é emitida em background, o DANFE dispara `window.print()` direto (janela nativa do Chrome) e a tela volta limpa pro PDV.",
+      "Se a NFC-e for rejeitada/erro nesse caminho silencioso, o diálogo consolidado abre para o operador ver a mensagem e recuperar via Monitor NFC-e.",
+      "Vendas com TEF continuam abrindo o diálogo consolidado (vias cliente/estabelecimento) — comportamento intencional e inalterado.",
+      "Modos 'Sempre perguntar' e 'Nunca imprimir' continuam abrindo o diálogo pós-venda normalmente.",
+      "Nenhuma alteração em TEF, PinPad, PDV V2, Pedido Express, Cobrança, NF-e, Compras/Importar XML, Manifestação Eletrônica, Estoque, Monitor NFC-e ou `auto_printer.py`.",
+    ],
+  },
   {
     version: "1.52.6-beta",
     date: "2026-07-02",
