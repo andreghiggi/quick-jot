@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.52.2-beta";
+export const VERSION = "1.52.3-beta";
 export const RELEASE_DATE = "2026-07-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Configurações da Frente de Caixa: persistência corrigida";
+export const CODENAME = "Configurações da Frente de Caixa: autosave dos controles";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.52.3-beta",
+    date: "2026-07-02",
+    codename: "Configurações da Frente de Caixa: autosave dos controles",
+    changes: [
+      "Correção restrita à tela Configurações da Frente de Caixa: selects e toggles agora persistem imediatamente ao serem alterados, evitando que 'Ação ao salvar a venda' volte para 'Imprimir automaticamente' após atualizar a página.",
+      "O botão superior continua disponível para campos de digitação, mas os comandos rápidos do operador deixam de depender de um clique separado em Salvar.",
+      "Nenhuma alteração em PDV V2, Pedido Express, Cobrança, TEF, PinPad, NFC-e compartilhada, NF-e, Compras ou impressão fora da Frente de Caixa.",
+    ],
+  },
   {
     version: "1.52.2-beta",
     date: "2026-07-02",
