@@ -133,14 +133,25 @@ export default function PurchaseImportXml() {
     setXmlText(text);
     try {
       const doc = new DOMParser().parseFromString(text, 'text/xml');
+      // Tolerante a namespace (ex.: <nfe:infNFe>) — usa getElementsByTagNameNS('*', ...)
+      const getEls = (el: Element | Document | null, tag: string): Element[] => {
+        if (!el) return [];
+        const anyEl = el as any;
+        const list = anyEl.getElementsByTagNameNS
+          ? anyEl.getElementsByTagNameNS('*', tag)
+          : anyEl.getElementsByTagName(tag);
+        return Array.from(list as HTMLCollectionOf<Element>);
+      };
+      const first = (el: Element | Document | null, tag: string): Element | null =>
+        getEls(el, tag)[0] || null;
       const get = (el: Element | null, tag: string) =>
-        el?.getElementsByTagName(tag)[0]?.textContent?.trim() || '';
-      const infNFe = doc.getElementsByTagName('infNFe')[0];
+        first(el, tag)?.textContent?.trim() || '';
+      const infNFe = first(doc, 'infNFe');
       if (!infNFe) throw new Error('XML não é uma NF-e válida (infNFe ausente)');
       const chave = (infNFe.getAttribute('Id') || '').replace(/^NFe/, '');
-      const emit = infNFe.getElementsByTagName('emit')[0];
-      const ide = infNFe.getElementsByTagName('ide')[0];
-      const total = infNFe.getElementsByTagName('total')[0]?.getElementsByTagName('ICMSTot')[0];
+      const emit = first(infNFe, 'emit') as Element | null;
+      const ide = first(infNFe, 'ide') as Element | null;
+      const total = first(first(infNFe, 'total'), 'ICMSTot') as Element | null;
       const h: Header = {
         chave,
         cnpj_emit: get(emit, 'CNPJ'),
@@ -152,9 +163,9 @@ export default function PurchaseImportXml() {
       };
       setHeader(h);
 
-      const dets = Array.from(infNFe.getElementsByTagName('det'));
+      const dets = getEls(infNFe, 'det');
       const its: ItemRow[] = dets.map((det) => {
-        const prod = det.getElementsByTagName('prod')[0];
+        const prod = first(det, 'prod') as Element | null;
         const ean = get(prod, 'cEAN');
         const descricao = get(prod, 'xProd');
         const matched = products.find(p => (ean && p.gtin === ean));

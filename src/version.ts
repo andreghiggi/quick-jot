@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.52.9-beta";
+export const VERSION = "1.52.10-beta";
 export const RELEASE_DATE = "2026-07-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: auto-print DANFE via iframe (contorna bloqueio de pop-up)";
+export const CODENAME = "Compras: importar XML tolerante a namespace (nfe:infNFe)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.52.10-beta",
+    date: "2026-07-02",
+    codename: "Compras: importar XML tolerante a namespace (nfe:infNFe)",
+    changes: [
+      "Correção na tela Compras → Importar XML de NF-e: XMLs com prefixo de namespace (ex.: `<nfe:infNFe>`) falhavam com 'XML não é uma NF-e válida (infNFe ausente)'.",
+      "Parser em `src/pages/compras/PurchaseImportXml.tsx` agora usa `getElementsByTagNameNS('*', ...)` para localizar `infNFe`, `emit`, `ide`, `total`, `ICMSTot`, `det` e `prod` independentemente do prefixo do namespace.",
+    ],
+  },
   {
     version: "1.52.9-beta",
     date: "2026-07-02",
