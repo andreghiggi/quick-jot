@@ -73,6 +73,7 @@ import { useTaxRules } from '@/hooks/useTaxRules';
 import {
   emitirNFCe,
   getNFCeRecordBySaleId,
+  printDanfeFromRecord,
   type NFCeItem,
   type NFCeRecord,
   type DanfePrintOptions,
@@ -941,14 +942,19 @@ export default function FrenteCaixa() {
         tefCapturedRef.current = null;
         const hasNfce = !!(nfcePayload && company?.id);
         const hasTef = !!(capturedTef && capturedTef.receiptLines?.length);
-        if (hasTef || hasNfce) {
+        // v1.52.4-beta — Auto-print sem diálogo:
+        // Quando o operador escolheu "imprimir automaticamente" e não há vias
+        // do TEF pendentes (que sempre exigem confirmação), pula o diálogo
+        // pós-venda e imprime o DANFE em background — igual pedidos automáticos.
+        const silentAuto = mode === 'auto' && !hasTef && hasNfce;
+        if ((hasTef || hasNfce) && !silentAuto) {
           setConsolidatedTef(capturedTef);
           setConsolidatedRecord(null);
           setConsolidatedNfceError(null);
           setConsolidatedEmitting(hasNfce);
           setConsolidatedOpen(true);
         }
-        if (hasNfce) {
+        if (hasNfce && !silentAuto) {
           (async () => {
             try {
               await emitirNFCe(company!.id, saleId, nfcePayload!);
@@ -967,6 +973,42 @@ export default function FrenteCaixa() {
               );
             } finally {
               setConsolidatedEmitting(false);
+            }
+          })();
+        }
+        if (silentAuto) {
+          const emittingToast = toast.loading('Emitindo NFC-e, aguarde...');
+          (async () => {
+            try {
+              await emitirNFCe(company!.id, saleId, nfcePayload!);
+              await new Promise((r) => setTimeout(r, 400));
+              const rec = await getNFCeRecordBySaleId(saleId);
+              if (rec && rec.status === 'autorizada') {
+                toast.success(`NFC-e nº ${rec.numero} autorizada — imprimindo`, {
+                  id: emittingToast,
+                });
+                try {
+                  await printDanfeFromRecord(rec);
+                } catch (e: any) {
+                  console.error('[FrenteCaixa] auto-print DANFE error:', e);
+                  toast.error(e?.message || 'Erro ao imprimir DANFE');
+                }
+              } else if (rec) {
+                // Ainda processando na SEFAZ — cai no fluxo padrão (Monitor NFC-e)
+                toast.success('NFC-e enviada. Acompanhe no Monitor NFC-e.', {
+                  id: emittingToast,
+                });
+              } else {
+                toast.success('NFC-e enviada. Acompanhe no Monitor NFC-e.', {
+                  id: emittingToast,
+                });
+              }
+            } catch (err: any) {
+              console.error('[FrenteCaixa] NFC-e error:', err);
+              toast.error(
+                `Venda salva, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`,
+                { id: emittingToast },
+              );
             }
           })();
         }
