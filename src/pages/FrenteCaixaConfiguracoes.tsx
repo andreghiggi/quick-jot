@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Save, CreditCard, Printer, Settings, Receipt, Wallet, ShoppingBag, MousePointerClick } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, CreditCard, Printer, Settings, Receipt, Wallet, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
