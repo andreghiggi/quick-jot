@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.52.7-beta";
+export const VERSION = "1.52.8-beta";
 export const RELEASE_DATE = "2026-07-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: modo auto sem TEF pula o diálogo pós-venda";
+export const CODENAME = "TEF: separação correta das vias Estabelecimento e Cliente";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.52.8-beta",
+    date: "2026-07-02",
+    codename: "TEF: separação correta das vias Estabelecimento e Cliente",
+    changes: [
+      "Correção na impressão das vias do TEF no diálogo pós-venda da Frente de Caixa (`src/utils/tefAutoPrint.ts`).",
+      "Antes: selecionar apenas 'Via Estabelecimento' podia imprimir folha em branco quando o cupom Multiplus começava com o cabeçalho 'VIA CLIENTE' — o slice do estabelecimento vinha vazio. Selecionar 'Ambas' imprimia UMA única folha com as duas vias emendadas.",
+      "Agora: o parser detecta TODOS os marcadores de via ('VIA ESTABELECIMENTO', 'VIA DO ESTABELECIMENTO', '1ª VIA', 'PRIMEIRA VIA', 'VIA LOJISTA', 'VIA CLIENTE', 'VIA DO CLIENTE', '2ª VIA', 'SEGUNDA VIA') e classifica cada segmento. Cabeçalho comum (dados do estabelecimento antes do primeiro marcador) é replicado nas duas vias.",
+      "Modo 'Ambas' agora emite DOIS jobs de impressão separados (uma folha por via). Modo 'Só Estabelecimento' cai no bloco completo como fallback caso o slice fique vazio, evitando página em branco.",
+      "Nenhuma alteração em TEF/PinPad/tef-webservice, PDV V2, Pedido Express, Cobrança, NFC-e, NF-e, Manifestação Eletrônica, Compras, Estoque ou `auto_printer.py`.",
+    ],
+  },
   {
     version: "1.52.7-beta",
     date: "2026-07-02",

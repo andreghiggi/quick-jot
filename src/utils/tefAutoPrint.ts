@@ -108,27 +108,72 @@ function normalizeReceipt(lines: string[]): string {
 
 /**
  * Multiplus retorna em `receiptLines` o cupom inteiro contendo as DUAS vias
- * (Estabelecimento + Cliente) num único bloco. Para imprimir só uma via,
- * precisamos cortar o texto na marca de início da via do cliente.
+ * (Estabelecimento + Cliente) num único bloco. Precisamos localizar TODOS os
+ * marcadores de via para segmentar corretamente e imprimir cada via em uma
+ * folha separada.
  *
- * Marcadores comuns observados: "VIA DO CLIENTE", "VIA CLIENTE", "2ª VIA",
- * "2.VIA", "SEGUNDA VIA". Tudo case-insensitive.
+ * Marcadores observados:
+ *  - Estabelecimento: "VIA ESTABELECIMENTO", "VIA DO ESTABELECIMENTO",
+ *    "1ª VIA", "PRIMEIRA VIA", "VIA LOJISTA".
+ *  - Cliente:         "VIA CLIENTE", "VIA DO CLIENTE", "2ª VIA",
+ *    "SEGUNDA VIA".
  */
 function splitVias(fullText: string): { estabelecimento: string; cliente: string | null } {
   const lines = fullText.split('\n');
+  const reEstab = /^\s*[-=*\s]*(1[ªa\.\s]*\s*VIA|VIA\s+(DO\s+)?(ESTABELECIMENTO|LOJIST[AO])|PRIMEIRA\s+VIA)\b/i;
   const reCliente = /^\s*[-=*\s]*(2[ªa\.\s]*\s*VIA|VIA\s+(DO\s+)?CLIENTE|SEGUNDA\s+VIA)\b/i;
-  let cutIndex = -1;
+
+  // Coleta índices de todos os marcadores, com o tipo.
+  const marks: Array<{ idx: number; kind: 'estab' | 'cliente' }> = [];
   for (let i = 0; i < lines.length; i++) {
-    if (reCliente.test(lines[i])) {
-      cutIndex = i;
-      break;
-    }
+    if (reCliente.test(lines[i])) marks.push({ idx: i, kind: 'cliente' });
+    else if (reEstab.test(lines[i])) marks.push({ idx: i, kind: 'estab' });
   }
-  if (cutIndex === -1) {
+
+  // Sem nenhum marcador → assume que todo o bloco é a via do estabelecimento.
+  if (marks.length === 0) {
     return { estabelecimento: fullText, cliente: null };
   }
-  const estabelecimento = lines.slice(0, cutIndex).join('\n').replace(/\n+$/g, '');
-  const cliente = lines.slice(cutIndex).join('\n').replace(/^\n+/g, '');
+
+  // Prefixo antes do primeiro marcador (cabeçalho comum: dados do estab,
+  // rede, etc.). Vamos preservá-lo em ambas as vias.
+  const header = lines.slice(0, marks[0].idx).join('\n').replace(/\n+$/g, '');
+
+  // Segmenta cada bloco entre marcadores.
+  const segments: Array<{ kind: 'estab' | 'cliente'; text: string }> = [];
+  for (let m = 0; m < marks.length; m++) {
+    const start = marks[m].idx;
+    const end = m + 1 < marks.length ? marks[m + 1].idx : lines.length;
+    const text = lines.slice(start, end).join('\n').replace(/^\n+|\n+$/g, '');
+    segments.push({ kind: marks[m].kind, text });
+  }
+
+  const estabSegs = segments.filter((s) => s.kind === 'estab').map((s) => s.text);
+  const clienteSegs = segments.filter((s) => s.kind === 'cliente').map((s) => s.text);
+
+  // Caso comum Multiplus: só um marcador "VIA CLIENTE" existe no meio.
+  // Nesse caso, o que veio ANTES do marcador (header + resto) é o
+  // estabelecimento; o que veio DEPOIS é o cliente.
+  if (estabSegs.length === 0 && clienteSegs.length >= 1) {
+    const firstClienteIdx = marks.find((x) => x.kind === 'cliente')!.idx;
+    const estabelecimento = lines.slice(0, firstClienteIdx).join('\n').replace(/\n+$/g, '');
+    const cliente = clienteSegs[0];
+    return {
+      estabelecimento: estabelecimento || cliente, // fallback se vier vazio
+      cliente,
+    };
+  }
+
+  const joinWithHeader = (body: string) =>
+    header ? `${header}\n${body}` : body;
+
+  const estabelecimento = estabSegs.length > 0
+    ? joinWithHeader(estabSegs.join('\n'))
+    : fullText;
+  const cliente = clienteSegs.length > 0
+    ? joinWithHeader(clienteSegs.join('\n'))
+    : null;
+
   return { estabelecimento, cliente };
 }
 
@@ -147,21 +192,15 @@ export async function executarImpressaoTefVias(
   const fullText = normalizeReceipt(receiptLines);
   const { estabelecimento, cliente } = splitVias(fullText);
 
-  // Monta a lista de impressões: cada item = { rótulo, conteúdo }.
+  // Monta a lista de impressões: cada via = um job (uma folha separada).
   const jobs: Array<{ label: string; body: string }> = [];
+  const estabBody = estabelecimento && estabelecimento.trim() ? estabelecimento : fullText;
   if (mode === 'ambas') {
-    // Se Multiplus já mandou as duas vias no mesmo bloco, imprime UMA vez
-    // o bloco inteiro (que já contém Estabelecimento + Cliente).
-    if (cliente) {
-      jobs.push({ label: 'VIAS ESTABELECIMENTO + CLIENTE', body: fullText });
-    } else {
-      // Fallback: bloco veio só com uma via — duplica para garantir as duas.
-      jobs.push({ label: 'VIA ESTABELECIMENTO', body: estabelecimento });
-      jobs.push({ label: 'VIA CLIENTE', body: estabelecimento });
-    }
+    jobs.push({ label: 'VIA ESTABELECIMENTO', body: estabBody });
+    jobs.push({ label: 'VIA CLIENTE', body: cliente || estabBody });
   } else {
-    // Só estabelecimento — corta a via do cliente.
-    jobs.push({ label: 'VIA ESTABELECIMENTO', body: estabelecimento });
+    // Só estabelecimento.
+    jobs.push({ label: 'VIA ESTABELECIMENTO', body: estabBody });
   }
 
   for (let i = 0; i < jobs.length; i++) {
