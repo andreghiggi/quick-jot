@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import {
   computeUIStatus, applyFilters, emptyFilters,
   type FinanceRow, type FinanceFilters,
 } from '@/components/financeiro/finance-shared';
+import { FinanceModuleLayout } from '@/components/financeiro/FinanceModuleLayout';
 
 const PAYMENT_METHODS = ['Dinheiro', 'PIX', 'Transferência', 'Cartão de Débito', 'Cartão de Crédito', 'Boleto', 'Outro'];
 const CATEGORIES = ['Fornecedor', 'Aluguel', 'Energia', 'Água', 'Internet', 'Salários', 'Impostos', 'Manutenção', 'Marketing', 'Outros'];
@@ -26,7 +27,6 @@ const CATEGORIES = ['Fornecedor', 'Aluguel', 'Energia', 'Água', 'Internet', 'Sa
 interface SupplierOption { id: string; name: string }
 
 export default function Despesas() {
-  const navigate = useNavigate();
   const { user, company } = useAuthContext();
   const { enabled, loading: finLoading } = useFinanceiroEnabled(company?.id);
   const { items, loading, reload, create, pay, remove, update, renegotiate } = useAccountsPayable(company?.id);
@@ -171,12 +171,7 @@ export default function Despesas() {
   };
 
   return (
-    <div className="container max-w-5xl py-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
-        <h1 className="text-2xl font-semibold">Despesas</h1>
-      </div>
-
+    <FinanceModuleLayout kind="despesas" title="Despesas">
       <BulkActionBar
         count={selection.size}
         onClear={() => setSelection(new Set())}
@@ -397,6 +392,6 @@ export default function Despesas() {
       />
 
       <FloatingFab onClick={() => setCreateOpen(true)} label="Nova despesa" />
-    </div>
+    </FinanceModuleLayout>
   );
 }

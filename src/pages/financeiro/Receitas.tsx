@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,9 +19,9 @@ import {
   computeUIStatus, applyFilters, emptyFilters,
   type FinanceRow, type FinanceFilters,
 } from '@/components/financeiro/finance-shared';
+import { FinanceModuleLayout } from '@/components/financeiro/FinanceModuleLayout';
 
 export default function Receitas() {
-  const navigate = useNavigate();
   const { user, company } = useAuthContext();
   const { enabled, loading: finLoading } = useFinanceiroEnabled(company?.id);
   const {
@@ -165,12 +165,7 @@ export default function Receitas() {
   };
 
   return (
-    <div className="container max-w-5xl py-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
-        <h1 className="text-2xl font-semibold">Receitas</h1>
-      </div>
-
+    <FinanceModuleLayout kind="receitas" title="Receitas">
       <BulkActionBar
         count={selection.size}
         onClear={() => setSelection(new Set())}
@@ -379,6 +374,6 @@ export default function Receitas() {
       />
 
       <FloatingFab onClick={() => setCreateOpen(true)} label="Nova receita" />
-    </div>
+    </FinanceModuleLayout>
   );
 }
