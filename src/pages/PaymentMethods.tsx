@@ -23,6 +23,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PaymentMethodFormDialog, type PaymentMethodDraft } from '@/components/payment-methods/PaymentMethodFormDialog';
+import { usePdvSettings } from '@/hooks/usePdvSettings';
+import { useFinanceiroEnabled } from '@/hooks/useFinanceiroEnabled';
+import { Badge } from '@/components/ui/badge';
+import { Link } from 'react-router-dom';
 
 const CHANNEL_LABELS: Record<PaymentChannel, string> = {
   pdv: 'PDV / Frente de Caixa',
@@ -46,6 +50,29 @@ function ChannelManager({ channel }: ChannelManagerProps) {
     companyId: company?.id,
     channel,
   });
+
+  // ─── Crediário NATIVO (só existe no PDV/Frente de Caixa) ────────────────
+  //   Aparece sempre como um card fixo, independente de haver ou não uma
+  //   forma de pagamento cadastrada. O toggle liga/desliga direto no
+  //   `pdv_settings.credit_sale_enabled` (mesmo campo consumido pelo
+  //   checkout do Frente de Caixa).
+  const isPdv = channel === 'pdv';
+  const { enabled: financeiroEnabled } = useFinanceiroEnabled(company?.id);
+  const {
+    settings: pdvSettings,
+    save: savePdvSettings,
+    saving: savingPdv,
+    loading: loadingPdv,
+  } = usePdvSettings(company?.id);
+
+  async function handleToggleCrediario(next: boolean) {
+    const { error } = await savePdvSettings({ ...pdvSettings, credit_sale_enabled: next });
+    if (error) {
+      toast.error('Não foi possível salvar. Tente novamente.');
+      return;
+    }
+    toast.success(next ? 'Crediário ativado' : 'Crediário desativado');
+  }
 
   // Divisão Entrega/Retirada nas formas de pagamento — liberado para todas as lojas
   // nas abas Cardápio Online e Pedido Express (PDV não tem conceito de modalidade).
@@ -136,6 +163,42 @@ function ChannelManager({ channel }: ChannelManagerProps) {
           </div>
         </CardHeader>
         <CardContent>
+          {isPdv && (
+            <div
+              className={`mb-3 flex items-center justify-between gap-3 p-4 rounded-lg border-2 ${
+                pdvSettings.credit_sale_enabled && financeiroEnabled
+                  ? 'border-primary/40 bg-primary/5'
+                  : 'border-dashed border-muted-foreground/30 bg-muted/30'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <CreditCard className="w-5 h-5 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">Crediário</span>
+                    <Badge variant="secondary" className="text-[10px] uppercase">Nativo</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Venda 100% no fiado, exige cliente e gera título em Contas a Receber. Não emite NFC-e.
+                  </p>
+                  {!financeiroEnabled && (
+                    <p className="text-xs text-destructive mt-1">
+                      Requer o módulo <Link to="/financeiro" className="underline">Financeiro</Link> ativo.
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-sm text-muted-foreground">Ativo</span>
+                <Switch
+                  checked={!!pdvSettings.credit_sale_enabled}
+                  disabled={!financeiroEnabled || loadingPdv || savingPdv}
+                  onCheckedChange={handleToggleCrediario}
+                />
+              </div>
+            </div>
+          )}
+
           {paymentMethods.length === 0 ? (
             <div className="text-center py-8">
               <CreditCard className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
