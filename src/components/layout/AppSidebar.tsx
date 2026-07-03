@@ -186,6 +186,15 @@ export function AppSidebar() {
     },
   ] : [];
 
+  // Módulo Financeiro (Fase 1: Crediário → Contas a Receber)
+  if (financeiroEnabled) {
+    financeMenuItems.push({
+      title: 'Contas a Receber',
+      icon: CircleDollarSign,
+      href: '/financeiro/contas-a-receber',
+    });
+  }
+
   // Formas de Pagamento — vive dentro do grupo Cadastros (disponível para todas as empresas)
   const paymentMethodsMenuItem = [
     {
