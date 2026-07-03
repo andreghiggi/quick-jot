@@ -283,6 +283,15 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      {/* Módulo Financeiro — Contas a Receber (Crediário) */}
+      <Route path="/financeiro/contas-a-receber" element={
+        <ProtectedRoute requireCompany>
+          <FinanceiroGuard>
+            <ContasReceber />
+          </FinanceiroGuard>
+        </ProtectedRoute>
+      } />
+
       {/* Estoque (módulo mercado) — guard interno via useMercadoEnabled */}
       <Route path="/estoque" element={
         <ProtectedRoute requireCompany>
