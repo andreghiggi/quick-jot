@@ -20,6 +20,7 @@ import {
   type FinanceRow, type FinanceFilters,
 } from '@/components/financeiro/finance-shared';
 import { FinanceModuleLayout } from '@/components/financeiro/FinanceModuleLayout';
+import { NewFinanceEntryDialog } from '@/components/financeiro/NewFinanceEntryDialog';
 
 export default function Receitas() {
   const { user, company } = useAuthContext();
@@ -52,13 +53,6 @@ export default function Receitas() {
   const [bulkDelete, setBulkDelete] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  // create form
-  const [nName, setNName] = useState('');
-  const [nPhone, setNPhone] = useState('');
-  const [nAmt, setNAmt] = useState('');
-  const [nDue, setNDue] = useState(today);
-  const [nNotes, setNNotes] = useState('');
 
   const rows = useMemo<FinanceRow[]>(() => items.map((r) => ({
     id: r.id,
