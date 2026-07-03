@@ -27,6 +27,7 @@ import {
   FolderTree,
   History,
   ChevronDown,
+  CreditCard as CardIcon,
 } from 'lucide-react';
 import { ShoppingCart } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
@@ -122,8 +123,8 @@ export function PDVV2Sidebar() {
   const finance = [
     ...(financeiroActive
       ? [
-          { title: 'Contas a Receber', icon: CircleDollarSign, href: '/financeiro/contas-a-receber' },
-          { title: 'Contas a Pagar', icon: Receipt, href: '/financeiro/contas-a-pagar' },
+          { title: 'Receitas', icon: CircleDollarSign, href: '/financeiro/receitas' },
+          { title: 'Despesas', icon: Receipt, href: '/financeiro/despesas' },
           { title: 'Fluxo de Caixa', icon: Wallet, href: '/financeiro/fluxo-de-caixa' },
           { title: 'Inadimplência', icon: BarChart3, href: '/financeiro/inadimplencia' },
         ]
