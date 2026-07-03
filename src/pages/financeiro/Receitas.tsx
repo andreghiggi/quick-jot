@@ -165,12 +165,7 @@ export default function Receitas() {
   };
 
   return (
-    <div className="container max-w-5xl py-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
-        <h1 className="text-2xl font-semibold">Receitas</h1>
-      </div>
-
+    <FinanceModuleLayout kind="receitas" title="Receitas">
       <BulkActionBar
         count={selection.size}
         onClear={() => setSelection(new Set())}
@@ -379,6 +374,6 @@ export default function Receitas() {
       />
 
       <FloatingFab onClick={() => setCreateOpen(true)} label="Nova receita" />
-    </div>
+    </FinanceModuleLayout>
   );
 }
