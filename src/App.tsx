@@ -290,14 +290,28 @@ function AppRoutes() {
       <Route path="/financeiro/contas-a-receber" element={
         <ProtectedRoute requireCompany>
           <FinanceiroGuard>
-            <ContasReceber />
+            <Receitas />
+          </FinanceiroGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/financeiro/receitas" element={
+        <ProtectedRoute requireCompany>
+          <FinanceiroGuard>
+            <Receitas />
           </FinanceiroGuard>
         </ProtectedRoute>
       } />
       <Route path="/financeiro/contas-a-pagar" element={
         <ProtectedRoute requireCompany>
           <FinanceiroGuard>
-            <ContasPagar />
+            <Despesas />
+          </FinanceiroGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/financeiro/despesas" element={
+        <ProtectedRoute requireCompany>
+          <FinanceiroGuard>
+            <Despesas />
           </FinanceiroGuard>
         </ProtectedRoute>
       } />
