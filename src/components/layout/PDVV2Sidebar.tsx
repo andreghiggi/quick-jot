@@ -31,6 +31,7 @@ import {
 import { ShoppingCart } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useFinanceiroEnabled } from '@/hooks/useFinanceiroEnabled';
 import {
   Sidebar,
   SidebarContent,
@@ -60,6 +61,8 @@ export function PDVV2Sidebar() {
   const location = useLocation();
   const { user, profile, company, signOut } = useAuthContext();
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
+  const { enabled: financeiroEnabled } = useFinanceiroEnabled(company?.id);
+  const financeiroActive = financeiroEnabled || isModuleEnabled('financeiro');
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return 'U';
@@ -118,6 +121,14 @@ export function PDVV2Sidebar() {
 
   const finance = [
     { title: 'Formas de Pagamento', icon: CreditCard, href: '/formas-pagamento' },
+    ...(financeiroActive
+      ? [
+          { title: 'Contas a Receber', icon: CircleDollarSign, href: '/financeiro/contas-a-receber' },
+          { title: 'Contas a Pagar', icon: Receipt, href: '/financeiro/contas-a-pagar' },
+          { title: 'Fluxo de Caixa', icon: Wallet, href: '/financeiro/fluxo-de-caixa' },
+          { title: 'Inadimplência', icon: BarChart3, href: '/financeiro/inadimplencia' },
+        ]
+      : []),
   ];
 
   const fiscal = isModuleEnabled('fiscal')
