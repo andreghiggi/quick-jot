@@ -77,21 +77,38 @@ export function usePaymentMethods(options: UsePaymentMethodsOptions = {}) {
     pixKey?: string,
     integrationType?: string,
     channelOverride?: PaymentChannel
+  ): Promise<boolean>;
+  async function addPaymentMethod(draft: Partial<PaymentMethod> & { name: string }, channelOverride?: PaymentChannel): Promise<boolean>;
+  async function addPaymentMethod(
+    nameOrDraft: any,
+    pixKeyOrChannel?: any,
+    integrationType?: string,
+    channelOverride?: PaymentChannel
   ): Promise<boolean> {
     if (!companyId) return false;
 
     try {
       const maxOrder = paymentMethods.reduce((max, m) => Math.max(max, m.display_order), 0);
-      const targetChannel = channelOverride ?? channel ?? 'menu';
-
-      const insertData: any = {
-        company_id: companyId,
-        name,
-        display_order: maxOrder + 1,
-        channel: targetChannel,
-      };
-      if (pixKey) insertData.pix_key = pixKey;
-      if (integrationType) insertData.integration_type = integrationType;
+      let insertData: any;
+      if (typeof nameOrDraft === 'string') {
+        const targetChannel = channelOverride ?? channel ?? 'menu';
+        insertData = {
+          company_id: companyId,
+          name: nameOrDraft,
+          display_order: maxOrder + 1,
+          channel: targetChannel,
+        };
+        if (pixKeyOrChannel) insertData.pix_key = pixKeyOrChannel;
+        if (integrationType) insertData.integration_type = integrationType;
+      } else {
+        const targetChannel = (pixKeyOrChannel as PaymentChannel | undefined) ?? channel ?? 'menu';
+        insertData = {
+          ...nameOrDraft,
+          company_id: companyId,
+          display_order: maxOrder + 1,
+          channel: targetChannel,
+        };
+      }
 
       const { error } = await supabase
         .from('payment_methods')
