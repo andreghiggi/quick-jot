@@ -291,6 +291,9 @@ export default function FrenteCaixaConfiguracoes() {
 
       {/* Controle de caixa */}
       <Card>
+        {financeiroEnabled && (
+          <div className="hidden" />
+        )}
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Wallet className="h-4 w-4" /> Controle de caixa
