@@ -65,6 +65,15 @@ function ChannelManager({ channel }: ChannelManagerProps) {
     loading: loadingPdv,
   } = usePdvSettings(company?.id);
 
+  /**
+   * Se já existir uma forma cadastrada como Crediário nesse canal, ela vira o
+   * "back-end" do card nativo — o Editar abre o cadastro dela. Caso não exista,
+   * o Editar cria automaticamente uma com os padrões do Crediário.
+   */
+  const crediarioMethod = paymentMethods.find(
+    (m) => (m as any).payment_type === 'crediario',
+  );
+
   async function handleToggleCrediario(next: boolean) {
     const { error } = await savePdvSettings({ ...pdvSettings, credit_sale_enabled: next });
     if (error) {
@@ -72,6 +81,37 @@ function ChannelManager({ channel }: ChannelManagerProps) {
       return;
     }
     toast.success(next ? 'Crediário ativado' : 'Crediário desativado');
+  }
+
+  async function openCrediarioEditor() {
+    if (crediarioMethod) {
+      openEditDialog(crediarioMethod);
+      return;
+    }
+    // Cria a forma padrão de Crediário e abre o editor com ela.
+    setIsSubmitting(true);
+    const ok = await addPaymentMethod(
+      {
+        name: 'Crediário',
+        payment_type: 'crediario',
+        nfe_ref_code: '90',
+        issue_nfce: false,
+        active: true,
+        installments_count: 1,
+        installment_interval: 1,
+        installment_period: 'month',
+        installment_start_rule: 'general',
+      } as any,
+      channel,
+    );
+    setIsSubmitting(false);
+    if (!ok) return;
+    // aguarda o próximo tick pra pegar o item recém-inserido no state
+    setTimeout(() => {
+      const justCreated = paymentMethods.find((m) => (m as any).payment_type === 'crediario');
+      if (justCreated) openEditDialog(justCreated);
+      else setAddDialog(true);
+    }, 100);
   }
 
   // Divisão Entrega/Retirada nas formas de pagamento — liberado para todas as lojas
@@ -195,6 +235,15 @@ function ChannelManager({ channel }: ChannelManagerProps) {
                   disabled={!financeiroEnabled || loadingPdv || savingPdv}
                   onCheckedChange={handleToggleCrediario}
                 />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={openCrediarioEditor}
+                  disabled={isSubmitting}
+                  title="Editar configurações do Crediário"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
               </div>
             </div>
           )}
@@ -210,7 +259,9 @@ function ChannelManager({ channel }: ChannelManagerProps) {
             </div>
           ) : (
             <div className="space-y-2">
-              {paymentMethods.map((method) => (
+              {paymentMethods
+                .filter((m) => !(isPdv && (m as any).payment_type === 'crediario'))
+                .map((method) => (
                 <div
                   key={method.id}
                   className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
