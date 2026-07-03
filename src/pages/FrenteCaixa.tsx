@@ -36,6 +36,8 @@ import {
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { useFinanceiroEnabled } from '@/hooks/useFinanceiroEnabled';
+import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
 import { useCardapioEnabled } from '@/hooks/useCardapioEnabled';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useProducts } from '@/hooks/useProducts';
