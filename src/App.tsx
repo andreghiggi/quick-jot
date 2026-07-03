@@ -61,6 +61,9 @@ import FrenteCaixa from "./pages/FrenteCaixa";
 import FrenteCaixaLista from "./pages/FrenteCaixaLista";
 import FrenteCaixaConfiguracoes from "./pages/FrenteCaixaConfiguracoes";
 import ContasReceber from "./pages/financeiro/ContasReceber";
+import ContasPagar from "./pages/financeiro/ContasPagar";
+import FluxoCaixa from "./pages/financeiro/FluxoCaixa";
+import Inadimplencia from "./pages/financeiro/Inadimplencia";
 import EstoqueRelatorio from "./pages/EstoqueRelatorio";
 import InventarioContagem from "./pages/InventarioContagem";
 import InventarioLivro from "./pages/InventarioLivro";
@@ -288,6 +291,27 @@ function AppRoutes() {
         <ProtectedRoute requireCompany>
           <FinanceiroGuard>
             <ContasReceber />
+          </FinanceiroGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/financeiro/contas-a-pagar" element={
+        <ProtectedRoute requireCompany>
+          <FinanceiroGuard>
+            <ContasPagar />
+          </FinanceiroGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/financeiro/fluxo-de-caixa" element={
+        <ProtectedRoute requireCompany>
+          <FinanceiroGuard>
+            <FluxoCaixa />
+          </FinanceiroGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/financeiro/inadimplencia" element={
+        <ProtectedRoute requireCompany>
+          <FinanceiroGuard>
+            <Inadimplencia />
           </FinanceiroGuard>
         </ProtectedRoute>
       } />
