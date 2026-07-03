@@ -60,8 +60,7 @@ export function useFluxoCaixa(
     const endIso = `${endDate}T23:59:59-03:00`;
 
     const [sales, arPayments, arOpen, apPayments, apOpen] = await Promise.all([
-      supabase
-        .from('pdv_sales')
+      (supabase.from('pdv_sales') as any)
         .select('pv_data_emissao, pv_total, pv_status')
         .eq('company_id', companyId)
         .gte('pv_data_emissao', startIso)
