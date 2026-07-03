@@ -93,6 +93,19 @@ export function FrenteCaixaCheckoutDialog({
 }: Props) {
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
 
+  /**
+   * Crediário nativo aparece quando:
+   *   (a) o operador marcou "Habilitar venda a prazo" em Configurações
+   *       (prop `creditSaleAvailable` vinda do PDV), OU
+   *   (b) existe pelo menos uma forma de pagamento cadastrada com
+   *       `payment_type = 'crediario'` (fluxo novo estilo GWeb).
+   */
+  const hasCrediarioPaymentMethod = useMemo(
+    () => activePaymentMethods.some((m) => (m as any).payment_type === 'crediario'),
+    [activePaymentMethods],
+  );
+  const creditSaleVisible = creditSaleAvailable || hasCrediarioPaymentMethod;
+
   const [step, setStep] = useState<StepId>(1);
   const [discountText, setDiscountText] = useState('');
   const [surchargeText, setSurchargeText] = useState('');
