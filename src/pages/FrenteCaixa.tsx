@@ -732,6 +732,18 @@ export default function FrenteCaixa() {
 
   async function handleConfirmPayment(params: FrenteCaixaCheckoutResult) {
     if (!user?.id) return;
+    const isCreditSale = params.paymentMethodId === '__credit_sale__';
+
+    // Crediário: exige cliente com nome + telefone
+    if (isCreditSale) {
+      const nm = (params.customerName || '').trim();
+      const ph = (params.customerPhone || '').trim();
+      if (!nm || !ph) {
+        toast.error('Vendas no crediário exigem nome e telefone do cliente.');
+        return;
+      }
+    }
+
     // Toggle: exigir cliente acima de X reais.
     const requireCustomerAbove = Number(pdvSettings.require_customer_above_value || 0);
     if (requireCustomerAbove > 0 && total > requireCustomerAbove) {
