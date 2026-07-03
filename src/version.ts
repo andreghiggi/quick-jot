@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.54.0-beta";
+export const VERSION = "1.55.0-beta";
 export const RELEASE_DATE = "2026-07-03"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Módulo Financeiro — Fase 2 (Contas a Pagar + Fluxo de Caixa + Inadimplência)";
+export const CODENAME = "Financeiro estilo GWeb — Receitas/Despesas em cards, filtros, renegociação";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.55.0-beta",
+    date: "2026-07-03",
+    codename: "Financeiro estilo GWeb — Receitas/Despesas em cards, filtros, renegociação",
+    changes: [
+      "Renomeadas as telas do Financeiro para 'Receitas' (/financeiro/receitas) e 'Despesas' (/financeiro/despesas) — as rotas antigas /contas-a-receber e /contas-a-pagar continuam funcionando.",
+      "Nova UI em cards estilo GWeb: barra de busca com filtro/ordenação/atualizar, cards por título com avatar + Doc.: <número> + Valor + datas + badge de status ('A vencer' azul, 'Vencida' vermelha, 'Paga' verde, 'Cancelada' cinza, 'Parcial' âmbar), botão FAB laranja para novo lançamento e paginação 'Por página X | X–Y / total'.",
+      "Painel de filtros expansível: por cliente/fornecedor, status, faixa de emissão e vencimento, Nº do documento (múltiplos por vírgula) e tags.",
+      "Menu de ações no card: Marcar (seleção múltipla com barra de ações em lote — receber/pagar em lote e excluir em lote), Ver detalhes (modal com Valor/Juros e multa/Saldo, datas, descrição e link 'Acessar origem'), Editar, Receber/Pagar, Renegociar (grava histórico em accounts_renegotiations), Excluir.",
+      "Schema: novos campos em accounts_receivable e accounts_payable — document_number, interest_amount, fine_amount, tags (text[]), origin_type e origin_id. Nova tabela accounts_renegotiations com histórico de mudanças de valor/vencimento. Contador finance_document_counters + função next_finance_document_number(company, prefix, parcela, total) para gerar identificadores tipo PV000000001/1-1.",
+    ],
+  },
   {
     version: "1.54.0-beta",
     date: "2026-07-03",
