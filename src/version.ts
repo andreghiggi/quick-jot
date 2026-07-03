@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.53.0-beta";
+export const VERSION = "1.54.0-beta";
 export const RELEASE_DATE = "2026-07-03"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Módulo Financeiro — Fase 1 (Crediário)";
+export const CODENAME = "Módulo Financeiro — Fase 2 (Contas a Pagar + Fluxo de Caixa + Inadimplência)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,20 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.54.0-beta",
+    date: "2026-07-03",
+    codename: "Módulo Financeiro — Fase 2 (Contas a Pagar + Fluxo de Caixa + Inadimplência)",
+    changes: [
+      "Fase 2 do módulo Financeiro (opcional, controlado por toggle em Admin → Módulos). Adiciona três novas telas dentro do grupo Financeiro: Contas a Pagar, Fluxo de Caixa e Inadimplência.",
+      "Contas a Pagar (/financeiro/contas-a-pagar): cadastro de despesas com descrição, valor, vencimento, categoria e fornecedor opcional. Suporta pagamentos parciais/totais escolhendo forma de pagamento (dinheiro, PIX, transferência, cartão, boleto, outro), cancelamento de título e abas Em aberto / Vencidos / Pagos / Cancelados.",
+      "Fluxo de Caixa (/financeiro/fluxo-de-caixa): visão consolidada por período (padrão: mês corrente em America/Sao_Paulo). Cards de Entradas realizadas, Saídas realizadas, Saldo realizado e Saldo projetado. Tabela diária com saldo do dia e acumulado. Toggle 'Incluir valores previstos' considera títulos ainda em aberto por vencimento.",
+      "Inadimplência (/financeiro/inadimplencia): agrupa por cliente todos os títulos de crediário vencidos e em aberto. Filtros por atraso mínimo (1/15/30/60/90 dias) e valor pendente. Cards de Total inadimplente, Clientes em atraso e Ticket médio. Badge de risco (Alto ≥60 dias, Médio ≥30 dias, Baixo).",
+      "Novas tabelas accounts_payable e accounts_payable_payments com RLS por company_id. Fluxo de Caixa e Inadimplência são somente leitura — apenas agregam pdv_sales, accounts_receivable, accounts_receivable_payments, accounts_payable e accounts_payable_payments.",
+      "Nenhuma alteração em fluxos existentes: PDV V1/V2, Frente de Caixa, Pedido Express, Cobrança, TEF, PinPad, NFC-e, NF-e, Compras, Manifestação Eletrônica, Estoque, Cardápio Mesa e impressão continuam intocados.",
+      "Piloto: manter o módulo Financeiro desligado por padrão. Ativar Fase 2 primeiro na Lancheria da I9 (que já validou a Fase 1) antes de liberar geral.",
+    ],
+  },
   {
     version: "1.53.0-beta",
     date: "2026-07-03",
