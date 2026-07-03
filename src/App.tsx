@@ -139,6 +139,18 @@ function FrenteCaixaGuard({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Guard do módulo Financeiro. Bloqueia rotas do grupo Financeiro para lojas
+ * sem o módulo `financeiro` ativo.
+ */
+function FinanceiroGuard({ children }: { children: ReactNode }) {
+  const { company } = useAuthContext();
+  const { enabled, loading } = useFinanceiroEnabled(company?.id);
+  if (loading) return null;
+  if (!enabled) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   // Detecta o contexto de domínio uma vez por render
   const domainCtx = detectDomainContext();
