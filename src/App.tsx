@@ -64,6 +64,11 @@ import Receitas from "./pages/financeiro/Receitas";
 import Despesas from "./pages/financeiro/Despesas";
 import FluxoCaixa from "./pages/financeiro/FluxoCaixa";
 import Inadimplencia from "./pages/financeiro/Inadimplencia";
+import {
+  ReceitasRelatorios, DespesasRelatorios,
+  ReceitasConfiguracoes, DespesasConfiguracoes,
+  PlanosDeContas, CentrosDeCustos,
+} from "./pages/financeiro/FinancePlaceholderPages";
 import EstoqueRelatorio from "./pages/EstoqueRelatorio";
 import InventarioContagem from "./pages/InventarioContagem";
 import InventarioLivro from "./pages/InventarioLivro";
@@ -328,6 +333,24 @@ function AppRoutes() {
             <Inadimplencia />
           </FinanceiroGuard>
         </ProtectedRoute>
+      } />
+      <Route path="/financeiro/receitas/relatorios" element={
+        <ProtectedRoute requireCompany><FinanceiroGuard><ReceitasRelatorios /></FinanceiroGuard></ProtectedRoute>
+      } />
+      <Route path="/financeiro/receitas/configuracoes" element={
+        <ProtectedRoute requireCompany><FinanceiroGuard><ReceitasConfiguracoes /></FinanceiroGuard></ProtectedRoute>
+      } />
+      <Route path="/financeiro/despesas/relatorios" element={
+        <ProtectedRoute requireCompany><FinanceiroGuard><DespesasRelatorios /></FinanceiroGuard></ProtectedRoute>
+      } />
+      <Route path="/financeiro/despesas/configuracoes" element={
+        <ProtectedRoute requireCompany><FinanceiroGuard><DespesasConfiguracoes /></FinanceiroGuard></ProtectedRoute>
+      } />
+      <Route path="/financeiro/planos-de-contas" element={
+        <ProtectedRoute requireCompany><FinanceiroGuard><PlanosDeContas /></FinanceiroGuard></ProtectedRoute>
+      } />
+      <Route path="/financeiro/centros-de-custos" element={
+        <ProtectedRoute requireCompany><FinanceiroGuard><CentrosDeCustos /></FinanceiroGuard></ProtectedRoute>
       } />
 
       {/* Estoque (módulo mercado) — guard interno via useMercadoEnabled */}
