@@ -822,7 +822,20 @@ export function FrenteCaixaCheckoutDialog({
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Voltar
               </Button>
-              {defaultFiscalMode === 'ask' ? (
+              {creditMode ? (
+                <Button
+                  type="button"
+                  onClick={() => handleSave('nao_fiscal')}
+                  disabled={processing || !exact}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[200px]"
+                >
+                  {processing ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando título…</>
+                  ) : (
+                    <><CreditCard className="h-4 w-4 mr-1" /> Salvar crediário</>
+                  )}
+                </Button>
+              ) : defaultFiscalMode === 'ask' ? (
                 <>
                   <Button
                     type="button"
