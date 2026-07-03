@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { useFinanceiroEnabled } from '@/hooks/useFinanceiroEnabled';
 import { usePdvSettings, type PdvSettings } from '@/hooks/usePdvSettings';
 
 /**
@@ -27,6 +28,7 @@ export default function FrenteCaixaConfiguracoes() {
   const navigate = useNavigate();
   const { company } = useAuthContext();
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
+  const { enabled: financeiroEnabled } = useFinanceiroEnabled(company?.id);
   const { settings, loading, saving, save, reload } = usePdvSettings(company?.id);
   const [form, setForm] = useState<PdvSettings>(settings);
   const [dirty, setDirty] = useState(false);
