@@ -289,6 +289,41 @@ export default function FrenteCaixaConfiguracoes() {
         </CardContent>
       </Card>
 
+      {/* Módulo Financeiro — Crediário (só aparece se o módulo Financeiro estiver ativo) */}
+      {financeiroEnabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CreditCard className="h-4 w-4" /> Financeiro — Crediário
+            </CardTitle>
+            <CardDescription>
+              Habilita "Crediário" como forma de pagamento nativa da Frente de Caixa. Cada venda no crediário exige cliente e gera automaticamente um título em Contas a Receber.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between gap-3 py-1.5">
+              <Label htmlFor="credit_sale_enabled" className="font-normal cursor-pointer">
+                Aceitar crediário no checkout
+              </Label>
+              <Switch
+                id="credit_sale_enabled"
+                checked={form.credit_sale_enabled}
+                onCheckedChange={(v) => updPersist('credit_sale_enabled', v)}
+                disabled={loading || busy}
+              />
+            </div>
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => navigate('/financeiro/contas-a-receber')}
+            >
+              <CreditCard className="h-4 w-4" />
+              Abrir Contas a Receber
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Controle de caixa */}
       <Card>
         <CardHeader>
