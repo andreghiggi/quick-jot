@@ -62,6 +62,11 @@ const AVAILABLE_MODULES = [
     name: 'cardapio',
     label: 'Cardápio Digital / Pedidos',
     description: 'Liga o módulo de cardápio e pedidos online (Dashboard de Pedidos, Cardápio público, Cupons, Combos, WhatsApp Ordering, Mesas). DESLIGAR apenas em lojas que serão SÓ Loja (sem cardápio digital) — a sidebar fica enxuta e a home cai direto na Frente de Caixa. Lojas existentes mantêm este módulo ATIVO por padrão.'
+  },
+  {
+    name: 'financeiro',
+    label: 'Financeiro (Crediário / Contas a Receber)',
+    description: 'Habilita o módulo Financeiro: Contas a Receber alimentado automaticamente pelo Crediário na Frente de Caixa. Requer o módulo Loja / Frente de Caixa. Não altera Caixa, TEF, NFC-e, PDV V2, Pedido Express ou impressão. Contas a Pagar e Fluxo de Caixa consolidado ficam para fases futuras.'
   }
 ];
 
