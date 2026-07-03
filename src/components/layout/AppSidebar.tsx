@@ -70,6 +70,7 @@ export function AppSidebar() {
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
+  const { enabled: financeiroEnabled } = useFinanceiroEnabled(company?.id);
   const { enabled: cardapioEnabled } = useCardapioEnabled(company?.id);
   // Fallback robusto: useMercadoEnabled depende de cache em localStorage e pode
   // ficar momentaneamente desatualizado. O useCompanyModules tem realtime e é a
