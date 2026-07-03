@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, ArrowLeft, Save, X } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, X, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
@@ -62,6 +62,8 @@ interface Props {
   itemsTotal: number;
   /** Fase 1: comportamento padrão do botão SALVAR (Configurações → Comportamento). */
   defaultFiscalMode?: 'fiscal' | 'nao_fiscal' | 'ask';
+  /** Módulo Financeiro: quando `true`, o checkout mostra a opção "Crediário". */
+  creditSaleAvailable?: boolean;
   /**
    * Chamado quando o operador clicar SALVAR e todas as cobranças (incluindo
    * TEF) foram aprovadas. O caller é responsável por persistir a venda via
@@ -86,6 +88,7 @@ export function FrenteCaixaCheckoutDialog({
   items,
   itemsTotal,
   defaultFiscalMode = 'ask',
+  creditSaleAvailable = false,
   onConfirm,
 }: Props) {
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
@@ -95,6 +98,8 @@ export function FrenteCaixaCheckoutDialog({
   const [surchargeText, setSurchargeText] = useState('');
   const [showAdjust, setShowAdjust] = useState(false);
   const [lines, setLines] = useState<Record<string, LineState>>({});
+  /** Modo Crediário: quando true, ignora `lines` (100% do total vira título). */
+  const [creditMode, setCreditMode] = useState(false);
 
   // Por linha de TEF: modalidade + parcelas (default crédito à vista)
   const [tefMod, setTefMod] = useState<
@@ -126,9 +131,11 @@ export function FrenteCaixaCheckoutDialog({
       ),
     [lines, activePaymentMethods],
   );
-  const remaining = Math.max(0, total - allocated);
-  const over = allocated > total + 0.005;
-  const exact = total > 0 && Math.abs(allocated - total) < 0.005;
+  const remaining = creditMode ? 0 : Math.max(0, total - allocated);
+  const over = !creditMode && allocated > total + 0.005;
+  const exact = creditMode
+    ? total > 0 && !!customerName.trim() && !!customerPhone.trim()
+    : total > 0 && Math.abs(allocated - total) < 0.005;
 
   // reset ao abrir
   useEffect(() => {
@@ -146,6 +153,7 @@ export function FrenteCaixaCheckoutDialog({
       setCustomerDialogOpen(false);
       setProcessing(false);
       setProcessingStatus('');
+      setCreditMode(false);
     }
   }, [open]);
 
