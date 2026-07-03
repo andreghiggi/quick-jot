@@ -184,7 +184,7 @@ export function AppSidebar() {
     },
   ] : [];
 
-  // Formas de pagamento disponível para todas as empresas
+  // Formas de Pagamento — vive dentro do grupo Cadastros (disponível para todas as empresas)
   const paymentMethodsMenuItem = [
     {
       title: 'Formas de Pagamento',
@@ -611,7 +611,7 @@ export function AppSidebar() {
           </Collapsible>
         )}
 
-        {(financeMenuItems.length > 0 || paymentMethodsMenuItem.length > 0) && (
+        {financeMenuItems.length > 0 && (
           <Collapsible className="group/grp-fin">
             <SidebarGroup>
               <SidebarGroupLabel asChild>
@@ -623,7 +623,7 @@ export function AppSidebar() {
               <CollapsibleContent>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                {[...financeMenuItems, ...paymentMethodsMenuItem].map((item) => (
+                {financeMenuItems.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild
