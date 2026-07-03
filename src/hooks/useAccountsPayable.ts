@@ -50,6 +50,8 @@ interface CreatePayableInput {
   issueDate?: string;   // default hoje
   category?: string | null;
   supplierId?: string | null;
+  documentNumber?: string | null;
+  supplierName?: string | null;
   notes?: string | null;
   createdBy?: string | null;
 }
@@ -105,6 +107,7 @@ export function useAccountsPayable(companyId?: string | null) {
       balance: input.amount,
       due_date: input.dueDate,
       issue_date: input.issueDate ?? undefined,
+      document_number: input.documentNumber ?? undefined,
       notes: input.notes ?? null,
       created_by: input.createdBy ?? null,
     };

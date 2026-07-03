@@ -20,6 +20,7 @@ import {
   type FinanceRow, type FinanceFilters,
 } from '@/components/financeiro/finance-shared';
 import { FinanceModuleLayout } from '@/components/financeiro/FinanceModuleLayout';
+import { NewFinanceEntryDialog } from '@/components/financeiro/NewFinanceEntryDialog';
 
 const PAYMENT_METHODS = ['Dinheiro', 'PIX', 'Transferência', 'Cartão de Débito', 'Cartão de Crédito', 'Boleto', 'Outro'];
 const CATEGORIES = ['Fornecedor', 'Aluguel', 'Energia', 'Água', 'Internet', 'Salários', 'Impostos', 'Manutenção', 'Marketing', 'Outros'];
@@ -61,13 +62,6 @@ export default function Despesas() {
   const [bulkDelete, setBulkDelete] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  const [nDesc, setNDesc] = useState('');
-  const [nAmt, setNAmt] = useState('');
-  const [nDue, setNDue] = useState(today);
-  const [nCategory, setNCategory] = useState('Outros');
-  const [nSupplier, setNSupplier] = useState('none');
-  const [nNotes, setNNotes] = useState('');
 
   const rows = useMemo<FinanceRow[]>(() => items.map((p) => ({
     id: p.id,
@@ -119,21 +113,35 @@ export default function Despesas() {
     if (ok) setPayRow(null);
   };
 
-  const submitCreate = async () => {
-    if (!company?.id) return;
-    const amt = parseCurrencyInput(nAmt);
-    if (!nDesc.trim() || amt <= 0 || !nDue) return;
+  const submitCreate = async (p: import('@/components/financeiro/NewFinanceEntryDialog').NewFinancePayload) => {
+    if (!company?.id) return false;
     setBusy(true);
-    const id = await create({
-      companyId: company.id, description: nDesc.trim(), amount: amt, dueDate: nDue,
-      category: nCategory, supplierId: nSupplier === 'none' ? null : nSupplier,
-      notes: nNotes || null, createdBy: user?.id ?? null,
-    });
-    setBusy(false);
-    if (id) {
-      setCreateOpen(false);
-      setNDesc(''); setNAmt(''); setNDue(today); setNCategory('Outros'); setNSupplier('none'); setNNotes('');
+    const n = Math.max(1, p.installments);
+    const each = Math.round((p.amount / n) * 100) / 100;
+    let ok = 0;
+    const base = new Date(p.dueDate + 'T00:00:00');
+    for (let i = 0; i < n; i++) {
+      const due = new Date(base);
+      due.setDate(base.getDate() + i * p.installmentIntervalDays);
+      const dueStr = due.toISOString().slice(0, 10);
+      const amt = i === n - 1 ? +(p.amount - each * (n - 1)).toFixed(2) : each;
+      const suffix = n > 1 ? ` (${i + 1}/${n})` : '';
+      const desc = (p.description || p.partyName || 'Despesa') + suffix;
+      const id = await create({
+        companyId: company.id, description: desc, amount: amt,
+        dueDate: dueStr, issueDate: p.issueDate,
+        documentNumber: p.documentNumber ? `${p.documentNumber}${suffix}` : null,
+        notes: p.description || null, createdBy: user?.id ?? null,
+      });
+      if (id) {
+        ok++;
+        if (p.alreadyPaid) {
+          await pay({ payableId: id, companyId: company.id, amount: amt, paymentMethod: 'Dinheiro', createdBy: user?.id ?? null });
+        }
+      }
     }
+    setBusy(false);
+    return ok === n;
   };
 
   const submitEdit = async () => {
@@ -304,49 +312,13 @@ export default function Despesas() {
         </DialogContent>
       </Dialog>
 
-      {/* Criar */}
-      <Dialog open={createOpen} onOpenChange={(o) => !o && !busy && setCreateOpen(false)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Nova despesa</DialogTitle></DialogHeader>
-          <div className="grid gap-3">
-            <div className="grid gap-1.5"><Label>Descrição</Label>
-              <Input value={nDesc} onChange={(e) => setNDesc(e.target.value)} placeholder="Ex.: Aluguel março" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1.5"><Label>Valor</Label>
-                <Input value={nAmt} onChange={(e) => setNAmt(maskCurrencyInput(e.target.value))} inputMode="decimal" placeholder="R$ 0,00" />
-              </div>
-              <div className="grid gap-1.5"><Label>Vencimento</Label>
-                <Input type="date" value={nDue} onChange={(e) => setNDue(e.target.value)} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1.5"><Label>Categoria</Label>
-                <Select value={nCategory} onValueChange={setNCategory}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-1.5"><Label>Fornecedor</Label>
-                <Select value={nSupplier} onValueChange={setNSupplier}>
-                  <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-1.5"><Label>Observações</Label>
-              <Textarea value={nNotes} onChange={(e) => setNNotes(e.target.value)} rows={2} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setCreateOpen(false)} disabled={busy}>Cancelar</Button>
-            <Button onClick={submitCreate} disabled={busy || !nDesc.trim() || parseCurrencyInput(nAmt) <= 0}>Criar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <NewFinanceEntryDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        kind="despesa"
+        busy={busy}
+        onSubmit={submitCreate}
+      />
 
       <RenegotiateDialog
         open={!!renegRow}

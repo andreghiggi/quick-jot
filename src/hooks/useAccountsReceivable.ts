@@ -54,6 +54,8 @@ interface CreateReceivableInput {
   amount: number;
   pdvSaleId?: string | null;
   dueDate?: string; // YYYY-MM-DD, default hoje
+  issueDate?: string; // YYYY-MM-DD, default hoje
+  documentNumber?: string | null;
   notes?: string | null;
   createdBy?: string | null;
 }
@@ -114,6 +116,8 @@ export function useAccountsReceivable(companyId?: string | null) {
       amount: input.amount,
       balance: input.amount,
       due_date: input.dueDate ?? undefined,
+      issue_date: input.issueDate ?? undefined,
+      document_number: input.documentNumber ?? undefined,
       pdv_sale_id: input.pdvSaleId ?? null,
       notes: input.notes ?? null,
       origin: 'frente_caixa',
