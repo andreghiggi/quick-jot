@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,9 +19,9 @@ import {
   computeUIStatus, applyFilters, emptyFilters,
   type FinanceRow, type FinanceFilters,
 } from '@/components/financeiro/finance-shared';
+import { FinanceModuleLayout } from '@/components/financeiro/FinanceModuleLayout';
 
 export default function Receitas() {
-  const navigate = useNavigate();
   const { user, company } = useAuthContext();
   const { enabled, loading: finLoading } = useFinanceiroEnabled(company?.id);
   const {
