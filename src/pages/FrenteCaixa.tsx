@@ -124,6 +124,8 @@ interface CartLine {
 export default function FrenteCaixa() {
   const { user, company } = useAuthContext();
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
+  const { enabled: financeiroEnabled } = useFinanceiroEnabled(company?.id);
+  const { create: createReceivable } = useAccountsReceivable(company?.id);
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   // Cardápio é "ligado por padrão" (sem registro = ativo). Usa o hook dedicado.
   const { enabled: cardapioModuleEnabled } = useCardapioEnabled(company?.id);
