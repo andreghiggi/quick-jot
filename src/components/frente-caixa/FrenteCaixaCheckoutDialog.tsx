@@ -473,7 +473,7 @@ export function FrenteCaixaCheckoutDialog({
               />
               {step === 1 && (
                 <div className="ml-9 space-y-3">
-                  {creditSaleAvailable && (
+                  {creditSaleVisible && (
                     <div className="rounded-md border border-primary/40 bg-primary/5 p-3 flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 text-sm font-medium">
