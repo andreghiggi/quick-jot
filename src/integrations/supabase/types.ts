@@ -26,13 +26,19 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string
+          document_number: string | null
           due_date: string
+          fine_amount: number
           id: string
+          interest_amount: number
           issue_date: string
           notes: string | null
+          origin_id: string | null
+          origin_type: string | null
           paid_at: string | null
           status: string
           supplier_id: string | null
+          tags: string[]
           updated_at: string
         }
         Insert: {
@@ -46,13 +52,19 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description: string
+          document_number?: string | null
           due_date?: string
+          fine_amount?: number
           id?: string
+          interest_amount?: number
           issue_date?: string
           notes?: string | null
+          origin_id?: string | null
+          origin_type?: string | null
           paid_at?: string | null
           status?: string
           supplier_id?: string | null
+          tags?: string[]
           updated_at?: string
         }
         Update: {
@@ -66,13 +78,19 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string
+          document_number?: string | null
           due_date?: string
+          fine_amount?: number
           id?: string
+          interest_amount?: number
           issue_date?: string
           notes?: string | null
+          origin_id?: string | null
+          origin_type?: string | null
           paid_at?: string | null
           status?: string
           supplier_id?: string | null
+          tags?: string[]
           updated_at?: string
         }
         Relationships: [
@@ -160,14 +178,20 @@ export type Database = {
           customer_id: string | null
           customer_name: string
           customer_phone: string | null
+          document_number: string | null
           due_date: string
+          fine_amount: number
           id: string
+          interest_amount: number
           issue_date: string
           notes: string | null
           origin: string
+          origin_id: string | null
+          origin_type: string | null
           paid_at: string | null
           pdv_sale_id: string | null
           status: string
+          tags: string[]
           updated_at: string
         }
         Insert: {
@@ -183,14 +207,20 @@ export type Database = {
           customer_id?: string | null
           customer_name: string
           customer_phone?: string | null
+          document_number?: string | null
           due_date?: string
+          fine_amount?: number
           id?: string
+          interest_amount?: number
           issue_date?: string
           notes?: string | null
           origin?: string
+          origin_id?: string | null
+          origin_type?: string | null
           paid_at?: string | null
           pdv_sale_id?: string | null
           status?: string
+          tags?: string[]
           updated_at?: string
         }
         Update: {
@@ -206,14 +236,20 @@ export type Database = {
           customer_id?: string | null
           customer_name?: string
           customer_phone?: string | null
+          document_number?: string | null
           due_date?: string
+          fine_amount?: number
           id?: string
+          interest_amount?: number
           issue_date?: string
           notes?: string | null
           origin?: string
+          origin_id?: string | null
+          origin_type?: string | null
           paid_at?: string | null
           pdv_sale_id?: string | null
           status?: string
+          tags?: string[]
           updated_at?: string
         }
         Relationships: [
@@ -303,6 +339,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      accounts_renegotiations: {
+        Row: {
+          account_id: string
+          account_type: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          new_amount: number
+          new_due_date: string
+          old_amount: number
+          old_due_date: string
+          reason: string | null
+        }
+        Insert: {
+          account_id: string
+          account_type: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_amount: number
+          new_due_date: string
+          old_amount: number
+          old_due_date: string
+          reason?: string | null
+        }
+        Update: {
+          account_id?: string
+          account_type?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_amount?: number
+          new_due_date?: string
+          old_amount?: number
+          old_due_date?: string
+          reason?: string | null
+        }
+        Relationships: []
       }
       admin_settings: {
         Row: {
@@ -1399,6 +1477,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      finance_document_counters: {
+        Row: {
+          company_id: string
+          next_value: number
+          prefix: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          next_value?: number
+          prefix: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          next_value?: number
+          prefix?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       inventory_count_items: {
         Row: {
@@ -4465,6 +4564,15 @@ export type Database = {
       }
       is_company_suspended: { Args: { _company_id: string }; Returns: boolean }
       is_reserved_subdomain: { Args: { _subdomain: string }; Returns: boolean }
+      next_finance_document_number: {
+        Args: {
+          _company_id: string
+          _installment?: number
+          _prefix: string
+          _total?: number
+        }
+        Returns: string
+      }
       open_inventory_count: {
         Args: {
           _category?: string
