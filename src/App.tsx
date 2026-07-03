@@ -60,6 +60,7 @@ import MesaQR from "./pages/MesaQR";
 import FrenteCaixa from "./pages/FrenteCaixa";
 import FrenteCaixaLista from "./pages/FrenteCaixaLista";
 import FrenteCaixaConfiguracoes from "./pages/FrenteCaixaConfiguracoes";
+import ContasReceber from "./pages/financeiro/ContasReceber";
 import EstoqueRelatorio from "./pages/EstoqueRelatorio";
 import InventarioContagem from "./pages/InventarioContagem";
 import InventarioLivro from "./pages/InventarioLivro";
@@ -77,6 +78,7 @@ import NFeList from "./pages/nfe/NFeList";
 import NFeEmissaoAvulsa from "./pages/nfe/NFeEmissaoAvulsa";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
+import { useFinanceiroEnabled } from "@/hooks/useFinanceiroEnabled";
 import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
 
 // Admin Pages
