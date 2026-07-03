@@ -15,6 +15,14 @@ export interface PaymentMethod {
   channel: PaymentChannel;
   show_for_delivery: boolean;
   show_for_pickup: boolean;
+  description: string | null;
+  payment_type: 'a_vista' | 'a_prazo' | 'crediario';
+  nfe_ref_code: string | null;
+  issue_nfce: boolean;
+  installments_count: number;
+  installment_interval: number;
+  installment_period: 'day' | 'week' | 'month';
+  installment_start_rule: 'general' | 'fixed_days' | 'next_month';
   created_at: string;
   updated_at: string;
 }
