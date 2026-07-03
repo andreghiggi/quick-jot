@@ -681,6 +681,8 @@ export function FrenteCaixaCheckoutDialog({
                       Próximo
                     </Button>
                   </div>
+                  </>
+                  )}
                 </div>
               )}
               {step !== 1 && (
