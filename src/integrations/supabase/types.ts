@@ -2302,10 +2302,18 @@ export type Database = {
           channel: string
           company_id: string
           created_at: string | null
+          description: string | null
           display_order: number | null
           id: string
+          installment_interval: number
+          installment_period: string
+          installment_start_rule: string
+          installments_count: number
           integration_type: string | null
+          issue_nfce: boolean
           name: string
+          nfe_ref_code: string | null
+          payment_type: string
           pix_key: string | null
           show_for_delivery: boolean
           show_for_pickup: boolean
@@ -2316,10 +2324,18 @@ export type Database = {
           channel?: string
           company_id: string
           created_at?: string | null
+          description?: string | null
           display_order?: number | null
           id?: string
+          installment_interval?: number
+          installment_period?: string
+          installment_start_rule?: string
+          installments_count?: number
           integration_type?: string | null
+          issue_nfce?: boolean
           name: string
+          nfe_ref_code?: string | null
+          payment_type?: string
           pix_key?: string | null
           show_for_delivery?: boolean
           show_for_pickup?: boolean
@@ -2330,10 +2346,18 @@ export type Database = {
           channel?: string
           company_id?: string
           created_at?: string | null
+          description?: string | null
           display_order?: number | null
           id?: string
+          installment_interval?: number
+          installment_period?: string
+          installment_start_rule?: string
+          installments_count?: number
           integration_type?: string | null
+          issue_nfce?: boolean
           name?: string
+          nfe_ref_code?: string | null
+          payment_type?: string
           pix_key?: string | null
           show_for_delivery?: boolean
           show_for_pickup?: boolean
