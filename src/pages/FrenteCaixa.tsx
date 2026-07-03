@@ -814,7 +814,7 @@ export default function FrenteCaixa() {
             Math.max(l.quantity, 0.0001),
         ),
       })),
-      params.paymentMethodId,
+      isCreditSale ? null : params.paymentMethodId,
       user.id,
       params.discount,
       params.customerName,
@@ -824,6 +824,26 @@ export default function FrenteCaixa() {
       'mercado',
     );
     if (saleId) {
+      // Crediário — cria o título em Contas a Receber logo após a venda.
+      if (isCreditSale && company?.id) {
+        try {
+          await createReceivable({
+            companyId: company.id,
+            customerName: (params.customerName || '').trim(),
+            customerPhone: (params.customerPhone || null),
+            customerDocument: (params.customerDocument || null),
+            amount: params.finalTotal,
+            pdvSaleId: saleId,
+            createdBy: user.id,
+            notes: params.notes || null,
+          });
+          toast.success('Título de crediário gerado em Contas a Receber.');
+        } catch (err) {
+          console.error('[FrenteCaixa] falha ao criar título de crediário', err);
+          toast.error('Venda registrada, mas falha ao gerar o título de crediário. Registre manualmente.');
+        }
+      }
+
       // Importação: vincula o pedido original à venda do FC e marca como entregue.
       // Itens importados são imutáveis, então a soma bate com o pedido original.
       if (importedOrderId) {
