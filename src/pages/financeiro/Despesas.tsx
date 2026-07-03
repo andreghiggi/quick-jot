@@ -27,7 +27,6 @@ const CATEGORIES = ['Fornecedor', 'Aluguel', 'Energia', 'Água', 'Internet', 'Sa
 interface SupplierOption { id: string; name: string }
 
 export default function Despesas() {
-  const navigate = useNavigate();
   const { user, company } = useAuthContext();
   const { enabled, loading: finLoading } = useFinanceiroEnabled(company?.id);
   const { items, loading, reload, create, pay, remove, update, renegotiate } = useAccountsPayable(company?.id);
