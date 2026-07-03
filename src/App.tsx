@@ -60,8 +60,8 @@ import MesaQR from "./pages/MesaQR";
 import FrenteCaixa from "./pages/FrenteCaixa";
 import FrenteCaixaLista from "./pages/FrenteCaixaLista";
 import FrenteCaixaConfiguracoes from "./pages/FrenteCaixaConfiguracoes";
-import ContasReceber from "./pages/financeiro/ContasReceber";
-import ContasPagar from "./pages/financeiro/ContasPagar";
+import Receitas from "./pages/financeiro/Receitas";
+import Despesas from "./pages/financeiro/Despesas";
 import FluxoCaixa from "./pages/financeiro/FluxoCaixa";
 import Inadimplencia from "./pages/financeiro/Inadimplencia";
 import EstoqueRelatorio from "./pages/EstoqueRelatorio";
@@ -290,14 +290,28 @@ function AppRoutes() {
       <Route path="/financeiro/contas-a-receber" element={
         <ProtectedRoute requireCompany>
           <FinanceiroGuard>
-            <ContasReceber />
+            <Receitas />
+          </FinanceiroGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/financeiro/receitas" element={
+        <ProtectedRoute requireCompany>
+          <FinanceiroGuard>
+            <Receitas />
           </FinanceiroGuard>
         </ProtectedRoute>
       } />
       <Route path="/financeiro/contas-a-pagar" element={
         <ProtectedRoute requireCompany>
           <FinanceiroGuard>
-            <ContasPagar />
+            <Despesas />
+          </FinanceiroGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/financeiro/despesas" element={
+        <ProtectedRoute requireCompany>
+          <FinanceiroGuard>
+            <Despesas />
           </FinanceiroGuard>
         </ProtectedRoute>
       } />

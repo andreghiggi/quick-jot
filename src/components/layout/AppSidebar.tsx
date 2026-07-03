@@ -189,14 +189,14 @@ export function AppSidebar() {
   // Módulo Financeiro (Fase 1: Crediário → Contas a Receber)
   if (financeiroEnabled) {
     financeMenuItems.push({
-      title: 'Contas a Receber',
+      title: 'Receitas',
       icon: CircleDollarSign,
-      href: '/financeiro/contas-a-receber',
+      href: '/financeiro/receitas',
     });
     financeMenuItems.push({
-      title: 'Contas a Pagar',
+      title: 'Despesas',
       icon: Receipt,
-      href: '/financeiro/contas-a-pagar',
+      href: '/financeiro/despesas',
     });
     financeMenuItems.push({
       title: 'Fluxo de Caixa',

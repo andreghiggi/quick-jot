@@ -22,6 +22,12 @@ export interface AccountPayable {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  document_number: string | null;
+  interest_amount: number;
+  fine_amount: number;
+  tags: string[];
+  origin_type: string | null;
+  origin_id: string | null;
 }
 
 export interface AccountPayablePayment {
@@ -200,6 +206,45 @@ export function useAccountsPayable(companyId?: string | null) {
     return true;
   }, [load]);
 
+  const remove = useCallback(async (payableId: string): Promise<boolean> => {
+    const { error } = await supabase.from('accounts_payable' as any).delete().eq('id', payableId);
+    if (error) { toast.error('Falha ao excluir: ' + error.message); return false; }
+    await load();
+    toast.success('Título excluído.');
+    return true;
+  }, [load]);
+
+  const update = useCallback(async (id: string, patch: Partial<AccountPayable>): Promise<boolean> => {
+    const { error } = await supabase.from('accounts_payable' as any).update(patch as any).eq('id', id);
+    if (error) { toast.error('Falha ao atualizar: ' + error.message); return false; }
+    await load();
+    return true;
+  }, [load]);
+
+  const renegotiate = useCallback(async (
+    id: string, newAmount: number, newDueDate: string, reason: string, companyId: string, userId?: string | null,
+  ): Promise<boolean> => {
+    const { data: cur } = await supabase.from('accounts_payable' as any).select('amount, balance, due_date').eq('id', id).maybeSingle();
+    const row = cur as any;
+    if (!row) { toast.error('Título não encontrado.'); return false; }
+    const { error: ehist } = await supabase.from('accounts_renegotiations' as any).insert({
+      company_id: companyId, account_type: 'payable', account_id: id,
+      old_amount: row.amount, new_amount: newAmount,
+      old_due_date: row.due_date, new_due_date: newDueDate,
+      reason: reason || null, created_by: userId ?? null,
+    });
+    if (ehist) { toast.error('Falha ao registrar renegociação: ' + ehist.message); return false; }
+    const alreadyPaid = Number(row.amount) - Number(row.balance);
+    const newBalance = Math.max(0, newAmount - alreadyPaid);
+    const { error } = await supabase.from('accounts_payable' as any).update({
+      amount: newAmount, balance: newBalance, due_date: newDueDate,
+    }).eq('id', id);
+    if (error) { toast.error('Falha ao renegociar: ' + error.message); return false; }
+    await load();
+    toast.success('Título renegociado.');
+    return true;
+  }, [load]);
+
   const listPayments = useCallback(async (payableId: string): Promise<AccountPayablePayment[]> => {
     const { data, error } = await supabase
       .from('accounts_payable_payments' as any)
@@ -213,5 +258,5 @@ export function useAccountsPayable(companyId?: string | null) {
     return (data as any[]) as AccountPayablePayment[];
   }, []);
 
-  return { items, loading, reload: load, create, pay, cancel, listPayments };
+  return { items, loading, reload: load, create, pay, cancel, remove, update, renegotiate, listPayments };
 }
