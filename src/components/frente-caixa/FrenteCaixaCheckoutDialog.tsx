@@ -91,7 +91,33 @@ export function FrenteCaixaCheckoutDialog({
   creditSaleAvailable = false,
   onConfirm,
 }: Props) {
-  const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
+  const { activePaymentMethods: allActivePaymentMethods } = usePaymentMethods({
+    companyId,
+    channel: 'pdv',
+  });
+
+  /**
+   * Crediário é NATIVO: no checkout ele aparece como um bloco fixo (não como
+   * uma linha na lista de formas de pagamento). Por isso removemos qualquer
+   * forma cadastrada com `payment_type='crediario'` da lista normal.
+   */
+  const activePaymentMethods = useMemo(
+    () => allActivePaymentMethods.filter((m) => (m as any).payment_type !== 'crediario'),
+    [allActivePaymentMethods],
+  );
+
+  /**
+   * Crediário nativo aparece quando:
+   *   (a) o operador marcou "Habilitar venda a prazo" em Configurações
+   *       (prop `creditSaleAvailable` vinda do PDV), OU
+   *   (b) existe pelo menos uma forma de pagamento cadastrada com
+   *       `payment_type='crediario'` (fluxo novo estilo GWeb).
+   */
+  const hasCrediarioPaymentMethod = useMemo(
+    () => allActivePaymentMethods.some((m) => (m as any).payment_type === 'crediario'),
+    [allActivePaymentMethods],
+  );
+  const creditSaleVisible = creditSaleAvailable || hasCrediarioPaymentMethod;
 
   const [step, setStep] = useState<StepId>(1);
   const [discountText, setDiscountText] = useState('');
@@ -447,7 +473,7 @@ export function FrenteCaixaCheckoutDialog({
               />
               {step === 1 && (
                 <div className="ml-9 space-y-3">
-                  {creditSaleAvailable && (
+                  {creditSaleVisible && (
                     <div className="rounded-md border border-primary/40 bg-primary/5 p-3 flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 text-sm font-medium">
