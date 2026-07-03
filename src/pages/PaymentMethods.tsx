@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { usePaymentMethods, type PaymentChannel } from '@/hooks/usePaymentMethods';
+import { usePaymentMethods, type PaymentChannel, type PaymentMethod } from '@/hooks/usePaymentMethods';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Plus,
@@ -23,8 +21,8 @@ import {
   Bike,
   Store,
 } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { PaymentMethodFormDialog, type PaymentMethodDraft } from '@/components/payment-methods/PaymentMethodFormDialog';
 
 const CHANNEL_LABELS: Record<PaymentChannel, string> = {
   pdv: 'PDV / Frente de Caixa',
@@ -56,92 +54,32 @@ function ChannelManager({ channel }: ChannelManagerProps) {
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
-  const [newMethodName, setNewMethodName] = useState('');
-  const [newMethodPixKey, setNewMethodPixKey] = useState('');
-  const [newMethodIntegration, setNewMethodIntegration] = useState<string>('none');
-  const [newMethodShowDelivery, setNewMethodShowDelivery] = useState(true);
-  const [newMethodShowPickup, setNewMethodShowPickup] = useState(true);
-  const [editingMethod, setEditingMethod] = useState<{ id: string; name: string; pix_key: string; integration_type: string; show_for_delivery: boolean; show_for_pickup: boolean } | null>(null);
+  const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
   const [deletingMethodId, setDeletingMethodId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isPixName = (name: string) => name.toLowerCase().includes('pix');
-
-  async function handleAdd() {
-    if (!newMethodName.trim()) {
-      toast.error('Nome é obrigatório');
-      return;
-    }
-    if (showModalitySplit && !newMethodShowDelivery && !newMethodShowPickup) {
+  async function handleSubmitCreate(draft: PaymentMethodDraft): Promise<boolean> {
+    if (showModalitySplit && !draft.show_for_delivery && !draft.show_for_pickup) {
       toast.error('Marque ao menos Entrega ou Retirada');
-      return;
+      return false;
     }
-
     setIsSubmitting(true);
-    const pixKey = isPixName(newMethodName) ? newMethodPixKey.trim() || undefined : undefined;
-    const integType = newMethodIntegration !== 'none' ? newMethodIntegration : undefined;
-    const success = await addPaymentMethod(newMethodName.trim(), pixKey, integType, channel);
-    // Aplica flags de modalidade apenas para I9 (canais menu/express).
-    if (success && showModalitySplit) {
-      // Recupera o id recém-criado pelo nome+canal (último).
-      const created = (await import('@/integrations/supabase/client')).supabase
-        .from('payment_methods')
-        .select('id')
-        .eq('company_id', company!.id)
-        .eq('channel', channel)
-        .eq('name', newMethodName.trim())
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const { data } = await created;
-      if (data?.id) {
-        await updatePaymentMethod(data.id, {
-          show_for_delivery: newMethodShowDelivery,
-          show_for_pickup: newMethodShowPickup,
-        } as any);
-      }
-    }
+    const ok = await addPaymentMethod(draft as any, channel);
     setIsSubmitting(false);
-
-    if (success) {
-      setAddDialog(false);
-      setNewMethodName('');
-      setNewMethodPixKey('');
-      setNewMethodIntegration('none');
-      setNewMethodShowDelivery(true);
-      setNewMethodShowPickup(true);
-    }
+    return ok;
   }
 
-  async function handleEdit() {
-    if (!editingMethod || !editingMethod.name.trim()) {
-      toast.error('Nome é obrigatório');
-      return;
-    }
-    if (showModalitySplit && !editingMethod.show_for_delivery && !editingMethod.show_for_pickup) {
+  async function handleSubmitEdit(draft: PaymentMethodDraft): Promise<boolean> {
+    if (!editingMethod) return false;
+    if (showModalitySplit && !draft.show_for_delivery && !draft.show_for_pickup) {
       toast.error('Marque ao menos Entrega ou Retirada');
-      return;
+      return false;
     }
-
     setIsSubmitting(true);
-    const updateData: any = { name: editingMethod.name.trim() };
-    if (isPixName(editingMethod.name)) {
-      updateData.pix_key = editingMethod.pix_key?.trim() || null;
-    } else {
-      updateData.pix_key = null;
-    }
-    updateData.integration_type = editingMethod.integration_type !== 'none' ? editingMethod.integration_type : null;
-    if (showModalitySplit) {
-      updateData.show_for_delivery = editingMethod.show_for_delivery;
-      updateData.show_for_pickup = editingMethod.show_for_pickup;
-    }
-    const success = await updatePaymentMethod(editingMethod.id, updateData);
+    const ok = await updatePaymentMethod(editingMethod.id, draft as any);
     setIsSubmitting(false);
-
-    if (success) {
-      setEditDialog(false);
-      setEditingMethod(null);
-    }
+    if (ok) setEditingMethod(null);
+    return ok;
   }
 
   async function handleDelete() {
@@ -161,16 +99,8 @@ function ChannelManager({ channel }: ChannelManagerProps) {
     await updatePaymentMethod(id, { active });
   }
 
-  function openEditDialog(method: { id: string; name: string; pix_key?: string | null; integration_type?: string | null }) {
-    const m: any = method;
-    setEditingMethod({
-      id: method.id,
-      name: method.name,
-      pix_key: method.pix_key || '',
-      integration_type: method.integration_type || 'none',
-      show_for_delivery: m.show_for_delivery !== false,
-      show_for_pickup: m.show_for_pickup !== false,
-    });
+  function openEditDialog(method: PaymentMethod) {
+    setEditingMethod(method);
     setEditDialog(true);
   }
 
