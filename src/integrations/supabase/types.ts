@@ -14,6 +14,164 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts_receivable: {
+        Row: {
+          amount: number
+          balance: number
+          cancel_reason: string | null
+          canceled_at: string | null
+          canceled_by: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          customer_document: string | null
+          customer_id: string | null
+          customer_name: string
+          customer_phone: string | null
+          due_date: string
+          id: string
+          issue_date: string
+          notes: string | null
+          origin: string
+          paid_at: string | null
+          pdv_sale_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          balance: number
+          cancel_reason?: string | null
+          canceled_at?: string | null
+          canceled_by?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          customer_document?: string | null
+          customer_id?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          due_date?: string
+          id?: string
+          issue_date?: string
+          notes?: string | null
+          origin?: string
+          paid_at?: string | null
+          pdv_sale_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          balance?: number
+          cancel_reason?: string | null
+          canceled_at?: string | null
+          canceled_by?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_document?: string | null
+          customer_id?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          due_date?: string
+          id?: string
+          issue_date?: string
+          notes?: string | null
+          origin?: string
+          paid_at?: string | null
+          pdv_sale_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_pdv_sale_id_fkey"
+            columns: ["pdv_sale_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts_receivable_payments: {
+        Row: {
+          amount: number
+          company_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          operator_id: string | null
+          paid_at: string
+          payment_method_id: string | null
+          payment_name: string
+          receivable_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          company_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          operator_id?: string | null
+          paid_at?: string
+          payment_method_id?: string | null
+          payment_name: string
+          receivable_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          operator_id?: string | null
+          paid_at?: string
+          payment_method_id?: string | null
+          payment_name?: string
+          receivable_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_payments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_payments_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_payments_receivable_id_fkey"
+            columns: ["receivable_id"]
+            isOneToOne: false
+            referencedRelation: "accounts_receivable"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_settings: {
         Row: {
           asaas_env: string | null
@@ -2259,6 +2417,7 @@ export type Database = {
           company_id: string
           confirm_quantity_above: number
           created_at: string
+          credit_sale_enabled: boolean
           default_fiscal_mode: string
           id: string
           nfe_ambiente: string | null
@@ -2299,6 +2458,7 @@ export type Database = {
           company_id: string
           confirm_quantity_above?: number
           created_at?: string
+          credit_sale_enabled?: boolean
           default_fiscal_mode?: string
           id?: string
           nfe_ambiente?: string | null
@@ -2339,6 +2499,7 @@ export type Database = {
           company_id?: string
           confirm_quantity_above?: number
           created_at?: string
+          credit_sale_enabled?: boolean
           default_fiscal_mode?: string
           id?: string
           nfe_ambiente?: string | null
