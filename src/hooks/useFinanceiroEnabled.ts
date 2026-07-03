@@ -12,6 +12,15 @@ import { supabase } from '@/integrations/supabase/client';
  */
 const cacheKey = (companyId: string) => `financeiro_enabled_${companyId}`;
 
+export function clearFinanceiroCache(companyId?: string | null) {
+  if (!companyId || typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(cacheKey(companyId));
+  } catch {
+    /* ignore */
+  }
+}
+
 function readCache(companyId?: string | null): boolean | null {
   if (!companyId || typeof window === 'undefined') return null;
   try {
@@ -36,6 +45,20 @@ function writeCache(companyId: string, value: boolean) {
 export function useFinanceiroEnabled(companyId?: string | null) {
   const [enabled, setEnabled] = useState<boolean | null>(() => readCache(companyId));
   const [loading, setLoading] = useState(enabled === null);
+  const [reloadTick, setReloadTick] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !companyId) return;
+    const handler = (event: Event) => {
+      const changed = (event as CustomEvent<{ companyId?: string }>).detail?.companyId;
+      if (!changed || changed === companyId) {
+        clearFinanceiroCache(companyId);
+        setReloadTick((t) => t + 1);
+      }
+    };
+    window.addEventListener('company-modules-changed', handler);
+    return () => window.removeEventListener('company-modules-changed', handler);
+  }, [companyId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,7 +93,7 @@ export function useFinanceiroEnabled(companyId?: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [companyId]);
+  }, [companyId, reloadTick]);
 
   return { enabled: !!enabled, loading };
 }

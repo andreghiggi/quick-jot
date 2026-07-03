@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { clearPdvV2Cache } from '@/hooks/usePdvV2Enabled';
 import { clearCardapioCache } from '@/hooks/useCardapioEnabled';
+import { clearFinanceiroCache } from '@/hooks/useFinanceiroEnabled';
 
 export interface CompanyModule {
   id: string;
@@ -106,6 +107,9 @@ export function useCompanyModules(options: UseCompanyModulesOptions = {}) {
       }
       if (moduleName === 'cardapio' || moduleName === 'mercado') {
         clearCardapioCache(companyId);
+      }
+      if (moduleName === 'financeiro') {
+        clearFinanceiroCache(companyId);
       }
       toast.success(`Módulo ${enabled ? 'habilitado' : 'desabilitado'} com sucesso!`);
       return true;
