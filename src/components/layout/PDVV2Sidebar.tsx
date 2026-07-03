@@ -120,7 +120,6 @@ export function PDVV2Sidebar() {
   ];
 
   const finance = [
-    { title: 'Formas de Pagamento', icon: CreditCard, href: '/formas-pagamento' },
     ...(financeiroActive
       ? [
           { title: 'Contas a Receber', icon: CircleDollarSign, href: '/financeiro/contas-a-receber' },
@@ -129,6 +128,10 @@ export function PDVV2Sidebar() {
           { title: 'Inadimplência', icon: BarChart3, href: '/financeiro/inadimplencia' },
         ]
       : []),
+  ];
+
+  const paymentMethods = [
+    { title: 'Formas de Pagamento', icon: CreditCard, href: '/formas-pagamento' },
   ];
 
   const fiscal = isModuleEnabled('fiscal')
@@ -270,6 +273,31 @@ export function PDVV2Sidebar() {
                       <CollapsibleContent>
                         <SidebarMenuSub className="pl-2">
                           {people.map((item) => (
+                            <SidebarMenuSubItem key={item.href}>
+                              <SidebarMenuSubButton asChild isActive={location.pathname === item.href}>
+                                <Link to={item.href}>
+                                  <item.icon className="w-4 h-4" />
+                                  <span>{item.title}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+                  <Collapsible className="group/cadastros-pagamentos">
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton>
+                          <CreditCard className="w-4 h-4" />
+                          <span>Pagamentos</span>
+                          <ChevronDown className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/cadastros-pagamentos:rotate-180" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub className="pl-2">
+                          {paymentMethods.map((item) => (
                             <SidebarMenuSubItem key={item.href}>
                               <SidebarMenuSubButton asChild isActive={location.pathname === item.href}>
                                 <Link to={item.href}>
