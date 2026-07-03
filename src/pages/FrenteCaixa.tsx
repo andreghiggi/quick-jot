@@ -1425,6 +1425,7 @@ export default function FrenteCaixa() {
           onOpenChange={setPaymentOpen}
           companyId={company?.id}
           defaultFiscalMode={pdvSettings.default_fiscal_mode}
+          creditSaleAvailable={!!(financeiroEnabled && pdvSettings.credit_sale_enabled)}
           items={lines.map((l) => ({
             product_id: l.product_id,
             product_name: l.product_name,
