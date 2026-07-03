@@ -42,6 +42,7 @@ import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { useFinanceiroEnabled } from '@/hooks/useFinanceiroEnabled';
 import { useCardapioEnabled } from '@/hooks/useCardapioEnabled';
 import {
   Sidebar,
@@ -69,6 +70,7 @@ export function AppSidebar() {
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
+  const { enabled: financeiroEnabled } = useFinanceiroEnabled(company?.id);
   const { enabled: cardapioEnabled } = useCardapioEnabled(company?.id);
   // Fallback robusto: useMercadoEnabled depende de cache em localStorage e pode
   // ficar momentaneamente desatualizado. O useCompanyModules tem realtime e é a
@@ -183,6 +185,15 @@ export function AppSidebar() {
       href: '/financeiro/caixa',
     },
   ] : [];
+
+  // Módulo Financeiro (Fase 1: Crediário → Contas a Receber)
+  if (financeiroEnabled) {
+    financeMenuItems.push({
+      title: 'Contas a Receber',
+      icon: CircleDollarSign,
+      href: '/financeiro/contas-a-receber',
+    });
+  }
 
   // Formas de Pagamento — vive dentro do grupo Cadastros (disponível para todas as empresas)
   const paymentMethodsMenuItem = [

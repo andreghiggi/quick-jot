@@ -33,6 +33,11 @@ export interface PdvSettings {
    *  - 'nao_fiscal'→ salva como pré-venda (sem NFC-e)
    *  - 'ask'       → mostra dois botões no checkout para o operador escolher */
   default_fiscal_mode: 'fiscal' | 'nao_fiscal' | 'ask';
+  /** Módulo Financeiro (Fase 1: Crediário).
+   *  Quando `true` E o módulo `financeiro` estiver ativo, a Frente de
+   *  Caixa exibe a opção "Crediário" no checkout, exige cliente e cria
+   *  um título em Contas a Receber após salvar. */
+  credit_sale_enabled: boolean;
 }
 
 export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
@@ -62,6 +67,7 @@ export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
   stock_move_on_fiscal_only: false,
   print_on_finish_mode: 'off',
   default_fiscal_mode: 'ask',
+  credit_sale_enabled: false,
 };
 
 /**
@@ -121,6 +127,7 @@ export function usePdvSettings(companyId?: string | null) {
           ((data as any).print_on_finish_mode as 'off' | 'auto' | 'ask') ?? 'off',
         default_fiscal_mode:
           ((data as any).default_fiscal_mode as 'fiscal' | 'nao_fiscal' | 'ask') ?? 'ask',
+        credit_sale_enabled: !!(data as any).credit_sale_enabled,
       });
     } else {
       setSettings(PDV_SETTINGS_DEFAULTS);

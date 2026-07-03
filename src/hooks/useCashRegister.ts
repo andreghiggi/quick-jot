@@ -344,7 +344,7 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
 
   async function addSale(
     items: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[],
-    paymentMethodId: string,
+    paymentMethodId: string | null,
     userId: string,
     discount: number = 0,
     customerName?: string,

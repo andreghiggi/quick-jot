@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, ArrowLeft, Save, X } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, X, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
@@ -62,6 +62,8 @@ interface Props {
   itemsTotal: number;
   /** Fase 1: comportamento padrão do botão SALVAR (Configurações → Comportamento). */
   defaultFiscalMode?: 'fiscal' | 'nao_fiscal' | 'ask';
+  /** Módulo Financeiro: quando `true`, o checkout mostra a opção "Crediário". */
+  creditSaleAvailable?: boolean;
   /**
    * Chamado quando o operador clicar SALVAR e todas as cobranças (incluindo
    * TEF) foram aprovadas. O caller é responsável por persistir a venda via
@@ -86,6 +88,7 @@ export function FrenteCaixaCheckoutDialog({
   items,
   itemsTotal,
   defaultFiscalMode = 'ask',
+  creditSaleAvailable = false,
   onConfirm,
 }: Props) {
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
@@ -95,6 +98,8 @@ export function FrenteCaixaCheckoutDialog({
   const [surchargeText, setSurchargeText] = useState('');
   const [showAdjust, setShowAdjust] = useState(false);
   const [lines, setLines] = useState<Record<string, LineState>>({});
+  /** Modo Crediário: quando true, ignora `lines` (100% do total vira título). */
+  const [creditMode, setCreditMode] = useState(false);
 
   // Por linha de TEF: modalidade + parcelas (default crédito à vista)
   const [tefMod, setTefMod] = useState<
@@ -126,9 +131,11 @@ export function FrenteCaixaCheckoutDialog({
       ),
     [lines, activePaymentMethods],
   );
-  const remaining = Math.max(0, total - allocated);
-  const over = allocated > total + 0.005;
-  const exact = total > 0 && Math.abs(allocated - total) < 0.005;
+  const remaining = creditMode ? 0 : Math.max(0, total - allocated);
+  const over = !creditMode && allocated > total + 0.005;
+  const exact = creditMode
+    ? total > 0 && !!customerName.trim() && !!customerPhone.trim()
+    : total > 0 && Math.abs(allocated - total) < 0.005;
 
   // reset ao abrir
   useEffect(() => {
@@ -146,6 +153,7 @@ export function FrenteCaixaCheckoutDialog({
       setCustomerDialogOpen(false);
       setProcessing(false);
       setProcessingStatus('');
+      setCreditMode(false);
     }
   }, [open]);
 
@@ -271,14 +279,39 @@ export function FrenteCaixaCheckoutDialog({
   async function handleSave(fiscalChoice?: 'fiscal' | 'nao_fiscal') {
     if (!companyId) return;
     if (!exact) {
-      toast.error('O valor pago precisa ser igual ao total.');
+      toast.error(creditMode
+        ? 'Informe o cliente (nome e telefone) antes de salvar o crediário.'
+        : 'O valor pago precisa ser igual ao total.');
       return;
     }
-    const fiscalMode: 'fiscal' | 'nao_fiscal' =
-      fiscalChoice ?? (defaultFiscalMode === 'ask' ? 'nao_fiscal' : defaultFiscalMode);
+    // Crediário nunca emite NFC-e na Fase 1 (venda entra como não-fiscal).
+    const fiscalMode: 'fiscal' | 'nao_fiscal' = creditMode
+      ? 'nao_fiscal'
+      : (fiscalChoice ?? (defaultFiscalMode === 'ask' ? 'nao_fiscal' : defaultFiscalMode));
     setProcessing(true);
-    setProcessingStatus('Processando pagamentos…');
+    setProcessingStatus(creditMode ? 'Gerando título de crediário…' : 'Processando pagamentos…');
     try {
+      // ── Caminho Crediário: bypass do runMultiPayment (nenhuma cobrança
+      // TEF, nenhum split de forma de pagamento — o título é criado pelo
+      // caller depois de salvar a venda).
+      if (creditMode) {
+        await onConfirm({
+          paymentMethodId: '__credit_sale__',
+          paymentName: 'Crediário',
+          discount,
+          surcharge,
+          finalTotal: total,
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim() || undefined,
+          customerDocument: customerDocument.trim() || undefined,
+          notes: notes.trim() || undefined,
+          combinedNotesFragment: 'Crediário — a receber',
+          fiscalMode,
+          mpLines: [],
+        });
+        return;
+      }
+
       // Monta linhas para runMultiPayment
       const mpLines: MultiPaymentInputLine[] = activePaymentMethods
         .map((m) => {
@@ -414,6 +447,55 @@ export function FrenteCaixaCheckoutDialog({
               />
               {step === 1 && (
                 <div className="ml-9 space-y-3">
+                  {creditSaleAvailable && (
+                    <div className="rounded-md border border-primary/40 bg-primary/5 p-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <CreditCard className="h-4 w-4 text-primary" />
+                          Crediário
+                          {creditMode && <Badge className="text-[10px] bg-primary hover:bg-primary">SELECIONADO</Badge>}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Venda 100% no fiado. Exige cliente e gera título em Contas a Receber. Não emite NFC-e.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={creditMode ? 'default' : 'outline'}
+                        onClick={() => {
+                          const next = !creditMode;
+                          setCreditMode(next);
+                          if (next) {
+                            // limpa qualquer valor alocado em formas normais
+                            setLines({});
+                            setTefMod({});
+                            // pula direto pro cliente
+                            setStep(2);
+                            if (!customerName) setCustomerDialogOpen(true);
+                          }
+                        }}
+                        disabled={processing}
+                      >
+                        {creditMode ? 'Ativo' : 'Usar crediário'}
+                      </Button>
+                    </div>
+                  )}
+                  {creditMode ? (
+                    <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                      Modo crediário ativo. Formas de pagamento normais foram desabilitadas.
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        className="px-1 h-auto"
+                        onClick={() => setCreditMode(false)}
+                      >
+                        Cancelar crediário
+                      </Button>
+                    </div>
+                  ) : (
+                  <>
                   {activePaymentMethods.length === 0 && (
                     <p className="text-sm text-muted-foreground">
                       Nenhuma forma de pagamento cadastrada para o canal PDV.
@@ -599,6 +681,8 @@ export function FrenteCaixaCheckoutDialog({
                       Próximo
                     </Button>
                   </div>
+                  </>
+                  )}
                 </div>
               )}
               {step !== 1 && (
@@ -738,7 +822,20 @@ export function FrenteCaixaCheckoutDialog({
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Voltar
               </Button>
-              {defaultFiscalMode === 'ask' ? (
+              {creditMode ? (
+                <Button
+                  type="button"
+                  onClick={() => handleSave('nao_fiscal')}
+                  disabled={processing || !exact}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[200px]"
+                >
+                  {processing ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando título…</>
+                  ) : (
+                    <><CreditCard className="h-4 w-4 mr-1" /> Salvar crediário</>
+                  )}
+                </Button>
+              ) : defaultFiscalMode === 'ask' ? (
                 <>
                   <Button
                     type="button"

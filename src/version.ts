@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.52.11-beta";
-export const RELEASE_DATE = "2026-07-02"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Compras: importação XML completa vs resumo";
+export const VERSION = "1.53.0-beta";
+export const RELEASE_DATE = "2026-07-03"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Módulo Financeiro — Fase 1 (Crediário)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,20 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.53.0-beta",
+    date: "2026-07-03",
+    codename: "Módulo Financeiro — Fase 1 (Crediário)",
+    changes: [
+      "Novo módulo Financeiro (opcional, controlado por toggle em Admin → Módulos). Fase 1 traz o Crediário e a tela Contas a Receber. Contas a Pagar e Fluxo de Caixa consolidado ficam para próximas fases.",
+      "Crediário nativo da Frente de Caixa: com o módulo Financeiro ativo, o operador vê 'Aceitar crediário no checkout' em Frente de Caixa → Configurações → Financeiro. Quando ligado, aparece um botão 'Crediário' na tela Finalizando venda.",
+      "Regras do crediário: exige nome e telefone do cliente; a venda vai para o caixa como não-fiscal (sem NFC-e nesta fase); o sistema gera automaticamente um título em Contas a Receber com o valor total da venda.",
+      "Nova tela /financeiro/contas-a-receber com abas 'Em aberto / Vencidos / Pagos / Cancelados', ações 'Receber' (baixa parcial ou total, escolhendo a forma de recebimento) e 'Cancelar título'.",
+      "Novas tabelas accounts_receivable e accounts_receivable_payments com RLS por company_id. Nenhuma alteração no fluxo existente: PDV V2, Pedido Express, Cobrança, TEF, PinPad, NFC-e, NF-e, Compras, Manifestação Eletrônica, Estoque e impressão continuam como estavam.",
+      "Ajuste de menu: 'Formas de Pagamento' foi movido para o grupo Cadastros (a página em si não mudou). O grupo Financeiro na sidebar só aparece se houver Caixa (PDV v1) ou o módulo Financeiro estiver ativo.",
+      "Piloto: manter o módulo desligado por padrão. Ativar primeiro na Lancheria da I9 para validar antes de liberar geral.",
+    ],
+  },
   {
     version: "1.52.11-beta",
     date: "2026-07-02",
