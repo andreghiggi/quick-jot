@@ -193,6 +193,21 @@ export function AppSidebar() {
       icon: CircleDollarSign,
       href: '/financeiro/contas-a-receber',
     });
+    financeMenuItems.push({
+      title: 'Contas a Pagar',
+      icon: Receipt,
+      href: '/financeiro/contas-a-pagar',
+    });
+    financeMenuItems.push({
+      title: 'Fluxo de Caixa',
+      icon: Wallet,
+      href: '/financeiro/fluxo-de-caixa',
+    });
+    financeMenuItems.push({
+      title: 'Inadimplência',
+      icon: BarChart3,
+      href: '/financeiro/inadimplencia',
+    });
   }
 
   // Formas de Pagamento — vive dentro do grupo Cadastros (disponível para todas as empresas)
