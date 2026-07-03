@@ -233,147 +233,24 @@ function ChannelManager({ channel }: ChannelManagerProps) {
         </Card>
       )}
 
-      {/* Add Dialog */}
-      <Dialog open={addDialog} onOpenChange={setAddDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nova Forma de Pagamento — {CHANNEL_LABELS[channel]}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome</Label>
-              <Input
-                placeholder="Ex: Cartão de Crédito"
-                value={newMethodName}
-                onChange={(e) => setNewMethodName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-              />
-            </div>
-            {isPixName(newMethodName) && (
-              <div className="space-y-2">
-                <Label>Chave PIX</Label>
-                <Input
-                  placeholder="Ex: email@exemplo.com, CPF, CNPJ ou telefone"
-                  value={newMethodPixKey}
-                  onChange={(e) => setNewMethodPixKey(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
-              </div>
-            )}
-            {(channel === 'pdv' || channel === 'express') && (
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1"><Plug className="w-3 h-3" /> Integração</Label>
-                <Select value={newMethodIntegration} onValueChange={setNewMethodIntegration}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nenhuma" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhuma</SelectItem>
-                    <SelectItem value="tef_pinpad">TEF PinPad (WebService)</SelectItem>
-                    <SelectItem value="tef_smartpos">TEF SmartPOS (PINPDV)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">Ao selecionar esta forma no PDV, o TEF será acionado automaticamente</p>
-              </div>
-            )}
-            {showModalitySplit && (
-              <div className="space-y-2 rounded-lg border p-3">
-                <Label className="text-sm">Disponível em</Label>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm flex items-center gap-2"><Bike className="w-4 h-4" /> Entrega</span>
-                  <Switch checked={newMethodShowDelivery} onCheckedChange={setNewMethodShowDelivery} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm flex items-center gap-2"><Store className="w-4 h-4" /> Retirada</span>
-                  <Switch checked={newMethodShowPickup} onCheckedChange={setNewMethodShowPickup} />
-                </div>
-                <p className="text-xs text-muted-foreground">A forma só aparece nas modalidades marcadas.</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialog(false)}>Cancelar</Button>
-            <Button onClick={handleAdd} disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Adicionar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PaymentMethodFormDialog
+        open={addDialog}
+        onOpenChange={setAddDialog}
+        channel={channel}
+        mode="create"
+        busy={isSubmitting}
+        onSubmit={handleSubmitCreate}
+      />
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialog} onOpenChange={setEditDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Forma de Pagamento</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome</Label>
-              <Input
-                placeholder="Ex: Cartão de Crédito"
-                value={editingMethod?.name || ''}
-                onChange={(e) => setEditingMethod(prev => prev ? { ...prev, name: e.target.value } : null)}
-                onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
-              />
-            </div>
-            {editingMethod && isPixName(editingMethod.name) && (
-              <div className="space-y-2">
-                <Label>Chave PIX</Label>
-                <Input
-                  placeholder="Ex: email@exemplo.com, CPF, CNPJ ou telefone"
-                  value={editingMethod.pix_key || ''}
-                  onChange={(e) => setEditingMethod(prev => prev ? { ...prev, pix_key: e.target.value } : null)}
-                />
-                <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
-              </div>
-            )}
-            {(channel === 'pdv' || channel === 'express') && (
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1"><Plug className="w-3 h-3" /> Integração</Label>
-                <Select value={editingMethod?.integration_type || 'none'} onValueChange={(v) => setEditingMethod(prev => prev ? { ...prev, integration_type: v } : null)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nenhuma" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhuma</SelectItem>
-                    <SelectItem value="tef_pinpad">TEF PinPad (WebService)</SelectItem>
-                    <SelectItem value="tef_smartpos">TEF SmartPOS (PINPDV)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">Ao selecionar esta forma no PDV, o TEF será acionado automaticamente</p>
-              </div>
-            )}
-            {showModalitySplit && editingMethod && (
-              <div className="space-y-2 rounded-lg border p-3">
-                <Label className="text-sm">Disponível em</Label>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm flex items-center gap-2"><Bike className="w-4 h-4" /> Entrega</span>
-                  <Switch
-                    checked={editingMethod.show_for_delivery}
-                    onCheckedChange={(v) => setEditingMethod(prev => prev ? { ...prev, show_for_delivery: v } : null)}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm flex items-center gap-2"><Store className="w-4 h-4" /> Retirada</span>
-                  <Switch
-                    checked={editingMethod.show_for_pickup}
-                    onCheckedChange={(v) => setEditingMethod(prev => prev ? { ...prev, show_for_pickup: v } : null)}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">A forma só aparece nas modalidades marcadas.</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialog(false)}>Cancelar</Button>
-            <Button onClick={handleEdit} disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PaymentMethodFormDialog
+        open={editDialog}
+        onOpenChange={(o) => { setEditDialog(o); if (!o) setEditingMethod(null); }}
+        channel={channel}
+        mode="edit"
+        initial={editingMethod}
+        busy={isSubmitting}
+        onSubmit={handleSubmitEdit}
+      />
 
       {/* Delete Dialog */}
       <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
