@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Plus,
@@ -125,15 +128,64 @@ function ChannelManager({ channel }: ChannelManagerProps) {
   const [deletingMethodId, setDeletingMethodId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleSubmitCreate(draft: PaymentMethodDraft): Promise<boolean> {
-    if (showModalitySplit && !draft.show_for_delivery && !draft.show_for_pickup) {
-      toast.error('Marque ao menos Entrega ou Retirada');
-      return false;
+  // Estado do diálogo LEGADO (usado por todas as formas que NÃO são Crediário)
+  const [legacyName, setLegacyName] = useState('');
+  const [legacyPixKey, setLegacyPixKey] = useState('');
+  const [legacyIntegration, setLegacyIntegration] = useState<string>('none');
+  const [legacyShowDelivery, setLegacyShowDelivery] = useState(true);
+  const [legacyShowPickup, setLegacyShowPickup] = useState(true);
+  const isPixName = (n: string) => n.toLowerCase().includes('pix');
+
+  function resetLegacyForm(m?: PaymentMethod | null) {
+    setLegacyName(m?.name ?? '');
+    setLegacyPixKey(m?.pix_key ?? '');
+    setLegacyIntegration(m?.integration_type ?? 'none');
+    setLegacyShowDelivery(m?.show_for_delivery ?? true);
+    setLegacyShowPickup(m?.show_for_pickup ?? true);
+  }
+
+  function openAddLegacy() {
+    resetLegacyForm(null);
+    setAddDialog(true);
+  }
+
+  async function handleLegacyAdd() {
+    if (!legacyName.trim()) { toast.error('Nome é obrigatório'); return; }
+    if (showModalitySplit && !legacyShowDelivery && !legacyShowPickup) {
+      toast.error('Marque ao menos Entrega ou Retirada'); return;
     }
     setIsSubmitting(true);
-    const ok = await addPaymentMethod(draft as any, channel);
+    const draft: any = {
+      name: legacyName.trim(),
+      pix_key: isPixName(legacyName) ? (legacyPixKey.trim() || null) : null,
+      integration_type: legacyIntegration !== 'none' ? legacyIntegration : null,
+      show_for_delivery: showModalitySplit ? legacyShowDelivery : true,
+      show_for_pickup: showModalitySplit ? legacyShowPickup : true,
+    };
+    const ok = await addPaymentMethod(draft, channel);
     setIsSubmitting(false);
-    return ok;
+    if (ok) setAddDialog(false);
+  }
+
+  async function handleLegacyEdit() {
+    if (!editingMethod) return;
+    if (!legacyName.trim()) { toast.error('Nome é obrigatório'); return; }
+    if (showModalitySplit && !legacyShowDelivery && !legacyShowPickup) {
+      toast.error('Marque ao menos Entrega ou Retirada'); return;
+    }
+    setIsSubmitting(true);
+    const updateData: any = {
+      name: legacyName.trim(),
+      pix_key: isPixName(legacyName) ? (legacyPixKey.trim() || null) : null,
+      integration_type: legacyIntegration !== 'none' ? legacyIntegration : null,
+    };
+    if (showModalitySplit) {
+      updateData.show_for_delivery = legacyShowDelivery;
+      updateData.show_for_pickup = legacyShowPickup;
+    }
+    const ok = await updatePaymentMethod(editingMethod.id, updateData);
+    setIsSubmitting(false);
+    if (ok) { setEditDialog(false); setEditingMethod(null); }
   }
 
   async function handleSubmitEdit(draft: PaymentMethodDraft): Promise<boolean> {
@@ -168,7 +220,14 @@ function ChannelManager({ channel }: ChannelManagerProps) {
 
   function openEditDialog(method: PaymentMethod) {
     setEditingMethod(method);
-    setEditDialog(true);
+    if ((method as any).payment_type === 'crediario') {
+      // Crediário usa o novo formulário completo (parcelamento, NF-e etc.)
+      setEditDialog(true);
+    } else {
+      // Demais formas continuam com o cadastro simples (legado)
+      resetLegacyForm(method);
+      setEditDialog(true);
+    }
   }
 
   function openDeleteDialog(id: string) {
@@ -196,7 +255,7 @@ function ChannelManager({ channel }: ChannelManagerProps) {
               </CardTitle>
               <CardDescription>{CHANNEL_DESCRIPTIONS[channel]}</CardDescription>
             </div>
-            <Button onClick={() => setAddDialog(true)} className="gap-2 shrink-0">
+            <Button onClick={openAddLegacy} className="gap-2 shrink-0">
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Nova Forma</span>
             </Button>
@@ -252,7 +311,7 @@ function ChannelManager({ channel }: ChannelManagerProps) {
             <div className="text-center py-8">
               <CreditCard className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground mb-4">Nenhuma forma de pagamento cadastrada para {CHANNEL_LABELS[channel]}</p>
-              <Button onClick={() => setAddDialog(true)} className="gap-2">
+              <Button onClick={openAddLegacy} className="gap-2">
                 <Plus className="w-4 h-4" />
                 Adicionar Forma de Pagamento
               </Button>
@@ -347,24 +406,145 @@ function ChannelManager({ channel }: ChannelManagerProps) {
         </Card>
       )}
 
-      <PaymentMethodFormDialog
-        open={addDialog}
-        onOpenChange={setAddDialog}
-        channel={channel}
-        mode="create"
-        busy={isSubmitting}
-        onSubmit={handleSubmitCreate}
-      />
+      {/* Diálogo LEGADO — nova forma (não-crediário) */}
+      <Dialog open={addDialog} onOpenChange={setAddDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova Forma de Pagamento — {CHANNEL_LABELS[channel]}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome</Label>
+              <Input
+                placeholder="Ex: Cartão de Crédito"
+                value={legacyName}
+                onChange={(e) => setLegacyName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleLegacyAdd()}
+              />
+            </div>
+            {isPixName(legacyName) && (
+              <div className="space-y-2">
+                <Label>Chave PIX</Label>
+                <Input
+                  placeholder="Ex: email@exemplo.com, CPF, CNPJ ou telefone"
+                  value={legacyPixKey}
+                  onChange={(e) => setLegacyPixKey(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
+              </div>
+            )}
+            {(channel === 'pdv' || channel === 'express') && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1"><Plug className="w-3 h-3" /> Integração</Label>
+                <Select value={legacyIntegration} onValueChange={setLegacyIntegration}>
+                  <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    <SelectItem value="tef_pinpad">TEF PinPad (WebService)</SelectItem>
+                    <SelectItem value="tef_smartpos">TEF SmartPOS (PINPDV)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Ao selecionar esta forma no PDV, o TEF será acionado automaticamente</p>
+              </div>
+            )}
+            {showModalitySplit && (
+              <div className="space-y-2 rounded-lg border p-3">
+                <Label className="text-sm">Disponível em</Label>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm flex items-center gap-2"><Bike className="w-4 h-4" /> Entrega</span>
+                  <Switch checked={legacyShowDelivery} onCheckedChange={setLegacyShowDelivery} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm flex items-center gap-2"><Store className="w-4 h-4" /> Retirada</span>
+                  <Switch checked={legacyShowPickup} onCheckedChange={setLegacyShowPickup} />
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddDialog(false)}>Cancelar</Button>
+            <Button onClick={handleLegacyAdd} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <PaymentMethodFormDialog
-        open={editDialog}
-        onOpenChange={(o) => { setEditDialog(o); if (!o) setEditingMethod(null); }}
-        channel={channel}
-        mode="edit"
-        initial={editingMethod}
-        busy={isSubmitting}
-        onSubmit={handleSubmitEdit}
-      />
+      {/* Edição — Crediário abre o formulário completo; demais formas usam o legado */}
+      {editingMethod && (editingMethod as any).payment_type === 'crediario' ? (
+        <PaymentMethodFormDialog
+          open={editDialog}
+          onOpenChange={(o) => { setEditDialog(o); if (!o) setEditingMethod(null); }}
+          channel={channel}
+          mode="edit"
+          initial={editingMethod}
+          busy={isSubmitting}
+          onSubmit={handleSubmitEdit}
+        />
+      ) : (
+        <Dialog open={editDialog} onOpenChange={(o) => { setEditDialog(o); if (!o) setEditingMethod(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Forma de Pagamento</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nome</Label>
+                <Input
+                  placeholder="Ex: Cartão de Crédito"
+                  value={legacyName}
+                  onChange={(e) => setLegacyName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLegacyEdit()}
+                />
+              </div>
+              {isPixName(legacyName) && (
+                <div className="space-y-2">
+                  <Label>Chave PIX</Label>
+                  <Input
+                    placeholder="Ex: email@exemplo.com, CPF, CNPJ ou telefone"
+                    value={legacyPixKey}
+                    onChange={(e) => setLegacyPixKey(e.target.value)}
+                  />
+                </div>
+              )}
+              {(channel === 'pdv' || channel === 'express') && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1"><Plug className="w-3 h-3" /> Integração</Label>
+                  <Select value={legacyIntegration} onValueChange={setLegacyIntegration}>
+                    <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhuma</SelectItem>
+                      <SelectItem value="tef_pinpad">TEF PinPad (WebService)</SelectItem>
+                      <SelectItem value="tef_smartpos">TEF SmartPOS (PINPDV)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {showModalitySplit && (
+                <div className="space-y-2 rounded-lg border p-3">
+                  <Label className="text-sm">Disponível em</Label>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm flex items-center gap-2"><Bike className="w-4 h-4" /> Entrega</span>
+                    <Switch checked={legacyShowDelivery} onCheckedChange={setLegacyShowDelivery} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm flex items-center gap-2"><Store className="w-4 h-4" /> Retirada</span>
+                    <Switch checked={legacyShowPickup} onCheckedChange={setLegacyShowPickup} />
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setEditDialog(false); setEditingMethod(null); }}>Cancelar</Button>
+              <Button onClick={handleLegacyEdit} disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Delete Dialog */}
       <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
