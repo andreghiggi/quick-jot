@@ -42,6 +42,7 @@ import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { useFinanceiroEnabled } from '@/hooks/useFinanceiroEnabled';
 import { useCardapioEnabled } from '@/hooks/useCardapioEnabled';
 import {
   Sidebar,
