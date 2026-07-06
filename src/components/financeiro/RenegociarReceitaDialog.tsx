@@ -31,16 +31,24 @@ function statusBadge(row: AccountReceivable, today: string) {
 }
 
 export function RenegociarReceitaDialog({
-  open, onOpenChange, receivable, onConfirm, busy,
+  open, onOpenChange, receivable, receivables, onConfirm, busy,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   receivable: AccountReceivable | null;
+  /** Se informado, renegocia todas essas parcelas juntas (venda inteira). */
+  receivables?: AccountReceivable[] | null;
   onConfirm: (data: RenegotiateSubmit) => Promise<void> | void;
   busy: boolean;
 }) {
   const today = new Date().toISOString().slice(0, 10);
-  const balance = Number(receivable?.balance || 0);
+  const isMulti = !!(receivables && receivables.length > 0);
+  const balance = isMulti
+    ? receivables!.reduce((s, r) => s + Number(r.balance || 0), 0)
+    : Number(receivable?.balance || 0);
+  const totalOriginal = isMulti
+    ? receivables!.reduce((s, r) => s + Number(r.amount || 0), 0)
+    : Number(receivable?.amount || 0);
 
   const [totalStr, setTotalStr] = useState('0,00');
   const [numParcelas, setNumParcelas] = useState<number>(1);
@@ -48,13 +56,13 @@ export function RenegociarReceitaDialog({
   const [period, setPeriod] = useState<Period>('month');
 
   useEffect(() => {
-    if (open && receivable) {
+    if (open && (isMulti || receivable)) {
       setTotalStr(maskCurrencyInput(balance.toFixed(2).replace('.', ',')));
       setNumParcelas(1);
       setIntervalVal(1);
       setPeriod('month');
     }
-  }, [open, receivable, balance]);
+  }, [open, receivable, isMulti, balance]);
 
   const total = parseCurrencyInput(totalStr);
 
@@ -84,14 +92,16 @@ export function RenegociarReceitaDialog({
     });
   };
 
-  if (!receivable) return null;
-  const badge = statusBadge(receivable, today);
+  if (!receivable && !isMulti) return null;
+  const badge = receivable ? statusBadge(receivable, today) : { label: 'Em aberto', cls: 'bg-sky-500 text-white' };
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !busy && onOpenChange(false)}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Renegociação de receitas</DialogTitle>
+          <DialogTitle>
+            {isMulti ? 'Renegociação da venda' : 'Renegociação de receitas'}
+          </DialogTitle>
         </DialogHeader>
 
         {/* Cabeçalho tabular */}
@@ -108,16 +118,42 @@ export function RenegociarReceitaDialog({
               </tr>
             </thead>
             <tbody>
+              {isMulti ? (
+                receivables!.map((r) => {
+                  const b = statusBadge(r, today);
+                  return (
+                    <tr key={r.id}>
+                      <td className="px-3 py-2 text-primary font-medium">
+                        {r.document_number || r.id.slice(0, 8).toUpperCase()}
+                      </td>
+                      <td className="px-3 py-2">{r.due_date.split('-').reverse().join('/')}</td>
+                      <td className="px-3 py-2"><Badge className={cn('rounded-full px-3', b.cls)}>{b.label}</Badge></td>
+                      <td className="px-3 py-2 text-right">{brl(Number(r.amount))}</td>
+                      <td className="px-3 py-2 text-right">{brl(Number(r.balance))}</td>
+                      <td className="px-3 py-2 text-right">{brl(Number(r.amount) - Number(r.balance))}</td>
+                    </tr>
+                  );
+                })
+              ) : (
               <tr>
                 <td className="px-3 py-2 text-primary font-medium">
-                  {receivable.document_number || receivable.id.slice(0, 8).toUpperCase()}
+                  {receivable!.document_number || receivable!.id.slice(0, 8).toUpperCase()}
                 </td>
-                <td className="px-3 py-2">{receivable.due_date.split('-').reverse().join('/')}</td>
+                <td className="px-3 py-2">{receivable!.due_date.split('-').reverse().join('/')}</td>
                 <td className="px-3 py-2"><Badge className={cn('rounded-full px-3', badge.cls)}>{badge.label}</Badge></td>
-                <td className="px-3 py-2 text-right">{brl(Number(receivable.amount))}</td>
-                <td className="px-3 py-2 text-right">{brl(Number(receivable.balance))}</td>
-                <td className="px-3 py-2 text-right">{brl(Number(receivable.amount) - Number(receivable.balance))}</td>
+                <td className="px-3 py-2 text-right">{brl(Number(receivable!.amount))}</td>
+                <td className="px-3 py-2 text-right">{brl(Number(receivable!.balance))}</td>
+                <td className="px-3 py-2 text-right">{brl(Number(receivable!.amount) - Number(receivable!.balance))}</td>
               </tr>
+              )}
+              {isMulti && (
+                <tr className="border-t bg-muted/20 text-sm font-semibold">
+                  <td className="px-3 py-2" colSpan={3}>TOTAIS</td>
+                  <td className="px-3 py-2 text-right">{brl(totalOriginal)}</td>
+                  <td className="px-3 py-2 text-right">{brl(balance)}</td>
+                  <td className="px-3 py-2 text-right">{brl(totalOriginal - balance)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
