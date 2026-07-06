@@ -1256,10 +1256,13 @@ export type Database = {
           birth_date: string | null
           city: string | null
           company_id: string | null
+          complement: string | null
           cpf: string | null
           created_at: string
           id: string
           name: string
+          neighborhood: string | null
+          number: string | null
           phone: string
           state: string | null
           updated_at: string
@@ -1269,10 +1272,13 @@ export type Database = {
           birth_date?: string | null
           city?: string | null
           company_id?: string | null
+          complement?: string | null
           cpf?: string | null
           created_at?: string
           id?: string
           name: string
+          neighborhood?: string | null
+          number?: string | null
           phone: string
           state?: string | null
           updated_at?: string
@@ -1282,10 +1288,13 @@ export type Database = {
           birth_date?: string | null
           city?: string | null
           company_id?: string | null
+          complement?: string | null
           cpf?: string | null
           created_at?: string
           id?: string
           name?: string
+          neighborhood?: string | null
+          number?: string | null
           phone?: string
           state?: string | null
           updated_at?: string
