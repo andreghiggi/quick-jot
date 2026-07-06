@@ -290,7 +290,12 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
       onOpenChange(false);
     } catch (e: any) {
       console.error('[FrenteCaixaCustomerDialog] create error', e);
-      toast.error(e?.message || 'Erro ao cadastrar cliente.');
+      const msg = String(e?.message || '');
+      if (msg.includes('Já existe um cliente cadastrado com este CPF')) {
+        toast.error(msg + '. Busque pelo CPF acima e use "Completar cadastro" para editar o cliente existente.');
+      } else {
+        toast.error(msg || 'Erro ao cadastrar cliente.');
+      }
     } finally {
       setSaving(false);
     }
