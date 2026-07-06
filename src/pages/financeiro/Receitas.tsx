@@ -35,7 +35,7 @@ export default function Receitas() {
   const { enabled, loading: finLoading } = useFinanceiroEnabled(company?.id);
   const {
     items, loading, reload, create, receivePayment, receivePaymentSplit,
-    remove, update, renegotiateSplit,
+    remove, update, renegotiateSplit, renegotiateManySplit,
   } = useAccountsReceivable(company?.id);
   const { activePaymentMethods } = usePaymentMethods({ companyId: company?.id, channel: 'pdv' });
 
@@ -63,6 +63,9 @@ export default function Receitas() {
   const [detailsGroup, setDetailsGroup] = useState<GroupItem | null>(null);
   const [efetivarRow, setEfetivarRow] = useState<AccountReceivable | null>(null);
   const [renegRow, setRenegRow] = useState<AccountReceivable | null>(null);
+  /** Quando o operador clica "Renegociar" numa venda inteira, guardamos
+   *  todas as parcelas em aberto da venda para renegociação conjunta. */
+  const [renegSaleRows, setRenegSaleRows] = useState<AccountReceivable[] | null>(null);
   /** Ação pendente ao selecionar uma parcela dentro do diálogo "Parcelas". */
   const [pendingAction, setPendingAction] = useState<'receber' | 'renegociar' | null>(null);
 
@@ -143,14 +146,22 @@ export default function Receitas() {
       action === 'receber' ? openEfetivar(g.row.id) : openRenegociar(g.row.id);
       return;
     }
+    // Renegociação sempre atua na venda inteira (todas as parcelas em
+    // aberto), sem passar pelo seletor de parcela.
+    if (action === 'renegociar') {
+      const opens = g.parcelas.filter((p) => p.status === 'open');
+      if (opens.length === 0) return;
+      setRenegSaleRows(opens);
+      return;
+    }
     const openCount = g.parcelas.filter((p) => p.status === 'open').length;
     if (openCount === 1) {
       const p = firstOpenOf(g);
-      if (p) (action === 'receber' ? openEfetivar : openRenegociar)(p.id);
+      if (p) openEfetivar(p.id);
       return;
     }
-    // Várias parcelas em aberto: abre o seletor.
-    setPendingAction(action);
+    // Recebimento com várias parcelas em aberto: abre o seletor.
+    setPendingAction('receber');
     setInstallmentsGroup(g);
   };
 
@@ -425,6 +436,28 @@ export default function Receitas() {
           });
           setBusy(false);
           if (ok) setRenegRow(null);
+        }}
+      />
+
+      {/* Renegociação da venda inteira (múltiplas parcelas em aberto) */}
+      <RenegociarReceitaDialog
+        open={!!renegSaleRows}
+        onOpenChange={(o) => !o && setRenegSaleRows(null)}
+        receivable={null}
+        receivables={renegSaleRows}
+        busy={busy}
+        onConfirm={async (data) => {
+          if (!renegSaleRows?.length || !company?.id) return;
+          setBusy(true);
+          const ok = await renegotiateManySplit({
+            receivableIds: renegSaleRows.map((r) => r.id),
+            companyId: company.id,
+            userId: user?.id ?? null,
+            newTotalAmount: data.newTotalAmount,
+            installments: data.installments,
+          });
+          setBusy(false);
+          if (ok) setRenegSaleRows(null);
         }}
       />
 
