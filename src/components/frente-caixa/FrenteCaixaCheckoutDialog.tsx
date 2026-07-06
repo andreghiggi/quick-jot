@@ -97,35 +97,24 @@ export function FrenteCaixaCheckoutDialog({
   });
 
   /**
-   * Crediário é NATIVO: no checkout ele aparece como um bloco fixo (não como
-   * uma linha na lista de formas de pagamento). Por isso removemos qualquer
-   * forma cadastrada com `payment_type='crediario'` da lista normal.
+   * Crediário aparece como uma linha normal da lista, com letra de atalho
+   * (A/B/C…), igual às outras formas. A única diferença é que, se o
+   * operador digitar valor nessa linha, a venda inteira vira "crediário"
+   * (sem NFC-e e exigindo cliente).
    */
-  const activePaymentMethods = useMemo(
-    () => allActivePaymentMethods.filter((m) => (m as any).payment_type !== 'crediario'),
-    [allActivePaymentMethods],
-  );
-
-  /**
-   * Crediário nativo aparece quando:
-   *   (a) o operador marcou "Habilitar venda a prazo" em Configurações
-   *       (prop `creditSaleAvailable` vinda do PDV), OU
-   *   (b) existe pelo menos uma forma de pagamento cadastrada com
-   *       `payment_type='crediario'` (fluxo novo estilo GWeb).
-   */
-  const hasCrediarioPaymentMethod = useMemo(
-    () => allActivePaymentMethods.some((m) => (m as any).payment_type === 'crediario'),
-    [allActivePaymentMethods],
-  );
-  const creditSaleVisible = creditSaleAvailable || hasCrediarioPaymentMethod;
+  const activePaymentMethods = allActivePaymentMethods;
 
   const [step, setStep] = useState<StepId>(1);
   const [discountText, setDiscountText] = useState('');
   const [surchargeText, setSurchargeText] = useState('');
   const [showAdjust, setShowAdjust] = useState(false);
   const [lines, setLines] = useState<Record<string, LineState>>({});
-  /** Modo Crediário: quando true, ignora `lines` (100% do total vira título). */
-  const [creditMode, setCreditMode] = useState(false);
+  /** Detecta se alguma linha lançada é de uma forma "Crediário".
+   *  Se houver, a venda inteira vira crediário (regra: 100% do total). */
+  const creditMethod = useMemo(
+    () => activePaymentMethods.find((m) => (m as any).payment_type === 'crediario'),
+    [activePaymentMethods],
+  );
 
   // Por linha de TEF: modalidade + parcelas (default crédito à vista)
   const [tefMod, setTefMod] = useState<
@@ -157,10 +146,22 @@ export function FrenteCaixaCheckoutDialog({
       ),
     [lines, activePaymentMethods],
   );
-  const remaining = creditMode ? 0 : Math.max(0, total - allocated);
-  const over = !creditMode && allocated > total + 0.005;
-  const exact = creditMode
-    ? total > 0 && !!customerName.trim() && !!customerPhone.trim()
+  /** É venda crediário quando o operador colocou valor > 0 numa forma
+   *  cadastrada como `payment_type='crediario'`. */
+  const creditLineAmount = creditMethod
+    ? parseCurrencyInput(lines[creditMethod.id]?.text || '')
+    : 0;
+  const isCreditSale = !!creditMethod && creditLineAmount > 0;
+  const remaining = Math.max(0, total - allocated);
+  const over = allocated > total + 0.005;
+  /** No crediário: precisa cliente (nome + telefone) e o valor da forma
+   *  crediário deve ser 100% do total (não permite mix). */
+  const exact = isCreditSale
+    ? total > 0
+      && Math.abs(creditLineAmount - total) < 0.005
+      && Math.abs(allocated - total) < 0.005
+      && !!customerName.trim()
+      && !!customerPhone.trim()
     : total > 0 && Math.abs(allocated - total) < 0.005;
 
   // reset ao abrir
@@ -179,7 +180,6 @@ export function FrenteCaixaCheckoutDialog({
       setCustomerDialogOpen(false);
       setProcessing(false);
       setProcessingStatus('');
-      setCreditMode(false);
     }
   }, [open]);
 
@@ -305,25 +305,31 @@ export function FrenteCaixaCheckoutDialog({
   async function handleSave(fiscalChoice?: 'fiscal' | 'nao_fiscal') {
     if (!companyId) return;
     if (!exact) {
-      toast.error(creditMode
-        ? 'Informe o cliente (nome e telefone) antes de salvar o crediário.'
-        : 'O valor pago precisa ser igual ao total.');
+      if (isCreditSale) {
+        if (!customerName.trim() || !customerPhone.trim()) {
+          toast.error('Informe o cliente (nome e telefone) antes de salvar o crediário.');
+        } else {
+          toast.error('Na venda no crediário, o valor da forma "Crediário" deve ser igual ao total (não é possível dividir com outras formas).');
+        }
+      } else {
+        toast.error('O valor pago precisa ser igual ao total.');
+      }
       return;
     }
     // Crediário nunca emite NFC-e na Fase 1 (venda entra como não-fiscal).
-    const fiscalMode: 'fiscal' | 'nao_fiscal' = creditMode
+    const fiscalMode: 'fiscal' | 'nao_fiscal' = isCreditSale
       ? 'nao_fiscal'
       : (fiscalChoice ?? (defaultFiscalMode === 'ask' ? 'nao_fiscal' : defaultFiscalMode));
     setProcessing(true);
-    setProcessingStatus(creditMode ? 'Gerando título de crediário…' : 'Processando pagamentos…');
+    setProcessingStatus(isCreditSale ? 'Gerando título de crediário…' : 'Processando pagamentos…');
     try {
       // ── Caminho Crediário: bypass do runMultiPayment (nenhuma cobrança
       // TEF, nenhum split de forma de pagamento — o título é criado pelo
       // caller depois de salvar a venda).
-      if (creditMode) {
+      if (isCreditSale) {
         await onConfirm({
           paymentMethodId: '__credit_sale__',
-          paymentName: 'Crediário',
+          paymentName: creditMethod?.name || 'Crediário',
           discount,
           surcharge,
           finalTotal: total,
@@ -473,55 +479,14 @@ export function FrenteCaixaCheckoutDialog({
               />
               {step === 1 && (
                 <div className="ml-9 space-y-3">
-                  {creditSaleVisible && (
-                    <div className="rounded-md border border-primary/40 bg-primary/5 p-3 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <CreditCard className="h-4 w-4 text-primary" />
-                          Crediário
-                          {creditMode && <Badge className="text-[10px] bg-primary hover:bg-primary">SELECIONADO</Badge>}
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          Venda 100% no fiado. Exige cliente e gera título em Contas a Receber. Não emite NFC-e.
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={creditMode ? 'default' : 'outline'}
-                        onClick={() => {
-                          const next = !creditMode;
-                          setCreditMode(next);
-                          if (next) {
-                            // limpa qualquer valor alocado em formas normais
-                            setLines({});
-                            setTefMod({});
-                            // pula direto pro cliente
-                            setStep(2);
-                            if (!customerName) setCustomerDialogOpen(true);
-                          }
-                        }}
-                        disabled={processing}
-                      >
-                        {creditMode ? 'Ativo' : 'Usar crediário'}
-                      </Button>
+                  {isCreditSale && (
+                    <div className="rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-[11px] text-primary flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      <span>
+                        Venda no crediário selecionada. Informe o cliente na próxima etapa. Não emite NFC-e.
+                      </span>
                     </div>
                   )}
-                  {creditMode ? (
-                    <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                      Modo crediário ativo. Formas de pagamento normais foram desabilitadas.
-                      <Button
-                        type="button"
-                        variant="link"
-                        size="sm"
-                        className="px-1 h-auto"
-                        onClick={() => setCreditMode(false)}
-                      >
-                        Cancelar crediário
-                      </Button>
-                    </div>
-                  ) : (
-                  <>
                   {activePaymentMethods.length === 0 && (
                     <p className="text-sm text-muted-foreground">
                       Nenhuma forma de pagamento cadastrada para o canal PDV.
@@ -532,6 +497,7 @@ export function FrenteCaixaCheckoutDialog({
                       const letter = LETTERS[idx] || '';
                       const itg = (m as any).integration_type as string | undefined;
                       const isTef = itg === 'tef_pinpad' || itg === 'tef_smartpos';
+                      const isCred = (m as any).payment_type === 'crediario';
                       const lineAmount = parseCurrencyInput(lines[m.id]?.text || '');
                       const mod = tefMod[m.id] || { modality: 'avista' as const, installments: 2 };
                       return (
@@ -542,6 +508,11 @@ export function FrenteCaixaCheckoutDialog({
                             {isTef && (
                               <Badge variant="outline" className="text-[10px] border-border">
                                 TEF
+                              </Badge>
+                            )}
+                            {isCred && (
+                              <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
+                                Crediário
                               </Badge>
                             )}
                             {letter && (
@@ -707,8 +678,6 @@ export function FrenteCaixaCheckoutDialog({
                       Próximo
                     </Button>
                   </div>
-                  </>
-                  )}
                 </div>
               )}
               {step !== 1 && (
@@ -848,7 +817,7 @@ export function FrenteCaixaCheckoutDialog({
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Voltar
               </Button>
-              {creditMode ? (
+              {isCreditSale ? (
                 <Button
                   type="button"
                   onClick={() => handleSave('nao_fiscal')}
