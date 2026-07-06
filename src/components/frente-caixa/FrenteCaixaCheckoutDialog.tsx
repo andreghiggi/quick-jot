@@ -391,6 +391,8 @@ export function FrenteCaixaCheckoutDialog({
           combinedNotesFragment: 'Crediário — a receber',
           fiscalMode,
           mpLines: [],
+          creditInstallmentsCount: Math.max(1, creditInstallments || 1),
+          creditFirstDueDate: creditFirstDue || undefined,
         });
         return;
       }
