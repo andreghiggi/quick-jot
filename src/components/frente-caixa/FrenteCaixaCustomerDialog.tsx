@@ -354,9 +354,20 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
             )}
 
             {requireFull && selected && selectedMissing.length > 0 && (
-              <p className="mt-2 text-xs text-destructive">
-                Cadastro incompleto — falta {selectedMissing.join(', ')}. Cadastre uma nova pessoa abaixo.
-              </p>
+              <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2">
+                <p className="text-xs text-destructive">
+                  Cadastro incompleto — falta {selectedMissing.join(', ')}.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleEditSelected}
+                  className="h-7 text-xs"
+                >
+                  Completar cadastro
+                </Button>
+              </div>
             )}
 
             <div className="mt-4 min-h-[160px] max-h-[280px] overflow-y-auto">
