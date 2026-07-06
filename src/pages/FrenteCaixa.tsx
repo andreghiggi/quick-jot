@@ -835,19 +835,6 @@ export default function FrenteCaixa() {
       // Crediário — cria o título em Contas a Receber logo após a venda.
       if (isCreditSale && company?.id) {
         try {
-          await createReceivable({
-            companyId: company.id,
-            customerName: (params.customerName || '').trim(),
-            customerPhone: (params.customerPhone || null),
-            customerDocument: (params.customerDocument || null),
-            amount: params.finalTotal,
-            pdvSaleId: saleId,
-            createdBy: user.id,
-            notes: params.notes || null,
-            dueDate: params.creditFirstDueDate || undefined,
-          });
-          toast.success('Título de crediário gerado em Contas a Receber.');
-
           // ── Impressão do comprovante de crediário (não fiscal) ─────
           // Respeita:
           //   - `store_settings.printer_paper_size` (58/80mm)
@@ -880,6 +867,33 @@ export default function FrenteCaixa() {
               issuedAt,
               firstDueOverride,
             );
+
+            // Cria UMA conta a receber POR PARCELA — cada parcela vira um
+            // título independente em Contas a Receber, com seu próprio
+            // vencimento e valor. Mantém `pdv_sale_id` igual em todas as
+            // parcelas para permitir agrupamento por venda na UI.
+            const n = parcelas.length;
+            const docBase = String(saleId).slice(0, 6).toUpperCase();
+            for (const parc of parcelas) {
+              await createReceivable({
+                companyId: company.id,
+                customerName: (params.customerName || '').trim(),
+                customerPhone: (params.customerPhone || null),
+                customerDocument: (params.customerDocument || null),
+                amount: parc.amount,
+                pdvSaleId: saleId,
+                createdBy: user.id,
+                notes: `Parcela ${parc.number}/${n}${params.notes ? ` — ${params.notes}` : ''}`,
+                dueDate: parc.dueDate,
+                documentNumber: n > 1 ? `${docBase}-${parc.number}/${n}` : docBase,
+              });
+            }
+            toast.success(
+              n > 1
+                ? `${n} parcelas geradas em Contas a Receber.`
+                : 'Título de crediário gerado em Contas a Receber.',
+            );
+
             await printCrediarioReceipt({
               companyId: company.id,
               paperSize: storeSettings.printerPaperSize,
