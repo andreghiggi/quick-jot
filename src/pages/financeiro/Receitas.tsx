@@ -62,6 +62,12 @@ export default function Receitas() {
   const [installmentsGroup, setInstallmentsGroup] = useState<GroupItem | null>(null);
   const [detailsGroup, setDetailsGroup] = useState<GroupItem | null>(null);
   const [efetivarRow, setEfetivarRow] = useState<AccountReceivable | null>(null);
+  /** Quando o operador seleciona várias parcelas no diálogo "Parcelas
+   *  da venda" e clica em "Receber selecionadas", guardamos as parcelas
+   *  aqui para efetivar tudo junto. */
+  const [efetivarRows, setEfetivarRows] = useState<AccountReceivable[] | null>(null);
+  /** Ids das parcelas marcadas dentro do diálogo "Parcelas da venda". */
+  const [selectedInst, setSelectedInst] = useState<Set<string>>(new Set());
   const [renegRow, setRenegRow] = useState<AccountReceivable | null>(null);
   /** Quando o operador clica "Renegociar" numa venda inteira, guardamos
    *  todas as parcelas em aberto da venda para renegociação conjunta. */
