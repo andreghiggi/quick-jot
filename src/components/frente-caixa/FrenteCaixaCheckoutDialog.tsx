@@ -124,6 +124,9 @@ export function FrenteCaixaCheckoutDialog({
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerDocument, setCustomerDocument] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [customerCity, setCustomerCity] = useState('');
+  const [customerState, setCustomerState] = useState('');
   const [notes, setNotes] = useState('');
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
 
@@ -162,6 +165,8 @@ export function FrenteCaixaCheckoutDialog({
       && Math.abs(allocated - total) < 0.005
       && !!customerName.trim()
       && !!customerPhone.trim()
+      && !!customerDocument.trim()
+      && !!customerAddress.trim()
     : total > 0 && Math.abs(allocated - total) < 0.005;
 
   // reset ao abrir
@@ -176,6 +181,9 @@ export function FrenteCaixaCheckoutDialog({
       setCustomerName('');
       setCustomerPhone('');
       setCustomerDocument('');
+      setCustomerAddress('');
+      setCustomerCity('');
+      setCustomerState('');
       setNotes('');
       setCustomerDialogOpen(false);
       setProcessing(false);
@@ -306,8 +314,14 @@ export function FrenteCaixaCheckoutDialog({
     if (!companyId) return;
     if (!exact) {
       if (isCreditSale) {
-        if (!customerName.trim() || !customerPhone.trim()) {
-          toast.error('Informe o cliente (nome e telefone) antes de salvar o crediário.');
+        const missing = [
+          !customerName.trim() && 'nome',
+          !customerDocument.trim() && 'CPF',
+          !customerPhone.trim() && 'telefone',
+          !customerAddress.trim() && 'endereço',
+        ].filter(Boolean) as string[];
+        if (missing.length > 0) {
+          toast.error(`Cadastro do cliente incompleto: falta ${missing.join(', ')}.`);
         } else {
           toast.error('Na venda no crediário, o valor da forma "Crediário" deve ser igual ao total (não é possível dividir com outras formas).');
         }
