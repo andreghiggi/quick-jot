@@ -51,6 +51,10 @@ export interface FrenteCaixaCheckoutResult {
   fiscalMode: 'fiscal' | 'nao_fiscal';
   /** Linhas resolvidas do multi-pagamento — usado para montar `pagamentos_split` da NFC-e. */
   mpLines: MultiPaymentResolvedLine[];
+  /** Crediário: nº de parcelas escolhido no checkout (override da forma). */
+  creditInstallmentsCount?: number;
+  /** Crediário: 1ª data de vencimento (YYYY-MM-DD) escolhida no checkout. */
+  creditFirstDueDate?: string;
 }
 
 interface Props {
