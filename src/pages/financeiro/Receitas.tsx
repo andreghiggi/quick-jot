@@ -297,7 +297,7 @@ export default function Receitas() {
 
       {/* Parcelas da venda — abre com duplo clique OU quando uma ação
           (Receber/Renegociar) precisa que o operador escolha a parcela. */}
-      <Dialog open={!!installmentsGroup} onOpenChange={(o) => { if (!o) { setInstallmentsGroup(null); setPendingAction(null); } }}>
+      <Dialog open={!!installmentsGroup} onOpenChange={(o) => { if (!o) { setInstallmentsGroup(null); setPendingAction(null); setSelectedInst(new Set()); } }}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Parcelas da venda</DialogTitle>
@@ -305,7 +305,7 @@ export default function Receitas() {
               {pendingAction === 'renegociar'
                 ? 'Selecione a parcela que deseja renegociar.'
                 : pendingAction === 'receber'
-                ? 'Selecione a parcela que deseja receber.'
+                ? 'Marque uma ou mais parcelas para receber em conjunto, ou use o botão "Receber" da parcela.'
                 : 'Visão geral das parcelas dessa venda.'}
             </DialogDescription>
           </DialogHeader>
@@ -318,6 +318,10 @@ export default function Receitas() {
             }
             const totalAmount = siblings.reduce((s, i) => s + Number(i.amount), 0);
             const totalBalance = siblings.reduce((s, i) => s + Number(i.balance), 0);
+            const openSiblings = siblings.filter((s) => s.status === 'open');
+            const selectedRows = openSiblings.filter((s) => selectedInst.has(s.id));
+            const selectedBalance = selectedRows.reduce((s, r) => s + Number(r.balance), 0);
+            const canMulti = pendingAction === 'receber' || pendingAction === null;
             return (
               <div className="space-y-2">
                 <div className="text-xs text-muted-foreground flex justify-between">
@@ -328,8 +332,24 @@ export default function Receitas() {
                   {siblings.map((it, idx) => {
                     const uiStatus = computeUIStatus(it.status, it.due_date, today);
                     const isOpen = it.status === 'open';
+                    const checked = selectedInst.has(it.id);
                     return (
                       <div key={it.id} className="flex items-center gap-3 p-3">
+                        {canMulti && (
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-primary cursor-pointer disabled:opacity-40"
+                            disabled={!isOpen}
+                            checked={checked}
+                            onChange={(e) => {
+                              setSelectedInst((prev) => {
+                                const next = new Set(prev);
+                                if (e.target.checked) next.add(it.id); else next.delete(it.id);
+                                return next;
+                              });
+                            }}
+                          />
+                        )}
                         <div className="text-xs text-muted-foreground w-12 shrink-0 tabular-nums">
                           {String(idx + 1).padStart(2, '0')}/{String(siblings.length).padStart(2, '0')}
                         </div>
@@ -352,7 +372,7 @@ export default function Receitas() {
                           </Button>
                         ) : (
                           <Button size="sm" disabled={!isOpen}
-                            onClick={() => { setInstallmentsGroup(null); setPendingAction(null); openEfetivar(it.id); }}>
+                            onClick={() => { setInstallmentsGroup(null); setPendingAction(null); setSelectedInst(new Set()); openEfetivar(it.id); }}>
                             <Check className="h-4 w-4 mr-1" /> Receber
                           </Button>
                         )}
@@ -360,11 +380,41 @@ export default function Receitas() {
                     );
                   })}
                 </div>
+                {canMulti && openSiblings.length > 1 && (
+                  <div className="flex items-center justify-between gap-3 pt-2">
+                    <div className="text-xs text-muted-foreground">
+                      <button
+                        type="button"
+                        className="underline mr-3 hover:text-foreground"
+                        onClick={() => setSelectedInst(new Set(openSiblings.map((s) => s.id)))}
+                      >Selecionar todas</button>
+                      {selectedRows.length > 0 && (
+                        <>
+                          {selectedRows.length} selecionada(s) · Saldo: <b>{brl(selectedBalance)}</b>
+                        </>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      disabled={selectedRows.length === 0}
+                      onClick={() => {
+                        const rows = openSiblings.filter((s) => selectedInst.has(s.id));
+                        setInstallmentsGroup(null);
+                        setPendingAction(null);
+                        setSelectedInst(new Set());
+                        if (rows.length === 1) setEfetivarRow(rows[0]);
+                        else setEfetivarRows(rows);
+                      }}
+                    >
+                      <Check className="h-4 w-4 mr-1" /> Receber selecionadas
+                    </Button>
+                  </div>
+                )}
               </div>
             );
           })()}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => { setInstallmentsGroup(null); setPendingAction(null); }}>Fechar</Button>
+            <Button variant="ghost" onClick={() => { setInstallmentsGroup(null); setPendingAction(null); setSelectedInst(new Set()); }}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
