@@ -305,25 +305,31 @@ export function FrenteCaixaCheckoutDialog({
   async function handleSave(fiscalChoice?: 'fiscal' | 'nao_fiscal') {
     if (!companyId) return;
     if (!exact) {
-      toast.error(creditMode
-        ? 'Informe o cliente (nome e telefone) antes de salvar o crediário.'
-        : 'O valor pago precisa ser igual ao total.');
+      if (isCreditSale) {
+        if (!customerName.trim() || !customerPhone.trim()) {
+          toast.error('Informe o cliente (nome e telefone) antes de salvar o crediário.');
+        } else {
+          toast.error('Na venda no crediário, o valor da forma "Crediário" deve ser igual ao total (não é possível dividir com outras formas).');
+        }
+      } else {
+        toast.error('O valor pago precisa ser igual ao total.');
+      }
       return;
     }
     // Crediário nunca emite NFC-e na Fase 1 (venda entra como não-fiscal).
-    const fiscalMode: 'fiscal' | 'nao_fiscal' = creditMode
+    const fiscalMode: 'fiscal' | 'nao_fiscal' = isCreditSale
       ? 'nao_fiscal'
       : (fiscalChoice ?? (defaultFiscalMode === 'ask' ? 'nao_fiscal' : defaultFiscalMode));
     setProcessing(true);
-    setProcessingStatus(creditMode ? 'Gerando título de crediário…' : 'Processando pagamentos…');
+    setProcessingStatus(isCreditSale ? 'Gerando título de crediário…' : 'Processando pagamentos…');
     try {
       // ── Caminho Crediário: bypass do runMultiPayment (nenhuma cobrança
       // TEF, nenhum split de forma de pagamento — o título é criado pelo
       // caller depois de salvar a venda).
-      if (creditMode) {
+      if (isCreditSale) {
         await onConfirm({
           paymentMethodId: '__credit_sale__',
-          paymentName: 'Crediário',
+          paymentName: creditMethod?.name || 'Crediário',
           discount,
           surcharge,
           finalTotal: total,
