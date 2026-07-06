@@ -564,6 +564,9 @@ function SaleGroupCard({
               <>
                 <span className="text-muted-foreground font-normal"> · </span>
                 <span className="font-mono text-xs">{saleCode}</span>
+                {issueDateBR && (
+                  <span className="text-muted-foreground font-normal font-mono text-xs"> {issueDateBR}</span>
+                )}
               </>
             )}
             <span className="text-muted-foreground font-normal"> · </span>
@@ -573,9 +576,7 @@ function SaleGroupCard({
           </div>
           <div className="text-xs text-muted-foreground">
             Saldo em aberto: <b>{brl(balance)}</b>
-            {isSale
-              ? issueDateBR && ` · Venda em: ${issueDateBR}`
-              : nextOpen && ` · Próx. vencimento: ${nextOpen.due_date.split('-').reverse().join('/')}`}
+            {nextOpen && ` · Próx. vencimento: ${nextOpen.due_date.split('-').reverse().join('/')}`}
           </div>
         </div>
         {!isSale && <StatusBadge status={status} />}
