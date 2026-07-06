@@ -51,6 +51,10 @@ export interface FrenteCaixaCheckoutResult {
   fiscalMode: 'fiscal' | 'nao_fiscal';
   /** Linhas resolvidas do multi-pagamento — usado para montar `pagamentos_split` da NFC-e. */
   mpLines: MultiPaymentResolvedLine[];
+  /** Crediário: nº de parcelas escolhido no checkout (override da forma). */
+  creditInstallmentsCount?: number;
+  /** Crediário: 1ª data de vencimento (YYYY-MM-DD) escolhida no checkout. */
+  creditFirstDueDate?: string;
 }
 
 interface Props {
@@ -130,6 +134,11 @@ export function FrenteCaixaCheckoutDialog({
   const [notes, setNotes] = useState('');
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
 
+  // Crediário: parcelas e 1ª data de vencimento (override da forma).
+  // Inicializados a partir da forma "Crediário" ao entrar em modo crediário.
+  const [creditInstallments, setCreditInstallments] = useState<number>(1);
+  const [creditFirstDue, setCreditFirstDue] = useState<string>('');
+
   const [processing, setProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>('');
 
@@ -155,6 +164,32 @@ export function FrenteCaixaCheckoutDialog({
     ? parseCurrencyInput(lines[creditMethod.id]?.text || '')
     : 0;
   const isCreditSale = !!creditMethod && creditLineAmount > 0;
+
+  // Ao entrar em modo crediário, pré-preenche parcelas e 1ª data de
+  // vencimento a partir da configuração da forma "Crediário".
+  useEffect(() => {
+    if (!isCreditSale || !creditMethod) return;
+    const cfg = creditMethod as any;
+    const n = Math.max(1, Number(cfg.installments_count) || 1);
+    const interval = Math.max(1, Number(cfg.installment_interval) || 1);
+    const period = (cfg.installment_period as 'day' | 'week' | 'month') || 'month';
+    const rule = (cfg.installment_start_rule as 'general' | 'fixed_days' | 'next_month') || 'general';
+    setCreditInstallments((prev) => (prev && prev !== 1 ? prev : n));
+    setCreditFirstDue((prev) => {
+      if (prev) return prev;
+      const d = new Date();
+      if (rule === 'next_month') {
+        d.setMonth(d.getMonth() + 1);
+      } else if (period === 'day') {
+        d.setDate(d.getDate() + interval);
+      } else if (period === 'week') {
+        d.setDate(d.getDate() + 7 * interval);
+      } else {
+        d.setMonth(d.getMonth() + interval);
+      }
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+  }, [isCreditSale, creditMethod]);
   const remaining = Math.max(0, total - allocated);
   const over = allocated > total + 0.005;
   /** No crediário: precisa cliente (nome + telefone) e o valor da forma
@@ -188,6 +223,8 @@ export function FrenteCaixaCheckoutDialog({
       setCustomerDialogOpen(false);
       setProcessing(false);
       setProcessingStatus('');
+      setCreditInstallments(1);
+      setCreditFirstDue('');
     }
   }, [open]);
 
@@ -354,6 +391,8 @@ export function FrenteCaixaCheckoutDialog({
           combinedNotesFragment: 'Crediário — a receber',
           fiscalMode,
           mpLines: [],
+          creditInstallmentsCount: Math.max(1, creditInstallments || 1),
+          creditFirstDueDate: creditFirstDue || undefined,
         });
         return;
       }
@@ -829,6 +868,45 @@ export function FrenteCaixaCheckoutDialog({
               />
               {step === 3 && (
                 <div className="ml-9 space-y-2 max-w-xl">
+                  {isCreditSale && (
+                    <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
+                      <div className="text-xs font-medium text-primary flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        Crediário — parcelamento
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Nº de parcelas</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={60}
+                            value={creditInstallments}
+                            onChange={(e) =>
+                              setCreditInstallments(Math.max(1, Math.min(60, Number(e.target.value) || 1)))
+                            }
+                            disabled={processing}
+                            className="bg-background border-border"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">1º vencimento</Label>
+                          <Input
+                            type="date"
+                            value={creditFirstDue}
+                            onChange={(e) => setCreditFirstDue(e.target.value)}
+                            disabled={processing}
+                            className="bg-background border-border"
+                          />
+                        </div>
+                      </div>
+                      {creditInstallments > 1 && total > 0 && (
+                        <div className="text-[11px] text-muted-foreground">
+                          {creditInstallments}× de aprox. {brl(total / creditInstallments)} — demais parcelas seguem o intervalo da forma cadastrada.
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <Label className="text-xs text-muted-foreground">Observação</Label>
                   <textarea
                     value={notes}

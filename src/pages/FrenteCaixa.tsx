@@ -844,6 +844,7 @@ export default function FrenteCaixa() {
             pdvSaleId: saleId,
             createdBy: user.id,
             notes: params.notes || null,
+            dueDate: params.creditFirstDueDate || undefined,
           });
           toast.success('Título de crediário gerado em Contas a Receber.');
 
@@ -857,7 +858,8 @@ export default function FrenteCaixa() {
               (m) => (m as any).payment_type === 'crediario',
             );
             const installConfig = {
-              installments_count: (crediarioMethod as any)?.installments_count ?? 1,
+              installments_count:
+                params.creditInstallmentsCount ?? ((crediarioMethod as any)?.installments_count ?? 1),
               installment_interval: (crediarioMethod as any)?.installment_interval ?? 1,
               installment_period:
                 ((crediarioMethod as any)?.installment_period as 'day' | 'week' | 'month') ?? 'month',
@@ -866,7 +868,18 @@ export default function FrenteCaixa() {
                 'general',
             };
             const issuedAt = new Date();
-            const parcelas = computeInstallments(params.finalTotal, installConfig, issuedAt);
+            const firstDueOverride = params.creditFirstDueDate
+              ? (() => {
+                  const [y, m, d] = params.creditFirstDueDate!.split('-').map(Number);
+                  return new Date(y, (m || 1) - 1, d || 1);
+                })()
+              : undefined;
+            const parcelas = computeInstallments(
+              params.finalTotal,
+              installConfig,
+              issuedAt,
+              firstDueOverride,
+            );
             await printCrediarioReceipt({
               companyId: company.id,
               paperSize: storeSettings.printerPaperSize,
