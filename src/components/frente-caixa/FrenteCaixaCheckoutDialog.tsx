@@ -896,10 +896,14 @@ export function FrenteCaixaCheckoutDialog({
         open={customerDialogOpen}
         onOpenChange={setCustomerDialogOpen}
         companyId={companyId}
+        requireFull={isCreditSale}
         onPick={(c) => {
           setCustomerName(c.name || '');
           setCustomerPhone(c.phone || '');
           setCustomerDocument(c.document || '');
+          setCustomerAddress(c.address || '');
+          setCustomerCity(c.city || '');
+          setCustomerState(c.state || '');
         }}
       />
     </Dialog>
