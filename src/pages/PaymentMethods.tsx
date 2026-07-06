@@ -277,9 +277,6 @@ function ChannelManager({ channel }: ChannelManagerProps) {
                     <span className="font-medium">Crediário</span>
                     <Badge variant="secondary" className="text-[10px] uppercase">Nativo</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Venda 100% no fiado, exige cliente e gera título em Contas a Receber. Não emite NFC-e.
-                  </p>
                   {!financeiroEnabled && (
                     <p className="text-xs text-destructive mt-1">
                       Requer o módulo <Link to="/financeiro" className="underline">Financeiro</Link> ativo.
