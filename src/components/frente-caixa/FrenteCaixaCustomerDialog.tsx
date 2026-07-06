@@ -69,6 +69,8 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
     city: '', state: '',
   });
   const [saving, setSaving] = useState(false);
+  /** Quando preenchido, o formulário "create" faz UPDATE deste cliente. */
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const searchRef = useRef<HTMLInputElement | null>(null);
   const nameRef = useRef<HTMLInputElement | null>(null);
@@ -86,6 +88,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         city: '', state: '',
       });
       setSaving(false);
+      setEditingId(null);
       setTimeout(() => searchRef.current?.focus(), 60);
     }
   }, [open]);
@@ -146,7 +149,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
   function handleConfirmSelected() {
     if (!selected) return;
     if (selectedMissing.length > 0) {
-      toast.error(`Cadastro incompleto: falta ${selectedMissing.join(', ')}. Cadastre uma nova pessoa ou complete o cadastro deste cliente na tela Clientes.`);
+      toast.error(`Cadastro incompleto: falta ${selectedMissing.join(', ')}. Clique em "Completar cadastro" para editar aqui mesmo.`);
       return;
     }
     const fullAddr = [
@@ -164,6 +167,24 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
       state: selected.state || undefined,
     });
     onOpenChange(false);
+  }
+
+  /** Abre o formulário no modo edição, pré-preenchido com o cliente selecionado. */
+  function handleEditSelected() {
+    if (!selected) return;
+    setForm({
+      name: selected.name || '',
+      phone: selected.phone || '',
+      cpf: selected.cpf || '',
+      address: selected.address || '',
+      number: selected.number || '',
+      neighborhood: selected.neighborhood || '',
+      complement: selected.complement || '',
+      city: selected.city || '',
+      state: selected.state || '',
+    });
+    setEditingId(selected.id);
+    setMode('create');
   }
 
   function handleUseRawCpf() {
