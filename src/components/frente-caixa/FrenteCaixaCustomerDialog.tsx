@@ -252,13 +252,27 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         city: city || null,
         state: state || null,
       };
-      const { data, error } = await supabase
-        .from('customers')
-        .insert(payload)
-        .select('id,name,phone,cpf,address,number,neighborhood,complement,city,state')
-        .single();
-      if (error) throw error;
-      toast.success('Cliente cadastrado.');
+      let data: any;
+      if (editingId) {
+        const { data: upd, error } = await supabase
+          .from('customers')
+          .update(payload)
+          .eq('id', editingId)
+          .select('id,name,phone,cpf,address,number,neighborhood,complement,city,state')
+          .single();
+        if (error) throw error;
+        data = upd;
+        toast.success('Cadastro atualizado.');
+      } else {
+        const { data: ins, error } = await supabase
+          .from('customers')
+          .insert(payload)
+          .select('id,name,phone,cpf,address,number,neighborhood,complement,city,state')
+          .single();
+        if (error) throw error;
+        data = ins;
+        toast.success('Cliente cadastrado.');
+      }
       const fullAddr = [
         address,
         number && `nº ${number}`,
