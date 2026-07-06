@@ -30,11 +30,13 @@ export interface EfetivarSubmit {
 }
 
 export function EfetivarReceitaDialog({
-  open, onOpenChange, receivable, paymentMethods, onConfirm, busy,
+  open, onOpenChange, receivable, receivables, paymentMethods, onConfirm, busy,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   receivable: AccountReceivable | null;
+  /** Quando informado, efetiva várias parcelas juntas (venda inteira). */
+  receivables?: AccountReceivable[] | null;
   paymentMethods: Array<{ id: string; name: string }>;
   onConfirm: (data: EfetivarSubmit) => Promise<void> | void;
   busy: boolean;
@@ -47,7 +49,12 @@ export function EfetivarReceitaDialog({
   const [amount, setAmount] = useState('0,00');
   const [payments, setPayments] = useState<EfetivarPayment[]>([]);
 
-  const balance = Number(receivable?.balance || 0);
+  const list = useMemo(
+    () => (receivables && receivables.length ? receivables : receivable ? [receivable] : []),
+    [receivables, receivable],
+  );
+  const isMulti = list.length > 1;
+  const balance = list.reduce((s, r) => s + Number(r.balance || 0), 0);
   const nInterest = parseCurrencyInput(interest);
   const nFine = parseCurrencyInput(fine);
   const nDiscount = parseCurrencyInput(discount);
@@ -95,7 +102,7 @@ export function EfetivarReceitaDialog({
         <DialogHeader>
           <DialogTitle>Efetivar receita</DialogTitle>
         </DialogHeader>
-        {receivable && (
+        {list.length > 0 && (
           <div className="space-y-4">
             {/* Tabela de cabeçalho: Documento | A Efetivar | Juros | Multa | Desconto | Acréscimo */}
             <div className="rounded-md border overflow-x-auto">
@@ -113,7 +120,9 @@ export function EfetivarReceitaDialog({
                 <tbody>
                   <tr>
                     <td className="px-3 py-2 text-primary font-medium">
-                      {receivable.document_number || receivable.id.slice(0, 8).toUpperCase()}
+                      {isMulti
+                        ? `Múltiplas parcelas (${list.length})`
+                        : (list[0].document_number || list[0].id.slice(0, 8).toUpperCase())}
                     </td>
                     <td className="px-3 py-2 text-right font-semibold">{brl(toEffective)}</td>
                     <td className="px-1 py-1">
