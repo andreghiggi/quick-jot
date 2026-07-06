@@ -1,17 +1,20 @@
 /**
- * Diálogo "Efetivar receita" — replica o UX do Gweb.
+ * Diálogo "Efetivar receita" — inspirado no checkout da Frente de Caixa.
  *
- * Aplica-se a 1 parcela por vez. Permite split de pagamento (várias
- * formas somando o total). Contempla juros/multa/desconto/acréscimo no
- * cálculo do "Falta".
+ * Lista as formas de pagamento com atalho por letra (A, B, C…), permitindo
+ * split de pagamento direto (várias linhas somando o total). Contempla
+ * juros/multa/desconto/acréscimo no cálculo do "Falta".
  */
-import { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { brl, maskCurrencyInput, parseCurrencyInput } from '@/components/pdv-v2/_format';
 import type { AccountReceivable } from '@/hooks/useAccountsReceivable';
 
@@ -29,8 +32,16 @@ export interface EfetivarSubmit {
   payments: EfetivarPayment[];
 }
 
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
 export function EfetivarReceitaDialog({
-  open, onOpenChange, receivable, receivables, paymentMethods, onConfirm, busy,
+  open,
+  onOpenChange,
+  receivable,
+  receivables,
+  paymentMethods,
+  onConfirm,
+  busy,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -45,9 +56,8 @@ export function EfetivarReceitaDialog({
   const [fine, setFine] = useState('0,00');
   const [discount, setDiscount] = useState('0,00');
   const [surcharge, setSurcharge] = useState('0,00');
-  const [methodId, setMethodId] = useState('');
-  const [amount, setAmount] = useState('0,00');
-  const [payments, setPayments] = useState<EfetivarPayment[]>([]);
+  const [lines, setLines] = useState<Record<string, string>>({});
+  const lineRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const list = useMemo(
     () => (receivables && receivables.length ? receivables : receivable ? [receivable] : []),
@@ -63,38 +73,97 @@ export function EfetivarReceitaDialog({
     () => Math.max(0, +(balance + nInterest + nFine + nSurcharge - nDiscount).toFixed(2)),
     [balance, nInterest, nFine, nSurcharge, nDiscount],
   );
-  const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
-  const missing = Math.max(0, +(toEffective - totalPaid).toFixed(2));
+  const totalPaid = paymentMethods.reduce(
+    (s, m) => s + parseCurrencyInput(lines[m.id] || ''),
+    0,
+  );
+  const diff = +(toEffective - totalPaid).toFixed(2);
+  const remaining = Math.max(0, diff);
+  const over = diff < -0.005;
+  const exact = Math.abs(diff) < 0.005 && totalPaid > 0;
 
   useEffect(() => {
     if (open) {
-      setInterest('0,00'); setFine('0,00'); setDiscount('0,00'); setSurcharge('0,00');
-      setMethodId(''); setAmount(maskCurrencyInput(balance.toFixed(2).replace('.', ',')));
-      setPayments([]);
+      setInterest('0,00');
+      setFine('0,00');
+      setDiscount('0,00');
+      setSurcharge('0,00');
+      setLines({});
+      setTimeout(() => {
+        const first = paymentMethods[0];
+        if (first) {
+          const el = lineRefs.current[first.id];
+          el?.focus();
+          el?.select();
+        }
+      }, 60);
     }
-  }, [open, balance]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
-  const addPayment = () => {
-    const amt = parseCurrencyInput(amount);
-    if (amt <= 0) return;
-    const m = paymentMethods.find((x) => x.id === methodId);
-    setPayments((prev) => [
+  const updateLine = (id: string, text: string) =>
+    setLines((prev) => ({ ...prev, [id]: maskCurrencyInput(text) }));
+
+  const fillRemainingOnLine = (id: string) => {
+    const cur = parseCurrencyInput(lines[id] || '');
+    const target = cur + remaining;
+    if (target <= 0) return;
+    setLines((prev) => ({
       ...prev,
-      { amount: amt, paymentMethodId: m?.id ?? null, paymentName: m?.name || 'Dinheiro' },
-    ]);
-    const remaining = Math.max(0, +(missing - amt).toFixed(2));
-    setAmount(maskCurrencyInput(remaining.toFixed(2).replace('.', ',')));
-    setMethodId('');
+      [id]: maskCurrencyInput(target.toFixed(2).replace('.', ',')),
+    }));
   };
 
-  const removePayment = (idx: number) => setPayments((prev) => prev.filter((_, i) => i !== idx));
+  const focusMethodByIndex = (idx: number) => {
+    const m = paymentMethods[idx];
+    if (!m) return;
+    const el = lineRefs.current[m.id];
+    el?.focus();
+    el?.select();
+  };
 
   const submit = async () => {
-    if (payments.length === 0 || missing > 0.005) return;
+    if (!exact) return;
+    const payments: EfetivarPayment[] = paymentMethods
+      .map((m) => {
+        const amt = parseCurrencyInput(lines[m.id] || '');
+        if (amt <= 0) return null;
+        return { amount: amt, paymentMethodId: m.id, paymentName: m.name };
+      })
+      .filter(Boolean) as EfetivarPayment[];
+    if (payments.length === 0) return;
     await onConfirm({
-      interest: nInterest, fine: nFine, discount: nDiscount, surcharge: nSurcharge, payments,
+      interest: nInterest,
+      fine: nFine,
+      discount: nDiscount,
+      surcharge: nSurcharge,
+      payments,
     });
   };
+
+  // Atalhos A..Z para focar formas de pagamento
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (busy) return;
+      if (
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        e.key.length === 1 &&
+        /[a-zA-Z]/.test(e.key)
+      ) {
+        const idx = LETTERS.indexOf(e.key.toUpperCase());
+        if (idx >= 0 && idx < paymentMethods.length) {
+          e.preventDefault();
+          focusMethodByIndex(idx);
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, busy, paymentMethods]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !busy && onOpenChange(false)}>
@@ -104,7 +173,7 @@ export function EfetivarReceitaDialog({
         </DialogHeader>
         {list.length > 0 && (
           <div className="space-y-4">
-            {/* Tabela de cabeçalho: Documento | A Efetivar | Juros | Multa | Desconto | Acréscimo */}
+            {/* Cabeçalho: Documento | A Efetivar | Juros | Multa | Desconto | Acréscimo */}
             <div className="rounded-md border overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/30">
@@ -122,7 +191,7 @@ export function EfetivarReceitaDialog({
                     <td className="px-3 py-2 text-primary font-medium">
                       {isMulti
                         ? `Múltiplas parcelas (${list.length})`
-                        : (list[0].document_number || list[0].id.slice(0, 8).toUpperCase())}
+                        : list[0].document_number || list[0].id.slice(0, 8).toUpperCase()}
                     </td>
                     <td className="px-3 py-2 text-right font-semibold">{brl(toEffective)}</td>
                     <td className="px-1 py-1">
@@ -162,83 +231,83 @@ export function EfetivarReceitaDialog({
               </table>
             </div>
 
-            {/* Split de pagamento */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-3">
-                <div className="grid gap-1.5">
-                  <Label className="text-xs">Meio de pagamento *</Label>
-                  <Select value={methodId} onValueChange={setMethodId}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>
-                      {paymentMethods.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-1.5">
-                  <Label className="text-xs">Valor *</Label>
-                  <Input
-                    value={amount}
-                    onChange={(e) => setAmount(maskCurrencyInput(e.target.value))}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addPayment();
-                      }
-                    }}
-                    inputMode="decimal"
-                    className="text-right"
-                  />
-                </div>
-                <Button
-                  variant="ghost"
-                  className="w-full text-primary hover:text-primary"
-                  onClick={addPayment}
-                  disabled={!methodId || parseCurrencyInput(amount) <= 0}
+            {/* Formas de pagamento com atalhos por letra (estilo Frente de Caixa) */}
+            <div>
+              {paymentMethods.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4">
+                  Nenhuma forma de pagamento cadastrada.
+                </p>
+              ) : (
+                <ul className="divide-y border-y">
+                  {paymentMethods.map((m, idx) => {
+                    const letter = LETTERS[idx] || '';
+                    return (
+                      <li key={m.id} className="py-2.5 flex items-center gap-3">
+                        <span className="flex-1 flex items-center gap-2 text-sm">
+                          <span>{m.name}</span>
+                          {letter && (
+                            <kbd className="ml-auto px-1.5 py-0.5 border border-border rounded text-[10px] bg-muted/40">
+                              {letter}
+                            </kbd>
+                          )}
+                        </span>
+                        <Input
+                          ref={(el) => (lineRefs.current[m.id] = el)}
+                          value={lines[m.id] || ''}
+                          onChange={(e) => updateLine(m.id, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const cur = parseCurrencyInput(lines[m.id] || '');
+                              if (cur === 0 && remaining > 0) {
+                                fillRemainingOnLine(m.id);
+                                return;
+                              }
+                              if (exact && !busy) submit();
+                            }
+                          }}
+                          placeholder="R$ 0,00"
+                          inputMode="decimal"
+                          disabled={busy}
+                          className="w-40 text-right"
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              <div className="flex items-center justify-between pt-3 text-sm">
+                <span className="text-muted-foreground">
+                  Pagamentos: <strong>{brl(totalPaid)}</strong>
+                </span>
+                <span
+                  className={
+                    exact
+                      ? 'text-emerald-500 font-semibold'
+                      : 'text-destructive font-semibold'
+                  }
                 >
-                  <Plus className="h-4 w-4 mr-1" /> PRÓXIMO
-                </Button>
-                <div className="grid gap-1.5 pt-2 border-t">
-                  <Label className="text-xs">Conta</Label>
-                  <Select disabled value="default">
-                    <SelectTrigger><SelectValue placeholder="Conta padrão" /></SelectTrigger>
-                    <SelectContent><SelectItem value="default">Conta padrão</SelectItem></SelectContent>
-                  </Select>
-                  <p className="text-[11px] text-muted-foreground">Será registrado na conta padrão</p>
-                </div>
+                  {over
+                    ? `Excede: ${brl(totalPaid - toEffective)}`
+                    : `Falta: ${brl(remaining)}`}
+                </span>
               </div>
-              <div className="space-y-2">
-                {payments.length === 0 ? (
-                  <div className="text-sm text-muted-foreground text-right">Nenhum pagamento informado</div>
-                ) : (
-                  <div className="divide-y rounded-md border">
-                    {payments.map((p, i) => (
-                      <div key={i} className="flex items-center gap-2 p-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{p.paymentName}</div>
-                          <div className="text-xs text-muted-foreground">{brl(p.amount)}</div>
-                        </div>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removePayment(i)}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="text-right text-sm pt-2 border-t space-y-0.5">
-                  <div>Total: <b>{brl(totalPaid)}</b></div>
-                  <div className={missing > 0.005 ? 'text-destructive' : 'text-emerald-500'}>
-                    Falta: <b>{brl(missing)}</b>
-                  </div>
-                </div>
-              </div>
+
+              <p className="text-[11px] text-muted-foreground pt-2">
+                <kbd className="px-1 py-0.5 border border-border rounded text-[10px]">A–Z</kbd>{' '}
+                foca a forma de pagamento.{' '}
+                <kbd className="px-1 py-0.5 border border-border rounded text-[10px]">Enter</kbd>{' '}
+                preenche o restante e efetiva.
+              </p>
             </div>
           </div>
         )}
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>CANCELAR</Button>
-          <Button onClick={submit} disabled={busy || payments.length === 0 || missing > 0.005}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+            CANCELAR
+          </Button>
+          <Button onClick={submit} disabled={busy || !exact}>
             EFETIVAR
           </Button>
         </DialogFooter>
