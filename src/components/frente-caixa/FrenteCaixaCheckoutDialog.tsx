@@ -134,6 +134,11 @@ export function FrenteCaixaCheckoutDialog({
   const [notes, setNotes] = useState('');
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
 
+  // Crediário: parcelas e 1ª data de vencimento (override da forma).
+  // Inicializados a partir da forma "Crediário" ao entrar em modo crediário.
+  const [creditInstallments, setCreditInstallments] = useState<number>(1);
+  const [creditFirstDue, setCreditFirstDue] = useState<string>('');
+
   const [processing, setProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>('');
 
