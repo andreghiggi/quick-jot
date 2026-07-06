@@ -175,6 +175,7 @@ export function computeInstallments(
     installment_start_rule: 'general' | 'fixed_days' | 'next_month';
   },
   issuedAt: Date,
+  firstDueDateOverride?: Date,
 ): { number: number; dueDate: string; amount: number }[] {
   const n = Math.max(1, config.installments_count || 1);
   const interval = Math.max(1, config.installment_interval || 1);
@@ -199,7 +200,7 @@ export function computeInstallments(
     return addTo(issuedAt, 1);
   };
 
-  const first = firstDue();
+  const first = firstDueDateOverride ?? firstDue();
   const out: { number: number; dueDate: string; amount: number }[] = [];
   for (let i = 0; i < n; i++) {
     const due = i === 0 ? first : addTo(first, i);
