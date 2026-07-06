@@ -276,5 +276,154 @@ export function useAccountsReceivable(companyId?: string | null) {
     return (data as any[]) as AccountReceivablePayment[];
   }, []);
 
-  return { items, loading, reload: load, create, receivePayment, cancel, remove, update, renegotiate, listPayments };
+  /**
+   * Efetiva um recebimento com múltiplas formas de pagamento (split).
+   * Cada linha vira 1 registro em `accounts_receivable_payments`. Aplica
+   * juros/multa (somam ao total efetivamente pago) e desconto/acréscimo
+   * (ajuste no cabeçalho para bater com o total do split).
+   */
+  const receivePaymentSplit = useCallback(async (input: {
+    receivableId: string;
+    companyId: string;
+    operatorId?: string | null;
+    interest?: number;   // juros
+    fine?: number;       // multa
+    discount?: number;   // desconto
+    surcharge?: number;  // acréscimo
+    payments: Array<{
+      amount: number;
+      paymentMethodId?: string | null;
+      paymentName: string;
+    }>;
+  }): Promise<boolean> => {
+    if (!input.payments.length) { toast.error('Adicione ao menos uma forma de pagamento.'); return false; }
+
+    const { data: cur, error: e1 } = await supabase
+      .from('accounts_receivable' as any)
+      .select('id, balance, amount, status, interest_amount, fine_amount')
+      .eq('id', input.receivableId)
+      .maybeSingle();
+    if (e1 || !cur) { toast.error('Título não encontrado.'); return false; }
+    const row = cur as any;
+    if (row.status !== 'open') {
+      toast.error('Título já está ' + (row.status === 'paid' ? 'quitado' : 'cancelado') + '.');
+      return false;
+    }
+
+    const paidTotal = input.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+    if (paidTotal <= 0) { toast.error('Valor total inválido.'); return false; }
+
+    // Inserir cada pagamento individual
+    const rows = input.payments.map((p) => ({
+      receivable_id: input.receivableId,
+      company_id: input.companyId,
+      amount: p.amount,
+      payment_method_id: p.paymentMethodId ?? null,
+      payment_name: p.paymentName,
+      operator_id: input.operatorId ?? null,
+      notes: null,
+    }));
+    const { error: e2 } = await supabase.from('accounts_receivable_payments' as any).insert(rows);
+    if (e2) { toast.error('Falha ao registrar recebimento: ' + e2.message); return false; }
+
+    // Ajusta saldo: soma juros/multa/acréscimo ao valor devido e subtrai
+    // desconto antes de comparar com o total efetivamente recebido.
+    const currentBalance = Number(row.balance);
+    const adjustments =
+      Number(input.interest || 0) +
+      Number(input.fine || 0) +
+      Number(input.surcharge || 0) -
+      Number(input.discount || 0);
+    const newBalance = Math.max(0, +(currentBalance + adjustments - paidTotal).toFixed(2));
+    const isPaid = newBalance <= 0.005;
+
+    const { error: e3 } = await supabase.from('accounts_receivable' as any).update({
+      balance: newBalance,
+      status: isPaid ? 'paid' : 'open',
+      interest_amount: Number(row.interest_amount || 0) + Number(input.interest || 0),
+      fine_amount: Number(row.fine_amount || 0) + Number(input.fine || 0),
+      paid_at: isPaid ? new Date().toISOString() : null,
+    }).eq('id', input.receivableId);
+    if (e3) { toast.error('Recebimento salvo, mas falha ao atualizar saldo.'); await load(); return false; }
+
+    await load();
+    toast.success(isPaid ? 'Título quitado.' : 'Recebimento registrado.');
+    return true;
+  }, [load]);
+
+  /**
+   * Renegocia um título gerando N novas parcelas: cancela o original
+   * (`status='canceled'` + histórico em `accounts_renegotiations`) e
+   * cria N novas contas a receber com o valor/intervalo informados.
+   */
+  const renegotiateSplit = useCallback(async (input: {
+    receivableId: string;
+    companyId: string;
+    userId?: string | null;
+    newTotalAmount: number;
+    installments: Array<{ amount: number; dueDate: string }>;
+    reason?: string | null;
+  }): Promise<boolean> => {
+    const { data: cur } = await supabase
+      .from('accounts_receivable' as any)
+      .select('*')
+      .eq('id', input.receivableId)
+      .maybeSingle();
+    const row = cur as any;
+    if (!row) { toast.error('Título não encontrado.'); return false; }
+
+    // 1) Histórico da renegociação
+    const firstDue = input.installments[0]?.dueDate || row.due_date;
+    const { error: ehist } = await supabase.from('accounts_renegotiations' as any).insert({
+      company_id: input.companyId,
+      account_type: 'receivable',
+      account_id: input.receivableId,
+      old_amount: row.amount,
+      new_amount: input.newTotalAmount,
+      old_due_date: row.due_date,
+      new_due_date: firstDue,
+      reason: input.reason || null,
+      created_by: input.userId ?? null,
+    });
+    if (ehist) { toast.error('Falha ao registrar renegociação: ' + ehist.message); return false; }
+
+    // 2) Cancela o original
+    const { error: ecancel } = await supabase.from('accounts_receivable' as any).update({
+      status: 'canceled',
+      canceled_at: new Date().toISOString(),
+      canceled_by: input.userId ?? null,
+      cancel_reason: `Renegociado em ${input.installments.length}x`,
+    }).eq('id', input.receivableId);
+    if (ecancel) { toast.error('Falha ao cancelar original: ' + ecancel.message); return false; }
+
+    // 3) Cria as novas parcelas
+    const n = input.installments.length;
+    const docBase = row.document_number
+      ? String(row.document_number).replace(/-\d+\/\d+$/, '') + '-R'
+      : `REN${String(input.receivableId).slice(0, 6).toUpperCase()}`;
+    const newRows = input.installments.map((it, i) => ({
+      company_id: input.companyId,
+      customer_id: row.customer_id,
+      customer_name: row.customer_name,
+      customer_phone: row.customer_phone,
+      customer_document: row.customer_document,
+      amount: it.amount,
+      balance: it.amount,
+      due_date: it.dueDate,
+      issue_date: new Date().toISOString().slice(0, 10),
+      document_number: n > 1 ? `${docBase}-${i + 1}/${n}` : docBase,
+      pdv_sale_id: row.pdv_sale_id,
+      notes: `Renegociação do título ${row.document_number || row.id.slice(0, 6)}`,
+      origin: 'renegociacao',
+      created_by: input.userId ?? null,
+    }));
+    const { error: enew } = await supabase.from('accounts_receivable' as any).insert(newRows);
+    if (enew) { toast.error('Falha ao criar novas parcelas: ' + enew.message); return false; }
+
+    await load();
+    toast.success(`Título renegociado em ${n} parcela(s).`);
+    return true;
+  }, [load]);
+
+  return { items, loading, reload: load, create, receivePayment, receivePaymentSplit, cancel, remove, update, renegotiate, renegotiateSplit, listPayments };
 }
