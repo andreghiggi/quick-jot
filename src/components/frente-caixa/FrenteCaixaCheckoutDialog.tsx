@@ -868,6 +868,45 @@ export function FrenteCaixaCheckoutDialog({
               />
               {step === 3 && (
                 <div className="ml-9 space-y-2 max-w-xl">
+                  {isCreditSale && (
+                    <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
+                      <div className="text-xs font-medium text-primary flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        Crediário — parcelamento
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Nº de parcelas</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={60}
+                            value={creditInstallments}
+                            onChange={(e) =>
+                              setCreditInstallments(Math.max(1, Math.min(60, Number(e.target.value) || 1)))
+                            }
+                            disabled={processing}
+                            className="bg-background border-border"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">1º vencimento</Label>
+                          <Input
+                            type="date"
+                            value={creditFirstDue}
+                            onChange={(e) => setCreditFirstDue(e.target.value)}
+                            disabled={processing}
+                            className="bg-background border-border"
+                          />
+                        </div>
+                      </div>
+                      {creditInstallments > 1 && total > 0 && (
+                        <div className="text-[11px] text-muted-foreground">
+                          {creditInstallments}× de aprox. {brl(total / creditInstallments)} — demais parcelas seguem o intervalo da forma cadastrada.
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <Label className="text-xs text-muted-foreground">Observação</Label>
                   <textarea
                     value={notes}
