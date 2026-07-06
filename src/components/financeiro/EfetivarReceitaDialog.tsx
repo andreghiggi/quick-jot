@@ -181,6 +181,12 @@ export function EfetivarReceitaDialog({
                   <Input
                     value={amount}
                     onChange={(e) => setAmount(maskCurrencyInput(e.target.value))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addPayment();
+                      }
+                    }}
                     inputMode="decimal"
                     className="text-right"
                   />
@@ -191,7 +197,7 @@ export function EfetivarReceitaDialog({
                   onClick={addPayment}
                   disabled={!methodId || parseCurrencyInput(amount) <= 0}
                 >
-                  <Plus className="h-4 w-4 mr-1" /> ADICIONAR
+                  <Plus className="h-4 w-4 mr-1" /> PRÓXIMO
                 </Button>
                 <div className="grid gap-1.5 pt-2 border-t">
                   <Label className="text-xs">Conta</Label>
