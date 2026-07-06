@@ -146,10 +146,22 @@ export function FrenteCaixaCheckoutDialog({
       ),
     [lines, activePaymentMethods],
   );
-  const remaining = creditMode ? 0 : Math.max(0, total - allocated);
-  const over = !creditMode && allocated > total + 0.005;
-  const exact = creditMode
-    ? total > 0 && !!customerName.trim() && !!customerPhone.trim()
+  /** É venda crediário quando o operador colocou valor > 0 numa forma
+   *  cadastrada como `payment_type='crediario'`. */
+  const creditLineAmount = creditMethod
+    ? parseCurrencyInput(lines[creditMethod.id]?.text || '')
+    : 0;
+  const isCreditSale = !!creditMethod && creditLineAmount > 0;
+  const remaining = Math.max(0, total - allocated);
+  const over = allocated > total + 0.005;
+  /** No crediário: precisa cliente (nome + telefone) e o valor da forma
+   *  crediário deve ser 100% do total (não permite mix). */
+  const exact = isCreditSale
+    ? total > 0
+      && Math.abs(creditLineAmount - total) < 0.005
+      && Math.abs(allocated - total) < 0.005
+      && !!customerName.trim()
+      && !!customerPhone.trim()
     : total > 0 && Math.abs(allocated - total) < 0.005;
 
   // reset ao abrir
