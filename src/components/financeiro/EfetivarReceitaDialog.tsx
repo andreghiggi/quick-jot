@@ -181,6 +181,12 @@ export function EfetivarReceitaDialog({
                   <Input
                     value={amount}
                     onChange={(e) => setAmount(maskCurrencyInput(e.target.value))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addPayment();
+                      }
+                    }}
                     inputMode="decimal"
                     className="text-right"
                   />
