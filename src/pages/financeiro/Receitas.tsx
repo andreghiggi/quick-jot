@@ -520,6 +520,13 @@ function SaleGroupCard({
   const nextOpen = rows.filter((r) => r.status === 'open').sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
   const status = groupStatus(group, today);
   const parcelasCount = rows.length;
+  const isSale = group.kind === 'sale';
+  const saleCode = isSale ? `#${group.saleId.replace(/-/g, '').slice(-6).toUpperCase()}` : '';
+  const issueDate = rows
+    .map((r) => r.issue_date)
+    .filter(Boolean)
+    .sort()[0];
+  const issueDateBR = issueDate ? issueDate.split('-').reverse().join('/') : '';
 
   // Row de referência para o menu (usa a próxima em aberto ou a primeira).
   const menuRefRow = nextOpen || rows[0];
@@ -553,6 +560,12 @@ function SaleGroupCard({
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold truncate">
             {customer}
+            {isSale && (
+              <>
+                <span className="text-muted-foreground font-normal"> · </span>
+                <span className="font-mono text-xs">{saleCode}</span>
+              </>
+            )}
             <span className="text-muted-foreground font-normal"> · </span>
             {parcelasCount > 1 ? `${parcelasCount} parcelas` : '1 título'}
             <span className="text-muted-foreground font-normal"> · Total: </span>
@@ -560,10 +573,12 @@ function SaleGroupCard({
           </div>
           <div className="text-xs text-muted-foreground">
             Saldo em aberto: <b>{brl(balance)}</b>
-            {nextOpen && ` · Próx. vencimento: ${nextOpen.due_date.split('-').reverse().join('/')}`}
+            {isSale
+              ? issueDateBR && ` · Venda em: ${issueDateBR}`
+              : nextOpen && ` · Próx. vencimento: ${nextOpen.due_date.split('-').reverse().join('/')}`}
           </div>
         </div>
-        <StatusBadge status={status} />
+        {!isSale && <StatusBadge status={status} />}
         <Button
           variant="ghost" size="icon" className="h-8 w-8"
           onClick={(e) => { e.stopPropagation(); onOpenMenu(e.currentTarget, financeRow); }}
