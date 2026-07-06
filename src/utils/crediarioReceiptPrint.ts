@@ -9,13 +9,16 @@
  *   - Termo curto: "Li e estou de acordo com este documento."
  *   - Campo de assinatura + CPF do cliente
  *
- * Enfileira em `print_queue` respeitando o número de vias configurado em
- * `pdv_settings.crediario_receipt_copies` (1 ou 2).
+ * Abre a janela de impressão do navegador (mesmo comportamento do DANFE
+ * NFC-e) respeitando o número de vias configurado em
+ * `pdv_settings.crediario_receipt_copies` (1 ou 2). O operador confirma
+ * a impressão pelo diálogo do Chrome — não é enviado para o
+ * `auto_printer.py`.
  *
  * Escopo: usado APENAS pelo fluxo de crediário do Frente de Caixa. Não
  * afeta impressão de cupom fiscal, DANFE NFC-e ou recibos do PDV V2.
  */
-import { supabase } from '@/integrations/supabase/client';
+// Sem import do supabase — a impressão é 100% client-side (window.open + print).
 
 export interface CrediarioReceiptItem {
   name: string;
@@ -244,13 +247,29 @@ export function computeInstallments(
 export async function printCrediarioReceipt(payload: CrediarioReceiptPayload): Promise<void> {
   const html = buildHTML(payload);
   const copies = payload.copies === 1 ? 1 : 2;
-  const rows = Array.from({ length: copies }).map((_, i) => ({
-    company_id: payload.companyId,
-    html_content: html,
-    label: copies === 2
-      ? `Crediário ${i === 0 ? 'Loja' : 'Cliente'} — ${payload.customerName.slice(0, 20)}`
-      : `Crediário — ${payload.customerName.slice(0, 20)}`,
-  }));
-  const { error } = await supabase.from('print_queue').insert(rows);
-  if (error) throw error;
+
+  // Abre uma janela por via — mesmo padrão do DANFE NFC-e (printDanfeFromRecord):
+  // o navegador exibe o diálogo nativo de impressão e o operador confirma.
+  for (let i = 0; i < copies; i++) {
+    const printWindow = window.open('', '_blank', 'width=420,height=750');
+    if (!printWindow) {
+      throw new Error('Pop-up bloqueado. Permita pop-ups para imprimir o comprovante.');
+    }
+    // Adiciona um botão de impressão (fallback) e dispara window.print() após o load.
+    const withAutoPrint = html.replace(
+      '</body>',
+      `<div class="no-print" style="text-align:center;margin-top:12px;">
+         <button onclick="window.print()" style="padding:8px 20px;font-size:14px;cursor:pointer;">🖨️ Imprimir</button>
+       </div>
+       <style>@media print { .no-print { display:none !important; } }</style>
+       </body>`,
+    );
+    printWindow.document.open();
+    printWindow.document.write(withAutoPrint);
+    printWindow.document.close();
+    // Delay entre cópias para o navegador liberar a fila.
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((r) => setTimeout(r, 500));
+    try { printWindow.print(); } catch (_) { /* noop */ }
+  }
 }
