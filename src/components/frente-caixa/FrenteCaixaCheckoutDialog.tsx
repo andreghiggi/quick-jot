@@ -97,27 +97,12 @@ export function FrenteCaixaCheckoutDialog({
   });
 
   /**
-   * Crediário é NATIVO: no checkout ele aparece como um bloco fixo (não como
-   * uma linha na lista de formas de pagamento). Por isso removemos qualquer
-   * forma cadastrada com `payment_type='crediario'` da lista normal.
+   * Crediário aparece como uma linha normal da lista, com letra de atalho
+   * (A/B/C…), igual às outras formas. A única diferença é que, se o
+   * operador digitar valor nessa linha, a venda inteira vira "crediário"
+   * (sem NFC-e e exigindo cliente).
    */
-  const activePaymentMethods = useMemo(
-    () => allActivePaymentMethods.filter((m) => (m as any).payment_type !== 'crediario'),
-    [allActivePaymentMethods],
-  );
-
-  /**
-   * Crediário nativo aparece quando:
-   *   (a) o operador marcou "Habilitar venda a prazo" em Configurações
-   *       (prop `creditSaleAvailable` vinda do PDV), OU
-   *   (b) existe pelo menos uma forma de pagamento cadastrada com
-   *       `payment_type='crediario'` (fluxo novo estilo GWeb).
-   */
-  const hasCrediarioPaymentMethod = useMemo(
-    () => allActivePaymentMethods.some((m) => (m as any).payment_type === 'crediario'),
-    [allActivePaymentMethods],
-  );
-  const creditSaleVisible = creditSaleAvailable || hasCrediarioPaymentMethod;
+  const activePaymentMethods = allActivePaymentMethods;
 
   const [step, setStep] = useState<StepId>(1);
   const [discountText, setDiscountText] = useState('');
