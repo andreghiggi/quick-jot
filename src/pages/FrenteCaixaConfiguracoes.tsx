@@ -320,6 +320,25 @@ export default function FrenteCaixaConfiguracoes() {
               <CreditCard className="h-4 w-4" />
               Abrir Contas a Receber
             </Button>
+
+            <div className="space-y-1.5 pt-2">
+              <Label htmlFor="crediario_receipt_copies">Vias do comprovante de crediário</Label>
+              <Select
+                value={String(form.crediario_receipt_copies)}
+                onValueChange={(v) => updPersist('crediario_receipt_copies', (v === '1' ? 1 : 2) as 1 | 2)}
+              >
+                <SelectTrigger id="crediario_receipt_copies">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 via (só cliente)</SelectItem>
+                  <SelectItem value="2">2 vias (loja + cliente)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Ao finalizar uma venda no crediário, a Frente de Caixa imprime o comprovante (com campo de assinatura) na quantidade escolhida.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}

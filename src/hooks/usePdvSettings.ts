@@ -38,6 +38,8 @@ export interface PdvSettings {
    *  Caixa exibe a opção "Crediário" no checkout, exige cliente e cria
    *  um título em Contas a Receber após salvar. */
   credit_sale_enabled: boolean;
+  /** Nº de vias (1 ou 2) do comprovante de crediário impresso após a venda. */
+  crediario_receipt_copies: 1 | 2;
 }
 
 export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
@@ -68,6 +70,7 @@ export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
   print_on_finish_mode: 'off',
   default_fiscal_mode: 'ask',
   credit_sale_enabled: false,
+  crediario_receipt_copies: 2,
 };
 
 /**
@@ -128,6 +131,7 @@ export function usePdvSettings(companyId?: string | null) {
         default_fiscal_mode:
           ((data as any).default_fiscal_mode as 'fiscal' | 'nao_fiscal' | 'ask') ?? 'ask',
         credit_sale_enabled: !!(data as any).credit_sale_enabled,
+        crediario_receipt_copies: ((data as any).crediario_receipt_copies === 1 ? 1 : 2) as 1 | 2,
       });
     } else {
       setSettings(PDV_SETTINGS_DEFAULTS);
