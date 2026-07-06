@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { brl, maskCurrencyInput, parseCurrencyInput } from '@/components/pdv-v2/_format';
 import {
   FinanceSearchBar, FinanceFilterPanel, FinanceCard, FinanceActionMenu, FinanceDetailModal,
-  FloatingFab, RenegotiateDialog, ConfirmDialog, BulkActionBar, Pagination,
+  FloatingFab, RenegotiateDialog, ConfirmDialog, BulkActionBar, Pagination, StatusBadge,
   computeUIStatus, applyFilters, emptyFilters,
   type FinanceRow, type FinanceFilters,
 } from '@/components/financeiro/finance-shared';
@@ -53,6 +53,7 @@ export default function Receitas() {
   const [bulkDelete, setBulkDelete] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [installmentsSaleId, setInstallmentsSaleId] = useState<string | null>(null);
 
   const rows = useMemo<FinanceRow[]>(() => items.map((r) => ({
     id: r.id,
@@ -69,6 +70,7 @@ export default function Receitas() {
     origin_type: r.origin_type,
     origin_id: r.origin_id,
     tags: r.tags || [],
+    pdv_sale_id: r.pdv_sale_id,
   })), [items, today]);
 
   const filtered = useMemo(() => {
@@ -228,12 +230,79 @@ export default function Receitas() {
                     setSelection(s);
                   }}
                   onOpenMenu={(el) => { setMenuAnchor(el); setMenuTarget(r); }}
+                  onOpenCard={() => {
+                    if (r.pdv_sale_id) setInstallmentsSaleId(r.pdv_sale_id);
+                    else openReceive(r.id);
+                  }}
                 />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Parcelas da venda — agrupamento por pdv_sale_id */}
+      <Dialog open={!!installmentsSaleId} onOpenChange={(o) => !o && setInstallmentsSaleId(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Parcelas da venda</DialogTitle>
+            <DialogDescription>Selecione a parcela que deseja receber.</DialogDescription>
+          </DialogHeader>
+          {installmentsSaleId && (() => {
+            const siblings = items
+              .filter((it) => it.pdv_sale_id === installmentsSaleId)
+              .sort((a, b) => a.due_date.localeCompare(b.due_date));
+            if (siblings.length === 0) {
+              return <div className="text-sm text-muted-foreground py-4">Nenhuma parcela encontrada.</div>;
+            }
+            const totalAmount = siblings.reduce((s, i) => s + Number(i.amount), 0);
+            const totalBalance = siblings.reduce((s, i) => s + Number(i.balance), 0);
+            return (
+              <div className="space-y-2">
+                <div className="text-xs text-muted-foreground flex justify-between">
+                  <span>Cliente: <b>{siblings[0].customer_name}</b></span>
+                  <span>Total: {brl(totalAmount)} · Saldo: {brl(totalBalance)}</span>
+                </div>
+                <div className="divide-y rounded-md border">
+                  {siblings.map((it, idx) => {
+                    const uiStatus = computeUIStatus(it.status, it.due_date, today);
+                    const isOpen = it.status === 'open';
+                    return (
+                      <div key={it.id} className="flex items-center gap-3 p-3">
+                        <div className="text-xs text-muted-foreground w-12 shrink-0 tabular-nums">
+                          {String(idx + 1).padStart(2, '0')}/{String(siblings.length).padStart(2, '0')}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">
+                            Vence {it.due_date.split('-').reverse().join('/')}
+                            <span className="text-muted-foreground"> · </span>
+                            <span className="text-emerald-500">{brl(Number(it.amount))}</span>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground truncate">
+                            Saldo: {brl(Number(it.balance))}
+                            {it.document_number ? ` · ${it.document_number}` : ''}
+                          </div>
+                        </div>
+                        <StatusBadge status={uiStatus} />
+                        <Button
+                          size="sm"
+                          disabled={!isOpen}
+                          onClick={() => { setInstallmentsSaleId(null); openReceive(it.id); }}
+                        >
+                          <Check className="h-4 w-4 mr-1" /> Receber
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setInstallmentsSaleId(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <FinanceActionMenu
         open={!!menuTarget}
