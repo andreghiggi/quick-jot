@@ -180,7 +180,6 @@ export function FrenteCaixaCheckoutDialog({
       setCustomerDialogOpen(false);
       setProcessing(false);
       setProcessingStatus('');
-      setCreditMode(false);
     }
   }, [open]);
 
