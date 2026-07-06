@@ -462,11 +462,13 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onClick={() => setMode('search')}
+                onClick={() => { setMode('search'); setEditingId(null); }}
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <h2 className="text-lg font-semibold">Novo cliente</h2>
+              <h2 className="text-lg font-semibold">
+                {editingId ? 'Completar cadastro do cliente' : 'Novo cliente'}
+              </h2>
             </div>
 
             <div className="space-y-3">
@@ -572,7 +574,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                     <Loader2 className="h-4 w-4 animate-spin mr-2" /> Salvando…
                   </>
                 ) : (
-                  'SALVAR E USAR'
+                  editingId ? 'ATUALIZAR E USAR' : 'SALVAR E USAR'
                 )}
               </Button>
             </div>
