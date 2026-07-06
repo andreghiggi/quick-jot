@@ -425,5 +425,82 @@ export function useAccountsReceivable(companyId?: string | null) {
     return true;
   }, [load]);
 
-  return { items, loading, reload: load, create, receivePayment, receivePaymentSplit, cancel, remove, update, renegotiate, renegotiateSplit, listPayments };
+  /**
+   * Renegocia MÚLTIPLOS títulos em aberto (uma venda inteira) gerando N
+   * novas parcelas: cancela cada título original + registra histórico e
+   * cria as novas contas usando o primeiro como referência (mesmo cliente
+   * e pdv_sale_id).
+   */
+  const renegotiateManySplit = useCallback(async (input: {
+    receivableIds: string[];
+    companyId: string;
+    userId?: string | null;
+    newTotalAmount: number;
+    installments: Array<{ amount: number; dueDate: string }>;
+    reason?: string | null;
+  }): Promise<boolean> => {
+    if (!input.receivableIds.length) { toast.error('Nenhuma parcela para renegociar.'); return false; }
+    const { data: curs } = await supabase
+      .from('accounts_receivable' as any)
+      .select('*')
+      .in('id', input.receivableIds);
+    const rows = (curs as any[]) || [];
+    if (!rows.length) { toast.error('Títulos não encontrados.'); return false; }
+    const ref = rows[0];
+    const firstDue = input.installments[0]?.dueDate || ref.due_date;
+
+    // 1) Histórico por título
+    const histRows = rows.map((r: any) => ({
+      company_id: input.companyId,
+      account_type: 'receivable',
+      account_id: r.id,
+      old_amount: r.amount,
+      new_amount: input.newTotalAmount,
+      old_due_date: r.due_date,
+      new_due_date: firstDue,
+      reason: input.reason || `Renegociação de venda em ${input.installments.length}x`,
+      created_by: input.userId ?? null,
+    }));
+    const { error: ehist } = await supabase.from('accounts_renegotiations' as any).insert(histRows);
+    if (ehist) { toast.error('Falha ao registrar renegociação: ' + ehist.message); return false; }
+
+    // 2) Cancela todos os originais
+    const { error: ecancel } = await supabase.from('accounts_receivable' as any).update({
+      status: 'canceled',
+      canceled_at: new Date().toISOString(),
+      canceled_by: input.userId ?? null,
+      cancel_reason: `Renegociado em ${input.installments.length}x (venda)`,
+    }).in('id', input.receivableIds);
+    if (ecancel) { toast.error('Falha ao cancelar originais: ' + ecancel.message); return false; }
+
+    // 3) Cria as novas parcelas
+    const n = input.installments.length;
+    const docBase = ref.document_number
+      ? String(ref.document_number).replace(/-\d+\/\d+$/, '') + '-R'
+      : `REN${String(ref.pdv_sale_id || ref.id).slice(0, 6).toUpperCase()}`;
+    const newRows = input.installments.map((it, i) => ({
+      company_id: input.companyId,
+      customer_id: ref.customer_id,
+      customer_name: ref.customer_name,
+      customer_phone: ref.customer_phone,
+      customer_document: ref.customer_document,
+      amount: it.amount,
+      balance: it.amount,
+      due_date: it.dueDate,
+      issue_date: new Date().toISOString().slice(0, 10),
+      document_number: n > 1 ? `${docBase}-${i + 1}/${n}` : docBase,
+      pdv_sale_id: ref.pdv_sale_id,
+      notes: `Renegociação da venda ${ref.pdv_sale_id ? ref.pdv_sale_id.slice(0, 6) : ref.id.slice(0, 6)}`,
+      origin: 'renegociacao',
+      created_by: input.userId ?? null,
+    }));
+    const { error: enew } = await supabase.from('accounts_receivable' as any).insert(newRows);
+    if (enew) { toast.error('Falha ao criar novas parcelas: ' + enew.message); return false; }
+
+    await load();
+    toast.success(`Venda renegociada em ${n} parcela(s).`);
+    return true;
+  }, [load]);
+
+  return { items, loading, reload: load, create, receivePayment, receivePaymentSplit, cancel, remove, update, renegotiate, renegotiateSplit, renegotiateManySplit, listPayments };
 }
