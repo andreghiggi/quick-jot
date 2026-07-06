@@ -309,6 +309,18 @@ export function FrenteCaixaCheckoutDialog({
         }
         if (step === 2) {
           e.preventDefault();
+          if (isCreditSale) {
+            const missing = [
+              !customerName.trim() && 'nome',
+              !customerDocument.trim() && 'CPF',
+              !customerPhone.trim() && 'telefone',
+              !customerAddress.trim() && 'endereço',
+            ].filter(Boolean) as string[];
+            if (missing.length > 0) {
+              toast.error(`Venda no crediário exige cliente com cadastro completo (falta ${missing.join(', ')}).`);
+              return;
+            }
+          }
           setStep(3);
           return;
         }
@@ -840,7 +852,21 @@ export function FrenteCaixaCheckoutDialog({
                     <Button
                       type="button"
                       size="sm"
-                      onClick={() => setStep(3)}
+                      onClick={() => {
+                        if (isCreditSale) {
+                          const missing = [
+                            !customerName.trim() && 'nome',
+                            !customerDocument.trim() && 'CPF',
+                            !customerPhone.trim() && 'telefone',
+                            !customerAddress.trim() && 'endereço',
+                          ].filter(Boolean) as string[];
+                          if (missing.length > 0) {
+                            toast.error(`Venda no crediário exige cliente com cadastro completo (falta ${missing.join(', ')}).`);
+                            return;
+                          }
+                        }
+                        setStep(3);
+                      }}
                       disabled={processing}
                       className="bg-muted hover:bg-muted/70"
                     >
