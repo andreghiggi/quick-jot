@@ -137,7 +137,9 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         !selected.name?.trim() && 'nome',
         !selected.cpf?.trim() && 'CPF',
         !selected.phone?.trim() && 'telefone',
-        !selected.address?.trim() && 'endereço',
+        !selected.address?.trim() && 'rua',
+        !selected.number?.trim() && 'número',
+        !selected.neighborhood?.trim() && 'bairro',
       ].filter(Boolean) as string[]
     : [];
 
