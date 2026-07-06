@@ -164,6 +164,32 @@ export function FrenteCaixaCheckoutDialog({
     ? parseCurrencyInput(lines[creditMethod.id]?.text || '')
     : 0;
   const isCreditSale = !!creditMethod && creditLineAmount > 0;
+
+  // Ao entrar em modo crediário, pré-preenche parcelas e 1ª data de
+  // vencimento a partir da configuração da forma "Crediário".
+  useEffect(() => {
+    if (!isCreditSale || !creditMethod) return;
+    const cfg = creditMethod as any;
+    const n = Math.max(1, Number(cfg.installments_count) || 1);
+    const interval = Math.max(1, Number(cfg.installment_interval) || 1);
+    const period = (cfg.installment_period as 'day' | 'week' | 'month') || 'month';
+    const rule = (cfg.installment_start_rule as 'general' | 'fixed_days' | 'next_month') || 'general';
+    setCreditInstallments((prev) => (prev && prev !== 1 ? prev : n));
+    setCreditFirstDue((prev) => {
+      if (prev) return prev;
+      const d = new Date();
+      if (rule === 'next_month') {
+        d.setMonth(d.getMonth() + 1);
+      } else if (period === 'day') {
+        d.setDate(d.getDate() + interval);
+      } else if (period === 'week') {
+        d.setDate(d.getDate() + 7 * interval);
+      } else {
+        d.setMonth(d.getMonth() + interval);
+      }
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+  }, [isCreditSale, creditMethod]);
   const remaining = Math.max(0, total - allocated);
   const over = allocated > total + 0.005;
   /** No crediário: precisa cliente (nome + telefone) e o valor da forma
