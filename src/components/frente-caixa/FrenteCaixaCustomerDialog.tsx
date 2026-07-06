@@ -30,6 +30,9 @@ interface CustomerRow {
   phone: string | null;
   cpf: string | null;
   address: string | null;
+  number: string | null;
+  neighborhood: string | null;
+  complement: string | null;
   city: string | null;
   state: string | null;
 }
@@ -60,7 +63,11 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
   const [cpfArmed, setCpfArmed] = useState(false);
 
   // create form
-  const [form, setForm] = useState({ name: '', phone: '', cpf: '', address: '', city: '', state: '' });
+  const [form, setForm] = useState({
+    name: '', phone: '', cpf: '',
+    address: '', number: '', neighborhood: '', complement: '',
+    city: '', state: '',
+  });
   const [saving, setSaving] = useState(false);
 
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -73,7 +80,11 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
       setResults([]);
       setSelected(null);
       setCpfArmed(false);
-      setForm({ name: '', phone: '', cpf: '', address: '', city: '', state: '' });
+      setForm({
+        name: '', phone: '', cpf: '',
+        address: '', number: '', neighborhood: '', complement: '',
+        city: '', state: '',
+      });
       setSaving(false);
       setTimeout(() => searchRef.current?.focus(), 60);
     }
@@ -97,7 +108,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         const digits = onlyDigits(q);
         let req = supabase
           .from('customers')
-          .select('id,name,phone,cpf,address,city,state')
+          .select('id,name,phone,cpf,address,number,neighborhood,complement,city,state')
           .eq('company_id', companyId)
           .order('name', { ascending: true })
           .limit(20);
@@ -136,11 +147,17 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
       toast.error(`Cadastro incompleto: falta ${selectedMissing.join(', ')}. Cadastre uma nova pessoa ou complete o cadastro deste cliente na tela Clientes.`);
       return;
     }
+    const fullAddr = [
+      selected.address,
+      selected.number && `nº ${selected.number}`,
+      selected.neighborhood,
+      selected.complement,
+    ].filter(Boolean).join(', ');
     onPick({
       name: selected.name || undefined,
       phone: selected.phone || undefined,
       document: selected.cpf || undefined,
-      address: selected.address || undefined,
+      address: fullAddr || selected.address || undefined,
       city: selected.city || undefined,
       state: selected.state || undefined,
     });
@@ -167,6 +184,9 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
     const phone = form.phone.trim();
     const cpf = form.cpf.trim();
     const address = form.address.trim();
+    const number = form.number.trim();
+    const neighborhood = form.neighborhood.trim();
+    const complement = form.complement.trim();
     const city = form.city.trim();
     const state = form.state.trim();
     if (!name) {
@@ -183,7 +203,15 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         return;
       }
       if (!address) {
-        toast.error('Endereço é obrigatório para venda no crediário.');
+        toast.error('Rua/logradouro é obrigatório para venda no crediário.');
+        return;
+      }
+      if (!number) {
+        toast.error('Número do endereço é obrigatório para venda no crediário.');
+        return;
+      }
+      if (!neighborhood) {
+        toast.error('Bairro é obrigatório para venda no crediário.');
         return;
       }
     }
@@ -195,21 +223,30 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         phone,
         cpf: cpf || null,
         address: address || null,
+        number: number || null,
+        neighborhood: neighborhood || null,
+        complement: complement || null,
         city: city || null,
         state: state || null,
       };
       const { data, error } = await supabase
         .from('customers')
         .insert(payload)
-        .select('id,name,phone,cpf,address,city,state')
+        .select('id,name,phone,cpf,address,number,neighborhood,complement,city,state')
         .single();
       if (error) throw error;
       toast.success('Cliente cadastrado.');
+      const fullAddr = [
+        address,
+        number && `nº ${number}`,
+        neighborhood,
+        complement,
+      ].filter(Boolean).join(', ');
       onPick({
         name: data?.name || name,
         phone: data?.phone || phone,
         document: data?.cpf || cpf || undefined,
-        address: data?.address || address || undefined,
+        address: fullAddr || data?.address || address || undefined,
         city: data?.city || city || undefined,
         state: data?.state || state || undefined,
       });
@@ -413,14 +450,42 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                   />
                 </div>
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Endereço {requireFull ? '*' : ''}</Label>
-                <Input
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  disabled={saving}
-                  placeholder="Rua, número, bairro"
-                />
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <Label className="text-xs text-muted-foreground">Rua / Logradouro {requireFull ? '*' : ''}</Label>
+                  <Input
+                    value={form.address}
+                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                    disabled={saving}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Número {requireFull ? '*' : ''}</Label>
+                  <Input
+                    value={form.number}
+                    onChange={(e) => setForm({ ...form, number: e.target.value })}
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Bairro {requireFull ? '*' : ''}</Label>
+                  <Input
+                    value={form.neighborhood}
+                    onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
+                    disabled={saving}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Complemento</Label>
+                  <Input
+                    value={form.complement}
+                    onChange={(e) => setForm({ ...form, complement: e.target.value })}
+                    disabled={saving}
+                    placeholder="apto, bloco, referência"
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
