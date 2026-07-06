@@ -479,55 +479,14 @@ export function FrenteCaixaCheckoutDialog({
               />
               {step === 1 && (
                 <div className="ml-9 space-y-3">
-                  {creditSaleVisible && (
-                    <div className="rounded-md border border-primary/40 bg-primary/5 p-3 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <CreditCard className="h-4 w-4 text-primary" />
-                          Crediário
-                          {creditMode && <Badge className="text-[10px] bg-primary hover:bg-primary">SELECIONADO</Badge>}
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          Venda 100% no fiado. Exige cliente e gera título em Contas a Receber. Não emite NFC-e.
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={creditMode ? 'default' : 'outline'}
-                        onClick={() => {
-                          const next = !creditMode;
-                          setCreditMode(next);
-                          if (next) {
-                            // limpa qualquer valor alocado em formas normais
-                            setLines({});
-                            setTefMod({});
-                            // pula direto pro cliente
-                            setStep(2);
-                            if (!customerName) setCustomerDialogOpen(true);
-                          }
-                        }}
-                        disabled={processing}
-                      >
-                        {creditMode ? 'Ativo' : 'Usar crediário'}
-                      </Button>
+                  {isCreditSale && (
+                    <div className="rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-[11px] text-primary flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      <span>
+                        Venda no crediário selecionada. Informe o cliente na próxima etapa. Não emite NFC-e.
+                      </span>
                     </div>
                   )}
-                  {creditMode ? (
-                    <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                      Modo crediário ativo. Formas de pagamento normais foram desabilitadas.
-                      <Button
-                        type="button"
-                        variant="link"
-                        size="sm"
-                        className="px-1 h-auto"
-                        onClick={() => setCreditMode(false)}
-                      >
-                        Cancelar crediário
-                      </Button>
-                    </div>
-                  ) : (
-                  <>
                   {activePaymentMethods.length === 0 && (
                     <p className="text-sm text-muted-foreground">
                       Nenhuma forma de pagamento cadastrada para o canal PDV.
