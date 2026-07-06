@@ -186,7 +186,7 @@ function buildHTML(p: CrediarioReceiptPayload): string {
   ${p.notes ? `<div class="separator"></div><div class="small">Obs: ${esc(p.notes)}</div>` : ''}
 
   <div class="separator"></div>
-  <div class="terms">Declaro que recebi os produtos acima e me comprometo a pagar as parcelas nas datas indicadas.</div>
+  <div class="terms">Li e estou de acordo.</div>
   <div class="small" style="margin-top:4px">${cityLabel}${fmtDateTime(p.issuedAt).split(' ')[0]}</div>
 
   <div class="sig">Assinatura do cliente</div>
