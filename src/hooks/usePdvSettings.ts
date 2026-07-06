@@ -131,6 +131,7 @@ export function usePdvSettings(companyId?: string | null) {
         default_fiscal_mode:
           ((data as any).default_fiscal_mode as 'fiscal' | 'nao_fiscal' | 'ask') ?? 'ask',
         credit_sale_enabled: !!(data as any).credit_sale_enabled,
+        crediario_receipt_copies: ((data as any).crediario_receipt_copies === 1 ? 1 : 2) as 1 | 2,
       });
     } else {
       setSettings(PDV_SETTINGS_DEFAULTS);
