@@ -811,7 +811,7 @@ export function FrenteCaixaCheckoutDialog({
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Voltar
               </Button>
-              {creditMode ? (
+              {isCreditSale ? (
                 <Button
                   type="button"
                   onClick={() => handleSave('nao_fiscal')}
