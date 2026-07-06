@@ -69,6 +69,8 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
     city: '', state: '',
   });
   const [saving, setSaving] = useState(false);
+  /** Quando preenchido, o formulário "create" faz UPDATE deste cliente. */
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const searchRef = useRef<HTMLInputElement | null>(null);
   const nameRef = useRef<HTMLInputElement | null>(null);
@@ -86,6 +88,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         city: '', state: '',
       });
       setSaving(false);
+      setEditingId(null);
       setTimeout(() => searchRef.current?.focus(), 60);
     }
   }, [open]);
@@ -146,7 +149,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
   function handleConfirmSelected() {
     if (!selected) return;
     if (selectedMissing.length > 0) {
-      toast.error(`Cadastro incompleto: falta ${selectedMissing.join(', ')}. Cadastre uma nova pessoa ou complete o cadastro deste cliente na tela Clientes.`);
+      toast.error(`Cadastro incompleto: falta ${selectedMissing.join(', ')}. Clique em "Completar cadastro" para editar aqui mesmo.`);
       return;
     }
     const fullAddr = [
@@ -164,6 +167,24 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
       state: selected.state || undefined,
     });
     onOpenChange(false);
+  }
+
+  /** Abre o formulário no modo edição, pré-preenchido com o cliente selecionado. */
+  function handleEditSelected() {
+    if (!selected) return;
+    setForm({
+      name: selected.name || '',
+      phone: selected.phone || '',
+      cpf: selected.cpf || '',
+      address: selected.address || '',
+      number: selected.number || '',
+      neighborhood: selected.neighborhood || '',
+      complement: selected.complement || '',
+      city: selected.city || '',
+      state: selected.state || '',
+    });
+    setEditingId(selected.id);
+    setMode('create');
   }
 
   function handleUseRawCpf() {
@@ -231,13 +252,27 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         city: city || null,
         state: state || null,
       };
-      const { data, error } = await supabase
-        .from('customers')
-        .insert(payload)
-        .select('id,name,phone,cpf,address,number,neighborhood,complement,city,state')
-        .single();
-      if (error) throw error;
-      toast.success('Cliente cadastrado.');
+      let data: any;
+      if (editingId) {
+        const { data: upd, error } = await supabase
+          .from('customers')
+          .update(payload)
+          .eq('id', editingId)
+          .select('id,name,phone,cpf,address,number,neighborhood,complement,city,state')
+          .single();
+        if (error) throw error;
+        data = upd;
+        toast.success('Cadastro atualizado.');
+      } else {
+        const { data: ins, error } = await supabase
+          .from('customers')
+          .insert(payload)
+          .select('id,name,phone,cpf,address,number,neighborhood,complement,city,state')
+          .single();
+        if (error) throw error;
+        data = ins;
+        toast.success('Cliente cadastrado.');
+      }
       const fullAddr = [
         address,
         number && `nº ${number}`,
@@ -319,9 +354,20 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
             )}
 
             {requireFull && selected && selectedMissing.length > 0 && (
-              <p className="mt-2 text-xs text-destructive">
-                Cadastro incompleto — falta {selectedMissing.join(', ')}. Cadastre uma nova pessoa abaixo.
-              </p>
+              <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2">
+                <p className="text-xs text-destructive">
+                  Cadastro incompleto — falta {selectedMissing.join(', ')}.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleEditSelected}
+                  className="h-7 text-xs"
+                >
+                  Completar cadastro
+                </Button>
+              </div>
             )}
 
             <div className="mt-4 min-h-[160px] max-h-[280px] overflow-y-auto">
@@ -416,11 +462,13 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onClick={() => setMode('search')}
+                onClick={() => { setMode('search'); setEditingId(null); }}
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <h2 className="text-lg font-semibold">Novo cliente</h2>
+              <h2 className="text-lg font-semibold">
+                {editingId ? 'Completar cadastro do cliente' : 'Novo cliente'}
+              </h2>
             </div>
 
             <div className="space-y-3">
@@ -526,7 +574,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                     <Loader2 className="h-4 w-4 animate-spin mr-2" /> Salvando…
                   </>
                 ) : (
-                  'SALVAR E USAR'
+                  editingId ? 'ATUALIZAR E USAR' : 'SALVAR E USAR'
                 )}
               </Button>
             </div>
