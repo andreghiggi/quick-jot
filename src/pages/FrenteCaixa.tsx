@@ -42,6 +42,12 @@ import { useCardapioEnabled } from '@/hooks/useCardapioEnabled';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useProducts } from '@/hooks/useProducts';
 import { useCashRegister } from '@/hooks/useCashRegister';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { usePaymentMethods } from '@/hooks/usePaymentMethods';
+import {
+  printCrediarioReceipt,
+  computeInstallments,
+} from '@/utils/crediarioReceiptPrint';
 import { brl as formatPrice } from '@/components/pdv-v2/_format';
 import {
   FrenteCaixaCheckoutDialog,
