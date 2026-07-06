@@ -74,23 +74,27 @@ function fmtDateTime(dt: Date) {
 
 function buildHTML(p: CrediarioReceiptPayload): string {
   const width = p.paperSize === '80mm' ? '80mm' : '58mm';
-  const fontSize = p.paperSize === '80mm' ? '12px' : '11px';
+  const fontSize = p.paperSize === '80mm' ? '10px' : '9px';
 
-  const itemsRows = p.items.map((it) => {
-    const line1 = `${it.quantity} x ${money(it.unit_price)}`;
-    const total = money(it.quantity * it.unit_price);
+  const qtdFmt = (q: number) => Number.isInteger(q) ? String(q) : q.toFixed(3).replace('.', ',');
+
+  const itemsRows = p.items.map((it, idx) => {
+    const total = it.quantity * it.unit_price;
     return `
-      <div class="item">
-        <div class="item-name">${esc(it.name)}</div>
-        <div class="item-line"><span>${line1}</span><span>${total}</span></div>
-      </div>`;
+      <tr>
+        <td class="col-idx">${String(idx + 1).padStart(3, '0')}</td>
+        <td class="col-desc">${esc(it.name)}</td>
+        <td class="col-num">${qtdFmt(it.quantity)}</td>
+        <td class="col-num">${money(it.unit_price)}</td>
+        <td class="col-num">${money(total)}</td>
+      </tr>`;
   }).join('');
 
   const parcelasRows = p.installments.map((i) => `
-    <div class="row">
-      <span>${String(i.number).padStart(2, '0')}/${String(p.installments.length).padStart(2, '0')} — ${fmtDate(i.dueDate)}</span>
-      <span>${money(i.amount)}</span>
-    </div>`).join('');
+      <tr>
+        <td class="col-desc">${String(i.number).padStart(2, '0')}/${String(p.installments.length).padStart(2, '0')} — ${fmtDate(i.dueDate)}</td>
+        <td class="col-num">${money(i.amount)}</td>
+      </tr>`).join('');
 
   const cityLabel = p.city ? `${esc(p.city)}, ` : '';
   const docLine = p.customerDocument ? `CPF/CNPJ: ${esc(p.customerDocument)}` : 'CPF: ______________________';
@@ -99,65 +103,91 @@ function buildHTML(p: CrediarioReceiptPayload): string {
 <html><head><meta charset="utf-8"><style>
   @page { size: ${width} auto; margin: 2mm; }
   * { box-sizing: border-box; }
-  body { font-family: 'Courier New', monospace; font-size: ${fontSize}; margin: 0; padding: 0; width: ${width}; color: #000; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: ${fontSize}; margin: 0; padding: 4px; width: ${width}; color: #000; line-height: 1.25; }
   .center { text-align: center; }
   .bold { font-weight: 700; }
-  .sep { border-top: 1px dashed #000; margin: 4px 0; }
+  .small { font-size: ${p.paperSize === '80mm' ? '9px' : '8px'}; }
+  .title { font-weight: 700; text-transform: uppercase; font-size: ${p.paperSize === '80mm' ? '11px' : '10px'}; }
+  .separator { border-top: 1px dashed #000; margin: 3px 0; height: 0; }
   .row { display: flex; justify-content: space-between; gap: 4px; }
-  .title { font-weight: 700; text-transform: uppercase; }
-  .subtitle { font-size: 10px; }
-  .item { margin-bottom: 3px; }
-  .item-name { word-break: break-word; }
-  .item-line { display: flex; justify-content: space-between; font-size: 10px; }
-  .terms { margin-top: 6px; text-align: justify; font-size: 10px; }
-  .sig { margin-top: 22px; border-top: 1px solid #000; text-align: center; padding-top: 2px; font-size: 10px; }
-  .footer { margin-top: 6px; font-size: 10px; text-align: center; }
+  .total-row { display: flex; justify-content: space-between; font-weight: 700; font-size: ${p.paperSize === '80mm' ? '14px' : '12px'}; margin: 2px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: ${p.paperSize === '80mm' ? '9px' : '8px'}; }
+  th, td { padding: 1px 2px; vertical-align: top; text-align: left; }
+  th { border-bottom: 1px dashed #000; font-weight: 700; text-transform: uppercase; }
+  .col-idx { width: 22px; }
+  .col-desc { word-break: break-word; }
+  .col-num { text-align: right; white-space: nowrap; }
+  .homolog-warn { border: 1px solid #000; padding: 3px; margin: 3px 0; text-align: center; font-weight: 700; font-size: ${p.paperSize === '80mm' ? '9px' : '8px'}; }
+  .terms { margin-top: 4px; text-align: justify; }
+  .sig { margin-top: 24px; border-top: 1px solid #000; text-align: center; padding-top: 2px; }
 </style></head>
 <body>
   <div class="center bold">${esc(p.storeName)}</div>
-  ${p.storeCnpj ? `<div class="center subtitle">CNPJ: ${esc(p.storeCnpj)}</div>` : ''}
-  ${p.storeAddress ? `<div class="center subtitle">${esc(p.storeAddress)}</div>` : ''}
-  ${p.storePhone ? `<div class="center subtitle">Tel: ${esc(p.storePhone)}</div>` : ''}
+  ${p.storeCnpj ? `<div class="center small">CNPJ: ${esc(p.storeCnpj)}</div>` : ''}
+  ${p.storeAddress ? `<div class="center small">${esc(p.storeAddress)}</div>` : ''}
+  ${p.storePhone ? `<div class="center small">Tel: ${esc(p.storePhone)}</div>` : ''}
 
-  <div class="sep"></div>
-  <div class="center title">Comprovante de Crediário</div>
-  <div class="center subtitle">*** NÃO É DOCUMENTO FISCAL ***</div>
-  <div class="sep"></div>
+  <div class="separator"></div>
+  <div class="homolog-warn">COMPROVANTE DE CREDIÁRIO<br/>NÃO É DOCUMENTO FISCAL</div>
 
-  <div class="row"><span>Data:</span><span>${fmtDateTime(p.issuedAt)}</span></div>
-  ${p.saleNumber != null ? `<div class="row"><span>Venda nº:</span><span>${esc(String(p.saleNumber))}</span></div>` : ''}
-  ${p.operatorName ? `<div class="row"><span>Operador:</span><span>${esc(p.operatorName)}</span></div>` : ''}
+  <table>
+    <thead>
+      <tr>
+        <th class="col-idx">#</th>
+        <th class="col-desc">DESCRIÇÃO</th>
+        <th class="col-num">QTD</th>
+        <th class="col-num">UNIT</th>
+        <th class="col-num">TOTAL</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemsRows}
+    </tbody>
+  </table>
 
-  <div class="sep"></div>
-  <div class="bold">CLIENTE</div>
-  <div>${esc(p.customerName)}</div>
-  ${p.customerPhone ? `<div class="subtitle">Tel: ${esc(p.customerPhone)}</div>` : ''}
-  ${p.customerDocument ? `<div class="subtitle">Doc: ${esc(p.customerDocument)}</div>` : ''}
+  <div class="separator"></div>
+  <div class="row"><span>Qtd. total de itens</span><span>${p.items.reduce((s, i) => s + i.quantity, 0)}</span></div>
+  <div class="row"><span>Subtotal</span><span>${money(p.subtotal)}</span></div>
+  ${p.discount > 0 ? `<div class="row"><span>Desconto</span><span>- ${money(p.discount)}</span></div>` : ''}
+  ${p.surcharge > 0 ? `<div class="row"><span>Acréscimo</span><span>+ ${money(p.surcharge)}</span></div>` : ''}
+  <div class="total-row"><span>VALOR TOTAL R$</span><span>${money(p.total).replace('R$ ', '')}</span></div>
+  <div class="row"><span>FORMA DE PAGAMENTO</span><span>CREDIÁRIO</span></div>
 
-  <div class="sep"></div>
-  <div class="bold">ITENS</div>
-  ${itemsRows}
+  <div class="separator"></div>
+  <div class="bold">DADOS DO CLIENTE</div>
+  <div>Nome: ${esc(p.customerName)}</div>
+  ${p.customerDocument ? `<div>CPF/CNPJ: ${esc(p.customerDocument)}</div>` : ''}
+  ${p.customerPhone ? `<div>Tel: ${esc(p.customerPhone)}</div>` : ''}
 
-  <div class="sep"></div>
-  <div class="row"><span>Subtotal:</span><span>${money(p.subtotal)}</span></div>
-  ${p.discount > 0 ? `<div class="row"><span>Desconto:</span><span>- ${money(p.discount)}</span></div>` : ''}
-  ${p.surcharge > 0 ? `<div class="row"><span>Acréscimo:</span><span>+ ${money(p.surcharge)}</span></div>` : ''}
-  <div class="row bold"><span>TOTAL A RECEBER:</span><span>${money(p.total)}</span></div>
+  <div class="separator"></div>
+  <div class="bold center">PARCELAS (${p.installments.length}x)</div>
+  <table>
+    <thead>
+      <tr>
+        <th class="col-desc">PARCELA / VENCIMENTO</th>
+        <th class="col-num">VALOR</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${parcelasRows}
+    </tbody>
+  </table>
 
-  <div class="sep"></div>
-  <div class="bold">PARCELAS (${p.installments.length}x)</div>
-  ${parcelasRows}
+  <div class="separator"></div>
+  <div class="row small">
+    <span>Emissão: ${fmtDateTime(p.issuedAt)}</span>
+    ${p.saleNumber != null ? `<span>Venda: ${esc(String(p.saleNumber))}</span>` : '<span></span>'}
+  </div>
+  ${p.operatorName ? `<div class="small">Operador: ${esc(p.operatorName)}</div>` : ''}
 
-  ${p.notes ? `<div class="sep"></div><div class="subtitle">Obs: ${esc(p.notes)}</div>` : ''}
+  ${p.notes ? `<div class="separator"></div><div class="small">Obs: ${esc(p.notes)}</div>` : ''}
 
-  <div class="sep"></div>
-  <div class="terms">Li e estou de acordo com este documento.</div>
-  <div class="subtitle" style="margin-top:4px">${cityLabel}${fmtDateTime(p.issuedAt).split(' ')[0]}</div>
+  <div class="separator"></div>
+  <div class="terms">Declaro que recebi os produtos acima e me comprometo a pagar as parcelas nas datas indicadas.</div>
+  <div class="small" style="margin-top:4px">${cityLabel}${fmtDateTime(p.issuedAt).split(' ')[0]}</div>
 
   <div class="sig">Assinatura do cliente</div>
-  <div class="subtitle center">${docLine}</div>
-
-  <div class="footer">— fim do comprovante —</div>
+  <div class="small center">${docLine}</div>
 </body></html>`;
 }
 
