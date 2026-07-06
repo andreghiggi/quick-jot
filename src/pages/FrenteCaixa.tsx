@@ -846,6 +846,57 @@ export default function FrenteCaixa() {
             notes: params.notes || null,
           });
           toast.success('Título de crediário gerado em Contas a Receber.');
+
+          // ── Impressão do comprovante de crediário (não fiscal) ─────
+          // Respeita:
+          //   - `store_settings.printer_paper_size` (58/80mm)
+          //   - `pdv_settings.crediario_receipt_copies` (1 ou 2)
+          //   - Configuração de parcelamento da forma "Crediário" cadastrada
+          try {
+            const crediarioMethod = (allPaymentMethods || []).find(
+              (m) => (m as any).payment_type === 'crediario',
+            );
+            const installConfig = {
+              installments_count: (crediarioMethod as any)?.installments_count ?? 1,
+              installment_interval: (crediarioMethod as any)?.installment_interval ?? 1,
+              installment_period:
+                ((crediarioMethod as any)?.installment_period as 'day' | 'week' | 'month') ?? 'month',
+              installment_start_rule:
+                ((crediarioMethod as any)?.installment_start_rule as 'general' | 'fixed_days' | 'next_month') ??
+                'general',
+            };
+            const issuedAt = new Date();
+            const parcelas = computeInstallments(params.finalTotal, installConfig, issuedAt);
+            await printCrediarioReceipt({
+              companyId: company.id,
+              paperSize: storeSettings.printerPaperSize,
+              copies: (pdvSettings.crediario_receipt_copies === 1 ? 1 : 2),
+              storeName: company?.name || storeSettings.storeName || 'Loja',
+              storeCnpj: (company as any)?.cnpj || null,
+              storeAddress: (company as any)?.address || null,
+              storePhone: storeSettings.storePhone || null,
+              saleNumber: saleId,
+              operatorName: (user as any)?.email || null,
+              customerName: (params.customerName || '').trim(),
+              customerPhone: params.customerPhone || null,
+              customerDocument: params.customerDocument || null,
+              items: lines.map((l) => ({
+                name: l.product_name,
+                quantity: l.quantity,
+                unit_price: l.effective_unit_price,
+              })),
+              subtotal: lines.reduce((s, l) => s + l.effective_unit_price * l.quantity, 0),
+              discount: params.discount || 0,
+              surcharge: params.surcharge || 0,
+              total: params.finalTotal,
+              installments: parcelas,
+              notes: params.notes || null,
+              issuedAt,
+            });
+          } catch (printErr) {
+            console.error('[FrenteCaixa] falha ao enfileirar comprovante crediário', printErr);
+            toast.error('Título criado, mas falha ao imprimir o comprovante.');
+          }
         } catch (err) {
           console.error('[FrenteCaixa] falha ao criar título de crediário', err);
           toast.error('Venda registrada, mas falha ao gerar o título de crediário. Registre manualmente.');
