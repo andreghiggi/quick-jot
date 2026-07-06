@@ -497,6 +497,7 @@ export function FrenteCaixaCheckoutDialog({
                       const letter = LETTERS[idx] || '';
                       const itg = (m as any).integration_type as string | undefined;
                       const isTef = itg === 'tef_pinpad' || itg === 'tef_smartpos';
+                      const isCred = (m as any).payment_type === 'crediario';
                       const lineAmount = parseCurrencyInput(lines[m.id]?.text || '');
                       const mod = tefMod[m.id] || { modality: 'avista' as const, installments: 2 };
                       return (
@@ -507,6 +508,11 @@ export function FrenteCaixaCheckoutDialog({
                             {isTef && (
                               <Badge variant="outline" className="text-[10px] border-border">
                                 TEF
+                              </Badge>
+                            )}
+                            {isCred && (
+                              <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
+                                Crediário
                               </Badge>
                             )}
                             {letter && (
