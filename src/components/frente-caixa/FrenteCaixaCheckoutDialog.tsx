@@ -197,6 +197,8 @@ export function FrenteCaixaCheckoutDialog({
       setCustomerDialogOpen(false);
       setProcessing(false);
       setProcessingStatus('');
+      setCreditInstallments(1);
+      setCreditFirstDue('');
     }
   }, [open]);
 
