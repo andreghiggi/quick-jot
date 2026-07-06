@@ -2672,6 +2672,7 @@ export type Database = {
           company_id: string
           confirm_quantity_above: number
           created_at: string
+          crediario_receipt_copies: number
           credit_sale_enabled: boolean
           default_fiscal_mode: string
           id: string
@@ -2713,6 +2714,7 @@ export type Database = {
           company_id: string
           confirm_quantity_above?: number
           created_at?: string
+          crediario_receipt_copies?: number
           credit_sale_enabled?: boolean
           default_fiscal_mode?: string
           id?: string
@@ -2754,6 +2756,7 @@ export type Database = {
           company_id?: string
           confirm_quantity_above?: number
           created_at?: string
+          crediario_receipt_copies?: number
           credit_sale_enabled?: boolean
           default_fiscal_mode?: string
           id?: string
