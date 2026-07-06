@@ -474,6 +474,52 @@ export default function Receitas() {
         }}
       />
 
+      {/* Efetivar múltiplas parcelas da mesma venda em um único fluxo.
+          Distribui os pagamentos por FIFO entre as parcelas e rateia
+          juros/multa/desconto/acréscimo pelo saldo de cada uma. */}
+      <EfetivarReceitaDialog
+        open={!!efetivarRows}
+        onOpenChange={(o) => !o && setEfetivarRows(null)}
+        receivable={null}
+        receivables={efetivarRows}
+        paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
+        busy={busy}
+        onConfirm={async (data) => {
+          if (!efetivarRows?.length || !company?.id) return;
+          setBusy(true);
+          const totalBalance = efetivarRows.reduce((s, r) => s + Number(r.balance), 0) || 1;
+          const queue = data.payments.map((p) => ({ ...p }));
+          let allOk = true;
+          for (const r of efetivarRows) {
+            let need = Number(r.balance);
+            const local: typeof data.payments = [];
+            while (need > 0.005 && queue.length) {
+              const p = queue[0];
+              const take = Math.min(p.amount, need);
+              local.push({ amount: +take.toFixed(2), paymentMethodId: p.paymentMethodId, paymentName: p.paymentName });
+              p.amount = +(p.amount - take).toFixed(2);
+              need = +(need - take).toFixed(2);
+              if (p.amount < 0.005) queue.shift();
+            }
+            if (local.length === 0) continue;
+            const share = Number(r.balance) / totalBalance;
+            const ok = await receivePaymentSplit({
+              receivableId: r.id,
+              companyId: company.id,
+              operatorId: user?.id ?? null,
+              interest: +(data.interest * share).toFixed(2),
+              fine: +(data.fine * share).toFixed(2),
+              discount: +(data.discount * share).toFixed(2),
+              surcharge: +(data.surcharge * share).toFixed(2),
+              payments: local,
+            });
+            if (!ok) { allOk = false; break; }
+          }
+          setBusy(false);
+          if (allOk) setEfetivarRows(null);
+        }}
+      />
+
       {/* Novo diálogo — Renegociação */}
       <RenegociarReceitaDialog
         open={!!renegRow}
