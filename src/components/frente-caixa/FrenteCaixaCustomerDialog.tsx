@@ -19,6 +19,9 @@ export interface FrenteCaixaCustomerPick {
   name?: string;
   phone?: string;
   document?: string;
+  address?: string;
+  city?: string;
+  state?: string;
 }
 
 interface CustomerRow {
@@ -26,6 +29,9 @@ interface CustomerRow {
   name: string;
   phone: string | null;
   cpf: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
 }
 
 interface Props {
@@ -33,13 +39,19 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   companyId?: string;
   onPick: (c: FrenteCaixaCustomerPick) => void;
+  /**
+   * Quando `true` (ex.: venda no crediário), exige cadastro completo:
+   * nome, CPF, telefone e endereço. Desabilita "USAR CPF AVULSO" e
+   * bloqueia confirmação de clientes com cadastro incompleto.
+   */
+  requireFull?: boolean;
 }
 
 function onlyDigits(s: string) {
   return (s || '').replace(/\D+/g, '');
 }
 
-export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPick }: Props) {
+export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPick, requireFull = false }: Props) {
   const [mode, setMode] = useState<'search' | 'create'>('search');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CustomerRow[]>([]);
@@ -48,7 +60,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
   const [cpfArmed, setCpfArmed] = useState(false);
 
   // create form
-  const [form, setForm] = useState({ name: '', phone: '', cpf: '' });
+  const [form, setForm] = useState({ name: '', phone: '', cpf: '', address: '', city: '', state: '' });
   const [saving, setSaving] = useState(false);
 
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -61,7 +73,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
       setResults([]);
       setSelected(null);
       setCpfArmed(false);
-      setForm({ name: '', phone: '', cpf: '' });
+      setForm({ name: '', phone: '', cpf: '', address: '', city: '', state: '' });
       setSaving(false);
       setTimeout(() => searchRef.current?.focus(), 60);
     }
@@ -85,7 +97,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         const digits = onlyDigits(q);
         let req = supabase
           .from('customers')
-          .select('id,name,phone,cpf')
+          .select('id,name,phone,cpf,address,city,state')
           .eq('company_id', companyId)
           .order('name', { ascending: true })
           .limit(20);
@@ -109,17 +121,37 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
     return () => clearTimeout(handle);
   }, [query, open, mode, companyId]);
 
+  const selectedMissing = requireFull && selected
+    ? [
+        !selected.name?.trim() && 'nome',
+        !selected.cpf?.trim() && 'CPF',
+        !selected.phone?.trim() && 'telefone',
+        !selected.address?.trim() && 'endereço',
+      ].filter(Boolean) as string[]
+    : [];
+
   function handleConfirmSelected() {
     if (!selected) return;
+    if (selectedMissing.length > 0) {
+      toast.error(`Cadastro incompleto: falta ${selectedMissing.join(', ')}. Cadastre uma nova pessoa ou complete o cadastro deste cliente na tela Clientes.`);
+      return;
+    }
     onPick({
       name: selected.name || undefined,
       phone: selected.phone || undefined,
       document: selected.cpf || undefined,
+      address: selected.address || undefined,
+      city: selected.city || undefined,
+      state: selected.state || undefined,
     });
     onOpenChange(false);
   }
 
   function handleUseRawCpf() {
+    if (requireFull) {
+      toast.error('Na venda no crediário, o cadastro completo é obrigatório.');
+      return;
+    }
     const digits = onlyDigits(query);
     if (digits.length < 11) {
       toast.error('Digite um CPF (11 dígitos) ou CNPJ (14 dígitos).');
@@ -134,6 +166,9 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
     const name = form.name.trim();
     const phone = form.phone.trim();
     const cpf = form.cpf.trim();
+    const address = form.address.trim();
+    const city = form.city.trim();
+    const state = form.state.trim();
     if (!name) {
       toast.error('Nome é obrigatório.');
       return;
@@ -142,6 +177,16 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
       toast.error('Telefone é obrigatório.');
       return;
     }
+    if (requireFull) {
+      if (!cpf) {
+        toast.error('CPF é obrigatório para venda no crediário.');
+        return;
+      }
+      if (!address) {
+        toast.error('Endereço é obrigatório para venda no crediário.');
+        return;
+      }
+    }
     setSaving(true);
     try {
       const payload = {
@@ -149,11 +194,14 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         name,
         phone,
         cpf: cpf || null,
+        address: address || null,
+        city: city || null,
+        state: state || null,
       };
       const { data, error } = await supabase
         .from('customers')
         .insert(payload)
-        .select('id,name,phone,cpf')
+        .select('id,name,phone,cpf,address,city,state')
         .single();
       if (error) throw error;
       toast.success('Cliente cadastrado.');
@@ -161,6 +209,9 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         name: data?.name || name,
         phone: data?.phone || phone,
         document: data?.cpf || cpf || undefined,
+        address: data?.address || address || undefined,
+        city: data?.city || city || undefined,
+        state: data?.state || state || undefined,
       });
       onOpenChange(false);
     } catch (e: any) {
@@ -181,6 +232,11 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
               <p className="text-xs text-muted-foreground mt-1">
                 CPF/CNPJ, nome ou telefone
               </p>
+              {requireFull && (
+                <p className="mt-2 text-[11px] text-amber-500">
+                  Venda no crediário: cadastro completo obrigatório (nome, CPF, telefone e endereço).
+                </p>
+              )}
             </div>
 
             <div className="relative">
@@ -209,7 +265,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
               />
             </div>
 
-            {onlyDigits(query).length >= 11 && !selected && (
+            {!requireFull && onlyDigits(query).length >= 11 && !selected && (
               <p className="mt-2 text-xs text-muted-foreground">
                 {cpfArmed ? (
                   <>
@@ -220,6 +276,12 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                     Pressione <kbd className="px-1.5 py-0.5 border rounded text-[10px] font-mono">Enter</kbd> para informar somente o CPF/CNPJ
                   </>
                 )}
+              </p>
+            )}
+
+            {requireFull && selected && selectedMissing.length > 0 && (
+              <p className="mt-2 text-xs text-destructive">
+                Cadastro incompleto — falta {selectedMissing.join(', ')}. Cadastre uma nova pessoa abaixo.
               </p>
             )}
 
@@ -278,7 +340,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                 className="text-foreground"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
-                CADASTRAR PESSOA
+                NOVO CLIENTE
               </Button>
               <div className="flex items-center gap-2">
                 <Button
@@ -292,7 +354,11 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                 <Button
                   type="button"
                   size="sm"
-                  disabled={!selected && !cpfArmed}
+                  disabled={
+                    requireFull
+                      ? !selected || selectedMissing.length > 0
+                      : !selected && !cpfArmed
+                  }
                   onClick={() => {
                     if (selected) handleConfirmSelected();
                     else if (cpfArmed) handleUseRawCpf();
@@ -315,12 +381,12 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <h2 className="text-lg font-semibold">Cadastrar pessoa</h2>
+              <h2 className="text-lg font-semibold">Novo cliente</h2>
             </div>
 
             <div className="space-y-3">
               <div>
-                <Label className="text-xs text-muted-foreground">Nome *</Label>
+                <Label className="text-xs text-muted-foreground">Nome completo *</Label>
                 <Input
                   ref={nameRef}
                   value={form.name}
@@ -338,12 +404,40 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">CPF</Label>
+                  <Label className="text-xs text-muted-foreground">CPF {requireFull ? '*' : ''}</Label>
                   <Input
                     value={form.cpf}
                     onChange={(e) => setForm({ ...form, cpf: e.target.value })}
                     disabled={saving}
-                    placeholder="(opcional)"
+                    placeholder={requireFull ? '' : '(opcional)'}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Endereço {requireFull ? '*' : ''}</Label>
+                <Input
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  disabled={saving}
+                  placeholder="Rua, número, bairro"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <Label className="text-xs text-muted-foreground">Cidade</Label>
+                  <Input
+                    value={form.city}
+                    onChange={(e) => setForm({ ...form, city: e.target.value })}
+                    disabled={saving}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">UF</Label>
+                  <Input
+                    value={form.state}
+                    onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase().slice(0, 2) })}
+                    disabled={saving}
+                    maxLength={2}
                   />
                 </div>
               </div>

@@ -124,6 +124,9 @@ export function FrenteCaixaCheckoutDialog({
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerDocument, setCustomerDocument] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [customerCity, setCustomerCity] = useState('');
+  const [customerState, setCustomerState] = useState('');
   const [notes, setNotes] = useState('');
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
 
@@ -162,6 +165,8 @@ export function FrenteCaixaCheckoutDialog({
       && Math.abs(allocated - total) < 0.005
       && !!customerName.trim()
       && !!customerPhone.trim()
+      && !!customerDocument.trim()
+      && !!customerAddress.trim()
     : total > 0 && Math.abs(allocated - total) < 0.005;
 
   // reset ao abrir
@@ -176,6 +181,9 @@ export function FrenteCaixaCheckoutDialog({
       setCustomerName('');
       setCustomerPhone('');
       setCustomerDocument('');
+      setCustomerAddress('');
+      setCustomerCity('');
+      setCustomerState('');
       setNotes('');
       setCustomerDialogOpen(false);
       setProcessing(false);
@@ -306,8 +314,14 @@ export function FrenteCaixaCheckoutDialog({
     if (!companyId) return;
     if (!exact) {
       if (isCreditSale) {
-        if (!customerName.trim() || !customerPhone.trim()) {
-          toast.error('Informe o cliente (nome e telefone) antes de salvar o crediário.');
+        const missing = [
+          !customerName.trim() && 'nome',
+          !customerDocument.trim() && 'CPF',
+          !customerPhone.trim() && 'telefone',
+          !customerAddress.trim() && 'endereço',
+        ].filter(Boolean) as string[];
+        if (missing.length > 0) {
+          toast.error(`Cadastro do cliente incompleto: falta ${missing.join(', ')}.`);
         } else {
           toast.error('Na venda no crediário, o valor da forma "Crediário" deve ser igual ao total (não é possível dividir com outras formas).');
         }
@@ -709,6 +723,13 @@ export function FrenteCaixaCheckoutDialog({
               />
               {step === 2 && (
                 <div className="ml-9 space-y-3 max-w-xl">
+                  {isCreditSale && (
+                    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                      Venda no crediário: é obrigatório vincular um cliente com cadastro
+                      <strong> completo</strong> (nome, CPF, telefone e endereço). Use
+                      <strong> Informar cliente → Novo cliente</strong> se ainda não estiver cadastrado.
+                    </div>
+                  )}
                   {customerName || customerPhone || customerDocument ? (
                     <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 px-4 py-3">
                       <div className="min-w-0">
@@ -720,6 +741,19 @@ export function FrenteCaixaCheckoutDialog({
                             .filter(Boolean)
                             .join(' • ') || 'Sem dados'}
                         </div>
+                        {customerAddress && (
+                          <div className="text-xs text-muted-foreground truncate">
+                            {[customerAddress, customerCity, customerState].filter(Boolean).join(' — ')}
+                          </div>
+                        )}
+                        {isCreditSale && (!customerDocument.trim() || !customerAddress.trim()) && (
+                          <div className="text-xs text-destructive mt-1">
+                            Cadastro incompleto — falta {[
+                              !customerDocument.trim() && 'CPF',
+                              !customerAddress.trim() && 'endereço',
+                            ].filter(Boolean).join(', ')}.
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <Button
@@ -739,6 +773,9 @@ export function FrenteCaixaCheckoutDialog({
                             setCustomerName('');
                             setCustomerPhone('');
                             setCustomerDocument('');
+                            setCustomerAddress('');
+                            setCustomerCity('');
+                            setCustomerState('');
                           }}
                           disabled={processing}
                         >
@@ -882,10 +919,14 @@ export function FrenteCaixaCheckoutDialog({
         open={customerDialogOpen}
         onOpenChange={setCustomerDialogOpen}
         companyId={companyId}
+        requireFull={isCreditSale}
         onPick={(c) => {
           setCustomerName(c.name || '');
           setCustomerPhone(c.phone || '');
           setCustomerDocument(c.document || '');
+          setCustomerAddress(c.address || '');
+          setCustomerCity(c.city || '');
+          setCustomerState(c.state || '');
         }}
       />
     </Dialog>
