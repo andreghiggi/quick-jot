@@ -13,7 +13,7 @@ import { useAccountsReceivable, type AccountReceivable } from '@/hooks/useAccoun
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { brl } from '@/components/pdv-v2/_format';
 import {
-  FinanceSearchBar, FinanceFilterPanel, FinanceCard, FinanceActionMenu,
+  FinanceSearchBar, FinanceFilterPanel, FinanceActionMenu,
   FloatingFab, ConfirmDialog, BulkActionBar, Pagination, StatusBadge,
   computeUIStatus, applyFilters, emptyFilters,
   type FinanceRow, type FinanceFilters,
