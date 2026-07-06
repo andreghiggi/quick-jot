@@ -38,6 +38,7 @@ export interface FinanceRow {
   origin_type: string | null;
   origin_id: string | null;
   tags: string[];
+  pdv_sale_id?: string | null;
 }
 
 export function computeUIStatus(status: string, dueDate: string, today: string): FinanceUIStatus {
@@ -240,17 +241,25 @@ export function Pagination({ page, size, total, setPage, setSize }: PageSize) {
 }
 
 export function FinanceCard({
-  row, selected, selectionMode, onToggleSelect, onOpenMenu,
+  row, selected, selectionMode, onToggleSelect, onOpenMenu, onOpenCard,
 }: {
   row: FinanceRow;
   selected: boolean;
   selectionMode: boolean;
   onToggleSelect: () => void;
   onOpenMenu: (target: HTMLElement) => void;
+  onOpenCard?: () => void;
 }) {
   const fmt = (d: string) => d.split('-').reverse().join('/');
   return (
-    <Card className={cn('bg-card/60', selected && 'ring-2 ring-primary')}>
+    <Card
+      className={cn(
+        'bg-card/60',
+        selected && 'ring-2 ring-primary',
+        !selectionMode && onOpenCard && 'cursor-pointer hover:bg-card/80 transition-colors',
+      )}
+      onClick={selectionMode || !onOpenCard ? undefined : onOpenCard}
+    >
       <CardContent className="p-3 flex items-center gap-3">
         {selectionMode ? (
           <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mx-1" />
@@ -276,7 +285,7 @@ export function FinanceCard({
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={(e) => onOpenMenu(e.currentTarget)}
+          onClick={(e) => { e.stopPropagation(); onOpenMenu(e.currentTarget); }}
         >
           <MoreVertical className="h-4 w-4" />
         </Button>
