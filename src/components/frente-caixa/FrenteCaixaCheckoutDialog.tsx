@@ -109,8 +109,12 @@ export function FrenteCaixaCheckoutDialog({
   const [surchargeText, setSurchargeText] = useState('');
   const [showAdjust, setShowAdjust] = useState(false);
   const [lines, setLines] = useState<Record<string, LineState>>({});
-  /** Modo Crediário: quando true, ignora `lines` (100% do total vira título). */
-  const [creditMode, setCreditMode] = useState(false);
+  /** Detecta se alguma linha lançada é de uma forma "Crediário".
+   *  Se houver, a venda inteira vira crediário (regra: 100% do total). */
+  const creditMethod = useMemo(
+    () => activePaymentMethods.find((m) => (m as any).payment_type === 'crediario'),
+    [activePaymentMethods],
+  );
 
   // Por linha de TEF: modalidade + parcelas (default crédito à vista)
   const [tefMod, setTefMod] = useState<
