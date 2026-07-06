@@ -142,6 +142,8 @@ export default function FrenteCaixa() {
   const importMesaEnabled = mesaQrModuleEnabled || mesasPdvModuleEnabled;
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
   const { settings: pdvSettings } = usePdvSettings(company?.id);
+  const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
+  const { paymentMethods: allPaymentMethods } = usePaymentMethods({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
   const {
     currentRegister,
