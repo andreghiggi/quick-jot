@@ -294,20 +294,21 @@ export function FinanceFilterPanel({
 }
 
 export function applyFilters<T extends FinanceRow>(rows: T[], f: FinanceFilters, search: string): T[] {
-  const s = search.trim().toLowerCase();
-  const docs = f.document.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
-  const tags = f.tags.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+  const s = normalizeSearch(search.trim());
+  const docs = f.document.split(',').map(x => normalizeSearch(x.trim())).filter(Boolean);
+  const tags = f.tags.split(',').map(x => normalizeSearch(x.trim())).filter(Boolean);
+  const partyFilter = normalizeSearch(f.party.trim());
   return rows.filter((r) => {
     if (f.status !== 'all' && r.status !== f.status) return false;
-    if (f.party && !r.party_name.toLowerCase().includes(f.party.toLowerCase())) return false;
+    if (partyFilter && !normalizeSearch(r.party_name).includes(partyFilter)) return false;
     if (f.issueFrom && r.issue_date < f.issueFrom) return false;
     if (f.issueTo && r.issue_date > f.issueTo) return false;
     if (f.dueFrom && r.due_date < f.dueFrom) return false;
     if (f.dueTo && r.due_date > f.dueTo) return false;
-    if (docs.length && !docs.some(d => (r.document_number || '').toLowerCase().includes(d))) return false;
-    if (tags.length && !tags.some(t => r.tags.some(rt => rt.toLowerCase().includes(t)))) return false;
+    if (docs.length && !docs.some(d => normalizeSearch(r.document_number || '').includes(d))) return false;
+    if (tags.length && !tags.some(t => r.tags.some(rt => normalizeSearch(rt).includes(t)))) return false;
     if (s) {
-      const hay = `${r.party_name} ${r.document_number || ''} ${r.description}`.toLowerCase();
+      const hay = normalizeSearch(`${r.party_name} ${r.document_number || ''} ${r.description}`);
       if (!hay.includes(s)) return false;
     }
     return true;
