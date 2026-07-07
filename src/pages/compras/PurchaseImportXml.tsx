@@ -15,7 +15,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Upload, Loader2, CheckCircle2, FileInput, ChevronLeft, Check, ChevronsUpDown } from 'lucide-react';
+import { Upload, Loader2, CheckCircle2, FileInput, ChevronLeft, Check, ChevronsUpDown, Ban, Undo2 } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useCategories } from '@/hooks/useCategories';
 import { useTaxRules } from '@/hooks/useTaxRules';
@@ -53,6 +57,8 @@ type ItemRow = {
   menu_item: boolean;
   waiter_item: boolean;
   qr_item: boolean;
+  // --- Fase opcional: ignorar item na importação (não altera XML/fiscal) ---
+  skip: boolean;
 };
 
 type Header = {
@@ -86,6 +92,7 @@ export default function PurchaseImportXml() {
   const [bulkCategoryId, setBulkCategoryId] = useState<string>('');
   const [bulkTaxRuleId, setBulkTaxRuleId] = useState<string>('');
   const [bulkType, setBulkType] = useState<ProductType | ''>('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!company?.id) return;
@@ -224,6 +231,7 @@ export default function PurchaseImportXml() {
           tax_rule_id: null,
           product_type: 'mercado',
           ...defaultVis,
+          skip: false,
         };
       });
       setItems(its);
@@ -404,6 +412,7 @@ export default function PurchaseImportXml() {
         });
       }
       for (const it of items) {
+        if (it.skip) continue;
         const factor = it.conversion_factor > 0 ? it.conversion_factor : 1;
         const stockQty = it.quantidade * factor;
         const realCost = it.valor_unitario / factor;
@@ -589,20 +598,34 @@ export default function PurchaseImportXml() {
                   </div>
                 )}
                 {items.map((it, idx) => (
-                  <div key={idx} className="border rounded-lg p-3 space-y-2">
+                  <div key={idx} className={cn('border rounded-lg p-3 space-y-2', it.skip && 'opacity-50 bg-muted/40')}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{it.xml_descricao}</div>
+                        <div className="font-medium truncate flex items-center gap-2">
+                          {it.skip && <Badge variant="destructive" className="text-[10px]">IGNORADO</Badge>}
+                          <span className="truncate">{it.xml_descricao}</span>
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           Cód {it.xml_codigo} · EAN {it.xml_ean || '—'} · NCM {it.xml_ncm} · CFOP {it.xml_cfop}
                         </div>
                       </div>
-                      <div className="text-right text-sm">
-                        <div>{it.quantidade} {it.xml_unidade}</div>
-                        <div className="text-xs text-muted-foreground">{it.valor_unitario.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} un</div>
-                        <div className="font-bold text-emerald-600">{it.valor_total.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="text-right text-sm">
+                          <div>{it.quantidade} {it.xml_unidade}</div>
+                          <div className="text-xs text-muted-foreground">{it.valor_unitario.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} un</div>
+                          <div className="font-bold text-emerald-600">{it.valor_total.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={it.skip ? 'outline' : 'ghost'}
+                          className={cn('h-7 text-xs', !it.skip && 'text-destructive hover:text-destructive')}
+                          onClick={() => updateItem(idx, { skip: !it.skip })}
+                        >
+                          {it.skip ? (<><Undo2 className="w-3 h-3 mr-1" /> Voltar a importar</>) : (<><Ban className="w-3 h-3 mr-1" /> Não importar</>)}
+                        </Button>
                       </div>
                     </div>
+                    {!it.skip && (<>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2 border-t">
                       <div>
                         <Label className="text-xs">Mapear para produto</Label>
@@ -813,6 +836,7 @@ export default function PurchaseImportXml() {
                         </div>
                       );
                     })()}
+                    </>)}
                   </div>
                 ))}
 
@@ -820,13 +844,48 @@ export default function PurchaseImportXml() {
                   <Button variant="outline" onClick={() => { setHeader(null); setItems([]); setXmlText(''); }}>
                     Cancelar
                   </Button>
-                  <Button onClick={handleConfirm} disabled={saving}>
+                  <Button
+                    onClick={() => setConfirmOpen(true)}
+                    disabled={saving || items.every(i => i.skip)}
+                  >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
                     Confirmar entrada
                   </Button>
                 </div>
               </CardContent>
             </Card>
+
+            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmar importação da NF-e</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2 text-sm">
+                      <div className="rounded-md border p-3 bg-muted/30 space-y-1">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Itens na NF:</span><span className="font-medium">{items.length}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Itens importados:</span><span className="font-medium text-emerald-600">{items.filter(i => !i.skip).length}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Itens ignorados:</span><span className="font-medium text-destructive">{items.filter(i => i.skip).length}</span></div>
+                        <div className="flex justify-between border-t pt-1 mt-1"><span className="text-muted-foreground">Valor da NF (XML):</span><span className="font-bold">{(header?.valor_total || 0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span></div>
+                      </div>
+                      {items.some(i => i.skip) && (
+                        <div className="text-xs text-muted-foreground">
+                          O valor total fiscal da NF é mantido conforme o XML. Apenas os itens marcados como “Não importar” serão ignorados no lançamento e na entrada de estoque.
+                        </div>
+                      )}
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={saving}>Voltar</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={saving}
+                    onClick={(e) => { e.preventDefault(); setConfirmOpen(false); handleConfirm(); }}
+                  >
+                    Confirmar entrada
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         )}
       </div>
