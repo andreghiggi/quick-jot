@@ -15,7 +15,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Upload, Loader2, CheckCircle2, FileInput, ChevronLeft, Check, ChevronsUpDown } from 'lucide-react';
+import { Upload, Loader2, CheckCircle2, FileInput, ChevronLeft, Check, ChevronsUpDown, Ban, Undo2 } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useCategories } from '@/hooks/useCategories';
 import { useTaxRules } from '@/hooks/useTaxRules';
@@ -53,6 +57,8 @@ type ItemRow = {
   menu_item: boolean;
   waiter_item: boolean;
   qr_item: boolean;
+  // --- Fase opcional: ignorar item na importação (não altera XML/fiscal) ---
+  skip: boolean;
 };
 
 type Header = {
@@ -86,6 +92,7 @@ export default function PurchaseImportXml() {
   const [bulkCategoryId, setBulkCategoryId] = useState<string>('');
   const [bulkTaxRuleId, setBulkTaxRuleId] = useState<string>('');
   const [bulkType, setBulkType] = useState<ProductType | ''>('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!company?.id) return;
@@ -224,6 +231,7 @@ export default function PurchaseImportXml() {
           tax_rule_id: null,
           product_type: 'mercado',
           ...defaultVis,
+          skip: false,
         };
       });
       setItems(its);
@@ -404,6 +412,7 @@ export default function PurchaseImportXml() {
         });
       }
       for (const it of items) {
+        if (it.skip) continue;
         const factor = it.conversion_factor > 0 ? it.conversion_factor : 1;
         const stockQty = it.quantidade * factor;
         const realCost = it.valor_unitario / factor;
