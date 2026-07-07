@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Search, Filter, ArrowUpDown, RefreshCw, Plus, MoreVertical,
   CheckSquare, Eye, Pencil, Check, RefreshCcw, Trash2, X, ExternalLink,
@@ -113,13 +113,109 @@ export const emptyFilters: FinanceFilters = {
   status: 'all', party: '', issueFrom: '', issueTo: '', dueFrom: '', dueTo: '', document: '', tags: '',
 };
 
+/** Remove acentos e converte para minúsculas para busca flexível. */
+export function normalizeSearch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function PartyAutocomplete({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  const normalizedInput = normalizeSearch(inputValue);
+  const showSuggestions = normalizedInput.length >= 2;
+
+  const filtered = useMemo(() => {
+    if (!showSuggestions) return [];
+    const map = new Map<string, string>();
+    for (const opt of options) {
+      const normalized = normalizeSearch(opt);
+      if (normalized.includes(normalizedInput)) {
+        map.set(normalized, opt);
+      }
+    }
+    return Array.from(map.values()).slice(0, 50);
+  }, [options, normalizedInput, showSuggestions]);
+
+  const selectOption = (name: string) => {
+    setInputValue(name);
+    onChange(name);
+    setOpen(false);
+    inputRef.current?.focus();
+  };
+
+  return (
+    <div className="grid gap-1.5">
+      <Label>{label}</Label>
+      <Popover open={open && filtered.length > 0} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Input
+            ref={inputRef}
+            value={inputValue}
+            placeholder={placeholder || 'Digite o nome'}
+            onChange={(e) => {
+              const v = e.target.value;
+              setInputValue(v);
+              onChange(v);
+              setOpen(true);
+            }}
+            onFocus={() => {
+              if (normalizeSearch(inputValue).length >= 2) setOpen(true);
+            }}
+          />
+        </PopoverTrigger>
+        <PopoverContent
+          className="p-1 w-[var(--radix-popover-trigger-width)] max-h-[260px] overflow-auto"
+          align="start"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <div className="space-y-0.5">
+            {filtered.map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => selectOption(name)}
+                className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-accent hover:text-accent-foreground truncate"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+
 export function FinanceFilterPanel({
-  open, filters, setFilters, partyLabel, onApply, onClear,
+  open, filters, setFilters, partyLabel, partyOptions, onApply, onClear,
 }: {
   open: boolean;
   filters: FinanceFilters;
   setFilters: (f: FinanceFilters) => void;
   partyLabel: string;
+  partyOptions?: string[];
   onApply: () => void;
   onClear: () => void;
 }) {
@@ -136,10 +232,20 @@ export function FinanceFilterPanel({
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="grid gap-1.5">
-            <Label>{partyLabel}</Label>
-            <Input value={filters.party} onChange={(e) => set({ party: e.target.value })} placeholder="Digite o nome" />
-          </div>
+          {partyOptions ? (
+            <PartyAutocomplete
+              label={partyLabel}
+              value={filters.party}
+              onChange={(v) => set({ party: v })}
+              options={partyOptions}
+              placeholder="Digite o nome"
+            />
+          ) : (
+            <div className="grid gap-1.5">
+              <Label>{partyLabel}</Label>
+              <Input value={filters.party} onChange={(e) => set({ party: e.target.value })} placeholder="Digite o nome" />
+            </div>
+          )}
           <div className="grid gap-1.5">
             <Label>Status</Label>
             <Select value={filters.status} onValueChange={(v) => set({ status: v as any })}>
@@ -188,20 +294,21 @@ export function FinanceFilterPanel({
 }
 
 export function applyFilters<T extends FinanceRow>(rows: T[], f: FinanceFilters, search: string): T[] {
-  const s = search.trim().toLowerCase();
-  const docs = f.document.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
-  const tags = f.tags.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+  const s = normalizeSearch(search.trim());
+  const docs = f.document.split(',').map(x => normalizeSearch(x.trim())).filter(Boolean);
+  const tags = f.tags.split(',').map(x => normalizeSearch(x.trim())).filter(Boolean);
+  const partyFilter = normalizeSearch(f.party.trim());
   return rows.filter((r) => {
     if (f.status !== 'all' && r.status !== f.status) return false;
-    if (f.party && !r.party_name.toLowerCase().includes(f.party.toLowerCase())) return false;
+    if (partyFilter && !normalizeSearch(r.party_name).includes(partyFilter)) return false;
     if (f.issueFrom && r.issue_date < f.issueFrom) return false;
     if (f.issueTo && r.issue_date > f.issueTo) return false;
     if (f.dueFrom && r.due_date < f.dueFrom) return false;
     if (f.dueTo && r.due_date > f.dueTo) return false;
-    if (docs.length && !docs.some(d => (r.document_number || '').toLowerCase().includes(d))) return false;
-    if (tags.length && !tags.some(t => r.tags.some(rt => rt.toLowerCase().includes(t)))) return false;
+    if (docs.length && !docs.some(d => normalizeSearch(r.document_number || '').includes(d))) return false;
+    if (tags.length && !tags.some(t => r.tags.some(rt => normalizeSearch(rt).includes(t)))) return false;
     if (s) {
-      const hay = `${r.party_name} ${r.document_number || ''} ${r.description}`.toLowerCase();
+      const hay = normalizeSearch(`${r.party_name} ${r.document_number || ''} ${r.description}`);
       if (!hay.includes(s)) return false;
     }
     return true;

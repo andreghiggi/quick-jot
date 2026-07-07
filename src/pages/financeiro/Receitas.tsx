@@ -98,6 +98,14 @@ export default function Receitas() {
     return [...list].sort((a, b) => sortAsc ? a.due_date.localeCompare(b.due_date) : b.due_date.localeCompare(a.due_date));
   }, [rows, filters, search, sortAsc]);
 
+  const customerOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const it of items) {
+      if (it.customer_name?.trim()) names.add(it.customer_name.trim());
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [items]);
+
   /** Agrupamento por pdv_sale_id: parcelas da mesma venda viram 1 item. */
   const groups = useMemo<GroupItem[]>(() => {
     const bySale = new Map<string, AccountReceivable[]>();
@@ -266,6 +274,7 @@ export default function Receitas() {
       <FinanceFilterPanel
         open={filtersOpen} filters={filters} setFilters={setFilters}
         partyLabel="Cliente"
+        partyOptions={customerOptions}
         onApply={() => { setPage(1); setFiltersOpen(false); }}
         onClear={() => { setFilters(emptyFilters); setPage(1); }}
       />
