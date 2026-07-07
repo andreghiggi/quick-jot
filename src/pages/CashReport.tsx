@@ -39,6 +39,15 @@ interface CashMovementRow {
   created_at?: string | null;
 }
 
+interface CrediarioReceiptRow {
+  id: string;
+  amount: number;
+  payment_name: string;
+  paid_at: string;
+  customer_name?: string | null;
+  document_number?: string | null;
+}
+
 function startOfDayLocalISO(d: string): string {
   // d = 'YYYY-MM-DD' (local input). Converte para UTC ISO considerando America/Sao_Paulo (-03:00).
   return new Date(`${d}T00:00:00-03:00`).toISOString();
