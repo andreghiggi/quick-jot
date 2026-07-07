@@ -23,6 +23,10 @@ import { NewFinanceEntryDialog } from '@/components/financeiro/NewFinanceEntryDi
 import { EfetivarReceitaDialog } from '@/components/financeiro/EfetivarReceitaDialog';
 import { RenegociarReceitaDialog } from '@/components/financeiro/RenegociarReceitaDialog';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { emitirNFCe, type NFCeItem } from '@/services/nfceService';
+import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
+import { toast } from 'sonner';
 
 /** Item agregado da lista: pode ser uma venda com N parcelas OU um
  *  título avulso (sem pdv_sale_id). */
