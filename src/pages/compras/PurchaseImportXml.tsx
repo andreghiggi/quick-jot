@@ -844,13 +844,48 @@ export default function PurchaseImportXml() {
                   <Button variant="outline" onClick={() => { setHeader(null); setItems([]); setXmlText(''); }}>
                     Cancelar
                   </Button>
-                  <Button onClick={handleConfirm} disabled={saving}>
+                  <Button
+                    onClick={() => setConfirmOpen(true)}
+                    disabled={saving || items.every(i => i.skip)}
+                  >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
                     Confirmar entrada
                   </Button>
                 </div>
               </CardContent>
             </Card>
+
+            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmar importação da NF-e</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2 text-sm">
+                      <div className="rounded-md border p-3 bg-muted/30 space-y-1">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Itens na NF:</span><span className="font-medium">{items.length}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Itens importados:</span><span className="font-medium text-emerald-600">{items.filter(i => !i.skip).length}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Itens ignorados:</span><span className="font-medium text-destructive">{items.filter(i => i.skip).length}</span></div>
+                        <div className="flex justify-between border-t pt-1 mt-1"><span className="text-muted-foreground">Valor da NF (XML):</span><span className="font-bold">{(header?.valor_total || 0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span></div>
+                      </div>
+                      {items.some(i => i.skip) && (
+                        <div className="text-xs text-muted-foreground">
+                          O valor total fiscal da NF é mantido conforme o XML. Apenas os itens marcados como “Não importar” serão ignorados no lançamento e na entrada de estoque.
+                        </div>
+                      )}
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={saving}>Voltar</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={saving}
+                    onClick={(e) => { e.preventDefault(); setConfirmOpen(false); handleConfirm(); }}
+                  >
+                    Confirmar entrada
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         )}
       </div>
