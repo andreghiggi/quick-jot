@@ -86,7 +86,8 @@ export function FrenteCaixaImportDialog({
           startLocal.getTime() - (now.getTimezoneOffset() - tzOffset) * 60 * 1000,
         ).toISOString();
 
-        const originValues = type === 'mesa' ? ['mesa_qr'] : ['cardapio'];
+        const originValues =
+          type === 'mesa' ? ['mesa_qr'] : ['cardapio', 'balcao'];
 
         const { data, error } = await supabase
           .from('orders')
