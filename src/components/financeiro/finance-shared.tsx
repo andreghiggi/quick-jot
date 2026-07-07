@@ -185,7 +185,7 @@ function PartyAutocomplete({
           />
         </PopoverAnchor>
         <PopoverContent
-          className="p-1 w-[var(--radix-popover-trigger-width)] max-h-[260px] overflow-auto"
+          className="p-1 w-[var(--radix-popover-anchor-width)] max-h-[260px] overflow-auto"
           align="start"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
