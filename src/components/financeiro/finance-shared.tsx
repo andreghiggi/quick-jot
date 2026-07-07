@@ -113,6 +113,101 @@ export const emptyFilters: FinanceFilters = {
   status: 'all', party: '', issueFrom: '', issueTo: '', dueFrom: '', dueTo: '', document: '', tags: '',
 };
 
+/** Remove acentos e converte para minúsculas para busca flexível. */
+export function normalizeSearch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function PartyAutocomplete({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  const normalizedInput = normalizeSearch(inputValue);
+  const showSuggestions = normalizedInput.length >= 2;
+
+  const filtered = useMemo(() => {
+    if (!showSuggestions) return [];
+    const map = new Map<string, string>();
+    for (const opt of options) {
+      const normalized = normalizeSearch(opt);
+      if (normalized.includes(normalizedInput)) {
+        map.set(normalized, opt);
+      }
+    }
+    return Array.from(map.values()).slice(0, 50);
+  }, [options, normalizedInput, showSuggestions]);
+
+  const selectOption = (name: string) => {
+    setInputValue(name);
+    onChange(name);
+    setOpen(false);
+    inputRef.current?.focus();
+  };
+
+  return (
+    <div className="grid gap-1.5">
+      <Label>{label}</Label>
+      <Popover open={open && filtered.length > 0} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Input
+            ref={inputRef}
+            value={inputValue}
+            placeholder={placeholder || 'Digite o nome'}
+            onChange={(e) => {
+              const v = e.target.value;
+              setInputValue(v);
+              onChange(v);
+              setOpen(true);
+            }}
+            onFocus={() => {
+              if (normalizeSearch(inputValue).length >= 2) setOpen(true);
+            }}
+          />
+        </PopoverTrigger>
+        <PopoverContent
+          className="p-1 w-[var(--radix-popover-trigger-width)] max-h-[260px] overflow-auto"
+          align="start"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <div className="space-y-0.5">
+            {filtered.map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => selectOption(name)}
+                className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-accent hover:text-accent-foreground truncate"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+
 export function FinanceFilterPanel({
   open, filters, setFilters, partyLabel, onApply, onClear,
 }: {
