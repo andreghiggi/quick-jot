@@ -23,6 +23,10 @@ import { NewFinanceEntryDialog } from '@/components/financeiro/NewFinanceEntryDi
 import { EfetivarReceitaDialog } from '@/components/financeiro/EfetivarReceitaDialog';
 import { RenegociarReceitaDialog } from '@/components/financeiro/RenegociarReceitaDialog';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { emitirNFCe, type NFCeItem } from '@/services/nfceService';
+import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
+import { toast } from 'sonner';
 
 /** Item agregado da lista: pode ser uma venda com N parcelas OU um
  *  título avulso (sem pdv_sale_id). */
@@ -144,6 +148,86 @@ export default function Receitas() {
   if (!enabled) return <Navigate to="/" replace />;
 
   const findAR = (id: string) => items.find((i) => i.id === id) || null;
+
+  /** Emite NFC-e a partir das parcelas recebidas, reaproveitando os itens
+   *  gravados em `pdv_sale_items` da venda de origem. Emite uma nota por
+   *  `pdv_sale_id` distinto envolvido no recebimento. */
+  async function emitNfceForReceivables(list: AccountReceivable[]) {
+    if (!company?.id) return;
+    const saleIds = Array.from(
+      new Set(list.map((r) => r.pdv_sale_id).filter(Boolean) as string[]),
+    );
+    if (saleIds.length === 0) {
+      toast.info('Título sem venda de origem — NFC-e não emitida.');
+      return;
+    }
+    for (const saleId of saleIds) {
+      try {
+        const { data: itemsData, error: itErr } = await supabase
+          .from('pdv_sale_items')
+          .select('product_id, product_name, quantity, unit_price')
+          .eq('sale_id', saleId);
+        if (itErr) throw itErr;
+        const saleItems = (itemsData as any[]) || [];
+        if (saleItems.length === 0) {
+          toast.error('Venda sem itens — NFC-e não emitida.');
+          continue;
+        }
+        // Carrega produtos + regras tributárias envolvidos.
+        const productIds = Array.from(
+          new Set(saleItems.map((it) => it.product_id).filter(Boolean) as string[]),
+        );
+        let productsMap = new Map<string, any>();
+        let taxRulesMap = new Map<string, any>();
+        if (productIds.length) {
+          const { data: prods } = await supabase
+            .from('products')
+            .select('id, code, unit, ncm, cfop, cest, tax_rule_id')
+            .in('id', productIds);
+          for (const p of (prods as any[]) || []) productsMap.set(p.id, p);
+          const taxRuleIds = Array.from(
+            new Set(
+              ((prods as any[]) || [])
+                .map((p) => p.tax_rule_id)
+                .filter(Boolean) as string[],
+            ),
+          );
+          if (taxRuleIds.length) {
+            const { data: rules } = await supabase
+              .from('tax_rules')
+              .select('*')
+              .in('id', taxRuleIds);
+            for (const t of (rules as any[]) || []) taxRulesMap.set(t.id, t);
+          }
+        }
+        const nfceItems: NFCeItem[] = saleItems.map((it) => {
+          const product = it.product_id ? productsMap.get(it.product_id) : null;
+          const taxRule = product?.tax_rule_id ? taxRulesMap.get(product.tax_rule_id) : null;
+          const fallbackNcm = it.product_id ? '00000000' : '21069090';
+          return {
+            codigo: product?.code || it.product_id || 'AVULSO',
+            descricao: it.product_name,
+            unidade: (product?.unit as string) || 'UN',
+            quantidade: Number(it.quantity) || 1,
+            valor_unitario: Number(it.unit_price) || 0,
+            ...buildNfceFiscalFields({ product: product as any, taxRule: taxRule as any, mercadoEnabled: true, fallbackNcm }),
+          };
+        });
+        const externalId = `CRED-${saleId.substring(0, 8)}-${Date.now()}`;
+        await emitirNFCe(company.id, saleId, {
+          external_id: externalId,
+          itens: nfceItems,
+          valor_desconto: 0,
+          valor_frete: 0,
+          observacoes: list[0]?.customer_name ? `Cliente: ${list[0].customer_name}` : undefined,
+        } as any);
+        toast.success('NFC-e enviada para processamento.');
+      } catch (e: any) {
+        console.error('[Receitas] emitNfceForReceivables', e);
+        toast.error('Falha ao emitir NFC-e: ' + (e?.message || e));
+      }
+    }
+  }
 
   const openEfetivar = (id: string) => { const r = findAR(id); if (r) setEfetivarRow(r); };
   const openRenegociar = (id: string) => { const r = findAR(id); if (r) setRenegRow(r); };
@@ -483,7 +567,7 @@ export default function Receitas() {
         open={!!efetivarRow}
         onOpenChange={(o) => !o && setEfetivarRow(null)}
         receivable={efetivarRow}
-        paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
+        paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name, integrationType: m.integration_type }))}
         busy={busy}
         onConfirm={async (data) => {
           if (!efetivarRow || !company?.id) return;
@@ -496,8 +580,12 @@ export default function Receitas() {
             payments: data.payments,
           });
           setBusy(false);
-          if (ok) setEfetivarRow(null);
-          if (ok) setSelection(new Set());
+          if (ok) {
+            const row = efetivarRow;
+            setEfetivarRow(null);
+            setSelection(new Set());
+            if (data.emitNfce) await emitNfceForReceivables([row]);
+          }
         }}
       />
 
@@ -509,7 +597,7 @@ export default function Receitas() {
         onOpenChange={(o) => !o && setEfetivarRows(null)}
         receivable={null}
         receivables={efetivarRows}
-        paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
+        paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name, integrationType: m.integration_type }))}
         busy={busy}
         onConfirm={async (data) => {
           if (!efetivarRows?.length || !company?.id) return;
@@ -543,7 +631,12 @@ export default function Receitas() {
             if (!ok) { allOk = false; break; }
           }
           setBusy(false);
-          if (allOk) { setEfetivarRows(null); setSelection(new Set()); }
+          if (allOk) {
+            const rowsForNfce = efetivarRows;
+            setEfetivarRows(null);
+            setSelection(new Set());
+            if (data.emitNfce && rowsForNfce) await emitNfceForReceivables(rowsForNfce);
+          }
         }}
       />
 
