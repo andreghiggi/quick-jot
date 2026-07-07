@@ -497,6 +497,7 @@ export default function Receitas() {
           });
           setBusy(false);
           if (ok) setEfetivarRow(null);
+          if (ok) setSelection(new Set());
         }}
       />
 
@@ -542,7 +543,7 @@ export default function Receitas() {
             if (!ok) { allOk = false; break; }
           }
           setBusy(false);
-          if (allOk) setEfetivarRows(null);
+          if (allOk) { setEfetivarRows(null); setSelection(new Set()); }
         }}
       />
 
