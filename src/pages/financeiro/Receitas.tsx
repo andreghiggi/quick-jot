@@ -567,7 +567,7 @@ export default function Receitas() {
         open={!!efetivarRow}
         onOpenChange={(o) => !o && setEfetivarRow(null)}
         receivable={efetivarRow}
-        paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
+        paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name, integrationType: m.integration_type }))}
         busy={busy}
         onConfirm={async (data) => {
           if (!efetivarRow || !company?.id) return;
@@ -580,8 +580,12 @@ export default function Receitas() {
             payments: data.payments,
           });
           setBusy(false);
-          if (ok) setEfetivarRow(null);
-          if (ok) setSelection(new Set());
+          if (ok) {
+            const row = efetivarRow;
+            setEfetivarRow(null);
+            setSelection(new Set());
+            if (data.emitNfce) await emitNfceForReceivables([row]);
+          }
         }}
       />
 
@@ -593,7 +597,7 @@ export default function Receitas() {
         onOpenChange={(o) => !o && setEfetivarRows(null)}
         receivable={null}
         receivables={efetivarRows}
-        paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name }))}
+        paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name, integrationType: m.integration_type }))}
         busy={busy}
         onConfirm={async (data) => {
           if (!efetivarRows?.length || !company?.id) return;
@@ -627,7 +631,12 @@ export default function Receitas() {
             if (!ok) { allOk = false; break; }
           }
           setBusy(false);
-          if (allOk) { setEfetivarRows(null); setSelection(new Set()); }
+          if (allOk) {
+            const rowsForNfce = efetivarRows;
+            setEfetivarRows(null);
+            setSelection(new Set());
+            if (data.emitNfce && rowsForNfce) await emitNfceForReceivables(rowsForNfce);
+          }
         }}
       />
 
