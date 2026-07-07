@@ -288,6 +288,17 @@ export default function Receitas() {
                   today={today}
                   onDoubleClick={() => setInstallmentsGroup(g)}
                   onOpenMenu={(el, row) => { setMenuAnchor(el); setMenuTarget(row); }}
+                  selectionActive={selection.size > 0}
+                  selectedIds={selection}
+                  onToggleSelect={(ids, checked) => {
+                    setSelection((prev) => {
+                      const next = new Set(prev);
+                      for (const id of ids) {
+                        if (checked) next.add(id); else next.delete(id);
+                      }
+                      return next;
+                    });
+                  }}
                 />
               ))}
             </div>
