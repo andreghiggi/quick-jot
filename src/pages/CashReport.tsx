@@ -91,6 +91,7 @@ export default function CashReport() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [salesByRegister, setSalesByRegister] = useState<Record<string, CloseCashSale[]>>({});
   const [movementsByRegister, setMovementsByRegister] = useState<Record<string, CashMovementRow[]>>({});
+  const [crediarioByRegister, setCrediarioByRegister] = useState<Record<string, CrediarioReceiptRow[]>>({});
   const [loadingSales, setLoadingSales] = useState<string | null>(null);
 
   const paperSize = (settings?.printerPaperSize as '58mm' | '80mm') || '80mm';
@@ -115,6 +116,33 @@ export default function CashReport() {
     if (error) throw error;
     const rows = (data || []) as CashMovementRow[];
     setMovementsByRegister((prev) => ({ ...prev, [registerId]: rows }));
+    return rows;
+  }
+
+  async function loadCrediarioReceipts(reg: RegisterRow): Promise<CrediarioReceiptRow[]> {
+    if (!companyId) return [];
+    const from = reg.opened_at;
+    const to = reg.closed_at || new Date().toISOString();
+    const { data, error } = await supabase
+      .from('accounts_receivable_payments' as any)
+      .select('id, amount, payment_name, paid_at, receivable_id, accounts_receivable(customer_name, document_number)')
+      .eq('company_id', companyId)
+      .gte('paid_at', from)
+      .lte('paid_at', to)
+      .order('paid_at', { ascending: true });
+    if (error) {
+      console.error('[CashReport] crediário error', error);
+      return [];
+    }
+    const rows: CrediarioReceiptRow[] = ((data as any[]) || []).map((r) => ({
+      id: r.id,
+      amount: Number(r.amount || 0),
+      payment_name: r.payment_name || 'Sem forma',
+      paid_at: r.paid_at,
+      customer_name: r.accounts_receivable?.customer_name || null,
+      document_number: r.accounts_receivable?.document_number || null,
+    }));
+    setCrediarioByRegister((prev) => ({ ...prev, [reg.id]: rows }));
     return rows;
   }
 
@@ -143,7 +171,7 @@ export default function CashReport() {
         rows.forEach((r) => { r.operator_name = map.get(r.opened_by) || null; });
       }
       setRegisters(rows);
-      await Promise.all(rows.flatMap((r) => [loadRegisterDetails(r), loadRegisterMovements(r.id)]));
+      await Promise.all(rows.flatMap((r) => [loadRegisterDetails(r), loadRegisterMovements(r.id), loadCrediarioReceipts(r)]));
     } catch (e: any) {
       console.error(e);
       toast.error('Erro ao carregar caixas');
