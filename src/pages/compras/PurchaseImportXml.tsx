@@ -598,20 +598,34 @@ export default function PurchaseImportXml() {
                   </div>
                 )}
                 {items.map((it, idx) => (
-                  <div key={idx} className="border rounded-lg p-3 space-y-2">
+                  <div key={idx} className={cn('border rounded-lg p-3 space-y-2', it.skip && 'opacity-50 bg-muted/40')}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{it.xml_descricao}</div>
+                        <div className="font-medium truncate flex items-center gap-2">
+                          {it.skip && <Badge variant="destructive" className="text-[10px]">IGNORADO</Badge>}
+                          <span className="truncate">{it.xml_descricao}</span>
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           Cód {it.xml_codigo} · EAN {it.xml_ean || '—'} · NCM {it.xml_ncm} · CFOP {it.xml_cfop}
                         </div>
                       </div>
-                      <div className="text-right text-sm">
-                        <div>{it.quantidade} {it.xml_unidade}</div>
-                        <div className="text-xs text-muted-foreground">{it.valor_unitario.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} un</div>
-                        <div className="font-bold text-emerald-600">{it.valor_total.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="text-right text-sm">
+                          <div>{it.quantidade} {it.xml_unidade}</div>
+                          <div className="text-xs text-muted-foreground">{it.valor_unitario.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} un</div>
+                          <div className="font-bold text-emerald-600">{it.valor_total.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={it.skip ? 'outline' : 'ghost'}
+                          className={cn('h-7 text-xs', !it.skip && 'text-destructive hover:text-destructive')}
+                          onClick={() => updateItem(idx, { skip: !it.skip })}
+                        >
+                          {it.skip ? (<><Undo2 className="w-3 h-3 mr-1" /> Voltar a importar</>) : (<><Ban className="w-3 h-3 mr-1" /> Não importar</>)}
+                        </Button>
                       </div>
                     </div>
+                    {!it.skip && (<>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2 border-t">
                       <div>
                         <Label className="text-xs">Mapear para produto</Label>
