@@ -435,7 +435,18 @@ export default function Receitas() {
         anchorRef={menuAnchor}
         onClose={() => { setMenuTarget(null); setMenuAnchor(null); }}
         canQuitar={!!menuTarget && menuTarget.status !== 'paga' && menuTarget.status !== 'cancelada'}
-        onSelectMark={() => menuTarget && setSelection(new Set(selection).add(menuTarget.id))}
+        onSelectMark={() => {
+          if (!menuTarget) return;
+          const g = groups.find((x) => x.key === menuTarget.id || (x.kind === 'sale' && x.saleId === menuTarget.pdv_sale_id));
+          const ids = g
+            ? (g.kind === 'sale' ? g.parcelas.map((p) => p.id) : [g.row.id])
+            : [menuTarget.id];
+          setSelection((prev) => {
+            const next = new Set(prev);
+            ids.forEach((id) => next.add(id));
+            return next;
+          });
+        }}
         onDetails={() => {
           if (!menuTarget) return;
           const g = groups.find((x) => x.key === menuTarget.id || (x.kind === 'sale' && x.saleId === menuTarget.pdv_sale_id));
