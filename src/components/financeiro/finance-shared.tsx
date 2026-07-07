@@ -209,12 +209,13 @@ function PartyAutocomplete({
 
 
 export function FinanceFilterPanel({
-  open, filters, setFilters, partyLabel, onApply, onClear,
+  open, filters, setFilters, partyLabel, partyOptions, onApply, onClear,
 }: {
   open: boolean;
   filters: FinanceFilters;
   setFilters: (f: FinanceFilters) => void;
   partyLabel: string;
+  partyOptions?: string[];
   onApply: () => void;
   onClear: () => void;
 }) {
@@ -231,10 +232,20 @@ export function FinanceFilterPanel({
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="grid gap-1.5">
-            <Label>{partyLabel}</Label>
-            <Input value={filters.party} onChange={(e) => set({ party: e.target.value })} placeholder="Digite o nome" />
-          </div>
+          {partyOptions ? (
+            <PartyAutocomplete
+              label={partyLabel}
+              value={filters.party}
+              onChange={(v) => set({ party: v })}
+              options={partyOptions}
+              placeholder="Digite o nome"
+            />
+          ) : (
+            <div className="grid gap-1.5">
+              <Label>{partyLabel}</Label>
+              <Input value={filters.party} onChange={(e) => set({ party: e.target.value })} placeholder="Digite o nome" />
+            </div>
+          )}
           <div className="grid gap-1.5">
             <Label>Status</Label>
             <Select value={filters.status} onValueChange={(v) => set({ status: v as any })}>
