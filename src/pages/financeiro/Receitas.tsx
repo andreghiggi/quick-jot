@@ -274,6 +274,7 @@ export default function Receitas() {
       <FinanceFilterPanel
         open={filtersOpen} filters={filters} setFilters={setFilters}
         partyLabel="Cliente"
+        partyOptions={customerOptions}
         onApply={() => { setPage(1); setFiltersOpen(false); }}
         onClear={() => { setFilters(emptyFilters); setPage(1); }}
       />
