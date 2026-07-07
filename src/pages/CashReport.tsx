@@ -39,6 +39,15 @@ interface CashMovementRow {
   created_at?: string | null;
 }
 
+interface CrediarioReceiptRow {
+  id: string;
+  amount: number;
+  payment_name: string;
+  paid_at: string;
+  customer_name?: string | null;
+  document_number?: string | null;
+}
+
 function startOfDayLocalISO(d: string): string {
   // d = 'YYYY-MM-DD' (local input). Converte para UTC ISO considerando America/Sao_Paulo (-03:00).
   return new Date(`${d}T00:00:00-03:00`).toISOString();
@@ -82,6 +91,7 @@ export default function CashReport() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [salesByRegister, setSalesByRegister] = useState<Record<string, CloseCashSale[]>>({});
   const [movementsByRegister, setMovementsByRegister] = useState<Record<string, CashMovementRow[]>>({});
+  const [crediarioByRegister, setCrediarioByRegister] = useState<Record<string, CrediarioReceiptRow[]>>({});
   const [loadingSales, setLoadingSales] = useState<string | null>(null);
 
   const paperSize = (settings?.printerPaperSize as '58mm' | '80mm') || '80mm';
@@ -106,6 +116,33 @@ export default function CashReport() {
     if (error) throw error;
     const rows = (data || []) as CashMovementRow[];
     setMovementsByRegister((prev) => ({ ...prev, [registerId]: rows }));
+    return rows;
+  }
+
+  async function loadCrediarioReceipts(reg: RegisterRow): Promise<CrediarioReceiptRow[]> {
+    if (!companyId) return [];
+    const from = reg.opened_at;
+    const to = reg.closed_at || new Date().toISOString();
+    const { data, error } = await supabase
+      .from('accounts_receivable_payments' as any)
+      .select('id, amount, payment_name, paid_at, receivable_id, accounts_receivable(customer_name, document_number)')
+      .eq('company_id', companyId)
+      .gte('paid_at', from)
+      .lte('paid_at', to)
+      .order('paid_at', { ascending: true });
+    if (error) {
+      console.error('[CashReport] crediário error', error);
+      return [];
+    }
+    const rows: CrediarioReceiptRow[] = ((data as any[]) || []).map((r) => ({
+      id: r.id,
+      amount: Number(r.amount || 0),
+      payment_name: r.payment_name || 'Sem forma',
+      paid_at: r.paid_at,
+      customer_name: r.accounts_receivable?.customer_name || null,
+      document_number: r.accounts_receivable?.document_number || null,
+    }));
+    setCrediarioByRegister((prev) => ({ ...prev, [reg.id]: rows }));
     return rows;
   }
 
@@ -134,7 +171,7 @@ export default function CashReport() {
         rows.forEach((r) => { r.operator_name = map.get(r.opened_by) || null; });
       }
       setRegisters(rows);
-      await Promise.all(rows.flatMap((r) => [loadRegisterDetails(r), loadRegisterMovements(r.id)]));
+      await Promise.all(rows.flatMap((r) => [loadRegisterDetails(r), loadRegisterMovements(r.id), loadCrediarioReceipts(r)]));
     } catch (e: any) {
       console.error(e);
       toast.error('Erro ao carregar caixas');
@@ -440,6 +477,56 @@ export default function CashReport() {
                           <pre className="text-xs whitespace-pre-wrap font-sans bg-muted/40 p-2 rounded">{reg.notes}</pre>
                         </div>
                       )}
+
+                      {/* Recebimento de Crediário — origem separada */}
+                      {(() => {
+                        const cred = crediarioByRegister[reg.id] || [];
+                        if (cred.length === 0) return null;
+                        const byMethod: Record<string, { total: number; count: number }> = {};
+                        for (const c of cred) {
+                          const k = c.payment_name || 'Sem forma';
+                          if (!byMethod[k]) byMethod[k] = { total: 0, count: 0 };
+                          byMethod[k].total += c.amount;
+                          byMethod[k].count += 1;
+                        }
+                        const total = cred.reduce((a, c) => a + c.amount, 0);
+                        return (
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2">Recebimento de Crediário</h4>
+                            <div className="rounded-md border p-3 text-sm space-y-2">
+                              <div className="space-y-1">
+                                {Object.entries(byMethod).map(([pay, v]) => (
+                                  <div key={pay} className="flex justify-between">
+                                    <span>{pay} <span className="text-xs text-muted-foreground">({v.count})</span></span>
+                                    <span className="tabular-nums font-medium">{brl(v.total)}</span>
+                                  </div>
+                                ))}
+                                <div className="flex justify-between border-t pt-1 mt-1 font-semibold">
+                                  <span>Total crediário ({cred.length})</span>
+                                  <span className="tabular-nums">{brl(total)}</span>
+                                </div>
+                              </div>
+                              <details className="text-xs">
+                                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                                  Ver recebimentos individuais
+                                </summary>
+                                <div className="mt-2 space-y-1">
+                                  {cred.map((c) => (
+                                    <div key={c.id} className="flex justify-between gap-2">
+                                      <span className="truncate">
+                                        {fmtTime(c.paid_at)} · {c.customer_name || 'Cliente'}
+                                        {c.document_number ? ` · ${c.document_number}` : ''}
+                                        <span className="text-muted-foreground"> · {c.payment_name}</span>
+                                      </span>
+                                      <span className="tabular-nums">{brl(c.amount)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </details>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </CardContent>
                   )}
                 </Card>

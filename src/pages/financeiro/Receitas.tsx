@@ -230,19 +230,15 @@ export default function Receitas() {
   };
 
   const bulkPay = async () => {
-    if (!company?.id) return;
-    setBusy(true);
-    for (const id of selection) {
-      const r = findAR(id);
-      if (r && r.status === 'open') {
-        await receivePayment({
-          receivableId: id, companyId: company.id, amount: Number(r.balance),
-          paymentMethodId: null, paymentName: 'Dinheiro', operatorId: user?.id ?? null,
-        });
-      }
-    }
-    setBusy(false);
-    setSelection(new Set());
+    // Abre o diálogo de recebimento (igual ao checkout do Frente de Caixa)
+    // com todas as parcelas selecionadas — permite split, juros/desconto e
+    // atalhos por letra.
+    const rows = Array.from(selection)
+      .map((id) => findAR(id))
+      .filter((r): r is AccountReceivable => !!r && r.status === 'open');
+    if (rows.length === 0) return;
+    if (rows.length === 1) setEfetivarRow(rows[0]);
+    else setEfetivarRows(rows);
   };
 
   const doBulkDelete = async () => {
@@ -501,6 +497,7 @@ export default function Receitas() {
           });
           setBusy(false);
           if (ok) setEfetivarRow(null);
+          if (ok) setSelection(new Set());
         }}
       />
 
@@ -546,7 +543,7 @@ export default function Receitas() {
             if (!ok) { allOk = false; break; }
           }
           setBusy(false);
-          if (allOk) setEfetivarRows(null);
+          if (allOk) { setEfetivarRows(null); setSelection(new Set()); }
         }}
       />
 
