@@ -222,7 +222,7 @@ export function FrenteCaixaImportDialog({
           fechamento da venda.
         </p>
 
-        <ScrollArea className="flex-1 -mx-2 px-2">
+        <ScrollArea className="flex-1 min-h-0 -mx-2 px-2">
           {loading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
