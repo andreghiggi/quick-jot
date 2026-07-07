@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/components/ui/popover';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -168,7 +168,7 @@ function PartyAutocomplete({
     <div className="grid gap-1.5">
       <Label>{label}</Label>
       <Popover open={open && filtered.length > 0} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
+        <PopoverAnchor asChild>
           <Input
             ref={inputRef}
             value={inputValue}
@@ -183,9 +183,9 @@ function PartyAutocomplete({
               if (normalizeSearch(inputValue).length >= 2) setOpen(true);
             }}
           />
-        </PopoverTrigger>
+        </PopoverAnchor>
         <PopoverContent
-          className="p-1 w-[var(--radix-popover-trigger-width)] max-h-[260px] overflow-auto"
+          className="p-1 w-[var(--radix-popover-anchor-width)] max-h-[260px] overflow-auto"
           align="start"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
@@ -205,6 +205,7 @@ function PartyAutocomplete({
       </Popover>
     </div>
   );
+
 }
 
 
