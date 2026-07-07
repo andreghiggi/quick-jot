@@ -836,6 +836,7 @@ export default function PurchaseImportXml() {
                         </div>
                       );
                     })()}
+                    </>)}
                   </div>
                 ))}
 
