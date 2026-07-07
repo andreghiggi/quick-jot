@@ -288,6 +288,17 @@ export default function Receitas() {
                   today={today}
                   onDoubleClick={() => setInstallmentsGroup(g)}
                   onOpenMenu={(el, row) => { setMenuAnchor(el); setMenuTarget(row); }}
+                  selectionActive={selection.size > 0}
+                  selectedIds={selection}
+                  onToggleSelect={(ids, checked) => {
+                    setSelection((prev) => {
+                      const next = new Set(prev);
+                      for (const id of ids) {
+                        if (checked) next.add(id); else next.delete(id);
+                      }
+                      return next;
+                    });
+                  }}
                 />
               ))}
             </div>
@@ -424,7 +435,18 @@ export default function Receitas() {
         anchorRef={menuAnchor}
         onClose={() => { setMenuTarget(null); setMenuAnchor(null); }}
         canQuitar={!!menuTarget && menuTarget.status !== 'paga' && menuTarget.status !== 'cancelada'}
-        onSelectMark={() => menuTarget && setSelection(new Set(selection).add(menuTarget.id))}
+        onSelectMark={() => {
+          if (!menuTarget) return;
+          const g = groups.find((x) => x.key === menuTarget.id || (x.kind === 'sale' && x.saleId === menuTarget.pdv_sale_id));
+          const ids = g
+            ? (g.kind === 'sale' ? g.parcelas.map((p) => p.id) : [g.row.id])
+            : [menuTarget.id];
+          setSelection((prev) => {
+            const next = new Set(prev);
+            ids.forEach((id) => next.add(id));
+            return next;
+          });
+        }}
         onDetails={() => {
           if (!menuTarget) return;
           const g = groups.find((x) => x.key === menuTarget.id || (x.kind === 'sale' && x.saleId === menuTarget.pdv_sale_id));
@@ -642,11 +664,15 @@ function groupStatus(g: GroupItem, today: string) {
 
 function SaleGroupCard({
   group, today, onDoubleClick, onOpenMenu,
+  selectionActive, selectedIds, onToggleSelect,
 }: {
   group: GroupItem;
   today: string;
   onDoubleClick: () => void;
   onOpenMenu: (el: HTMLElement, row: FinanceRow) => void;
+  selectionActive: boolean;
+  selectedIds: Set<string>;
+  onToggleSelect: (ids: string[], checked: boolean) => void;
 }) {
   const rows = group.kind === 'sale' ? group.parcelas : [group.row];
   const total = rows.reduce((s, r) => s + Number(r.amount), 0);
@@ -662,6 +688,10 @@ function SaleGroupCard({
     .filter(Boolean)
     .sort()[0];
   const issueDateBR = issueDate ? issueDate.split('-').reverse().join('/') : '';
+
+  const allIds = rows.map((r) => r.id);
+  const selectedCount = allIds.filter((id) => selectedIds.has(id)).length;
+  const allSelected = selectedCount > 0 && selectedCount === allIds.length;
 
   // Row de referência para o menu (usa a próxima em aberto ou a primeira).
   const menuRefRow = nextOpen || rows[0];
@@ -689,6 +719,16 @@ function SaleGroupCard({
       title="Duplo clique para ver as parcelas"
     >
       <CardContent className="p-3 flex items-center gap-3">
+        {selectionActive && (
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-primary cursor-pointer shrink-0"
+            checked={allSelected}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => onToggleSelect(allIds, e.target.checked)}
+            aria-label="Selecionar venda"
+          />
+        )}
         <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
           <Receipt className="h-4 w-4 text-muted-foreground" />
         </div>
