@@ -251,7 +251,6 @@ export default function Receitas() {
         count={selection.size}
         onClear={() => setSelection(new Set())}
         onBulkPay={bulkPay}
-        onBulkDelete={() => setBulkDelete(true)}
         quitarLabel="Receber selecionados"
       />
 

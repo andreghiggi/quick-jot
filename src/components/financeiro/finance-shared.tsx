@@ -508,7 +508,7 @@ export function BulkActionBar({
   count, onClear, onBulkPay, onBulkDelete, quitarLabel,
 }: {
   count: number; onClear: () => void;
-  onBulkPay: () => void; onBulkDelete: () => void;
+  onBulkPay: () => void; onBulkDelete?: () => void;
   quitarLabel: string;
 }) {
   if (count === 0) return null;
@@ -523,9 +523,11 @@ export function BulkActionBar({
           <Button size="sm" variant="secondary" onClick={onBulkPay} className="gap-1">
             <Check className="h-4 w-4" /> {quitarLabel}
           </Button>
-          <Button size="sm" variant="destructive" onClick={onBulkDelete} className="gap-1">
-            <Trash2 className="h-4 w-4" /> Excluir
-          </Button>
+          {onBulkDelete && (
+            <Button size="sm" variant="destructive" onClick={onBulkDelete} className="gap-1">
+              <Trash2 className="h-4 w-4" /> Excluir
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
