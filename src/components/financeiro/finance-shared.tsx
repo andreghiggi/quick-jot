@@ -168,7 +168,7 @@ function PartyAutocomplete({
     <div className="grid gap-1.5">
       <Label>{label}</Label>
       <Popover open={open && filtered.length > 0} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
+        <PopoverAnchor asChild>
           <Input
             ref={inputRef}
             value={inputValue}
@@ -183,7 +183,7 @@ function PartyAutocomplete({
               if (normalizeSearch(inputValue).length >= 2) setOpen(true);
             }}
           />
-        </PopoverTrigger>
+        </PopoverAnchor>
         <PopoverContent
           className="p-1 w-[var(--radix-popover-trigger-width)] max-h-[260px] overflow-auto"
           align="start"
@@ -205,6 +205,7 @@ function PartyAutocomplete({
       </Popover>
     </div>
   );
+
 }
 
 
