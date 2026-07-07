@@ -210,19 +210,19 @@ export function FrenteCaixaImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85dvh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl h-[85dvh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground shrink-0">
           Pedidos do dia que ainda não foram cobrados. Após importar, os itens
           serão adicionados ao carrinho e <strong>não poderão ser editados nem removidos</strong>.
           O pedido original continua existindo — apenas será marcado como pago após o
           fechamento da venda.
         </p>
 
-        <ScrollArea className="flex-1 min-h-0 -mx-2 px-2">
+        <div className="flex-1 min-h-0 overflow-y-auto -mx-2 px-2">
           {loading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -289,7 +289,7 @@ export function FrenteCaixaImportDialog({
               ))}
             </ul>
           )}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
