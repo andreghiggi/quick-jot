@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { brl, maskCurrencyInput, parseCurrencyInput } from '@/components/pdv-v2/_format';
 import type { AccountReceivable } from '@/hooks/useAccountsReceivable';
 
@@ -30,6 +31,9 @@ export interface EfetivarSubmit {
   discount: number;
   surcharge: number;
   payments: EfetivarPayment[];
+  /** Operador optou por emitir NFC-e após o recebimento. Sempre `true`
+   *  quando alguma linha usa forma de pagamento TEF (obrigatório por lei). */
+  emitNfce: boolean;
 }
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -48,7 +52,7 @@ export function EfetivarReceitaDialog({
   receivable: AccountReceivable | null;
   /** Quando informado, efetiva várias parcelas juntas (venda inteira). */
   receivables?: AccountReceivable[] | null;
-  paymentMethods: Array<{ id: string; name: string }>;
+  paymentMethods: Array<{ id: string; name: string; integrationType?: string | null }>;
   onConfirm: (data: EfetivarSubmit) => Promise<void> | void;
   busy: boolean;
 }) {
@@ -57,6 +61,7 @@ export function EfetivarReceitaDialog({
   const [discount, setDiscount] = useState('0,00');
   const [surcharge, setSurcharge] = useState('0,00');
   const [lines, setLines] = useState<Record<string, string>>({});
+  const [emitNfce, setEmitNfce] = useState(false);
   const lineRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const list = useMemo(
@@ -82,6 +87,15 @@ export function EfetivarReceitaDialog({
   const over = diff < -0.005;
   const exact = Math.abs(diff) < 0.005 && totalPaid > 0;
 
+  // Detecta se alguma linha usa forma de pagamento TEF com valor > 0.
+  // Nesse caso, a emissão da NFC-e é obrigatória (não pode desmarcar).
+  const hasTefLine = paymentMethods.some(
+    (m) =>
+      (m.integrationType || '').toLowerCase() === 'tef' &&
+      parseCurrencyInput(lines[m.id] || '') > 0,
+  );
+  const effectiveEmitNfce = hasTefLine ? true : emitNfce;
+
   useEffect(() => {
     if (open) {
       setInterest('0,00');
@@ -89,6 +103,7 @@ export function EfetivarReceitaDialog({
       setDiscount('0,00');
       setSurcharge('0,00');
       setLines({});
+      setEmitNfce(false);
       setTimeout(() => {
         const first = paymentMethods[0];
         if (first) {
@@ -138,6 +153,7 @@ export function EfetivarReceitaDialog({
       discount: nDiscount,
       surcharge: nSurcharge,
       payments,
+      emitNfce: effectiveEmitNfce,
     });
   };
 
@@ -292,6 +308,31 @@ export function EfetivarReceitaDialog({
                     ? `Excede: ${brl(totalPaid - toEffective)}`
                     : `Falta: ${brl(remaining)}`}
                 </span>
+              </div>
+
+              {/* Emissão de NFC-e — obrigatória em TEF, opcional nas demais formas */}
+              <div className="pt-3 border-t mt-3">
+                <label
+                  className={
+                    'flex items-start gap-2 text-sm ' +
+                    (hasTefLine ? 'opacity-90' : 'cursor-pointer')
+                  }
+                >
+                  <Checkbox
+                    checked={effectiveEmitNfce}
+                    onCheckedChange={(v) => !hasTefLine && setEmitNfce(v === true)}
+                    disabled={hasTefLine || busy}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    Emitir NFC-e após efetivar
+                    {hasTefLine && (
+                      <span className="block text-[11px] text-muted-foreground">
+                        Obrigatória para pagamentos via TEF — não pode ser desmarcada.
+                      </span>
+                    )}
+                  </span>
+                </label>
               </div>
 
               <p className="text-[11px] text-muted-foreground pt-2">
