@@ -477,6 +477,56 @@ export default function CashReport() {
                           <pre className="text-xs whitespace-pre-wrap font-sans bg-muted/40 p-2 rounded">{reg.notes}</pre>
                         </div>
                       )}
+
+                      {/* Recebimento de Crediário — origem separada */}
+                      {(() => {
+                        const cred = crediarioByRegister[reg.id] || [];
+                        if (cred.length === 0) return null;
+                        const byMethod: Record<string, { total: number; count: number }> = {};
+                        for (const c of cred) {
+                          const k = c.payment_name || 'Sem forma';
+                          if (!byMethod[k]) byMethod[k] = { total: 0, count: 0 };
+                          byMethod[k].total += c.amount;
+                          byMethod[k].count += 1;
+                        }
+                        const total = cred.reduce((a, c) => a + c.amount, 0);
+                        return (
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2">Recebimento de Crediário</h4>
+                            <div className="rounded-md border p-3 text-sm space-y-2">
+                              <div className="space-y-1">
+                                {Object.entries(byMethod).map(([pay, v]) => (
+                                  <div key={pay} className="flex justify-between">
+                                    <span>{pay} <span className="text-xs text-muted-foreground">({v.count})</span></span>
+                                    <span className="tabular-nums font-medium">{brl(v.total)}</span>
+                                  </div>
+                                ))}
+                                <div className="flex justify-between border-t pt-1 mt-1 font-semibold">
+                                  <span>Total crediário ({cred.length})</span>
+                                  <span className="tabular-nums">{brl(total)}</span>
+                                </div>
+                              </div>
+                              <details className="text-xs">
+                                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                                  Ver recebimentos individuais
+                                </summary>
+                                <div className="mt-2 space-y-1">
+                                  {cred.map((c) => (
+                                    <div key={c.id} className="flex justify-between gap-2">
+                                      <span className="truncate">
+                                        {fmtTime(c.paid_at)} · {c.customer_name || 'Cliente'}
+                                        {c.document_number ? ` · ${c.document_number}` : ''}
+                                        <span className="text-muted-foreground"> · {c.payment_name}</span>
+                                      </span>
+                                      <span className="tabular-nums">{brl(c.amount)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </details>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </CardContent>
                   )}
                 </Card>
