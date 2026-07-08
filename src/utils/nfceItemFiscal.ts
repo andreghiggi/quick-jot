@@ -5,9 +5,11 @@ import type { TaxRule } from '@/hooks/useTaxRules';
  * Monta os campos fiscais (ncm/cfop/cest + tributos) de um item de NFC-e.
  *
  * Regra (Mercado / Frente de Caixa):
- *  - `ncm`, `cfop`, `cest` podem vir do cadastro do produto. Quando vazios,
- *    cai para a regra tributária. Quando nem produto nem regra trazem nada,
- *    usa o fallback (NCM '00000000' / CFOP '5102').
+ *  - `ncm` e `cest` podem vir do cadastro do produto. Quando vazios,
+ *    caem para a regra tributária. Quando nem produto nem regra trazem nada,
+ *    usa o fallback (NCM '00000000' / CEST vazio).
+ *  - `cfop` SEMPRE vem da regra tributária; o cadastro do produto é ignorado.
+ *    Quando a regra não traz CFOP, usa o fallback '5102'.
  *  - `cest` só é incluído quando preenchido (XML opcional).
  *  - Demais campos (CSOSN, alíquotas, CSTs) SEMPRE vêm da regra tributária.
  *
@@ -27,7 +29,7 @@ export interface NfceFiscalFields {
 }
 
 export interface BuildNfceFiscalOptions {
-  product?: Pick<Product, 'ncm' | 'cfop' | 'cest'> | null;
+  product?: Pick<Product, 'ncm' | 'cest'> | null;
   taxRule?: Pick<
     TaxRule,
     | 'ncm'
@@ -43,7 +45,7 @@ export interface BuildNfceFiscalOptions {
   mercadoEnabled?: boolean;
   /** NCM default quando produto e regra estiverem vazios. Default: '00000000'. */
   fallbackNcm?: string;
-  /** CFOP default quando produto e regra estiverem vazios. Default: '5102'. */
+  /** CFOP default quando a regra tributária estiver vazia. Default: '5102'. */
   fallbackCfop?: string;
 }
 
@@ -59,11 +61,10 @@ export function buildNfceFiscalFields(opts: BuildNfceFiscalOptions): NfceFiscalF
   } = opts;
 
   const prodNcm = mercadoEnabled ? clean(product?.ncm) : '';
-  const prodCfop = mercadoEnabled ? clean(product?.cfop) : '';
   const prodCest = mercadoEnabled ? clean(product?.cest) : '';
 
   const ncm = prodNcm || clean(taxRule?.ncm) || fallbackNcm;
-  const cfop = prodCfop || clean(taxRule?.cfop) || fallbackCfop;
+  const cfop = clean(taxRule?.cfop) || fallbackCfop;
   const cest = prodCest || clean(taxRule?.cest) || '';
 
   return {

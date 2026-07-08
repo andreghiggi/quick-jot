@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '08/07/2026',
+    version: '1.55.2-beta',
+    type: 'fix',
+    description: 'Fiscal: CFOP dos itens de NFC-e agora SEMPRE vem da regra tributária vinculada ao produto. O campo CFOP do cadastro do produto passa a ser ignorado na emissão, evitando saídas com CFOP 5102 quando a regra exige 5101. NCM e CEST continuam podendo vir do produto (quando preenchidos) e caem para a regra tributária se vazios. Aplica-se a PDV, PDV V2, Frente de Caixa, Pedido Express, Cobrança de comanda e Financeiro. Sem alteração em NF-e avulsa, Compras/Importar XML, cadastro de produtos ou combos.',
+  },
+  {
+    date: '08/07/2026',
     version: '1.55.1-beta',
     type: 'fix',
     description: 'Compras → Importar XML: produtos já importados anteriormente do mesmo fornecedor agora são reconhecidos também pelo histórico de vínculo fornecedor + código do item no XML, além do EAN/GTIN. Isso evita recriar produto quando o XML vem sem EAN ou com EAN divergente, mas já houve importação anterior mapeada para um produto cadastrado.',
