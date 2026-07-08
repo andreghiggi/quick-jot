@@ -660,6 +660,9 @@ Deno.serve(async (req) => {
               try { providerJson = JSON.parse(rawText) } catch { /* not JSON */ }
               if (providerJson && typeof providerJson === 'object') {
                 // Try known field names for the XML payload
+                const nestedData = providerJson.data && typeof providerJson.data === 'object'
+                  ? providerJson.data
+                  : null
                 const candidate =
                   providerJson.xml_retorno ||
                   providerJson.xml ||
@@ -669,10 +672,15 @@ Deno.serve(async (req) => {
                   providerJson.xml_base64 ||
                   providerJson.conteudo ||
                   providerJson.content ||
-                  providerJson.data ||
-                  (providerJson.data && typeof providerJson.data === 'object'
-                    ? (providerJson.data.xml || providerJson.data.xml_base64 || providerJson.data.conteudo)
-                    : null) ||
+                  nestedData?.xml_retorno ||
+                  nestedData?.xml ||
+                  nestedData?.xml_autorizado ||
+                  nestedData?.xmlNFe ||
+                  nestedData?.xml_proc ||
+                  nestedData?.xml_base64 ||
+                  nestedData?.conteudo ||
+                  nestedData?.content ||
+                  (typeof providerJson.data === 'string' ? providerJson.data : null) ||
                   null
 
                 if (candidate && typeof candidate === 'string') {
@@ -681,7 +689,7 @@ Deno.serve(async (req) => {
                     : (() => { try { return atob(candidate) } catch { return candidate } })()
                 } else {
                   // Follow URL server-side to bypass CORS
-                  const url = providerJson.xml_url || providerJson.url_xml || providerJson.url || null
+                  const url = providerJson.xml_url || providerJson.url_xml || providerJson.url || nestedData?.xml_url || nestedData?.url_xml || nestedData?.url || null
                   if (url) {
                     try {
                       const r2 = await fetch(url, { headers: { 'x-api-key': NFCE_API_KEY } })
