@@ -69,7 +69,29 @@ type Header = {
   serie: string;
   emissao: string;
   valor_total: number;
+  // Enriquecimento fornecedor (v1.47)
+  ie_emit?: string;
+  fone_emit?: string;
+  end_logradouro?: string;
+  end_numero?: string;
+  end_bairro?: string;
+  end_municipio?: string;
+  end_uf?: string;
+  end_cep?: string;
 };
+
+// Converte CFOP de saída (do XML do fornecedor) para CFOP de entrada.
+// 5xxx → 1xxx (dentro do estado), 6xxx → 2xxx (interestadual), 7xxx → 3xxx (importação).
+// Demais códigos permanecem como estão.
+function cfopSaidaParaEntrada(cfop: string | null | undefined): string | null {
+  if (!cfop) return null;
+  const c = String(cfop).replace(/\D/g, '');
+  if (c.length !== 4) return cfop || null;
+  const map: Record<string, string> = { '5': '1', '6': '2', '7': '3' };
+  const first = c[0];
+  if (!map[first]) return c;
+  return map[first] + c.slice(1);
+}
 
 type ProductSlim = { id: string; name: string; gtin: string | null; price: number | null; unit: string | null };
 
