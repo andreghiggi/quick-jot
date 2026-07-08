@@ -124,6 +124,29 @@ export default function PurchaseImportXml() {
     if (documentoId) loadFromDfe(documentoId);
   }, [company?.id, documentoId]);
 
+  // Reconciliação por GTIN: quando os produtos terminam de carregar depois do
+  // parse do XML, tenta casar itens ainda marcados como "criar novo" com
+  // cadastros existentes que tenham o mesmo EAN. Evita race condition entre o
+  // fetch de produtos e a leitura automática do XML via documentoId.
+  useEffect(() => {
+    if (products.length === 0 || items.length === 0) return;
+    let changed = false;
+    const next = items.map((it) => {
+      if (!it.createNew || !it.xml_ean) return it;
+      const matched = products.find((p) => p.gtin && p.gtin === it.xml_ean);
+      if (!matched) return it;
+      changed = true;
+      return {
+        ...it,
+        product_id: matched.id,
+        createNew: false,
+        stock_unit: matched.unit || it.stock_unit,
+        sale_price: matched.price ?? it.sale_price,
+      };
+    });
+    if (changed) setItems(next);
+  }, [products]);
+
   async function loadFromDfe(id: string) {
     if (!company?.id) return;
     setLoading(true);
