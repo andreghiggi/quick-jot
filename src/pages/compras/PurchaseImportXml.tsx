@@ -384,11 +384,21 @@ export default function PurchaseImportXml() {
       let supplierId: string | null = null;
       if (header.cnpj_emit) {
         const { data: sup } = await (supabase.from('suppliers') as any)
-          .select('id').eq('company_id', company.id).eq('cnpj', header.cnpj_emit).maybeSingle();
+          .select('id').eq('company_id', company.id).eq('document', header.cnpj_emit).maybeSingle();
         if (sup) supplierId = (sup as any).id;
         else {
           const { data: novo } = await (supabase.from('suppliers') as any).insert({
-            company_id: company.id, name: header.nome_emit || 'Fornecedor', cnpj: header.cnpj_emit,
+            company_id: company.id,
+            name: header.nome_emit || 'Fornecedor',
+            document: header.cnpj_emit,
+            state_registration: header.ie_emit || null,
+            phone: header.fone_emit || null,
+            address: header.end_logradouro || null,
+            number: header.end_numero || null,
+            neighborhood: header.end_bairro || null,
+            city: header.end_municipio || null,
+            state: header.end_uf || null,
+            zip_code: header.end_cep || null,
           }).select('id').single();
           supplierId = (novo as any)?.id || null;
         }
