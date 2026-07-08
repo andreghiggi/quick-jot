@@ -471,7 +471,7 @@ export default function PurchaseImportXml() {
             tax_rule_id: it.tax_rule_id || null,
             gtin: it.xml_ean || null,
             ncm: it.xml_ncm || null,
-            cfop: it.xml_cfop || null,
+            cfop: cfopSaidaParaEntrada(it.xml_cfop),
             unit: it.stock_unit || it.xml_unidade || null,
             track_stock: true,
             product_type: it.product_type || 'mercado',
