@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star, Camera, Check, X, Sparkles, UtensilsCrossed, ShoppingCart, Repeat } from 'lucide-react';
+import { Plus, Trash2, Upload, Pencil, FolderOpen, Image, Loader2, Package, ChevronUp, ChevronDown, FileText, Copy, Star, Camera, Check, X, Sparkles, UtensilsCrossed, ShoppingCart, Repeat, Search } from 'lucide-react';
 import { BulkTaxRuleDialog } from '@/components/products/BulkTaxRuleDialog';
 import { ProductsMercadoView } from '@/components/products/ProductsMercadoView';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -116,6 +116,7 @@ export default function Products() {
   useEffect(() => { try { sessionStorage.setItem('products:typeFilter', typeFilter); } catch {} }, [typeFilter]);
   // Mini-picker do tipo ao criar produto novo
   const [typePickerOpen, setTypePickerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const menuLink = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
 
   // AI import state
@@ -594,10 +595,22 @@ export default function Products() {
           .map(([cat, prods]) => [cat, prods.filter(matchesType)] as [string, Product[]])
           .filter(([, prods]) => prods.length > 0)
       : groupedProducts;
-    // 2) Filtro por categoria (chip).
-    if (!selectedCategoryFilter) return byType;
-    return byType.filter(([category]) => category === selectedCategoryFilter);
-  }, [groupedProducts, selectedCategoryFilter, typeFilter, isModuleEnabled]);
+    // 2) Filtro por texto (nome, código/SKU, GTIN).
+    const q = searchQuery.trim().toLowerCase();
+    const bySearch = !q
+      ? byType
+      : byType
+          .map(([cat, prods]) => [cat, prods.filter((p) => {
+            const name = (p.name || '').toLowerCase();
+            const code = ((p as any).code || '').toLowerCase();
+            const gtin = ((p as any).gtin || '').toLowerCase();
+            return name.includes(q) || code.includes(q) || gtin.includes(q);
+          })] as [string, Product[]])
+          .filter(([, prods]) => prods.length > 0);
+    // 3) Filtro por categoria (chip).
+    if (!selectedCategoryFilter) return bySearch;
+    return bySearch.filter(([category]) => category === selectedCategoryFilter);
+  }, [groupedProducts, selectedCategoryFilter, typeFilter, isModuleEnabled, searchQuery]);
 
   if (loading) {
     return (
@@ -937,6 +950,27 @@ export default function Products() {
           />
         ) : (
         <>
+        {/* Search input (nome / SKU / GTIN) — para abas Cardápio e Ambos */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por nome, código ou código de barras…"
+            className="pl-9"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              aria-label="Limpar busca"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted"
+            >
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+
         {/* Category filter chips */}
         {groupedProducts.length > 1 && (
           <div className="flex gap-2 flex-wrap pb-1">
