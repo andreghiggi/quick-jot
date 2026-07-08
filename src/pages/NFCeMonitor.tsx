@@ -11,9 +11,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { 
   FileText, Loader2, RefreshCw, Search, CheckCircle, XCircle, 
-  Clock, AlertTriangle, Ban, Eye, Copy, RotateCcw, X, Printer, CloudDownload 
+  Clock, AlertTriangle, Ban, Eye, Copy, RotateCcw, X, Printer, CloudDownload, MoreVertical, Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -260,6 +267,33 @@ export default function NFCeMonitor() {
     }
   }
 
+  async function handleDownloadXml(record: NFCeRecord) {
+    if (!record.xml_url) {
+      toast.error('XML não disponível para esta nota.');
+      return;
+    }
+    setActionLoading(record.id);
+    try {
+      const resp = await fetch(record.xml_url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const text = await resp.text();
+      const blob = new Blob([text], { type: 'application/xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const name = record.chave_acesso || `nfce-${record.serie ?? 'X'}-${record.numero ?? record.id.slice(0, 8)}`;
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${name}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e.message || 'Falha ao baixar XML');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   const filteredRecords = records.filter((r) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
@@ -418,15 +452,6 @@ export default function NFCeMonitor() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => setSelectedRecord(record)}
-                                title="Detalhes"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
                               {(record.status === 'rejeitada' || record.status === 'erro' || record.status === 'pendente') && (
                                 <Button
                                   variant="ghost"
@@ -451,30 +476,48 @@ export default function NFCeMonitor() {
                                   <CloudDownload className={`h-4 w-4 ${isLoading ? 'animate-pulse' : ''}`} />
                                 </Button>
                               )}
-                              {record.status === 'autorizada' && (
-                                <>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-primary"
+                                    className="h-8 w-8"
+                                    disabled={isLoading}
+                                    aria-label="Ações"
+                                  >
+                                    {isLoading ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <MoreVertical className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuItem
                                     onClick={() => handlePrintDanfe(record)}
-                                    disabled={isLoading}
-                                    title="Imprimir DANFE"
+                                    disabled={record.status !== 'autorizada'}
                                   >
-                                    <Printer className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-destructive"
+                                    <Printer className="h-4 w-4 mr-2" /> Imprimir
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => setSelectedRecord(record)}>
+                                    <Eye className="h-4 w-4 mr-2" /> Detalhes
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
                                     onClick={() => handleCancelar(record)}
-                                    disabled={isLoading}
-                                    title="Cancelar"
+                                    disabled={record.status !== 'autorizada'}
+                                    className="text-destructive focus:text-destructive"
                                   >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
+                                    <X className="h-4 w-4 mr-2" /> Cancelar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleDownloadXml(record)}
+                                    disabled={!record.xml_url}
+                                  >
+                                    <Download className="h-4 w-4 mr-2" /> Baixar XML
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </TableCell>
                         </TableRow>
