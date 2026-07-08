@@ -102,7 +102,6 @@ export default function ProductEdit() {
   const [ncm, setNcm] = useState('');
   const [cest, setCest] = useState('');
   const [cestSuggestions, setCestSuggestions] = useState<CestMatch[]>([]);
-  const [cfop, setCfop] = useState('');
   // ---- Mercado: comercial ----
   const [brand, setBrand] = useState('');
   const [supplierId, setSupplierId] = useState<string>('');
