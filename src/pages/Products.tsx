@@ -116,6 +116,7 @@ export default function Products() {
   useEffect(() => { try { sessionStorage.setItem('products:typeFilter', typeFilter); } catch {} }, [typeFilter]);
   // Mini-picker do tipo ao criar produto novo
   const [typePickerOpen, setTypePickerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const menuLink = company?.slug ? `${window.location.origin}/cardapio/${company.slug}` : `${window.location.origin}/cardapio`;
 
   // AI import state
