@@ -23,6 +23,8 @@ type Item = {
   valor_unitario: number | null;
   valor_total: number | null;
   stock_applied: boolean | null;
+  conversion_factor: number | null;
+  stock_unit: string | null;
 };
 
 type Invoice = {
