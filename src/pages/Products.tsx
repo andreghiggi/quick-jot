@@ -943,9 +943,16 @@ export default function Products() {
           );
         })()}
 
-        {isModuleEnabled('mercado') && typeFilter === 'mercado' ? (
+        {isModuleEnabled('mercado') ? (
           <ProductsMercadoView
-            products={products.filter((p) => (p as any).productType === 'mercado')}
+            key={typeFilter}
+            products={products.filter((p) => {
+              const t = (p as any).productType ?? 'cardapio';
+              if (typeFilter === 'cardapio') return t === 'cardapio' || t === 'ambos';
+              if (typeFilter === 'mercado') return t === 'mercado' || t === 'ambos';
+              if (typeFilter === 'ambos') return t === 'ambos';
+              return true;
+            })}
             onEdit={openEditDialog}
           />
         ) : (
