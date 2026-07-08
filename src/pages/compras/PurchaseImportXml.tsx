@@ -69,7 +69,29 @@ type Header = {
   serie: string;
   emissao: string;
   valor_total: number;
+  // Enriquecimento fornecedor (v1.47)
+  ie_emit?: string;
+  fone_emit?: string;
+  end_logradouro?: string;
+  end_numero?: string;
+  end_bairro?: string;
+  end_municipio?: string;
+  end_uf?: string;
+  end_cep?: string;
 };
+
+// Converte CFOP de saída (do XML do fornecedor) para CFOP de entrada.
+// 5xxx → 1xxx (dentro do estado), 6xxx → 2xxx (interestadual), 7xxx → 3xxx (importação).
+// Demais códigos permanecem como estão.
+function cfopSaidaParaEntrada(cfop: string | null | undefined): string | null {
+  if (!cfop) return null;
+  const c = String(cfop).replace(/\D/g, '');
+  if (c.length !== 4) return cfop || null;
+  const map: Record<string, string> = { '5': '1', '6': '2', '7': '3' };
+  const first = c[0];
+  if (!map[first]) return c;
+  return map[first] + c.slice(1);
+}
 
 type ProductSlim = { id: string; name: string; gtin: string | null; price: number | null; unit: string | null };
 
@@ -188,6 +210,7 @@ export default function PurchaseImportXml() {
       const emit = first(infNFe, 'emit') as Element | null;
       const ide = first(infNFe, 'ide') as Element | null;
       const total = first(first(infNFe, 'total'), 'ICMSTot') as Element | null;
+      const enderEmit = first(emit, 'enderEmit') as Element | null;
       const h: Header = {
         chave,
         cnpj_emit: get(emit, 'CNPJ'),
@@ -196,6 +219,14 @@ export default function PurchaseImportXml() {
         serie: get(ide, 'serie'),
         emissao: get(ide, 'dhEmi') || get(ide, 'dEmi'),
         valor_total: Number(get(total, 'vNF') || 0),
+        ie_emit: get(emit, 'IE'),
+        fone_emit: get(enderEmit, 'fone'),
+        end_logradouro: get(enderEmit, 'xLgr'),
+        end_numero: get(enderEmit, 'nro'),
+        end_bairro: get(enderEmit, 'xBairro'),
+        end_municipio: get(enderEmit, 'xMun'),
+        end_uf: get(enderEmit, 'UF'),
+        end_cep: get(enderEmit, 'CEP'),
       };
       setHeader(h);
 
@@ -353,11 +384,21 @@ export default function PurchaseImportXml() {
       let supplierId: string | null = null;
       if (header.cnpj_emit) {
         const { data: sup } = await (supabase.from('suppliers') as any)
-          .select('id').eq('company_id', company.id).eq('cnpj', header.cnpj_emit).maybeSingle();
+          .select('id').eq('company_id', company.id).eq('document', header.cnpj_emit).maybeSingle();
         if (sup) supplierId = (sup as any).id;
         else {
           const { data: novo } = await (supabase.from('suppliers') as any).insert({
-            company_id: company.id, name: header.nome_emit || 'Fornecedor', cnpj: header.cnpj_emit,
+            company_id: company.id,
+            name: header.nome_emit || 'Fornecedor',
+            document: header.cnpj_emit,
+            state_registration: header.ie_emit || null,
+            phone: header.fone_emit || null,
+            address: header.end_logradouro || null,
+            number: header.end_numero || null,
+            neighborhood: header.end_bairro || null,
+            city: header.end_municipio || null,
+            state: header.end_uf || null,
+            zip_code: header.end_cep || null,
           }).select('id').single();
           supplierId = (novo as any)?.id || null;
         }
@@ -430,7 +471,7 @@ export default function PurchaseImportXml() {
             tax_rule_id: it.tax_rule_id || null,
             gtin: it.xml_ean || null,
             ncm: it.xml_ncm || null,
-            cfop: it.xml_cfop || null,
+            cfop: cfopSaidaParaEntrada(it.xml_cfop),
             unit: it.stock_unit || it.xml_unidade || null,
             track_stock: true,
             product_type: it.product_type || 'mercado',
@@ -607,6 +648,9 @@ export default function PurchaseImportXml() {
                         </div>
                         <div className="text-xs text-muted-foreground">
                           Cód {it.xml_codigo} · EAN {it.xml_ean || '—'} · NCM {it.xml_ncm} · CFOP {it.xml_cfop}
+                          {cfopSaidaParaEntrada(it.xml_cfop) && cfopSaidaParaEntrada(it.xml_cfop) !== it.xml_cfop
+                            ? ` → ${cfopSaidaParaEntrada(it.xml_cfop)} (entrada)`
+                            : ''}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
