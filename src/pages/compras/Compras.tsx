@@ -13,9 +13,16 @@ import {
 import {
   Loader2, Search, RefreshCw, ArrowUpDown,
   ChevronLeft, ChevronRight, Package, Plus,
+  MoreVertical, FileText, Download, ListChecks,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { FrenteCaixaXmlMesDialog } from '@/components/frente-caixa/FrenteCaixaXmlMesDialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
+import { renderDanfeFromXml } from '@/utils/danfePrint';
+import { PurchaseInvoiceDetailsDialog } from '@/components/compras/PurchaseInvoiceDetailsDialog';
 
 type Inv = {
   id: string;
@@ -28,6 +35,8 @@ type Inv = {
   valor_total: number | null;
   status: string;
   created_at: string;
+  xml_path?: string | null;
+  natureza_operacao?: string | null;
 };
 
 /**
@@ -45,6 +54,8 @@ export default function Compras() {
   const [perPage, setPerPage] = useState(10);
   const [sortAsc, setSortAsc] = useState(false);
   const [xmlMesOpen, setXmlMesOpen] = useState(false);
+  const [detailsInv, setDetailsInv] = useState<Inv | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => { if (company?.id) load(); }, [company?.id]);
 
@@ -56,6 +67,45 @@ export default function Compras() {
       .order('created_at', { ascending: false }).limit(500);
     setItems((data as any) || []);
     setLoading(false);
+  }
+
+  async function fetchXml(inv: Inv): Promise<string | null> {
+    if (!inv.xml_path) {
+      toast.error('XML não encontrado para esta nota.');
+      return null;
+    }
+    const { data, error } = await supabase.storage.from('dfe-xmls').download(inv.xml_path);
+    if (error || !data) {
+      toast.error('Falha ao baixar o XML.');
+      return null;
+    }
+    return await data.text();
+  }
+
+  async function handleDownloadXml(inv: Inv) {
+    setBusyId(inv.id);
+    try {
+      const text = await fetchXml(inv);
+      if (!text) return;
+      const blob = new Blob([text], { type: 'application/xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const name = inv.chave_acesso || `nfe-${inv.serie || 'X'}-${inv.numero_nfe || inv.id.slice(0, 8)}`;
+      const a = document.createElement('a');
+      a.href = url; a.download = `${name}.xml`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } finally { setBusyId(null); }
+  }
+
+  async function handleViewDanfe(inv: Inv) {
+    setBusyId(inv.id);
+    try {
+      const text = await fetchXml(inv);
+      if (!text) return;
+      renderDanfeFromXml(text);
+    } catch (e: any) {
+      toast.error(e?.message || 'Falha ao renderizar a DANFE.');
+    } finally { setBusyId(null); }
   }
 
   const filtered = useMemo(() => {
@@ -145,6 +195,26 @@ export default function Compras() {
                           {i.data_emissao ? new Date(i.data_emissao).toLocaleDateString('pt-BR') : '—'}
                         </div>
                       </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" disabled={busyId === i.id} aria-label="Ações">
+                            {busyId === i.id
+                              ? <Loader2 className="w-4 h-4 animate-spin" />
+                              : <MoreVertical className="w-4 h-4" />}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => handleViewDanfe(i)}>
+                            <FileText className="w-4 h-4 mr-2" /> Ver DANFE
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDownloadXml(i)}>
+                            <Download className="w-4 h-4 mr-2" /> Baixar XML
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDetailsInv(i)}>
+                            <ListChecks className="w-4 h-4 mr-2" /> Ver detalhes
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </CardContent>
                   </Card>
                 ))}
@@ -228,6 +298,12 @@ export default function Compras() {
           source="compras"
         />
       )}
+
+      <PurchaseInvoiceDetailsDialog
+        open={!!detailsInv}
+        onOpenChange={(o) => !o && setDetailsInv(null)}
+        invoice={detailsInv}
+      />
     </AppLayout>
   );
 }
