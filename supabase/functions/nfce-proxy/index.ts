@@ -635,43 +635,82 @@ Deno.serve(async (req) => {
       }
 
       case 'xml': {
+        console.log('[nfce-proxy] Fetching XML for:', nfceId)
         apiResponse = await fetch(`${NFCE_API_URL}/${nfceId}/xml`, {
           headers: { 'x-api-key': NFCE_API_KEY },
         })
         {
           const contentType = apiResponse.headers.get('content-type') || ''
+          console.log('[nfce-proxy] XML response status:', apiResponse.status, 'content-type:', contentType)
           if (!apiResponse.ok) {
             const errText = await apiResponse.text()
             console.error('[nfce-proxy] XML error response:', errText.substring(0, 300))
             result = { success: false, error: `XML endpoint retornou ${apiResponse.status}`, raw: errText.substring(0, 300) }
-          } else if (contentType.includes('application/json')) {
-            const j = await safeJson(apiResponse)
-            // Provider may return { xml: '...' } | { xml_retorno } | { data: base64 } | { url }
-            const rawXml = pickXmlField(j) || j.xml_proc || null
-            const url = j.xml_url || j.url_xml || j.url || null
-            if (rawXml && typeof rawXml === 'string') {
-              // May be raw or base64
-              let xmlText = rawXml
-              if (!rawXml.trimStart().startsWith('<')) {
-                try { xmlText = atob(rawXml) } catch { /* keep as is */ }
-              }
-              result = { success: true, xml: xmlText }
-            } else if (url) {
-              // Follow the URL server-side to bypass CORS
-              try {
-                const r2 = await fetch(url, { headers: { 'x-api-key': NFCE_API_KEY } })
-                const t = await r2.text()
-                result = r2.ok ? { success: true, xml: t } : { success: false, error: `Falha ao baixar XML (${r2.status})`, raw: t.substring(0, 300) }
-              } catch (e: any) {
-                result = { success: false, error: e?.message || 'Falha ao baixar XML pela URL' }
-              }
-            } else {
-              result = { success: false, error: 'Provider não retornou XML.', raw: JSON.stringify(j).substring(0, 300) }
-            }
           } else {
-            // Provider returned raw XML (text/xml or application/xml)
-            const t = await apiResponse.text()
-            result = { success: true, xml: t }
+            // Read as text first; try JSON, fall back to raw XML
+            const rawText = await apiResponse.text()
+            const trimmed = rawText.trimStart()
+            let xmlText: string | null = null
+            let providerJson: any = null
+
+            if (trimmed.startsWith('<')) {
+              // Provider returned raw XML directly
+              xmlText = rawText
+            } else {
+              try { providerJson = JSON.parse(rawText) } catch { /* not JSON */ }
+              if (providerJson && typeof providerJson === 'object') {
+                // Try known field names for the XML payload
+                const candidate =
+                  providerJson.xml_retorno ||
+                  providerJson.xml ||
+                  providerJson.xml_autorizado ||
+                  providerJson.xmlNFe ||
+                  providerJson.xml_proc ||
+                  providerJson.xml_base64 ||
+                  providerJson.conteudo ||
+                  providerJson.content ||
+                  providerJson.data ||
+                  (providerJson.data && typeof providerJson.data === 'object'
+                    ? (providerJson.data.xml || providerJson.data.xml_base64 || providerJson.data.conteudo)
+                    : null) ||
+                  null
+
+                if (candidate && typeof candidate === 'string') {
+                  xmlText = candidate.trimStart().startsWith('<')
+                    ? candidate
+                    : (() => { try { return atob(candidate) } catch { return candidate } })()
+                } else {
+                  // Follow URL server-side to bypass CORS
+                  const url = providerJson.xml_url || providerJson.url_xml || providerJson.url || null
+                  if (url) {
+                    try {
+                      const r2 = await fetch(url, { headers: { 'x-api-key': NFCE_API_KEY } })
+                      const t = await r2.text()
+                      if (r2.ok) xmlText = t
+                    } catch (e) {
+                      console.error('[nfce-proxy] XML url follow error:', e)
+                    }
+                  }
+                }
+              } else if (rawText.trim().length > 0) {
+                // Not JSON, not obvious XML — try base64 decode
+                try {
+                  const dec = atob(rawText.trim())
+                  if (dec.trimStart().startsWith('<')) xmlText = dec
+                } catch { /* ignore */ }
+              }
+            }
+
+            if (xmlText) {
+              result = { success: true, xml: xmlText }
+            } else {
+              console.error('[nfce-proxy] XML unrecognized shape:', rawText.substring(0, 400))
+              result = {
+                success: false,
+                error: 'Provider retornou XML em formato não reconhecido.',
+                raw: rawText.substring(0, 500),
+              }
+            }
           }
         }
         break
