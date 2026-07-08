@@ -638,7 +638,42 @@ Deno.serve(async (req) => {
         apiResponse = await fetch(`${NFCE_API_URL}/${nfceId}/xml`, {
           headers: { 'x-api-key': NFCE_API_KEY },
         })
-        result = await safeJson(apiResponse)
+        {
+          const contentType = apiResponse.headers.get('content-type') || ''
+          if (!apiResponse.ok) {
+            const errText = await apiResponse.text()
+            console.error('[nfce-proxy] XML error response:', errText.substring(0, 300))
+            result = { success: false, error: `XML endpoint retornou ${apiResponse.status}`, raw: errText.substring(0, 300) }
+          } else if (contentType.includes('application/json')) {
+            const j = await safeJson(apiResponse)
+            // Provider may return { xml: '...' } | { xml_retorno } | { data: base64 } | { url }
+            const rawXml = pickXmlField(j) || j.xml_proc || null
+            const url = j.xml_url || j.url_xml || j.url || null
+            if (rawXml && typeof rawXml === 'string') {
+              // May be raw or base64
+              let xmlText = rawXml
+              if (!rawXml.trimStart().startsWith('<')) {
+                try { xmlText = atob(rawXml) } catch { /* keep as is */ }
+              }
+              result = { success: true, xml: xmlText }
+            } else if (url) {
+              // Follow the URL server-side to bypass CORS
+              try {
+                const r2 = await fetch(url, { headers: { 'x-api-key': NFCE_API_KEY } })
+                const t = await r2.text()
+                result = r2.ok ? { success: true, xml: t } : { success: false, error: `Falha ao baixar XML (${r2.status})`, raw: t.substring(0, 300) }
+              } catch (e: any) {
+                result = { success: false, error: e?.message || 'Falha ao baixar XML pela URL' }
+              }
+            } else {
+              result = { success: false, error: 'Provider não retornou XML.', raw: JSON.stringify(j).substring(0, 300) }
+            }
+          } else {
+            // Provider returned raw XML (text/xml or application/xml)
+            const t = await apiResponse.text()
+            result = { success: true, xml: t }
+          }
+        }
         break
       }
 

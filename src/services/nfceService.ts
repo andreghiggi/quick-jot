@@ -193,6 +193,23 @@ export async function listarNFCe(companyId: string, filtros?: Record<string, str
   });
 }
 
+/**
+ * Baixa o XML autorizado da NFC-e via proxy (evita CORS e usa a x-api-key
+ * do servidor). Retorna o conteúdo XML como string.
+ */
+export async function baixarXmlNFCe(companyId: string, nfceId: string): Promise<string> {
+  const data: any = await callNFCeProxy({
+    action: 'xml',
+    companyId,
+    nfceId,
+  });
+  const xml = data?.xml || data?.xml_retorno || data?.xml_proc;
+  if (!xml || typeof xml !== 'string') {
+    throw new Error(data?.error || 'XML não disponível para esta NFC-e');
+  }
+  return xml;
+}
+
 // Build SEFAZ QR Code URL from chave when not available in DB
 function buildQrcodeUrlFromChave(chave: string, ambiente?: string | null): string | null {
   if (!chave || chave.length < 44) return null;

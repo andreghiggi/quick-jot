@@ -25,7 +25,7 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { consultarNFCe, cancelarNFCe, reprocessarNFCe, printDanfeFromRecord, recuperarNFCePorChave } from '@/services/nfceService';
+import { consultarNFCe, cancelarNFCe, reprocessarNFCe, printDanfeFromRecord, recuperarNFCePorChave, baixarXmlNFCe } from '@/services/nfceService';
 
 interface NFCeRecord {
   id: string;
@@ -268,15 +268,24 @@ export default function NFCeMonitor() {
   }
 
   async function handleDownloadXml(record: NFCeRecord) {
-    if (!record.xml_url) {
-      toast.error('XML não disponível para esta nota.');
-      return;
-    }
     setActionLoading(record.id);
     try {
-      const resp = await fetch(record.xml_url);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const text = await resp.text();
+      let text: string | null = null;
+      // 1) Preferir baixar via proxy (evita CORS e usa x-api-key no servidor)
+      if (company?.id && record.nfce_id) {
+        try {
+          text = await baixarXmlNFCe(company.id, record.nfce_id);
+        } catch (e) {
+          console.warn('[NFCeMonitor] Falha no proxy XML, tentando xml_url direto:', e);
+        }
+      }
+      // 2) Fallback: baixar diretamente da URL pública salva
+      if (!text && record.xml_url) {
+        const resp = await fetch(record.xml_url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        text = await resp.text();
+      }
+      if (!text) throw new Error('XML não disponível para esta NFC-e.');
       const blob = new Blob([text], { type: 'application/xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const name = record.chave_acesso || `nfce-${record.serie ?? 'X'}-${record.numero ?? record.id.slice(0, 8)}`;
@@ -512,7 +521,7 @@ export default function NFCeMonitor() {
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
                                     onClick={() => handleDownloadXml(record)}
-                                    disabled={!record.xml_url}
+                                    disabled={record.status !== 'autorizada' && !record.xml_url}
                                   >
                                     <Download className="h-4 w-4 mr-2" /> Baixar XML
                                   </DropdownMenuItem>
