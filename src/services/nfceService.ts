@@ -203,7 +203,8 @@ export async function baixarXmlNFCe(companyId: string, nfceId: string): Promise<
     companyId,
     nfceId,
   });
-  const xml = data?.xml || data?.xml_retorno || data?.xml_proc;
+  const xml = data?.xml || data?.xml_retorno || data?.xml_proc
+    || data?.data?.xml || data?.data?.xml_retorno || data?.data?.xml_proc;
   if (!xml || typeof xml !== 'string') {
     throw new Error(data?.error || 'XML não disponível para esta NFC-e');
   }
