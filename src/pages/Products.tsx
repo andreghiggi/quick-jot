@@ -595,10 +595,22 @@ export default function Products() {
           .map(([cat, prods]) => [cat, prods.filter(matchesType)] as [string, Product[]])
           .filter(([, prods]) => prods.length > 0)
       : groupedProducts;
-    // 2) Filtro por categoria (chip).
-    if (!selectedCategoryFilter) return byType;
-    return byType.filter(([category]) => category === selectedCategoryFilter);
-  }, [groupedProducts, selectedCategoryFilter, typeFilter, isModuleEnabled]);
+    // 2) Filtro por texto (nome, código/SKU, GTIN).
+    const q = searchQuery.trim().toLowerCase();
+    const bySearch = !q
+      ? byType
+      : byType
+          .map(([cat, prods]) => [cat, prods.filter((p) => {
+            const name = (p.name || '').toLowerCase();
+            const code = ((p as any).code || '').toLowerCase();
+            const gtin = ((p as any).gtin || '').toLowerCase();
+            return name.includes(q) || code.includes(q) || gtin.includes(q);
+          })] as [string, Product[]])
+          .filter(([, prods]) => prods.length > 0);
+    // 3) Filtro por categoria (chip).
+    if (!selectedCategoryFilter) return bySearch;
+    return bySearch.filter(([category]) => category === selectedCategoryFilter);
+  }, [groupedProducts, selectedCategoryFilter, typeFilter, isModuleEnabled, searchQuery]);
 
   if (loading) {
     return (
