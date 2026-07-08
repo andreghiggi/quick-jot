@@ -95,6 +95,14 @@ function cfopSaidaParaEntrada(cfop: string | null | undefined): string | null {
 
 type ProductSlim = { id: string; name: string; gtin: string | null; price: number | null; unit: string | null };
 
+type SupplierProductLink = {
+  xml_codigo: string | null;
+  xml_ean: string | null;
+  product_id: string | null;
+  stock_unit: string | null;
+  sale_price: number | null;
+};
+
 function normalizeGtin(value: string | null | undefined): string {
   const raw = String(value || '').trim();
   if (!raw || /sem\s*gtin/i.test(raw)) return '';
@@ -105,6 +113,39 @@ function findProductByGtin(products: ProductSlim[], gtin: string | null | undefi
   const normalized = normalizeGtin(gtin);
   if (!normalized) return undefined;
   return products.find((p) => normalizeGtin(p.gtin) === normalized);
+}
+
+function normalizeSupplierProductCode(value: string | null | undefined): string {
+  return String(value || '').trim().toUpperCase();
+}
+
+function findProductBySupplierHistory(
+  products: ProductSlim[],
+  links: SupplierProductLink[],
+  xmlCodigo: string | null | undefined,
+  xmlEan: string | null | undefined,
+): ProductSlim | undefined {
+  const productById = new Map(products.map((p) => [p.id, p]));
+  const codigo = normalizeSupplierProductCode(xmlCodigo);
+  const ean = normalizeGtin(xmlEan);
+  const byCode = codigo
+    ? links.find((link) =>
+        link.product_id &&
+        normalizeSupplierProductCode(link.xml_codigo) === codigo &&
+        productById.has(link.product_id),
+      )
+    : undefined;
+  if (byCode?.product_id) return productById.get(byCode.product_id);
+
+  const byEan = ean
+    ? links.find((link) =>
+        link.product_id &&
+        normalizeGtin(link.xml_ean) === ean &&
+        productById.has(link.product_id),
+      )
+    : undefined;
+  if (byEan?.product_id) return productById.get(byEan.product_id);
+  return undefined;
 }
 
 export default function PurchaseImportXml() {
@@ -119,6 +160,7 @@ export default function PurchaseImportXml() {
   const [header, setHeader] = useState<Header | null>(null);
   const [items, setItems] = useState<ItemRow[]>([]);
   const [products, setProducts] = useState<ProductSlim[]>([]);
+  const [supplierProductLinks, setSupplierProductLinks] = useState<SupplierProductLink[]>([]);
   const [dfeId, setDfeId] = useState<string | null>(documentoId);
   const [openMap, setOpenMap] = useState<Record<number, boolean>>({});
   const { categories } = useCategories({ companyId: company?.id });
@@ -136,16 +178,55 @@ export default function PurchaseImportXml() {
     if (documentoId) loadFromDfe(documentoId);
   }, [company?.id, documentoId]);
 
-  // Reconciliação por GTIN: quando os produtos terminam de carregar depois do
-  // parse do XML, tenta casar itens ainda marcados como "criar novo" com
-  // cadastros existentes que tenham o mesmo EAN. Evita race condition entre o
-  // fetch de produtos e a leitura automática do XML via documentoId.
+  useEffect(() => {
+    if (!company?.id || !header?.cnpj_emit) {
+      setSupplierProductLinks([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data: invoices, error: invError } = await supabase
+        .from('purchase_invoices')
+        .select('id')
+        .eq('company_id', company.id)
+        .eq('cnpj_emitente', header.cnpj_emit)
+        .order('created_at', { ascending: false })
+        .limit(80);
+
+      if (cancelled) return;
+      if (invError || !invoices?.length) {
+        setSupplierProductLinks([]);
+        return;
+      }
+
+      const invoiceIds = invoices.map((inv: any) => inv.id).filter(Boolean);
+      const { data: rows, error: itemsError } = await supabase
+        .from('purchase_invoice_items')
+        .select('xml_codigo, xml_ean, product_id, stock_unit, sale_price')
+        .eq('company_id', company.id)
+        .in('invoice_id', invoiceIds)
+        .not('product_id', 'is', null);
+
+      if (!cancelled) {
+        setSupplierProductLinks(itemsError ? [] : ((rows as any) || []));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [company?.id, header?.cnpj_emit]);
+
+  // Reconciliação automática: quando produtos e histórico de compras terminam
+  // de carregar depois do parse do XML, tenta casar itens ainda marcados como
+  // "criar novo" primeiro por EAN/GTIN e depois pelo histórico do mesmo
+  // fornecedor (código do produto no XML). Evita duplicar produto já importado.
   useEffect(() => {
     if (products.length === 0 || items.length === 0) return;
     let changed = false;
     const next = items.map((it) => {
-      if (!it.createNew || !it.xml_ean) return it;
-      const matched = findProductByGtin(products, it.xml_ean);
+      if (!it.createNew) return it;
+      const matched = findProductByGtin(products, it.xml_ean)
+        || findProductBySupplierHistory(products, supplierProductLinks, it.xml_codigo, it.xml_ean);
       if (!matched) return it;
       changed = true;
       return {
@@ -157,7 +238,7 @@ export default function PurchaseImportXml() {
       };
     });
     if (changed) setItems(next);
-  }, [products]);
+  }, [items, products, supplierProductLinks]);
 
   async function loadFromDfe(id: string) {
     if (!company?.id) return;
@@ -538,7 +619,7 @@ export default function PurchaseImportXml() {
                 .update({ gtin: xmlEan })
                 .eq('id', productId);
               if (matched?.name) gtinUpdates.push(matched.name);
-            } else if (currentGtin !== xmlEan) {
+            } else if (normalizeGtin(currentGtin) !== normalizeGtin(xmlEan)) {
               if (matched?.name) gtinDivergentes.push(matched.name);
             }
           }

@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '08/07/2026',
+    version: '1.55.1-beta',
+    type: 'fix',
+    description: 'Compras → Importar XML: produtos já importados anteriormente do mesmo fornecedor agora são reconhecidos também pelo histórico de vínculo fornecedor + código do item no XML, além do EAN/GTIN. Isso evita recriar produto quando o XML vem sem EAN ou com EAN divergente, mas já houve importação anterior mapeada para um produto cadastrado.',
+  },
+  {
     date: '01/07/2026',
     version: '1.46.4-beta',
     type: 'fix',
