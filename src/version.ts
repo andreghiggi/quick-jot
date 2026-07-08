@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.55.0-beta";
-export const RELEASE_DATE = "2026-07-03"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Financeiro estilo GWeb — Receitas/Despesas em cards, filtros, renegociação";
+export const VERSION = "1.55.1-beta";
+export const RELEASE_DATE = "2026-07-08"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Compras: reconhecimento por histórico do fornecedor";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.55.1-beta",
+    date: "2026-07-08",
+    codename: "Compras: reconhecimento por histórico do fornecedor",
+    changes: [
+      "Compras → Importar XML de NF-e: itens ainda marcados como 'Criar novo produto' agora são reconciliados também pelo histórico de compras do mesmo fornecedor, usando o código do produto no XML já vinculado em importações anteriores.",
+      "O reconhecimento por EAN/GTIN continua funcionando, mas o sistema passa a cobrir casos em que o XML vem com EAN vazio, 'SEM GTIN' ou diferente do cadastro, evitando duplicar produtos já importados anteriormente.",
+      "Sem alteração em PDV, Frente de Caixa, TEF, PinPad, NFC-e, impressão ou demais módulos.",
+    ],
+  },
   {
     version: "1.55.0-beta",
     date: "2026-07-03",
