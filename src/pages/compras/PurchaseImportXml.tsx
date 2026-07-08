@@ -95,6 +95,18 @@ function cfopSaidaParaEntrada(cfop: string | null | undefined): string | null {
 
 type ProductSlim = { id: string; name: string; gtin: string | null; price: number | null; unit: string | null };
 
+function normalizeGtin(value: string | null | undefined): string {
+  const raw = String(value || '').trim();
+  if (!raw || /sem\s*gtin/i.test(raw)) return '';
+  return raw.replace(/\D/g, '');
+}
+
+function findProductByGtin(products: ProductSlim[], gtin: string | null | undefined): ProductSlim | undefined {
+  const normalized = normalizeGtin(gtin);
+  if (!normalized) return undefined;
+  return products.find((p) => normalizeGtin(p.gtin) === normalized);
+}
+
 export default function PurchaseImportXml() {
   const { company } = useAuthContext();
   const navigate = useNavigate();
@@ -133,7 +145,7 @@ export default function PurchaseImportXml() {
     let changed = false;
     const next = items.map((it) => {
       if (!it.createNew || !it.xml_ean) return it;
-      const matched = products.find((p) => p.gtin && p.gtin === it.xml_ean);
+      const matched = findProductByGtin(products, it.xml_ean);
       if (!matched) return it;
       changed = true;
       return {
@@ -256,9 +268,9 @@ export default function PurchaseImportXml() {
       const dets = getEls(infNFe, 'det');
       const its: ItemRow[] = dets.map((det) => {
         const prod = first(det, 'prod') as Element | null;
-        const ean = get(prod, 'cEAN');
+        const ean = normalizeGtin(get(prod, 'cEAN')) || normalizeGtin(get(prod, 'cEANTrib'));
         const descricao = get(prod, 'xProd');
-        const matched = products.find(p => (ean && p.gtin === ean));
+        const matched = findProductByGtin(products, ean);
         const uCom = get(prod, 'uCom');
         const vUn = Number(get(prod, 'vUnCom') || 0);
         const defaultCat = categories[0];
@@ -266,7 +278,7 @@ export default function PurchaseImportXml() {
         return {
           xml_codigo: get(prod, 'cProd'),
           xml_descricao: descricao,
-          xml_ean: ean && ean !== 'SEM GTIN' ? ean : '',
+          xml_ean: ean,
           xml_ncm: get(prod, 'NCM'),
           xml_cfop: get(prod, 'CFOP'),
           xml_unidade: uCom,
