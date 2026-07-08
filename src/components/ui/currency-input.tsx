@@ -27,7 +27,17 @@ export interface CurrencyInputProps
 
 function toDisplay(value: number | string | null | undefined): string {
   if (value === null || value === undefined || value === '') return '';
-  const n = typeof value === 'number' ? value : Number(String(value).replace(/\./g, '').replace(',', '.'));
+  let n: number;
+  if (typeof value === 'number') {
+    n = value;
+  } else {
+    const s = String(value);
+    // Se contém vírgula, é formato pt-BR (pontos = milhar, vírgula = decimal).
+    // Caso contrário, é numérico "cru" JS (ponto = decimal) — não remover pontos.
+    n = s.includes(',')
+      ? Number(s.replace(/\./g, '').replace(',', '.'))
+      : Number(s);
+  }
   if (!Number.isFinite(n)) return '';
   return n.toFixed(2).replace('.', ',');
 }
