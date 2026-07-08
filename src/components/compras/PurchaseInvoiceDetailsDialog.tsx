@@ -133,6 +133,7 @@ export function PurchaseInvoiceDetailsDialog({ open, onOpenChange, invoice }: Pr
                   <th className="p-2">CFOP entrada</th>
                   <th className="p-2">Un</th>
                   <th className="p-2 text-right">Qtd</th>
+                  <th className="p-2">Estoque (convertido)</th>
                   <th className="p-2 text-right">Vl. Unit.</th>
                   <th className="p-2 text-right">Vl. Total</th>
                   <th className="p-2">Estoque</th>
@@ -175,6 +176,29 @@ export function PurchaseInvoiceDetailsDialog({ open, onOpenChange, invoice }: Pr
                           maximumFractionDigits: 4,
                         })}
                       </td>
+                      <td className="p-2">
+                        {(() => {
+                          const factor = Number(it.conversion_factor || 1);
+                          const qtd = Number(it.quantidade || 0);
+                          const stockUnit = (it.stock_unit || it.xml_unidade || '').toUpperCase();
+                          const xmlUn = (it.xml_unidade || '').toUpperCase();
+                          const converted = qtd * factor;
+                          const changed = factor !== 1 || (stockUnit && stockUnit !== xmlUn);
+                          if (!changed) {
+                            return <span className="text-muted-foreground text-[11px]">sem conversão</span>;
+                          }
+                          return (
+                            <div className="text-[11px] leading-tight">
+                              <div className="font-medium">
+                                {converted.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} {stockUnit}
+                              </div>
+                              <div className="text-muted-foreground">
+                                fator {factor.toLocaleString('pt-BR')}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td className="p-2 text-right">{brl(it.valor_unitario)}</td>
                       <td className="p-2 text-right font-medium">
                         {brl(it.valor_total)}
@@ -202,9 +226,16 @@ export function PurchaseInvoiceDetailsDialog({ open, onOpenChange, invoice }: Pr
         </div>
 
         <div className="text-[11px] text-muted-foreground pt-2 border-t">
-          O <strong>CFOP de entrada</strong> é derivado do CFOP de saída do XML
-          (prefixo 5→1, 6→2, 7→3) e aplicado ao cadastro do produto no momento do
-          lançamento.
+          <div>
+            O <strong>CFOP de entrada</strong> é derivado do CFOP de saída do XML
+            (prefixo 5→1, 6→2, 7→3) e aplicado ao cadastro do produto no momento
+            do lançamento.
+          </div>
+          <div className="mt-1">
+            A coluna <strong>Un / Qtd</strong> mostra os valores originais do XML.
+            A coluna <strong>Estoque (convertido)</strong> mostra o que
+            efetivamente entrou no estoque após aplicar o fator de conversão.
+          </div>
         </div>
       </DialogContent>
     </Dialog>
