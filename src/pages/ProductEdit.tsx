@@ -174,7 +174,6 @@ export default function ProductEdit() {
       setMinStock(existing.minStock != null ? String(existing.minStock) : '');
       setNcm(existing.ncm || '');
       setCest(existing.cest || '');
-      setCfop(existing.cfop || '');
       setBrand(existing.brand || '');
       setSupplierId(existing.supplierId || '');
       setWholesalePrice(existing.wholesalePrice != null ? String(existing.wholesalePrice) : '');
@@ -193,8 +192,8 @@ export default function ProductEdit() {
   // Pré-carrega o estado de "fiscal aberto" quando há valores fiscais (UX: não esconder dados já preenchidos)
   useEffect(() => {
     if (!hydrated) return;
-    if (ncm || cest || cfop || taxRuleId) setFiscalOpen(true);
-  }, [hydrated, ncm, cest, cfop, taxRuleId]);
+    if (ncm || cest || taxRuleId) setFiscalOpen(true);
+  }, [hydrated, ncm, cest, taxRuleId]);
 
   // Sincroniza visibilidade automaticamente conforme o tipo do produto, desde que o usuário
   // ainda não tenha aberto "Visibilidade avançada" para fazer ajustes manuais.
@@ -368,7 +367,6 @@ export default function ProductEdit() {
         taxRuleId: taxRuleId || null,
         ncm: ncm.trim() || null,
         cest: cest.trim() || null,
-        cfop: cfop.trim() || null,
         ...(mercadoEnabled
           ? {
               brand: brand.trim() || null,
