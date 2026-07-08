@@ -648,6 +648,9 @@ export default function PurchaseImportXml() {
                         </div>
                         <div className="text-xs text-muted-foreground">
                           Cód {it.xml_codigo} · EAN {it.xml_ean || '—'} · NCM {it.xml_ncm} · CFOP {it.xml_cfop}
+                          {cfopSaidaParaEntrada(it.xml_cfop) && cfopSaidaParaEntrada(it.xml_cfop) !== it.xml_cfop
+                            ? ` → ${cfopSaidaParaEntrada(it.xml_cfop)} (entrada)`
+                            : ''}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
