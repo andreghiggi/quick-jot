@@ -481,6 +481,7 @@ export default function PurchaseImportXml() {
             qr_item: it.qr_item,
             active: true,
             stock_quantity: 0,
+            supplier_id: supplierId,
           } as any).select('id').single();
           if (pErr) throw pErr;
           productId = (prod as any).id;
