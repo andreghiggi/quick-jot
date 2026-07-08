@@ -1,12 +1,29 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Inbox, ChevronLeft } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Loader2,
+  Inbox,
+  ChevronLeft,
+  MoreVertical,
+  FileText,
+  Download,
+  ListChecks,
+} from 'lucide-react';
+import { renderDanfeFromXml } from '@/utils/danfePrint';
+import { PurchaseInvoiceDetailsDialog } from '@/components/compras/PurchaseInvoiceDetailsDialog';
 
 type Inv = {
   id: string;
@@ -19,12 +36,16 @@ type Inv = {
   valor_total: number | null;
   status: string;
   created_at: string;
+  xml_path?: string | null;
+  natureza_operacao?: string | null;
 };
 
 export default function PurchaseInvoices() {
   const { company } = useAuthContext();
   const [items, setItems] = useState<Inv[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detailsInv, setDetailsInv] = useState<Inv | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => { if (company?.id) load(); }, [company?.id]);
 
@@ -36,6 +57,56 @@ export default function PurchaseInvoices() {
       .order('created_at', { ascending: false }).limit(500);
     setItems((data as any) || []);
     setLoading(false);
+  }
+
+  async function fetchXml(inv: Inv): Promise<string | null> {
+    if (!inv.xml_path) {
+      toast.error('XML não encontrado para esta nota.');
+      return null;
+    }
+    const { data, error } = await supabase.storage
+      .from('dfe-xmls')
+      .download(inv.xml_path);
+    if (error || !data) {
+      toast.error('Falha ao baixar o XML.');
+      return null;
+    }
+    return await data.text();
+  }
+
+  async function handleDownloadXml(inv: Inv) {
+    setBusyId(inv.id);
+    try {
+      const text = await fetchXml(inv);
+      if (!text) return;
+      const blob = new Blob([text], { type: 'application/xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const name =
+        inv.chave_acesso ||
+        `nfe-${inv.serie || 'X'}-${inv.numero_nfe || inv.id.slice(0, 8)}`;
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${name}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleViewDanfe(inv: Inv) {
+    setBusyId(inv.id);
+    try {
+      const text = await fetchXml(inv);
+      if (!text) return;
+      renderDanfeFromXml(text);
+    } catch (e: any) {
+      toast.error(e?.message || 'Falha ao renderizar a DANFE.');
+    } finally {
+      setBusyId(null);
+    }
   }
 
   return (
@@ -79,12 +150,44 @@ export default function PurchaseInvoices() {
                       {i.data_emissao ? new Date(i.data_emissao).toLocaleDateString('pt-BR') : '—'}
                     </div>
                   </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={busyId === i.id}
+                        aria-label="Ações"
+                      >
+                        {busyId === i.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <MoreVertical className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => handleViewDanfe(i)}>
+                        <FileText className="w-4 h-4 mr-2" /> Ver DANFE
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownloadXml(i)}>
+                        <Download className="w-4 h-4 mr-2" /> Baixar XML
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDetailsInv(i)}>
+                        <ListChecks className="w-4 h-4 mr-2" /> Ver detalhes
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
       </div>
+      <PurchaseInvoiceDetailsDialog
+        open={!!detailsInv}
+        onOpenChange={(o) => !o && setDetailsInv(null)}
+        invoice={detailsInv}
+      />
     </AppLayout>
   );
 }
