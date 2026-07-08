@@ -210,6 +210,7 @@ export default function PurchaseImportXml() {
       const emit = first(infNFe, 'emit') as Element | null;
       const ide = first(infNFe, 'ide') as Element | null;
       const total = first(first(infNFe, 'total'), 'ICMSTot') as Element | null;
+      const enderEmit = first(emit, 'enderEmit') as Element | null;
       const h: Header = {
         chave,
         cnpj_emit: get(emit, 'CNPJ'),
@@ -218,6 +219,14 @@ export default function PurchaseImportXml() {
         serie: get(ide, 'serie'),
         emissao: get(ide, 'dhEmi') || get(ide, 'dEmi'),
         valor_total: Number(get(total, 'vNF') || 0),
+        ie_emit: get(emit, 'IE'),
+        fone_emit: get(enderEmit, 'fone'),
+        end_logradouro: get(enderEmit, 'xLgr'),
+        end_numero: get(enderEmit, 'nro'),
+        end_bairro: get(enderEmit, 'xBairro'),
+        end_municipio: get(enderEmit, 'xMun'),
+        end_uf: get(enderEmit, 'UF'),
+        end_cep: get(enderEmit, 'CEP'),
       };
       setHeader(h);
 
