@@ -815,7 +815,7 @@ export default function ProductEdit() {
         {/* ===================== TRIBUTAÇÃO (colapsável) ===================== */}
         <Section
           title="Dados fiscais"
-          description="NCM, CFOP, CEST, origem e regra tributária. Aplicados na NFC-e / NF-e."
+          description="NCM, CEST, origem e regra tributária. Aplicados na NFC-e / NF-e."
         >
           <Collapsible open={fiscalOpen} onOpenChange={setFiscalOpen}>
             <CollapsibleTrigger asChild>
@@ -828,12 +828,12 @@ export default function ProductEdit() {
                   {fiscalOpen ? 'Recolher dados fiscais' : 'Editar dados fiscais'}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {ncm || cfop || cest || taxRuleId ? 'Preenchido' : 'Vazio'}
+                  {ncm || cest || taxRuleId ? 'Preenchido' : 'Vazio'}
                 </span>
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <Field label="NCM" hint="8 dígitos. Ex.: 22021000">
               <Input
                 value={ncm}
@@ -891,14 +891,6 @@ export default function ProductEdit() {
                   </button>
                 </div>
               )}
-            </Field>
-            <Field label="CFOP padrão" hint="Ex.: 5102 (venda dentro do estado).">
-              <Input
-                value={cfop}
-                onChange={(e) => setCfop(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                placeholder="5102"
-                inputMode="numeric"
-              />
             </Field>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
