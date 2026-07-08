@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.55.1-beta";
+export const VERSION = "1.55.2-beta";
 export const RELEASE_DATE = "2026-07-08"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Compras: reconhecimento por histórico do fornecedor";
+export const CODENAME = "Fiscal: CFOP da NFC-e sempre pela regra tributária";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.55.2-beta",
+    date: "2026-07-08",
+    codename: "Fiscal: CFOP da NFC-e sempre pela regra tributária",
+    changes: [
+      "Correção fiscal: o CFOP dos itens de NFC-e agora SEMPRE vem da regra tributária vinculada ao produto. O campo CFOP do cadastro do produto passa a ser ignorado na hora de emitir a NFC-e, evitando saídas com CFOP 5102 quando a regra exige 5101.",
+      "NCM e CEST continuam podendo vir do cadastro do produto (quando preenchidos) e caem para a regra tributária somente se o produto estiver vazio. O fallback de CFOP sem regra permanece 5102.",
+      "Aplicado em todos os fluxos que usam o helper buildNfceFiscalFields: PDV, PDV V2, Frente de Caixa, Pedido Express, Cobrança de comanda e Financeiro.",
+      "Sem alteração em NF-e avulsa, Compras/Importar XML, cadastro de produtos, combos ou regras tributárias em si.",
+    ],
+  },
   {
     version: "1.55.1-beta",
     date: "2026-07-08",
