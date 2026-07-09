@@ -1128,7 +1128,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       notes: noteStr,
       items: orderItems,
       total: effectiveTotal,
-      status: (override?.finalizeNow || isClienteLoja) ? 'ready' : 'pending',
+      status: override?.finalizeNow ? 'ready' : 'pending',
       origin: 'balcao',
     });
 
