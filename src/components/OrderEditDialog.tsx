@@ -1348,11 +1348,8 @@ export function OrderEditDialog({
                   )}
                 </div>
 
-              </div>
-            </ScrollArea>
-
-            {/* Bloco: Forma de pagamento — fica FORA do ScrollArea para estar sempre visível. */}
-            <div className="border-t pt-3 space-y-2">
+                {/* Bloco: Forma de pagamento */}
+                <div className="border-t pt-3 space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <CreditCard className="w-4 h-4" />
                 Forma de pagamento
@@ -1389,7 +1386,9 @@ export function OrderEditDialog({
                   Chave PIX: <span className="font-mono text-foreground">{selectedPixKey}</span>
                 </div>
               )}
-            </div>
+                </div>
+              </div>
+            </ScrollArea>
 
             <div className="border-t pt-3 space-y-1 text-sm">
               <div className="flex justify-between">
