@@ -829,9 +829,19 @@ export function OrderEditDialog({
   async function handleSave() {
     if (saving) return;
     // Validação dos novos blocos
-    if (modality === 'delivery' && !addressLine.trim()) {
-      toast.error('Informe o endereço de entrega');
-      return;
+    if (modality === 'delivery') {
+      if (requiresCustomerSelection && !resolvedCustomerId) {
+        toast.error('Selecione um cliente antes de trocar para Entrega.');
+        return;
+      }
+      if (!deliveryAddress.trim() || !deliveryNumber.trim() || !deliveryNeighborhood.trim()) {
+        toast.error('Informe rua, número e bairro para a entrega.');
+        return;
+      }
+      if (deliveryOption === 'neighborhood' && !selectedNeighborhoodId) {
+        toast.error('Selecione o bairro de entrega.');
+        return;
+      }
     }
     if (
       paymentChanged &&
