@@ -1348,7 +1348,6 @@ export function OrderEditDialog({
                   )}
                 </div>
 
-              </div>
                 {/* Bloco: Forma de pagamento */}
                 <div className="border-t pt-3 space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold">
