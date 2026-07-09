@@ -1010,7 +1010,7 @@ export function OrderEditDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85dvh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[92dvh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             Editar Pedido #{order.orderCode || order.dailyNumber}
