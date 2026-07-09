@@ -1010,7 +1010,7 @@ export function OrderEditDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85dvh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[92dvh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             Editar Pedido #{order.orderCode || order.dailyNumber}
@@ -1139,8 +1139,9 @@ export function OrderEditDialog({
                 </Button>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-3">
                 {/* Bloco: Entrega */}
-                <div className="space-y-2 border-t pt-3">
+                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-semibold">
                     {modality === 'delivery' ? <Bike className="w-4 h-4" /> : <Store className="w-4 h-4" />}
                     Entrega
@@ -1348,8 +1349,8 @@ export function OrderEditDialog({
                   )}
                 </div>
 
-                {/* Bloco: Forma de pagamento */}
-                <div className="border-t pt-3 space-y-2">
+                 {/* Bloco: Forma de pagamento */}
+                 <div className="space-y-2 md:border-l md:pl-4">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <CreditCard className="w-4 h-4" />
                 Forma de pagamento
@@ -1386,6 +1387,7 @@ export function OrderEditDialog({
                   Chave PIX: <span className="font-mono text-foreground">{selectedPixKey}</span>
                 </div>
               )}
+                </div>
                 </div>
               </div>
             </ScrollArea>
