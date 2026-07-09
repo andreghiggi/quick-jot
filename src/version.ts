@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.55.2-beta";
-export const RELEASE_DATE = "2026-07-08"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Fiscal: CFOP da NFC-e sempre pela regra tributária";
+export const VERSION = "1.56.0-beta";
+export const RELEASE_DATE = "2026-07-09"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Editar Pedido: Entrega estilo cardápio (endereços, taxa e cliente)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.56.0-beta",
+    date: "2026-07-09",
+    codename: "Editar Pedido: Entrega estilo cardápio (endereços, taxa e cliente)",
+    changes: [
+      "Editar Pedido (lápis nos cards): ao trocar a modalidade para Entrega, o diálogo agora se comporta como o cardápio online — usa os endereços salvos do cliente (com seletor + botão 'Novo endereço'), campos estruturados (Logradouro, Número, Complemento, Bairro, Referência) e exibe as opções de entrega cadastradas na loja (cidade/interior no modo simples, ou bairros atendidos no modo por bairro), calculando a taxa automaticamente.",
+      "Endereço novo é salvo em `customer_addresses` no cadastro do cliente. Se o cliente ainda não tinha nenhum, o novo entra como padrão; se já tinha, entra como adicional (não substitui).",
+      "Pedidos com 'Cliente Loja' que trocarem para Entrega passam a exigir a seleção de um cliente real — o diálogo mostra um alerta e o botão 'Informar cliente' reaproveita o mesmo modal do Frente de Caixa (busca por CPF/nome/telefone + cadastro inline). O nome/telefone escolhidos são gravados no pedido.",
+      "Bairros fora da lista de atendimento (quando a loja usa entrega por bairro) exibem aviso e mantêm a taxa em R$ 0,00 até que o operador escolha um bairro cadastrado. Ao voltar para Retirada, a taxa é zerada normalmente.",
+      "O recibo para o motoboy (com endereço + taxa) e a notificação WhatsApp continuam sendo disparados automaticamente ao salvar a edição, agora com o endereço completo estruturado.",
+      "Sem alterações em PDV V2, Pedido Express, Cobrança de comanda, TEF, PinPad, NFC-e, NF-e, Compras, Manifestação Eletrônica, Estoque, Financeiro ou impressão fora do diálogo de edição.",
+    ],
+  },
   {
     version: "1.55.2-beta",
     date: "2026-07-08",
