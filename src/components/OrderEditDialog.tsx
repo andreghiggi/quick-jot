@@ -922,12 +922,44 @@ export function OrderEditDialog({
       if (modalityChanged) {
         orderUpdate.delivery_address = finalDeliveryAddress;
       }
+      // Atualiza cliente do pedido quando um novo cliente foi vinculado (Cliente Loja → cliente real).
+      const nameChanged =
+        (resolvedCustomerName || '').trim() &&
+        resolvedCustomerName.trim() !== (order.customerName || '').trim();
+      const phoneChanged =
+        (resolvedCustomerPhone || '').trim() !== (order.customerPhone || '').trim();
+      if (nameChanged) orderUpdate.customer_name = resolvedCustomerName.trim();
+      if (phoneChanged) orderUpdate.customer_phone = resolvedCustomerPhone.trim() || null;
 
       const { error: orderErr } = await supabase
         .from('orders')
         .update(orderUpdate)
         .eq('id', order.id);
       if (orderErr) throw orderErr;
+
+      // Persistir endereço novo no cadastro do cliente (best-effort).
+      if (
+        modality === 'delivery' &&
+        resolvedCustomerId &&
+        !selectedAddressId &&
+        deliveryAddress.trim()
+      ) {
+        try {
+          await createCustomerAddress({
+            label: null,
+            address: deliveryAddress.trim(),
+            number: deliveryNumber.trim() || null,
+            complement: deliveryComplement.trim() || null,
+            neighborhood: deliveryNeighborhood.trim() || null,
+            reference: deliveryReference.trim() || null,
+            city: null,
+            state: null,
+            is_default: customerAddresses.length === 0,
+          });
+        } catch (e) {
+          console.warn('[OrderEdit] Falha ao salvar endereço no cliente:', e);
+        }
+      }
 
       // Itens "delta" para impressão (apenas adicionados/trocados).
       const deltaItems: WorkingItem[] = [...inserts, ...updates];
