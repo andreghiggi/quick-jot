@@ -1348,47 +1348,48 @@ export function OrderEditDialog({
                   )}
                 </div>
 
-                {/* Bloco: Forma de pagamento */}
-                <div className="space-y-2 border-t pt-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <CreditCard className="w-4 h-4" />
-                    Forma de pagamento
-                  </div>
-                  {originalPaymentName && (
-                    <div className="text-xs text-muted-foreground">
-                      Atual: <span className="font-medium text-foreground">{originalPaymentName}</span>
-                    </div>
-                  )}
-                  <Select value={paymentMethodId} onValueChange={setPaymentMethodId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a forma de pagamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activePaymentMethods.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {isMoneyPayment && (
-                    <div>
-                      <Label className="text-xs">Troco para R$</Label>
-                      <Input
-                        placeholder="Ex: 50,00 ou 'Não precisa'"
-                        value={changeFor}
-                        onChange={(e) => setChangeFor(e.target.value)}
-                      />
-                    </div>
-                  )}
-                  {isPixPayment && selectedPixKey && (
-                    <div className="text-xs text-muted-foreground">
-                      Chave PIX: <span className="font-mono text-foreground">{selectedPixKey}</span>
-                    </div>
-                  )}
-                </div>
               </div>
             </ScrollArea>
+
+            {/* Bloco: Forma de pagamento — fica FORA do ScrollArea para estar sempre visível. */}
+            <div className="border-t pt-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <CreditCard className="w-4 h-4" />
+                Forma de pagamento
+              </div>
+              {originalPaymentName && (
+                <div className="text-xs text-muted-foreground">
+                  Atual: <span className="font-medium text-foreground">{originalPaymentName}</span>
+                </div>
+              )}
+              <Select value={paymentMethodId} onValueChange={setPaymentMethodId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a forma de pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activePaymentMethods.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isMoneyPayment && (
+                <div>
+                  <Label className="text-xs">Troco para R$</Label>
+                  <Input
+                    placeholder="Ex: 50,00 ou 'Não precisa'"
+                    value={changeFor}
+                    onChange={(e) => setChangeFor(e.target.value)}
+                  />
+                </div>
+              )}
+              {isPixPayment && selectedPixKey && (
+                <div className="text-xs text-muted-foreground">
+                  Chave PIX: <span className="font-mono text-foreground">{selectedPixKey}</span>
+                </div>
+              )}
+            </div>
 
             <div className="border-t pt-3 space-y-1 text-sm">
               <div className="flex justify-between">
