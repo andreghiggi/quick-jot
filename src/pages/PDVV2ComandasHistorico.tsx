@@ -46,11 +46,27 @@ export default function PDVV2ComandasHistorico() {
     try {
       const { startISO } = spDayBoundsISO(startDate);
       const { endISO } = spDayBoundsISO(endDate);
+      // Comandas fechadas no período — usadas para localizar vendas
+      // que não gravaram "Comanda #N" no `notes` (ex.: fechamentos via
+      // Frente de Caixa antigos).
+      const { data: closedTabs } = await supabase
+        .from('tabs')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('status', 'closed')
+        .gte('closed_at', startISO)
+        .lte('closed_at', endISO);
+      const tabIds = (closedTabs || []).map((t: any) => t.id).filter(Boolean);
+
+      const orFilter = tabIds.length
+        ? `notes.ilike.%Comanda%,imported_order_id.in.(${tabIds.join(',')})`
+        : `notes.ilike.%Comanda%`;
+
       const { data, error } = await supabase
         .from('pdv_sales')
         .select('id, final_total, customer_name, notes, created_at, payment_method:payment_methods(name)')
         .eq('company_id', companyId)
-        .ilike('notes', '%Comanda%')
+        .or(orFilter)
         .gte('created_at', startISO)
         .lte('created_at', endISO)
         .order('created_at', { ascending: false });
