@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Plus, ArrowLeftRight, Search, Bike, Store, CreditCard } from 'lucide-react';
+import { Loader2, Plus, ArrowLeftRight, Search, Bike, Store, CreditCard, MapPin, UserPlus, AlertTriangle } from 'lucide-react';
 import { Order, OrderItem } from '@/types/order';
 import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,12 +16,16 @@ import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { stripDescMarkers, extractPaymentName } from '@/utils/orderNotesDisplay';
 import { cn } from '@/lib/utils';
+import { useCustomerAddresses, CustomerAddress } from '@/hooks/useCustomerAddresses';
+import { CustomerAddressPicker } from '@/components/menu/CustomerAddressPicker';
+import { FrenteCaixaCustomerDialog } from '@/components/frente-caixa/FrenteCaixaCustomerDialog';
 
 interface OrderEditDialogProps {
   open: boolean;
