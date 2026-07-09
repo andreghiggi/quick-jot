@@ -1135,33 +1135,177 @@ export function OrderEditDialog({
                   </div>
                   {modality === 'delivery' && (
                     <div className="space-y-2">
+                      {/* Cliente obrigatório quando é "Cliente Loja" → Entrega */}
+                      {requiresCustomerSelection && !resolvedCustomerId && (
+                        <div className="flex items-start gap-2 rounded-md border border-amber-500/60 bg-amber-50/60 dark:bg-amber-950/20 p-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div className="flex-1 text-xs">
+                            <div className="font-medium text-amber-900 dark:text-amber-200">
+                              Selecione um cliente para continuar
+                            </div>
+                            <div className="text-amber-800/80 dark:text-amber-300/80">
+                              Pedidos de "Cliente Loja" precisam de um cliente cadastrado para virar Entrega.
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="mt-2 gap-1"
+                              onClick={() => setCustomerPickerOpen(true)}
+                            >
+                              <UserPlus className="w-3.5 h-3.5" /> Informar cliente
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      {resolvedCustomerId && (
+                        <div className="text-xs text-muted-foreground">
+                          Cliente: <span className="font-medium text-foreground">{resolvedCustomerName}</span>
+                          {resolvedCustomerPhone && <> · {resolvedCustomerPhone}</>}
+                        </div>
+                      )}
+
+                      {/* Endereços salvos */}
+                      {resolvedCustomerId && customerAddresses.length > 0 && (
+                        <CustomerAddressPicker
+                          addresses={customerAddresses}
+                          selectedId={selectedAddressId}
+                          onSelect={(a: CustomerAddress) => {
+                            setSelectedAddressId(a.id);
+                            setDeliveryAddress(a.address ?? '');
+                            setDeliveryNumber(a.number ?? '');
+                            setDeliveryComplement(a.complement ?? '');
+                            setDeliveryNeighborhood(a.neighborhood ?? '');
+                            setDeliveryReference(a.reference ?? '');
+                            // tenta casar bairro cadastrado na loja
+                            if (a.neighborhood && storeSettings.deliveryMode === 'neighborhood') {
+                              const match = neighborhoods.find(
+                                (n) => n.active && n.neighborhoodName.trim().toLowerCase() === (a.neighborhood ?? '').trim().toLowerCase(),
+                              );
+                              setSelectedNeighborhoodId(match?.id ?? '');
+                              setDeliveryOption('neighborhood');
+                            }
+                          }}
+                          onNew={() => {
+                            setSelectedAddressId(null);
+                            setNewAddrForm({ label: '', address: '', number: '', complement: '', neighborhood: '', reference: '' });
+                            setNewAddrOpen(true);
+                          }}
+                          onDelete={async (id) => { await removeCustomerAddress(id); if (selectedAddressId === id) setSelectedAddressId(null); }}
+                          onSetDefault={async (id) => { await setCustomerAddressDefault(id); }}
+                        />
+                      )}
+                      {resolvedCustomerId && customerAddresses.length === 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 self-start"
+                          onClick={() => {
+                            setNewAddrForm({ label: '', address: '', number: '', complement: '', neighborhood: '', reference: '' });
+                            setNewAddrOpen(true);
+                          }}
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Novo endereço
+                        </Button>
+                      )}
+
+                      {/* Campos estruturados */}
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_88px]">
+                        <div>
+                          <Label className="text-xs">Logradouro *</Label>
+                          <Input
+                            placeholder="Rua, avenida..."
+                            value={deliveryAddress}
+                            onChange={(e) => setDeliveryAddress(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Número *</Label>
+                          <Input
+                            placeholder="123"
+                            inputMode="numeric"
+                            value={deliveryNumber}
+                            onChange={(e) => setDeliveryNumber(e.target.value)}
+                          />
+                        </div>
+                      </div>
                       <div>
-                        <Label className="text-xs">Endereço</Label>
+                        <Label className="text-xs">Complemento</Label>
                         <Input
-                          placeholder="Rua, número, complemento..."
-                          value={addressLine}
-                          onChange={(e) => setAddressLine(e.target.value)}
+                          placeholder="Apto, sala, bloco..."
+                          value={deliveryComplement}
+                          onChange={(e) => setDeliveryComplement(e.target.value)}
                         />
                       </div>
-                      {storeSettings.deliveryMode === 'neighborhood' && neighborhoods.filter((n) => n.active).length > 0 && (
-                        <div>
-                          <Label className="text-xs">Bairro</Label>
-                          <Select value={neighborhoodId} onValueChange={setNeighborhoodId}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione o bairro" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {neighborhoods
-                                .filter((n) => n.active)
-                                .map((n) => (
+                      <div>
+                        <Label className="text-xs">Bairro *</Label>
+                        <Input
+                          placeholder="Nome do bairro"
+                          value={deliveryNeighborhood}
+                          onChange={(e) => setDeliveryNeighborhood(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Ponto de referência</Label>
+                        <Input
+                          placeholder="Próximo à..."
+                          value={deliveryReference}
+                          onChange={(e) => setDeliveryReference(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Opções de entrega da loja */}
+                      <div className="border-t pt-2">
+                        <Label className="text-xs">Opção de entrega</Label>
+                        {storeSettings.deliveryMode === 'neighborhood' && neighborhoods.filter((n) => n.active).length > 0 ? (
+                          <div className="mt-1 space-y-1">
+                            <Select value={selectedNeighborhoodId} onValueChange={(v) => { setSelectedNeighborhoodId(v); setDeliveryOption('neighborhood'); }}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o bairro atendido" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {neighborhoods.filter((n) => n.active).map((n) => (
                                   <SelectItem key={n.id} value={n.id}>
                                     {n.neighborhoodName} — R$ {n.deliveryFee.toFixed(2).replace('.', ',')}
                                   </SelectItem>
                                 ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
+                              </SelectContent>
+                            </Select>
+                            {deliveryNeighborhood && !selectedNeighborhoodId && (
+                              <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                                Bairro "{deliveryNeighborhood}" não está cadastrado — a taxa será R$ 0,00.
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <RadioGroup
+                            value={deliveryOption}
+                            onValueChange={(v) => setDeliveryOption(v as any)}
+                            className="mt-1 space-y-1"
+                          >
+                            {(storeSettings.deliveryFeeCityEnabled !== false) && (
+                              <label className="flex items-center gap-2 rounded border p-2 text-sm cursor-pointer">
+                                <RadioGroupItem value="city" id="oed-city" />
+                                <span className="flex-1">Entrega na cidade</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {storeSettings.deliveryFeeCity > 0 ? `R$ ${storeSettings.deliveryFeeCity.toFixed(2).replace('.', ',')}` : 'Grátis'}
+                                </span>
+                              </label>
+                            )}
+                            {(storeSettings.deliveryFeeInteriorEnabled !== false) && (
+                              <label className="flex items-center gap-2 rounded border p-2 text-sm cursor-pointer">
+                                <RadioGroupItem value="interior" id="oed-interior" />
+                                <span className="flex-1">Entrega no interior</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {storeSettings.deliveryFeeInterior > 0 ? `R$ ${storeSettings.deliveryFeeInterior.toFixed(2).replace('.', ',')}` : 'Grátis'}
+                                </span>
+                              </label>
+                            )}
+                          </RadioGroup>
+                        )}
+                      </div>
+
                       <div className="text-xs text-muted-foreground">
                         Taxa de entrega:{' '}
                         <span className="font-semibold text-foreground">
