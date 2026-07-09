@@ -139,7 +139,14 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     ? Math.max(0, order.total - partialPaidTotal)
     : order.total;
   const hasPendingItemPayment = hasPartialItemPayments && pendingPaymentTotal > 0.009;
-  const alreadyCharged = hasChargedMarker && !hasPendingItemPayment;
+  // Fonte de verdade: quando payment_status='paid' (ou paid_amount cobre o total),
+  // o pedido está quitado — mesmo que paid_qtys esteja defasado por causa de itens
+  // extras adicionados na tela de cobrança. Isso evita cobrar duas vezes quando a
+  // operadora adiciona itens durante o "Cobrar".
+  const isFullyPaidByStatus =
+    (order as any).paymentStatus === 'paid' ||
+    (Number(order.paidAmount || 0) >= order.total - 0.009 && Number(order.paidAmount || 0) > 0);
+  const alreadyCharged = hasChargedMarker && (isFullyPaidByStatus || !hasPendingItemPayment);
   const showChargeButton =
     chargeButtonEnabled &&
     (isCardapioOrder || isBalcaoOrder) &&
