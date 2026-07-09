@@ -958,6 +958,12 @@ export default function FrenteCaixa() {
                 .update({ status: 'available' })
                 .eq('id', tabRow.table_id);
             }
+            // Vincula a venda à comanda para o Histórico de Comandas
+            // localizar mesmo quando o texto do `notes` variar.
+            await supabase
+              .from('pdv_sales')
+              .update({ imported_order_id: importedOrderId })
+              .eq('id', saleId);
           } else {
             await supabase
               .from('orders')
