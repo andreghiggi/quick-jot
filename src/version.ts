@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.56.0-beta";
+export const VERSION = "1.56.1-beta";
 export const RELEASE_DATE = "2026-07-09"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Editar Pedido: Entrega estilo cardápio (endereços, taxa e cliente)";
+export const CODENAME = "Cobrar com itens extras: não cobra em duplicidade";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.56.1-beta",
+    date: "2026-07-09",
+    codename: "Cobrar com itens extras: não cobra em duplicidade",
+    changes: [
+      "Correção em todas as lojas no diálogo 'Cobrar' dos cards de pedido (Dashboard/Dashboard Mercado): quando a operadora adicionava itens durante a cobrança, esses itens entravam no valor cobrado e eram salvos no pedido, mas o card voltava a mostrar 'Cobrar' porque os extras não eram considerados pagos — permitindo cobrar o pedido inteiro uma segunda vez e gerando divergência no caixa.",
+      "Agora o OrderCard trata `payment_status='paid'` (ou `paid_amount >= total`) como fonte de verdade para o marcador 'Cobrado', ignorando o mapa `paid_qtys` quando o pedido já está integralmente quitado. Isso cobre o cenário de extras adicionados na tela de cobrança sem alterar nenhum outro fluxo.",
+      "Sem alteração em PDV V2, Pedido Express, TEF, PinPad, NFC-e, NF-e, Compras, Financeiro ou impressão.",
+    ],
+  },
   {
     version: "1.56.0-beta",
     date: "2026-07-09",
