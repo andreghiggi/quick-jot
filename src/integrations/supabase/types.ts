@@ -4632,7 +4632,7 @@ export type Database = {
         | "company_admin"
         | "company_user"
         | "waiter"
-      order_status: "pending" | "preparing" | "ready" | "delivered"
+      order_status: "pending" | "preparing" | "ready" | "delivered" | "canceled"
       table_status: "available" | "occupied" | "reserved"
     }
     CompositeTypes: {
@@ -4768,7 +4768,7 @@ export const Constants = {
         "company_user",
         "waiter",
       ],
-      order_status: ["pending", "preparing", "ready", "delivered"],
+      order_status: ["pending", "preparing", "ready", "delivered", "canceled"],
       table_status: ["available", "occupied", "reserved"],
     },
   },
