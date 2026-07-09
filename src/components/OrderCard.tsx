@@ -265,10 +265,15 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   }
 
   async function handleAdvanceStatus() {
-    if (config.next && !advancing) {
+    // Cliente Loja Express: pula preparing/ready e vai direto para delivered.
+    const nextStatus =
+      isClienteLojaExpress && order.status === 'pending'
+        ? ('delivered' as const)
+        : config.next;
+    if (nextStatus && !advancing) {
       setAdvancing(true);
       try {
-        await updateOrderStatus(order.id, config.next);
+        await updateOrderStatus(order.id, nextStatus);
       } finally {
         setAdvancing(false);
       }
