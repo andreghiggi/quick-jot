@@ -1037,7 +1037,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               </AlertDialogContent>
             </AlertDialog>
           )}
-          {!isCancelled && order.status === 'pending' && (
+          {!isCancelled && order.status === 'pending' && !isClienteLojaExpress && (
             <Button
               size="sm"
               variant={confirmed ? 'outline' : 'secondary'}
@@ -1060,20 +1060,22 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             <Button 
               size="sm" 
               onClick={handleAdvanceStatus}
-              disabled={advancing || (order.status === 'pending' && !confirmed) || disableAdvance}
+              disabled={advancing || (order.status === 'pending' && !confirmed && !isClienteLojaExpress) || disableAdvance}
               title={disableAdvance ? disableAdvanceReason : undefined}
               className={cn(
                 "gap-1 shrink-0 px-3 inline-flex items-center",
-                order.status === 'pending' && !confirmed
+                order.status === 'pending' && !confirmed && !isClienteLojaExpress
                   ? "opacity-50 cursor-not-allowed bg-gray-400 text-white hover:bg-gray-400"
-                  : order.status === 'pending' && confirmed
+                  : order.status === 'pending' && (confirmed || isClienteLojaExpress)
                     ? "bg-red-600 hover:bg-red-700 text-white"
                     : "",
                 disableAdvance && "opacity-50 cursor-not-allowed"
               )}
             >
               {advancing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {nextStatusLabel[order.status]}
+              {isClienteLojaExpress && order.status === 'pending'
+                ? 'Entregar'
+                : nextStatusLabel[order.status]}
               {!advancing && <ChevronRight className="w-4 h-4" />}
             </Button>
           )}
