@@ -112,6 +112,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const isCardapioOrder = (order.origin || 'cardapio') === 'cardapio';
   const isBalcaoOrder = order.origin === 'balcao';
   const isRetirada = !order.deliveryAddress;
+  // Pedido Express de "Cliente Loja": nasce em 'pending' (pra impressora local
+  // capturar e imprimir recibo + comanda como sempre fez), mas na tela pula os
+  // botões Confirmar/Preparar/Pronto — mostra direto Cobrar / Entregar.
+  const isClienteLojaExpress =
+    isBalcaoOrder && (order.customerName || '').trim() === 'Cliente Loja';
   // Pedido considerado cobrado quando o pagamento foi efetivamente processado.
   // No Express isso só acontece em "Finalizar Pedido" (ou TEF concluído), que
   // adiciona o marcador [COBRADO] nas notas. "Enviar pra Cozinha" segue o
@@ -151,7 +156,8 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     chargeButtonEnabled &&
     (isCardapioOrder || isBalcaoOrder) &&
     isRetirada &&
-    order.status === 'ready';
+    (order.status === 'ready' ||
+      (isClienteLojaExpress && order.status === 'pending'));
 
   // Detecta se é pagamento TEF e se já foi estornado
   const tefInfo = useMemo(() => parseTefDataFromNotes(order.notes), [order.notes]);
