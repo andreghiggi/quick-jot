@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '09/07/2026',
+    version: '1.56.0-beta',
+    type: 'feature',
+    description: 'Editar Pedido (lápis nos cards): trocar a modalidade para Entrega agora abre o mesmo fluxo do cardápio online — endereços salvos do cliente com seletor + botão Novo endereço, campos estruturados (Logradouro, Número, Complemento, Bairro, Referência) e as opções de entrega cadastradas na loja (cidade/interior ou bairros atendidos), calculando a taxa automaticamente. Endereços novos são salvos no cadastro do cliente. Pedidos de "Cliente Loja" que virarem Entrega passam a exigir a seleção de um cliente real (reaproveita o modal do Frente de Caixa). Bairros fora da lista de atendimento mantêm taxa zero com aviso. O recibo do motoboy e a notificação WhatsApp continuam sendo disparados ao salvar a edição.',
+  },
+  {
     date: '08/07/2026',
     version: '1.55.2-beta',
     type: 'fix',

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Plus, ArrowLeftRight, Search, Bike, Store, CreditCard } from 'lucide-react';
+import { Loader2, Plus, ArrowLeftRight, Search, Bike, Store, CreditCard, MapPin, UserPlus, AlertTriangle } from 'lucide-react';
 import { Order, OrderItem } from '@/types/order';
 import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,12 +16,16 @@ import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { stripDescMarkers, extractPaymentName } from '@/utils/orderNotesDisplay';
 import { cn } from '@/lib/utils';
+import { useCustomerAddresses, CustomerAddress } from '@/hooks/useCustomerAddresses';
+import { CustomerAddressPicker } from '@/components/menu/CustomerAddressPicker';
+import { FrenteCaixaCustomerDialog } from '@/components/frente-caixa/FrenteCaixaCustomerDialog';
 
 interface OrderEditDialogProps {
   open: boolean;
@@ -80,8 +84,26 @@ export function OrderEditDialog({
   // Modalidade atual derivada do pedido original.
   const originalModality: 'pickup' | 'delivery' = order.deliveryAddress ? 'delivery' : 'pickup';
   const [modality, setModality] = useState<'pickup' | 'delivery'>(originalModality);
-  const [addressLine, setAddressLine] = useState<string>('');
-  const [neighborhoodId, setNeighborhoodId] = useState<string>('');
+  // Endereço estruturado (mesmo padrão do cardápio).
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryNumber, setDeliveryNumber] = useState('');
+  const [deliveryComplement, setDeliveryComplement] = useState('');
+  const [deliveryNeighborhood, setDeliveryNeighborhood] = useState('');
+  const [deliveryReference, setDeliveryReference] = useState('');
+  // Opção de entrega (mirror MenuV2): pickup | city | interior | neighborhood.
+  const [deliveryOption, setDeliveryOption] = useState<'pickup' | 'city' | 'interior' | 'neighborhood'>('pickup');
+  const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState<string>('');
+  // Cliente resolvido a partir do telefone (para carregar endereços salvos).
+  const [resolvedCustomerId, setResolvedCustomerId] = useState<string | null>(null);
+  const [resolvedCustomerName, setResolvedCustomerName] = useState<string>('');
+  const [resolvedCustomerPhone, setResolvedCustomerPhone] = useState<string>('');
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
+  // Endereços salvos do cliente.
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [newAddrOpen, setNewAddrOpen] = useState(false);
+  const [newAddrForm, setNewAddrForm] = useState({
+    label: '', address: '', number: '', complement: '', neighborhood: '', reference: '',
+  });
   const [paymentMethodId, setPaymentMethodId] = useState<string>('');
   const [changeFor, setChangeFor] = useState<string>('');
 
@@ -96,13 +118,103 @@ export function OrderEditDialog({
     setOptionalsProduct(null);
     // Reset Entrega/Pagamento ao abrir
     setModality(order.deliveryAddress ? 'delivery' : 'pickup');
-    setAddressLine(order.deliveryAddress || '');
-    setNeighborhoodId('');
+    // Parse best-effort do endereço original: "Logradouro, Número - Complemento - Bairro | Ref: X"
+    const raw = (order.deliveryAddress || '').trim();
+    let addr = '', num = '', comp = '', bairro = '', ref = '';
+    if (raw) {
+      const refM = raw.match(/\|\s*Ref[^:]*:\s*(.+)$/i);
+      const base = refM ? raw.slice(0, refM.index).trim() : raw;
+      if (refM) ref = refM[1].trim();
+      // Split por " - "
+      const parts = base.split(/\s+-\s+/);
+      // parts[0] = "Logradouro, Número"
+      if (parts[0]) {
+        const m = parts[0].match(/^(.*?),\s*([^,]+)$/);
+        if (m) { addr = m[1].trim(); num = m[2].trim(); } else { addr = parts[0].trim(); }
+      }
+      if (parts.length >= 3) { comp = parts[1].trim(); bairro = parts.slice(2).join(' - ').trim(); }
+      else if (parts.length === 2) { bairro = parts[1].trim(); }
+    }
+    setDeliveryAddress(addr);
+    setDeliveryNumber(num);
+    setDeliveryComplement(comp);
+    setDeliveryNeighborhood(bairro);
+    setDeliveryReference(ref);
+    setSelectedNeighborhoodId('');
+    setSelectedAddressId(null);
+    setNewAddrOpen(false);
+    setCustomerPickerOpen(false);
+    // Cliente inicial vindo do pedido
+    setResolvedCustomerName(order.customerName || '');
+    setResolvedCustomerPhone(order.customerPhone || '');
+    setResolvedCustomerId(null);
     // Tenta detectar o "troco para" das notes originais.
     const trocoM = (order.notes || '').match(/Troco para R\$\s*([^)]+)/i);
     setChangeFor(trocoM ? trocoM[1].trim() : '');
     setPaymentMethodId('');
-  }, [open, order.items, order.deliveryAddress, order.notes]);
+  }, [open, order.items, order.deliveryAddress, order.notes, order.customerName, order.customerPhone]);
+
+  // Inicializa a OPÇÃO de entrega ao abrir e quando storeSettings/neighborhoods chegam.
+  useEffect(() => {
+    if (!open) return;
+    if (originalModality === 'pickup') { setDeliveryOption('pickup'); return; }
+    if (storeSettings.deliveryMode === 'neighborhood') {
+      setDeliveryOption('neighborhood');
+    } else {
+      // Modo simples: preferir cidade se habilitada, senão interior.
+      if (storeSettings.deliveryFeeCityEnabled !== false) setDeliveryOption('city');
+      else if (storeSettings.deliveryFeeInteriorEnabled !== false) setDeliveryOption('interior');
+      else setDeliveryOption('city');
+    }
+  }, [open, originalModality, storeSettings.deliveryMode, storeSettings.deliveryFeeCityEnabled, storeSettings.deliveryFeeInteriorEnabled]);
+
+  // Segue a modalidade: retirada zera opção; entrega volta pra padrão.
+  useEffect(() => {
+    if (!open) return;
+    if (modality === 'pickup') {
+      setDeliveryOption('pickup');
+      return;
+    }
+    if (deliveryOption === 'pickup') {
+      if (storeSettings.deliveryMode === 'neighborhood') setDeliveryOption('neighborhood');
+      else setDeliveryOption('city');
+    }
+  }, [modality, open, storeSettings.deliveryMode, deliveryOption]);
+
+  // Resolve customer_id pelo telefone do pedido (para carregar endereços salvos).
+  useEffect(() => {
+    if (!open) return;
+    const phone = (resolvedCustomerPhone || '').replace(/\D/g, '');
+    const isClienteLoja = (resolvedCustomerName || '').trim().toLowerCase() === 'cliente loja';
+    if (!phone || isClienteLoja) { setResolvedCustomerId(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('company_id', companyId)
+          .eq('phone', phone)
+          .maybeSingle();
+        if (!cancelled) setResolvedCustomerId(data?.id ?? null);
+      } catch { if (!cancelled) setResolvedCustomerId(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [open, resolvedCustomerPhone, resolvedCustomerName, companyId]);
+
+  // Endereços salvos do cliente.
+  const {
+    addresses: customerAddresses,
+    create: createCustomerAddress,
+    setDefault: setCustomerAddressDefault,
+    remove: removeCustomerAddress,
+  } = useCustomerAddresses(resolvedCustomerId, companyId);
+
+  const isClienteLoja = useMemo(
+    () => (resolvedCustomerName || '').trim().toLowerCase() === 'cliente loja',
+    [resolvedCustomerName],
+  );
+  const requiresCustomerSelection = modality === 'delivery' && (isClienteLoja || !resolvedCustomerPhone);
 
   // Pré-seleciona método de pagamento atual quando a lista chega.
   useEffect(() => {
@@ -127,19 +239,18 @@ export function OrderEditDialog({
   // Taxa de entrega ORIGINAL preservada (derivada por diferença).
   const originalDeliveryFee = Math.max(0, order.total - subtotalOriginal);
 
-  // Nova taxa de entrega conforme escolha atual no diálogo.
+  // Nova taxa de entrega conforme opção escolhida no diálogo (mirror MenuV2).
   const newDeliveryFee = useMemo(() => {
-    if (modality === 'pickup') return 0;
-    if (storeSettings.deliveryMode === 'neighborhood') {
-      const n = neighborhoods.find((x) => x.id === neighborhoodId);
-      // Se ainda não escolheu bairro, mantém a taxa original (não zera por engano).
-      if (!n) return originalDeliveryFee;
-      return n.deliveryFee;
+    if (modality === 'pickup' || deliveryOption === 'pickup') return 0;
+    if (deliveryOption === 'city') return storeSettings.deliveryFeeCity || 0;
+    if (deliveryOption === 'interior') return storeSettings.deliveryFeeInterior || 0;
+    if (deliveryOption === 'neighborhood') {
+      const n = neighborhoods.find((x) => x.id === selectedNeighborhoodId);
+      // Sem bairro selecionado ou bairro não atendido → zera taxa (decisão do usuário).
+      return n?.deliveryFee || 0;
     }
-    // Modo simples: usa taxa cidade quando habilitada, senão mantém original.
-    if (storeSettings.deliveryFeeCityEnabled) return storeSettings.deliveryFeeCity || 0;
-    return originalDeliveryFee;
-  }, [modality, neighborhoodId, neighborhoods, storeSettings, originalDeliveryFee]);
+    return 0;
+  }, [modality, deliveryOption, selectedNeighborhoodId, neighborhoods, storeSettings]);
 
   const newGrandTotal = newTotal + newDeliveryFee;
   const diff = newGrandTotal - order.total;
@@ -160,9 +271,9 @@ export function OrderEditDialog({
 
   const modalityChanged =
     modality !== originalModality ||
-    (modality === 'delivery' && addressLine.trim() !== (order.deliveryAddress || '').trim()) ||
+    (modality === 'delivery' && buildFinalDeliveryAddress() !== (order.deliveryAddress || null)) ||
     Math.abs(newDeliveryFee - originalDeliveryFee) > 0.001 ||
-    (modality === 'delivery' && !!neighborhoodId);
+    (modality === 'delivery' && !!selectedNeighborhoodId);
   const paymentChanged =
     !!newPaymentName &&
     (newPaymentName.trim().toLowerCase() !== originalPaymentName.toLowerCase() ||
@@ -172,16 +283,20 @@ export function OrderEditDialog({
   const isPixPayment = /pix/i.test(newPaymentName);
   const selectedPixKey = activePaymentMethods.find((p) => p.id === paymentMethodId)?.pix_key || '';
 
-  // Endereço final que será gravado quando salvar.
+  // Endereço final que será gravado (mesmo formato do cardápio).
   function buildFinalDeliveryAddress(): string | null {
     if (modality === 'pickup') return null;
-    const base = addressLine.trim();
-    if (!base) return null;
-    const n = neighborhoods.find((x) => x.id === neighborhoodId);
-    if (n && !base.toLowerCase().includes(n.neighborhoodName.toLowerCase())) {
-      return `${base} — Bairro ${n.neighborhoodName}`;
-    }
-    return base;
+    const addr = deliveryAddress.trim();
+    if (!addr) return null;
+    const num = deliveryNumber.trim();
+    const comp = deliveryComplement.trim();
+    const bairro = deliveryNeighborhood.trim();
+    const ref = deliveryReference.trim();
+    let s = num ? `${addr}, ${num}` : addr;
+    if (comp) s += ` - ${comp}`;
+    if (bairro) s += ` - ${bairro}`;
+    if (ref) s += ` | Ref: ${ref}`;
+    return s;
   }
 
   // Reescreve `notes` substituindo o bloco "Pagamento: ..." quando houve troca.
@@ -714,9 +829,19 @@ export function OrderEditDialog({
   async function handleSave() {
     if (saving) return;
     // Validação dos novos blocos
-    if (modality === 'delivery' && !addressLine.trim()) {
-      toast.error('Informe o endereço de entrega');
-      return;
+    if (modality === 'delivery') {
+      if (requiresCustomerSelection && !resolvedCustomerId) {
+        toast.error('Selecione um cliente antes de trocar para Entrega.');
+        return;
+      }
+      if (!deliveryAddress.trim() || !deliveryNumber.trim() || !deliveryNeighborhood.trim()) {
+        toast.error('Informe rua, número e bairro para a entrega.');
+        return;
+      }
+      if (deliveryOption === 'neighborhood' && !selectedNeighborhoodId) {
+        toast.error('Selecione o bairro de entrega.');
+        return;
+      }
     }
     if (
       paymentChanged &&
@@ -797,12 +922,44 @@ export function OrderEditDialog({
       if (modalityChanged) {
         orderUpdate.delivery_address = finalDeliveryAddress;
       }
+      // Atualiza cliente do pedido quando um novo cliente foi vinculado (Cliente Loja → cliente real).
+      const nameChanged =
+        (resolvedCustomerName || '').trim() &&
+        resolvedCustomerName.trim() !== (order.customerName || '').trim();
+      const phoneChanged =
+        (resolvedCustomerPhone || '').trim() !== (order.customerPhone || '').trim();
+      if (nameChanged) orderUpdate.customer_name = resolvedCustomerName.trim();
+      if (phoneChanged) orderUpdate.customer_phone = resolvedCustomerPhone.trim() || null;
 
       const { error: orderErr } = await supabase
         .from('orders')
         .update(orderUpdate)
         .eq('id', order.id);
       if (orderErr) throw orderErr;
+
+      // Persistir endereço novo no cadastro do cliente (best-effort).
+      if (
+        modality === 'delivery' &&
+        resolvedCustomerId &&
+        !selectedAddressId &&
+        deliveryAddress.trim()
+      ) {
+        try {
+          await createCustomerAddress({
+            label: null,
+            address: deliveryAddress.trim(),
+            number: deliveryNumber.trim() || null,
+            complement: deliveryComplement.trim() || null,
+            neighborhood: deliveryNeighborhood.trim() || null,
+            reference: deliveryReference.trim() || null,
+            city: null,
+            state: null,
+            is_default: customerAddresses.length === 0,
+          });
+        } catch (e) {
+          console.warn('[OrderEdit] Falha ao salvar endereço no cliente:', e);
+        }
+      }
 
       // Itens "delta" para impressão (apenas adicionados/trocados).
       const deltaItems: WorkingItem[] = [...inserts, ...updates];
@@ -1010,33 +1167,177 @@ export function OrderEditDialog({
                   </div>
                   {modality === 'delivery' && (
                     <div className="space-y-2">
+                      {/* Cliente obrigatório quando é "Cliente Loja" → Entrega */}
+                      {requiresCustomerSelection && !resolvedCustomerId && (
+                        <div className="flex items-start gap-2 rounded-md border border-amber-500/60 bg-amber-50/60 dark:bg-amber-950/20 p-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div className="flex-1 text-xs">
+                            <div className="font-medium text-amber-900 dark:text-amber-200">
+                              Selecione um cliente para continuar
+                            </div>
+                            <div className="text-amber-800/80 dark:text-amber-300/80">
+                              Pedidos de "Cliente Loja" precisam de um cliente cadastrado para virar Entrega.
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="mt-2 gap-1"
+                              onClick={() => setCustomerPickerOpen(true)}
+                            >
+                              <UserPlus className="w-3.5 h-3.5" /> Informar cliente
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      {resolvedCustomerId && (
+                        <div className="text-xs text-muted-foreground">
+                          Cliente: <span className="font-medium text-foreground">{resolvedCustomerName}</span>
+                          {resolvedCustomerPhone && <> · {resolvedCustomerPhone}</>}
+                        </div>
+                      )}
+
+                      {/* Endereços salvos */}
+                      {resolvedCustomerId && customerAddresses.length > 0 && (
+                        <CustomerAddressPicker
+                          addresses={customerAddresses}
+                          selectedId={selectedAddressId}
+                          onSelect={(a: CustomerAddress) => {
+                            setSelectedAddressId(a.id);
+                            setDeliveryAddress(a.address ?? '');
+                            setDeliveryNumber(a.number ?? '');
+                            setDeliveryComplement(a.complement ?? '');
+                            setDeliveryNeighborhood(a.neighborhood ?? '');
+                            setDeliveryReference(a.reference ?? '');
+                            // tenta casar bairro cadastrado na loja
+                            if (a.neighborhood && storeSettings.deliveryMode === 'neighborhood') {
+                              const match = neighborhoods.find(
+                                (n) => n.active && n.neighborhoodName.trim().toLowerCase() === (a.neighborhood ?? '').trim().toLowerCase(),
+                              );
+                              setSelectedNeighborhoodId(match?.id ?? '');
+                              setDeliveryOption('neighborhood');
+                            }
+                          }}
+                          onNew={() => {
+                            setSelectedAddressId(null);
+                            setNewAddrForm({ label: '', address: '', number: '', complement: '', neighborhood: '', reference: '' });
+                            setNewAddrOpen(true);
+                          }}
+                          onDelete={async (id) => { await removeCustomerAddress(id); if (selectedAddressId === id) setSelectedAddressId(null); }}
+                          onSetDefault={async (id) => { await setCustomerAddressDefault(id); }}
+                        />
+                      )}
+                      {resolvedCustomerId && customerAddresses.length === 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 self-start"
+                          onClick={() => {
+                            setNewAddrForm({ label: '', address: '', number: '', complement: '', neighborhood: '', reference: '' });
+                            setNewAddrOpen(true);
+                          }}
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Novo endereço
+                        </Button>
+                      )}
+
+                      {/* Campos estruturados */}
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_88px]">
+                        <div>
+                          <Label className="text-xs">Logradouro *</Label>
+                          <Input
+                            placeholder="Rua, avenida..."
+                            value={deliveryAddress}
+                            onChange={(e) => setDeliveryAddress(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Número *</Label>
+                          <Input
+                            placeholder="123"
+                            inputMode="numeric"
+                            value={deliveryNumber}
+                            onChange={(e) => setDeliveryNumber(e.target.value)}
+                          />
+                        </div>
+                      </div>
                       <div>
-                        <Label className="text-xs">Endereço</Label>
+                        <Label className="text-xs">Complemento</Label>
                         <Input
-                          placeholder="Rua, número, complemento..."
-                          value={addressLine}
-                          onChange={(e) => setAddressLine(e.target.value)}
+                          placeholder="Apto, sala, bloco..."
+                          value={deliveryComplement}
+                          onChange={(e) => setDeliveryComplement(e.target.value)}
                         />
                       </div>
-                      {storeSettings.deliveryMode === 'neighborhood' && neighborhoods.filter((n) => n.active).length > 0 && (
-                        <div>
-                          <Label className="text-xs">Bairro</Label>
-                          <Select value={neighborhoodId} onValueChange={setNeighborhoodId}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione o bairro" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {neighborhoods
-                                .filter((n) => n.active)
-                                .map((n) => (
+                      <div>
+                        <Label className="text-xs">Bairro *</Label>
+                        <Input
+                          placeholder="Nome do bairro"
+                          value={deliveryNeighborhood}
+                          onChange={(e) => setDeliveryNeighborhood(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Ponto de referência</Label>
+                        <Input
+                          placeholder="Próximo à..."
+                          value={deliveryReference}
+                          onChange={(e) => setDeliveryReference(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Opções de entrega da loja */}
+                      <div className="border-t pt-2">
+                        <Label className="text-xs">Opção de entrega</Label>
+                        {storeSettings.deliveryMode === 'neighborhood' && neighborhoods.filter((n) => n.active).length > 0 ? (
+                          <div className="mt-1 space-y-1">
+                            <Select value={selectedNeighborhoodId} onValueChange={(v) => { setSelectedNeighborhoodId(v); setDeliveryOption('neighborhood'); }}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o bairro atendido" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {neighborhoods.filter((n) => n.active).map((n) => (
                                   <SelectItem key={n.id} value={n.id}>
                                     {n.neighborhoodName} — R$ {n.deliveryFee.toFixed(2).replace('.', ',')}
                                   </SelectItem>
                                 ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
+                              </SelectContent>
+                            </Select>
+                            {deliveryNeighborhood && !selectedNeighborhoodId && (
+                              <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                                Bairro "{deliveryNeighborhood}" não está cadastrado — a taxa será R$ 0,00.
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <RadioGroup
+                            value={deliveryOption}
+                            onValueChange={(v) => setDeliveryOption(v as any)}
+                            className="mt-1 space-y-1"
+                          >
+                            {(storeSettings.deliveryFeeCityEnabled !== false) && (
+                              <label className="flex items-center gap-2 rounded border p-2 text-sm cursor-pointer">
+                                <RadioGroupItem value="city" id="oed-city" />
+                                <span className="flex-1">Entrega na cidade</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {storeSettings.deliveryFeeCity > 0 ? `R$ ${storeSettings.deliveryFeeCity.toFixed(2).replace('.', ',')}` : 'Grátis'}
+                                </span>
+                              </label>
+                            )}
+                            {(storeSettings.deliveryFeeInteriorEnabled !== false) && (
+                              <label className="flex items-center gap-2 rounded border p-2 text-sm cursor-pointer">
+                                <RadioGroupItem value="interior" id="oed-interior" />
+                                <span className="flex-1">Entrega no interior</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {storeSettings.deliveryFeeInterior > 0 ? `R$ ${storeSettings.deliveryFeeInterior.toFixed(2).replace('.', ',')}` : 'Grátis'}
+                                </span>
+                              </label>
+                            )}
+                          </RadioGroup>
+                        )}
+                      </div>
+
                       <div className="text-xs text-muted-foreground">
                         Taxa de entrega:{' '}
                         <span className="font-semibold text-foreground">
@@ -1142,6 +1443,152 @@ export function OrderEditDialog({
         companyId={companyId}
       />
     )}
+
+    <FrenteCaixaCustomerDialog
+      open={customerPickerOpen}
+      onOpenChange={setCustomerPickerOpen}
+      companyId={companyId}
+      onPick={async (c) => {
+        // Após escolher/cadastrar, resolve o customer_id pelo telefone.
+        const name = (c.name || '').trim();
+        const phone = (c.phone || '').trim();
+        if (name) setResolvedCustomerName(name);
+        if (phone) setResolvedCustomerPhone(phone);
+        const digits = phone.replace(/\D/g, '');
+        if (digits) {
+          try {
+            const { data } = await supabase
+              .from('customers')
+              .select('id, address, number, complement, neighborhood')
+              .eq('company_id', companyId)
+              .eq('phone', digits)
+              .maybeSingle();
+            if (data?.id) {
+              setResolvedCustomerId(data.id);
+              // Pré-preenche endereço se cliente já tem um cadastrado no perfil
+              if (data.address && !deliveryAddress) {
+                setDeliveryAddress(data.address || '');
+                setDeliveryNumber((data as any).number || '');
+                setDeliveryComplement((data as any).complement || '');
+                setDeliveryNeighborhood((data as any).neighborhood || '');
+              }
+            }
+          } catch (e) {
+            console.warn('[OrderEdit] Falha ao resolver cliente:', e);
+          }
+        }
+        setCustomerPickerOpen(false);
+      }}
+    />
+
+    {/* Modal: Novo endereço */}
+    <Dialog open={newAddrOpen} onOpenChange={setNewAddrOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Novo endereço</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2">
+          <div>
+            <Label className="text-xs">Rótulo (opcional)</Label>
+            <Input
+              placeholder="Casa, Trabalho..."
+              value={newAddrForm.label}
+              onChange={(e) => setNewAddrForm((p) => ({ ...p, label: e.target.value }))}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_88px]">
+            <div>
+              <Label className="text-xs">Logradouro *</Label>
+              <Input
+                placeholder="Rua, avenida..."
+                value={newAddrForm.address}
+                onChange={(e) => setNewAddrForm((p) => ({ ...p, address: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Número *</Label>
+              <Input
+                placeholder="123"
+                inputMode="numeric"
+                value={newAddrForm.number}
+                onChange={(e) => setNewAddrForm((p) => ({ ...p, number: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Complemento</Label>
+            <Input
+              placeholder="Apto, sala..."
+              value={newAddrForm.complement}
+              onChange={(e) => setNewAddrForm((p) => ({ ...p, complement: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Bairro *</Label>
+            <Input
+              placeholder="Nome do bairro"
+              value={newAddrForm.neighborhood}
+              onChange={(e) => setNewAddrForm((p) => ({ ...p, neighborhood: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Ponto de referência</Label>
+            <Input
+              placeholder="Próximo a..."
+              value={newAddrForm.reference}
+              onChange={(e) => setNewAddrForm((p) => ({ ...p, reference: e.target.value }))}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setNewAddrOpen(false)}>Cancelar</Button>
+          <Button
+            onClick={async () => {
+              if (!newAddrForm.address.trim() || !newAddrForm.number.trim() || !newAddrForm.neighborhood.trim()) {
+                toast.error('Preencha rua, número e bairro.');
+                return;
+              }
+              if (!resolvedCustomerId) {
+                toast.error('Cliente não encontrado.');
+                return;
+              }
+              const created = await createCustomerAddress({
+                label: newAddrForm.label.trim() || null,
+                address: newAddrForm.address.trim(),
+                number: newAddrForm.number.trim() || null,
+                complement: newAddrForm.complement.trim() || null,
+                neighborhood: newAddrForm.neighborhood.trim() || null,
+                reference: newAddrForm.reference.trim() || null,
+                city: null,
+                state: null,
+                is_default: customerAddresses.length === 0,
+              });
+              if (created) {
+                setSelectedAddressId(created.id);
+                setDeliveryAddress(created.address ?? '');
+                setDeliveryNumber(created.number ?? '');
+                setDeliveryComplement(created.complement ?? '');
+                setDeliveryNeighborhood(created.neighborhood ?? '');
+                setDeliveryReference(created.reference ?? '');
+                if (created.neighborhood && storeSettings.deliveryMode === 'neighborhood') {
+                  const match = neighborhoods.find(
+                    (n) => n.active && n.neighborhoodName.trim().toLowerCase() === (created.neighborhood ?? '').trim().toLowerCase(),
+                  );
+                  setSelectedNeighborhoodId(match?.id ?? '');
+                  setDeliveryOption('neighborhood');
+                }
+                toast.success('Endereço adicionado!');
+                setNewAddrOpen(false);
+              } else {
+                toast.error('Erro ao salvar endereço.');
+              }
+            }}
+          >
+            Salvar endereço
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
