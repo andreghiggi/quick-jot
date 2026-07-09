@@ -1443,6 +1443,152 @@ export function OrderEditDialog({
         companyId={companyId}
       />
     )}
+
+    <FrenteCaixaCustomerDialog
+      open={customerPickerOpen}
+      onOpenChange={setCustomerPickerOpen}
+      companyId={companyId}
+      onPick={async (c) => {
+        // Após escolher/cadastrar, resolve o customer_id pelo telefone.
+        const name = (c.name || '').trim();
+        const phone = (c.phone || '').trim();
+        if (name) setResolvedCustomerName(name);
+        if (phone) setResolvedCustomerPhone(phone);
+        const digits = phone.replace(/\D/g, '');
+        if (digits) {
+          try {
+            const { data } = await supabase
+              .from('customers')
+              .select('id, address, number, complement, neighborhood')
+              .eq('company_id', companyId)
+              .eq('phone', digits)
+              .maybeSingle();
+            if (data?.id) {
+              setResolvedCustomerId(data.id);
+              // Pré-preenche endereço se cliente já tem um cadastrado no perfil
+              if (data.address && !deliveryAddress) {
+                setDeliveryAddress(data.address || '');
+                setDeliveryNumber((data as any).number || '');
+                setDeliveryComplement((data as any).complement || '');
+                setDeliveryNeighborhood((data as any).neighborhood || '');
+              }
+            }
+          } catch (e) {
+            console.warn('[OrderEdit] Falha ao resolver cliente:', e);
+          }
+        }
+        setCustomerPickerOpen(false);
+      }}
+    />
+
+    {/* Modal: Novo endereço */}
+    <Dialog open={newAddrOpen} onOpenChange={setNewAddrOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Novo endereço</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2">
+          <div>
+            <Label className="text-xs">Rótulo (opcional)</Label>
+            <Input
+              placeholder="Casa, Trabalho..."
+              value={newAddrForm.label}
+              onChange={(e) => setNewAddrForm((p) => ({ ...p, label: e.target.value }))}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_88px]">
+            <div>
+              <Label className="text-xs">Logradouro *</Label>
+              <Input
+                placeholder="Rua, avenida..."
+                value={newAddrForm.address}
+                onChange={(e) => setNewAddrForm((p) => ({ ...p, address: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Número *</Label>
+              <Input
+                placeholder="123"
+                inputMode="numeric"
+                value={newAddrForm.number}
+                onChange={(e) => setNewAddrForm((p) => ({ ...p, number: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Complemento</Label>
+            <Input
+              placeholder="Apto, sala..."
+              value={newAddrForm.complement}
+              onChange={(e) => setNewAddrForm((p) => ({ ...p, complement: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Bairro *</Label>
+            <Input
+              placeholder="Nome do bairro"
+              value={newAddrForm.neighborhood}
+              onChange={(e) => setNewAddrForm((p) => ({ ...p, neighborhood: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Ponto de referência</Label>
+            <Input
+              placeholder="Próximo a..."
+              value={newAddrForm.reference}
+              onChange={(e) => setNewAddrForm((p) => ({ ...p, reference: e.target.value }))}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setNewAddrOpen(false)}>Cancelar</Button>
+          <Button
+            onClick={async () => {
+              if (!newAddrForm.address.trim() || !newAddrForm.number.trim() || !newAddrForm.neighborhood.trim()) {
+                toast.error('Preencha rua, número e bairro.');
+                return;
+              }
+              if (!resolvedCustomerId) {
+                toast.error('Cliente não encontrado.');
+                return;
+              }
+              const created = await createCustomerAddress({
+                label: newAddrForm.label.trim() || null,
+                address: newAddrForm.address.trim(),
+                number: newAddrForm.number.trim() || null,
+                complement: newAddrForm.complement.trim() || null,
+                neighborhood: newAddrForm.neighborhood.trim() || null,
+                reference: newAddrForm.reference.trim() || null,
+                city: null,
+                state: null,
+                is_default: customerAddresses.length === 0,
+              });
+              if (created) {
+                setSelectedAddressId(created.id);
+                setDeliveryAddress(created.address ?? '');
+                setDeliveryNumber(created.number ?? '');
+                setDeliveryComplement(created.complement ?? '');
+                setDeliveryNeighborhood(created.neighborhood ?? '');
+                setDeliveryReference(created.reference ?? '');
+                if (created.neighborhood && storeSettings.deliveryMode === 'neighborhood') {
+                  const match = neighborhoods.find(
+                    (n) => n.active && n.neighborhoodName.trim().toLowerCase() === (created.neighborhood ?? '').trim().toLowerCase(),
+                  );
+                  setSelectedNeighborhoodId(match?.id ?? '');
+                  setDeliveryOption('neighborhood');
+                }
+                toast.success('Endereço adicionado!');
+                setNewAddrOpen(false);
+              } else {
+                toast.error('Erro ao salvar endereço.');
+              }
+            }}
+          >
+            Salvar endereço
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
