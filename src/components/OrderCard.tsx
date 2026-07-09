@@ -112,6 +112,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const isCardapioOrder = (order.origin || 'cardapio') === 'cardapio';
   const isBalcaoOrder = order.origin === 'balcao';
   const isRetirada = !order.deliveryAddress;
+  // Pedido Express de "Cliente Loja": nasce em 'pending' (pra impressora local
+  // capturar e imprimir recibo + comanda como sempre fez), mas na tela pula os
+  // botões Confirmar/Preparar/Pronto — mostra direto Cobrar / Entregar.
+  const isClienteLojaExpress =
+    isBalcaoOrder && (order.customerName || '').trim() === 'Cliente Loja';
   // Pedido considerado cobrado quando o pagamento foi efetivamente processado.
   // No Express isso só acontece em "Finalizar Pedido" (ou TEF concluído), que
   // adiciona o marcador [COBRADO] nas notas. "Enviar pra Cozinha" segue o
@@ -151,7 +156,8 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     chargeButtonEnabled &&
     (isCardapioOrder || isBalcaoOrder) &&
     isRetirada &&
-    order.status === 'ready';
+    (order.status === 'ready' ||
+      (isClienteLojaExpress && order.status === 'pending'));
 
   // Detecta se é pagamento TEF e se já foi estornado
   const tefInfo = useMemo(() => parseTefDataFromNotes(order.notes), [order.notes]);
@@ -259,10 +265,15 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   }
 
   async function handleAdvanceStatus() {
-    if (config.next && !advancing) {
+    // Cliente Loja Express: pula preparing/ready e vai direto para delivered.
+    const nextStatus =
+      isClienteLojaExpress && order.status === 'pending'
+        ? ('delivered' as const)
+        : config.next;
+    if (nextStatus && !advancing) {
       setAdvancing(true);
       try {
-        await updateOrderStatus(order.id, config.next);
+        await updateOrderStatus(order.id, nextStatus);
       } finally {
         setAdvancing(false);
       }
@@ -1026,7 +1037,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               </AlertDialogContent>
             </AlertDialog>
           )}
-          {!isCancelled && order.status === 'pending' && (
+          {!isCancelled && order.status === 'pending' && !isClienteLojaExpress && (
             <Button
               size="sm"
               variant={confirmed ? 'outline' : 'secondary'}
@@ -1049,20 +1060,22 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             <Button 
               size="sm" 
               onClick={handleAdvanceStatus}
-              disabled={advancing || (order.status === 'pending' && !confirmed) || disableAdvance}
+              disabled={advancing || (order.status === 'pending' && !confirmed && !isClienteLojaExpress) || disableAdvance}
               title={disableAdvance ? disableAdvanceReason : undefined}
               className={cn(
                 "gap-1 shrink-0 px-3 inline-flex items-center",
-                order.status === 'pending' && !confirmed
+                order.status === 'pending' && !confirmed && !isClienteLojaExpress
                   ? "opacity-50 cursor-not-allowed bg-gray-400 text-white hover:bg-gray-400"
-                  : order.status === 'pending' && confirmed
+                  : order.status === 'pending' && (confirmed || isClienteLojaExpress)
                     ? "bg-red-600 hover:bg-red-700 text-white"
                     : "",
                 disableAdvance && "opacity-50 cursor-not-allowed"
               )}
             >
               {advancing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {nextStatusLabel[order.status]}
+              {isClienteLojaExpress && order.status === 'pending'
+                ? 'Entregar'
+                : nextStatusLabel[order.status]}
               {!advancing && <ChevronRight className="w-4 h-4" />}
             </Button>
           )}

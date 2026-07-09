@@ -284,9 +284,7 @@ def buscar_todos_pedidos_hoje(company_id):
 
 def buscar_pedidos_nao_impressos(company_id):
     """Busca pedidos não impressos de qualquer status imprimível"""
-    # 'ready' incluído para capturar Pedido Express de Cliente Loja
-    # (que nasce direto em 'ready', pulando 'pending').
-    STATUS_IMPRIMIVEIS = {"pending", "confirmed", "express", "waiter", "ready"}
+    STATUS_IMPRIMIVEIS = {"pending", "confirmed", "express", "waiter"}
     try:
         url = f"{SUPABASE_URL}/rest/v1/orders"
         params = {
