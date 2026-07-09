@@ -786,7 +786,13 @@ export default function FrenteCaixa() {
     };
     setDanfeOpts(nextDanfeOpts);
 
-    const noteParts: string[] = [`[FRENTE-CAIXA] Pagamento: ${params.paymentName}`];
+    // Se a venda vem de uma comanda importada, prefixa com "Comanda #N"
+    // para que apareça no Histórico de Comandas (que filtra por notes ILIKE '%Comanda%').
+    const noteParts: string[] = [];
+    if (importedOrderId && importedOrderSource === 'tab' && importedLabel) {
+      noteParts.push(`Comanda #${importedLabel.replace(/^#/, '')}`);
+    }
+    noteParts.push(`[FRENTE-CAIXA] Pagamento: ${params.paymentName}`);
     if (params.combinedNotesFragment) noteParts.push(params.combinedNotesFragment);
     if (params.customerPhone) noteParts.push(`Tel: ${params.customerPhone}`);
     if (params.customerDocument) noteParts.push(`CPF: ${params.customerDocument}`);
