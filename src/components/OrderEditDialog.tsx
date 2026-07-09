@@ -239,19 +239,18 @@ export function OrderEditDialog({
   // Taxa de entrega ORIGINAL preservada (derivada por diferença).
   const originalDeliveryFee = Math.max(0, order.total - subtotalOriginal);
 
-  // Nova taxa de entrega conforme escolha atual no diálogo.
+  // Nova taxa de entrega conforme opção escolhida no diálogo (mirror MenuV2).
   const newDeliveryFee = useMemo(() => {
-    if (modality === 'pickup') return 0;
-    if (storeSettings.deliveryMode === 'neighborhood') {
-      const n = neighborhoods.find((x) => x.id === neighborhoodId);
-      // Se ainda não escolheu bairro, mantém a taxa original (não zera por engano).
-      if (!n) return originalDeliveryFee;
-      return n.deliveryFee;
+    if (modality === 'pickup' || deliveryOption === 'pickup') return 0;
+    if (deliveryOption === 'city') return storeSettings.deliveryFeeCity || 0;
+    if (deliveryOption === 'interior') return storeSettings.deliveryFeeInterior || 0;
+    if (deliveryOption === 'neighborhood') {
+      const n = neighborhoods.find((x) => x.id === selectedNeighborhoodId);
+      // Sem bairro selecionado ou bairro não atendido → zera taxa (decisão do usuário).
+      return n?.deliveryFee || 0;
     }
-    // Modo simples: usa taxa cidade quando habilitada, senão mantém original.
-    if (storeSettings.deliveryFeeCityEnabled) return storeSettings.deliveryFeeCity || 0;
-    return originalDeliveryFee;
-  }, [modality, neighborhoodId, neighborhoods, storeSettings, originalDeliveryFee]);
+    return 0;
+  }, [modality, deliveryOption, selectedNeighborhoodId, neighborhoods, storeSettings]);
 
   const newGrandTotal = newTotal + newDeliveryFee;
   const diff = newGrandTotal - order.total;
@@ -272,9 +271,9 @@ export function OrderEditDialog({
 
   const modalityChanged =
     modality !== originalModality ||
-    (modality === 'delivery' && addressLine.trim() !== (order.deliveryAddress || '').trim()) ||
+    (modality === 'delivery' && buildFinalDeliveryAddress() !== (order.deliveryAddress || null)) ||
     Math.abs(newDeliveryFee - originalDeliveryFee) > 0.001 ||
-    (modality === 'delivery' && !!neighborhoodId);
+    (modality === 'delivery' && !!selectedNeighborhoodId);
   const paymentChanged =
     !!newPaymentName &&
     (newPaymentName.trim().toLowerCase() !== originalPaymentName.toLowerCase() ||
@@ -284,16 +283,20 @@ export function OrderEditDialog({
   const isPixPayment = /pix/i.test(newPaymentName);
   const selectedPixKey = activePaymentMethods.find((p) => p.id === paymentMethodId)?.pix_key || '';
 
-  // Endereço final que será gravado quando salvar.
+  // Endereço final que será gravado (mesmo formato do cardápio).
   function buildFinalDeliveryAddress(): string | null {
     if (modality === 'pickup') return null;
-    const base = addressLine.trim();
-    if (!base) return null;
-    const n = neighborhoods.find((x) => x.id === neighborhoodId);
-    if (n && !base.toLowerCase().includes(n.neighborhoodName.toLowerCase())) {
-      return `${base} — Bairro ${n.neighborhoodName}`;
-    }
-    return base;
+    const addr = deliveryAddress.trim();
+    if (!addr) return null;
+    const num = deliveryNumber.trim();
+    const comp = deliveryComplement.trim();
+    const bairro = deliveryNeighborhood.trim();
+    const ref = deliveryReference.trim();
+    let s = num ? `${addr}, ${num}` : addr;
+    if (comp) s += ` - ${comp}`;
+    if (bairro) s += ` - ${bairro}`;
+    if (ref) s += ` | Ref: ${ref}`;
+    return s;
   }
 
   // Reescreve `notes` substituindo o bloco "Pagamento: ..." quando houve troca.
