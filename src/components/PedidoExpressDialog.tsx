@@ -1310,11 +1310,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           console.error('Erro ao enfileirar recibo:', e);
         }
         }
-      } else if ((settings.autoPrintProductionTicket || isClienteLoja) && company?.id) {
+      } else if (settings.autoPrintProductionTicket && company?.id) {
         // Enfileira comanda de produção (mesmo padrão do Waiter).
-        // Também dispara para Cliente Loja: como o pedido nasce em 'ready'
-        // (pulando 'pending'), o auto_printer local não o captura pelo fluxo
-        // padrão — então enviamos direto via print_queue.
         try {
           // V2+: envia adicionais agrupados para qualquer loja com Layout V2/V3 ativo.
           const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
