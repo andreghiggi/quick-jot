@@ -1316,6 +1316,72 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         // (pulando 'pending'), o auto_printer local não o captura pelo fluxo
         // padrão — então enviamos direto via print_queue.
         try {
+          // Cliente Loja + autoPrintProductionTicket ligado: também imprime o RECIBO
+          // (antes o auto_printer local imprimia o recibo quando o pedido nascia
+          // em 'pending'; como agora nasce em 'ready', precisamos enfileirar aqui).
+          if (isClienteLoja && settings.autoPrintProductionTicket) {
+            try {
+              const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
+              const I9_COMPANY_ID_R = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+              const sendGroupedReceipt =
+                settings.printLayout === 'v2' || settings.printLayout === 'v3' || company?.id === I9_COMPANY_ID_R;
+              const receiptItems = cart.map((item) => {
+                const groupedOptionals: { groupName: string; items: string }[] = [];
+                if (sendGroupedReceipt) {
+                  if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+                    for (const entry of item.groupedOptionalNames) {
+                      const hasColon = entry.includes(':');
+                      const groupName = hasColon ? entry.split(':')[0].trim() : 'Adicionais';
+                      const after = hasColon ? entry.split(':').slice(1).join(':') : entry;
+                      const itemsStr = after
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .join(', ');
+                      if (itemsStr) groupedOptionals.push({ groupName, items: itemsStr });
+                    }
+                  } else if (item.selectedOptionals.length > 0) {
+                    groupedOptionals.push({
+                      groupName: 'Adicionais',
+                      items: item.selectedOptionals
+                        .map((o) =>
+                          o.price > 0
+                            ? `${o.name} R$${o.price.toFixed(2).replace('.', ',')}`
+                            : o.name,
+                        )
+                        .join(', '),
+                    });
+                  }
+                }
+                return {
+                  name: item.product.name,
+                  quantity: item.quantity,
+                  price: item.product.price + item.selectedOptionals.reduce((s, o) => s + o.price, 0),
+                  notes: item.notes || undefined,
+                  groupedOptionals: groupedOptionals.length > 0 ? groupedOptionals : undefined,
+                };
+              });
+              await printOnlyReceipt({
+                companyId: company.id,
+                orderCode: createdOrderCode,
+                dailyNumber: createdDailyNumber,
+                shortCode: createdShortCode,
+                customerName: customerName.trim(),
+                items: receiptItems,
+                total: effectiveTotal,
+                notes: `Pagamento: ${paymentName}`,
+                paperSize,
+                printLayout: settings.printLayout,
+                deliveryAddress:
+                  sendGroupedReceipt && deliveryType === 'entrega' && fullAddress
+                    ? fullAddress
+                    : null,
+              });
+            } catch (e) {
+              console.error('Erro ao enfileirar recibo (Cliente Loja):', e);
+            }
+          }
+
           // V2+: envia adicionais agrupados para qualquer loja com Layout V2/V3 ativo.
           const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
           const sendGroupedOptionals =
