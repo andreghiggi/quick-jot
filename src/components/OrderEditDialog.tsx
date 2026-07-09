@@ -84,8 +84,26 @@ export function OrderEditDialog({
   // Modalidade atual derivada do pedido original.
   const originalModality: 'pickup' | 'delivery' = order.deliveryAddress ? 'delivery' : 'pickup';
   const [modality, setModality] = useState<'pickup' | 'delivery'>(originalModality);
-  const [addressLine, setAddressLine] = useState<string>('');
-  const [neighborhoodId, setNeighborhoodId] = useState<string>('');
+  // Endereço estruturado (mesmo padrão do cardápio).
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryNumber, setDeliveryNumber] = useState('');
+  const [deliveryComplement, setDeliveryComplement] = useState('');
+  const [deliveryNeighborhood, setDeliveryNeighborhood] = useState('');
+  const [deliveryReference, setDeliveryReference] = useState('');
+  // Opção de entrega (mirror MenuV2): pickup | city | interior | neighborhood.
+  const [deliveryOption, setDeliveryOption] = useState<'pickup' | 'city' | 'interior' | 'neighborhood'>('pickup');
+  const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState<string>('');
+  // Cliente resolvido a partir do telefone (para carregar endereços salvos).
+  const [resolvedCustomerId, setResolvedCustomerId] = useState<string | null>(null);
+  const [resolvedCustomerName, setResolvedCustomerName] = useState<string>('');
+  const [resolvedCustomerPhone, setResolvedCustomerPhone] = useState<string>('');
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
+  // Endereços salvos do cliente.
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [newAddrOpen, setNewAddrOpen] = useState(false);
+  const [newAddrForm, setNewAddrForm] = useState({
+    label: '', address: '', number: '', complement: '', neighborhood: '', reference: '',
+  });
   const [paymentMethodId, setPaymentMethodId] = useState<string>('');
   const [changeFor, setChangeFor] = useState<string>('');
 
@@ -100,13 +118,103 @@ export function OrderEditDialog({
     setOptionalsProduct(null);
     // Reset Entrega/Pagamento ao abrir
     setModality(order.deliveryAddress ? 'delivery' : 'pickup');
-    setAddressLine(order.deliveryAddress || '');
-    setNeighborhoodId('');
+    // Parse best-effort do endereço original: "Logradouro, Número - Complemento - Bairro | Ref: X"
+    const raw = (order.deliveryAddress || '').trim();
+    let addr = '', num = '', comp = '', bairro = '', ref = '';
+    if (raw) {
+      const refM = raw.match(/\|\s*Ref[^:]*:\s*(.+)$/i);
+      const base = refM ? raw.slice(0, refM.index).trim() : raw;
+      if (refM) ref = refM[1].trim();
+      // Split por " - "
+      const parts = base.split(/\s+-\s+/);
+      // parts[0] = "Logradouro, Número"
+      if (parts[0]) {
+        const m = parts[0].match(/^(.*?),\s*([^,]+)$/);
+        if (m) { addr = m[1].trim(); num = m[2].trim(); } else { addr = parts[0].trim(); }
+      }
+      if (parts.length >= 3) { comp = parts[1].trim(); bairro = parts.slice(2).join(' - ').trim(); }
+      else if (parts.length === 2) { bairro = parts[1].trim(); }
+    }
+    setDeliveryAddress(addr);
+    setDeliveryNumber(num);
+    setDeliveryComplement(comp);
+    setDeliveryNeighborhood(bairro);
+    setDeliveryReference(ref);
+    setSelectedNeighborhoodId('');
+    setSelectedAddressId(null);
+    setNewAddrOpen(false);
+    setCustomerPickerOpen(false);
+    // Cliente inicial vindo do pedido
+    setResolvedCustomerName(order.customerName || '');
+    setResolvedCustomerPhone(order.customerPhone || '');
+    setResolvedCustomerId(null);
     // Tenta detectar o "troco para" das notes originais.
     const trocoM = (order.notes || '').match(/Troco para R\$\s*([^)]+)/i);
     setChangeFor(trocoM ? trocoM[1].trim() : '');
     setPaymentMethodId('');
-  }, [open, order.items, order.deliveryAddress, order.notes]);
+  }, [open, order.items, order.deliveryAddress, order.notes, order.customerName, order.customerPhone]);
+
+  // Inicializa a OPÇÃO de entrega ao abrir e quando storeSettings/neighborhoods chegam.
+  useEffect(() => {
+    if (!open) return;
+    if (originalModality === 'pickup') { setDeliveryOption('pickup'); return; }
+    if (storeSettings.deliveryMode === 'neighborhood') {
+      setDeliveryOption('neighborhood');
+    } else {
+      // Modo simples: preferir cidade se habilitada, senão interior.
+      if (storeSettings.deliveryFeeCityEnabled !== false) setDeliveryOption('city');
+      else if (storeSettings.deliveryFeeInteriorEnabled !== false) setDeliveryOption('interior');
+      else setDeliveryOption('city');
+    }
+  }, [open, originalModality, storeSettings.deliveryMode, storeSettings.deliveryFeeCityEnabled, storeSettings.deliveryFeeInteriorEnabled]);
+
+  // Segue a modalidade: retirada zera opção; entrega volta pra padrão.
+  useEffect(() => {
+    if (!open) return;
+    if (modality === 'pickup') {
+      setDeliveryOption('pickup');
+      return;
+    }
+    if (deliveryOption === 'pickup') {
+      if (storeSettings.deliveryMode === 'neighborhood') setDeliveryOption('neighborhood');
+      else setDeliveryOption('city');
+    }
+  }, [modality, open, storeSettings.deliveryMode, deliveryOption]);
+
+  // Resolve customer_id pelo telefone do pedido (para carregar endereços salvos).
+  useEffect(() => {
+    if (!open) return;
+    const phone = (resolvedCustomerPhone || '').replace(/\D/g, '');
+    const isClienteLoja = (resolvedCustomerName || '').trim().toLowerCase() === 'cliente loja';
+    if (!phone || isClienteLoja) { setResolvedCustomerId(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('company_id', companyId)
+          .eq('phone', phone)
+          .maybeSingle();
+        if (!cancelled) setResolvedCustomerId(data?.id ?? null);
+      } catch { if (!cancelled) setResolvedCustomerId(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [open, resolvedCustomerPhone, resolvedCustomerName, companyId]);
+
+  // Endereços salvos do cliente.
+  const {
+    addresses: customerAddresses,
+    create: createCustomerAddress,
+    setDefault: setCustomerAddressDefault,
+    remove: removeCustomerAddress,
+  } = useCustomerAddresses(resolvedCustomerId, companyId);
+
+  const isClienteLoja = useMemo(
+    () => (resolvedCustomerName || '').trim().toLowerCase() === 'cliente loja',
+    [resolvedCustomerName],
+  );
+  const requiresCustomerSelection = modality === 'delivery' && (isClienteLoja || !resolvedCustomerPhone);
 
   // Pré-seleciona método de pagamento atual quando a lista chega.
   useEffect(() => {
