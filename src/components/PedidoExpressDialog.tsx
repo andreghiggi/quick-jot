@@ -2470,7 +2470,20 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                               </button>
                               <span>{item.quantity}x {item.product.name}</span>
                             </div>
-                            <span className="text-muted-foreground">R$ {itemTotal.toFixed(2)}</span>
+                            <div className="flex items-center gap-2">
+                              {(item.selectedOptionals.length > 0 || (item.groupedOptionalNames && item.groupedOptionalNames.length > 0)) && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); duplicateCartItem(index); }}
+                                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                  title="Repetir item com os mesmos adicionais"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                  Repetir
+                                </button>
+                              )}
+                              <span className="text-muted-foreground">R$ {itemTotal.toFixed(2)}</span>
+                            </div>
                           </div>
                           {item.groupedOptionalNames && item.groupedOptionalNames.length > 0 && (
                             <div className="ml-7 text-xs text-muted-foreground">
