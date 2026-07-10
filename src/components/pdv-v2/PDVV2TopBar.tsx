@@ -1,7 +1,15 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Eye, EyeOff, Plus, DoorClosed } from 'lucide-react';
+import { Eye, EyeOff, Plus, DoorClosed, MoreVertical, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useState } from 'react';
+import { FrenteCaixaCashMovementDialog, type CashMovementType } from '@/components/frente-caixa/FrenteCaixaCashMovementDialog';
 import { brl as formatPrice } from './_format';
 
 interface PDVV2TopBarProps {
@@ -15,6 +23,8 @@ interface PDVV2TopBarProps {
   onCloseCash: () => void;
   onNewOrder: () => void;
   companyId?: string;
+  cashRegisterId?: string;
+  userId?: string;
 }
 
 
@@ -29,7 +39,10 @@ export function PDVV2TopBar({
   onCloseCash,
   onNewOrder,
   companyId,
+  cashRegisterId,
+  userId,
 }: PDVV2TopBarProps) {
+  const [movementType, setMovementType] = useState<CashMovementType | null>(null);
   const newOrderLabel = 'Pedido Express';
   const newOrderBtn = (
     <Button
@@ -73,10 +86,29 @@ export function PDVV2TopBar({
 
       <div className="flex items-center gap-2">
         {!cashStateUnknown && cashOpen && (
-          <Button variant="outline" size="sm" onClick={onCloseCash}>
-            <DoorClosed className="h-4 w-4 mr-2" />
-            Fechar Caixa
-          </Button>
+          <>
+            <Button variant="outline" size="sm" onClick={onCloseCash}>
+              <DoorClosed className="h-4 w-4 mr-2" />
+              Fechar Caixa
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Mais ações do caixa">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setMovementType('sangria')}>
+                  <ArrowUpFromLine className="h-4 w-4 mr-2" />
+                  Sangria
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setMovementType('suprimento')}>
+                  <ArrowDownToLine className="h-4 w-4 mr-2" />
+                  Suprimento
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
         )}
         {cashStateUnknown ? null : cashOpen ? (
           newOrderBtn
@@ -91,6 +123,17 @@ export function PDVV2TopBar({
           </TooltipProvider>
         )}
       </div>
+      {movementType && (
+        <FrenteCaixaCashMovementDialog
+          open={!!movementType}
+          type={movementType}
+          companyId={companyId}
+          cashRegisterId={cashRegisterId}
+          userId={userId}
+          requireReason
+          onOpenChange={(o) => !o && setMovementType(null)}
+        />
+      )}
     </div>
   );
 }
