@@ -383,7 +383,7 @@ export function LateralOptionalsWizard({
                       size="icon"
                       variant="outline"
                       className="h-7 w-7"
-                      onClick={() => setRepeatCount((n) => Math.max(1, n - 1))}
+                      onClick={decRepeat}
                       disabled={repeatCount <= 1}
                       title="Reduzir quantidade"
                     >
@@ -395,7 +395,7 @@ export function LateralOptionalsWizard({
                       size="icon"
                       variant="outline"
                       className="h-7 w-7"
-                      onClick={() => setRepeatCount((n) => Math.min(MAX_REPEAT, n + 1))}
+                      onClick={incRepeat}
                       disabled={repeatCount >= MAX_REPEAT}
                       title="Repetir com os mesmos adicionais"
                     >
