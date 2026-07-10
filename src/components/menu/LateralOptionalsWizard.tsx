@@ -40,7 +40,7 @@ interface LateralOptionalsWizardProps {
   onToggleGroupItem: (groupId: string, itemId: string, maxSelect: number) => void;
   onChangeGroupItemQty?: (groupId: string, itemId: string, delta: number, maxSelect: number, maxPerItem: number) => void;
   onNotesChange: (notes: string) => void;
-  onAddToCart: () => void;
+  onAddToCart: (repeatCount?: number) => void;
   isI9?: boolean;
   hideBasePrice?: boolean;
   comboMode?: 'middle' | 'last' | null;
@@ -79,6 +79,14 @@ export function LateralOptionalsWizard({
   useEffect(() => {
     setCurrentStep(0);
   }, [product.id]);
+
+  // Stepper "Repetir" — só faz sentido no passo de confirmação (ou último passo do combo).
+  const [repeatCount, setRepeatCount] = useState(1);
+  useEffect(() => {
+    setRepeatCount(1);
+  }, [product.id]);
+  const showRepeat = comboMode !== 'middle'; // no meio do combo, ainda faltam etapas
+  const MAX_REPEAT = 20;
 
   const step = steps[currentStep];
   const isFirst = currentStep === 0;
@@ -342,8 +350,37 @@ export function LateralOptionalsWizard({
             </div>
 
             {/* Summary */}
-            <div className="border rounded-lg p-3 space-y-1 bg-muted/30">
-              <p className="font-semibold text-sm">{product.name}</p>
+            <div className="border rounded-lg p-3 space-y-1 bg-muted/30 relative">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold text-sm">{product.name}</p>
+                {showRepeat && (
+                  <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      className="h-7 w-7"
+                      onClick={() => setRepeatCount((n) => Math.max(1, n - 1))}
+                      disabled={repeatCount <= 1}
+                      title="Reduzir quantidade"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </Button>
+                    <span className="w-6 text-center text-sm font-bold tabular-nums">{repeatCount}</span>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      className="h-7 w-7"
+                      onClick={() => setRepeatCount((n) => Math.min(MAX_REPEAT, n + 1))}
+                      disabled={repeatCount >= MAX_REPEAT}
+                      title="Repetir com os mesmos adicionais"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
               {!hideBasePrice && (
                 <p className="text-xs text-muted-foreground">R$ {formatPrice(product.price)}</p>
               )}
@@ -368,7 +405,14 @@ export function LateralOptionalsWizard({
                   + {selectedOptionals.map((o) => o.name).join(', ')}
                 </p>
               )}
-              <p className="text-lg font-bold text-green-600 pt-1">Total: R$ {formatPrice(totalPrice)}</p>
+              <p className="text-lg font-bold text-green-600 pt-1">
+                Total: R$ {formatPrice(totalPrice * (showRepeat ? repeatCount : 1))}
+                {showRepeat && repeatCount > 1 && (
+                  <span className="text-xs text-muted-foreground font-normal ml-2">
+                    ({repeatCount}× R$ {formatPrice(totalPrice)})
+                  </span>
+                )}
+              </p>
             </div>
           </div>
         )}
@@ -387,7 +431,7 @@ export function LateralOptionalsWizard({
           </Button>
         )}
         {isLast ? (
-          <Button onClick={onAddToCart} className="min-w-0 flex-1 whitespace-nowrap px-3 text-sm sm:px-8 sm:text-base" size="lg">
+          <Button onClick={() => onAddToCart(showRepeat ? repeatCount : 1)} className="min-w-0 flex-1 whitespace-nowrap px-3 text-sm sm:px-8 sm:text-base" size="lg">
             {comboMode === 'middle' ? (
               <>
                 Próximo item do combo
@@ -396,12 +440,16 @@ export function LateralOptionalsWizard({
             ) : comboMode === 'last' ? (
               <>
                 <ShoppingCart className="h-4 w-4 mr-1 flex-shrink-0" />
-                <span className="truncate">Adicionar combo — R$ {formatPrice(comboAccumulatedExtras + totalPrice)}</span>
+                <span className="truncate">
+                  {repeatCount > 1 ? `Adicionar ${repeatCount}× combo` : 'Adicionar combo'} — R$ {formatPrice((comboAccumulatedExtras + totalPrice) * repeatCount)}
+                </span>
               </>
             ) : (
               <>
                 <ShoppingCart className="h-4 w-4 mr-1" />
-                Adicionar — R$ {formatPrice(totalPrice)}
+                {repeatCount > 1
+                  ? `Adicionar ${repeatCount}× — R$ ${formatPrice(totalPrice * repeatCount)}`
+                  : `Adicionar — R$ ${formatPrice(totalPrice)}`}
               </>
             )}
           </Button>

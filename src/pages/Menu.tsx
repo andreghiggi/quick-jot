@@ -800,8 +800,9 @@ export default function Menu() {
     });
   }
 
-  function addToCart() {
+  function addToCart(repeatCount: number = 1) {
     if (!selectedProduct) return;
+    const times = Math.max(1, Math.floor(repeatCount || 1));
 
     // Validate min selections for optional groups
     for (const group of selectedProductGroups) {
@@ -890,31 +891,32 @@ export default function Menu() {
             active: true,
           }]
         : [];
-      const finalItem: CartItem = {
+      const makeComboItem = (): CartItem => ({
         product: comboFlow.combo,
         quantity: 1,
-        selectedOptionals: comboPaidExtras,
-        groupedOptionalNames: comboLines.length > 0 ? comboLines : undefined,
+        selectedOptionals: comboPaidExtras.map(o => ({ ...o })),
+        groupedOptionalNames: comboLines.length > 0 ? [...comboLines] : undefined,
         notes: undefined,
-      };
-      setCart(prev => [...prev, finalItem]);
-      setLastAddedItem(finalItem);
+      });
+      const comboItems = Array.from({ length: times }, makeComboItem);
+      setCart(prev => [...prev, ...comboItems]);
+      setLastAddedItem(comboItems[0]);
       setSelectedProduct(null);
       setComboFlow(null);
       setShowAddedToCart(true);
       return;
     }
 
-    const newItem: CartItem = {
+    const makeItem = (): CartItem => ({
       product: selectedProduct,
       quantity: 1,
-      selectedOptionals: allOptionals,
-      groupedOptionalNames: groupedOptionalNames.length > 0 ? groupedOptionalNames : undefined,
+      selectedOptionals: allOptionals.map(o => ({ ...o })),
+      groupedOptionalNames: groupedOptionalNames.length > 0 ? [...groupedOptionalNames] : undefined,
       notes: itemNotes || undefined,
-    };
-
-    setCart((prev) => [...prev, newItem]);
-    setLastAddedItem(newItem);
+    });
+    const newItems = Array.from({ length: times }, makeItem);
+    setCart((prev) => [...prev, ...newItems]);
+    setLastAddedItem(newItems[0]);
     setSelectedProduct(null);
     setSelectedOptionals([]);
     setSelectedGroupItems({});
@@ -2102,7 +2104,7 @@ export default function Menu() {
           {/* Fixed bottom button - only for non-wizard flow */}
           {selectedProduct && !(settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) && (
             <div className="px-6 py-4 border-t flex-shrink-0 bg-background">
-              <Button onClick={addToCart} className="w-full" size="lg" disabled={!allMandatoryComplete}>
+              <Button onClick={() => addToCart(1)} className="w-full" size="lg" disabled={!allMandatoryComplete}>
                 <Plus className="h-4 w-4 mr-2" />
                 {comboFlow
                   ? (comboFlow.index + 1 < comboFlow.steps.length ? 'Próximo item do combo' : 'Adicionar combo ao carrinho')
@@ -2219,18 +2221,6 @@ export default function Menu() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                      {(item.selectedOptionals.length > 0 || (item.groupedOptionalNames && item.groupedOptionalNames.length > 0)) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 px-2 ml-1"
-                          onClick={() => duplicateCartItem(index)}
-                          title="Repetir item com os mesmos adicionais"
-                        >
-                          <Copy className="h-3.5 w-3.5 mr-1" />
-                          Repetir
-                        </Button>
-                      )}
                     </div>
                   </div>
                 ))}
