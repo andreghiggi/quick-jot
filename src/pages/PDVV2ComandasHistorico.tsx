@@ -7,7 +7,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Loader2, History, Search } from 'lucide-react';
+import { Loader2, History, Search, ChevronDown } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { PDVV2ClosedTabSaleCard, ClosedTabSaleCardData } from '@/components/pdv-v2/PDVV2ClosedTabSaleCard';
 import { getNFCeRecordBySaleId, type NFCeRecord } from '@/services/nfceService';
@@ -35,6 +37,7 @@ export default function PDVV2ComandasHistorico() {
   const [startDate, setStartDate] = useState<string>(todayInSP());
   const [endDate, setEndDate] = useState<string>(todayInSP());
   const [search, setSearch] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [sales, setSales] = useState<ClosedTabSaleCardData[]>([]);
   const [nfceMap, setNfceMap] = useState<Record<string, NFCeRecord | null>>({});
@@ -105,12 +108,49 @@ export default function PDVV2ComandasHistorico() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return sales;
-    return sales.filter((s) =>
-      (s.customer_name || '').toLowerCase().includes(q) ||
-      (s.notes || '').toLowerCase().includes(q),
+    return sales.filter((s) => {
+      if (q) {
+        const hit =
+          (s.customer_name || '').toLowerCase().includes(q) ||
+          (s.notes || '').toLowerCase().includes(q);
+        if (!hit) return false;
+      }
+      if (paymentFilter.length > 0) {
+        const name = s.payment_method_name || 'Sem forma';
+        const match = paymentFilter.some((sel) =>
+          sel === 'Sem forma' ? !s.payment_method_name || s.payment_method_name === 'Sem forma' : name === sel,
+        );
+        if (!match) return false;
+      }
+      return true;
+    });
+  }, [sales, search, paymentFilter]);
+
+  const paymentOptions = useMemo(() => {
+    const set = new Set<string>();
+    let hasSem = false;
+    for (const s of sales) {
+      const n = s.payment_method_name;
+      if (!n || n === 'Sem forma') hasSem = true;
+      else set.add(n);
+    }
+    const list = Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    if (hasSem) list.push('Sem forma');
+    return list;
+  }, [sales]);
+
+  const paymentLabel =
+    paymentFilter.length === 0
+      ? 'Todas as formas'
+      : paymentFilter.length === 1
+        ? paymentFilter[0]
+        : `${paymentFilter.length} formas`;
+
+  const togglePayment = (name: string) => {
+    setPaymentFilter((prev) =>
+      prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name],
     );
-  }, [sales, search]);
+  };
 
   const totals = useMemo(() => {
     let active = 0, cancelled = 0, revenue = 0;
@@ -132,7 +172,7 @@ export default function PDVV2ComandasHistorico() {
           </div>
 
           <Card>
-            <CardContent className="p-4 grid gap-3 sm:grid-cols-[1fr_1fr_2fr_auto] items-end">
+            <CardContent className="p-4 grid gap-3 sm:grid-cols-[1fr_1fr_2fr_auto_auto] items-end">
               <div className="space-y-1">
                 <Label htmlFor="start">De</Label>
                 <Input id="start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -153,6 +193,49 @@ export default function PDVV2ComandasHistorico() {
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
+              </div>
+              <div className="space-y-1">
+                <Label>Pagamento</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-10 min-w-[180px] justify-between font-normal">
+                      <span className="truncate">{paymentLabel}</span>
+                      <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2" align="start">
+                    <div className="flex items-center justify-between px-2 py-1.5 border-b mb-1">
+                      <span className="text-xs font-medium text-muted-foreground">Formas de pagamento</span>
+                      {paymentFilter.length > 0 && (
+                        <button
+                          type="button"
+                          className="text-xs text-primary hover:underline"
+                          onClick={() => setPaymentFilter([])}
+                        >
+                          Limpar
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {paymentOptions.length === 0 ? (
+                        <p className="text-xs text-muted-foreground px-2 py-2">Nenhuma forma disponível</p>
+                      ) : (
+                        paymentOptions.map((p) => (
+                          <label
+                            key={p}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer"
+                          >
+                            <Checkbox
+                              checked={paymentFilter.includes(p)}
+                              onCheckedChange={() => togglePayment(p)}
+                            />
+                            <span className="text-sm">{p}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
               <Button onClick={load} disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
