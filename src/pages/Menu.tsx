@@ -955,6 +955,23 @@ export default function Menu() {
     setCart((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function duplicateCartItem(index: number) {
+    setCart((prev) => {
+      const item = prev[index];
+      if (!item) return prev;
+      // Deep-copy selectedOptionals para evitar referências compartilhadas
+      const copy: CartItem = {
+        ...item,
+        quantity: 1,
+        selectedOptionals: item.selectedOptionals.map((o) => ({ ...o })),
+        groupedOptionalNames: item.groupedOptionalNames ? [...item.groupedOptionalNames] : undefined,
+      };
+      const next = [...prev];
+      next.splice(index + 1, 0, copy);
+      return next;
+    });
+  }
+
   function buildCartItemOptionalsText(item: CartItem): string {
     if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
       return item.groupedOptionalNames.join(' | ');
