@@ -16,6 +16,7 @@ import { getNFCeRecordBySaleId, type NFCeRecord } from '@/services/nfceService';
 import { loadCancellationsBySaleIds, SaleCancellationRecord } from '@/utils/saleCancellation';
 import { brl as formatPrice } from '@/components/pdv-v2/_format';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
+import { expandSalesWithSplits } from '@/utils/expandSalesWithSplits';
 
 function todayInSP(): string {
   const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
@@ -69,7 +70,7 @@ export default function PDVV2ComandasHistorico() {
 
       const { data, error } = await supabase
         .from('pdv_sales')
-        .select('id, final_total, customer_name, notes, created_at, payment_method:payment_methods(name)')
+        .select('id, final_total, customer_name, notes, created_at, payment_method_id, payment_method:payment_methods(name)')
         .eq('company_id', companyId)
         .or(orFilter)
         .gte('created_at', startISO)
@@ -77,26 +78,43 @@ export default function PDVV2ComandasHistorico() {
         .order('created_at', { ascending: false });
       if (error) throw error;
 
-      const rows: ClosedTabSaleCardData[] = (data || []).map((s: any) => ({
+      const baseRows = (data || []).map((s: any) => ({
         id: s.id,
+        real_id: s.id,
         final_total: Number(s.final_total) || 0,
         customer_name: s.customer_name,
         notes: s.notes,
         created_at: s.created_at,
+        payment_method_id: s.payment_method_id ?? null,
         payment_method_name: s.payment_method?.name || 'Sem forma',
+        origin: null,
+      }));
+      // Expande multi-pagamento: 1 linha por forma quando existirem splits.
+      const expanded = await expandSalesWithSplits(baseRows as any);
+      const rows: (ClosedTabSaleCardData & { real_id: string })[] = (expanded as any[]).map((s) => ({
+        id: s.id,
+        real_id: s.real_id || s.id.split('__')[0],
+        final_total: Number(s.final_total) || 0,
+        customer_name: s.customer_name,
+        notes: s.notes,
+        created_at: s.created_at,
+        payment_method_name: s.payment_method_name || 'Sem forma',
       }));
       setSales(rows);
 
       // Carregar NFC-e e cancelamentos em paralelo
-      const nfceEntries = await Promise.all(rows.map(async (s) => {
-        try { return [s.id, await getNFCeRecordBySaleId(s.id)] as const; }
-        catch { return [s.id, null] as const; }
+      const uniqueRealIds = Array.from(new Set(rows.map((r) => r.real_id)));
+      const nfceEntries = await Promise.all(uniqueRealIds.map(async (id) => {
+        try { return [id, await getNFCeRecordBySaleId(id)] as const; }
+        catch { return [id, null] as const; }
       }));
       const nm: Record<string, NFCeRecord | null> = {};
       nfceEntries.forEach(([id, rec]) => { nm[id] = rec; });
       setNfceMap(nm);
 
-      const cancelled = rows.filter((s) => s.notes?.includes('[CANCELADA]')).map((s) => s.id);
+      const cancelled = Array.from(new Set(
+        rows.filter((s) => s.notes?.includes('[CANCELADA]')).map((s) => s.real_id)
+      ));
       setCancelMap(cancelled.length ? await loadCancellationsBySaleIds(cancelled) : {});
     } catch (e: any) {
       console.error(e);
