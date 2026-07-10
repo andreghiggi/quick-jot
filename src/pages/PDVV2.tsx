@@ -1154,6 +1154,8 @@ export default function PDVV2() {
           onCloseCash={openCloseCashDialog}
           onNewOrder={() => setNewOrderOpen(true)}
           companyId={company?.id}
+          cashRegisterId={currentRegister?.id}
+          userId={user?.id}
         />
 
         {cashStateUnknown ? (
