@@ -218,18 +218,16 @@ export default function PDVV2() {
     return c;
   }, [dashboardOrders]);
 
-  // Faturamento do dia: filtra vendas do caixa para mostrar apenas as de hoje (America/Sao_Paulo)
+  // Faturamento do card "Pedidos": soma apenas pedidos (cardápio + express) com status
+  // 'delivered' do dia. Vendas cobradas mas não entregues NÃO entram aqui — elas continuam
+  // aparecendo normalmente no Relatório de Fechamento de Caixa (fonte pdv_sales).
+  // Comandas de mesa possuem card próprio (tablesMetrics.revenueToday) e não se misturam.
   const revenue = useMemo(() => {
-    const nowSP = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-    const todayStart = new Date(nowSP.getFullYear(), nowSP.getMonth(), nowSP.getDate());
-    return (sales || []).reduce((sum, s) => {
-      const saleDateSP = new Date(new Date(s.created_at).toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-      if (saleDateSP >= todayStart) {
-        return sum + (Number(s.final_total) || 0);
-      }
-      return sum;
+    return dashboardOrders.reduce((sum, o) => {
+      if (o.status !== 'delivered') return sum;
+      return sum + (Number((o as any).total) || 0);
     }, 0);
-  }, [sales]);
+  }, [dashboardOrders]);
 
   const filteredOrders = useMemo(
     () => (filter === 'all' ? visibleOrders : visibleOrders.filter((o) => o.status === filter)),
