@@ -42,7 +42,7 @@ export default function PDVV2ComandasHistorico() {
   const [search, setSearch] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [sales, setSales] = useState<ClosedTabSaleCardData[]>([]);
+  const [sales, setSales] = useState<(ClosedTabSaleCardData & { real_id: string })[]>([]);
   const [nfceMap, setNfceMap] = useState<Record<string, NFCeRecord | null>>({});
   const [cancelMap, setCancelMap] = useState<Record<string, SaleCancellationRecord>>({});
 
