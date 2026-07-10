@@ -51,7 +51,7 @@ import {
   checkMultiplusCardTransactionStatus,
   abortMultiplusCardSale,
 } from '@/services/multiplusCardService';
-import { Plus, Minus, ShoppingBag, X, Loader2, ArrowLeft, ArrowRight, Phone, User, Package, MapPin, CreditCard } from 'lucide-react';
+import { Plus, Minus, ShoppingBag, X, Loader2, ArrowLeft, ArrowRight, Phone, User, Package, MapPin, CreditCard, Copy } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -775,6 +775,22 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
   function removeCartItem(index: number) {
     setCart(prev => prev.filter((_, i) => i !== index));
+  }
+
+  function duplicateCartItem(index: number) {
+    setCart(prev => {
+      const item = prev[index];
+      if (!item) return prev;
+      const copy: CartItem = {
+        ...item,
+        quantity: 1,
+        selectedOptionals: item.selectedOptionals.map(o => ({ ...o })),
+        groupedOptionalNames: item.groupedOptionalNames ? [...item.groupedOptionalNames] : undefined,
+      };
+      const next = [...prev];
+      next.splice(index + 1, 0, copy);
+      return next;
+    });
   }
 
   function updateCartQuantity(index: number, delta: number) {
