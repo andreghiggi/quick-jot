@@ -600,6 +600,47 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
   }, [phoneDigits, searchCustomer]);
 
+  // Upsert do cliente após finalizar pedido — mesmo comportamento do cardápio online.
+  // Best-effort: nunca bloqueia o fluxo se falhar.
+  const upsertCustomerBestEffort = useCallback(async () => {
+    try {
+      if (!company?.id) return;
+      const clean = customerPhone.replace(/\D/g, '');
+      if (clean.length < 10) return;
+      const nameTrim = customerName.trim();
+      if (!nameTrim || nameTrim.toLowerCase() === 'cliente loja') return;
+      const hasAddr =
+        deliveryType === 'entrega' &&
+        deliveryAddress.trim().length > 0;
+      const fullAddress = hasAddr
+        ? `${deliveryAddress.trim()}, ${deliveryNumber.trim()}${deliveryComplement.trim() ? ` - ${deliveryComplement.trim()}` : ''} - ${deliveryNeighborhood.trim()}${deliveryReference.trim() ? ` | Ref: ${deliveryReference.trim()}` : ''}`
+        : null;
+      await supabase
+        .from('customers')
+        .upsert(
+          {
+            company_id: company.id,
+            phone: clean,
+            name: nameTrim,
+            ...(fullAddress ? { address: fullAddress } : {}),
+          },
+          { onConflict: 'company_id,phone', ignoreDuplicates: false },
+        );
+    } catch {
+      // silencioso — nunca quebra o pedido
+    }
+  }, [
+    company?.id,
+    customerPhone,
+    customerName,
+    deliveryType,
+    deliveryAddress,
+    deliveryNumber,
+    deliveryComplement,
+    deliveryNeighborhood,
+    deliveryReference,
+  ]);
+
   // --- Product selection handlers (mirrors Menu.tsx) ---
   function handleProductClick(product: Product) {
     setSelectedProduct(product);
@@ -1136,6 +1177,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       const createdShortCode = created.shortCode;
       const createdOrderCode = created.orderCode || 'EXPRESS';
       const createdDailyNumber = created.dailyNumber ?? 0;
+      // Salva/atualiza cliente para autofill futuro (best-effort).
+      upsertCustomerBestEffort();
       // ===== NFC-e (I9 "Finalizar Pedido" com Venda + NFC-e) =====
       // Cria pdv_sale e dispara emissão. Pop-up de status abre ao final.
       const wantsNfce =
@@ -1612,6 +1655,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         toast.error('Pedido não foi criado.');
         return;
       }
+      // Salva/atualiza cliente para autofill futuro (best-effort).
+      upsertCustomerBestEffort();
 
       // 2) Registra a venda (uma única pdv_sale, método = primary).
       const saleItems = cart.map((item) => ({
@@ -2187,6 +2232,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         origin: 'balcao',
       });
     }
+    // Salva/atualiza cliente para autofill futuro (best-effort).
+    upsertCustomerBestEffort();
     resetForm();
     onOpenChange(false);
   }
