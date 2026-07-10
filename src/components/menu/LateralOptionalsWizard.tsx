@@ -483,7 +483,15 @@ export function LateralOptionalsWizard({
           </Button>
         )}
         {isLast ? (
-          <Button onClick={() => onAddToCart(showRepeat ? repeatCount : 1)} className="min-w-0 flex-1 whitespace-nowrap px-3 text-sm sm:px-8 sm:text-base" size="lg">
+          <Button
+            onClick={() => {
+              if (!showRepeat) { onAddToCart(1); return; }
+              const notesList = [itemNotes || '', ...extraNotes];
+              onAddToCart(repeatCount, notesList);
+            }}
+            className="min-w-0 flex-1 whitespace-nowrap px-3 text-sm sm:px-8 sm:text-base"
+            size="lg"
+          >
             {comboMode === 'middle' ? (
               <>
                 Próximo item do combo
