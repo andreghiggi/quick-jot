@@ -800,7 +800,7 @@ export default function Menu() {
     });
   }
 
-  function addToCart(repeatCount: number = 1) {
+  function addToCart(repeatCount: number = 1, notesList?: string[]) {
     if (!selectedProduct) return;
     const times = Math.max(1, Math.floor(repeatCount || 1));
 
