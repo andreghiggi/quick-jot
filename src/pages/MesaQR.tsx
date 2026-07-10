@@ -731,13 +731,13 @@ export default function MesaQR() {
           <DialogHeader className="px-6 pt-6 pb-3 border-b">
             <DialogTitle>{selectedProduct?.name}</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto">
+          <div className={(selectedProduct && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) ? "flex-1 min-h-0 flex flex-col overflow-hidden" : "flex-1 overflow-y-auto"}>
             {selectedProduct && (
               <>
                 {selectedProduct.imageUrl && (
-                  <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-48 object-cover" />
+                  <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-48 object-cover flex-shrink-0" />
                 )}
-                <div className="px-6 py-4">
+                <div className={((selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) ? "px-6 py-4 flex-1 min-h-0 flex flex-col" : "px-6 py-4"}>
                   {(selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0)) ? (
                     <LateralOptionalsWizard
                       product={selectedProduct}
