@@ -40,7 +40,7 @@ interface LateralOptionalsWizardProps {
   onToggleGroupItem: (groupId: string, itemId: string, maxSelect: number) => void;
   onChangeGroupItemQty?: (groupId: string, itemId: string, delta: number, maxSelect: number, maxPerItem: number) => void;
   onNotesChange: (notes: string) => void;
-  onAddToCart: (repeatCount?: number) => void;
+  onAddToCart: (repeatCount?: number, notesList?: string[]) => void;
   isI9?: boolean;
   hideBasePrice?: boolean;
   comboMode?: 'middle' | 'last' | null;
