@@ -40,7 +40,7 @@ interface LateralOptionalsWizardProps {
   onToggleGroupItem: (groupId: string, itemId: string, maxSelect: number) => void;
   onChangeGroupItemQty?: (groupId: string, itemId: string, delta: number, maxSelect: number, maxPerItem: number) => void;
   onNotesChange: (notes: string) => void;
-  onAddToCart: (repeatCount?: number) => void;
+  onAddToCart: (repeatCount?: number, notesList?: string[]) => void;
   isI9?: boolean;
   hideBasePrice?: boolean;
   comboMode?: 'middle' | 'last' | null;
@@ -82,11 +82,34 @@ export function LateralOptionalsWizard({
 
   // Stepper "Repetir" — só faz sentido no passo de confirmação (ou último passo do combo).
   const [repeatCount, setRepeatCount] = useState(1);
+  // Observações individuais para as unidades extras (índice 0 = 2ª un., 1 = 3ª un., ...).
+  // A 1ª unidade continua usando o campo `itemNotes` da prop (compat total).
+  const [extraNotes, setExtraNotes] = useState<string[]>([]);
   useEffect(() => {
     setRepeatCount(1);
+    setExtraNotes([]);
   }, [product.id]);
   const showRepeat = comboMode !== 'middle'; // no meio do combo, ainda faltam etapas
   const MAX_REPEAT = 20;
+
+  function incRepeat() {
+    if (repeatCount >= MAX_REPEAT) return;
+    setExtraNotes((prev) => [...prev, '']);
+    setRepeatCount((n) => Math.min(MAX_REPEAT, n + 1));
+  }
+  function decRepeat() {
+    if (repeatCount <= 1) return;
+    const lastIdx = repeatCount - 2;
+    const lastNote = (extraNotes[lastIdx] || '').trim();
+    if (lastNote.length > 0) {
+      const ok = window.confirm(
+        `A observação da ${repeatCount}ª unidade será apagada:\n\n"${lastNote}"\n\nDeseja continuar?`
+      );
+      if (!ok) return;
+    }
+    setExtraNotes((prev) => prev.slice(0, -1));
+    setRepeatCount((n) => Math.max(1, n - 1));
+  }
 
   const step = steps[currentStep];
   const isFirst = currentStep === 0;
@@ -341,12 +364,41 @@ export function LateralOptionalsWizard({
           <div className="space-y-4">
             <div>
               <Label>Observações (opcional)</Label>
-              <Input
-                value={itemNotes}
-                onChange={(e) => onNotesChange(e.target.value)}
-                placeholder="Ex: Sem cebola, bem passado..."
-                className="mt-2"
-              />
+              {showRepeat && repeatCount > 1 ? (
+                <div className="space-y-2 mt-2">
+                  {Array.from({ length: repeatCount }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-muted-foreground w-14 flex-shrink-0">
+                        {i + 1}ª un.
+                      </span>
+                      <Input
+                        value={i === 0 ? itemNotes : (extraNotes[i - 1] ?? '')}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (i === 0) {
+                            onNotesChange(v);
+                          } else {
+                            setExtraNotes((prev) => {
+                              const next = [...prev];
+                              while (next.length < i) next.push('');
+                              next[i - 1] = v;
+                              return next;
+                            });
+                          }
+                        }}
+                        placeholder={i === 0 ? 'Ex: Sem cebola, bem passado...' : 'Observação (opcional)'}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Input
+                  value={itemNotes}
+                  onChange={(e) => onNotesChange(e.target.value)}
+                  placeholder="Ex: Sem cebola, bem passado..."
+                  className="mt-2"
+                />
+              )}
             </div>
 
             {/* Summary */}
@@ -360,7 +412,7 @@ export function LateralOptionalsWizard({
                       size="icon"
                       variant="outline"
                       className="h-7 w-7"
-                      onClick={() => setRepeatCount((n) => Math.max(1, n - 1))}
+                      onClick={decRepeat}
                       disabled={repeatCount <= 1}
                       title="Reduzir quantidade"
                     >
@@ -372,7 +424,7 @@ export function LateralOptionalsWizard({
                       size="icon"
                       variant="outline"
                       className="h-7 w-7"
-                      onClick={() => setRepeatCount((n) => Math.min(MAX_REPEAT, n + 1))}
+                      onClick={incRepeat}
                       disabled={repeatCount >= MAX_REPEAT}
                       title="Repetir com os mesmos adicionais"
                     >
@@ -431,7 +483,15 @@ export function LateralOptionalsWizard({
           </Button>
         )}
         {isLast ? (
-          <Button onClick={() => onAddToCart(showRepeat ? repeatCount : 1)} className="min-w-0 flex-1 whitespace-nowrap px-3 text-sm sm:px-8 sm:text-base" size="lg">
+          <Button
+            onClick={() => {
+              if (!showRepeat) { onAddToCart(1); return; }
+              const notesList = [itemNotes || '', ...extraNotes];
+              onAddToCart(repeatCount, notesList);
+            }}
+            className="min-w-0 flex-1 whitespace-nowrap px-3 text-sm sm:px-8 sm:text-base"
+            size="lg"
+          >
             {comboMode === 'middle' ? (
               <>
                 Próximo item do combo
