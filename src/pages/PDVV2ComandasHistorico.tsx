@@ -15,6 +15,7 @@ import { PDVV2ClosedTabSaleCard, ClosedTabSaleCardData } from '@/components/pdv-
 import { getNFCeRecordBySaleId, type NFCeRecord } from '@/services/nfceService';
 import { loadCancellationsBySaleIds, SaleCancellationRecord } from '@/utils/saleCancellation';
 import { brl as formatPrice } from '@/components/pdv-v2/_format';
+import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 
 function todayInSP(): string {
   const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
@@ -33,6 +34,7 @@ export default function PDVV2ComandasHistorico() {
   const { company } = useAuthContext();
   const companyId = company?.id;
   const { settings } = useStoreSettings({ companyId });
+  const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
 
   const [startDate, setStartDate] = useState<string>(todayInSP());
   const [endDate, setEndDate] = useState<string>(todayInSP());
@@ -129,6 +131,9 @@ export default function PDVV2ComandasHistorico() {
   const paymentOptions = useMemo(() => {
     const set = new Set<string>();
     let hasSem = false;
+    for (const pm of activePaymentMethods) {
+      if (pm.name) set.add(pm.name);
+    }
     for (const s of sales) {
       const n = s.payment_method_name;
       if (!n || n === 'Sem forma') hasSem = true;
@@ -137,7 +142,7 @@ export default function PDVV2ComandasHistorico() {
     const list = Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
     if (hasSem) list.push('Sem forma');
     return list;
-  }, [sales]);
+  }, [sales, activePaymentMethods]);
 
   const paymentLabel =
     paymentFilter.length === 0
