@@ -707,8 +707,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   }
 
   // addToCart — same logic as Menu.tsx, creates a catalog CartItem
-  function addToCart() {
+  function addToCart(repeatCount: number = 1) {
     if (!selectedProduct) return;
+    const times = Math.max(1, Math.floor(repeatCount || 1));
 
     // Validate min selections
     for (const group of selectedProductGroups) {
@@ -758,15 +759,15 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       groupedOptionalNames.push(`Adicionais: ${oldStyleStr}`);
     }
 
-    const newItem: CartItem = {
+    const makeItem = (): CartItem => ({
       product: selectedProduct,
       quantity: 1,
-      selectedOptionals: allOptionals,
-      groupedOptionalNames: groupedOptionalNames.length > 0 ? groupedOptionalNames : undefined,
+      selectedOptionals: allOptionals.map(o => ({ ...o })),
+      groupedOptionalNames: groupedOptionalNames.length > 0 ? [...groupedOptionalNames] : undefined,
       notes: itemNotes || undefined,
-    };
-
-    setCart(prev => [...prev, newItem]);
+    });
+    const newItems = Array.from({ length: times }, makeItem);
+    setCart(prev => [...prev, ...newItems]);
     setSelectedProduct(null);
     setSelectedOptionals([]);
     setSelectedGroupItems({});
@@ -2471,17 +2472,6 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                               <span>{item.quantity}x {item.product.name}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              {(item.selectedOptionals.length > 0 || (item.groupedOptionalNames && item.groupedOptionalNames.length > 0)) && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); duplicateCartItem(index); }}
-                                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                                  title="Repetir item com os mesmos adicionais"
-                                >
-                                  <Copy className="w-3 h-3" />
-                                  Repetir
-                                </button>
-                              )}
                               <span className="text-muted-foreground">R$ {itemTotal.toFixed(2)}</span>
                             </div>
                           </div>
