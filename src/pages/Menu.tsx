@@ -898,7 +898,11 @@ export default function Menu() {
         groupedOptionalNames: comboLines.length > 0 ? [...comboLines] : undefined,
         notes: undefined,
       });
-      const comboItems = Array.from({ length: times }, makeComboItem);
+      const comboItems = Array.from({ length: times }, (_, i) => {
+        const item = makeComboItem();
+        const perNote = (notesList?.[i] ?? '').trim();
+        return { ...item, notes: perNote || undefined };
+      });
       setCart(prev => [...prev, ...comboItems]);
       setLastAddedItem(comboItems[0]);
       setSelectedProduct(null);
@@ -907,14 +911,16 @@ export default function Menu() {
       return;
     }
 
-    const makeItem = (): CartItem => ({
-      product: selectedProduct,
-      quantity: 1,
-      selectedOptionals: allOptionals.map(o => ({ ...o })),
-      groupedOptionalNames: groupedOptionalNames.length > 0 ? [...groupedOptionalNames] : undefined,
-      notes: itemNotes || undefined,
+    const newItems = Array.from({ length: times }, (_, i): CartItem => {
+      const perNote = (notesList?.[i] ?? itemNotes ?? '').trim();
+      return {
+        product: selectedProduct,
+        quantity: 1,
+        selectedOptionals: allOptionals.map(o => ({ ...o })),
+        groupedOptionalNames: groupedOptionalNames.length > 0 ? [...groupedOptionalNames] : undefined,
+        notes: perNote || undefined,
+      };
     });
-    const newItems = Array.from({ length: times }, makeItem);
     setCart((prev) => [...prev, ...newItems]);
     setLastAddedItem(newItems[0]);
     setSelectedProduct(null);
