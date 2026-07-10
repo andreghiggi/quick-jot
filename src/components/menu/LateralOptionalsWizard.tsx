@@ -82,11 +82,34 @@ export function LateralOptionalsWizard({
 
   // Stepper "Repetir" — só faz sentido no passo de confirmação (ou último passo do combo).
   const [repeatCount, setRepeatCount] = useState(1);
+  // Observações individuais para as unidades extras (índice 0 = 2ª un., 1 = 3ª un., ...).
+  // A 1ª unidade continua usando o campo `itemNotes` da prop (compat total).
+  const [extraNotes, setExtraNotes] = useState<string[]>([]);
   useEffect(() => {
     setRepeatCount(1);
+    setExtraNotes([]);
   }, [product.id]);
   const showRepeat = comboMode !== 'middle'; // no meio do combo, ainda faltam etapas
   const MAX_REPEAT = 20;
+
+  function incRepeat() {
+    if (repeatCount >= MAX_REPEAT) return;
+    setExtraNotes((prev) => [...prev, '']);
+    setRepeatCount((n) => Math.min(MAX_REPEAT, n + 1));
+  }
+  function decRepeat() {
+    if (repeatCount <= 1) return;
+    const lastIdx = repeatCount - 2;
+    const lastNote = (extraNotes[lastIdx] || '').trim();
+    if (lastNote.length > 0) {
+      const ok = window.confirm(
+        `A observação da ${repeatCount}ª unidade será apagada:\n\n"${lastNote}"\n\nDeseja continuar?`
+      );
+      if (!ok) return;
+    }
+    setExtraNotes((prev) => prev.slice(0, -1));
+    setRepeatCount((n) => Math.max(1, n - 1));
+  }
 
   const step = steps[currentStep];
   const isFirst = currentStep === 0;
