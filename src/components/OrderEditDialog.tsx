@@ -362,7 +362,10 @@ export function OrderEditDialog({
     if (pickerMode.type === 'swap') {
       const target = working[pickerMode.targetIndex];
       const targetClean = cleanProductName(target.name);
-      const original = products.find((p) => p.name === targetClean);
+      // Prioriza busca pelo productId (robusto contra espaços/renome), depois nome com trim dos dois lados
+      const original =
+        (target.productId && products.find((p) => p.id === target.productId)) ||
+        products.find((p) => p.name.trim() === targetClean.trim());
       const targetCategory = original?.category;
       let list = swappableProducts;
       if (targetCategory) list = list.filter((p) => p.category === targetCategory);
