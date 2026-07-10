@@ -112,10 +112,13 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Get menu URL
+      // Get menu URL — prefere subdomínio da loja p/ evitar cache antigo de preview no WhatsApp
       const { data: company } = await supabase
-        .from('companies').select('slug').eq('id', c.company_id).maybeSingle();
-      const menuLink = `${PUBLIC_MENU_ORIGIN}/cardapio/${company?.slug || ''}`;
+        .from('companies').select('slug, subdomain').eq('id', c.company_id).maybeSingle();
+      const sub = (company as any)?.subdomain ? String((company as any).subdomain).trim().toLowerCase() : '';
+      const menuLink = sub
+        ? `https://${sub}.comandatech.com.br`
+        : `${PUBLIC_MENU_ORIGIN}/cardapio/${company?.slug || ''}`;
 
       // Variation: A on even sent_count, B on odd
       const variation = (c.sent_count % 2 === 0) ? 'A' : 'B';
