@@ -1117,32 +1117,46 @@ export default function FrenteCaixa() {
             }
           })();
         } else if (silentAutoNfce) {
-          // Caminho silencioso: emite, faz polling até autorizar e imprime DANFE.
+          // Caminho bloqueante rápido: emite, confirma e imprime DANFE.
+          // O overlay `silentPhase` impede o operador de iniciar outra venda
+          // até o cupom sair. Otimizado para 2-4s no caso feliz (SEFAZ já
+          // devolve autorizada na primeira chamada).
           (async () => {
             setSilentPhase('emitting');
             try {
               await emitirNFCe(company!.id, saleId, nfcePayload!);
-              await new Promise((r) => setTimeout(r, 400));
+              // A resposta da API já criou o registro em `nfce_records` com o
+              // status devolvido pela SEFAZ (na maioria das vezes 'autorizada').
+              // Delay mínimo pro insert propagar e busca única.
+              await new Promise((r) => setTimeout(r, 150));
               let rec = await getNFCeRecordBySaleId(saleId);
-              // Polling curto (até ~30s) até status resolver.
-              for (let i = 0; i < 15; i++) {
+              // Polling curto de segurança (até ~6s) só se ainda estiver
+              // pendente/processando — cobre o caso raro da SEFAZ demorar.
+              for (let i = 0; i < 6; i++) {
                 if (rec && (rec.status === 'autorizada' || rec.status === 'rejeitada' || rec.status === 'erro')) break;
                 if (rec?.nfce_id) {
                   try { await consultarNFCe(company!.id, rec.nfce_id); } catch { /* noop */ }
                 }
-                await new Promise((r) => setTimeout(r, 2000));
+                await new Promise((r) => setTimeout(r, 1000));
                 rec = await getNFCeRecordBySaleId(saleId);
               }
               if (rec?.status === 'autorizada') {
                 setSilentPhase('printing');
                 try {
-                  // Usa iframe (não pop-up) porque a chamada acontece após
-                  // segundos de polling assíncrono — pop-ups sem gesto do
-                  // usuário são bloqueados pelo Chrome.
-                  await printDanfeFromRecordViaIframe(rec, danfeOpts);
+                  // Pop-up nativo: como a emissão agora resolve em 1-3s, o
+                  // gesto do clique em "Cobrar" ainda vale e o Chrome libera
+                  // o `window.open`. Não bloqueia o JavaScript da página
+                  // como o iframe fazia.
+                  await printDanfeFromRecord(rec, danfeOpts);
                   toast.success(`NFC-e nº ${rec.numero || ''} autorizada — DANFE impressa.`);
                 } catch (e: any) {
-                  toast.error(e?.message || 'Erro ao imprimir DANFE');
+                  // Se o pop-up foi bloqueado, cai pro iframe como fallback.
+                  try {
+                    await printDanfeFromRecordViaIframe(rec, danfeOpts);
+                    toast.success(`NFC-e nº ${rec.numero || ''} autorizada — DANFE impressa.`);
+                  } catch (e2: any) {
+                    toast.error(e2?.message || e?.message || 'Erro ao imprimir DANFE');
+                  }
                 }
               } else if (rec) {
                 // Rejeitada/erro: aí sim abre o diálogo pra o operador ver.
