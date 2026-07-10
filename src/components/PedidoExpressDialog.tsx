@@ -51,7 +51,7 @@ import {
   checkMultiplusCardTransactionStatus,
   abortMultiplusCardSale,
 } from '@/services/multiplusCardService';
-import { Plus, Minus, ShoppingBag, X, Loader2, ArrowLeft, ArrowRight, Phone, User, Package, MapPin, CreditCard } from 'lucide-react';
+import { Plus, Minus, ShoppingBag, X, Loader2, ArrowLeft, ArrowRight, Phone, User, Package, MapPin, CreditCard, Copy } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -775,6 +775,22 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
   function removeCartItem(index: number) {
     setCart(prev => prev.filter((_, i) => i !== index));
+  }
+
+  function duplicateCartItem(index: number) {
+    setCart(prev => {
+      const item = prev[index];
+      if (!item) return prev;
+      const copy: CartItem = {
+        ...item,
+        quantity: 1,
+        selectedOptionals: item.selectedOptionals.map(o => ({ ...o })),
+        groupedOptionalNames: item.groupedOptionalNames ? [...item.groupedOptionalNames] : undefined,
+      };
+      const next = [...prev];
+      next.splice(index + 1, 0, copy);
+      return next;
+    });
   }
 
   function updateCartQuantity(index: number, delta: number) {
@@ -2454,7 +2470,20 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                               </button>
                               <span>{item.quantity}x {item.product.name}</span>
                             </div>
-                            <span className="text-muted-foreground">R$ {itemTotal.toFixed(2)}</span>
+                            <div className="flex items-center gap-2">
+                              {(item.selectedOptionals.length > 0 || (item.groupedOptionalNames && item.groupedOptionalNames.length > 0)) && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); duplicateCartItem(index); }}
+                                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                  title="Repetir item com os mesmos adicionais"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                  Repetir
+                                </button>
+                              )}
+                              <span className="text-muted-foreground">R$ {itemTotal.toFixed(2)}</span>
+                            </div>
                           </div>
                           {item.groupedOptionalNames && item.groupedOptionalNames.length > 0 && (
                             <div className="ml-7 text-xs text-muted-foreground">

@@ -955,6 +955,23 @@ export default function Menu() {
     setCart((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function duplicateCartItem(index: number) {
+    setCart((prev) => {
+      const item = prev[index];
+      if (!item) return prev;
+      // Deep-copy selectedOptionals para evitar referências compartilhadas
+      const copy: CartItem = {
+        ...item,
+        quantity: 1,
+        selectedOptionals: item.selectedOptionals.map((o) => ({ ...o })),
+        groupedOptionalNames: item.groupedOptionalNames ? [...item.groupedOptionalNames] : undefined,
+      };
+      const next = [...prev];
+      next.splice(index + 1, 0, copy);
+      return next;
+    });
+  }
+
   function buildCartItemOptionalsText(item: CartItem): string {
     if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
       return item.groupedOptionalNames.join(' | ');
@@ -2202,6 +2219,18 @@ export default function Menu() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
+                      {(item.selectedOptionals.length > 0 || (item.groupedOptionalNames && item.groupedOptionalNames.length > 0)) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2 ml-1"
+                          onClick={() => duplicateCartItem(index)}
+                          title="Repetir item com os mesmos adicionais"
+                        >
+                          <Copy className="h-3.5 w-3.5 mr-1" />
+                          Repetir
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
