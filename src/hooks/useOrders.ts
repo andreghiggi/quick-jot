@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { generateWhatsAppMessage } from '@/utils/whatsappMessages';
 import { formatOrderItemWhatsApp } from '@/utils/formatOrderItemWhatsApp';
 import { useOrderNotificationSound } from '@/hooks/useOrderNotificationSound';
+import { buildMenuLink } from '@/utils/menuLink';
 
 interface UseOrdersOptions {
   companyId?: string | null;
