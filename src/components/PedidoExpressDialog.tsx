@@ -3251,7 +3251,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           {/* Add to cart button — only for non-wizard flow */}
           {selectedProduct && !(useWizardFlow && hasOptionalsOrGroups) && (
             <div className="px-6 py-4 border-t flex-shrink-0 bg-background">
-              <Button onClick={addToCart} className="w-full" size="lg">
+              <Button onClick={() => addToCart(1)} className="w-full" size="lg">
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar ao carrinho
               </Button>
