@@ -2232,6 +2232,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         origin: 'balcao',
       });
     }
+    // Salva/atualiza cliente para autofill futuro (best-effort).
+    upsertCustomerBestEffort();
     resetForm();
     onOpenChange(false);
   }
