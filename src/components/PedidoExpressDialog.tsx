@@ -707,7 +707,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   }
 
   // addToCart — same logic as Menu.tsx, creates a catalog CartItem
-  function addToCart(repeatCount: number = 1) {
+  function addToCart(repeatCount: number = 1, notesList?: string[]) {
     if (!selectedProduct) return;
     const times = Math.max(1, Math.floor(repeatCount || 1));
 
@@ -759,14 +759,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       groupedOptionalNames.push(`Adicionais: ${oldStyleStr}`);
     }
 
-    const makeItem = (): CartItem => ({
-      product: selectedProduct,
-      quantity: 1,
-      selectedOptionals: allOptionals.map(o => ({ ...o })),
-      groupedOptionalNames: groupedOptionalNames.length > 0 ? [...groupedOptionalNames] : undefined,
-      notes: itemNotes || undefined,
+    const newItems = Array.from({ length: times }, (_, i): CartItem => {
+      const perNote = (notesList?.[i] ?? itemNotes ?? '').trim();
+      return {
+        product: selectedProduct,
+        quantity: 1,
+        selectedOptionals: allOptionals.map(o => ({ ...o })),
+        groupedOptionalNames: groupedOptionalNames.length > 0 ? [...groupedOptionalNames] : undefined,
+        notes: perNote || undefined,
+      };
     });
-    const newItems = Array.from({ length: times }, makeItem);
     setCart(prev => [...prev, ...newItems]);
     setSelectedProduct(null);
     setSelectedOptionals([]);
