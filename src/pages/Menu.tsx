@@ -2221,18 +2221,6 @@ export default function Menu() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                      {(item.selectedOptionals.length > 0 || (item.groupedOptionalNames && item.groupedOptionalNames.length > 0)) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 px-2 ml-1"
-                          onClick={() => duplicateCartItem(index)}
-                          title="Repetir item com os mesmos adicionais"
-                        >
-                          <Copy className="h-3.5 w-3.5 mr-1" />
-                          Repetir
-                        </Button>
-                      )}
                     </div>
                   </div>
                 ))}
