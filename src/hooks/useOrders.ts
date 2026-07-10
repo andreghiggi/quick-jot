@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { generateWhatsAppMessage } from '@/utils/whatsappMessages';
 import { formatOrderItemWhatsApp } from '@/utils/formatOrderItemWhatsApp';
 import { useOrderNotificationSound } from '@/hooks/useOrderNotificationSound';
+import { buildMenuLink } from '@/utils/menuLink';
 
 interface UseOrdersOptions {
   companyId?: string | null;
@@ -288,7 +289,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
               // Get store name and address
               const { data: companyData } = await supabase
                 .from('companies')
-                .select('name, address, slug')
+                .select('name, address, slug, subdomain')
                 .eq('id', companyId)
                 .single();
 
@@ -312,8 +313,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
               // Determine delivery type from order notes (contains "Retirada" or "Entrega")
               const isPickup = order.notes?.includes('Retirada') || !order.deliveryAddress;
 
-              // Build menu link
-              const menuLink = companyData?.slug ? `https://app.comandatech.com.br/cardapio/${companyData.slug}` : '';
+              // Build menu link (prefere subdomínio da loja quando existir)
+              const menuLink = buildMenuLink(companyData as any);
               
               const message = generateWhatsAppMessage({
                 customerName: order.customerName,
@@ -500,7 +501,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
       const { data: companyData } = await supabase
         .from('companies')
-        .select('name, address, slug')
+        .select('name, address, slug, subdomain')
         .eq('id', companyId)
         .single();
 
@@ -516,7 +517,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
       });
 
       const isPickup = order.notes?.includes('Retirada') || !order.deliveryAddress;
-      const menuLink = companyData?.slug ? `https://app.comandatech.com.br/cardapio/${companyData.slug}` : '';
+      const menuLink = buildMenuLink(companyData as any);
 
       // Build resumo string with items, payment, and delivery info
       let resumo = '';

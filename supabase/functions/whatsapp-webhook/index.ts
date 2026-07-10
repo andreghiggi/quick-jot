@@ -253,7 +253,7 @@ serve(async (req) => {
       const { dayOfWeek } = getSaoPauloTime();
 
       const [companyRes, moduleRes, hoursRes, settingsRes, schedulingModuleRes] = await Promise.all([
-        supabase.from('companies').select('name, slug').eq('id', companyId).single(),
+        supabase.from('companies').select('name, slug, subdomain').eq('id', companyId).single(),
         supabase.from('company_modules').select('enabled').eq('company_id', companyId).eq('module_name', 'whatsapp').maybeSingle(),
         supabase.from('business_hours').select('*').eq('company_id', companyId),
         supabase.from('store_settings').select('key, value').eq('company_id', companyId).in('key', ['site_url', 'whatsapp_msg_autoreply_closed', 'whatsapp_msg_autoreply_closed_scheduling', 'whatsapp_msg_autoreply_closed_no_hours_today']),
@@ -279,7 +279,12 @@ serve(async (req) => {
       });
 
       const baseUrl = sanitizeBaseUrl(settingsMap['site_url'] || Deno.env.get('SITE_URL') || null);
-      const menuUrl = `${baseUrl.replace(/\/$/, '')}/cardapio/${company.slug}`;
+      // Prefere subdomínio da loja (ex: vanialanches.comandatech.com.br) para evitar
+      // cache antigo de preview do WhatsApp em links /cardapio/{slug}.
+      const subdomain = (company as any).subdomain ? String((company as any).subdomain).trim().toLowerCase() : '';
+      const menuUrl = subdomain
+        ? `https://${subdomain}.comandatech.com.br`
+        : `${baseUrl.replace(/\/$/, '')}/cardapio/${company.slug}`;
 
       // Try to get sender name from contacts
       const senderName = messageData.pushName || 'cliente';
