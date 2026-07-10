@@ -1177,6 +1177,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       const createdShortCode = created.shortCode;
       const createdOrderCode = created.orderCode || 'EXPRESS';
       const createdDailyNumber = created.dailyNumber ?? 0;
+      // Salva/atualiza cliente para autofill futuro (best-effort).
+      upsertCustomerBestEffort();
       // ===== NFC-e (I9 "Finalizar Pedido" com Venda + NFC-e) =====
       // Cria pdv_sale e dispara emissão. Pop-up de status abre ao final.
       const wantsNfce =
