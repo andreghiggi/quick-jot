@@ -2104,7 +2104,7 @@ export default function Menu() {
           {/* Fixed bottom button - only for non-wizard flow */}
           {selectedProduct && !(settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) && (
             <div className="px-6 py-4 border-t flex-shrink-0 bg-background">
-              <Button onClick={addToCart} className="w-full" size="lg" disabled={!allMandatoryComplete}>
+              <Button onClick={() => addToCart(1)} className="w-full" size="lg" disabled={!allMandatoryComplete}>
                 <Plus className="h-4 w-4 mr-2" />
                 {comboFlow
                   ? (comboFlow.index + 1 < comboFlow.steps.length ? 'Próximo item do combo' : 'Adicionar combo ao carrinho')
