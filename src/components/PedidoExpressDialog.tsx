@@ -1655,6 +1655,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         toast.error('Pedido não foi criado.');
         return;
       }
+      // Salva/atualiza cliente para autofill futuro (best-effort).
+      upsertCustomerBestEffort();
 
       // 2) Registra a venda (uma única pdv_sale, método = primary).
       const saleItems = cart.map((item) => ({
