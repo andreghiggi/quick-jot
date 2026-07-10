@@ -99,15 +99,47 @@ export function LateralOptionalsWizard({
   }
   function decRepeat() {
     if (repeatCount <= 1) return;
-    const lastIdx = repeatCount - 2;
-    const lastNote = (extraNotes[lastIdx] || '').trim();
-    if (lastNote.length > 0) {
-      const ok = window.confirm(
-        `A observação da ${repeatCount}ª unidade será apagada:\n\n"${lastNote}"\n\nDeseja continuar?`
-      );
-      if (!ok) return;
+    // Coleta todas as observações (índice 0 = 1ª un. = itemNotes, demais = extraNotes)
+    const allNotes: string[] = [itemNotes || '', ...extraNotes];
+    const filledIdx: number[] = [];
+    allNotes.forEach((n, i) => { if ((n || '').trim().length > 0) filledIdx.push(i); });
+
+    // Se nenhuma obs preenchida, apenas remove a última unidade silenciosamente.
+    if (filledIdx.length === 0) {
+      setExtraNotes((prev) => prev.slice(0, -1));
+      setRepeatCount((n) => Math.max(1, n - 1));
+      return;
     }
-    setExtraNotes((prev) => prev.slice(0, -1));
+
+    // Pergunta qual unidade remover, listando as observações.
+    const listaTxt = allNotes
+      .map((n, i) => `${i + 1}) ${i + 1}ª un.: ${(n || '').trim() ? `"${(n || '').trim()}"` : '(sem observação)'}`)
+      .join('\n');
+    const raw = window.prompt(
+      `Você tem ${repeatCount} unidades com observações. Qual unidade deseja remover?\n\n${listaTxt}\n\nDigite o número (1 a ${repeatCount}):`,
+      String(repeatCount)
+    );
+    if (raw === null) return; // cancelou
+    const chosen = parseInt(raw.trim(), 10);
+    if (!Number.isFinite(chosen) || chosen < 1 || chosen > repeatCount) {
+      window.alert('Número inválido. Nenhuma unidade removida.');
+      return;
+    }
+    const idx = chosen - 1;
+
+    if (idx === 0) {
+      // Remove a 1ª unidade: promove a 2ª (extraNotes[0]) para itemNotes.
+      const promoted = extraNotes[0] ?? '';
+      onNotesChange(promoted);
+      setExtraNotes((prev) => prev.slice(1));
+    } else {
+      // Remove uma unidade extra específica.
+      setExtraNotes((prev) => {
+        const next = [...prev];
+        next.splice(idx - 1, 1);
+        return next;
+      });
+    }
     setRepeatCount((n) => Math.max(1, n - 1));
   }
 
