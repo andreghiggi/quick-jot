@@ -364,12 +364,41 @@ export function LateralOptionalsWizard({
           <div className="space-y-4">
             <div>
               <Label>Observações (opcional)</Label>
-              <Input
-                value={itemNotes}
-                onChange={(e) => onNotesChange(e.target.value)}
-                placeholder="Ex: Sem cebola, bem passado..."
-                className="mt-2"
-              />
+              {showRepeat && repeatCount > 1 ? (
+                <div className="space-y-2 mt-2">
+                  {Array.from({ length: repeatCount }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-muted-foreground w-14 flex-shrink-0">
+                        {i + 1}ª un.
+                      </span>
+                      <Input
+                        value={i === 0 ? itemNotes : (extraNotes[i - 1] ?? '')}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (i === 0) {
+                            onNotesChange(v);
+                          } else {
+                            setExtraNotes((prev) => {
+                              const next = [...prev];
+                              while (next.length < i) next.push('');
+                              next[i - 1] = v;
+                              return next;
+                            });
+                          }
+                        }}
+                        placeholder={i === 0 ? 'Ex: Sem cebola, bem passado...' : 'Observação (opcional)'}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Input
+                  value={itemNotes}
+                  onChange={(e) => onNotesChange(e.target.value)}
+                  placeholder="Ex: Sem cebola, bem passado..."
+                  className="mt-2"
+                />
+              )}
             </div>
 
             {/* Summary */}
