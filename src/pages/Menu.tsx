@@ -800,8 +800,9 @@ export default function Menu() {
     });
   }
 
-  function addToCart() {
+  function addToCart(repeatCount: number = 1) {
     if (!selectedProduct) return;
+    const times = Math.max(1, Math.floor(repeatCount || 1));
 
     // Validate min selections for optional groups
     for (const group of selectedProductGroups) {
@@ -890,31 +891,32 @@ export default function Menu() {
             active: true,
           }]
         : [];
-      const finalItem: CartItem = {
+      const makeComboItem = (): CartItem => ({
         product: comboFlow.combo,
         quantity: 1,
-        selectedOptionals: comboPaidExtras,
-        groupedOptionalNames: comboLines.length > 0 ? comboLines : undefined,
+        selectedOptionals: comboPaidExtras.map(o => ({ ...o })),
+        groupedOptionalNames: comboLines.length > 0 ? [...comboLines] : undefined,
         notes: undefined,
-      };
-      setCart(prev => [...prev, finalItem]);
-      setLastAddedItem(finalItem);
+      });
+      const comboItems = Array.from({ length: times }, makeComboItem);
+      setCart(prev => [...prev, ...comboItems]);
+      setLastAddedItem(comboItems[0]);
       setSelectedProduct(null);
       setComboFlow(null);
       setShowAddedToCart(true);
       return;
     }
 
-    const newItem: CartItem = {
+    const makeItem = (): CartItem => ({
       product: selectedProduct,
       quantity: 1,
-      selectedOptionals: allOptionals,
-      groupedOptionalNames: groupedOptionalNames.length > 0 ? groupedOptionalNames : undefined,
+      selectedOptionals: allOptionals.map(o => ({ ...o })),
+      groupedOptionalNames: groupedOptionalNames.length > 0 ? [...groupedOptionalNames] : undefined,
       notes: itemNotes || undefined,
-    };
-
-    setCart((prev) => [...prev, newItem]);
-    setLastAddedItem(newItem);
+    });
+    const newItems = Array.from({ length: times }, makeItem);
+    setCart((prev) => [...prev, ...newItems]);
+    setLastAddedItem(newItems[0]);
     setSelectedProduct(null);
     setSelectedOptionals([]);
     setSelectedGroupItems({});
