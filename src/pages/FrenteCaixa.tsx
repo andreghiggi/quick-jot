@@ -166,16 +166,10 @@ export default function FrenteCaixa() {
   const [nfceEmitting, setNfceEmitting] = useState(false);
   const [postSaleOpen, setPostSaleOpen] = useState(false);
   const [postSaleRecord, setPostSaleRecord] = useState<NFCeRecord | null>(null);
-  // ── Pós-venda consolidado (v1.39.x) — só nas lojas piloto ───────────────
-  const FC_CONSOLIDATED_POST_SALE_ALLOW: ReadonlySet<string> = useMemo(
-    () =>
-      new Set([
-        '55181771-8b10-4af1-afc3-472c090a49be', // Cozinha da Ruiva
-        '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da i9
-      ]),
-    [],
-  );
-  const useConsolidatedPostSale = !!company?.id && FC_CONSOLIDATED_POST_SALE_ALLOW.has(company.id);
+  // ── Pós-venda consolidado (v1.39.x) — habilitado globalmente ─────────────
+  // Teste inicial: Lancheria da I9. Fluxo é seguro para todas as lojas pois
+  // preserva o comportamento bloqueante otimizado (polling 6s + pop-up nativo).
+  const useConsolidatedPostSale = !!company?.id;
   const tefCapturedRef = useRef<TefPrintPromptPayload | null>(null);
   const [consolidatedOpen, setConsolidatedOpen] = useState(false);
   const [consolidatedTef, setConsolidatedTef] = useState<TefPrintPromptPayload | null>(null);
