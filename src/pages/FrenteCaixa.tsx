@@ -180,7 +180,7 @@ export default function FrenteCaixa() {
    *  + configurações da Frente de Caixa. Recalculado em cada `handleConfirmPayment`. */
   const [danfeOpts, setDanfeOpts] = useState<DanfePrintOptions | undefined>(undefined);
   // Overlay bloqueante do fluxo silencioso (modo auto, sem TEF).
-  const [silentPhase, setSilentPhase] = useState<null | 'emitting' | 'printing'>(null);
+  const [silentPhase, setSilentPhase] = useState<null | { label: string; detail?: string }>(null);
 
   // Instala/desinstala o interceptor do prompt TEF enquanto a página está
   // montada e a loja está na allow-list. Fora dessa condição, o fluxo atual
@@ -1116,18 +1116,20 @@ export default function FrenteCaixa() {
           // até o cupom sair. Otimizado para 2-4s no caso feliz (SEFAZ já
           // devolve autorizada na primeira chamada).
           (async () => {
-            setSilentPhase('emitting');
+            setSilentPhase({ label: 'Emitindo NFC-e...', detail: 'Enviando dados para a SEFAZ' });
             try {
               await emitirNFCe(company!.id, saleId, nfcePayload!);
               // A resposta da API já criou o registro em `nfce_records` com o
               // status devolvido pela SEFAZ (na maioria das vezes 'autorizada').
               // Delay mínimo pro insert propagar e busca única.
+              setSilentPhase({ label: 'Confirmando autorização...', detail: 'Consultando retorno da SEFAZ' });
               await new Promise((r) => setTimeout(r, 150));
               let rec = await getNFCeRecordBySaleId(saleId);
               // Polling curto de segurança (até ~6s) só se ainda estiver
               // pendente/processando — cobre o caso raro da SEFAZ demorar.
               for (let i = 0; i < 6; i++) {
                 if (rec && (rec.status === 'autorizada' || rec.status === 'rejeitada' || rec.status === 'erro')) break;
+                setSilentPhase({ label: 'Consultando SEFAZ...', detail: `Tentativa ${i + 1}/6` });
                 if (rec?.nfce_id) {
                   try { await consultarNFCe(company!.id, rec.nfce_id); } catch { /* noop */ }
                 }
@@ -1135,17 +1137,19 @@ export default function FrenteCaixa() {
                 rec = await getNFCeRecordBySaleId(saleId);
               }
               if (rec?.status === 'autorizada') {
-                setSilentPhase('printing');
+                setSilentPhase({ label: `NFC-e autorizada${rec.numero ? ` nº ${rec.numero}` : ''}`, detail: 'Preparando impressão do DANFE' });
                 try {
                   // Pop-up nativo: como a emissão agora resolve em 1-3s, o
                   // gesto do clique em "Cobrar" ainda vale e o Chrome libera
                   // o `window.open`. Não bloqueia o JavaScript da página
                   // como o iframe fazia.
+                  setSilentPhase({ label: 'Enviando para impressão...', detail: 'Abrindo diálogo de impressão' });
                   await printDanfeFromRecord(rec, danfeOpts);
                   toast.success(`NFC-e nº ${rec.numero || ''} autorizada — DANFE impressa.`);
                 } catch (e: any) {
                   // Se o pop-up foi bloqueado, cai pro iframe como fallback.
                   try {
+                    setSilentPhase({ label: 'Enviando para impressão...', detail: 'Fallback via iframe' });
                     await printDanfeFromRecordViaIframe(rec, danfeOpts);
                     toast.success(`NFC-e nº ${rec.numero || ''} autorizada — DANFE impressa.`);
                   } catch (e2: any) {
@@ -2036,10 +2040,11 @@ export default function FrenteCaixa() {
         <div className="fixed inset-0 z-[9999] bg-background/80 backdrop-blur-sm flex items-center justify-center">
           <div className="bg-card border rounded-lg shadow-lg p-6 min-w-[320px] flex flex-col items-center gap-3">
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
-            <p className="text-lg font-semibold">
-              {silentPhase === 'emitting' ? 'Emitindo NFC-e...' : 'Imprimindo NFC-e...'}
-            </p>
-            <p className="text-sm text-muted-foreground">Aguarde, não feche esta tela.</p>
+            <p className="text-lg font-semibold text-center">{silentPhase.label}</p>
+            {silentPhase.detail && (
+              <p className="text-sm text-muted-foreground text-center">{silentPhase.detail}</p>
+            )}
+            <p className="text-xs text-muted-foreground">Aguarde, não feche esta tela.</p>
           </div>
         </div>
       )}
