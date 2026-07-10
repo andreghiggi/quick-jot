@@ -503,7 +503,7 @@ export function LateralOptionalsWizard({
       </div>
 
       {/* Navigation */}
-      <div className="sticky bottom-0 left-0 right-0 z-20 flex gap-2 mt-4 pt-3 pb-3 border-t bg-background flex-shrink-0 -mx-6 px-6 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.08)]">
+      <div className="flex gap-2 mt-4 pt-3 pb-3 border-t bg-background flex-shrink-0">
         {!isFirst && (
           <Button
             variant="outline"

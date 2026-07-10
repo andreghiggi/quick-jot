@@ -3061,7 +3061,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle className="pr-6">{selectedProduct?.name}</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className={(selectedProduct && useWizardFlow && hasOptionalsOrGroups) ? "flex-1 min-h-0 flex flex-col overflow-hidden px-6 py-4" : "flex-1 overflow-y-auto px-6 py-4"}>
             {selectedProduct && (
               useWizardFlow && hasOptionalsOrGroups ? (
                 <LateralOptionalsWizard
