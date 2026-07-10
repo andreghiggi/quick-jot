@@ -296,8 +296,8 @@ export default function PDVV2ComandasHistorico() {
                 <PDVV2ClosedTabSaleCard
                   key={s.id}
                   sale={s}
-                  nfce={nfceMap[s.id] || null}
-                  cancellation={cancelMap[s.id] || null}
+                  nfce={nfceMap[(s as any).real_id || s.id] || null}
+                  cancellation={cancelMap[(s as any).real_id || s.id] || null}
                   companyId={companyId}
                   paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
                   printLayout={settings.printLayout}
