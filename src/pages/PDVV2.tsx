@@ -1112,15 +1112,14 @@ export default function PDVV2() {
       // O operador precisa finalizar tudo antes de fechar o caixa.
       if (companyId) {
         try {
-          // Início do dia em America/Sao_Paulo
-          const nowSP = new Date(
-            new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }),
+          // Início do dia em America/Sao_Paulo (independente do fuso do navegador)
+          const now = new Date();
+          const spNow = new Date(
+            now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }),
           );
-          const startSP = new Date(nowSP);
-          startSP.setHours(0, 0, 0, 0);
-          const startISO = new Date(
-            startSP.getTime() - startSP.getTimezoneOffset() * 60000,
-          ).toISOString();
+          const offsetMs = spNow.getTime() - now.getTime();
+          spNow.setHours(0, 0, 0, 0);
+          const startISO = new Date(spNow.getTime() - offsetMs).toISOString();
           const [ordersRes, tabsRes] = await Promise.all([
             supabase
               .from('orders')
