@@ -1383,6 +1383,44 @@ export default function PDVV2() {
         onConfirm={handleCloseCash}
       />
 
+      <AlertDialog open={!!pendingBlock} onOpenChange={(o) => !o && setPendingBlock(null)}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-xl">
+              Pendências no caixa
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-base pt-2">
+              {pendingBlock && (
+                <>
+                  {[
+                    pendingBlock.orders > 0 &&
+                      `${pendingBlock.orders} pedido${pendingBlock.orders > 1 ? 's' : ''} do dia em aberto`,
+                    pendingBlock.tabs > 0 &&
+                      `${pendingBlock.tabs} mesa${pendingBlock.tabs > 1 ? 's' : ''} em aberto`,
+                  ]
+                    .filter(Boolean)
+                    .join(' e ')}
+                  .
+                  <br />
+                  Finalize{' '}
+                  {pendingBlock.orders > 0 && pendingBlock.tabs > 0
+                    ? 'todos'
+                    : pendingBlock.orders > 0
+                    ? 'os pedidos'
+                    : 'as mesas'}{' '}
+                  para fechar o caixa.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center">
+            <AlertDialogAction onClick={() => setPendingBlock(null)}>
+              Entendi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <PDVV2PaymentDialog
         open={!!importingTab}
         onOpenChange={(o) => {
