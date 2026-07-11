@@ -1099,16 +1099,26 @@ export default function PDVV2() {
   async function openCloseCashDialog() {
     if (currentRegister?.id) {
       // Trava de fechamento: bloqueia se existirem pedidos ativos
-      // (pending/preparing/ready) ou comandas/mesas em aberto.
+      // do dia (pending/preparing/ready) ou comandas/mesas em aberto.
       // O operador precisa finalizar tudo antes de fechar o caixa.
       if (companyId) {
         try {
+          // Início do dia em America/Sao_Paulo
+          const nowSP = new Date(
+            new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }),
+          );
+          const startSP = new Date(nowSP);
+          startSP.setHours(0, 0, 0, 0);
+          const startISO = new Date(
+            startSP.getTime() - startSP.getTimezoneOffset() * 60000,
+          ).toISOString();
           const [ordersRes, tabsRes] = await Promise.all([
             supabase
               .from('orders')
               .select('id', { count: 'exact', head: true })
               .eq('company_id', companyId)
-              .in('status', ['pending', 'preparing', 'ready']),
+              .in('status', ['pending', 'preparing', 'ready'])
+              .gte('created_at', startISO),
             supabase
               .from('tabs')
               .select('id', { count: 'exact', head: true })
@@ -1118,15 +1128,7 @@ export default function PDVV2() {
           const openOrders = ordersRes.count || 0;
           const openTabs = tabsRes.count || 0;
           if (openOrders > 0 || openTabs > 0) {
-            const parts: string[] = [];
-            if (openOrders > 0)
-              parts.push(`${openOrders} pedido${openOrders > 1 ? 's' : ''} em aberto`);
-            if (openTabs > 0)
-              parts.push(`${openTabs} mesa${openTabs > 1 ? 's' : ''} em aberto`);
-            toast.error('Pendências no caixa', {
-              description: `${parts.join(' e ')}. Finalize-${parts.length > 1 ? 'os' : (openOrders > 0 ? 'os' : 'as')} para fechar o caixa.`,
-              duration: 8000,
-            });
+            setPendingBlock({ orders: openOrders, tabs: openTabs });
             return;
           }
         } catch (e) {
