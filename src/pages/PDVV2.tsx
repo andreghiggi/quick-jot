@@ -1383,8 +1383,9 @@ export default function PDVV2() {
         onConfirm={handleCloseCash}
       />
 
-
       <PDVV2PaymentDialog
+        // marker
+        {...({} as any)}
         open={!!importingTab}
         onOpenChange={(o) => {
           if (!o) {
