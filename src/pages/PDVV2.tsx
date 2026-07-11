@@ -147,6 +147,7 @@ export default function PDVV2() {
     }
   }, [filter, filterStorageKey, storageHydrated]);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [pendingBlock, setPendingBlock] = useState<{ orders: number; tabs: number } | null>(null);
   const [cashMovements, setCashMovements] = useState<{ type: string; amount: number | string | null }[]>([]);
   const [closeCashSales, setCloseCashSales] = useState<CloseCashSale[]>([]);
   const [openCashOpen, setOpenCashOpen] = useState(false);
