@@ -1097,6 +1097,41 @@ export default function PDVV2() {
 
   async function openCloseCashDialog() {
     if (currentRegister?.id) {
+      // Trava de fechamento: bloqueia se existirem pedidos ativos
+      // (pending/preparing/ready) ou comandas/mesas em aberto.
+      // O operador precisa finalizar tudo antes de fechar o caixa.
+      if (companyId) {
+        try {
+          const [ordersRes, tabsRes] = await Promise.all([
+            supabase
+              .from('orders')
+              .select('id', { count: 'exact', head: true })
+              .eq('company_id', companyId)
+              .in('status', ['pending', 'preparing', 'ready']),
+            supabase
+              .from('tabs')
+              .select('id', { count: 'exact', head: true })
+              .eq('company_id', companyId)
+              .eq('status', 'open'),
+          ]);
+          const openOrders = ordersRes.count || 0;
+          const openTabs = tabsRes.count || 0;
+          if (openOrders > 0 || openTabs > 0) {
+            const parts: string[] = [];
+            if (openOrders > 0)
+              parts.push(`${openOrders} pedido${openOrders > 1 ? 's' : ''} em aberto`);
+            if (openTabs > 0)
+              parts.push(`${openTabs} mesa${openTabs > 1 ? 's' : ''} em aberto`);
+            toast.error('Pendências no caixa', {
+              description: `${parts.join(' e ')}. Finalize-${parts.length > 1 ? 'os' : (openOrders > 0 ? 'os' : 'as')} para fechar o caixa.`,
+              duration: 8000,
+            });
+            return;
+          }
+        } catch (e) {
+          console.error('[PDVV2] Error checking pending items before close:', e);
+        }
+      }
       if (companyId) {
         try {
           const mapped = await loadCashClosingSales({
