@@ -30,6 +30,15 @@ import { OccupiedTab } from '@/components/pdv-v2/PDVV2TablesPanel';
 import { PDVV2TablesGrid } from '@/components/pdv-v2/PDVV2TablesGrid';
 import { PDVV2TablesSummaryCards } from '@/components/pdv-v2/PDVV2TablesSummaryCards';
 import { PDVV2CloseCashDialog, CloseCashSale } from '@/components/pdv-v2/PDVV2CloseCashDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PDVV2ClosedTabsDialog, ClosedTabSale } from '@/components/pdv-v2/PDVV2ClosedTabsDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
@@ -147,6 +156,7 @@ export default function PDVV2() {
     }
   }, [filter, filterStorageKey, storageHydrated]);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [pendingBlock, setPendingBlock] = useState<{ orders: number; tabs: number } | null>(null);
   const [cashMovements, setCashMovements] = useState<{ type: string; amount: number | string | null }[]>([]);
   const [closeCashSales, setCloseCashSales] = useState<CloseCashSale[]>([]);
   const [openCashOpen, setOpenCashOpen] = useState(false);
@@ -1098,16 +1108,26 @@ export default function PDVV2() {
   async function openCloseCashDialog() {
     if (currentRegister?.id) {
       // Trava de fechamento: bloqueia se existirem pedidos ativos
-      // (pending/preparing/ready) ou comandas/mesas em aberto.
+      // do dia (pending/preparing/ready) ou comandas/mesas em aberto.
       // O operador precisa finalizar tudo antes de fechar o caixa.
       if (companyId) {
         try {
+          // Início do dia em America/Sao_Paulo
+          const nowSP = new Date(
+            new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }),
+          );
+          const startSP = new Date(nowSP);
+          startSP.setHours(0, 0, 0, 0);
+          const startISO = new Date(
+            startSP.getTime() - startSP.getTimezoneOffset() * 60000,
+          ).toISOString();
           const [ordersRes, tabsRes] = await Promise.all([
             supabase
               .from('orders')
               .select('id', { count: 'exact', head: true })
               .eq('company_id', companyId)
-              .in('status', ['pending', 'preparing', 'ready']),
+              .in('status', ['pending', 'preparing', 'ready'])
+              .gte('created_at', startISO),
             supabase
               .from('tabs')
               .select('id', { count: 'exact', head: true })
@@ -1117,15 +1137,7 @@ export default function PDVV2() {
           const openOrders = ordersRes.count || 0;
           const openTabs = tabsRes.count || 0;
           if (openOrders > 0 || openTabs > 0) {
-            const parts: string[] = [];
-            if (openOrders > 0)
-              parts.push(`${openOrders} pedido${openOrders > 1 ? 's' : ''} em aberto`);
-            if (openTabs > 0)
-              parts.push(`${openTabs} mesa${openTabs > 1 ? 's' : ''} em aberto`);
-            toast.error('Pendências no caixa', {
-              description: `${parts.join(' e ')}. Finalize-${parts.length > 1 ? 'os' : (openOrders > 0 ? 'os' : 'as')} para fechar o caixa.`,
-              duration: 8000,
-            });
+            setPendingBlock({ orders: openOrders, tabs: openTabs });
             return;
           }
         } catch (e) {
@@ -1380,6 +1392,43 @@ export default function PDVV2() {
         onConfirm={handleCloseCash}
       />
 
+      <AlertDialog open={!!pendingBlock} onOpenChange={(o) => !o && setPendingBlock(null)}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-xl">
+              Pendências no caixa
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-base pt-2">
+              {pendingBlock && (
+                <>
+                  {[
+                    pendingBlock.orders > 0 &&
+                      `${pendingBlock.orders} pedido${pendingBlock.orders > 1 ? 's' : ''} do dia em aberto`,
+                    pendingBlock.tabs > 0 &&
+                      `${pendingBlock.tabs} mesa${pendingBlock.tabs > 1 ? 's' : ''} em aberto`,
+                  ]
+                    .filter(Boolean)
+                    .join(' e ')}
+                  .
+                  <br />
+                  Finalize{' '}
+                  {pendingBlock.orders > 0 && pendingBlock.tabs > 0
+                    ? 'todos'
+                    : pendingBlock.orders > 0
+                    ? 'os pedidos'
+                    : 'as mesas'}{' '}
+                  para fechar o caixa.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center">
+            <AlertDialogAction onClick={() => setPendingBlock(null)}>
+              Entendi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <PDVV2PaymentDialog
         open={!!importingTab}
