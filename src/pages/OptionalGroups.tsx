@@ -813,6 +813,7 @@ export default function OptionalGroups() {
           const activeCategories = [...categories]
             .filter(c => c.active !== false)
             .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+          const activeCatIdSet = new Set(activeCategories.map(c => c.id));
 
           // Mapa: id do produto -> id da categoria (via nome da categoria do cadastro do produto)
           const catIdByName: Record<string, string> = {};
@@ -834,9 +835,32 @@ export default function OptionalGroups() {
             });
             return Array.from(set);
           };
+          // Considera apenas os categoryIds que ainda estão ATIVOS.
+          // Assim, se todas as categorias vinculadas estiverem inativas, o grupo
+          // se comporta como se estivesse "vinculado só a produtos" e pode ser
+          // filtrado / re-inferido normalmente.
+          const activeCategoryIdsOf = (g: OptionalGroup): string[] =>
+            g.categoryIds.filter(id => activeCatIdSet.has(id));
+
+          // Um grupo só é exibido se tiver ao menos UM vínculo ativo:
+          //  - categoria ativa, ou
+          //  - produto cuja categoria esteja ativa, ou
+          //  - totalmente sem vínculo (aparece em "Sem categoria vinculada")
+          const hasVisibleLink = (g: OptionalGroup): boolean => {
+            if (g.categoryIds.length === 0 && g.productIds.length === 0) return true;
+            if (activeCategoryIdsOf(g).length > 0) return true;
+            if (inferredCatIds(g).length > 0) return true;
+            return false;
+          };
+          const hiddenByInactiveCount = filtered.filter(g => !hasVisibleLink(g)).length;
+          const visible = filtered.filter(hasVisibleLink);
+
           const groupBelongsToCategory = (g: OptionalGroup, catId: string): boolean => {
-            if (g.categoryIds.includes(catId)) return true;
-            if (g.categoryIds.length === 0 && g.productIds.length > 0) {
+            const activeLinks = activeCategoryIdsOf(g);
+            if (activeLinks.includes(catId)) return true;
+            // Se não há vínculo ativo por categoria mas há produtos, cai na inferência
+            // pelos produtos (idem cenário original).
+            if (activeLinks.length === 0 && g.productIds.length > 0) {
               const inferred = inferredCatIds(g);
               // Se o grupo está vinculado apenas a produtos, exibe dentro de
               // TODA categoria dos produtos vinculados (mesmo que sejam várias).
@@ -849,7 +873,7 @@ export default function OptionalGroups() {
 
           const buckets: { key: string; title: string; count: number; items: OptionalGroup[] }[] = [];
           for (const cat of activeCategories) {
-            const inCat = filtered.filter(g => groupBelongsToCategory(g, cat.id));
+            const inCat = visible.filter(g => groupBelongsToCategory(g, cat.id));
             if (inCat.length > 0) {
               buckets.push({ key: `cat-${cat.id}`, title: cat.name, count: inCat.length, items: inCat });
             }
@@ -857,8 +881,8 @@ export default function OptionalGroups() {
           // Grupos vinculados só a produtos cujas categorias não foram reconhecidas
           // (produto sem categoria cadastrada). Os "compartilhados entre categorias"
           // já aparecem dentro de cada categoria dos produtos.
-          const productsNoCat = filtered.filter(g =>
-            g.categoryIds.length === 0 &&
+          const productsNoCat = visible.filter(g =>
+            activeCategoryIdsOf(g).length === 0 &&
             g.productIds.length > 0 &&
             inferredCatIds(g).length === 0
           );
@@ -870,13 +894,21 @@ export default function OptionalGroups() {
               items: productsNoCat,
             });
           }
-          const unlinked = filtered.filter(g => g.categoryIds.length === 0 && g.productIds.length === 0);
+          const unlinked = visible.filter(g => g.categoryIds.length === 0 && g.productIds.length === 0);
           if (unlinked.length > 0) {
             buckets.push({ key: 'unlinked', title: 'Sem categoria vinculada', count: unlinked.length, items: unlinked });
           }
 
           return (
             <div className="space-y-6">
+              {hiddenByInactiveCount > 0 && (
+                <div className="rounded-md border border-amber-300/60 bg-amber-50 text-amber-900 px-3 py-2 text-xs">
+                  {hiddenByInactiveCount === 1
+                    ? '1 grupo está oculto porque sua categoria está inativa.'
+                    : `${hiddenByInactiveCount} grupos estão ocultos porque suas categorias estão inativas.`}
+                  {' '}Reative a categoria em <strong>Categorias</strong> para gerenciá-los aqui.
+                </div>
+              )}
               {buckets.map(b => (
                 <div key={b.key} className="space-y-3">
                   <div className="flex items-center gap-2">
