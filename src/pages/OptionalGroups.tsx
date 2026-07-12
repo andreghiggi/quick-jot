@@ -545,6 +545,25 @@ export default function OptionalGroups() {
           </Card>
         )}
 
+        {/* Toolbar: busca + agrupamento */}
+        {groups.length > 0 && importStep === 'idle' && (
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Buscar grupo ou item..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center gap-2 px-1">
+              <Switch id="group-by-cat" checked={groupByCategory} onCheckedChange={setGroupByCategory} />
+              <Label htmlFor="group-by-cat" className="cursor-pointer text-sm">Agrupar por categoria</Label>
+            </div>
+          </div>
+        )}
+
         {/* Groups list */}
         {groups.length === 0 && importStep === 'idle' && (
           <Card>
@@ -556,9 +575,30 @@ export default function OptionalGroups() {
           </Card>
         )}
 
-        <Accordion type="multiple" className="space-y-3">
-          {groups.map(group => (
-            <AccordionItem key={group.id} value={group.id} className="border rounded-lg px-4">
+        {(() => {
+          if (groups.length === 0) return null;
+          const q = searchQuery.trim().toLowerCase();
+          const matches = (g: OptionalGroup) => {
+            if (!q) return true;
+            if (g.name.toLowerCase().includes(q)) return true;
+            return g.items.some(it => it.name.toLowerCase().includes(q));
+          };
+          const filtered = groups.filter(matches);
+
+          if (filtered.length === 0) {
+            return (
+              <Card>
+                <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                  Nenhum grupo ou item encontrado para "{searchQuery}".
+                </CardContent>
+              </Card>
+            );
+          }
+
+          const renderAccordion = (list: OptionalGroup[], keyPrefix: string) => (
+            <Accordion type="multiple" className="space-y-3">
+              {list.map(group => (
+            <AccordionItem key={`${keyPrefix}-${group.id}`} value={`${keyPrefix}-${group.id}`} className="border rounded-lg px-4">
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-1 mr-2" onClick={(e) => e.stopPropagation()}>
                   <div className="relative group">
@@ -751,8 +791,49 @@ export default function OptionalGroups() {
                 </div>
               </AccordionContent>
             </AccordionItem>
-          ))}
-        </Accordion>
+              ))}
+            </Accordion>
+          );
+
+          if (!groupByCategory) {
+            return renderAccordion(filtered, 'flat');
+          }
+
+          // Buckets por categoria (ordenadas por displayOrder), + "Sem categoria" e "Vinculado apenas a produtos"
+          const activeCategories = [...categories]
+            .filter(c => c.active !== false)
+            .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+          const buckets: { key: string; title: string; count: number; items: OptionalGroup[] }[] = [];
+          for (const cat of activeCategories) {
+            const inCat = filtered.filter(g => g.categoryIds.includes(cat.id));
+            if (inCat.length > 0) {
+              buckets.push({ key: `cat-${cat.id}`, title: cat.name, count: inCat.length, items: inCat });
+            }
+          }
+          const onlyProducts = filtered.filter(g => g.categoryIds.length === 0 && g.productIds.length > 0);
+          if (onlyProducts.length > 0) {
+            buckets.push({ key: 'only-prod', title: 'Vinculado apenas a produtos', count: onlyProducts.length, items: onlyProducts });
+          }
+          const unlinked = filtered.filter(g => g.categoryIds.length === 0 && g.productIds.length === 0);
+          if (unlinked.length > 0) {
+            buckets.push({ key: 'unlinked', title: 'Sem categoria vinculada', count: unlinked.length, items: unlinked });
+          }
+
+          return (
+            <div className="space-y-6">
+              {buckets.map(b => (
+                <div key={b.key} className="space-y-2">
+                  <div className="flex items-center gap-2 px-1">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{b.title}</h3>
+                    <Badge variant="outline" className="text-[10px]">{b.count}</Badge>
+                  </div>
+                  {renderAccordion(b.items, b.key)}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {/* New Group Dialog */}
