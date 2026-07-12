@@ -843,7 +843,11 @@ export default function OptionalGroups() {
             if (g.categoryIds.includes(catId)) return true;
             if (g.categoryIds.length === 0 && g.productIds.length > 0) {
               const inferred = inferredCatIds(g);
-              return inferred.length === 1 && inferred[0] === catId;
+              // Se o grupo está vinculado apenas a produtos, exibe dentro de
+              // TODA categoria dos produtos vinculados (mesmo que sejam várias).
+              // Assim "Sabores da sua Pizza" aparece tanto em "Monte sua Pizza"
+              // quanto em "Pizza a la carte".
+              return inferred.includes(catId);
             }
             return false;
           };
@@ -855,24 +859,14 @@ export default function OptionalGroups() {
               buckets.push({ key: `cat-${cat.id}`, title: cat.name, count: inCat.length, items: inCat });
             }
           }
-          // Grupos vinculados só a produtos que NÃO couberam em nenhuma categoria única:
-          //  - produtos de categorias diferentes → "Compartilhado entre categorias"
-          //  - produtos sem categoria reconhecida → "Vinculado apenas a produtos"
-          const onlyProductsRemaining = filtered.filter(g =>
+          // Grupos vinculados só a produtos cujas categorias não foram reconhecidas
+          // (produto sem categoria cadastrada). Os "compartilhados entre categorias"
+          // já aparecem dentro de cada categoria dos produtos.
+          const productsNoCat = filtered.filter(g =>
             g.categoryIds.length === 0 &&
             g.productIds.length > 0 &&
-            inferredCatIds(g).length !== 1
+            inferredCatIds(g).length === 0
           );
-          const sharedAcrossCats = onlyProductsRemaining.filter(g => inferredCatIds(g).length > 1);
-          const productsNoCat = onlyProductsRemaining.filter(g => inferredCatIds(g).length === 0);
-          if (sharedAcrossCats.length > 0) {
-            buckets.push({
-              key: 'shared-cats',
-              title: 'Compartilhado entre categorias',
-              count: sharedAcrossCats.length,
-              items: sharedAcrossCats,
-            });
-          }
           if (productsNoCat.length > 0) {
             buckets.push({
               key: 'only-products',
