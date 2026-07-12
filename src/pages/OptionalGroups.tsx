@@ -652,6 +652,11 @@ export default function OptionalGroups() {
                           : `${group.productIds.length} produtos`}
                       </Badge>
                     )}
+                    {group.categoryIds.length === 0 && group.productIds.length > 0 && (
+                      <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                        via produtos
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </AccordionTrigger>
@@ -814,36 +819,67 @@ export default function OptionalGroups() {
             .filter(c => c.active !== false)
             .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 
+          // Mapa: id do produto -> id da categoria (via nome da categoria do cadastro do produto)
+          const catIdByName: Record<string, string> = {};
+          activeCategories.forEach(c => { catIdByName[c.name] = c.id; });
+          const productCatId = (pid: string): string | null => {
+            const p = products.find(pp => pp.id === pid);
+            if (!p) return null;
+            const cn = (p.category ?? '').trim();
+            return cn && catIdByName[cn] ? catIdByName[cn] : null;
+          };
+          // Para grupos vinculados só a produtos, deriva as categorias distintas
+          // desses produtos. Assim conseguimos exibir o grupo dentro da categoria certa
+          // (quando todos os produtos são da mesma) — cenário mais comum.
+          const inferredCatIds = (g: OptionalGroup): string[] => {
+            const set = new Set<string>();
+            g.productIds.forEach(pid => {
+              const cid = productCatId(pid);
+              if (cid) set.add(cid);
+            });
+            return Array.from(set);
+          };
+          const groupBelongsToCategory = (g: OptionalGroup, catId: string): boolean => {
+            if (g.categoryIds.includes(catId)) return true;
+            if (g.categoryIds.length === 0 && g.productIds.length > 0) {
+              const inferred = inferredCatIds(g);
+              return inferred.length === 1 && inferred[0] === catId;
+            }
+            return false;
+          };
+
           const buckets: { key: string; title: string; count: number; items: OptionalGroup[] }[] = [];
           for (const cat of activeCategories) {
-            const inCat = filtered.filter(g => g.categoryIds.includes(cat.id));
+            const inCat = filtered.filter(g => groupBelongsToCategory(g, cat.id));
             if (inCat.length > 0) {
               buckets.push({ key: `cat-${cat.id}`, title: cat.name, count: inCat.length, items: inCat });
             }
           }
-          const onlyProducts = filtered.filter(g => g.categoryIds.length === 0 && g.productIds.length > 0);
-          if (onlyProducts.length > 0) {
-            // Sub-bucket por produto quando o grupo está vinculado a exatamente 1 produto.
-            // Grupos com >1 produto vão para um bucket compartilhado "Vários produtos".
-            const singleByProduct: Record<string, OptionalGroup[]> = {};
-            const multi: OptionalGroup[] = [];
-            for (const g of onlyProducts) {
-              if (g.productIds.length === 1) {
-                const pid = g.productIds[0];
-                const pname = productNameById[pid] ?? 'Produto';
-                (singleByProduct[pname] = singleByProduct[pname] || []).push(g);
-              } else {
-                multi.push(g);
-              }
-            }
-            const sortedNames = Object.keys(singleByProduct).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-            for (const pname of sortedNames) {
-              const list = singleByProduct[pname];
-              buckets.push({ key: `prod-${pname}`, title: pname, count: list.length, items: list });
-            }
-            if (multi.length > 0) {
-              buckets.push({ key: 'multi-prod', title: 'Vários produtos', count: multi.length, items: multi });
-            }
+          // Grupos vinculados só a produtos que NÃO couberam em nenhuma categoria única:
+          //  - produtos de categorias diferentes → "Compartilhado entre categorias"
+          //  - produtos sem categoria reconhecida → "Vinculado apenas a produtos"
+          const onlyProductsRemaining = filtered.filter(g =>
+            g.categoryIds.length === 0 &&
+            g.productIds.length > 0 &&
+            inferredCatIds(g).length !== 1
+          );
+          const sharedAcrossCats = onlyProductsRemaining.filter(g => inferredCatIds(g).length > 1);
+          const productsNoCat = onlyProductsRemaining.filter(g => inferredCatIds(g).length === 0);
+          if (sharedAcrossCats.length > 0) {
+            buckets.push({
+              key: 'shared-cats',
+              title: 'Compartilhado entre categorias',
+              count: sharedAcrossCats.length,
+              items: sharedAcrossCats,
+            });
+          }
+          if (productsNoCat.length > 0) {
+            buckets.push({
+              key: 'only-products',
+              title: 'Vinculado apenas a produtos',
+              count: productsNoCat.length,
+              items: productsNoCat,
+            });
           }
           const unlinked = filtered.filter(g => g.categoryIds.length === 0 && g.productIds.length === 0);
           if (unlinked.length > 0) {
