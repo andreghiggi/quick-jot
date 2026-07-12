@@ -652,11 +652,6 @@ export default function OptionalGroups() {
                           : `${group.productIds.length} produtos`}
                       </Badge>
                     )}
-                    {group.categoryIds.length === 0 && group.productIds.length > 0 && (
-                      <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-                        via produtos
-                      </Badge>
-                    )}
                   </div>
                 </div>
               </AccordionTrigger>
