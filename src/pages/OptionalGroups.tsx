@@ -578,10 +578,15 @@ export default function OptionalGroups() {
         {(() => {
           if (groups.length === 0) return null;
           const q = searchQuery.trim().toLowerCase();
+          const productNameById: Record<string, string> = {};
+          products.forEach(p => { productNameById[p.id] = p.name; });
+          const linkedProductNames = (g: OptionalGroup) =>
+            g.productIds.map(pid => productNameById[pid]).filter(Boolean) as string[];
           const matches = (g: OptionalGroup) => {
             if (!q) return true;
             if (g.name.toLowerCase().includes(q)) return true;
-            return g.items.some(it => it.name.toLowerCase().includes(q));
+            if (g.items.some(it => it.name.toLowerCase().includes(q))) return true;
+            return linkedProductNames(g).some(n => n.toLowerCase().includes(q));
           };
           const filtered = groups.filter(matches);
 
@@ -638,8 +643,13 @@ export default function OptionalGroups() {
                       </Badge>
                     )}
                     {group.productIds.length > 0 && (
-                      <Badge className="text-xs bg-primary/10 text-primary border-primary/20">
-                        {group.productIds.length} prod.
+                      <Badge
+                        className="text-xs bg-primary/10 text-primary border-primary/20 max-w-[220px] truncate"
+                        title={linkedProductNames(group).join(', ')}
+                      >
+                        {group.productIds.length === 1
+                          ? (productNameById[group.productIds[0]] ?? '1 produto')
+                          : `${group.productIds.length} produtos`}
                       </Badge>
                     )}
                   </div>
@@ -813,7 +823,27 @@ export default function OptionalGroups() {
           }
           const onlyProducts = filtered.filter(g => g.categoryIds.length === 0 && g.productIds.length > 0);
           if (onlyProducts.length > 0) {
-            buckets.push({ key: 'only-prod', title: 'Vinculado apenas a produtos', count: onlyProducts.length, items: onlyProducts });
+            // Sub-bucket por produto quando o grupo está vinculado a exatamente 1 produto.
+            // Grupos com >1 produto vão para um bucket compartilhado "Vários produtos".
+            const singleByProduct: Record<string, OptionalGroup[]> = {};
+            const multi: OptionalGroup[] = [];
+            for (const g of onlyProducts) {
+              if (g.productIds.length === 1) {
+                const pid = g.productIds[0];
+                const pname = productNameById[pid] ?? 'Produto';
+                (singleByProduct[pname] = singleByProduct[pname] || []).push(g);
+              } else {
+                multi.push(g);
+              }
+            }
+            const sortedNames = Object.keys(singleByProduct).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            for (const pname of sortedNames) {
+              const list = singleByProduct[pname];
+              buckets.push({ key: `prod-${pname}`, title: pname, count: list.length, items: list });
+            }
+            if (multi.length > 0) {
+              buckets.push({ key: 'multi-prod', title: 'Vários produtos', count: multi.length, items: multi });
+            }
           }
           const unlinked = filtered.filter(g => g.categoryIds.length === 0 && g.productIds.length === 0);
           if (unlinked.length > 0) {
