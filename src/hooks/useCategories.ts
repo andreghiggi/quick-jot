@@ -7,10 +7,11 @@ export type CategorySortMode = 'manual' | 'alphabetical' | 'created';
 
 interface UseCategoriesOptions {
   companyId?: string | null;
+  includeInactive?: boolean;
 }
 
 export function useCategories(options: UseCategoriesOptions = {}) {
-  const { companyId } = options;
+  const { companyId, includeInactive = false } = options;
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortMode, setSortMode] = useState<CategorySortMode>('manual');
@@ -24,12 +25,14 @@ export function useCategories(options: UseCategoriesOptions = {}) {
     }
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('categories')
         .select('*')
-        .eq('company_id', companyId)
-        .eq('active', true)
-        .order('display_order', { ascending: true });
+        .eq('company_id', companyId);
+      if (!includeInactive) {
+        query = query.eq('active', true);
+      }
+      const { data, error } = await query.order('display_order', { ascending: true });
 
       if (error) throw error;
 
@@ -81,7 +84,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
 
   useEffect(() => {
     fetchCategories();
-  }, [companyId]);
+  }, [companyId, includeInactive]);
 
   // Sorted categories based on current sort mode
   const sortedCategories = useMemo(() => {
