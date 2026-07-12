@@ -823,9 +823,11 @@ export default function OptionalGroups() {
           return (
             <div className="space-y-6">
               {buckets.map(b => (
-                <div key={b.key} className="space-y-2">
-                  <div className="flex items-center gap-2 px-1">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{b.title}</h3>
+                <div key={b.key} className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <h3 className="inline-flex items-center rounded-full bg-primary px-3 py-1 text-sm font-bold uppercase tracking-wide text-primary-foreground">
+                      {b.title}
+                    </h3>
                     <Badge variant="outline" className="text-[10px]">{b.count}</Badge>
                   </div>
                   {renderAccordion(b.items, b.key)}
