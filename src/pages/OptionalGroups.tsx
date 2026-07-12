@@ -578,10 +578,15 @@ export default function OptionalGroups() {
         {(() => {
           if (groups.length === 0) return null;
           const q = searchQuery.trim().toLowerCase();
+          const productNameById: Record<string, string> = {};
+          products.forEach(p => { productNameById[p.id] = p.name; });
+          const linkedProductNames = (g: OptionalGroup) =>
+            g.productIds.map(pid => productNameById[pid]).filter(Boolean) as string[];
           const matches = (g: OptionalGroup) => {
             if (!q) return true;
             if (g.name.toLowerCase().includes(q)) return true;
-            return g.items.some(it => it.name.toLowerCase().includes(q));
+            if (g.items.some(it => it.name.toLowerCase().includes(q))) return true;
+            return linkedProductNames(g).some(n => n.toLowerCase().includes(q));
           };
           const filtered = groups.filter(matches);
 
