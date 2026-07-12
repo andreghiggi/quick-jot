@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen, Pencil, Check, X, Eye, EyeOff, FileText, UtensilsCrossed, Repeat } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen, Pencil, Check, X, Eye, EyeOff, FileText, UtensilsCrossed, Repeat, Power } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,7 +29,7 @@ export default function Categories() {
     deleteCategory,
     updateCategory,
     moveCategory,
-  } = useCategories({ companyId: company?.id });
+  } = useCategories({ companyId: company?.id, includeInactive: true });
 
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
@@ -105,7 +105,7 @@ export default function Categories() {
             </p>
             <div className="space-y-2">
               {categories.map((cat, index) => (
-                <div key={cat.id} className="flex items-center justify-between p-3 border rounded-lg bg-background">
+                <div key={cat.id} className={cn("flex items-center justify-between p-3 border rounded-lg bg-background", cat.active === false && "opacity-60")}>
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {sortMode === 'manual' && (
                       <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
