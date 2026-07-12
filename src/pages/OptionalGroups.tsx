@@ -643,8 +643,13 @@ export default function OptionalGroups() {
                       </Badge>
                     )}
                     {group.productIds.length > 0 && (
-                      <Badge className="text-xs bg-primary/10 text-primary border-primary/20">
-                        {group.productIds.length} prod.
+                      <Badge
+                        className="text-xs bg-primary/10 text-primary border-primary/20 max-w-[220px] truncate"
+                        title={linkedProductNames(group).join(', ')}
+                      >
+                        {group.productIds.length === 1
+                          ? (productNameById[group.productIds[0]] ?? '1 produto')
+                          : `${group.productIds.length} produtos`}
                       </Badge>
                     )}
                   </div>
