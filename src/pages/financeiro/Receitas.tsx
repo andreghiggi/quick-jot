@@ -25,8 +25,9 @@ import { RenegociarReceitaDialog } from '@/components/financeiro/RenegociarRecei
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { emitirNFCe, type NFCeItem } from '@/services/nfceService';
+import { getNFCeRecordBySaleId, consultarNFCe, printDanfeFromRecord, printDanfeFromRecordViaIframe } from '@/services/nfceService';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
-import { printPaymentReceipt } from '@/utils/paymentReceiptPrint';
+import { printPaymentReceipt, printPaymentReceiptsConsolidated, type PaymentReceiptPayload } from '@/utils/paymentReceiptPrint';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { toast } from 'sonner';
 
@@ -81,6 +82,10 @@ export default function Receitas() {
   const [renegSaleRows, setRenegSaleRows] = useState<AccountReceivable[] | null>(null);
   /** Ação pendente ao selecionar uma parcela dentro do diálogo "Parcelas". */
   const [pendingAction, setPendingAction] = useState<'receber' | 'renegociar' | null>(null);
+
+  // Overlay sequenciado "Recebendo → Imprimindo comprovantes → Emitindo NFC-e → Imprimindo cupom".
+  const [nfcePhase, setNfcePhase] = useState<{ label: string; detail?: string } | null>(null);
+  const [nfceError, setNfceError] = useState<string | null>(null);
 
   const rows = useMemo<FinanceRow[]>(() => items.map((r) => ({
     id: r.id,
@@ -165,41 +170,45 @@ export default function Receitas() {
     }>,
   ) {
     const now = new Date();
+    // Recarrega os saldos atualizados em paralelo para montar "saldo restante".
+    const payloads: PaymentReceiptPayload[] = [];
     for (const r of rowsPaid) {
-      try {
-        // Recarrega o saldo mais recente para exibir "saldo restante" real.
-        const { data: fresh } = await supabase
-          .from('accounts_receivable' as any)
-          .select('balance, status')
-          .eq('id', r.row.id)
-          .maybeSingle();
-        const remaining = Number((fresh as any)?.balance ?? 0);
-        const paidFlag = ((fresh as any)?.status || '') === 'paid';
-        await printPaymentReceipt({
-          paperSize: storeSettings.printerPaperSize,
-          storeName: company?.name || storeSettings.storeName || 'Loja',
-          storeCnpj: (company as any)?.cnpj || null,
-          storeAddress: (company as any)?.address || null,
-          storePhone: storeSettings.storePhone || null,
-          operatorName: (user as any)?.email || null,
-          customerName: r.row.customer_name || 'Cliente',
-          customerDocument: (r.row as any).customer_document || null,
-          documentNumber: r.row.document_number || r.row.id.slice(0, 8).toUpperCase(),
-          installmentLabel: (r.row.notes || '').match(/Parcela\s+\d+\/\d+/i)?.[0] || null,
-          amountPaid: r.amountPaid,
-          interest: r.interest,
-          fine: r.fine,
-          discount: r.discount,
-          surcharge: r.surcharge,
-          remainingBalance: remaining,
-          status: paidFlag ? 'paid' : 'partial',
-          payments: r.payments,
-          issuedAt: now,
-        });
-      } catch (e: any) {
-        console.error('[Receitas] falha ao imprimir comprovante', e);
-        toast.error('Falha ao imprimir comprovante: ' + (e?.message || e));
-      }
+      const { data: fresh } = await supabase
+        .from('accounts_receivable' as any)
+        .select('balance, status')
+        .eq('id', r.row.id)
+        .maybeSingle();
+      const remaining = Number((fresh as any)?.balance ?? 0);
+      const paidFlag = ((fresh as any)?.status || '') === 'paid';
+      payloads.push({
+        paperSize: storeSettings.printerPaperSize,
+        storeName: company?.name || storeSettings.storeName || 'Loja',
+        storeCnpj: (company as any)?.cnpj || null,
+        storeAddress: (company as any)?.address || null,
+        storePhone: storeSettings.storePhone || null,
+        operatorName: (user as any)?.email || null,
+        customerName: r.row.customer_name || 'Cliente',
+        customerDocument: (r.row as any).customer_document || null,
+        documentNumber: r.row.document_number || r.row.id.slice(0, 8).toUpperCase(),
+        installmentLabel: (r.row.notes || '').match(/Parcela\s+\d+\/\d+/i)?.[0] || null,
+        amountPaid: r.amountPaid,
+        interest: r.interest,
+        fine: r.fine,
+        discount: r.discount,
+        surcharge: r.surcharge,
+        remainingBalance: remaining,
+        status: paidFlag ? 'paid' : 'partial',
+        payments: r.payments,
+        issuedAt: now,
+      });
+    }
+    try {
+      // UMA janela, N páginas com page-break entre parcelas — a impressora
+      // corta entre cada comprovante (nas que têm guilhotina).
+      await printPaymentReceiptsConsolidated(payloads);
+    } catch (e: any) {
+      console.error('[Receitas] falha ao imprimir comprovante', e);
+      toast.error('Falha ao imprimir comprovante: ' + (e?.message || e));
     }
   }
 
@@ -217,6 +226,7 @@ export default function Receitas() {
     }
     for (const saleId of saleIds) {
       try {
+        setNfcePhase({ label: 'Emitindo NFC-e...', detail: 'Preparando itens da venda' });
         const { data: itemsData, error: itErr } = await supabase
           .from('pdv_sale_items')
           .select('product_id, product_name, quantity, unit_price')
@@ -224,7 +234,7 @@ export default function Receitas() {
         if (itErr) throw itErr;
         const saleItems = (itemsData as any[]) || [];
         if (saleItems.length === 0) {
-          toast.error('Venda sem itens — NFC-e não emitida.');
+          setNfceError('Venda sem itens — NFC-e não emitida.');
           continue;
         }
         // Carrega produtos + regras tributárias envolvidos.
@@ -268,6 +278,7 @@ export default function Receitas() {
           };
         });
         const externalId = `CRED-${saleId.substring(0, 8)}-${Date.now()}`;
+        setNfcePhase({ label: 'Emitindo NFC-e...', detail: 'Enviando dados para a SEFAZ' });
         await emitirNFCe(company.id, saleId, {
           external_id: externalId,
           itens: nfceItems,
@@ -275,12 +286,39 @@ export default function Receitas() {
           valor_frete: 0,
           observacoes: list[0]?.customer_name ? `Cliente: ${list[0].customer_name}` : undefined,
         } as any);
-        toast.success('NFC-e enviada para processamento.');
+        setNfcePhase({ label: 'Confirmando autorização...', detail: 'Consultando retorno da SEFAZ' });
+        await new Promise((r) => setTimeout(r, 200));
+        let rec = await getNFCeRecordBySaleId(saleId);
+        for (let i = 0; i < 6; i++) {
+          if (rec && (rec.status === 'autorizada' || rec.status === 'rejeitada' || rec.status === 'erro')) break;
+          setNfcePhase({ label: 'Consultando SEFAZ...', detail: `Tentativa ${i + 1}/6` });
+          if (rec?.nfce_id) {
+            try { await consultarNFCe(company.id, rec.nfce_id); } catch { /* noop */ }
+          }
+          await new Promise((r) => setTimeout(r, 1000));
+          rec = await getNFCeRecordBySaleId(saleId);
+        }
+        if (rec?.status === 'autorizada') {
+          setNfcePhase({ label: `NFC-e nº ${rec.numero || ''} autorizada`, detail: 'Imprimindo cupom fiscal...' });
+          try {
+            await printDanfeFromRecord(rec as any);
+          } catch {
+            try { await printDanfeFromRecordViaIframe(rec as any); } catch (e: any) {
+              toast.error(e?.message || 'Erro ao imprimir DANFE');
+            }
+          }
+          toast.success(`NFC-e nº ${rec.numero || ''} autorizada.`);
+        } else if (rec) {
+          setNfceError(rec.motivo_rejeicao || `NFC-e ${rec.status}. Verifique no Monitor NFC-e.`);
+        } else {
+          toast.info('NFC-e enviada. Acompanhe no Monitor NFC-e.');
+        }
       } catch (e: any) {
         console.error('[Receitas] emitNfceForReceivables', e);
-        toast.error('Falha ao emitir NFC-e: ' + (e?.message || e));
+        setNfceError('Falha ao emitir NFC-e: ' + (e?.message || e));
       }
     }
+    setNfcePhase(null);
   }
 
   const openEfetivar = (id: string) => { const r = findAR(id); if (r) setEfetivarRow(r); };
@@ -627,6 +665,8 @@ export default function Receitas() {
         onConfirm={async (data) => {
           if (!efetivarRow || !company?.id) return;
           setBusy(true);
+          setNfceError(null);
+          setNfcePhase({ label: 'Recebendo pagamento...', detail: 'Gravando quitação' });
           const ok = await receivePaymentSplit({
             receivableId: efetivarRow.id,
             companyId: company.id,
@@ -641,6 +681,7 @@ export default function Receitas() {
             setSelection(new Set());
             // Imprime 1 comprovante de recebimento para a parcela paga.
             const amountPaid = data.payments.reduce((s, p) => s + p.amount, 0);
+            setNfcePhase({ label: 'Imprimindo comprovante...', detail: 'Recebimento de parcela' });
             await printReceiptsFor([{
               row,
               amountPaid,
@@ -648,6 +689,9 @@ export default function Receitas() {
               interest: data.interest, fine: data.fine, discount: data.discount, surcharge: data.surcharge,
             }]);
             if (data.emitNfce) await emitNfceForReceivables([row]);
+            else setNfcePhase(null);
+          } else {
+            setNfcePhase(null);
           }
         }}
       />
@@ -666,6 +710,8 @@ export default function Receitas() {
         onConfirm={async (data) => {
           if (!efetivarRows?.length || !company?.id) return;
           setBusy(true);
+          setNfceError(null);
+          setNfcePhase({ label: 'Recebendo pagamento...', detail: `${efetivarRows.length} parcelas` });
           const totalBalance = efetivarRows.reduce((s, r) => s + Number(r.balance), 0) || 1;
           const queue = data.payments.map((p) => ({ ...p }));
           let allOk = true;
@@ -716,8 +762,14 @@ export default function Receitas() {
             const rowsForNfce = efetivarRows;
             setEfetivarRows(null);
             setSelection(new Set());
-            if (receipts.length) await printReceiptsFor(receipts);
+            if (receipts.length) {
+              setNfcePhase({ label: 'Imprimindo comprovantes...', detail: `${receipts.length} parcelas — corte automático entre elas` });
+              await printReceiptsFor(receipts);
+            }
             if (data.emitNfce && rowsForNfce) await emitNfceForReceivables(rowsForNfce);
+            else setNfcePhase(null);
+          } else {
+            setNfcePhase(null);
           }
         }}
       />
@@ -822,6 +874,37 @@ export default function Receitas() {
       />
 
       <FloatingFab onClick={() => setCreateOpen(true)} label="Nova receita" />
+
+      {/* Overlay sequenciado durante Efetivar → Comprovante → NFC-e → DANFE */}
+      {nfcePhase && (
+        <div className="fixed inset-0 z-[100] bg-background/85 backdrop-blur-sm flex items-center justify-center">
+          <div className="max-w-sm w-full mx-4 rounded-lg border bg-card shadow-xl p-6 text-center">
+            <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-3" />
+            <div className="text-lg font-semibold">{nfcePhase.label}</div>
+            {nfcePhase.detail && (
+              <div className="text-sm text-muted-foreground mt-1">{nfcePhase.detail}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Erro/rejeição da NFC-e — modal para o operador ler o motivo */}
+      <Dialog open={!!nfceError} onOpenChange={(o) => !o && setNfceError(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">NFC-e não autorizada</DialogTitle>
+            <DialogDescription>
+              O recebimento foi gravado e o comprovante impresso, mas a nota fiscal não pôde ser emitida.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm whitespace-pre-wrap">
+            {nfceError}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setNfceError(null)}>Entendi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </FinanceModuleLayout>
   );
 }

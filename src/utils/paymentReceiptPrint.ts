@@ -136,3 +136,64 @@ export async function printPaymentReceipt(payload: PaymentReceiptPayload): Promi
   await new Promise((r) => setTimeout(r, 400));
   try { printWindow.print(); } catch (_) { /* noop */ }
 }
+
+/**
+ * Imprime N comprovantes em UMA única janela/print(), separados por
+ * `page-break-after: always` — a impressora com guilhotina corta entre
+ * cada parcela. Substitui o comportamento de abrir 1 pop-up por parcela.
+ */
+export async function printPaymentReceiptsConsolidated(
+  payloads: PaymentReceiptPayload[],
+): Promise<void> {
+  if (payloads.length === 0) return;
+  if (payloads.length === 1) return printPaymentReceipt(payloads[0]);
+
+  // Todos os payloads compartilham o mesmo paperSize/loja — usa o primeiro
+  // para os estilos globais e concatena os <body>s de cada comprovante,
+  // separados por page-break para a impressora cortar entre cada um.
+  const first = payloads[0];
+  const width = first.paperSize === '80mm' ? '80mm' : '58mm';
+  const fontSize = first.paperSize === '80mm' ? '10px' : '9px';
+
+  const bodies = payloads.map((p, idx) => {
+    const full = buildHTML(p);
+    const m = full.match(/<body[^>]*>([\s\S]*)<\/body>/);
+    const inner = m ? m[1] : '';
+    const brk = idx < payloads.length - 1
+      ? '<div style="page-break-after: always; break-after: page;"></div>'
+      : '';
+    return `<div class="receipt">${inner}</div>${brk}`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  @page { size: ${width} auto; margin: 2mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: ${fontSize}; margin: 0; padding: 4px; width: ${width}; color: #000; line-height: 1.3; }
+  .center { text-align: center; }
+  .bold { font-weight: 700; }
+  .small { font-size: ${first.paperSize === '80mm' ? '9px' : '8px'}; }
+  .separator { border-top: 1px dashed #000; margin: 3px 0; height: 0; }
+  .row { display: flex; justify-content: space-between; gap: 4px; }
+  .banner { border: 1px solid #000; padding: 3px; margin: 3px 0; text-align: center; font-weight: 700; text-transform: uppercase; }
+  .total-row { display: flex; justify-content: space-between; font-weight: 700; font-size: ${first.paperSize === '80mm' ? '13px' : '11px'}; margin: 2px 0; }
+  .sig { margin-top: 22px; border-top: 1px solid #000; text-align: center; padding-top: 2px; }
+  @media print { .no-print { display:none !important; } }
+</style></head>
+<body>
+${bodies}
+<div class="no-print" style="text-align:center;margin-top:12px;">
+  <button onclick="window.print()" style="padding:8px 20px;font-size:14px;cursor:pointer;">🖨️ Imprimir</button>
+</div>
+</body></html>`;
+
+  const printWindow = window.open('', '_blank', 'width=420,height=750');
+  if (!printWindow) {
+    throw new Error('Pop-up bloqueado. Permita pop-ups para imprimir o comprovante.');
+  }
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+  await new Promise((r) => setTimeout(r, 400));
+  try { printWindow.print(); } catch (_) { /* noop */ }
+}
