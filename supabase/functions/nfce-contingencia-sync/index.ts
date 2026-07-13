@@ -138,6 +138,21 @@ Deno.serve(async (req) => {
           console.log(`[nfce-contingencia-sync] Nota ${record.nfce_id} EFETIVADA na SEFAZ`)
         }
 
+        // Caso o retry em contingência não tenha sido necessário e a SEFAZ
+        // tenha autorizado em modo NORMAL (tpEmis=1), limpa a flag de
+        // contingência para não deixar a nota presa com o selo amarelo.
+        const xmlRetorno: string | undefined =
+          d.xml_retorno || d.xml_nfe || d.xml || (typeof xml === 'string' ? xml : undefined)
+        const autorizadaNormal =
+          rawStatus === 'autorizada' &&
+          typeof xmlRetorno === 'string' &&
+          /<tpEmis>\s*1\s*<\/tpEmis>/.test(xmlRetorno)
+        if (autorizadaNormal) {
+          updateData.contingencia_offline = false
+          updateData.contingencia_efetivada = false
+          console.log(`[nfce-contingencia-sync] Nota ${record.nfce_id} autorizada em modo NORMAL — limpando flag de contingência`)
+        }
+
         const { error: upErr } = await supabase
           .from('nfce_records')
           .update(updateData)
