@@ -1168,7 +1168,27 @@ export default function FrenteCaixa() {
               }
             } catch (err: any) {
               console.error('[FrenteCaixa] NFC-e silent error:', err);
-              toast.error(`Venda salva, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`);
+              // Em vez de um toast no canto (que some rápido e trunca o
+              // motivo), abrimos o diálogo consolidado no centro da tela
+              // com o motivo real da rejeição — assim o operador vê e pode
+              // agir. O `nfce-proxy` agora grava a rejeição em
+              // `nfce_records`, então tentamos buscar o registro pra pegar
+              // o `motivo_rejeicao` completo devolvido pela SEFAZ.
+              let motivo = err?.message || 'Erro desconhecido';
+              try {
+                await new Promise((r) => setTimeout(r, 300));
+                const rejRec = await getNFCeRecordBySaleId(saleId);
+                if (rejRec?.motivo_rejeicao) {
+                  motivo = rejRec.motivo_rejeicao;
+                }
+                if (rejRec) {
+                  setConsolidatedRecord(rejRec);
+                }
+              } catch { /* noop */ }
+              setConsolidatedTef(null);
+              setConsolidatedNfceError(`Venda salva, mas a NFC-e foi rejeitada: ${motivo}`);
+              setConsolidatedEmitting(false);
+              setConsolidatedOpen(true);
             } finally {
               setSilentPhase(null);
             }
