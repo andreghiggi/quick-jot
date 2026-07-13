@@ -84,7 +84,13 @@ export function FinanceSearchBar({ search, onSearch, onToggleFilter, onToggleSor
           placeholder="Digite para buscar..."
           className="border-0 shadow-none focus-visible:ring-0 bg-transparent"
         />
-        <Button variant="ghost" size="icon" onClick={onToggleFilter} title="Filtrar">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleFilter}
+          title="Filtrar"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+        >
           <Filter className="h-4 w-4" />
         </Button>
         <Button variant="ghost" size="icon" onClick={onToggleSort} title={sortLabel || 'Ordenar'}>
