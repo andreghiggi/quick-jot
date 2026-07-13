@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Check, MoreVertical, Receipt } from 'lucide-react';
+import { Loader2, Check, MoreVertical, Receipt, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -772,6 +772,7 @@ function SaleGroupCard({
   selectedIds: Set<string>;
   onToggleSelect: (ids: string[], checked: boolean) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const rows = group.kind === 'sale' ? group.parcelas : [group.row];
   const total = rows.reduce((s, r) => s + Number(r.amount), 0);
   const balance = rows.reduce((s, r) => s + Number(r.balance), 0);
@@ -790,6 +791,8 @@ function SaleGroupCard({
   const allIds = rows.map((r) => r.id);
   const selectedCount = allIds.filter((id) => selectedIds.has(id)).length;
   const allSelected = selectedCount > 0 && selectedCount === allIds.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+  const isSaleWithMulti = isSale && rows.length > 1;
 
   // Row de referência para o menu (usa a próxima em aberto ou a primeira).
   const menuRefRow = nextOpen || rows[0];
@@ -822,10 +825,20 @@ function SaleGroupCard({
             type="checkbox"
             className="h-4 w-4 accent-primary cursor-pointer shrink-0"
             checked={allSelected}
+            ref={(el) => { if (el) el.indeterminate = someSelected; }}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => onToggleSelect(allIds, e.target.checked)}
             aria-label="Selecionar venda"
           />
+        )}
+        {isSaleWithMulti && (
+          <Button
+            variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+            onClick={(e) => { e.stopPropagation(); setExpanded((x) => !x); }}
+            title={expanded ? 'Recolher parcelas' : 'Expandir parcelas'}
+          >
+            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </Button>
         )}
         <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
           <Receipt className="h-4 w-4 text-muted-foreground" />
@@ -850,6 +863,9 @@ function SaleGroupCard({
           <div className="text-xs text-muted-foreground">
             Saldo em aberto: <b>{brl(balance)}</b>
             {nextOpen && ` · Próx. vencimento: ${nextOpen.due_date.split('-').reverse().join('/')}`}
+            {selectionActive && selectedCount > 0 && selectedCount < allIds.length && (
+              <> · <span className="text-primary">{selectedCount}/{allIds.length} parcela(s)</span></>
+            )}
           </div>
         </div>
         {!isSale && <StatusBadge status={status} />}
@@ -860,6 +876,43 @@ function SaleGroupCard({
           <MoreVertical className="h-4 w-4" />
         </Button>
       </CardContent>
+      {isSaleWithMulti && expanded && (
+        <div
+          className="border-t bg-muted/20 divide-y"
+          onClick={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+        >
+          {rows.map((r, idx) => {
+            const uiStatus = computeUIStatus(r.status, r.due_date, today);
+            const isOpen = r.status === 'open';
+            const checked = selectedIds.has(r.id);
+            return (
+              <div key={r.id} className="flex items-center gap-3 px-3 py-2 pl-10">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-primary cursor-pointer shrink-0 disabled:opacity-40"
+                  disabled={!isOpen}
+                  checked={checked}
+                  onChange={(e) => onToggleSelect([r.id], e.target.checked)}
+                  aria-label={`Selecionar parcela ${idx + 1}`}
+                />
+                <div className="text-xs text-muted-foreground w-12 shrink-0 tabular-nums">
+                  {String(idx + 1).padStart(2, '0')}/{String(rows.length).padStart(2, '0')}
+                </div>
+                <div className="flex-1 min-w-0 text-xs">
+                  <span className="font-medium">
+                    Vence {r.due_date.split('-').reverse().join('/')}
+                  </span>
+                  <span className="text-muted-foreground"> · </span>
+                  <span className="text-emerald-500">{brl(Number(r.amount))}</span>
+                  <span className="text-muted-foreground"> · Saldo {brl(Number(r.balance))}</span>
+                </div>
+                <StatusBadge status={uiStatus} />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 }
