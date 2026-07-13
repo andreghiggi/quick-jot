@@ -327,40 +327,117 @@ export function EfetivarReceitaDialog({
                 <ul className="divide-y border-y">
                   {paymentMethods.map((m, idx) => {
                     const letter = LETTERS[idx] || '';
+                    const integ = (m.integrationType || '').toLowerCase();
+                    const isTef = integ === 'tef_pinpad' || integ === 'tef_smartpos';
+                    const lineAmount = parseCurrencyInput(lines[m.id] || '');
+                    const mod = tefMod[m.id] || { modality: 'avista' as const, installments: 2 };
                     return (
-                      <li key={m.id} className="py-2.5 flex items-center gap-3">
-                        <span className="flex-1 flex items-center gap-2 text-sm">
-                          <span>{m.name}</span>
-                          {letter && (
-                            <kbd className="ml-auto px-1.5 py-0.5 border border-border rounded text-[10px] bg-muted/40">
-                              {letter}
-                            </kbd>
-                          )}
-                        </span>
-                        <Input
-                          ref={(el) => (lineRefs.current[m.id] = el)}
-                          value={lines[m.id] || ''}
-                          onChange={(e) => updateLine(m.id, e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              const cur = parseCurrencyInput(lines[m.id] || '');
-                              if (cur === 0 && remaining > 0) {
-                                fillRemainingOnLine(m.id);
-                                return;
+                      <li key={m.id} className="py-2.5 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="flex-1 flex items-center gap-2 text-sm">
+                            <span>{m.name}</span>
+                            {isTef && (
+                              <span className="text-[10px] px-1.5 py-0.5 border border-border rounded bg-muted/40">
+                                TEF
+                              </span>
+                            )}
+                            {letter && (
+                              <kbd className="ml-auto px-1.5 py-0.5 border border-border rounded text-[10px] bg-muted/40">
+                                {letter}
+                              </kbd>
+                            )}
+                          </span>
+                          <Input
+                            ref={(el) => (lineRefs.current[m.id] = el)}
+                            value={lines[m.id] || ''}
+                            onChange={(e) => updateLine(m.id, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const cur = parseCurrencyInput(lines[m.id] || '');
+                                if (cur === 0 && remaining > 0) {
+                                  fillRemainingOnLine(m.id);
+                                  return;
+                                }
+                                if (exact && !busy && !processingTef) submit();
                               }
-                              if (exact && !busy) submit();
-                            }
-                          }}
-                          placeholder="R$ 0,00"
-                          inputMode="decimal"
-                          disabled={busy}
-                          className="w-40 text-right"
-                        />
+                            }}
+                            placeholder="R$ 0,00"
+                            inputMode="decimal"
+                            disabled={busy || processingTef}
+                            className="w-40 text-right"
+                          />
+                        </div>
+                        {isTef && lineAmount > 0 && (
+                          <div className="flex flex-wrap items-center gap-2 text-xs pl-1">
+                            <span className="text-muted-foreground">Modalidade:</span>
+                            {([
+                              { id: 'avista', label: 'Crédito à vista' },
+                              { id: 'debit', label: 'Débito' },
+                              { id: 'parcelado', label: 'Parcelado' },
+                              { id: 'pix', label: 'PIX' },
+                            ] as const).map((opt) => (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                disabled={busy || processingTef}
+                                onClick={() =>
+                                  setTefMod((prev) => ({
+                                    ...prev,
+                                    [m.id]: {
+                                      modality: opt.id,
+                                      installments: prev[m.id]?.installments || 2,
+                                    },
+                                  }))
+                                }
+                                className={`px-2 py-1 rounded border text-xs transition-colors ${
+                                  mod.modality === opt.id
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-border bg-muted/40 hover:bg-muted'
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                            {mod.modality === 'parcelado' && (
+                              <span className="flex items-center gap-1">
+                                <span className="text-muted-foreground">Parcelas:</span>
+                                <Input
+                                  type="number"
+                                  min={2}
+                                  max={18}
+                                  value={mod.installments || 2}
+                                  onChange={(e) =>
+                                    setTefMod((prev) => ({
+                                      ...prev,
+                                      [m.id]: {
+                                        modality: 'parcelado',
+                                        installments: Math.max(
+                                          2,
+                                          Math.min(18, Number(e.target.value) || 2),
+                                        ),
+                                      },
+                                    }))
+                                  }
+                                  disabled={busy || processingTef}
+                                  className="w-16 h-7 text-right"
+                                />
+                                <span className="text-muted-foreground">x</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </li>
                     );
                   })}
                 </ul>
+              )}
+
+              {(processingTef || tefStatus) && (
+                <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm flex items-center gap-2">
+                  {processingTef && <Loader2 className="h-4 w-4 animate-spin" />}
+                  <span>{tefStatus || 'Processando TEF…'}</span>
+                </div>
               )}
 
               <div className="flex items-center justify-between pt-3 text-sm">
@@ -415,11 +492,21 @@ export function EfetivarReceitaDialog({
           </div>
         )}
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={busy || processingTef}
+          >
             CANCELAR
           </Button>
-          <Button onClick={submit} disabled={busy || !exact}>
-            EFETIVAR
+          <Button onClick={submit} disabled={busy || processingTef || !exact}>
+            {processingTef ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…
+              </>
+            ) : (
+              'EFETIVAR'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
