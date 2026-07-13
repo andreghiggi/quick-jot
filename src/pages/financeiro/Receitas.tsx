@@ -665,6 +665,8 @@ export default function Receitas() {
         onConfirm={async (data) => {
           if (!efetivarRow || !company?.id) return;
           setBusy(true);
+          setNfceError(null);
+          setNfcePhase({ label: 'Recebendo pagamento...', detail: 'Gravando quitação' });
           const ok = await receivePaymentSplit({
             receivableId: efetivarRow.id,
             companyId: company.id,
@@ -679,6 +681,7 @@ export default function Receitas() {
             setSelection(new Set());
             // Imprime 1 comprovante de recebimento para a parcela paga.
             const amountPaid = data.payments.reduce((s, p) => s + p.amount, 0);
+            setNfcePhase({ label: 'Imprimindo comprovante...', detail: 'Recebimento de parcela' });
             await printReceiptsFor([{
               row,
               amountPaid,
@@ -686,6 +689,9 @@ export default function Receitas() {
               interest: data.interest, fine: data.fine, discount: data.discount, surcharge: data.surcharge,
             }]);
             if (data.emitNfce) await emitNfceForReceivables([row]);
+            else setNfcePhase(null);
+          } else {
+            setNfcePhase(null);
           }
         }}
       />
@@ -704,6 +710,8 @@ export default function Receitas() {
         onConfirm={async (data) => {
           if (!efetivarRows?.length || !company?.id) return;
           setBusy(true);
+          setNfceError(null);
+          setNfcePhase({ label: 'Recebendo pagamento...', detail: `${efetivarRows.length} parcelas` });
           const totalBalance = efetivarRows.reduce((s, r) => s + Number(r.balance), 0) || 1;
           const queue = data.payments.map((p) => ({ ...p }));
           let allOk = true;
@@ -754,8 +762,14 @@ export default function Receitas() {
             const rowsForNfce = efetivarRows;
             setEfetivarRows(null);
             setSelection(new Set());
-            if (receipts.length) await printReceiptsFor(receipts);
+            if (receipts.length) {
+              setNfcePhase({ label: 'Imprimindo comprovantes...', detail: `${receipts.length} parcelas — corte automático entre elas` });
+              await printReceiptsFor(receipts);
+            }
             if (data.emitNfce && rowsForNfce) await emitNfceForReceivables(rowsForNfce);
+            else setNfcePhase(null);
+          } else {
+            setNfcePhase(null);
           }
         }}
       />
