@@ -83,6 +83,10 @@ export default function Receitas() {
   /** Ação pendente ao selecionar uma parcela dentro do diálogo "Parcelas". */
   const [pendingAction, setPendingAction] = useState<'receber' | 'renegociar' | null>(null);
 
+  // Overlay sequenciado "Recebendo → Imprimindo comprovantes → Emitindo NFC-e → Imprimindo cupom".
+  const [nfcePhase, setNfcePhase] = useState<{ label: string; detail?: string } | null>(null);
+  const [nfceError, setNfceError] = useState<string | null>(null);
+
   const rows = useMemo<FinanceRow[]>(() => items.map((r) => ({
     id: r.id,
     document_number: r.document_number,
@@ -166,41 +170,45 @@ export default function Receitas() {
     }>,
   ) {
     const now = new Date();
+    // Recarrega os saldos atualizados em paralelo para montar "saldo restante".
+    const payloads: PaymentReceiptPayload[] = [];
     for (const r of rowsPaid) {
-      try {
-        // Recarrega o saldo mais recente para exibir "saldo restante" real.
-        const { data: fresh } = await supabase
-          .from('accounts_receivable' as any)
-          .select('balance, status')
-          .eq('id', r.row.id)
-          .maybeSingle();
-        const remaining = Number((fresh as any)?.balance ?? 0);
-        const paidFlag = ((fresh as any)?.status || '') === 'paid';
-        await printPaymentReceipt({
-          paperSize: storeSettings.printerPaperSize,
-          storeName: company?.name || storeSettings.storeName || 'Loja',
-          storeCnpj: (company as any)?.cnpj || null,
-          storeAddress: (company as any)?.address || null,
-          storePhone: storeSettings.storePhone || null,
-          operatorName: (user as any)?.email || null,
-          customerName: r.row.customer_name || 'Cliente',
-          customerDocument: (r.row as any).customer_document || null,
-          documentNumber: r.row.document_number || r.row.id.slice(0, 8).toUpperCase(),
-          installmentLabel: (r.row.notes || '').match(/Parcela\s+\d+\/\d+/i)?.[0] || null,
-          amountPaid: r.amountPaid,
-          interest: r.interest,
-          fine: r.fine,
-          discount: r.discount,
-          surcharge: r.surcharge,
-          remainingBalance: remaining,
-          status: paidFlag ? 'paid' : 'partial',
-          payments: r.payments,
-          issuedAt: now,
-        });
-      } catch (e: any) {
-        console.error('[Receitas] falha ao imprimir comprovante', e);
-        toast.error('Falha ao imprimir comprovante: ' + (e?.message || e));
-      }
+      const { data: fresh } = await supabase
+        .from('accounts_receivable' as any)
+        .select('balance, status')
+        .eq('id', r.row.id)
+        .maybeSingle();
+      const remaining = Number((fresh as any)?.balance ?? 0);
+      const paidFlag = ((fresh as any)?.status || '') === 'paid';
+      payloads.push({
+        paperSize: storeSettings.printerPaperSize,
+        storeName: company?.name || storeSettings.storeName || 'Loja',
+        storeCnpj: (company as any)?.cnpj || null,
+        storeAddress: (company as any)?.address || null,
+        storePhone: storeSettings.storePhone || null,
+        operatorName: (user as any)?.email || null,
+        customerName: r.row.customer_name || 'Cliente',
+        customerDocument: (r.row as any).customer_document || null,
+        documentNumber: r.row.document_number || r.row.id.slice(0, 8).toUpperCase(),
+        installmentLabel: (r.row.notes || '').match(/Parcela\s+\d+\/\d+/i)?.[0] || null,
+        amountPaid: r.amountPaid,
+        interest: r.interest,
+        fine: r.fine,
+        discount: r.discount,
+        surcharge: r.surcharge,
+        remainingBalance: remaining,
+        status: paidFlag ? 'paid' : 'partial',
+        payments: r.payments,
+        issuedAt: now,
+      });
+    }
+    try {
+      // UMA janela, N páginas com page-break entre parcelas — a impressora
+      // corta entre cada comprovante (nas que têm guilhotina).
+      await printPaymentReceiptsConsolidated(payloads);
+    } catch (e: any) {
+      console.error('[Receitas] falha ao imprimir comprovante', e);
+      toast.error('Falha ao imprimir comprovante: ' + (e?.message || e));
     }
   }
 
@@ -218,6 +226,7 @@ export default function Receitas() {
     }
     for (const saleId of saleIds) {
       try {
+        setNfcePhase({ label: 'Emitindo NFC-e...', detail: 'Preparando itens da venda' });
         const { data: itemsData, error: itErr } = await supabase
           .from('pdv_sale_items')
           .select('product_id, product_name, quantity, unit_price')
@@ -225,7 +234,7 @@ export default function Receitas() {
         if (itErr) throw itErr;
         const saleItems = (itemsData as any[]) || [];
         if (saleItems.length === 0) {
-          toast.error('Venda sem itens — NFC-e não emitida.');
+          setNfceError('Venda sem itens — NFC-e não emitida.');
           continue;
         }
         // Carrega produtos + regras tributárias envolvidos.
@@ -269,6 +278,7 @@ export default function Receitas() {
           };
         });
         const externalId = `CRED-${saleId.substring(0, 8)}-${Date.now()}`;
+        setNfcePhase({ label: 'Emitindo NFC-e...', detail: 'Enviando dados para a SEFAZ' });
         await emitirNFCe(company.id, saleId, {
           external_id: externalId,
           itens: nfceItems,
@@ -276,12 +286,39 @@ export default function Receitas() {
           valor_frete: 0,
           observacoes: list[0]?.customer_name ? `Cliente: ${list[0].customer_name}` : undefined,
         } as any);
-        toast.success('NFC-e enviada para processamento.');
+        setNfcePhase({ label: 'Confirmando autorização...', detail: 'Consultando retorno da SEFAZ' });
+        await new Promise((r) => setTimeout(r, 200));
+        let rec = await getNFCeRecordBySaleId(saleId);
+        for (let i = 0; i < 6; i++) {
+          if (rec && (rec.status === 'autorizada' || rec.status === 'rejeitada' || rec.status === 'erro')) break;
+          setNfcePhase({ label: 'Consultando SEFAZ...', detail: `Tentativa ${i + 1}/6` });
+          if (rec?.nfce_id) {
+            try { await consultarNFCe(company.id, rec.nfce_id); } catch { /* noop */ }
+          }
+          await new Promise((r) => setTimeout(r, 1000));
+          rec = await getNFCeRecordBySaleId(saleId);
+        }
+        if (rec?.status === 'autorizada') {
+          setNfcePhase({ label: `NFC-e nº ${rec.numero || ''} autorizada`, detail: 'Imprimindo cupom fiscal...' });
+          try {
+            await printDanfeFromRecord(rec as any);
+          } catch {
+            try { await printDanfeFromRecordViaIframe(rec as any); } catch (e: any) {
+              toast.error(e?.message || 'Erro ao imprimir DANFE');
+            }
+          }
+          toast.success(`NFC-e nº ${rec.numero || ''} autorizada.`);
+        } else if (rec) {
+          setNfceError(rec.motivo_rejeicao || `NFC-e ${rec.status}. Verifique no Monitor NFC-e.`);
+        } else {
+          toast.info('NFC-e enviada. Acompanhe no Monitor NFC-e.');
+        }
       } catch (e: any) {
         console.error('[Receitas] emitNfceForReceivables', e);
-        toast.error('Falha ao emitir NFC-e: ' + (e?.message || e));
+        setNfceError('Falha ao emitir NFC-e: ' + (e?.message || e));
       }
     }
+    setNfcePhase(null);
   }
 
   const openEfetivar = (id: string) => { const r = findAR(id); if (r) setEfetivarRow(r); };
