@@ -48,6 +48,8 @@ interface NFCeRecord {
   request_payload: any;
   response_payload: any;
   webhook_payload: any;
+  contingencia_offline?: boolean;
+  contingencia_efetivada?: boolean;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; className: string }> = {
@@ -447,6 +449,23 @@ export default function NFCeMonitor() {
                               <StatusIcon className={`w-3 h-3 ${record.status === 'processando' ? 'animate-spin' : ''}`} />
                               {statusCfg.label}
                             </Badge>
+                            {record.contingencia_offline && (
+                              <Badge
+                                variant="outline"
+                                className={`ml-1 text-[10px] ${
+                                  record.contingencia_efetivada
+                                    ? 'bg-green-500/10 text-green-700 border-green-500/30'
+                                    : 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30'
+                                }`}
+                                title={
+                                  record.contingencia_efetivada
+                                    ? 'Contingência já efetivada na SEFAZ'
+                                    : 'Emitida em contingência — aguardando efetivação na SEFAZ'
+                                }
+                              >
+                                {record.contingencia_efetivada ? 'Cont. efetivada' : 'Contingência'}
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className="text-xs">

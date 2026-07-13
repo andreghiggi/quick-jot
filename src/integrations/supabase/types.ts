@@ -1719,6 +1719,8 @@ export type Database = {
           ambiente: string | null
           chave_acesso: string | null
           company_id: string
+          contingencia_efetivada: boolean
+          contingencia_offline: boolean
           created_at: string
           external_id: string
           id: string
@@ -1741,6 +1743,8 @@ export type Database = {
           ambiente?: string | null
           chave_acesso?: string | null
           company_id: string
+          contingencia_efetivada?: boolean
+          contingencia_offline?: boolean
           created_at?: string
           external_id: string
           id?: string
@@ -1763,6 +1767,8 @@ export type Database = {
           ambiente?: string | null
           chave_acesso?: string | null
           company_id?: string
+          contingencia_efetivada?: boolean
+          contingencia_offline?: boolean
           created_at?: string
           external_id?: string
           id?: string
