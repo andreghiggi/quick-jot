@@ -165,7 +165,7 @@ export function EfetivarReceitaDialog({
     el?.select();
   };
 
-  const submit = async () => {
+  const submit = async (emitNfceOverride?: boolean) => {
     if (!exact) return;
     const activeLines = paymentMethods
       .map((m) => {
@@ -232,13 +232,17 @@ export function EfetivarReceitaDialog({
       paymentMethodId: l.method.id,
       paymentName: l.method.name,
     }));
+    const emitFlag =
+      typeof emitNfceOverride === 'boolean'
+        ? hasTefLine || emitNfceOverride
+        : effectiveEmitNfce;
     await onConfirm({
       interest: nInterest,
       fine: nFine,
       discount: nDiscount,
       surcharge: nSurcharge,
       payments,
-      emitNfce: effectiveEmitNfce,
+      emitNfce: emitFlag,
     });
   };
 
@@ -472,32 +476,7 @@ export function EfetivarReceitaDialog({
                 </span>
               </div>
 
-              {/* Emissão de NFC-e — obrigatória em TEF, opcional nas demais formas */}
-              <div className="pt-3 border-t mt-3">
-                <label
-                  className={
-                    'flex items-start gap-2 text-sm ' +
-                    (hasTefLine ? 'opacity-90' : 'cursor-pointer')
-                  }
-                >
-                  <Checkbox
-                    checked={effectiveEmitNfce}
-                    onCheckedChange={(v) => !hasTefLine && setEmitNfce(v === true)}
-                    disabled={hasTefLine || busy}
-                    className="mt-0.5"
-                  />
-                  <span>
-                    Emitir NFC-e após efetivar
-                    {hasTefLine && (
-                      <span className="block text-[11px] text-muted-foreground">
-                        Obrigatória para pagamentos via TEF — não pode ser desmarcada.
-                      </span>
-                    )}
-                  </span>
-                </label>
-              </div>
-
-              <p className="text-[11px] text-muted-foreground pt-2">
+              <p className="text-[11px] text-muted-foreground pt-3 border-t mt-3">
                 <kbd className="px-1 py-0.5 border border-border rounded text-[10px]">A–Z</kbd>{' '}
                 foca a forma de pagamento.{' '}
                 <kbd className="px-1 py-0.5 border border-border rounded text-[10px]">Enter</kbd>{' '}
@@ -514,13 +493,23 @@ export function EfetivarReceitaDialog({
           >
             CANCELAR
           </Button>
-          <Button onClick={submit} disabled={busy || processingTef || !exact}>
+          {!hasTefLine && (
+            <Button
+              variant="outline"
+              onClick={() => submit(false)}
+              disabled={busy || processingTef || !exact}
+            >
+              EFETIVAR
+            </Button>
+          )}
+          <Button
+            onClick={() => submit(true)}
+            disabled={busy || processingTef || !exact}
+          >
             {processingTef ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…
-              </>
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…</>
             ) : (
-              'EFETIVAR'
+              'EFETIVAR COM NFC-E'
             )}
           </Button>
         </DialogFooter>
