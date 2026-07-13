@@ -1102,10 +1102,19 @@ export default function FrenteCaixa() {
               }
             } catch (err: any) {
               console.error('[FrenteCaixa] NFC-e error:', err);
-              setConsolidatedNfceError(err?.message || 'Erro ao emitir NFC-e');
-              toast.error(
-                `Venda salva, mas erro ao emitir NFC-e: ${err?.message || 'erro desconhecido'}`,
-              );
+              // O diálogo consolidado já está aberto; basta preencher o
+              // erro nele. Não disparamos toast no canto pra não competir
+              // com o card central e pra não truncar o motivo.
+              let motivo = err?.message || 'Erro ao emitir NFC-e';
+              try {
+                await new Promise((r) => setTimeout(r, 300));
+                const rejRec = await getNFCeRecordBySaleId(saleId);
+                if (rejRec?.motivo_rejeicao) {
+                  motivo = rejRec.motivo_rejeicao;
+                  setConsolidatedRecord(rejRec);
+                }
+              } catch { /* noop */ }
+              setConsolidatedNfceError(motivo);
             } finally {
               setConsolidatedEmitting(false);
             }
