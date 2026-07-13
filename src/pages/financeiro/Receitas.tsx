@@ -568,6 +568,7 @@ export default function Receitas() {
         onOpenChange={(o) => !o && setEfetivarRow(null)}
         receivable={efetivarRow}
         paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name, integrationType: m.integration_type }))}
+        companyId={company?.id}
         busy={busy}
         onConfirm={async (data) => {
           if (!efetivarRow || !company?.id) return;
@@ -598,6 +599,7 @@ export default function Receitas() {
         receivable={null}
         receivables={efetivarRows}
         paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name, integrationType: m.integration_type }))}
+        companyId={company?.id}
         busy={busy}
         onConfirm={async (data) => {
           if (!efetivarRows?.length || !company?.id) return;
