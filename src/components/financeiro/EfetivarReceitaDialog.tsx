@@ -18,6 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { brl, maskCurrencyInput, parseCurrencyInput } from '@/components/pdv-v2/_format';
 import type { AccountReceivable } from '@/hooks/useAccountsReceivable';
+import { runMultiPayment, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export interface EfetivarPayment {
   amount: number;
@@ -44,6 +47,7 @@ export function EfetivarReceitaDialog({
   receivable,
   receivables,
   paymentMethods,
+  companyId,
   onConfirm,
   busy,
 }: {
@@ -53,6 +57,7 @@ export function EfetivarReceitaDialog({
   /** Quando informado, efetiva várias parcelas juntas (venda inteira). */
   receivables?: AccountReceivable[] | null;
   paymentMethods: Array<{ id: string; name: string; integrationType?: string | null }>;
+  companyId?: string | null;
   onConfirm: (data: EfetivarSubmit) => Promise<void> | void;
   busy: boolean;
 }) {
@@ -62,6 +67,11 @@ export function EfetivarReceitaDialog({
   const [surcharge, setSurcharge] = useState('0,00');
   const [lines, setLines] = useState<Record<string, string>>({});
   const [emitNfce, setEmitNfce] = useState(false);
+  const [tefMod, setTefMod] = useState<
+    Record<string, { modality: 'avista' | 'debit' | 'parcelado' | 'pix'; installments: number }>
+  >({});
+  const [processingTef, setProcessingTef] = useState(false);
+  const [tefStatus, setTefStatus] = useState<string>('');
   const lineRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const list = useMemo(
@@ -104,6 +114,9 @@ export function EfetivarReceitaDialog({
       setSurcharge('0,00');
       setLines({});
       setEmitNfce(false);
+      setTefMod({});
+      setTefStatus('');
+      setProcessingTef(false);
       setTimeout(() => {
         const first = paymentMethods[0];
         if (first) {
@@ -139,14 +152,71 @@ export function EfetivarReceitaDialog({
 
   const submit = async () => {
     if (!exact) return;
-    const payments: EfetivarPayment[] = paymentMethods
+    const activeLines = paymentMethods
       .map((m) => {
         const amt = parseCurrencyInput(lines[m.id] || '');
         if (amt <= 0) return null;
-        return { amount: amt, paymentMethodId: m.id, paymentName: m.name };
+        const integ = (m.integrationType || '').toLowerCase();
+        const isTef = integ === 'tef_pinpad' || integ === 'tef_smartpos';
+        return { method: m, amount: amt, isTef, integ };
       })
-      .filter(Boolean) as EfetivarPayment[];
-    if (payments.length === 0) return;
+      .filter(Boolean) as Array<{
+        method: (typeof paymentMethods)[number];
+        amount: number;
+        isTef: boolean;
+        integ: string;
+      }>;
+    if (activeLines.length === 0) return;
+
+    // Se houver linhas TEF, executa runMultiPayment (mesma engine do
+    // Frente de Caixa / PDV V2) antes de registrar o recebimento. Em caso
+    // de recusa, tudo é estornado automaticamente.
+    const hasTef = activeLines.some((l) => l.isTef);
+    if (hasTef) {
+      if (!companyId) {
+        toast.error('Empresa não identificada para processar TEF.');
+        return;
+      }
+      const mpLines: MultiPaymentInputLine[] = activeLines.map((l) => {
+        const mod = tefMod[l.method.id] || { modality: 'avista' as const, installments: 2 };
+        return {
+          payment_method_id: l.method.id,
+          payment_name: l.method.name,
+          amount: l.amount,
+          integration: l.isTef ? (l.integ as 'tef_pinpad' | 'tef_smartpos') : undefined,
+          tef_options: l.isTef
+            ? {
+                modality: mod.modality,
+                installments:
+                  mod.modality === 'parcelado' ? Math.max(2, mod.installments || 2) : undefined,
+              }
+            : undefined,
+        };
+      });
+      setProcessingTef(true);
+      setTefStatus('Iniciando TEF…');
+      const mp = await runMultiPayment({
+        companyId,
+        lines: mpLines,
+        description: 'Recebimento de crediário',
+        onStatus: setTefStatus,
+      });
+      setProcessingTef(false);
+      setTefStatus('');
+      if (!mp.ok) {
+        const extra = mp.rolledBackCount
+          ? ` (${mp.rolledBackCount} cobrança(s) estornada(s))`
+          : '';
+        toast.error((mp.errorMessage || 'Cobrança TEF recusada') + extra);
+        return;
+      }
+    }
+
+    const payments: EfetivarPayment[] = activeLines.map((l) => ({
+      amount: l.amount,
+      paymentMethodId: l.method.id,
+      paymentName: l.method.name,
+    }));
     await onConfirm({
       interest: nInterest,
       fine: nFine,
@@ -257,40 +327,117 @@ export function EfetivarReceitaDialog({
                 <ul className="divide-y border-y">
                   {paymentMethods.map((m, idx) => {
                     const letter = LETTERS[idx] || '';
+                    const integ = (m.integrationType || '').toLowerCase();
+                    const isTef = integ === 'tef_pinpad' || integ === 'tef_smartpos';
+                    const lineAmount = parseCurrencyInput(lines[m.id] || '');
+                    const mod = tefMod[m.id] || { modality: 'avista' as const, installments: 2 };
                     return (
-                      <li key={m.id} className="py-2.5 flex items-center gap-3">
-                        <span className="flex-1 flex items-center gap-2 text-sm">
-                          <span>{m.name}</span>
-                          {letter && (
-                            <kbd className="ml-auto px-1.5 py-0.5 border border-border rounded text-[10px] bg-muted/40">
-                              {letter}
-                            </kbd>
-                          )}
-                        </span>
-                        <Input
-                          ref={(el) => (lineRefs.current[m.id] = el)}
-                          value={lines[m.id] || ''}
-                          onChange={(e) => updateLine(m.id, e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              const cur = parseCurrencyInput(lines[m.id] || '');
-                              if (cur === 0 && remaining > 0) {
-                                fillRemainingOnLine(m.id);
-                                return;
+                      <li key={m.id} className="py-2.5 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="flex-1 flex items-center gap-2 text-sm">
+                            <span>{m.name}</span>
+                            {isTef && (
+                              <span className="text-[10px] px-1.5 py-0.5 border border-border rounded bg-muted/40">
+                                TEF
+                              </span>
+                            )}
+                            {letter && (
+                              <kbd className="ml-auto px-1.5 py-0.5 border border-border rounded text-[10px] bg-muted/40">
+                                {letter}
+                              </kbd>
+                            )}
+                          </span>
+                          <Input
+                            ref={(el) => (lineRefs.current[m.id] = el)}
+                            value={lines[m.id] || ''}
+                            onChange={(e) => updateLine(m.id, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const cur = parseCurrencyInput(lines[m.id] || '');
+                                if (cur === 0 && remaining > 0) {
+                                  fillRemainingOnLine(m.id);
+                                  return;
+                                }
+                                if (exact && !busy && !processingTef) submit();
                               }
-                              if (exact && !busy) submit();
-                            }
-                          }}
-                          placeholder="R$ 0,00"
-                          inputMode="decimal"
-                          disabled={busy}
-                          className="w-40 text-right"
-                        />
+                            }}
+                            placeholder="R$ 0,00"
+                            inputMode="decimal"
+                            disabled={busy || processingTef}
+                            className="w-40 text-right"
+                          />
+                        </div>
+                        {isTef && lineAmount > 0 && (
+                          <div className="flex flex-wrap items-center gap-2 text-xs pl-1">
+                            <span className="text-muted-foreground">Modalidade:</span>
+                            {([
+                              { id: 'avista', label: 'Crédito à vista' },
+                              { id: 'debit', label: 'Débito' },
+                              { id: 'parcelado', label: 'Parcelado' },
+                              { id: 'pix', label: 'PIX' },
+                            ] as const).map((opt) => (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                disabled={busy || processingTef}
+                                onClick={() =>
+                                  setTefMod((prev) => ({
+                                    ...prev,
+                                    [m.id]: {
+                                      modality: opt.id,
+                                      installments: prev[m.id]?.installments || 2,
+                                    },
+                                  }))
+                                }
+                                className={`px-2 py-1 rounded border text-xs transition-colors ${
+                                  mod.modality === opt.id
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-border bg-muted/40 hover:bg-muted'
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                            {mod.modality === 'parcelado' && (
+                              <span className="flex items-center gap-1">
+                                <span className="text-muted-foreground">Parcelas:</span>
+                                <Input
+                                  type="number"
+                                  min={2}
+                                  max={18}
+                                  value={mod.installments || 2}
+                                  onChange={(e) =>
+                                    setTefMod((prev) => ({
+                                      ...prev,
+                                      [m.id]: {
+                                        modality: 'parcelado',
+                                        installments: Math.max(
+                                          2,
+                                          Math.min(18, Number(e.target.value) || 2),
+                                        ),
+                                      },
+                                    }))
+                                  }
+                                  disabled={busy || processingTef}
+                                  className="w-16 h-7 text-right"
+                                />
+                                <span className="text-muted-foreground">x</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </li>
                     );
                   })}
                 </ul>
+              )}
+
+              {(processingTef || tefStatus) && (
+                <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm flex items-center gap-2">
+                  {processingTef && <Loader2 className="h-4 w-4 animate-spin" />}
+                  <span>{tefStatus || 'Processando TEF…'}</span>
+                </div>
               )}
 
               <div className="flex items-center justify-between pt-3 text-sm">
@@ -345,11 +492,21 @@ export function EfetivarReceitaDialog({
           </div>
         )}
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={busy || processingTef}
+          >
             CANCELAR
           </Button>
-          <Button onClick={submit} disabled={busy || !exact}>
-            EFETIVAR
+          <Button onClick={submit} disabled={busy || processingTef || !exact}>
+            {processingTef ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…
+              </>
+            ) : (
+              'EFETIVAR'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
