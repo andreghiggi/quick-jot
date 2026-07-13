@@ -110,7 +110,11 @@ export default function NFCeMonitor() {
 
     async function consultAndRefresh() {
       const pending = recordsRef.current.filter(r => 
-        (r.status === 'pendente' || r.status === 'processando') && r.nfce_id
+        r.nfce_id && (
+          r.status === 'pendente' ||
+          r.status === 'processando' ||
+          (r.contingencia_offline === true && r.contingencia_efetivada !== true)
+        )
       );
       
       for (const record of pending.slice(0, 5)) {
