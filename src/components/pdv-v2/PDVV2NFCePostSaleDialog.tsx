@@ -179,13 +179,24 @@ export function PDVV2NFCePostSaleDialog({
             NFC-e
             {record?.numero ? ` nº ${record.numero}` : ''} —{' '}
             {status === 'autorizada'
-              ? 'Autorizada'
+              ? (record?.contingencia_offline ? 'Autorizada em contingência' : 'Autorizada')
               : status === 'rejeitada'
               ? 'Rejeitada'
               : 'Processando...'}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 text-center">
+          {status === 'autorizada' && record?.contingencia_offline && !record?.contingencia_efetivada && (
+            <div className="rounded-md border border-yellow-400 bg-yellow-50 text-yellow-900 text-xs px-3 py-2">
+              ⚠️ Emitida em <strong>contingência offline</strong> (SEFAZ indisponível).
+              A efetivação junto à SEFAZ acontece automaticamente em segundo plano — o cupom já é válido.
+            </div>
+          )}
+          {status === 'autorizada' && record?.contingencia_offline && record?.contingencia_efetivada && (
+            <div className="rounded-md border border-green-400 bg-green-50 text-green-900 text-xs px-3 py-2">
+              ✅ Contingência efetivada com sucesso na SEFAZ.
+            </div>
+          )}
           {polling || status === 'processando' || status === 'pendente' ? (
             <div className="flex flex-col items-center gap-3 py-4">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
