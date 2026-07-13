@@ -165,7 +165,7 @@ export function EfetivarReceitaDialog({
     el?.select();
   };
 
-  const submit = async () => {
+  const submit = async (emitNfceOverride?: boolean) => {
     if (!exact) return;
     const activeLines = paymentMethods
       .map((m) => {
@@ -232,13 +232,17 @@ export function EfetivarReceitaDialog({
       paymentMethodId: l.method.id,
       paymentName: l.method.name,
     }));
+    const emitFlag =
+      typeof emitNfceOverride === 'boolean'
+        ? hasTefLine || emitNfceOverride
+        : effectiveEmitNfce;
     await onConfirm({
       interest: nInterest,
       fine: nFine,
       discount: nDiscount,
       surcharge: nSurcharge,
       payments,
-      emitNfce: effectiveEmitNfce,
+      emitNfce: emitFlag,
     });
   };
 
