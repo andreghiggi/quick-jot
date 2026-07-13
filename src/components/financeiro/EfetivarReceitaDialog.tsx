@@ -18,6 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { brl, maskCurrencyInput, parseCurrencyInput } from '@/components/pdv-v2/_format';
 import type { AccountReceivable } from '@/hooks/useAccountsReceivable';
+import { runMultiPayment, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export interface EfetivarPayment {
   amount: number;
@@ -44,6 +47,7 @@ export function EfetivarReceitaDialog({
   receivable,
   receivables,
   paymentMethods,
+  companyId,
   onConfirm,
   busy,
 }: {
@@ -53,6 +57,7 @@ export function EfetivarReceitaDialog({
   /** Quando informado, efetiva várias parcelas juntas (venda inteira). */
   receivables?: AccountReceivable[] | null;
   paymentMethods: Array<{ id: string; name: string; integrationType?: string | null }>;
+  companyId?: string | null;
   onConfirm: (data: EfetivarSubmit) => Promise<void> | void;
   busy: boolean;
 }) {
@@ -62,6 +67,11 @@ export function EfetivarReceitaDialog({
   const [surcharge, setSurcharge] = useState('0,00');
   const [lines, setLines] = useState<Record<string, string>>({});
   const [emitNfce, setEmitNfce] = useState(false);
+  const [tefMod, setTefMod] = useState<
+    Record<string, { modality: 'avista' | 'debit' | 'parcelado' | 'pix'; installments: number }>
+  >({});
+  const [processingTef, setProcessingTef] = useState(false);
+  const [tefStatus, setTefStatus] = useState<string>('');
   const lineRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const list = useMemo(
@@ -104,6 +114,9 @@ export function EfetivarReceitaDialog({
       setSurcharge('0,00');
       setLines({});
       setEmitNfce(false);
+      setTefMod({});
+      setTefStatus('');
+      setProcessingTef(false);
       setTimeout(() => {
         const first = paymentMethods[0];
         if (first) {
@@ -139,14 +152,71 @@ export function EfetivarReceitaDialog({
 
   const submit = async () => {
     if (!exact) return;
-    const payments: EfetivarPayment[] = paymentMethods
+    const activeLines = paymentMethods
       .map((m) => {
         const amt = parseCurrencyInput(lines[m.id] || '');
         if (amt <= 0) return null;
-        return { amount: amt, paymentMethodId: m.id, paymentName: m.name };
+        const integ = (m.integrationType || '').toLowerCase();
+        const isTef = integ === 'tef_pinpad' || integ === 'tef_smartpos';
+        return { method: m, amount: amt, isTef, integ };
       })
-      .filter(Boolean) as EfetivarPayment[];
-    if (payments.length === 0) return;
+      .filter(Boolean) as Array<{
+        method: (typeof paymentMethods)[number];
+        amount: number;
+        isTef: boolean;
+        integ: string;
+      }>;
+    if (activeLines.length === 0) return;
+
+    // Se houver linhas TEF, executa runMultiPayment (mesma engine do
+    // Frente de Caixa / PDV V2) antes de registrar o recebimento. Em caso
+    // de recusa, tudo é estornado automaticamente.
+    const hasTef = activeLines.some((l) => l.isTef);
+    if (hasTef) {
+      if (!companyId) {
+        toast.error('Empresa não identificada para processar TEF.');
+        return;
+      }
+      const mpLines: MultiPaymentInputLine[] = activeLines.map((l) => {
+        const mod = tefMod[l.method.id] || { modality: 'avista' as const, installments: 2 };
+        return {
+          payment_method_id: l.method.id,
+          payment_name: l.method.name,
+          amount: l.amount,
+          integration: l.isTef ? (l.integ as 'tef_pinpad' | 'tef_smartpos') : undefined,
+          tef_options: l.isTef
+            ? {
+                modality: mod.modality,
+                installments:
+                  mod.modality === 'parcelado' ? Math.max(2, mod.installments || 2) : undefined,
+              }
+            : undefined,
+        };
+      });
+      setProcessingTef(true);
+      setTefStatus('Iniciando TEF…');
+      const mp = await runMultiPayment({
+        companyId,
+        lines: mpLines,
+        description: 'Recebimento de crediário',
+        onStatus: setTefStatus,
+      });
+      setProcessingTef(false);
+      setTefStatus('');
+      if (!mp.ok) {
+        const extra = mp.rolledBackCount
+          ? ` (${mp.rolledBackCount} cobrança(s) estornada(s))`
+          : '';
+        toast.error((mp.errorMessage || 'Cobrança TEF recusada') + extra);
+        return;
+      }
+    }
+
+    const payments: EfetivarPayment[] = activeLines.map((l) => ({
+      amount: l.amount,
+      paymentMethodId: l.method.id,
+      paymentName: l.method.name,
+    }));
     await onConfirm({
       interest: nInterest,
       fine: nFine,
