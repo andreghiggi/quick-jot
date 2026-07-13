@@ -122,7 +122,7 @@ export function FrenteCaixaCheckoutDialog({
 
   // Por linha de TEF: modalidade + parcelas (default crédito à vista)
   const [tefMod, setTefMod] = useState<
-    Record<string, { modality: 'avista' | 'debit' | 'parcelado'; installments: number }>
+    Record<string, { modality: 'avista' | 'debit' | 'parcelado' | 'pix'; installments: number }>
   >({});
 
   const [customerName, setCustomerName] = useState('');
@@ -620,6 +620,7 @@ export function FrenteCaixaCheckoutDialog({
                                 { id: 'avista', label: 'Crédito à vista' },
                                 { id: 'debit', label: 'Débito' },
                                 { id: 'parcelado', label: 'Parcelado' },
+                                { id: 'pix', label: 'PIX' },
                               ] as const).map((opt) => (
                                 <button
                                   key={opt.id}
