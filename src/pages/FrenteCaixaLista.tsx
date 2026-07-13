@@ -751,6 +751,25 @@ export default function FrenteCaixaLista() {
                               Pendente de emissão do documento fiscal
                             </Badge>
                           )}
+                          {/* Contingência offline — distingue "autorizada em contingência" (aguardando SEFAZ) de "efetivada" */}
+                          {hasNfce && r.nfce!.contingencia_offline && (
+                            <Badge
+                              className={
+                                r.nfce!.contingencia_efetivada
+                                  ? 'bg-emerald-700 hover:bg-emerald-700 text-white border-0 text-[10px]'
+                                  : 'bg-yellow-500 hover:bg-yellow-500 text-yellow-950 border-0 text-[10px]'
+                              }
+                              title={
+                                r.nfce!.contingencia_efetivada
+                                  ? 'Contingência efetivada — a SEFAZ já processou esta nota.'
+                                  : 'Emitida em contingência offline — aguardando efetivação automática na SEFAZ (a cada 5 min).'
+                              }
+                            >
+                              {r.nfce!.contingencia_efetivada
+                                ? 'Cont. efetivada'
+                                : 'Contingência — aguardando SEFAZ'}
+                            </Badge>
+                          )}
                           {/* Status operacional (só pré-venda) */}
                           {!isFiscal && !saleCancelled && (
                             <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white border-0 text-[10px]">
