@@ -97,6 +97,8 @@ export interface NFCeRecord {
   motivo_rejeicao: string | null;
   created_at: string;
   updated_at: string;
+  contingencia_offline?: boolean;
+  contingencia_efetivada?: boolean;
 }
 
 async function callNFCeProxy(body: Record<string, any>) {
