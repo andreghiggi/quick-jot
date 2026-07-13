@@ -138,6 +138,23 @@ Deno.serve(async (req) => {
           console.log(`[nfce-contingencia-sync] Nota ${record.nfce_id} EFETIVADA na SEFAZ`)
         }
 
+        // Se a Focus já retorna a nota com protocolo REAL da SEFAZ (autorizada
+        // ou cancelada), a contingência foi transmitida com sucesso — mesmo
+        // que o campo `contingencia_offline_efetivada` não venha (ex.: notas
+        // já canceladas depois da efetivação). Protocolo SEFAZ é numérico e
+        // tem ~15 dígitos; usamos essa heurística para não deixar a flag
+        // amarela presa indefinidamente.
+        const protoStr = (proto ? String(proto) : '').trim()
+        const hasRealSefazProto = /^\d{10,}$/.test(protoStr)
+        const finalStatus = (updateData.status || rawStatus || '').toLowerCase()
+        if (hasRealSefazProto && (finalStatus === 'autorizada' || finalStatus === 'cancelada')) {
+          if (updateData.contingencia_efetivada !== true) {
+            updateData.contingencia_efetivada = true
+            effected++
+            console.log(`[nfce-contingencia-sync] Nota ${record.nfce_id} EFETIVADA (via protocolo SEFAZ, status=${finalStatus})`)
+          }
+        }
+
         // Caso o retry em contingência não tenha sido necessário e a SEFAZ
         // tenha autorizado em modo NORMAL (tpEmis=1), limpa a flag de
         // contingência para não deixar a nota presa com o selo amarelo.
