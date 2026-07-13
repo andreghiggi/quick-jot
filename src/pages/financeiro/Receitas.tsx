@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Check, MoreVertical, Receipt } from 'lucide-react';
+import { Loader2, Check, MoreVertical, Receipt, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { useFinanceiroEnabled } from '@/hooks/useFinanceiroEnabled';
 import { useAccountsReceivable, type AccountReceivable } from '@/hooks/useAccountsReceivable';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { brl } from '@/components/pdv-v2/_format';
+import { StatusBadge as SharedStatusBadge } from '@/components/financeiro/finance-shared';
 import {
   FinanceSearchBar, FinanceFilterPanel, FinanceActionMenu,
   FloatingFab, ConfirmDialog, BulkActionBar, Pagination, StatusBadge,
