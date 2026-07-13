@@ -569,17 +569,20 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                   <Label className="text-xs text-muted-foreground">Telefone *</Label>
                   <Input
                     value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    onChange={(e) => setForm({ ...form, phone: maskPhoneBR(e.target.value) })}
                     disabled={saving}
+                    inputMode="tel"
+                    placeholder="(11) 98765-4321"
                   />
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">CPF {requireFull ? '*' : ''}</Label>
                   <Input
                     value={form.cpf}
-                    onChange={(e) => setForm({ ...form, cpf: e.target.value })}
+                    onChange={(e) => setForm({ ...form, cpf: maskCpfCnpj(e.target.value) })}
                     disabled={saving}
-                    placeholder={requireFull ? '' : '(opcional)'}
+                    inputMode="numeric"
+                    placeholder={requireFull ? '000.000.000-00' : '(opcional)'}
                   />
                 </div>
               </div>
@@ -616,9 +619,18 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                     value={form.complement}
                     onChange={(e) => setForm({ ...form, complement: e.target.value })}
                     disabled={saving}
-                    placeholder="apto, bloco, referência"
+                    placeholder="apto, bloco"
                   />
                 </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Ponto de referência</Label>
+                <Input
+                  value={form.reference}
+                  onChange={(e) => setForm({ ...form, reference: e.target.value })}
+                  disabled={saving}
+                  placeholder="Ex.: em frente à padaria"
+                />
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
