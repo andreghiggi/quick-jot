@@ -472,32 +472,7 @@ export function EfetivarReceitaDialog({
                 </span>
               </div>
 
-              {/* Emissão de NFC-e — obrigatória em TEF, opcional nas demais formas */}
-              <div className="pt-3 border-t mt-3">
-                <label
-                  className={
-                    'flex items-start gap-2 text-sm ' +
-                    (hasTefLine ? 'opacity-90' : 'cursor-pointer')
-                  }
-                >
-                  <Checkbox
-                    checked={effectiveEmitNfce}
-                    onCheckedChange={(v) => !hasTefLine && setEmitNfce(v === true)}
-                    disabled={hasTefLine || busy}
-                    className="mt-0.5"
-                  />
-                  <span>
-                    Emitir NFC-e após efetivar
-                    {hasTefLine && (
-                      <span className="block text-[11px] text-muted-foreground">
-                        Obrigatória para pagamentos via TEF — não pode ser desmarcada.
-                      </span>
-                    )}
-                  </span>
-                </label>
-              </div>
-
-              <p className="text-[11px] text-muted-foreground pt-2">
+              <p className="text-[11px] text-muted-foreground pt-3 border-t mt-3">
                 <kbd className="px-1 py-0.5 border border-border rounded text-[10px]">A–Z</kbd>{' '}
                 foca a forma de pagamento.{' '}
                 <kbd className="px-1 py-0.5 border border-border rounded text-[10px]">Enter</kbd>{' '}
@@ -514,13 +489,27 @@ export function EfetivarReceitaDialog({
           >
             CANCELAR
           </Button>
-          <Button onClick={submit} disabled={busy || processingTef || !exact}>
+          {!hasTefLine && (
+            <Button
+              variant="outline"
+              onClick={() => { setEmitNfce(false); submit(); }}
+              disabled={busy || processingTef || !exact}
+            >
+              {processingTef && !emitNfce ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…</>
+              ) : (
+                'EFETIVAR'
+              )}
+            </Button>
+          )}
+          <Button
+            onClick={() => { if (!hasTefLine) setEmitNfce(true); submit(); }}
+            disabled={busy || processingTef || !exact}
+          >
             {processingTef ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…
-              </>
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…</>
             ) : (
-              'EFETIVAR'
+              'EFETIVAR COM NFC-E'
             )}
           </Button>
         </DialogFooter>
