@@ -679,7 +679,8 @@ export default function FrenteCaixaLista() {
                 const numero = hasNfce
                   ? (r.nfce!.numero || '—')
                   : (r.pv_numero != null ? String(r.pv_numero) : `#${r.id.slice(0, 6).toUpperCase()}`);
-                const canEmit = !r.nfce || (r.nfce.status !== 'autorizada' && r.nfce.status !== 'processando' && r.nfce.status !== 'cancelada');
+                const saleCancelled = (r.notes || '').includes('[CANCELADA]');
+                const canEmit = !saleCancelled && (!r.nfce || (r.nfce.status !== 'autorizada' && r.nfce.status !== 'processando' && r.nfce.status !== 'cancelada'));
                 return (
                   <li key={r.id} className="px-4 py-3 hover:bg-muted/40 transition-colors">
                     <div className="flex items-start gap-3">
@@ -749,9 +750,14 @@ export default function FrenteCaixaLista() {
                             </Badge>
                           )}
                           {/* Status operacional (só pré-venda) */}
-                          {!isFiscal && (
+                          {!isFiscal && !saleCancelled && (
                             <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white border-0 text-[10px]">
                               Pré-venda concluída
+                            </Badge>
+                          )}
+                          {saleCancelled && (
+                            <Badge className="bg-destructive hover:bg-destructive text-white border-0 text-[10px] font-bold uppercase">
+                              <Ban className="h-3 w-3 mr-1" /> Venda cancelada
                             </Badge>
                           )}
                         </div>
