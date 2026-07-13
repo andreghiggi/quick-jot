@@ -874,6 +874,37 @@ export default function Receitas() {
       />
 
       <FloatingFab onClick={() => setCreateOpen(true)} label="Nova receita" />
+
+      {/* Overlay sequenciado durante Efetivar → Comprovante → NFC-e → DANFE */}
+      {nfcePhase && (
+        <div className="fixed inset-0 z-[100] bg-background/85 backdrop-blur-sm flex items-center justify-center">
+          <div className="max-w-sm w-full mx-4 rounded-lg border bg-card shadow-xl p-6 text-center">
+            <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-3" />
+            <div className="text-lg font-semibold">{nfcePhase.label}</div>
+            {nfcePhase.detail && (
+              <div className="text-sm text-muted-foreground mt-1">{nfcePhase.detail}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Erro/rejeição da NFC-e — modal para o operador ler o motivo */}
+      <Dialog open={!!nfceError} onOpenChange={(o) => !o && setNfceError(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">NFC-e não autorizada</DialogTitle>
+            <DialogDescription>
+              O recebimento foi gravado e o comprovante impresso, mas a nota fiscal não pôde ser emitida.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm whitespace-pre-wrap">
+            {nfceError}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setNfceError(null)}>Entendi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </FinanceModuleLayout>
   );
 }
