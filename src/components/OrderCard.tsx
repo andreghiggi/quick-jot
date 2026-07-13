@@ -304,7 +304,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       const newNotes = `[CANCELADA]${reasonTag} ${order.notes || ''}`.trim();
       const { error } = await supabase
         .from('orders')
-        .update({ notes: newNotes })
+        .update({ notes: newNotes, status: 'canceled' as any })
         .eq('id', order.id);
       if (error) throw error;
       toast.success(`Pedido #${order.shortCode || order.orderCode || order.dailyNumber} cancelado`);
