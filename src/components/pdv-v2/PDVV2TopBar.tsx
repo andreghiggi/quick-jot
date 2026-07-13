@@ -1,14 +1,17 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Eye, EyeOff, Plus, DoorClosed, MoreVertical, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
+import { Eye, EyeOff, Plus, DoorClosed, MoreVertical, ArrowUpFromLine, ArrowDownToLine, Calculator, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useState } from 'react';
+import { loadCashClosingSales } from '@/utils/cashClosingSales';
 import { FrenteCaixaCashMovementDialog, type CashMovementType } from '@/components/frente-caixa/FrenteCaixaCashMovementDialog';
 import { brl as formatPrice } from './_format';
 
@@ -25,6 +28,7 @@ interface PDVV2TopBarProps {
   companyId?: string;
   cashRegisterId?: string;
   userId?: string;
+  registerOpenedAt?: string | null;
 }
 
 
@@ -41,8 +45,41 @@ export function PDVV2TopBar({
   companyId,
   cashRegisterId,
   userId,
+  registerOpenedAt,
 }: PDVV2TopBarProps) {
   const [movementType, setMovementType] = useState<CashMovementType | null>(null);
+  const [totalsOpen, setTotalsOpen] = useState(false);
+  const [totalsLoading, setTotalsLoading] = useState(false);
+  const [totalsByMethod, setTotalsByMethod] = useState<Array<{ name: string; total: number }>>([]);
+  const [totalsGrand, setTotalsGrand] = useState(0);
+
+  async function loadTotals() {
+    if (!companyId || !cashRegisterId) return;
+    setTotalsLoading(true);
+    try {
+      const sales = await loadCashClosingSales({
+        companyId,
+        registerId: cashRegisterId,
+        openedAt: registerOpenedAt || null,
+      });
+      const map = new Map<string, number>();
+      for (const s of sales) {
+        const key = s.payment_method_name || 'Sem forma';
+        map.set(key, (map.get(key) || 0) + (Number(s.final_total) || 0));
+      }
+      const arr = Array.from(map.entries())
+        .map(([name, total]) => ({ name, total }))
+        .sort((a, b) => b.total - a.total);
+      setTotalsByMethod(arr);
+      setTotalsGrand(arr.reduce((a, b) => a + b.total, 0));
+    } catch (e) {
+      console.error('Erro ao carregar totalizador', e);
+      setTotalsByMethod([]);
+      setTotalsGrand(0);
+    } finally {
+      setTotalsLoading(false);
+    }
+  }
   const newOrderLabel = 'Pedido Express';
   const newOrderBtn = (
     <Button
@@ -91,13 +128,49 @@ export function PDVV2TopBar({
               <DoorClosed className="h-4 w-4 mr-2" />
               Fechar Caixa
             </Button>
-            <DropdownMenu>
+            <DropdownMenu
+              open={totalsOpen}
+              onOpenChange={(o) => {
+                setTotalsOpen(o);
+                if (o) loadTotals();
+              }}
+            >
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Mais ações do caixa">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent
+                align="end"
+                onCloseAutoFocus={(e) => e.preventDefault()}
+                className="min-w-[260px]"
+              >
+                <DropdownMenuLabel className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                  <Calculator className="h-3.5 w-3.5" /> Totalizador do caixa
+                </DropdownMenuLabel>
+                <div className="px-2 pb-2 text-sm">
+                  {totalsLoading ? (
+                    <div className="flex items-center gap-2 py-2 text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando...
+                    </div>
+                  ) : totalsByMethod.length === 0 ? (
+                    <div className="py-2 text-muted-foreground">Sem vendas ainda.</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {totalsByMethod.map((row) => (
+                        <div key={row.name} className="flex items-center justify-between gap-4 tabular-nums">
+                          <span className="truncate">{row.name}</span>
+                          <span className="font-medium">{formatPrice(row.total)}</span>
+                        </div>
+                      ))}
+                      <div className="mt-1 flex items-center justify-between gap-4 border-t pt-1 tabular-nums font-semibold">
+                        <span>Total</span>
+                        <span>{formatPrice(totalsGrand)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setMovementType('sangria')}>
                   <ArrowUpFromLine className="h-4 w-4 mr-2" />
                   Sangria
