@@ -900,11 +900,21 @@ Deno.serve(async (req) => {
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
         }
 
-        apiResponse = await fetch(`${NFCE_API_URL}/inutilizar`, {
+        // O gateway FiscalFlow expõe a inutilização no path `/inutilizacao`
+        // (mesma convenção do Focus NFe). Fazemos fallback para `/inutilizar`
+        // caso alguma instância antiga ainda use o path anterior.
+        apiResponse = await fetch(`${NFCE_API_URL}/inutilizacao`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': NFCE_API_KEY },
           body: JSON.stringify(reqBody),
         })
+        if (apiResponse.status === 404) {
+          apiResponse = await fetch(`${NFCE_API_URL}/inutilizar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': NFCE_API_KEY },
+            body: JSON.stringify(reqBody),
+          })
+        }
         result = await safeJson(apiResponse)
 
         const ok = apiResponse.ok && (result?.success !== false)
