@@ -25,8 +25,9 @@ import { RenegociarReceitaDialog } from '@/components/financeiro/RenegociarRecei
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { emitirNFCe, type NFCeItem } from '@/services/nfceService';
+import { getNFCeRecordBySaleId, consultarNFCe, printDanfeFromRecord, printDanfeFromRecordViaIframe } from '@/services/nfceService';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
-import { printPaymentReceipt } from '@/utils/paymentReceiptPrint';
+import { printPaymentReceipt, printPaymentReceiptsConsolidated, type PaymentReceiptPayload } from '@/utils/paymentReceiptPrint';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { toast } from 'sonner';
 
