@@ -54,6 +54,47 @@ function onlyDigits(s: string) {
   return (s || '').replace(/\D+/g, '');
 }
 
+/** Máscara BR de telefone: (99) 9999-9999 ou (99) 99999-9999. Não limita quantos dígitos digitar. */
+function maskPhoneBR(v: string) {
+  const d = onlyDigits(v);
+  if (d.length === 0) return '';
+  if (d.length <= 2) return `(${d}`;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  if (d.length <= 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  // aceita mais dígitos que 11 (usuário pediu poder digitar quantos quiser)
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+/** Máscara CPF/CNPJ: XXX.XXX.XXX-XX ou XX.XXX.XXX/XXXX-XX. Não limita entrada. */
+function maskCpfCnpj(v: string) {
+  const d = onlyDigits(v);
+  if (d.length === 0) return '';
+  if (d.length <= 11) {
+    // CPF
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+    if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9, 11)}`;
+  }
+  // CNPJ
+  if (d.length <= 14) {
+    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`;
+  }
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`;
+}
+
+/** Aceita fixo (10 dígitos) ou celular (11 dígitos) BR. DDD 11–99. */
+function isValidBrPhone(v: string) {
+  const d = onlyDigits(v);
+  if (d.length !== 10 && d.length !== 11) return false;
+  const ddd = parseInt(d.slice(0, 2), 10);
+  if (ddd < 11 || ddd > 99) return false;
+  // celular deve começar com 9
+  if (d.length === 11 && d[2] !== '9') return false;
+  return true;
+}
+
 export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPick, requireFull = false }: Props) {
   const [mode, setMode] = useState<'search' | 'create'>('search');
   const [query, setQuery] = useState('');
@@ -65,7 +106,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
   // create form
   const [form, setForm] = useState({
     name: '', phone: '', cpf: '',
-    address: '', number: '', neighborhood: '', complement: '',
+    address: '', number: '', neighborhood: '', complement: '', reference: '',
     city: '', state: '',
   });
   const [saving, setSaving] = useState(false);
@@ -84,7 +125,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
       setCpfArmed(false);
       setForm({
         name: '', phone: '', cpf: '',
-        address: '', number: '', neighborhood: '', complement: '',
+        address: '', number: '', neighborhood: '', complement: '', reference: '',
         city: '', state: '',
       });
       setSaving(false);
@@ -182,14 +223,24 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
   /** Abre o formulário no modo edição, pré-preenchido com o cliente selecionado. */
   function handleEditSelected() {
     if (!selected) return;
+    // Extrai "Ref: ..." do complement, se armazenado nesse formato pela FC.
+    const rawComp = selected.complement || '';
+    let complement = rawComp;
+    let reference = '';
+    const m = rawComp.match(/^(.*?)(?:\s*[-|]\s*)?Ref:\s*(.+)$/i);
+    if (m) {
+      complement = (m[1] || '').trim();
+      reference = (m[2] || '').trim();
+    }
     setForm({
       name: selected.name || '',
-      phone: selected.phone || '',
-      cpf: selected.cpf || '',
+      phone: maskPhoneBR(selected.phone || ''),
+      cpf: maskCpfCnpj(selected.cpf || ''),
       address: selected.address || '',
       number: selected.number || '',
       neighborhood: selected.neighborhood || '',
-      complement: selected.complement || '',
+      complement,
+      reference,
       city: selected.city || '',
       state: selected.state || '',
     });
@@ -220,6 +271,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
     const number = form.number.trim();
     const neighborhood = form.neighborhood.trim();
     const complement = form.complement.trim();
+    const reference = form.reference.trim();
     const city = form.city.trim();
     const state = form.state.trim();
     if (!name) {
@@ -229,6 +281,17 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
     if (!phone) {
       toast.error('Telefone é obrigatório.');
       return;
+    }
+    if (!isValidBrPhone(phone)) {
+      toast.error('Telefone inválido. Use um número brasileiro válido — fixo (10 dígitos) ou celular (11 dígitos com 9).');
+      return;
+    }
+    if (cpf) {
+      const cd = onlyDigits(cpf);
+      if (cd.length !== 11 && cd.length !== 14) {
+        toast.error('CPF deve ter 11 dígitos ou CNPJ 14 dígitos.');
+        return;
+      }
     }
     if (requireFull) {
       if (!cpf) {
@@ -250,6 +313,11 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
     }
     setSaving(true);
     try {
+      // Ponto de referência: opcional no FC. Persistimos concatenado em `complement`
+      // no formato "<complement> - Ref: <reference>" (mesma convenção do cardápio).
+      const mergedComplement = [complement, reference && `Ref: ${reference}`]
+        .filter(Boolean)
+        .join(complement && reference ? ' - ' : '');
       const payload = {
         company_id: companyId,
         name,
@@ -258,7 +326,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         address: address || null,
         number: number || null,
         neighborhood: neighborhood || null,
-        complement: complement || null,
+        complement: mergedComplement || null,
         city: city || null,
         state: state || null,
       };
@@ -287,7 +355,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         address,
         number && `nº ${number}`,
         neighborhood,
-        complement,
+        mergedComplement,
       ].filter(Boolean).join(', ');
       onPick({
         name: data?.name || name,
