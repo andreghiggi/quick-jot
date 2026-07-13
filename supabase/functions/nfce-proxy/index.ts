@@ -879,7 +879,30 @@ Deno.serve(async (req) => {
           )
         }
 
-        const reqBody = { serie, numero_inicial, numero_final, ano, justificativa }
+        const { data: companyRow, error: companyErr } = await supabase
+          .from('companies')
+          .select('cnpj')
+          .eq('id', companyId)
+          .maybeSingle()
+        if (companyErr) {
+          return new Response(JSON.stringify({ error: 'Falha ao carregar CNPJ da loja: ' + companyErr.message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+
+        const cnpj = String(companyRow?.cnpj ?? '').replace(/\D/g, '')
+        if (cnpj.length !== 14) {
+          return new Response(JSON.stringify({ error: 'CNPJ da loja inválido ou não cadastrado. Corrija o cadastro da empresa antes de inutilizar numeração.' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+
+        const reqBody = {
+          cnpj,
+          serie,
+          numero_inicial: String(numero_inicial),
+          numero_final: String(numero_final),
+          ano,
+          justificativa,
+        }
         const { data: inserted, error: insErr } = await supabase
           .from('nfce_inutilizacoes')
           .insert({
@@ -900,27 +923,38 @@ Deno.serve(async (req) => {
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
         }
 
-        // O gateway FiscalFlow expõe a inutilização no path `/inutilizacao`
-        // (mesma convenção do Focus NFe). Fazemos fallback para `/inutilizar`
-        // caso alguma instância antiga ainda use o path anterior.
-        apiResponse = await fetch(`${NFCE_API_URL}/inutilizacao`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': NFCE_API_KEY },
-          body: JSON.stringify(reqBody),
-        })
-        if (apiResponse.status === 404) {
-          apiResponse = await fetch(`${NFCE_API_URL}/inutilizar`, {
+        // Focus NFe usa exatamente /v2/nfce/inutilizacao para NFC-e.
+        // Algumas instalações configuram NFCE_API_URL como a base /nfce; outras
+        // como uma rota de emissão. Geramos candidatos sem expor a URL em log.
+        const baseUrl = NFCE_API_URL.replace(/\/+$/, '')
+        const inutilizacaoUrls = Array.from(new Set([
+          baseUrl.replace(/\/nfce(?:\/.*)?$/i, '/nfce/inutilizacao'),
+          `${baseUrl}/inutilizacao`,
+          `${baseUrl}/inutilizar`,
+        ]))
+        const apiHeaders = {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'x-api-key': NFCE_API_KEY,
+          'Authorization': `Basic ${btoa(`${NFCE_API_KEY}:`)}`,
+        }
+
+        let lastResult: any = null
+        for (const url of inutilizacaoUrls) {
+          apiResponse = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-api-key': NFCE_API_KEY },
+            headers: apiHeaders,
             body: JSON.stringify(reqBody),
           })
+          lastResult = await safeJson(apiResponse)
+          if (apiResponse.status !== 404) break
         }
-        result = await safeJson(apiResponse)
+        result = lastResult
 
         const ok = apiResponse.ok && (result?.success !== false)
         const newStatus = ok ? 'aceita' : 'rejeitada'
-        const protocolo = result?.protocolo ?? result?.data?.protocolo ?? null
-        const motivo = ok ? null : (result?.error || result?.message || 'Rejeitado pela SEFAZ')
+        const protocolo = result?.protocolo_sefaz ?? result?.protocolo ?? result?.data?.protocolo ?? result?.data?.protocolo_sefaz ?? null
+        const motivo = ok ? null : (result?.error || result?.message || result?.mensagem_sefaz || 'Rejeitado pela SEFAZ')
 
         await supabase.from('nfce_inutilizacoes')
           .update({
