@@ -94,6 +94,8 @@ interface SaleRow {
     numero: string | null;
     serie: string | null;
     chave_acesso: string | null;
+    contingencia_offline?: boolean | null;
+    contingencia_efetivada?: boolean | null;
   } | null;
   items?: { product_name: string; quantity: number; unit_price: number; total_price: number }[];
 }
@@ -396,7 +398,7 @@ export default function FrenteCaixaLista() {
       if (ids.length > 0) {
         const { data: nfces } = await supabase
           .from('nfce_records')
-          .select('id, sale_id, status, numero, serie, chave_acesso')
+          .select('id, sale_id, status, numero, serie, chave_acesso, contingencia_offline, contingencia_efetivada')
           .eq('company_id', company.id)
           .in('sale_id', ids);
         (nfces || []).forEach((n: any) => {
