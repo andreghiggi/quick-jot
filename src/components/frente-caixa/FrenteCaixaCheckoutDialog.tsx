@@ -620,6 +620,7 @@ export function FrenteCaixaCheckoutDialog({
                                 { id: 'avista', label: 'Crédito à vista' },
                                 { id: 'debit', label: 'Débito' },
                                 { id: 'parcelado', label: 'Parcelado' },
+                                { id: 'pix', label: 'PIX' },
                               ] as const).map((opt) => (
                                 <button
                                   key={opt.id}
