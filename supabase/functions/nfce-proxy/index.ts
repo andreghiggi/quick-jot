@@ -54,6 +54,16 @@ Deno.serve(async (req) => {
     const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
     const isI9 = companyId === I9_COMPANY_ID
 
+    // ---- Contingência Offline (piloto) --------------------------------------
+    // Empresas habilitadas a usar contingência offline automática na Focus NFe
+    // quando a SEFAZ estourar o timeout. Rollout restrito — expandir só após
+    // validar em produção. Cozinha da Ruiva primeiro.
+    const CONTINGENCIA_OFFLINE_COMPANY_IDS = new Set<string>([
+      '55181771-8b10-4af1-afc3-472c090a49be', // Cozinha da Ruiva
+    ])
+    const contingenciaEnabled = CONTINGENCIA_OFFLINE_COMPANY_IDS.has(companyId)
+    const CONTINGENCIA_TIMEOUT_MS = 8000
+
     let NFCE_API_KEY: string | null = GLOBAL_NFCE_API_KEY ?? null
     try {
       const { data: tokenRow } = await supabase
@@ -456,15 +466,82 @@ Deno.serve(async (req) => {
             JSON.stringify(pagamentosArr))
         }
 
-        apiResponse = await fetch(NFCE_API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': NFCE_API_KEY,
-          },
-          body: JSON.stringify(emitPayload),
-        })
-        result = await safeJson(apiResponse)
+        // Helper: emite com timeout. Retorna { resp, timedOut, netError }.
+        async function emitirComTimeout(payloadBody: any, timeoutMs?: number) {
+          const ctrl = timeoutMs ? new AbortController() : null
+          const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs!) : null
+          try {
+            const r = await fetch(NFCE_API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-api-key': NFCE_API_KEY },
+              body: JSON.stringify(payloadBody),
+              signal: ctrl?.signal,
+            })
+            return { resp: r as Response, timedOut: false, netError: null as any }
+          } catch (err: any) {
+            const timedOut = err?.name === 'AbortError'
+            return { resp: null as any as Response, timedOut, netError: err }
+          } finally {
+            if (timer) clearTimeout(timer)
+          }
+        }
+
+        // Detecta se a resposta indica falha por SEFAZ indisponível / timeout /
+        // erro de comunicação — casos em que vale acionar contingência.
+        function isSefazUnavailable(r: Response | null, body: any): boolean {
+          if (!r) return true
+          if (r.status >= 500) return true
+          const s = JSON.stringify(body || {}).toLowerCase()
+          return (
+            s.includes('sefaz') && (
+              s.includes('indispon') ||
+              s.includes('offline') ||
+              s.includes('timeout') ||
+              s.includes('fora do ar') ||
+              s.includes('comunica')
+            )
+          )
+        }
+
+        let usedContingencia = false
+        if (contingenciaEnabled) {
+          // Tentativa 1: emissão normal com timeout de 8s
+          const t1 = await emitirComTimeout(emitPayload, CONTINGENCIA_TIMEOUT_MS)
+          if (t1.resp && !t1.timedOut) {
+            apiResponse = t1.resp
+            result = await safeJson(apiResponse)
+          }
+          // Se estourou o timeout OU SEFAZ indisponível → cai em contingência
+          if (t1.timedOut || isSefazUnavailable(t1.resp, result)) {
+            console.warn('[nfce-proxy][contingencia] Ativando contingência offline. timedOut=',
+              t1.timedOut, 'company=', companyId)
+            const contPayload = {
+              ...emitPayload,
+              // Focus NFe: forma_emissao=9 (Contingência Offline NFC-e)
+              forma_emissao: '9',
+              tpEmis: 9,
+              contingencia_offline: true,
+            }
+            const t2 = await emitirComTimeout(contPayload) // sem timeout (rápido localmente)
+            if (t2.resp) {
+              apiResponse = t2.resp
+              result = await safeJson(apiResponse)
+              usedContingencia = true
+            } else if (!apiResponse!) {
+              // Se nem a normal chegou a responder, sinaliza erro claro
+              apiResponse = new Response(JSON.stringify({ error: 'Falha ao emitir NFC-e (contingência indisponível)' }),
+                { status: 502 }) as Response
+              result = { success: false, error: 'Falha ao emitir NFC-e (contingência indisponível)' }
+            }
+          }
+        } else {
+          apiResponse = await fetch(NFCE_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': NFCE_API_KEY },
+            body: JSON.stringify(emitPayload),
+          })
+          result = await safeJson(apiResponse)
+        }
 
         console.log('[nfce-proxy] Emitir raw result:', JSON.stringify(result).substring(0, 1000))
 
@@ -502,6 +579,12 @@ Deno.serve(async (req) => {
             motivo_rejeicao: emitData.motivo_rejeicao || emitData.motivo || null,
             request_payload: isI9 ? emitPayload : payload,
             response_payload: result,
+            contingencia_offline: usedContingencia
+              || emitData.contingencia_offline === true
+              || emitData.tpEmis === 9
+              || String(emitData.forma_emissao || '') === '9',
+            contingencia_efetivada: emitData.contingencia_offline_efetivada === true
+              || emitData.contingencia_efetivada === true,
           }
           console.log('[nfce-proxy] Inserting record:', JSON.stringify(nfceRecord))
           const { error: insertError } = await supabase.from('nfce_records').insert(nfceRecord)
