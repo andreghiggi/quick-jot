@@ -97,8 +97,6 @@ function buildHTML(p: PaymentReceiptPayload): string {
   <div class="separator"></div>
   ${p.documentNumber ? `<div class="row"><span>Documento</span><span>${esc(p.documentNumber)}</span></div>` : ''}
   ${p.installmentLabel ? `<div class="row"><span>Parcela</span><span>${esc(p.installmentLabel)}</span></div>` : ''}
-  <div class="row"><span>Emissão</span><span>${fmtDateTime(p.issuedAt)}</span></div>
-  ${p.operatorName ? `<div class="row small"><span>Operador</span><span>${esc(p.operatorName)}</span></div>` : ''}
 
   ${adj.length ? `<div class="separator"></div>${adj.join('')}` : ''}
 
@@ -108,11 +106,6 @@ function buildHTML(p: PaymentReceiptPayload): string {
 
   <div class="separator"></div>
   <div class="total-row"><span>VALOR RECEBIDO</span><span>${money(p.amountPaid).replace('R$ ', '')}</span></div>
-  <div class="row"><span>Saldo restante do título</span><span>${money(p.remainingBalance)}</span></div>
-  <div class="row bold"><span>Status</span><span>${p.status === 'paid' ? 'QUITADO' : 'PARCIAL'}</span></div>
-
-  <div class="separator"></div>
-  <div class="sig">Assinatura do recebedor</div>
 </body></html>`;
 }
 
