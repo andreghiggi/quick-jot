@@ -1200,6 +1200,7 @@ export default function PDVV2() {
           companyId={company?.id}
           cashRegisterId={currentRegister?.id}
           userId={user?.id}
+          registerOpenedAt={currentRegister?.opened_at}
         />
 
         {cashStateUnknown ? (
