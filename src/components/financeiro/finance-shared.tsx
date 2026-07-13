@@ -172,7 +172,7 @@ function PartyAutocomplete({
 
   return (
     <div className="grid gap-1.5">
-      <Label>{label}</Label>
+      <Label className="font-semibold">{label}</Label>
       <Popover open={open && filtered.length > 0} onOpenChange={setOpen}>
         <PopoverAnchor asChild>
           <Input
@@ -249,12 +249,12 @@ export function FinanceFilterPanel({
             />
           ) : (
             <div className="grid gap-1.5">
-              <Label>{partyLabel}</Label>
+              <Label className="font-semibold">{partyLabel}</Label>
               <Input value={filters.party} onChange={(e) => set({ party: e.target.value })} placeholder="Digite o nome" />
             </div>
           )}
           <div className="grid gap-1.5">
-            <Label>Status</Label>
+            <Label className="font-semibold">Status</Label>
             <Select value={filters.status} onValueChange={(v) => set({ status: v as any })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -269,26 +269,26 @@ export function FinanceFilterPanel({
           </div>
         </div>
         <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          <div className="grid gap-1.5"><Label>Emissão inicial</Label>
+          <div className="grid gap-1.5"><Label className="font-semibold">Emissão inicial</Label>
             <Input type="date" value={filters.issueFrom} onChange={(e) => set({ issueFrom: e.target.value })} />
           </div>
-          <div className="grid gap-1.5"><Label>Emissão final</Label>
+          <div className="grid gap-1.5"><Label className="font-semibold">Emissão final</Label>
             <Input type="date" value={filters.issueTo} onChange={(e) => set({ issueTo: e.target.value })} />
           </div>
-          <div className="grid gap-1.5"><Label>Vencimento inicial</Label>
+          <div className="grid gap-1.5"><Label className="font-semibold">Vencimento inicial</Label>
             <Input type="date" value={filters.dueFrom} onChange={(e) => set({ dueFrom: e.target.value })} />
           </div>
-          <div className="grid gap-1.5"><Label>Vencimento final</Label>
+          <div className="grid gap-1.5"><Label className="font-semibold">Vencimento final</Label>
             <Input type="date" value={filters.dueTo} onChange={(e) => set({ dueTo: e.target.value })} />
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="grid gap-1.5">
-            <Label>Nº do documento</Label>
+            <Label className="font-semibold">Nº do documento</Label>
             <Input value={filters.document} onChange={(e) => set({ document: e.target.value })} placeholder="Separe múltiplos por vírgula" />
           </div>
           <div className="grid gap-1.5">
-            <Label>Tags</Label>
+            <Label className="font-semibold">Tags</Label>
             <Input value={filters.tags} onChange={(e) => set({ tags: e.target.value })} placeholder="Separe por vírgula" />
           </div>
         </div>
@@ -564,14 +564,14 @@ export function RenegotiateDialog({
         </DialogHeader>
         <div className="grid gap-3">
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Novo valor</Label>
+            <div className="grid gap-1.5"><Label className="font-semibold">Novo valor</Label>
               <Input value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" />
             </div>
-            <div className="grid gap-1.5"><Label>Novo vencimento</Label>
+            <div className="grid gap-1.5"><Label className="font-semibold">Novo vencimento</Label>
               <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
             </div>
           </div>
-          <div className="grid gap-1.5"><Label>Motivo</Label>
+          <div className="grid gap-1.5"><Label className="font-semibold">Motivo</Label>
             <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Ex.: acordo com o cliente" />
           </div>
         </div>
