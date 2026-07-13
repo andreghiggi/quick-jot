@@ -26,6 +26,8 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { emitirNFCe, type NFCeItem } from '@/services/nfceService';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
+import { printPaymentReceipt } from '@/utils/paymentReceiptPrint';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { toast } from 'sonner';
 
 /** Item agregado da lista: pode ser uma venda com N parcelas OU um
@@ -42,6 +44,7 @@ export default function Receitas() {
     remove, update, renegotiateSplit, renegotiateManySplit,
   } = useAccountsReceivable(company?.id);
   const { activePaymentMethods } = usePaymentMethods({ companyId: company?.id, channel: 'pdv' });
+  const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -148,6 +151,57 @@ export default function Receitas() {
   if (!enabled) return <Navigate to="/" replace />;
 
   const findAR = (id: string) => items.find((i) => i.id === id) || null;
+
+  /** Imprime UM comprovante de recebimento por parcela paga. */
+  async function printReceiptsFor(
+    rowsPaid: Array<{
+      row: AccountReceivable;
+      amountPaid: number;
+      payments: Array<{ paymentName: string; amount: number }>;
+      interest: number;
+      fine: number;
+      discount: number;
+      surcharge: number;
+    }>,
+  ) {
+    const now = new Date();
+    for (const r of rowsPaid) {
+      try {
+        // Recarrega o saldo mais recente para exibir "saldo restante" real.
+        const { data: fresh } = await supabase
+          .from('accounts_receivable' as any)
+          .select('balance, status')
+          .eq('id', r.row.id)
+          .maybeSingle();
+        const remaining = Number((fresh as any)?.balance ?? 0);
+        const paidFlag = ((fresh as any)?.status || '') === 'paid';
+        await printPaymentReceipt({
+          paperSize: storeSettings.printerPaperSize,
+          storeName: company?.name || storeSettings.storeName || 'Loja',
+          storeCnpj: (company as any)?.cnpj || null,
+          storeAddress: (company as any)?.address || null,
+          storePhone: storeSettings.storePhone || null,
+          operatorName: (user as any)?.email || null,
+          customerName: r.row.customer_name || 'Cliente',
+          customerDocument: (r.row as any).customer_document || null,
+          documentNumber: r.row.document_number || r.row.id.slice(0, 8).toUpperCase(),
+          installmentLabel: (r.row.notes || '').match(/Parcela\s+\d+\/\d+/i)?.[0] || null,
+          amountPaid: r.amountPaid,
+          interest: r.interest,
+          fine: r.fine,
+          discount: r.discount,
+          surcharge: r.surcharge,
+          remainingBalance: remaining,
+          status: paidFlag ? 'paid' : 'partial',
+          payments: r.payments,
+          issuedAt: now,
+        });
+      } catch (e: any) {
+        console.error('[Receitas] falha ao imprimir comprovante', e);
+        toast.error('Falha ao imprimir comprovante: ' + (e?.message || e));
+      }
+    }
+  }
 
   /** Emite NFC-e a partir das parcelas recebidas, reaproveitando os itens
    *  gravados em `pdv_sale_items` da venda de origem. Emite uma nota por
@@ -585,6 +639,14 @@ export default function Receitas() {
             const row = efetivarRow;
             setEfetivarRow(null);
             setSelection(new Set());
+            // Imprime 1 comprovante de recebimento para a parcela paga.
+            const amountPaid = data.payments.reduce((s, p) => s + p.amount, 0);
+            await printReceiptsFor([{
+              row,
+              amountPaid,
+              payments: data.payments.map((p) => ({ paymentName: p.paymentName, amount: p.amount })),
+              interest: data.interest, fine: data.fine, discount: data.discount, surcharge: data.surcharge,
+            }]);
             if (data.emitNfce) await emitNfceForReceivables([row]);
           }
         }}
@@ -607,6 +669,13 @@ export default function Receitas() {
           const totalBalance = efetivarRows.reduce((s, r) => s + Number(r.balance), 0) || 1;
           const queue = data.payments.map((p) => ({ ...p }));
           let allOk = true;
+          // Guarda o "recibo" por parcela para imprimir após todas as gravações.
+          const receipts: Array<{
+            row: AccountReceivable;
+            amountPaid: number;
+            payments: Array<{ paymentName: string; amount: number }>;
+            interest: number; fine: number; discount: number; surcharge: number;
+          }> = [];
           for (const r of efetivarRows) {
             let need = Number(r.balance);
             const local: typeof data.payments = [];
@@ -620,23 +689,34 @@ export default function Receitas() {
             }
             if (local.length === 0) continue;
             const share = Number(r.balance) / totalBalance;
+            const shareInterest = +(data.interest * share).toFixed(2);
+            const shareFine = +(data.fine * share).toFixed(2);
+            const shareDiscount = +(data.discount * share).toFixed(2);
+            const shareSurcharge = +(data.surcharge * share).toFixed(2);
             const ok = await receivePaymentSplit({
               receivableId: r.id,
               companyId: company.id,
               operatorId: user?.id ?? null,
-              interest: +(data.interest * share).toFixed(2),
-              fine: +(data.fine * share).toFixed(2),
-              discount: +(data.discount * share).toFixed(2),
-              surcharge: +(data.surcharge * share).toFixed(2),
+              interest: shareInterest,
+              fine: shareFine,
+              discount: shareDiscount,
+              surcharge: shareSurcharge,
               payments: local,
             });
             if (!ok) { allOk = false; break; }
+            receipts.push({
+              row: r,
+              amountPaid: local.reduce((s, p) => s + p.amount, 0),
+              payments: local.map((p) => ({ paymentName: p.paymentName, amount: p.amount })),
+              interest: shareInterest, fine: shareFine, discount: shareDiscount, surcharge: shareSurcharge,
+            });
           }
           setBusy(false);
           if (allOk) {
             const rowsForNfce = efetivarRows;
             setEfetivarRows(null);
             setSelection(new Set());
+            if (receipts.length) await printReceiptsFor(receipts);
             if (data.emitNfce && rowsForNfce) await emitNfceForReceivables(rowsForNfce);
           }
         }}
