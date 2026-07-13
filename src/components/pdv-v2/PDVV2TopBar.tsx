@@ -128,7 +128,13 @@ export function PDVV2TopBar({
               <DoorClosed className="h-4 w-4 mr-2" />
               Fechar Caixa
             </Button>
-            <DropdownMenu>
+            <DropdownMenu
+              open={totalsOpen}
+              onOpenChange={(o) => {
+                setTotalsOpen(o);
+                if (o) loadTotals();
+              }}
+            >
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Mais ações do caixa">
                   <MoreVertical className="h-4 w-4" />
