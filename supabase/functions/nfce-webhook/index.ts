@@ -94,6 +94,16 @@ Deno.serve(async (req) => {
       updateData.protocolo = dados.protocolo
       updateData.qrcode_url = dados.qrcode_url
       updateData.numero = dados.numero
+      // Se a autorização veio para uma nota que estava em contingência offline,
+      // marca como efetivada para o Monitor e a DANFE removerem a tarja.
+      if (
+        dados.contingencia_offline_efetivada === true ||
+        dados.contingencia_efetivada === true ||
+        dados.tpEmis === 9 ||
+        String(dados.forma_emissao || '') === '9'
+      ) {
+        updateData.contingencia_efetivada = true
+      }
     }
 
     if (evento === 'nfce.rejeitada' || evento === 'nfce.denegada') {
