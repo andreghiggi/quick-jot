@@ -114,18 +114,28 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
           .select('id,name,phone,cpf,address,number,neighborhood,complement,city,state')
           .eq('company_id', companyId)
           .order('name', { ascending: true })
-          .limit(20);
+          .limit(500);
         if (digits.length >= 3) {
-          // busca por dígitos (telefone OU cpf) ou nome
+          // busca por dígitos (telefone OU cpf) — server-side é seguro
           req = req.or(
-            `phone.ilike.%${digits}%,cpf.ilike.%${digits}%,name.ilike.%${q}%`,
+            `phone.ilike.%${digits}%,cpf.ilike.%${digits}%`,
           );
-        } else {
-          req = req.ilike('name', `%${q}%`);
         }
         const { data, error } = await req;
         if (error) throw error;
-        setResults((data as CustomerRow[]) || []);
+        let rows = (data as CustomerRow[]) || [];
+        // Filtro por nome ignorando acentuação (server ilike não é
+        // accent-insensitive). Normaliza com NFD + remove diacríticos.
+        if (digits.length < 3) {
+          const norm = (s: string) =>
+            (s || '')
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .toLowerCase();
+          const nq = norm(q);
+          rows = rows.filter((r) => norm(r.name || '').includes(nq));
+        }
+        setResults(rows.slice(0, 20));
       } catch (e) {
         console.error('[FrenteCaixaCustomerDialog] search error', e);
       } finally {
