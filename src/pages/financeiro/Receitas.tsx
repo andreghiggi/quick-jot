@@ -26,6 +26,8 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { emitirNFCe, type NFCeItem } from '@/services/nfceService';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
+import { printPaymentReceipt } from '@/utils/paymentReceiptPrint';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { toast } from 'sonner';
 
 /** Item agregado da lista: pode ser uma venda com N parcelas OU um
@@ -42,6 +44,7 @@ export default function Receitas() {
     remove, update, renegotiateSplit, renegotiateManySplit,
   } = useAccountsReceivable(company?.id);
   const { activePaymentMethods } = usePaymentMethods({ companyId: company?.id, channel: 'pdv' });
+  const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -148,6 +151,57 @@ export default function Receitas() {
   if (!enabled) return <Navigate to="/" replace />;
 
   const findAR = (id: string) => items.find((i) => i.id === id) || null;
+
+  /** Imprime UM comprovante de recebimento por parcela paga. */
+  async function printReceiptsFor(
+    rowsPaid: Array<{
+      row: AccountReceivable;
+      amountPaid: number;
+      payments: Array<{ paymentName: string; amount: number }>;
+      interest: number;
+      fine: number;
+      discount: number;
+      surcharge: number;
+    }>,
+  ) {
+    const now = new Date();
+    for (const r of rowsPaid) {
+      try {
+        // Recarrega o saldo mais recente para exibir "saldo restante" real.
+        const { data: fresh } = await supabase
+          .from('accounts_receivable' as any)
+          .select('balance, status')
+          .eq('id', r.row.id)
+          .maybeSingle();
+        const remaining = Number((fresh as any)?.balance ?? 0);
+        const paidFlag = ((fresh as any)?.status || '') === 'paid';
+        await printPaymentReceipt({
+          paperSize: storeSettings.printerPaperSize,
+          storeName: company?.name || storeSettings.storeName || 'Loja',
+          storeCnpj: (company as any)?.cnpj || null,
+          storeAddress: (company as any)?.address || null,
+          storePhone: storeSettings.storePhone || null,
+          operatorName: (user as any)?.email || null,
+          customerName: r.row.customer_name || 'Cliente',
+          customerDocument: (r.row as any).customer_document || null,
+          documentNumber: r.row.document_number || r.row.id.slice(0, 8).toUpperCase(),
+          installmentLabel: (r.row.notes || '').match(/Parcela\s+\d+\/\d+/i)?.[0] || null,
+          amountPaid: r.amountPaid,
+          interest: r.interest,
+          fine: r.fine,
+          discount: r.discount,
+          surcharge: r.surcharge,
+          remainingBalance: remaining,
+          status: paidFlag ? 'paid' : 'partial',
+          payments: r.payments,
+          issuedAt: now,
+        });
+      } catch (e: any) {
+        console.error('[Receitas] falha ao imprimir comprovante', e);
+        toast.error('Falha ao imprimir comprovante: ' + (e?.message || e));
+      }
+    }
+  }
 
   /** Emite NFC-e a partir das parcelas recebidas, reaproveitando os itens
    *  gravados em `pdv_sale_items` da venda de origem. Emite uma nota por
