@@ -94,6 +94,8 @@ interface SaleRow {
     numero: string | null;
     serie: string | null;
     chave_acesso: string | null;
+    contingencia_offline?: boolean | null;
+    contingencia_efetivada?: boolean | null;
   } | null;
   items?: { product_name: string; quantity: number; unit_price: number; total_price: number }[];
 }
@@ -396,7 +398,7 @@ export default function FrenteCaixaLista() {
       if (ids.length > 0) {
         const { data: nfces } = await supabase
           .from('nfce_records')
-          .select('id, sale_id, status, numero, serie, chave_acesso')
+          .select('id, sale_id, status, numero, serie, chave_acesso, contingencia_offline, contingencia_efetivada')
           .eq('company_id', company.id)
           .in('sale_id', ids);
         (nfces || []).forEach((n: any) => {
@@ -747,6 +749,25 @@ export default function FrenteCaixaLista() {
                           ) : (
                             <Badge className="bg-red-500 hover:bg-red-500 text-white border-0 text-[10px]">
                               Pendente de emissão do documento fiscal
+                            </Badge>
+                          )}
+                          {/* Contingência offline — distingue "autorizada em contingência" (aguardando SEFAZ) de "efetivada" */}
+                          {hasNfce && r.nfce!.contingencia_offline && (
+                            <Badge
+                              className={
+                                r.nfce!.contingencia_efetivada
+                                  ? 'bg-emerald-700 hover:bg-emerald-700 text-white border-0 text-[10px]'
+                                  : 'bg-yellow-500 hover:bg-yellow-500 text-yellow-950 border-0 text-[10px]'
+                              }
+                              title={
+                                r.nfce!.contingencia_efetivada
+                                  ? 'Contingência efetivada — a SEFAZ já processou esta nota.'
+                                  : 'Emitida em contingência offline — aguardando efetivação automática na SEFAZ (a cada 5 min).'
+                              }
+                            >
+                              {r.nfce!.contingencia_efetivada
+                                ? 'Cont. efetivada'
+                                : 'Contingência — aguardando SEFAZ'}
                             </Badge>
                           )}
                           {/* Status operacional (só pré-venda) */}
