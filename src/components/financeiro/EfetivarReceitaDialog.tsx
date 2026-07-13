@@ -145,6 +145,21 @@ export function EfetivarReceitaDialog({
   const focusMethodByIndex = (idx: number) => {
     const m = paymentMethods[idx];
     if (!m) return;
+    // Ao trocar de forma de pagamento via atalho (A-Z), zera as demais
+    // linhas para evitar que um valor residual (ex.: TEF selecionado antes)
+    // continue sendo processado ao dar Enter na nova forma.
+    setLines((prev) => {
+      const next: Record<string, string> = {};
+      for (const key of Object.keys(prev)) {
+        if (key === m.id) next[key] = prev[key];
+      }
+      return next;
+    });
+    setTefMod((prev) => {
+      const next: typeof prev = {};
+      if (prev[m.id]) next[m.id] = prev[m.id];
+      return next;
+    });
     const el = lineRefs.current[m.id];
     el?.focus();
     el?.select();
