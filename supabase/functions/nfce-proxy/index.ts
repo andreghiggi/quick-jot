@@ -590,7 +590,70 @@ Deno.serve(async (req) => {
           const { error: insertError } = await supabase.from('nfce_records').insert(nfceRecord)
           if (insertError) console.error('[nfce-proxy] Insert error:', insertError)
         } else {
-          console.error('[nfce-proxy] Emitir: unexpected response structure, no id found:', JSON.stringify(result).substring(0, 500))
+          // Rejeição da Focus/SEFAZ (ex.: NCM inválido, total divergente, CFOP
+          // incompatível). Antes, jogávamos o motivo fora e a UI só via um
+          // toast genérico "non-2xx". Agora persistimos a NFC-e como
+          // `rejeitada` com o motivo real, para o operador ver no card e o
+          // suporte investigar direto no banco.
+          console.error('[nfce-proxy] Emitir: rejeitado pelo gateway/SEFAZ:',
+            JSON.stringify(result).substring(0, 800))
+
+          const rej = result?.data || result || {}
+          const motivo =
+            rej.motivo_rejeicao ||
+            rej.motivo ||
+            rej.mensagem_sefaz ||
+            rej.mensagem ||
+            rej.message ||
+            rej.erro ||
+            rej.error ||
+            (Array.isArray(rej.erros) ? rej.erros.map((e: any) => e?.mensagem || e?.message || JSON.stringify(e)).join(' | ') : null) ||
+            (apiResponse ? `HTTP ${apiResponse.status}` : 'Erro desconhecido')
+
+          const ambienteResolved =
+            emitPayload?.ambiente ||
+            emitPayload?.environment ||
+            payload?.ambiente ||
+            'homologacao'
+
+          try {
+            const rejectedRecord = {
+              company_id: companyId,
+              sale_id: saleId || null,
+              external_id: payload.external_id,
+              nfce_id: null,
+              numero: null,
+              serie: null,
+              status: 'rejeitada',
+              ambiente: ambienteResolved,
+              valor_total: emitPayload?.itens
+                ? emitPayload.itens.reduce(
+                    (sum: number, item: any) =>
+                      sum + Number(item.quantidade || 1) * Number(item.valor_unitario || 0),
+                    0,
+                  )
+                : 0,
+              chave_acesso: null,
+              protocolo: null,
+              qrcode_url: null,
+              xml_url: null,
+              motivo_rejeicao: String(motivo).substring(0, 1000),
+              request_payload: isI9 ? emitPayload : payload,
+              response_payload: result,
+              contingencia_offline: false,
+              contingencia_efetivada: false,
+            }
+            const { error: rejInsertError } = await supabase
+              .from('nfce_records')
+              .insert(rejectedRecord)
+            if (rejInsertError) {
+              console.error('[nfce-proxy] Insert rejeitada error:', rejInsertError)
+            } else {
+              console.log('[nfce-proxy] Registro de rejeição gravado. motivo=', motivo)
+            }
+          } catch (e) {
+            console.error('[nfce-proxy] Falha ao persistir rejeição:', e)
+          }
         }
         break
       }
