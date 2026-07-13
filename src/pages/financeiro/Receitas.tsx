@@ -834,7 +834,16 @@ function SaleGroupCard({
         {isSaleWithMulti && (
           <Button
             variant="ghost" size="icon" className="h-7 w-7 shrink-0"
-            onClick={(e) => { e.stopPropagation(); setExpanded((x) => !x); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded((x) => {
+                const next = !x;
+                // Ao expandir, desmarca todas as parcelas para que o operador
+                // escolha manualmente quais quer receber.
+                if (next && selectedCount > 0) onToggleSelect(allIds, false);
+                return next;
+              });
+            }}
             title={expanded ? 'Recolher parcelas' : 'Expandir parcelas'}
           >
             {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
