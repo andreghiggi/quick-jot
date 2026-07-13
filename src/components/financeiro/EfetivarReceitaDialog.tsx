@@ -496,18 +496,14 @@ export function EfetivarReceitaDialog({
           {!hasTefLine && (
             <Button
               variant="outline"
-              onClick={() => { setEmitNfce(false); submit(); }}
+              onClick={() => submit(false)}
               disabled={busy || processingTef || !exact}
             >
-              {processingTef && !emitNfce ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…</>
-              ) : (
-                'EFETIVAR'
-              )}
+              EFETIVAR
             </Button>
           )}
           <Button
-            onClick={() => { if (!hasTefLine) setEmitNfce(true); submit(); }}
+            onClick={() => submit(true)}
             disabled={busy || processingTef || !exact}
           >
             {processingTef ? (
