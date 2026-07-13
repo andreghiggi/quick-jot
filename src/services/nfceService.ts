@@ -360,6 +360,8 @@ export async function generateDanfeHtml(
 
   ${record.ambiente !== 'producao' ? '<div class="homolog-warn">AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL</div>' : ''}
 
+  ${record.contingencia_offline && !record.contingencia_efetivada ? '<div class="homolog-warn">EMITIDA EM CONTINGÊNCIA OFFLINE<br/><span style="font-size:9px;font-weight:normal;">Pendente de autorização — NT 2015/002</span></div>' : ''}
+
   ${customerHtml}
   <table>
     <thead>
