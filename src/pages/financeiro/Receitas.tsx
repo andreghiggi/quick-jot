@@ -897,7 +897,7 @@ function SaleGroupCard({
 
   return (
     <Card
-      className={cn('bg-card/60 cursor-pointer hover:bg-card/80 transition-colors')}
+      className={cn('bg-card/60 cursor-pointer hover:bg-card/80 transition-colors border-destructive/60 hover:border-destructive')}
       onDoubleClick={onDoubleClick}
       title="Duplo clique para ver as parcelas"
     >
