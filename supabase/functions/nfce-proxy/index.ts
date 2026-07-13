@@ -669,6 +669,15 @@ Deno.serve(async (req) => {
           // Valor total
           if (d.valor_total || d.total || d.vNF) updateData.valor_total = d.valor_total || d.total || d.vNF
 
+          // Contingência offline — atualiza flags quando a Focus reportar
+          // efetivação retroativa (SEFAZ voltou e autorizou).
+          if (d.contingencia_offline === true || d.tpEmis === 9 || String(d.forma_emissao || '') === '9') {
+            updateData.contingencia_offline = true
+          }
+          if (d.contingencia_offline_efetivada === true || d.contingencia_efetivada === true) {
+            updateData.contingencia_efetivada = true
+          }
+
           console.log('[nfce-proxy] Updating record with:', JSON.stringify(updateData))
           const { error: updateError } = await supabase.from('nfce_records')
             .update(updateData)
