@@ -202,7 +202,7 @@ export async function runMultiPayment(args: RunMultiPaymentArgs): Promise<RunMul
 /** Converte linhas resolvidas no formato aceito pelo nfce-proxy (`pagamentos_split`). */
 export function buildPagamentosSplit(
   lines: MultiPaymentResolvedLine[],
-): Array<{ tipo: 'cash' | 'tef'; valor: number; tef?: NFCeTefData }> {
+): Array<{ tipo: 'cash' | 'tef' | 'crediario'; valor: number; tef?: NFCeTefData }> {
   return lines.map((l) => {
     if (l.integration && l.tef) {
       return { tipo: 'tef', valor: l.amount, tef: l.tef };

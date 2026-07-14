@@ -1036,7 +1036,10 @@ export default function FrenteCaixa() {
               valor_frete: 0,
               observacoes: params.customerName ? `Cliente: ${params.customerName}` : undefined,
               destinatario,
-              pagamentos_split: buildPagamentosSplit(params.mpLines),
+              pagamentos_split:
+                params.paymentMethodId === '__credit_sale__'
+                  ? [{ tipo: 'crediario' as const, valor: params.finalTotal }]
+                  : buildPagamentosSplit(params.mpLines),
             } as any;
           })()
         : null;
@@ -1597,6 +1600,7 @@ export default function FrenteCaixa() {
           companyId={company?.id}
           defaultFiscalMode={pdvSettings.default_fiscal_mode}
           creditSaleAvailable={!!(financeiroEnabled && pdvSettings.credit_sale_enabled)}
+          creditSaleFiscalMode={pdvSettings.credit_sale_fiscal_mode}
           items={lines.map((l) => ({
             product_id: l.product_id,
             product_name: l.product_name,

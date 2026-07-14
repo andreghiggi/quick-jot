@@ -442,6 +442,12 @@ Deno.serve(async (req) => {
                 bandeira_operadora: tBand,
                 numero_autorizacao: t.autorizacao,
               })
+            } else if (linha.tipo === 'crediario') {
+              // Venda no crediário — NFC-e da mercadoria com tPag=05
+              // (Crédito Loja). Não há dados de cartão.
+              pagamentosArr.push({ tPag: '05', vPag: vPagStr })
+              detPagArr.push({ indPag: '1', tPag: '05', vPag: vPagStr })
+              formasArr.push({ forma_pagamento: '05', valor_pagamento: valor })
             } else {
               // cash / dinheiro
               pagamentosArr.push({ tPag: '01', vPag: vPagStr })

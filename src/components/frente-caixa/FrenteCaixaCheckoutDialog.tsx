@@ -68,6 +68,9 @@ interface Props {
   defaultFiscalMode?: 'fiscal' | 'nao_fiscal' | 'ask';
   /** Módulo Financeiro: quando `true`, o checkout mostra a opção "Crediário". */
   creditSaleAvailable?: boolean;
+  /** Fase Crediário Fiscal: define se a venda no crediário deve emitir NFC-e
+   *  já no ato da venda (tPag=05) ou adiar para o 1º recebimento em TEF. */
+  creditSaleFiscalMode?: 'on_sale' | 'on_receipt';
   /**
    * Chamado quando o operador clicar SALVAR e todas as cobranças (incluindo
    * TEF) foram aprovadas. O caller é responsável por persistir a venda via
@@ -93,6 +96,7 @@ export function FrenteCaixaCheckoutDialog({
   itemsTotal,
   defaultFiscalMode = 'ask',
   creditSaleAvailable = false,
+  creditSaleFiscalMode = 'on_sale',
   onConfirm,
 }: Props) {
   const { activePaymentMethods: allActivePaymentMethods } = usePaymentMethods({
@@ -379,9 +383,13 @@ export function FrenteCaixaCheckoutDialog({
       }
       return;
     }
-    // Crediário nunca emite NFC-e na Fase 1 (venda entra como não-fiscal).
+    // Modo fiscal:
+    //  - Venda comum: usa a escolha do operador / default configurado.
+    //  - Crediário: respeita a config "Quando emitir a NFC-e da venda no crediário":
+    //      • on_sale    → emite NFC-e no ato (tPag=05)
+    //      • on_receipt → não emite; a nota sai no 1º recebimento em TEF
     const fiscalMode: 'fiscal' | 'nao_fiscal' = isCreditSale
-      ? 'nao_fiscal'
+      ? (creditSaleFiscalMode === 'on_sale' ? 'fiscal' : 'nao_fiscal')
       : (fiscalChoice ?? (defaultFiscalMode === 'ask' ? 'nao_fiscal' : defaultFiscalMode));
     setProcessing(true);
     setProcessingStatus(isCreditSale ? 'Gerando título de crediário…' : 'Processando pagamentos…');
