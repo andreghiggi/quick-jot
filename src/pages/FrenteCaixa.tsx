@@ -1036,7 +1036,10 @@ export default function FrenteCaixa() {
               valor_frete: 0,
               observacoes: params.customerName ? `Cliente: ${params.customerName}` : undefined,
               destinatario,
-              pagamentos_split: buildPagamentosSplit(params.mpLines),
+              pagamentos_split:
+                params.paymentMethodId === '__credit_sale__'
+                  ? [{ tipo: 'crediario' as const, valor: params.finalTotal }]
+                  : buildPagamentosSplit(params.mpLines),
             } as any;
           })()
         : null;
