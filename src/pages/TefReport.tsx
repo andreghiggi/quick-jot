@@ -101,7 +101,7 @@ export default function TefReport() {
         .lte(dateField, range.end.toISOString())
         .ilike('notes', '%TEF PinPad:%');
 
-      const [ordersByCreated, ordersByUpdated, pdvSales] = await Promise.all([
+      const [ordersByCreated, ordersByUpdated, pdvSales, arPayments] = await Promise.all([
         buildOrdersQuery('created_at'),
         buildOrdersQuery('updated_at'),
         supabase
@@ -111,10 +111,20 @@ export default function TefReport() {
           .gte('created_at', range.start.toISOString())
           .lte('created_at', range.end.toISOString())
           .ilike('notes', '%TEF PinPad:%'),
+        // Recebimentos de crediário em TEF gravados via Receitas.tsx.
+        // O fragmento "TEF PinPad: NSU ... | Aut ... | ..." vai em
+        // accounts_receivable_payments.notes desde v1.42.x.
+        supabase
+          .from('accounts_receivable_payments' as any)
+          .select('id, created_at, amount, notes, receivable_id')
+          .eq('company_id', company.id)
+          .gte('created_at', range.start.toISOString())
+          .lte('created_at', range.end.toISOString())
+          .ilike('notes', '%TEF PinPad:%'),
       ]);
 
-      if (ordersByCreated.error || ordersByUpdated.error || pdvSales.error) {
-        console.error('TEF report fetch error:', ordersByCreated.error || ordersByUpdated.error || pdvSales.error);
+      if (ordersByCreated.error || ordersByUpdated.error || pdvSales.error || arPayments.error) {
+        console.error('TEF report fetch error:', ordersByCreated.error || ordersByUpdated.error || pdvSales.error || arPayments.error);
         return [];
       }
 
@@ -174,6 +184,43 @@ export default function TefReport() {
           acquirer: tef.acquirer,
           operationType: tef.operationType,
           cancelled: isOrderTefCancelled(s.notes) || isOrderTefCancelled(linkedOrder?.notes),
+          hasReceipt: !!tef.receipt,
+        });
+      }
+
+      // Recebimentos de crediário via TEF (Receitas.tsx).
+      const arRows = (arPayments.data as any[]) || [];
+      const arReceivableIds = Array.from(
+        new Set(arRows.map((p) => p.receivable_id).filter(Boolean)),
+      );
+      let arReceivables = new Map<string, { customer_name?: string | null; document_number?: string | null }>();
+      if (arReceivableIds.length) {
+        const { data: recs } = await supabase
+          .from('accounts_receivable' as any)
+          .select('id, customer_name, document_number')
+          .in('id', arReceivableIds);
+        arReceivables = new Map(
+          ((recs as any[]) || []).map((r) => [r.id, { customer_name: r.customer_name, document_number: r.document_number }]),
+        );
+      }
+      for (const p of arRows) {
+        const tef = parseTefDataFromNotes(p.notes);
+        if (!tef) continue;
+        const ar = arReceivables.get(p.receivable_id);
+        result.set(tefRowKey(tef, p.id), {
+          id: p.id,
+          order_code: `Crediário ${ar?.document_number || p.receivable_id.slice(0, 8).toUpperCase()}`,
+          created_at: p.created_at,
+          total: Number(p.amount) || 0,
+          customer_name: ar?.customer_name || 'Cliente',
+          notes: p.notes,
+          type: tef.type,
+          nsu: tef.nsu,
+          authCode: tef.authCode,
+          cardBrand: tef.cardBrand,
+          acquirer: tef.acquirer,
+          operationType: tef.operationType,
+          cancelled: isOrderTefCancelled(p.notes),
           hasReceipt: !!tef.receipt,
         });
       }
