@@ -1251,14 +1251,14 @@ pause
 
         {/* Tab Impressão */}
         <TabsContent value="impressao" className="space-y-6">
-          {/* TEF Auto Print v1 — visível somente para a Lancheria da I9 */}
-          {company?.id === '8c9e7a0e-dbb6-49b9-8344-c23155a71164' && (
+          {/* TEF Auto Print v1 — disponível para todas as lojas com PDV V2 */}
+          {(
             <Card className="border-primary/40">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Printer className="w-5 h-5" />
                   Impressão automática do comprovante TEF
-                  <Badge variant="secondary" className="ml-2">Beta — Lancheria I9</Badge>
+                  <Badge variant="secondary" className="ml-2">TEF PinPad</Badge>
                 </CardTitle>
                 <CardDescription>
                   Após cada venda TEF aprovada (PinPad), imprime o comprovante automaticamente.
