@@ -2688,7 +2688,9 @@ export type Database = {
           confirm_quantity_above: number
           created_at: string
           crediario_receipt_copies: number
+          credit_receipt_tax_rule_id: string | null
           credit_sale_enabled: boolean
+          credit_sale_fiscal_mode: string
           default_fiscal_mode: string
           id: string
           nfe_ambiente: string | null
@@ -2730,7 +2732,9 @@ export type Database = {
           confirm_quantity_above?: number
           created_at?: string
           crediario_receipt_copies?: number
+          credit_receipt_tax_rule_id?: string | null
           credit_sale_enabled?: boolean
+          credit_sale_fiscal_mode?: string
           default_fiscal_mode?: string
           id?: string
           nfe_ambiente?: string | null
@@ -2772,7 +2776,9 @@ export type Database = {
           confirm_quantity_above?: number
           created_at?: string
           crediario_receipt_copies?: number
+          credit_receipt_tax_rule_id?: string | null
           credit_sale_enabled?: boolean
+          credit_sale_fiscal_mode?: string
           default_fiscal_mode?: string
           id?: string
           nfe_ambiente?: string | null
@@ -2804,6 +2810,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_settings_credit_receipt_tax_rule_id_fkey"
+            columns: ["credit_receipt_tax_rule_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rules"
             referencedColumns: ["id"]
           },
         ]
