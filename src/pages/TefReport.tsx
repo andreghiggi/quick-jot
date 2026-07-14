@@ -188,6 +188,43 @@ export default function TefReport() {
         });
       }
 
+      // Recebimentos de crediário via TEF (Receitas.tsx).
+      const arRows = (arPayments.data as any[]) || [];
+      const arReceivableIds = Array.from(
+        new Set(arRows.map((p) => p.receivable_id).filter(Boolean)),
+      );
+      let arReceivables = new Map<string, { customer_name?: string | null; document_number?: string | null }>();
+      if (arReceivableIds.length) {
+        const { data: recs } = await supabase
+          .from('accounts_receivable' as any)
+          .select('id, customer_name, document_number')
+          .in('id', arReceivableIds);
+        arReceivables = new Map(
+          ((recs as any[]) || []).map((r) => [r.id, { customer_name: r.customer_name, document_number: r.document_number }]),
+        );
+      }
+      for (const p of arRows) {
+        const tef = parseTefDataFromNotes(p.notes);
+        if (!tef) continue;
+        const ar = arReceivables.get(p.receivable_id);
+        result.set(tefRowKey(tef, p.id), {
+          id: p.id,
+          order_code: `Crediário ${ar?.document_number || p.receivable_id.slice(0, 8).toUpperCase()}`,
+          created_at: p.created_at,
+          total: Number(p.amount) || 0,
+          customer_name: ar?.customer_name || 'Cliente',
+          notes: p.notes,
+          type: tef.type,
+          nsu: tef.nsu,
+          authCode: tef.authCode,
+          cardBrand: tef.cardBrand,
+          acquirer: tef.acquirer,
+          operationType: tef.operationType,
+          cancelled: isOrderTefCancelled(p.notes),
+          hasReceipt: !!tef.receipt,
+        });
+      }
+
       return Array.from(result.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
     enabled: !!company?.id,
