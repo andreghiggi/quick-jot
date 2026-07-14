@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Check, MoreVertical, Receipt, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, Check, MoreVertical, Receipt, ChevronDown, ChevronRight, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -87,6 +87,117 @@ export default function Receitas() {
   // Overlay sequenciado "Recebendo → Imprimindo comprovantes → Emitindo NFC-e → Imprimindo cupom".
   const [nfcePhase, setNfcePhase] = useState<{ label: string; detail?: string } | null>(null);
   const [nfceError, setNfceError] = useState<string | null>(null);
+
+  // NFC-e financeiras (CRED-*) rejeitadas — banner de reemissão.
+  type RejectedCredNote = {
+    id: string;
+    numero: string | null;
+    valor_total: number;
+    external_id: string;
+    sale_id: string | null;
+    motivo_rejeicao: string | null;
+    request_payload: any;
+    created_at: string;
+  };
+  const [rejectedCredNotes, setRejectedCredNotes] = useState<RejectedCredNote[]>([]);
+  const [reemittingId, setReemittingId] = useState<string | null>(null);
+
+  async function loadRejectedCredNotes() {
+    if (!company?.id) return;
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { data } = await supabase
+      .from('nfce_records')
+      .select('id, numero, valor_total, external_id, sale_id, motivo_rejeicao, request_payload, created_at')
+      .eq('company_id', company.id)
+      .eq('status', 'rejeitada')
+      .like('external_id', 'CRED-%')
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setRejectedCredNotes((data as any[]) || []);
+  }
+  useEffect(() => { loadRejectedCredNotes(); /* eslint-disable-next-line */ }, [company?.id]);
+
+  async function reemitirNotaRejeitada(rec: RejectedCredNote) {
+    if (!company?.id) return;
+    setReemittingId(rec.id);
+    try {
+      const payload = rec.request_payload || {};
+      const itens = Array.isArray(payload.itens) ? [...payload.itens] : [];
+      if (itens.length === 0) throw new Error('Payload original vazio — não é possível reemitir.');
+
+      // Corrige NCM 00000000 buscando o do produto DIVERSOS (ou qualquer produto com NCM real).
+      let ncmReal = '';
+      const { data: diversos } = await supabase
+        .from('products')
+        .select('ncm, tax_rule:tax_rule_id(ncm)')
+        .eq('company_id', company.id)
+        .ilike('name', '%divers%')
+        .limit(1)
+        .maybeSingle();
+      ncmReal = ((diversos as any)?.ncm || (diversos as any)?.tax_rule?.ncm || '').replace(/\D/g, '');
+      if (!ncmReal || ncmReal === '00000000') {
+        const { data: anyProd } = await supabase
+          .from('products')
+          .select('ncm')
+          .eq('company_id', company.id)
+          .not('ncm', 'is', null)
+          .neq('ncm', '')
+          .neq('ncm', '00000000')
+          .limit(1)
+          .maybeSingle();
+        ncmReal = ((anyProd as any)?.ncm || '').replace(/\D/g, '');
+      }
+      if (!ncmReal || ncmReal === '00000000') {
+        throw new Error('Nenhum NCM válido encontrado nos cadastros para usar na reemissão.');
+      }
+
+      const fixedItens = itens.map((it: any) => {
+        const cur = (it.ncm || '').replace(/\D/g, '');
+        return (!cur || cur === '00000000') ? { ...it, ncm: ncmReal } : it;
+      });
+
+      const newExternalId = `${String(rec.external_id).split('-REEMIT-')[0]}-REEMIT-${Date.now()}`;
+      setNfcePhase({ label: 'Reemitindo NFC-e financeira...', detail: `Nota ${rec.numero || ''} (R$ ${Number(rec.valor_total).toFixed(2).replace('.', ',')})` });
+
+      await emitirNFCe(company.id, rec.sale_id, {
+        ...payload,
+        external_id: newExternalId,
+        natureza_operacao: payload.natureza_operacao || 'Recebimento de crediário',
+        itens: fixedItens,
+      } as any);
+
+      // Aguarda confirmação
+      let newRec: any = null;
+      for (let i = 0; i < 6; i++) {
+        const { data: r } = await supabase
+          .from('nfce_records')
+          .select('*')
+          .eq('external_id', newExternalId)
+          .maybeSingle();
+        newRec = r;
+        if (newRec && (newRec.status === 'autorizada' || newRec.status === 'rejeitada' || newRec.status === 'erro')) break;
+        if (newRec?.nfce_id) { try { await consultarNFCe(company.id, newRec.nfce_id); } catch { /* noop */ } }
+        await new Promise((res) => setTimeout(res, 1000));
+      }
+
+      if (newRec?.status === 'autorizada') {
+        toast.success(`NFC-e financeira nº ${newRec.numero || ''} autorizada.`);
+        try { await printDanfeFromRecord(newRec); } catch { try { await printDanfeFromRecordViaIframe(newRec); } catch { /* noop */ } }
+      } else if (newRec?.status === 'rejeitada') {
+        toast.error(`Rejeitada novamente: ${newRec.motivo_rejeicao || 'Verifique no Monitor NFC-e.'}`);
+      } else {
+        toast.info('Reemissão enviada. Acompanhe no Monitor NFC-e.');
+      }
+      await loadRejectedCredNotes();
+    } catch (e: any) {
+      console.error('[Receitas] reemitir', e);
+      toast.error('Falha ao reemitir: ' + (e?.message || e));
+    } finally {
+      setReemittingId(null);
+      setNfcePhase(null);
+    }
+  }
 
   const rows = useMemo<FinanceRow[]>(() => items.map((r) => ({
     id: r.id,
@@ -708,6 +819,46 @@ export default function Receitas() {
         onApply={() => { setPage(1); setFiltersOpen(false); }}
         onClear={() => { setFilters(emptyFilters); setPage(1); }}
       />
+
+      {rejectedCredNotes.length > 0 && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              NFC-e financeiras rejeitadas ({rejectedCredNotes.length})
+            </div>
+            <div className="space-y-1">
+              {rejectedCredNotes.map((rec) => {
+                const motivo = (() => {
+                  const m = rec.motivo_rejeicao as any;
+                  if (!m) return '—';
+                  if (typeof m === 'string') {
+                    try { const o = JSON.parse(m); return o.xMotivo || o.erro || m; } catch { return m; }
+                  }
+                  return m.xMotivo || m.erro || JSON.stringify(m);
+                })();
+                return (
+                  <div key={rec.id} className="flex items-center justify-between gap-2 rounded-md border border-destructive/20 bg-background px-3 py-2 text-xs">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium">Nº {rec.numero || '—'} · R$ {Number(rec.valor_total).toFixed(2).replace('.', ',')} · {new Date(rec.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</div>
+                      <div className="text-muted-foreground truncate" title={motivo}>{motivo}</div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={reemittingId === rec.id}
+                      onClick={() => reemitirNotaRejeitada(rec)}
+                    >
+                      {reemittingId === rec.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                      <span className="ml-1">Reemitir</span>
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="bg-muted/30">
         <CardContent className="p-0">
