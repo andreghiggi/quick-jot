@@ -890,7 +890,7 @@ export default function Receitas() {
               payments: data.payments.map((p) => ({ paymentName: p.paymentName, amount: p.amount })),
               interest: data.interest, fine: data.fine, discount: data.discount, surcharge: data.surcharge,
             }]);
-            if (data.emitNfce) await emitNfceForReceivables([row]);
+            if (data.emitNfce) await emitCreditReceiptNFCe([row], data.payments);
             else setNfcePhase(null);
           } else {
             setNfcePhase(null);
@@ -968,7 +968,7 @@ export default function Receitas() {
               setNfcePhase({ label: 'Imprimindo comprovantes...', detail: `${receipts.length} parcelas — corte automático entre elas` });
               await printReceiptsFor(receipts);
             }
-            if (data.emitNfce && rowsForNfce) await emitNfceForReceivables(rowsForNfce);
+            if (data.emitNfce && rowsForNfce) await emitCreditReceiptNFCe(rowsForNfce, data.payments);
             else setNfcePhase(null);
           } else {
             setNfcePhase(null);
