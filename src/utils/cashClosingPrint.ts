@@ -5,6 +5,7 @@ const ORIGIN_LABEL: Record<CloseCashSale['origin'], string> = {
   cardapio_retirada: 'Retiradas (cobradas no PDV)',
   cardapio_delivery: 'Deliveries',
   mesa: 'Mesas Importadas',
+  quitacao_crediario: 'Quitação de crediário',
   outros: 'Outros',
 };
 
