@@ -23,7 +23,7 @@ export interface CloseCashSale {
   payment_method_name: string;
   customer_name: string | null;
   created_at: string;
-  origin: 'balcao' | 'cardapio_retirada' | 'cardapio_delivery' | 'mesa' | 'outros';
+  origin: 'balcao' | 'cardapio_retirada' | 'cardapio_delivery' | 'mesa' | 'quitacao_crediario' | 'outros';
   /** Módulo de origem da venda no caixa: PDV/Comandas ou Mercado/Frente de Caixa. */
   source_module?: 'pdv' | 'mercado';
 }
@@ -63,6 +63,7 @@ const ORIGIN_LABEL: Record<CloseCashSale['origin'], string> = {
   cardapio_retirada: 'Retiradas (cobradas no PDV)',
   cardapio_delivery: 'Deliveries',
   mesa: 'Mesas Importadas',
+  quitacao_crediario: 'Quitação de crediário',
   outros: 'Outros',
 };
 

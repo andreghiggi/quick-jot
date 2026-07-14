@@ -400,6 +400,37 @@ export default function Receitas() {
         return;
       }
       taxRule = rule;
+
+      // NCM 00000000 é rejeitado pela SEFAZ em NFC-e (finalidade 1 normal).
+      // Buscamos o NCM efetivo do produto "DIVERSOS" da empresa (via cadastro
+      // ou regra tributária dele) para usar como NCM real do item financeiro.
+      // Se não encontrar, tenta qualquer produto ativo com NCM preenchido.
+      const currentNcm = (taxRule?.ncm || '').replace(/\D/g, '');
+      if (!currentNcm || currentNcm === '00000000') {
+        const { data: diversos } = await supabase
+          .from('products')
+          .select('ncm, tax_rule:tax_rule_id(ncm)')
+          .eq('company_id', company.id)
+          .ilike('name', '%divers%')
+          .limit(1)
+          .maybeSingle();
+        let ncmReal = ((diversos as any)?.ncm || (diversos as any)?.tax_rule?.ncm || '').replace(/\D/g, '');
+        if (!ncmReal || ncmReal === '00000000') {
+          const { data: anyProd } = await supabase
+            .from('products')
+            .select('ncm')
+            .eq('company_id', company.id)
+            .not('ncm', 'is', null)
+            .neq('ncm', '')
+            .neq('ncm', '00000000')
+            .limit(1)
+            .maybeSingle();
+          ncmReal = ((anyProd as any)?.ncm || '').replace(/\D/g, '');
+        }
+        if (ncmReal && ncmReal !== '00000000') {
+          taxRule = { ...taxRule, ncm: ncmReal };
+        }
+      }
     }
 
     const totalBalance = list.reduce((s, r) => s + Number(r.balance || 0), 0) || 1;
@@ -495,6 +526,7 @@ export default function Receitas() {
         const externalId = `CRED-${saleId.substring(0, 8)}-${Date.now()}`;
         await emitirNFCe(company.id, saleId, {
           external_id: externalId,
+          natureza_operacao: 'Recebimento de crediário',
           itens: [financeItem],
           valor_desconto: 0,
           valor_frete: 0,

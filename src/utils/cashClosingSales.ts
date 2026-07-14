@@ -143,5 +143,31 @@ export async function loadCashClosingSales(params: {
     })
     .filter((s: CloseCashSale) => Number(s.final_total || 0) > 0);
 
-  return [...mapped, ...missingCashSales];
+  // Quitações de crediário recebidas dentro da janela do caixa: entram como
+  // uma origem separada ("Quitação de crediário") para NÃO somarem no
+  // relatório de vendas, mas ainda comporem o total do caixa (o
+  // getCashSalesTotal filtra por nome "Dinheiro" e captura automaticamente
+  // a parte em espécie).
+  let credPaymentsQuery = supabase
+    .from('accounts_receivable_payments')
+    .select('id, amount, payment_method_id, payment_name, paid_at, notes, receivable:receivable_id(customer_name)')
+    .eq('company_id', companyId)
+    .gte('paid_at', openedAt);
+  if (closedAt) credPaymentsQuery = credPaymentsQuery.lte('paid_at', closedAt);
+  const { data: credPayments } = await credPaymentsQuery;
+
+  const credSales: CloseCashSale[] = ((credPayments as any[]) || [])
+    .map((p: any) => ({
+      id: `arp-${p.id}`,
+      final_total: Number(p.amount) || 0,
+      payment_method_id: p.payment_method_id || null,
+      payment_method_name: appendTefSubtype(p.payment_name || 'Sem forma', p.notes),
+      customer_name: p.receivable?.customer_name || null,
+      created_at: p.paid_at,
+      origin: 'quitacao_crediario' as const,
+      source_module: 'pdv' as const,
+    }))
+    .filter((s) => s.final_total > 0);
+
+  return [...mapped, ...missingCashSales, ...credSales];
 }
