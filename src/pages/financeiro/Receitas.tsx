@@ -820,6 +820,46 @@ export default function Receitas() {
         onClear={() => { setFilters(emptyFilters); setPage(1); }}
       />
 
+      {rejectedCredNotes.length > 0 && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              NFC-e financeiras rejeitadas ({rejectedCredNotes.length})
+            </div>
+            <div className="space-y-1">
+              {rejectedCredNotes.map((rec) => {
+                const motivo = (() => {
+                  const m = rec.motivo_rejeicao as any;
+                  if (!m) return '—';
+                  if (typeof m === 'string') {
+                    try { const o = JSON.parse(m); return o.xMotivo || o.erro || m; } catch { return m; }
+                  }
+                  return m.xMotivo || m.erro || JSON.stringify(m);
+                })();
+                return (
+                  <div key={rec.id} className="flex items-center justify-between gap-2 rounded-md border border-destructive/20 bg-background px-3 py-2 text-xs">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium">Nº {rec.numero || '—'} · R$ {Number(rec.valor_total).toFixed(2).replace('.', ',')} · {new Date(rec.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</div>
+                      <div className="text-muted-foreground truncate" title={motivo}>{motivo}</div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={reemittingId === rec.id}
+                      onClick={() => reemitirNotaRejeitada(rec)}
+                    >
+                      {reemittingId === rec.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                      <span className="ml-1">Reemitir</span>
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="bg-muted/30">
         <CardContent className="p-0">
           <Pagination page={page} size={size} total={groups.length} setPage={setPage} setSize={setSize} />
