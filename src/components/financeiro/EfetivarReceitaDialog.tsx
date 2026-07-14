@@ -33,6 +33,11 @@ export interface EfetivarPayment {
   /** Dados TEF aprovados (NSU/autorização/bandeira). Presente apenas
    *  para linhas TEF aprovadas via runMultiPayment. */
   tef?: NFCeTefData;
+  /** Trecho de notes gerado pelo `runTefPayment` (mesmo formato usado em
+   *  `orders.notes` / `pdv_sales.notes`). Persistido em
+   *  `accounts_receivable_payments.notes` para que o Relatório TEF
+   *  consiga listar recebimentos de crediário via PinPad. */
+  notes?: string | null;
 }
 
 export interface EfetivarSubmit {
@@ -198,6 +203,7 @@ export function EfetivarReceitaDialog({
     // para propagar ao onConfirm — Receitas usa para emitir a NFC-e
     // financeira 5949/6949.
     let resolvedTefByMethod: Record<string, NFCeTefData | undefined> = {};
+    let resolvedNotesByMethod: Record<string, string | undefined> = {};
     if (hasTef) {
       if (!companyId) {
         toast.error('Empresa não identificada para processar TEF.');
@@ -237,7 +243,10 @@ export function EfetivarReceitaDialog({
         return;
       }
       for (const l of mp.lines || []) {
-        if (l.integration && l.tef) resolvedTefByMethod[l.payment_method_id] = l.tef;
+        if (l.integration && l.tef) {
+          resolvedTefByMethod[l.payment_method_id] = l.tef;
+          resolvedNotesByMethod[l.payment_method_id] = l.notes_fragment || undefined;
+        }
       }
     }
 
@@ -247,6 +256,7 @@ export function EfetivarReceitaDialog({
       paymentName: l.method.name,
       integration: l.isTef ? (l.integ as 'tef_pinpad' | 'tef_smartpos') : undefined,
       tef: l.isTef ? resolvedTefByMethod[l.method.id] : undefined,
+      notes: l.isTef ? resolvedNotesByMethod[l.method.id] || null : null,
     }));
     const emitFlag =
       typeof emitNfceOverride === 'boolean'
