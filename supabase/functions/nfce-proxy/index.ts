@@ -448,6 +448,11 @@ Deno.serve(async (req) => {
               pagamentosArr.push({ tPag: '05', vPag: vPagStr })
               detPagArr.push({ indPag: '1', tPag: '05', vPag: vPagStr })
               formasArr.push({ forma_pagamento: '05', valor_pagamento: valor })
+            } else if (linha.tipo === 'pix') {
+              // PIX manual (fora do TEF) — tPag=17.
+              pagamentosArr.push({ tPag: '17', vPag: vPagStr })
+              detPagArr.push({ indPag: '0', tPag: '17', vPag: vPagStr })
+              formasArr.push({ forma_pagamento: '17', valor_pagamento: valor })
             } else {
               // cash / dinheiro
               pagamentosArr.push({ tPag: '01', vPag: vPagStr })
