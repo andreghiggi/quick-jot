@@ -16,6 +16,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { useFinanceiroEnabled } from '@/hooks/useFinanceiroEnabled';
 import { usePdvSettings, type PdvSettings } from '@/hooks/usePdvSettings';
+import { useTaxRules } from '@/hooks/useTaxRules';
 
 /**
  * Configurações consolidadas da Frente de Caixa.
@@ -30,6 +31,7 @@ export default function FrenteCaixaConfiguracoes() {
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { enabled: financeiroEnabled } = useFinanceiroEnabled(company?.id);
   const { settings, loading, saving, save, reload } = usePdvSettings(company?.id);
+  const { taxRules } = useTaxRules({ companyId: company?.id });
   const [form, setForm] = useState<PdvSettings>(settings);
   const [dirty, setDirty] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
