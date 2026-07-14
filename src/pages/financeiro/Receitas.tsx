@@ -30,6 +30,7 @@ import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { printPaymentReceipt, printPaymentReceiptsConsolidated, type PaymentReceiptPayload } from '@/utils/paymentReceiptPrint';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { toast } from 'sonner';
+import type { EfetivarPayment } from '@/components/financeiro/EfetivarReceitaDialog';
 
 /** Item agregado da lista: pode ser uma venda com N parcelas OU um
  *  título avulso (sem pdv_sale_id). */
@@ -316,6 +317,207 @@ export default function Receitas() {
       } catch (e: any) {
         console.error('[Receitas] emitNfceForReceivables', e);
         setNfceError('Falha ao emitir NFC-e: ' + (e?.message || e));
+      }
+    }
+    setNfcePhase(null);
+  }
+
+  /**
+   * Fase 3 — Crediário Fiscal.
+   *
+   * Emite a(s) NFC-e do recebimento respeitando `pdv_settings`:
+   *
+   *  • `credit_sale_fiscal_mode = 'on_sale'` (padrão): a NFC-e da mercadoria
+   *    já foi emitida no ato da venda (tPag=05). Aqui emitimos apenas uma
+   *    **NFC-e financeira** (CFOP 5949/6949) para a parte paga em TEF, usando
+   *    a regra tributária configurada em `credit_receipt_tax_rule_id`.
+   *
+   *  • `credit_sale_fiscal_mode = 'on_receipt'`: a venda nasceu sem NFC-e.
+   *    No primeiro recebimento que envolva TEF, emitimos primeiro a NFC-e
+   *    completa da mercadoria (com tPag=05) e depois a NFC-e financeira do
+   *    valor TEF. Nos recebimentos seguintes só sai a financeira.
+   *
+   *  Recebimentos 100% em dinheiro / PIX manual não emitem nota financeira
+   *  (a baixa segue com o comprovante de recebimento apenas).
+   */
+  async function emitCreditReceiptNFCe(
+    list: AccountReceivable[],
+    payments: EfetivarPayment[],
+  ) {
+    if (!company?.id) { setNfcePhase(null); return; }
+    const saleIds = Array.from(
+      new Set(list.map((r) => r.pdv_sale_id).filter(Boolean) as string[]),
+    );
+    if (saleIds.length === 0) {
+      // Título avulso — não há como emitir nota vinculada; ignora silenciosamente.
+      setNfcePhase(null);
+      return;
+    }
+
+    // Total TEF real (com dados NSU/autorização) neste recebimento.
+    const tefPayments = payments.filter((p) => p.integration && p.tef);
+    const tefTotal = tefPayments.reduce((s, p) => s + p.amount, 0);
+
+    // Carrega config do PDV.
+    const { data: cfg } = await supabase
+      .from('pdv_settings')
+      .select('credit_sale_fiscal_mode, credit_receipt_tax_rule_id')
+      .eq('company_id', company.id)
+      .maybeSingle();
+    const mode: 'on_sale' | 'on_receipt' =
+      ((cfg as any)?.credit_sale_fiscal_mode as any) || 'on_sale';
+    const taxRuleId = (cfg as any)?.credit_receipt_tax_rule_id as string | null;
+
+    let taxRule: any = null;
+    if (tefTotal > 0.005) {
+      if (!taxRuleId) {
+        setNfceError('Regra tributária de crediário não configurada. Configure em Frente de Caixa → Configurações → Financeiro – Crediário.');
+        setNfcePhase(null);
+        return;
+      }
+      const { data: rule } = await supabase
+        .from('tax_rules')
+        .select('*')
+        .eq('id', taxRuleId)
+        .maybeSingle();
+      if (!rule) {
+        setNfceError('Regra tributária de crediário não encontrada.');
+        setNfcePhase(null);
+        return;
+      }
+      taxRule = rule;
+    }
+
+    const totalBalance = list.reduce((s, r) => s + Number(r.balance || 0), 0) || 1;
+
+    for (const saleId of saleIds) {
+      const arRowsOfSale = list.filter((r) => r.pdv_sale_id === saleId);
+      const saleBalance = arRowsOfSale.reduce((s, r) => s + Number(r.balance || 0), 0);
+      const share = saleBalance / totalBalance;
+      const tefForSale = +(tefTotal * share).toFixed(2);
+
+      // Destinatário: cliente titular do título (primeiro AR desta venda).
+      const arRow = arRowsOfSale[0];
+      const docDigits = (arRow.customer_document || '').replace(/\D/g, '');
+      const destinatario =
+        docDigits.length === 11
+          ? { cpf: docDigits, nome: arRow.customer_name || undefined }
+          : docDigits.length === 14
+            ? { cnpj: docDigits, nome: arRow.customer_name || undefined }
+            : undefined;
+
+      // Consulta pdv_sales para pv_numero (usado na descrição da financeira).
+      const { data: saleRow } = await supabase
+        .from('pdv_sales')
+        .select('pv_numero, final_total')
+        .eq('id', saleId)
+        .maybeSingle();
+      const pvNumero = (saleRow as any)?.pv_numero ?? null;
+
+      // Modo B — primeira nota da mercadoria caso ainda não haja uma
+      // autorizada para a venda.
+      if (mode === 'on_receipt') {
+        const { data: prevRecs } = await supabase
+          .from('nfce_records')
+          .select('id, status, external_id')
+          .eq('sale_id', saleId)
+          .eq('status', 'autorizada');
+        const hasMercadoria = ((prevRecs as any[]) || []).some(
+          (r) => !String(r.external_id || '').startsWith('CRED-'),
+        );
+        if (!hasMercadoria) {
+          try {
+            await emitNfceForReceivables(arRowsOfSale);
+          } catch (e: any) {
+            console.error('[Receitas] falha ao emitir mercadoria (on_receipt)', e);
+          }
+        }
+      }
+
+      // Financeira 5949 — só quando parte foi paga via TEF.
+      if (tefForSale <= 0.005 || !taxRule) continue;
+
+      try {
+        setNfcePhase({
+          label: 'Emitindo NFC-e financeira (5949)...',
+          detail: `Recebimento TEF R$ ${tefForSale.toFixed(2).replace('.', ',')}`,
+        });
+
+        const descricao = `Recebimento de crediário${pvNumero ? ` - Venda #${pvNumero}` : ''}`;
+        const fiscal = buildNfceFiscalFields({
+          product: null,
+          taxRule: taxRule as any,
+          mercadoEnabled: false,
+          fallbackNcm: '00000000',
+          fallbackCfop: '5949',
+        });
+        const financeItem: NFCeItem = {
+          codigo: 'REC-CRED',
+          descricao,
+          unidade: 'UN',
+          quantidade: 1,
+          valor_unitario: tefForSale,
+          ...fiscal,
+        };
+
+        // Split de pagamento: reflete o(s) TEF(s) que compõem este rateio.
+        // Cada linha TEF entra proporcionalmente ao share desta venda.
+        const pagSplit = tefPayments.map((p) => ({
+          tipo: 'tef' as const,
+          valor: +(p.amount * share).toFixed(2),
+          tef: p.tef!,
+        })).filter((x) => x.valor > 0.005);
+
+        const externalId = `CRED-${saleId.substring(0, 8)}-${Date.now()}`;
+        await emitirNFCe(company.id, saleId, {
+          external_id: externalId,
+          itens: [financeItem],
+          valor_desconto: 0,
+          valor_frete: 0,
+          observacoes: `${descricao}${arRow.customer_name ? ` | Cliente: ${arRow.customer_name}` : ''}`,
+          pagamentos_split: pagSplit,
+          destinatario,
+        } as any);
+
+        setNfcePhase({ label: 'Confirmando autorização...', detail: 'Consultando retorno da SEFAZ' });
+        await new Promise((r) => setTimeout(r, 300));
+
+        // Busca o registro mais recente desta venda (a financeira que acabamos de emitir).
+        let rec: any = null;
+        for (let i = 0; i < 6; i++) {
+          const { data: recs } = await supabase
+            .from('nfce_records')
+            .select('*')
+            .eq('sale_id', saleId)
+            .eq('external_id', externalId)
+            .maybeSingle();
+          rec = recs;
+          if (rec && (rec.status === 'autorizada' || rec.status === 'rejeitada' || rec.status === 'erro')) break;
+          setNfcePhase({ label: 'Consultando SEFAZ...', detail: `Tentativa ${i + 1}/6` });
+          if (rec?.nfce_id) {
+            try { await consultarNFCe(company.id, rec.nfce_id); } catch { /* noop */ }
+          }
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+
+        if (rec?.status === 'autorizada') {
+          setNfcePhase({ label: `NFC-e financeira nº ${rec.numero || ''} autorizada`, detail: 'Imprimindo cupom fiscal...' });
+          try {
+            await printDanfeFromRecord(rec as any);
+          } catch {
+            try { await printDanfeFromRecordViaIframe(rec as any); } catch (e: any) {
+              toast.error(e?.message || 'Erro ao imprimir DANFE');
+            }
+          }
+          toast.success(`NFC-e financeira nº ${rec.numero || ''} autorizada.`);
+        } else if (rec) {
+          setNfceError(rec.motivo_rejeicao || `NFC-e financeira ${rec.status}. Verifique no Monitor NFC-e.`);
+        } else {
+          toast.info('NFC-e financeira enviada. Acompanhe no Monitor NFC-e.');
+        }
+      } catch (e: any) {
+        console.error('[Receitas] emitCreditReceiptNFCe', e);
+        setNfceError('Falha ao emitir NFC-e financeira: ' + (e?.message || e));
       }
     }
     setNfcePhase(null);
@@ -688,7 +890,7 @@ export default function Receitas() {
               payments: data.payments.map((p) => ({ paymentName: p.paymentName, amount: p.amount })),
               interest: data.interest, fine: data.fine, discount: data.discount, surcharge: data.surcharge,
             }]);
-            if (data.emitNfce) await emitNfceForReceivables([row]);
+            if (data.emitNfce) await emitCreditReceiptNFCe([row], data.payments);
             else setNfcePhase(null);
           } else {
             setNfcePhase(null);
@@ -766,7 +968,7 @@ export default function Receitas() {
               setNfcePhase({ label: 'Imprimindo comprovantes...', detail: `${receipts.length} parcelas — corte automático entre elas` });
               await printReceiptsFor(receipts);
             }
-            if (data.emitNfce && rowsForNfce) await emitNfceForReceivables(rowsForNfce);
+            if (data.emitNfce && rowsForNfce) await emitCreditReceiptNFCe(rowsForNfce, data.payments);
             else setNfcePhase(null);
           } else {
             setNfcePhase(null);

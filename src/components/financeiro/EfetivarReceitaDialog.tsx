@@ -19,6 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { brl, maskCurrencyInput, parseCurrencyInput } from '@/components/pdv-v2/_format';
 import type { AccountReceivable } from '@/hooks/useAccountsReceivable';
 import { runMultiPayment, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
+import type { NFCeTefData } from '@/services/nfceService';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -26,6 +27,12 @@ export interface EfetivarPayment {
   amount: number;
   paymentMethodId?: string | null;
   paymentName: string;
+  /** Integração TEF quando aplicável — usada pelo Receitas para
+   *  decidir se emite NFC-e financeira (5949/6949). */
+  integration?: 'tef_pinpad' | 'tef_smartpos';
+  /** Dados TEF aprovados (NSU/autorização/bandeira). Presente apenas
+   *  para linhas TEF aprovadas via runMultiPayment. */
+  tef?: NFCeTefData;
 }
 
 export interface EfetivarSubmit {
@@ -187,6 +194,10 @@ export function EfetivarReceitaDialog({
     // Frente de Caixa / PDV V2) antes de registrar o recebimento. Em caso
     // de recusa, tudo é estornado automaticamente.
     const hasTef = activeLines.some((l) => l.isTef);
+    // Guarda dados TEF resolvidos (NSU/aut/bandeira) por payment_method_id
+    // para propagar ao onConfirm — Receitas usa para emitir a NFC-e
+    // financeira 5949/6949.
+    let resolvedTefByMethod: Record<string, NFCeTefData | undefined> = {};
     if (hasTef) {
       if (!companyId) {
         toast.error('Empresa não identificada para processar TEF.');
@@ -225,12 +236,17 @@ export function EfetivarReceitaDialog({
         toast.error((mp.errorMessage || 'Cobrança TEF recusada') + extra);
         return;
       }
+      for (const l of mp.lines || []) {
+        if (l.integration && l.tef) resolvedTefByMethod[l.payment_method_id] = l.tef;
+      }
     }
 
     const payments: EfetivarPayment[] = activeLines.map((l) => ({
       amount: l.amount,
       paymentMethodId: l.method.id,
       paymentName: l.method.name,
+      integration: l.isTef ? (l.integ as 'tef_pinpad' | 'tef_smartpos') : undefined,
+      tef: l.isTef ? resolvedTefByMethod[l.method.id] : undefined,
     }));
     const emitFlag =
       typeof emitNfceOverride === 'boolean'
