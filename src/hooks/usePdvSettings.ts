@@ -40,6 +40,13 @@ export interface PdvSettings {
   credit_sale_enabled: boolean;
   /** Nº de vias (1 ou 2) do comprovante de crediário impresso após a venda. */
   crediario_receipt_copies: 1 | 2;
+  /** Fase Crediário Fiscal: quando emitir a NFC-e da venda no crediário.
+   *  - 'on_sale'    → emite NFC-e da mercadoria no ato da venda (tPag=05 crediário)
+   *  - 'on_receipt' → adia a NFC-e; no 1º recebimento em TEF a nota da venda é emitida
+   *                    e depois cada TEF gera uma NFC-e financeira (CFOP 5949/6949). */
+  credit_sale_fiscal_mode: 'on_sale' | 'on_receipt';
+  /** Regra tributária usada nas NFC-e financeiras de recebimento (5949/6949). */
+  credit_receipt_tax_rule_id: string | null;
 }
 
 export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
@@ -71,6 +78,8 @@ export const PDV_SETTINGS_DEFAULTS: PdvSettings = {
   default_fiscal_mode: 'ask',
   credit_sale_enabled: false,
   crediario_receipt_copies: 2,
+  credit_sale_fiscal_mode: 'on_sale',
+  credit_receipt_tax_rule_id: null,
 };
 
 /**
@@ -132,6 +141,9 @@ export function usePdvSettings(companyId?: string | null) {
           ((data as any).default_fiscal_mode as 'fiscal' | 'nao_fiscal' | 'ask') ?? 'ask',
         credit_sale_enabled: !!(data as any).credit_sale_enabled,
         crediario_receipt_copies: ((data as any).crediario_receipt_copies === 1 ? 1 : 2) as 1 | 2,
+        credit_sale_fiscal_mode:
+          ((data as any).credit_sale_fiscal_mode as 'on_sale' | 'on_receipt') ?? 'on_sale',
+        credit_receipt_tax_rule_id: (data as any).credit_receipt_tax_rule_id ?? null,
       });
     } else {
       setSettings(PDV_SETTINGS_DEFAULTS);
