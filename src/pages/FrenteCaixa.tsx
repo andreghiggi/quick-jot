@@ -555,6 +555,17 @@ export default function FrenteCaixa() {
     e.preventDefault();
     if (!query.trim()) return;
 
+    // Se o auto-add por GTIN acabou de consumir este mesmo texto, o Enter
+    // do leitor NÃO deve adicionar de novo.
+    if (justAutoAddedRef.current && justAutoAddedRef.current === query.trim()) {
+      justAutoAddedRef.current = null;
+      setQuery('');
+      setSearchMatches([]);
+      setHighlightIdx(0);
+      return;
+    }
+    justAutoAddedRef.current = null;
+
     // padrão N*CODIGO (multiplicador de quantidade)
     let raw = query.trim();
     let qty = 1;
