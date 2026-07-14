@@ -1081,7 +1081,12 @@ export default function Receitas() {
             companyId: company.id,
             operatorId: user?.id ?? null,
             interest: data.interest, fine: data.fine, discount: data.discount, surcharge: data.surcharge,
-            payments: data.payments,
+            payments: data.payments.map((p) => ({
+              amount: p.amount,
+              paymentMethodId: p.paymentMethodId,
+              paymentName: p.paymentName,
+              notes: p.notes ?? null,
+            })),
           });
           setBusy(false);
           if (ok) {
@@ -1137,7 +1142,16 @@ export default function Receitas() {
             while (need > 0.005 && queue.length) {
               const p = queue[0];
               const take = Math.min(p.amount, need);
-              local.push({ amount: +take.toFixed(2), paymentMethodId: p.paymentMethodId, paymentName: p.paymentName });
+              local.push({
+                amount: +take.toFixed(2),
+                paymentMethodId: p.paymentMethodId,
+                paymentName: p.paymentName,
+                // Preserva o fragmento TEF apenas na PRIMEIRA parcela que consome
+                // este pagamento — evita duplicar a mesma NSU em várias linhas
+                // do accounts_receivable_payments (e no Relatório TEF).
+                notes: (p as any)._notesConsumed ? null : (p.notes ?? null),
+              });
+              (p as any)._notesConsumed = true;
               p.amount = +(p.amount - take).toFixed(2);
               need = +(need - take).toFixed(2);
               if (p.amount < 0.005) queue.shift();
