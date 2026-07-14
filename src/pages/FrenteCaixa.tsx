@@ -352,6 +352,7 @@ export default function FrenteCaixa() {
     );
     if (match) {
       addProductToCart(match, qty);
+      justAutoAddedRef.current = raw;
       setQuery('');
       setSearchMatches([]);
       setHighlightIdx(0);
