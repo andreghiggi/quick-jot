@@ -341,6 +341,51 @@ export default function FrenteCaixaConfiguracoes() {
                 Ao finalizar uma venda no crediário, a Frente de Caixa imprime o comprovante (com campo de assinatura) na quantidade escolhida.
               </p>
             </div>
+
+            <Separator />
+
+            <div className="space-y-1.5 pt-1">
+              <Label htmlFor="credit_sale_fiscal_mode">Quando emitir a NFC-e da venda no crediário</Label>
+              <Select
+                value={form.credit_sale_fiscal_mode}
+                onValueChange={(v) => updPersist('credit_sale_fiscal_mode', v as 'on_sale' | 'on_receipt')}
+              >
+                <SelectTrigger id="credit_sale_fiscal_mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="on_sale">Emitir NFC-e na venda (recomendado)</SelectItem>
+                  <SelectItem value="on_receipt">Emitir NFC-e no 1º recebimento em TEF</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                <b>Na venda:</b> a nota da mercadoria sai no ato (tPag=05 crediário). Cada recebimento em TEF gera uma NFC-e financeira (CFOP 5949/6949) para conciliação do cartão.
+                <br />
+                <b>No recebimento:</b> a venda nasce sem nota. Assim que o cliente pagar uma parcela em TEF, o sistema emite a nota da mercadoria e, na sequência, a NFC-e financeira do recebimento. Parcelas seguintes em TEF geram só a financeira. Recebimentos em dinheiro não emitem nota.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="credit_receipt_tax_rule_id">Regra tributária das notas financeiras (5949/6949)</Label>
+              <Select
+                value={form.credit_receipt_tax_rule_id ?? ''}
+                onValueChange={(v) => updPersist('credit_receipt_tax_rule_id', v || null)}
+              >
+                <SelectTrigger id="credit_receipt_tax_rule_id">
+                  <SelectValue placeholder="Selecione uma regra…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {taxRules.map((tr) => (
+                    <SelectItem key={tr.id} value={tr.id}>
+                      {tr.name} — CFOP {tr.cfop} / CSOSN {tr.csosn}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Já criamos automaticamente a regra "Recebimento de Crediário" (CFOP 5949, NCM 00000000, CSOSN 400, PIS/COFINS 49 zerados). Você pode editá-la em <b>Fiscal → Regras tributárias</b>.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
