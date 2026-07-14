@@ -383,9 +383,13 @@ export function FrenteCaixaCheckoutDialog({
       }
       return;
     }
-    // Crediário nunca emite NFC-e na Fase 1 (venda entra como não-fiscal).
+    // Modo fiscal:
+    //  - Venda comum: usa a escolha do operador / default configurado.
+    //  - Crediário: respeita a config "Quando emitir a NFC-e da venda no crediário":
+    //      • on_sale    → emite NFC-e no ato (tPag=05)
+    //      • on_receipt → não emite; a nota sai no 1º recebimento em TEF
     const fiscalMode: 'fiscal' | 'nao_fiscal' = isCreditSale
-      ? 'nao_fiscal'
+      ? (creditSaleFiscalMode === 'on_sale' ? 'fiscal' : 'nao_fiscal')
       : (fiscalChoice ?? (defaultFiscalMode === 'ask' ? 'nao_fiscal' : defaultFiscalMode));
     setProcessing(true);
     setProcessingStatus(isCreditSale ? 'Gerando título de crediário…' : 'Processando pagamentos…');
