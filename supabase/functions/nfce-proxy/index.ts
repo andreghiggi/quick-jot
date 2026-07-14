@@ -573,6 +573,19 @@ Deno.serve(async (req) => {
             emitPayload?.environment ||
             payload?.ambiente ||
             'homologacao'
+          // Detecta tpEmis real no XML autorizado: se a Focus emitiu em modo
+          // normal (tpEmis=1) mesmo depois de termos pedido contingência, NÃO
+          // marcamos como contingência — isso acontece quando o timeout de 8s
+          // estourou mas a SEFAZ na verdade só estava lenta, não indisponível.
+          const xmlStr = pickXmlField(emitData) || ''
+          const xmlTpEmisMatch = xmlStr.match(/<tpEmis>\s*(\d)\s*<\/tpEmis>/i)
+          const xmlTpEmis = xmlTpEmisMatch ? Number(xmlTpEmisMatch[1]) : null
+          const emittedInContingencia =
+            xmlTpEmis === 9 ||
+            emitData.tpEmis === 9 ||
+            String(emitData.forma_emissao || '') === '9' ||
+            emitData.contingencia_offline === true
+
           const nfceRecord = {
             company_id: companyId,
             sale_id: saleId || null,
@@ -590,12 +603,11 @@ Deno.serve(async (req) => {
             motivo_rejeicao: emitData.motivo_rejeicao || emitData.motivo || null,
             request_payload: isI9 ? emitPayload : payload,
             response_payload: result,
-            contingencia_offline: usedContingencia
-              || emitData.contingencia_offline === true
-              || emitData.tpEmis === 9
-              || String(emitData.forma_emissao || '') === '9',
-            contingencia_efetivada: emitData.contingencia_offline_efetivada === true
-              || emitData.contingencia_efetivada === true,
+            contingencia_offline: emittedInContingencia,
+            contingencia_efetivada: emittedInContingencia && (
+              emitData.contingencia_offline_efetivada === true ||
+              emitData.contingencia_efetivada === true
+            ),
           }
           console.log('[nfce-proxy] Inserting record:', JSON.stringify(nfceRecord))
           const { error: insertError } = await supabase.from('nfce_records').insert(nfceRecord)
