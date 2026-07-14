@@ -294,6 +294,9 @@ export function useAccountsReceivable(companyId?: string | null) {
       amount: number;
       paymentMethodId?: string | null;
       paymentName: string;
+      /** Fragmento de notas por pagamento (ex.: "TEF PinPad: NSU X | Aut Y | ...").
+       *  Persistido em accounts_receivable_payments.notes para o Relatório TEF. */
+      notes?: string | null;
     }>;
   }): Promise<boolean> => {
     if (!input.payments.length) { toast.error('Adicione ao menos uma forma de pagamento.'); return false; }
@@ -321,7 +324,7 @@ export function useAccountsReceivable(companyId?: string | null) {
       payment_method_id: p.paymentMethodId ?? null,
       payment_name: p.paymentName,
       operator_id: input.operatorId ?? null,
-      notes: null,
+      notes: p.notes ?? null,
     }));
     const { error: e2 } = await supabase.from('accounts_receivable_payments' as any).insert(rows);
     if (e2) { toast.error('Falha ao registrar recebimento: ' + e2.message); return false; }
