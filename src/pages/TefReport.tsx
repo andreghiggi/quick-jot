@@ -101,7 +101,7 @@ export default function TefReport() {
         .lte(dateField, range.end.toISOString())
         .ilike('notes', '%TEF PinPad:%');
 
-      const [ordersByCreated, ordersByUpdated, pdvSales] = await Promise.all([
+      const [ordersByCreated, ordersByUpdated, pdvSales, arPayments] = await Promise.all([
         buildOrdersQuery('created_at'),
         buildOrdersQuery('updated_at'),
         supabase
@@ -111,10 +111,20 @@ export default function TefReport() {
           .gte('created_at', range.start.toISOString())
           .lte('created_at', range.end.toISOString())
           .ilike('notes', '%TEF PinPad:%'),
+        // Recebimentos de crediário em TEF gravados via Receitas.tsx.
+        // O fragmento "TEF PinPad: NSU ... | Aut ... | ..." vai em
+        // accounts_receivable_payments.notes desde v1.42.x.
+        supabase
+          .from('accounts_receivable_payments' as any)
+          .select('id, created_at, amount, notes, receivable_id')
+          .eq('company_id', company.id)
+          .gte('created_at', range.start.toISOString())
+          .lte('created_at', range.end.toISOString())
+          .ilike('notes', '%TEF PinPad:%'),
       ]);
 
-      if (ordersByCreated.error || ordersByUpdated.error || pdvSales.error) {
-        console.error('TEF report fetch error:', ordersByCreated.error || ordersByUpdated.error || pdvSales.error);
+      if (ordersByCreated.error || ordersByUpdated.error || pdvSales.error || arPayments.error) {
+        console.error('TEF report fetch error:', ordersByCreated.error || ordersByUpdated.error || pdvSales.error || arPayments.error);
         return [];
       }
 
