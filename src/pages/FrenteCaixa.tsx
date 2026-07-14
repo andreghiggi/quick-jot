@@ -257,6 +257,11 @@ export default function FrenteCaixa() {
   // Quando o usuário confirma sair/recarregar pelo nosso dialog, suprimimos
   // o beforeunload nativo para não aparecer o popup do navegador em cima.
   const suppressBeforeUnloadRef = useRef(false);
+  // Guarda contra dupla adição quando o leitor de código de barras envia
+  // os dígitos + Enter: o useEffect auto-adiciona ao bater o GTIN e, logo
+  // em seguida, o Enter dispara handleSubmit — sem esta trava, o produto
+  // é adicionado 2x por bipe.
+  const justAutoAddedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!hasUnsavedSale) return;
