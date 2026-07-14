@@ -358,6 +358,20 @@ export default function Receitas() {
     const tefPayments = payments.filter((p) => p.integration && p.tef);
     const tefTotal = tefPayments.reduce((s, p) => s + p.amount, 0);
 
+    // Pagamentos NÃO-TEF (dinheiro / PIX manual). Quando o operador clica
+    // em "EFETIVAR COM NFC-E" em um recebimento sem TEF, também emitimos a
+    // nota financeira (5949/6949) — cada linha vira um <detPag> com o tPag
+    // adequado (PIX=17, demais=01/dinheiro).
+    const cashPayments = payments
+      .filter((p) => !(p.integration && p.tef))
+      .map((p) => ({
+        amount: p.amount,
+        isPix: /pix/i.test(p.paymentName || ''),
+      }))
+      .filter((p) => p.amount > 0.005);
+    const cashTotal = cashPayments.reduce((s, p) => s + p.amount, 0);
+    const financeTotal = +(tefTotal + cashTotal).toFixed(2);
+
     // Carrega config do PDV.
     const { data: cfg } = await supabase
       .from('pdv_settings')
@@ -369,7 +383,7 @@ export default function Receitas() {
     const taxRuleId = (cfg as any)?.credit_receipt_tax_rule_id as string | null;
 
     let taxRule: any = null;
-    if (tefTotal > 0.005) {
+    if (financeTotal > 0.005) {
       if (!taxRuleId) {
         setNfceError('Regra tributária de crediário não configurada. Configure em Frente de Caixa → Configurações → Financeiro – Crediário.');
         setNfcePhase(null);
@@ -395,6 +409,8 @@ export default function Receitas() {
       const saleBalance = arRowsOfSale.reduce((s, r) => s + Number(r.balance || 0), 0);
       const share = saleBalance / totalBalance;
       const tefForSale = +(tefTotal * share).toFixed(2);
+      const cashForSale = +(cashTotal * share).toFixed(2);
+      const financeForSale = +(tefForSale + cashForSale).toFixed(2);
 
       // Destinatário: cliente titular do título (primeiro AR desta venda).
       const arRow = arRowsOfSale[0];
@@ -434,13 +450,14 @@ export default function Receitas() {
         }
       }
 
-      // Financeira 5949 — só quando parte foi paga via TEF.
-      if (tefForSale <= 0.005 || !taxRule) continue;
+      // Financeira 5949 — emitida sempre que o operador optou por NFC-e
+      // neste recebimento (TEF, dinheiro ou PIX manual).
+      if (financeForSale <= 0.005 || !taxRule) continue;
 
       try {
         setNfcePhase({
           label: 'Emitindo NFC-e financeira (5949)...',
-          detail: `Recebimento TEF R$ ${tefForSale.toFixed(2).replace('.', ',')}`,
+          detail: `Recebimento R$ ${financeForSale.toFixed(2).replace('.', ',')}`,
         });
 
         const descricao = `Recebimento de crediário${pvNumero ? ` - Venda #${pvNumero}` : ''}`;
@@ -456,17 +473,24 @@ export default function Receitas() {
           descricao,
           unidade: 'UN',
           quantidade: 1,
-          valor_unitario: tefForSale,
+          valor_unitario: financeForSale,
           ...fiscal,
         };
 
         // Split de pagamento: reflete o(s) TEF(s) que compõem este rateio.
-        // Cada linha TEF entra proporcionalmente ao share desta venda.
-        const pagSplit = tefPayments.map((p) => ({
-          tipo: 'tef' as const,
-          valor: +(p.amount * share).toFixed(2),
-          tef: p.tef!,
-        })).filter((x) => x.valor > 0.005);
+        // Cada linha (TEF/dinheiro/PIX) entra proporcionalmente ao share
+        // desta venda.
+        const pagSplit: any[] = [
+          ...tefPayments.map((p) => ({
+            tipo: 'tef' as const,
+            valor: +(p.amount * share).toFixed(2),
+            tef: p.tef!,
+          })),
+          ...cashPayments.map((p) => ({
+            tipo: (p.isPix ? 'pix' : 'dinheiro') as 'pix' | 'dinheiro',
+            valor: +(p.amount * share).toFixed(2),
+          })),
+        ].filter((x) => x.valor > 0.005);
 
         const externalId = `CRED-${saleId.substring(0, 8)}-${Date.now()}`;
         await emitirNFCe(company.id, saleId, {
