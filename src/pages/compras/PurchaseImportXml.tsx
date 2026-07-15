@@ -173,6 +173,10 @@ export default function PurchaseImportXml() {
   const [bulkTaxRuleId, setBulkTaxRuleId] = useState<string>('');
   const [bulkType, setBulkType] = useState<ProductType | ''>('');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // Defaults inteligentes (Fase 3) — persistidos em store_settings.
+  const [defaultCategoryId, setDefaultCategoryId] = useState<string>('');
+  const [defaultTaxRuleId, setDefaultTaxRuleId] = useState<string>('');
+  const [savingDefaults, setSavingDefaults] = useState(false);
   // Estado do fluxo de "SEFAZ ainda não liberou XML completo" —
   // usado para oferecer o botão "Executar Confirmação da Operação agora"
   // dentro da própria tela de importação, sem voltar em Manifestação.
@@ -187,6 +191,18 @@ export default function PurchaseImportXml() {
     supabase.from('products').select('id,name,gtin,price,unit').eq('company_id', company.id).then(({ data }) => {
       setProducts((data as any) || []);
     });
+    // Carrega defaults salvos para importação de XML
+    supabase
+      .from('store_settings')
+      .select('key,value')
+      .eq('company_id', company.id)
+      .in('key', ['purchase_import_default_category_id', 'purchase_import_default_tax_rule_id'])
+      .then(({ data }) => {
+        (data || []).forEach((row: any) => {
+          if (row.key === 'purchase_import_default_category_id') setDefaultCategoryId(row.value || '');
+          if (row.key === 'purchase_import_default_tax_rule_id') setDefaultTaxRuleId(row.value || '');
+        });
+      });
     if (documentoId) loadFromDfe(documentoId);
   }, [company?.id, documentoId]);
 
