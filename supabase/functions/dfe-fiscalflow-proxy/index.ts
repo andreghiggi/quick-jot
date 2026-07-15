@@ -167,6 +167,29 @@ Deno.serve(async (req) => {
         `${FF_BASE}/${doc.fiscalflow_id}/xml`,
         { method: 'GET', headers: { 'x-api-key': token } }
       )
+      // Se a FF respondeu NOT_AVAILABLE (tipicamente 404), o próprio provedor
+      // orienta: manifestar Confirmação da Operação → /sync → repetir GET /xml.
+      if (!r.ok) {
+        let ffText = await r.text()
+        let ffParsed: any = ffText
+        try { ffParsed = JSON.parse(ffText) } catch { /* noop */ }
+        const ffCode = (ffParsed as any)?.code || (ffParsed as any)?.error
+        const isNotAvailable = r.status === 404 || /NOT_AVAILABLE/i.test(String(ffCode || ffText))
+        if (isNotAvailable) {
+          console.log('[download_xml] NOT_AVAILABLE — manifestando Confirmação e re-sincronizando')
+          await fetch(`${FF_BASE}/${doc.fiscalflow_id}/manifestar`, {
+            method: 'POST', headers: ffHeaders,
+            body: JSON.stringify({ tipo: 'confirmacao', tpEvento: 210200 }),
+          }).catch(() => null)
+          await fetch(`${FF_BASE}/sync`, {
+            method: 'POST', headers: ffHeaders, body: JSON.stringify({}),
+          }).catch(() => null)
+          r = await fetch(
+            `${FF_BASE}/${doc.fiscalflow_id}/xml`,
+            { method: 'GET', headers: { 'x-api-key': token } }
+          )
+        }
+      }
       if (!r.ok) {
         const text = await r.text()
         let parsed: unknown = text
@@ -193,9 +216,10 @@ Deno.serve(async (req) => {
       let xml = await r.text()
       if (isResumoDfe(xml)) {
         // resNFe = resumo. Só vira XML completo após Confirmação da Operação (Ciência não basta).
-        // Tenta consultar/sincronizar e rebaixar antes de reportar indisponibilidade.
-        await fetch(`${FF_BASE}/${doc.fiscalflow_id}/consultar`, {
-          method: 'POST', headers: ffHeaders, body: JSON.stringify({}),
+        // Fluxo recomendado pela Fiscal Flow: manifestar confirmação → /sync → repetir GET /xml.
+        await fetch(`${FF_BASE}/${doc.fiscalflow_id}/manifestar`, {
+          method: 'POST', headers: ffHeaders,
+          body: JSON.stringify({ tipo: 'confirmacao', tpEvento: 210200 }),
         }).catch(() => null)
         await fetch(`${FF_BASE}/sync`, {
           method: 'POST', headers: ffHeaders, body: JSON.stringify({}),
