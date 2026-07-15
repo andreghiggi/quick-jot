@@ -104,6 +104,21 @@ Deno.serve(async (req) => {
       if (!r.ok || !data?.success) {
         return j({ error: data?.error || 'Falha ao manifestar', detail: data }, 502)
       }
+      // Valida se a SEFAZ efetivamente aceitou o evento.
+      // cStat 135 = evento vinculado à NF-e; 136 = vinculado com aviso;
+      // qualquer outro código, ou aceito:false, significa que NÃO foi aceito.
+      const cStat = String(data.data?.cStat ?? '')
+      const aceito = data.data?.aceito
+      const eventoAceito = aceito === true || cStat === '135' || cStat === '136'
+      if (!eventoAceito) {
+        return j({
+          error: data.data?.xMotivo || 'SEFAZ rejeitou o evento de manifestação',
+          code: 'MANIFESTACAO_REJEITADA',
+          cStat: cStat || null,
+          xMotivo: data.data?.xMotivo || null,
+          detail: data,
+        }, 502)
+      }
       const statusMap: Record<string, string> = {
         ciencia: 'ciente', confirmacao: 'confirmada',
         desconhecimento: 'desconhecida', nao_realizada: 'nao_realizada',
@@ -224,6 +239,16 @@ Deno.serve(async (req) => {
           const data = await r.json().catch(() => ({}))
           if (!r.ok || !data?.success) {
             fails.push({ id: d.id, error: data?.error || `HTTP ${r.status}` }); continue
+          }
+          const cStat = String(data.data?.cStat ?? '')
+          const aceito = data.data?.aceito
+          const eventoAceito = aceito === true || cStat === '135' || cStat === '136'
+          if (!eventoAceito) {
+            fails.push({
+              id: d.id,
+              error: data.data?.xMotivo || `SEFAZ rejeitou (cStat ${cStat || '—'})`,
+            })
+            continue
           }
           await admin.from('dfe_documentos').update({
             status_manifestacao: statusMap[tipo] || 'pendente',
