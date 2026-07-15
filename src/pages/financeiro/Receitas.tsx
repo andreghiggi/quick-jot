@@ -154,7 +154,10 @@ export default function Receitas() {
 
       const fixedItens = itens.map((it: any) => {
         const cur = (it.ncm || '').replace(/\D/g, '');
-        return (!cur || cur === '00000000') ? { ...it, ncm: ncmReal } : it;
+        const withNcm = (!cur || cur === '00000000') ? { ...it, ncm: ncmReal } : it;
+        // Teste autorizado: CSOSN 400 é bloqueado pelo validador da Fiscal Flow
+        // para CFOP 5949 nesta empresa. Trocamos para 900 (Outros) na reemissão.
+        return { ...withNcm, csosn: '900' };
       });
 
       const newExternalId = `${String(rec.external_id).split('-REEMIT-')[0]}-REEMIT-${Date.now()}`;
