@@ -183,6 +183,7 @@ export default function PurchaseImportXml() {
   const [xmlUnavailable, setXmlUnavailable] = useState<{
     message: string;
     needsConfirmacao: boolean;
+    code?: string | null;
   } | null>(null);
   const [confirmingOp, setConfirmingOp] = useState(false);
 
@@ -310,8 +311,12 @@ export default function PurchaseImportXml() {
           const finalMsg = bodyMsg
             || (error as any)?.message
             || 'Não foi possível baixar o XML desta NF-e.';
-          if (bodyCode === 'NOT_AVAILABLE' || /confirmac|resNFe|resumo/i.test(finalMsg)) {
-            setXmlUnavailable({ message: finalMsg, needsConfirmacao: true });
+          if (bodyCode === 'NOT_AVAILABLE' || bodyCode === 'AWAITING_SEFAZ' || /confirmac|resNFe|resumo|duplicidade/i.test(finalMsg)) {
+            setXmlUnavailable({
+              message: finalMsg,
+              needsConfirmacao: bodyCode !== 'AWAITING_SEFAZ',
+              code: bodyCode,
+            });
             setLoading(false);
             return;
           }
@@ -337,8 +342,12 @@ export default function PurchaseImportXml() {
           });
           if (error || !data || data.error) {
             const finalMsg = data?.error || (error as any)?.message || 'XML ainda não disponível.';
-            if (data?.code === 'NOT_AVAILABLE' || /confirmac|resNFe|resumo/i.test(finalMsg)) {
-              setXmlUnavailable({ message: finalMsg, needsConfirmacao: true });
+            if (data?.code === 'NOT_AVAILABLE' || data?.code === 'AWAITING_SEFAZ' || /confirmac|resNFe|resumo|duplicidade/i.test(finalMsg)) {
+              setXmlUnavailable({
+                message: finalMsg,
+                needsConfirmacao: data?.code !== 'AWAITING_SEFAZ',
+                code: data?.code || null,
+              });
               setLoading(false);
               return;
             }
