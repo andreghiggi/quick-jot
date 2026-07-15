@@ -936,6 +936,44 @@ export default function PurchaseImportXml() {
                         <Button size="sm" variant="outline" onClick={bulkApplyType}>Aplicar</Button>
                       </div>
                     </div>
+                    <div className="mt-2 pt-2 border-t flex items-center justify-between gap-2 flex-wrap">
+                      <div className="text-[11px] text-muted-foreground">
+                        Categoria/regra padrão salvas serão pré-preenchidas nas próximas importações desta loja.
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={savingDefaults || (!bulkCategoryId && !bulkTaxRuleId)}
+                        onClick={async () => {
+                          if (!company?.id) return;
+                          setSavingDefaults(true);
+                          try {
+                            const rows: { key: string; value: string }[] = [];
+                            if (bulkCategoryId) rows.push({ key: 'purchase_import_default_category_id', value: bulkCategoryId });
+                            if (bulkTaxRuleId) rows.push({ key: 'purchase_import_default_tax_rule_id', value: bulkTaxRuleId });
+                            for (const row of rows) {
+                              const { data: existing } = await supabase
+                                .from('store_settings').select('id')
+                                .eq('company_id', company.id).eq('key', row.key).maybeSingle();
+                              if (existing) {
+                                await supabase.from('store_settings').update({ value: row.value }).eq('id', (existing as any).id);
+                              } else {
+                                await supabase.from('store_settings').insert({ company_id: company.id, key: row.key, value: row.value });
+                              }
+                            }
+                            if (bulkCategoryId) setDefaultCategoryId(bulkCategoryId);
+                            if (bulkTaxRuleId) setDefaultTaxRuleId(bulkTaxRuleId);
+                            toast.success('Padrões salvos para as próximas importações.');
+                          } catch (e: any) {
+                            toast.error(e.message || 'Erro ao salvar padrões');
+                          } finally {
+                            setSavingDefaults(false);
+                          }
+                        }}
+                      >
+                        Salvar como padrão
+                      </Button>
+                    </div>
                   </div>
                 )}
                 {items.map((it, idx) => (
