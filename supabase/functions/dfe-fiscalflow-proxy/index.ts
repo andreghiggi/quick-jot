@@ -171,7 +171,24 @@ Deno.serve(async (req) => {
         const text = await r.text()
         let parsed: unknown = text
         try { parsed = JSON.parse(text) } catch { /* xml or error */ }
-        return j({ error: 'XML indisponível', detail: parsed }, r.status)
+        // Retorna 200 para que supabase.functions.invoke entregue o corpo
+        // ao cliente (caso contrário o SDK mostra apenas
+        // "Edge Function returned a non-2xx status code"). O front decide
+        // como exibir com base no campo `error`/`code`.
+        const ffMsg =
+          (parsed as any)?.error ||
+          (parsed as any)?.message ||
+          (typeof parsed === 'string' ? String(parsed).slice(0, 300) : null)
+        const isFatal = typeof text === 'string' && /Fatal error|Uncaught/i.test(text)
+        console.log('[download_xml] FF /xml falhou', { status: r.status, isFatal, ffMsg })
+        return j({
+          error: isFatal
+            ? 'Provedor fiscal (Fiscal Flow) retornou erro interno ao baixar o XML. Tente novamente em alguns minutos ou abra chamado com o provedor.'
+            : (ffMsg || `Fiscal Flow retornou status ${r.status} ao baixar o XML.`),
+          code: 'FF_DOWNLOAD_FAILED',
+          ffStatus: r.status,
+          detail: parsed,
+        }, 200)
       }
       let xml = await r.text()
       if (isResumoDfe(xml)) {
@@ -194,7 +211,7 @@ Deno.serve(async (req) => {
           error: 'A SEFAZ ainda não liberou o XML completo desta NF-e. A Ciência apenas registra que você tomou conhecimento do documento — para receber o XML com os itens é preciso executar a "Confirmação da Operação" e aguardar alguns minutos até a SEFAZ disponibilizar o procNFe.',
           code: 'NOT_AVAILABLE',
           hint: 'CONFIRMACAO_REQUIRED',
-        }, 404)
+        }, 200)
       }
       const path = `${companyId}/${doc.chave_acesso}.xml`
       const { error: upErr } = await admin.storage.from('dfe-xmls').upload(
