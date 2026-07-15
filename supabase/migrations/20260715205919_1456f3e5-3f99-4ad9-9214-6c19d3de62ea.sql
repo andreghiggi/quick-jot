@@ -1,0 +1,1 @@
+UPDATE public.dfe_documentos SET status_manifestacao='pendente', data_manifestacao=NULL WHERE id='7d9aa69c-89c4-4911-80f2-346d8f993090' AND xml_path IS NULL;

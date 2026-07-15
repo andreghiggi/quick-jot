@@ -111,6 +111,16 @@ Deno.serve(async (req) => {
       const aceito = data.data?.aceito
       const eventoAceito = aceito === true || cStat === '135' || cStat === '136'
       if (!eventoAceito) {
+        // Se o documento estava marcado como confirmada/ciente por bug anterior
+        // (sem XML completo baixado), rebaixa para 'pendente' — permite nova tentativa.
+        const { data: cur } = await admin.from('dfe_documentos')
+          .select('status_manifestacao, xml_path, tipo').eq('id', documentoId).maybeSingle()
+        if (cur && !cur.xml_path && cur.tipo !== 'completo' &&
+            ['confirmada','ciente'].includes(String(cur.status_manifestacao))) {
+          await admin.from('dfe_documentos')
+            .update({ status_manifestacao: 'pendente', data_manifestacao: null })
+            .eq('id', documentoId)
+        }
         return j({
           error: data.data?.xMotivo || 'SEFAZ rejeitou o evento de manifestação',
           code: 'MANIFESTACAO_REJEITADA',
