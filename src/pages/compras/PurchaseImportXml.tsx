@@ -805,7 +805,54 @@ export default function PurchaseImportXml() {
           <Card>
             <CardHeader><CardTitle className="text-base flex items-center gap-2"><Upload className="w-4 h-4" /> Selecionar XML</CardTitle></CardHeader>
             <CardContent>
-              <Input type="file" accept=".xml,application/xml,text/xml" onChange={onFile} />
+              {xmlUnavailable ? (
+                <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <div className="font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                        SEFAZ ainda não liberou o XML completo desta NF-e
+                      </div>
+                      <div className="text-amber-800 dark:text-amber-300">
+                        {xmlUnavailable.message}
+                      </div>
+                    </div>
+                  </div>
+                  {xmlUnavailable.needsConfirmacao && dfeId && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        onClick={handleConfirmarOperacao}
+                        disabled={confirmingOp}
+                      >
+                        {confirmingOp
+                          ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Confirmando…</>
+                          : <><CheckCircle2 className="w-4 h-4 mr-2" /> Executar Confirmação da Operação agora</>}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => dfeId && loadFromDfe(dfeId)}
+                        disabled={confirmingOp || loading}
+                      >
+                        Tentar baixar novamente
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => navigate('/compras/manifestacao')}
+                      >
+                        Voltar para Manifestação
+                      </Button>
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground">
+                    A Ciência apenas registra que você tomou conhecimento do documento — para receber o XML com os itens é preciso executar a Confirmação da Operação e aguardar alguns minutos.
+                  </div>
+                </div>
+              ) : (
+                <Input type="file" accept=".xml,application/xml,text/xml" onChange={onFile} />
+              )}
               {loading && <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Baixando XML…</div>}
             </CardContent>
           </Card>
