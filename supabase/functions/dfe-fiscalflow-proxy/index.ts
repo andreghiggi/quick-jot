@@ -261,7 +261,8 @@ Deno.serve(async (req) => {
           }
           const cStat = String(data.data?.cStat ?? '')
           const aceito = data.data?.aceito
-          const eventoAceito = aceito === true || cStat === '135' || cStat === '136'
+          const eventoAceito = aceito === true
+            || cStat === '135' || cStat === '136' || cStat === '155' || cStat === '573'
           if (!eventoAceito) {
             fails.push({
               id: d.id,
