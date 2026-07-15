@@ -106,6 +106,7 @@ Deno.serve(async (req) => {
         cStat: data?.data?.cStat, xMotivo: data?.data?.xMotivo, aceito: data?.data?.aceito,
         error: data?.error,
       })
+      console.log('[manifestar] FF raw data', JSON.stringify(data).slice(0, 2000))
       if (!r.ok || !data?.success) {
         const xMotivo = data?.data?.xMotivo || data?.error || 'Falha ao manifestar'
         return j({ error: xMotivo, detail: data, cStat: data?.data?.cStat || null }, 200)
