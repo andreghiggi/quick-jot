@@ -183,6 +183,7 @@ export default function PurchaseImportXml() {
   const [xmlUnavailable, setXmlUnavailable] = useState<{
     message: string;
     needsConfirmacao: boolean;
+    code?: string | null;
   } | null>(null);
   const [confirmingOp, setConfirmingOp] = useState(false);
 
@@ -310,8 +311,12 @@ export default function PurchaseImportXml() {
           const finalMsg = bodyMsg
             || (error as any)?.message
             || 'Não foi possível baixar o XML desta NF-e.';
-          if (bodyCode === 'NOT_AVAILABLE' || /confirmac|resNFe|resumo/i.test(finalMsg)) {
-            setXmlUnavailable({ message: finalMsg, needsConfirmacao: true });
+          if (bodyCode === 'NOT_AVAILABLE' || bodyCode === 'AWAITING_SEFAZ' || /confirmac|resNFe|resumo|duplicidade/i.test(finalMsg)) {
+            setXmlUnavailable({
+              message: finalMsg,
+              needsConfirmacao: bodyCode !== 'AWAITING_SEFAZ',
+              code: bodyCode,
+            });
             setLoading(false);
             return;
           }
@@ -337,8 +342,12 @@ export default function PurchaseImportXml() {
           });
           if (error || !data || data.error) {
             const finalMsg = data?.error || (error as any)?.message || 'XML ainda não disponível.';
-            if (data?.code === 'NOT_AVAILABLE' || /confirmac|resNFe|resumo/i.test(finalMsg)) {
-              setXmlUnavailable({ message: finalMsg, needsConfirmacao: true });
+            if (data?.code === 'NOT_AVAILABLE' || data?.code === 'AWAITING_SEFAZ' || /confirmac|resNFe|resumo|duplicidade/i.test(finalMsg)) {
+              setXmlUnavailable({
+                message: finalMsg,
+                needsConfirmacao: data?.code !== 'AWAITING_SEFAZ',
+                code: data?.code || null,
+              });
               setLoading(false);
               return;
             }
@@ -828,7 +837,9 @@ export default function PurchaseImportXml() {
                     <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                     <div className="text-sm">
                       <div className="font-semibold text-amber-900 dark:text-amber-200 mb-1">
-                        SEFAZ ainda não liberou o XML completo desta NF-e
+                        {xmlUnavailable.code === 'AWAITING_SEFAZ'
+                          ? 'Confirmação já registrada — aguardando SEFAZ liberar o XML'
+                          : 'SEFAZ ainda não liberou o XML completo desta NF-e'}
                       </div>
                       <div className="text-amber-800 dark:text-amber-300">
                         {xmlUnavailable.message}
@@ -864,7 +875,9 @@ export default function PurchaseImportXml() {
                     </div>
                   )}
                   <div className="text-xs text-muted-foreground">
-                    A Ciência apenas registra que você tomou conhecimento do documento — para receber o XML com os itens é preciso executar a Confirmação da Operação e aguardar alguns minutos.
+                    {xmlUnavailable.code === 'AWAITING_SEFAZ'
+                      ? 'A Confirmação da Operação já foi registrada anteriormente (evento em duplicidade — cStat 573). O XML completo é liberado pela SEFAZ em alguns minutos até 2h. Se demorar mais que isso, peça o XML ao fornecedor e importe pela aba "Selecionar XML".'
+                      : 'A Ciência apenas registra que você tomou conhecimento do documento — para receber o XML com os itens é preciso executar a Confirmação da Operação e aguardar alguns minutos.'}
                   </div>
                 </div>
               ) : (

@@ -177,10 +177,19 @@ Deno.serve(async (req) => {
         const isNotAvailable = r.status === 404 || /NOT_AVAILABLE/i.test(String(ffCode || ffText))
         if (isNotAvailable) {
           console.log('[download_xml] NOT_AVAILABLE — manifestando Confirmação e re-sincronizando')
-          await fetch(`${FF_BASE}/${doc.fiscalflow_id}/manifestar`, {
+          const mr = await fetch(`${FF_BASE}/${doc.fiscalflow_id}/manifestar`, {
             method: 'POST', headers: ffHeaders,
             body: JSON.stringify({ tipo: 'confirmacao', tpEvento: 210200 }),
           }).catch(() => null)
+          try {
+            const mtxt = mr ? await mr.clone().text() : ''
+            const mjson = mtxt ? JSON.parse(mtxt) : {}
+            const cStat = String(mjson?.data?.cStat ?? mjson?.cStat ?? '')
+            if (cStat === '573') {
+              ;(globalThis as any).__ff_already_manifested = true
+              console.log('[download_xml] cStat 573 — manifestação já registrada anteriormente')
+            }
+          } catch { /* noop */ }
           await fetch(`${FF_BASE}/sync`, {
             method: 'POST', headers: ffHeaders, body: JSON.stringify({}),
           }).catch(() => null)
@@ -217,10 +226,17 @@ Deno.serve(async (req) => {
       if (isResumoDfe(xml)) {
         // resNFe = resumo. Só vira XML completo após Confirmação da Operação (Ciência não basta).
         // Fluxo recomendado pela Fiscal Flow: manifestar confirmação → /sync → repetir GET /xml.
-        await fetch(`${FF_BASE}/${doc.fiscalflow_id}/manifestar`, {
+        const mr2 = await fetch(`${FF_BASE}/${doc.fiscalflow_id}/manifestar`, {
           method: 'POST', headers: ffHeaders,
           body: JSON.stringify({ tipo: 'confirmacao', tpEvento: 210200 }),
         }).catch(() => null)
+        let alreadyManifested = false
+        try {
+          const mtxt = mr2 ? await mr2.clone().text() : ''
+          const mjson = mtxt ? JSON.parse(mtxt) : {}
+          const cStat = String(mjson?.data?.cStat ?? mjson?.cStat ?? '')
+          if (cStat === '573') alreadyManifested = true
+        } catch { /* noop */ }
         await fetch(`${FF_BASE}/sync`, {
           method: 'POST', headers: ffHeaders, body: JSON.stringify({}),
         }).catch(() => null)
@@ -229,6 +245,14 @@ Deno.serve(async (req) => {
           { method: 'GET', headers: { 'x-api-key': token } }
         )
         if (r.ok) xml = await r.text()
+        if ((alreadyManifested || (globalThis as any).__ff_already_manifested) && (isResumoDfe(xml) || !isNfeCompleta(xml))) {
+          ;(globalThis as any).__ff_already_manifested = false
+          return j({
+            error: 'A Confirmação da Operação já foi registrada na SEFAZ para esta nota (evento em duplicidade — cStat 573). O XML completo ainda não foi liberado pela SEFAZ; isso normalmente leva de alguns minutos até 2 horas. Tente baixar novamente mais tarde. Se persistir por muito tempo, solicite o XML diretamente ao fornecedor e importe pela aba "Selecionar XML".',
+            code: 'AWAITING_SEFAZ',
+            hint: 'ALREADY_MANIFESTED',
+          }, 200)
+        }
       }
       if (isResumoDfe(xml) || !isNfeCompleta(xml)) {
         return j({
