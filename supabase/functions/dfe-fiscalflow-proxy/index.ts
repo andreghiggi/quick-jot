@@ -101,15 +101,24 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ tipo, justificativa: justificativa || '' }),
       })
       const data = await r.json().catch(() => ({}))
+      console.log('[manifestar] FF response', {
+        status: r.status, ok: r.ok, success: data?.success,
+        cStat: data?.data?.cStat, xMotivo: data?.data?.xMotivo, aceito: data?.data?.aceito,
+        error: data?.error,
+      })
       if (!r.ok || !data?.success) {
-        return j({ error: data?.error || 'Falha ao manifestar', detail: data }, 502)
+        const xMotivo = data?.data?.xMotivo || data?.error || 'Falha ao manifestar'
+        return j({ error: xMotivo, detail: data, cStat: data?.data?.cStat || null }, 200)
       }
       // Valida se a SEFAZ efetivamente aceitou o evento.
       // cStat 135 = evento vinculado à NF-e; 136 = vinculado com aviso;
+      // cStat 155 = evento vinculado a evento anterior;
+      // cStat 573 = duplicidade (já manifestado — tratamos como sucesso);
       // qualquer outro código, ou aceito:false, significa que NÃO foi aceito.
       const cStat = String(data.data?.cStat ?? '')
       const aceito = data.data?.aceito
-      const eventoAceito = aceito === true || cStat === '135' || cStat === '136'
+      const eventoAceito = aceito === true
+        || cStat === '135' || cStat === '136' || cStat === '155' || cStat === '573'
       if (!eventoAceito) {
         // Se o documento estava marcado como confirmada/ciente por bug anterior
         // (sem XML completo baixado), rebaixa para 'pendente' — permite nova tentativa.
@@ -127,7 +136,7 @@ Deno.serve(async (req) => {
           cStat: cStat || null,
           xMotivo: data.data?.xMotivo || null,
           detail: data,
-        }, 502)
+        }, 200)
       }
       const statusMap: Record<string, string> = {
         ciencia: 'ciente', confirmacao: 'confirmada',
