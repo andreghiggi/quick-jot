@@ -155,12 +155,19 @@ export default function Receitas() {
       const fixedItens = itens.map((it: any) => {
         const cur = (it.ncm || '').replace(/\D/g, '');
         const withNcm = (!cur || cur === '00000000') ? { ...it, ncm: ncmReal } : it;
-        // Teste autorizado: CSOSN 400 é bloqueado pelo validador da Fiscal Flow
-        // para CFOP 5949 nesta empresa. Trocamos para 900 (Outros) na reemissão.
-        return { ...withNcm, csosn: '900' };
+        // Reemissão financeira (CFOP 5949):
+        //  • CSOSN 400 (não tributada – Simples Nacional): não gera grupo
+        //    ICMS-ST, evitando a rejeição [385] que a Fiscal Flow provocava
+        //    ao usar 900 (o provider preenchia modBCST/pICMSST automaticamente).
+        //  • cClassTrib '000001': classificação tributária alinhada à Reforma
+        //    Tributária, idêntica à regra usada em outro ERP homologado.
+        return { ...withNcm, csosn: '400', cClassTrib: '000001', classTrib: '000001' };
       });
 
-      const newExternalId = `${String(rec.external_id).split('-REEMIT-')[0]}-REEMIT-${Date.now()}`;
+      // Reutiliza o MESMO external_id da nota rejeitada. Isso força a Fiscal
+      // Flow a sobrescrever o registro original (nfce_id existente) em vez de
+      // gerar uma nota nova a cada tentativa.
+      const newExternalId = String(rec.external_id);
       setNfcePhase({ label: 'Reemitindo NFC-e financeira...', detail: `Nota ${rec.numero || ''} (R$ ${Number(rec.valor_total).toFixed(2).replace('.', ',')})` });
 
       await emitirNFCe(company.id, rec.sale_id, {
