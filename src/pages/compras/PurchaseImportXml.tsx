@@ -986,10 +986,16 @@ export default function PurchaseImportXml() {
                         </div>
                         <div className="text-xs text-muted-foreground">
                           Cód {it.xml_codigo} · EAN {it.xml_ean || '—'} · NCM {it.xml_ncm} · CFOP {it.xml_cfop}
-                          {cfopSaidaParaEntrada(it.xml_cfop) && cfopSaidaParaEntrada(it.xml_cfop) !== it.xml_cfop
-                            ? ` → ${cfopSaidaParaEntrada(it.xml_cfop)} (entrada)`
+                          {it.cfop_entrada && it.cfop_entrada !== it.xml_cfop
+                            ? ` → ${it.cfop_entrada} (entrada)`
                             : ''}
                         </div>
+                        {it.gtin_dup_warning && (
+                          <div className="mt-1 flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            EAN já cadastrado no produto "{it.gtin_dup_warning}" — confira o mapeamento.
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <div className="text-right text-sm">
