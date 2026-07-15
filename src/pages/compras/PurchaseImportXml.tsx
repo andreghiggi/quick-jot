@@ -1179,7 +1179,7 @@ export default function PurchaseImportXml() {
                         ? ((it.sale_price - realCost) / it.sale_price) * 100
                         : 0;
                       return (
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 pt-2 border-t bg-muted/30 -mx-3 px-3 pb-2 rounded-b-lg">
+                        <div className="grid grid-cols-2 md:grid-cols-6 gap-2 pt-2 border-t bg-muted/30 -mx-3 px-3 pb-2 rounded-b-lg">
                           <div>
                             <Label className="text-xs">Fator de conversão</Label>
                             <Input
@@ -1219,6 +1219,14 @@ export default function PurchaseImportXml() {
                               type="number" step="0.01" min="0"
                               value={it.sale_price}
                               onChange={(e) => updateItem(idx, { sale_price: Number(e.target.value) || 0 })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">CFOP entrada</Label>
+                            <Input
+                              value={it.cfop_entrada}
+                              onChange={(e) => updateItem(idx, { cfop_entrada: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                              placeholder="1102"
                             />
                           </div>
                         </div>
