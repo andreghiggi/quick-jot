@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Upload, Loader2, CheckCircle2, FileInput, ChevronLeft, Check, ChevronsUpDown, Ban, Undo2 } from 'lucide-react';
+import { Upload, Loader2, CheckCircle2, FileInput, ChevronLeft, Check, ChevronsUpDown, Ban, Undo2, AlertTriangle } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -169,6 +169,14 @@ export default function PurchaseImportXml() {
   const [bulkTaxRuleId, setBulkTaxRuleId] = useState<string>('');
   const [bulkType, setBulkType] = useState<ProductType | ''>('');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // Estado do fluxo de "SEFAZ ainda não liberou XML completo" —
+  // usado para oferecer o botão "Executar Confirmação da Operação agora"
+  // dentro da própria tela de importação, sem voltar em Manifestação.
+  const [xmlUnavailable, setXmlUnavailable] = useState<{
+    message: string;
+    needsConfirmacao: boolean;
+  } | null>(null);
+  const [confirmingOp, setConfirmingOp] = useState(false);
 
   useEffect(() => {
     if (!company?.id) return;
@@ -243,6 +251,7 @@ export default function PurchaseImportXml() {
   async function loadFromDfe(id: string) {
     if (!company?.id) return;
     setLoading(true);
+    setXmlUnavailable(null);
     try {
       const { data: doc } = await supabase.from('dfe_documentos')
         .select('*').eq('id', id).maybeSingle();
@@ -250,15 +259,52 @@ export default function PurchaseImportXml() {
       // Garantir XML baixado
       let xmlPath = (doc as any).xml_path;
       if (!xmlPath) {
-        const { data } = await supabase.functions.invoke('dfe-fiscalflow-proxy', {
+        const { data, error } = await supabase.functions.invoke('dfe-fiscalflow-proxy', {
           body: { companyId: company.id, action: 'download_xml', documentoId: id },
         });
-        if (data?.error) throw new Error(data.error);
+        // O cliente Supabase v2 devolve `error` em HTTP não-2xx e `data` pode vir
+        // `null`. Precisamos ler o corpo do erro para mostrar a mensagem real
+        // ("SEFAZ ainda não liberou o XML completo" / "Faça a Confirmação").
+        if (error || !data || data.error) {
+          let bodyMsg: string | null = null;
+          let bodyCode: string | null = null;
+          if (data?.error) {
+            bodyMsg = data.error;
+            bodyCode = data?.code || null;
+          } else if ((error as any)?.context?.body) {
+            try {
+              const parsed = typeof (error as any).context.body === 'string'
+                ? JSON.parse((error as any).context.body)
+                : (error as any).context.body;
+              bodyMsg = parsed?.error || null;
+              bodyCode = parsed?.code || null;
+            } catch { /* noop */ }
+          } else if ((error as any)?.context && typeof (error as any).context.text === 'function') {
+            try {
+              const t = await (error as any).context.text();
+              const parsed = JSON.parse(t);
+              bodyMsg = parsed?.error || null;
+              bodyCode = parsed?.code || null;
+            } catch { /* noop */ }
+          }
+          const finalMsg = bodyMsg
+            || (error as any)?.message
+            || 'Não foi possível baixar o XML desta NF-e.';
+          if (bodyCode === 'NOT_AVAILABLE' || /confirmac|resNFe|resumo/i.test(finalMsg)) {
+            setXmlUnavailable({ message: finalMsg, needsConfirmacao: true });
+            setLoading(false);
+            return;
+          }
+          throw new Error(finalMsg);
+        }
         xmlPath = data?.xml_path;
         if (data?.xml) { parseXml(data.xml, { throwOnError: true }); setLoading(false); return; }
       }
-      const { data: file } = await supabase.storage.from('dfe-xmls').download(xmlPath);
-      if (!file) throw new Error('XML não encontrado no storage');
+      if (!xmlPath) throw new Error('XML não disponível para este documento.');
+      const { data: file, error: dlErr } = await supabase.storage.from('dfe-xmls').download(xmlPath);
+      if (dlErr || !file) {
+        throw new Error(dlErr?.message || 'XML não encontrado no storage. Baixe novamente pela tela de Manifestação.');
+      }
       const text = await file.text();
       try {
         parseXml(text, { throwOnError: true });
@@ -266,10 +312,18 @@ export default function PurchaseImportXml() {
         // Alguns XMLs antigos podem ter sido salvos como resumo (resNFe) ou retorno JSON.
         // Força novo download do backend; se ainda vier resumo, mostra mensagem operacional correta.
         if (isDfeSummaryOrWrapped(text) || String(parseError?.message || '').includes('infNFe')) {
-          const { data } = await supabase.functions.invoke('dfe-fiscalflow-proxy', {
+          const { data, error } = await supabase.functions.invoke('dfe-fiscalflow-proxy', {
             body: { companyId: company.id, action: 'download_xml', documentoId: id },
           });
-          if (data?.error) throw new Error(data.error);
+          if (error || !data || data.error) {
+            const finalMsg = data?.error || (error as any)?.message || 'XML ainda não disponível.';
+            if (data?.code === 'NOT_AVAILABLE' || /confirmac|resNFe|resumo/i.test(finalMsg)) {
+              setXmlUnavailable({ message: finalMsg, needsConfirmacao: true });
+              setLoading(false);
+              return;
+            }
+            throw new Error(finalMsg);
+          }
           if (!data?.xml) throw parseError;
           parseXml(data.xml, { throwOnError: true });
         } else {
@@ -279,6 +333,34 @@ export default function PurchaseImportXml() {
     } catch (e: any) {
       toast.error(e.message || 'Erro ao carregar XML');
     } finally { setLoading(false); }
+  }
+
+  // Executa a Confirmação da Operação e tenta rebaixar o XML completo.
+  async function handleConfirmarOperacao() {
+    if (!company?.id || !dfeId) return;
+    setConfirmingOp(true);
+    try {
+      const { data: mData, error: mErr } = await supabase.functions.invoke('dfe-fiscalflow-proxy', {
+        body: {
+          companyId: company.id,
+          action: 'manifestar',
+          documentoId: dfeId,
+          tipo: 'confirmacao',
+          justificativa: '',
+        },
+      });
+      if (mErr || mData?.error) {
+        throw new Error(mData?.error || (mErr as any)?.message || 'Falha ao confirmar operação');
+      }
+      toast.success('Confirmação da Operação enviada. Baixando XML…');
+      // pequeno delay para a SEFAZ liberar o XML completo
+      await new Promise(r => setTimeout(r, 2500));
+      await loadFromDfe(dfeId);
+    } catch (e: any) {
+      toast.error(e.message || 'Falha ao confirmar operação');
+    } finally {
+      setConfirmingOp(false);
+    }
   }
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -481,6 +563,43 @@ export default function PurchaseImportXml() {
 
   async function handleConfirm() {
     if (!company?.id || !header) return;
+    // -------- Validações bloqueantes (evitam "correção manual depois") --------
+    const importables = items.filter(i => !i.skip);
+    if (importables.length === 0) {
+      toast.error('Nenhum item selecionado para importação.');
+      return;
+    }
+    const invalidQty = importables.find(i => !(i.quantidade > 0) || !(i.conversion_factor > 0));
+    if (invalidQty) {
+      toast.error(`Item "${invalidQty.xml_descricao}" com quantidade ou fator inválido.`);
+      return;
+    }
+    const missingCategory = importables.find(i => i.createNew && !i.category_id);
+    if (missingCategory) {
+      toast.error(`Selecione uma categoria para "${missingCategory.newName || missingCategory.xml_descricao}".`);
+      return;
+    }
+    const missingTax = importables.find(i => i.createNew && !i.tax_rule_id);
+    if (missingTax) {
+      toast.error(`Selecione a regra tributária para "${missingTax.newName || missingTax.xml_descricao}". Sem ela, o produto vende com CFOP/CSOSN padrão errado.`);
+      return;
+    }
+    const emptyName = importables.find(i => i.createNew && !String(i.newName || '').trim());
+    if (emptyName) {
+      toast.error('Todos os produtos novos precisam de nome.');
+      return;
+    }
+    // Alerta (não bloqueante) para diferença entre soma dos itens e valor da NF.
+    const soma = importables.reduce((s, i) => s + (i.valor_total || 0), 0);
+    const totalXml = header.valor_total || 0;
+    if (Math.abs(soma - totalXml) > 0.05 && !items.some(i => i.skip)) {
+      const ok = window.confirm(
+        `Atenção: a soma dos itens (${soma.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}) `
+        + `diverge do valor total da NF (${totalXml.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}). `
+        + `Deseja continuar mesmo assim?`
+      );
+      if (!ok) return;
+    }
     setSaving(true);
     try {
       // 0) duplicidade: mesma NF (chave) já lançada?
