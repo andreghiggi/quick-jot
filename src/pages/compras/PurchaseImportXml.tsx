@@ -43,6 +43,8 @@ type ItemRow = {
   product_id: string | null; // null => criar novo
   createNew: boolean;
   newName: string;
+  // CFOP de entrada convertido — editável por linha (Fase 6)
+  cfop_entrada: string;
   // --- Conversão / preço (Fase 1) ---
   conversion_factor: number;   // ex.: fardo c/ 15 → 15
   stock_unit: string;          // unidade que entra no estoque
@@ -59,6 +61,8 @@ type ItemRow = {
   qr_item: boolean;
   // --- Fase opcional: ignorar item na importação (não altera XML/fiscal) ---
   skip: boolean;
+  // Alerta de GTIN duplicado detectado no cadastro (Fase 7)
+  gtin_dup_warning?: string;
 };
 
 type Header = {
