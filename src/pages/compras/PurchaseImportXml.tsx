@@ -43,6 +43,8 @@ type ItemRow = {
   product_id: string | null; // null => criar novo
   createNew: boolean;
   newName: string;
+  // CFOP de entrada convertido — editável por linha (Fase 6)
+  cfop_entrada: string;
   // --- Conversão / preço (Fase 1) ---
   conversion_factor: number;   // ex.: fardo c/ 15 → 15
   stock_unit: string;          // unidade que entra no estoque
@@ -59,6 +61,8 @@ type ItemRow = {
   qr_item: boolean;
   // --- Fase opcional: ignorar item na importação (não altera XML/fiscal) ---
   skip: boolean;
+  // Alerta de GTIN duplicado detectado no cadastro (Fase 7)
+  gtin_dup_warning?: string;
 };
 
 type Header = {
@@ -169,6 +173,10 @@ export default function PurchaseImportXml() {
   const [bulkTaxRuleId, setBulkTaxRuleId] = useState<string>('');
   const [bulkType, setBulkType] = useState<ProductType | ''>('');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // Defaults inteligentes (Fase 3) — persistidos em store_settings.
+  const [defaultCategoryId, setDefaultCategoryId] = useState<string>('');
+  const [defaultTaxRuleId, setDefaultTaxRuleId] = useState<string>('');
+  const [savingDefaults, setSavingDefaults] = useState(false);
   // Estado do fluxo de "SEFAZ ainda não liberou XML completo" —
   // usado para oferecer o botão "Executar Confirmação da Operação agora"
   // dentro da própria tela de importação, sem voltar em Manifestação.
@@ -183,6 +191,18 @@ export default function PurchaseImportXml() {
     supabase.from('products').select('id,name,gtin,price,unit').eq('company_id', company.id).then(({ data }) => {
       setProducts((data as any) || []);
     });
+    // Carrega defaults salvos para importação de XML
+    supabase
+      .from('store_settings')
+      .select('key,value')
+      .eq('company_id', company.id)
+      .in('key', ['purchase_import_default_category_id', 'purchase_import_default_tax_rule_id'])
+      .then(({ data }) => {
+        (data || []).forEach((row: any) => {
+          if (row.key === 'purchase_import_default_category_id') setDefaultCategoryId(row.value || '');
+          if (row.key === 'purchase_import_default_tax_rule_id') setDefaultTaxRuleId(row.value || '');
+        });
+      });
     if (documentoId) loadFromDfe(documentoId);
   }, [company?.id, documentoId]);
 
@@ -436,14 +456,27 @@ export default function PurchaseImportXml() {
         const matched = findProductByGtin(products, ean);
         const uCom = get(prod, 'uCom');
         const vUn = Number(get(prod, 'vUnCom') || 0);
-        const defaultCat = categories[0];
+        const xmlCfop = get(prod, 'CFOP');
+        const cfopEntrada = cfopSaidaParaEntrada(xmlCfop) || xmlCfop;
+        // Defaults inteligentes (Fase 3): usa preferência salva; fallback para primeiro cadastro.
+        const defaultCat =
+          categories.find((c) => c.id === defaultCategoryId) || categories[0];
+        const defaultRuleId =
+          taxRules.find((r) => r.id === defaultTaxRuleId)?.id || null;
         const defaultVis = visibilityFromType('mercado');
+        // GTIN duplicado (Fase 7): já existe outro produto com este EAN?
+        let gtinDup: string | undefined;
+        if (ean) {
+          const dup = findProductByGtin(products, ean);
+          if (dup && matched && dup.id !== matched.id) gtinDup = dup.name;
+        }
         return {
           xml_codigo: get(prod, 'cProd'),
           xml_descricao: descricao,
           xml_ean: ean,
           xml_ncm: get(prod, 'NCM'),
-          xml_cfop: get(prod, 'CFOP'),
+          xml_cfop: xmlCfop,
+          cfop_entrada: cfopEntrada,
           xml_unidade: uCom,
           quantidade: Number(get(prod, 'qCom') || 0),
           valor_unitario: vUn,
@@ -457,10 +490,11 @@ export default function PurchaseImportXml() {
           unit_weight_kg: null,
           category_id: defaultCat?.id || null,
           category_name: defaultCat?.name || 'Mercado',
-          tax_rule_id: null,
+          tax_rule_id: defaultRuleId,
           product_type: 'mercado',
           ...defaultVis,
           skip: false,
+          gtin_dup_warning: gtinDup,
         };
       });
       setItems(its);
@@ -602,19 +636,6 @@ export default function PurchaseImportXml() {
     }
     setSaving(true);
     try {
-      // 0) duplicidade: mesma NF (chave) já lançada?
-      if (header.chave) {
-        const { data: dup } = await (supabase.from('purchase_invoices') as any)
-          .select('id, numero_nfe')
-          .eq('company_id', company.id)
-          .eq('chave_acesso', header.chave)
-          .maybeSingle();
-        if (dup) {
-          toast.error(`Esta NF já foi importada anteriormente (nº ${(dup as any).numero_nfe}). Entrada não duplicada.`);
-          setSaving(false);
-          return;
-        }
-      }
       // 1) supplier: busca por CNPJ, cria se não existir
       let supplierId: string | null = null;
       if (header.cnpj_emit) {
@@ -649,27 +670,10 @@ export default function PurchaseImportXml() {
         );
       }
 
-      // 3) criar invoice
-      const { data: inv, error: invErr } = await supabase.from('purchase_invoices').insert({
-        company_id: company.id,
-        dfe_documento_id: dfeId,
-        supplier_id: supplierId,
-        chave_acesso: header.chave,
-        cnpj_emitente: header.cnpj_emit,
-        nome_emitente: header.nome_emit,
-        numero_nfe: header.numero,
-        serie: header.serie,
-        data_emissao: header.emissao,
-        valor_total: header.valor_total,
-        xml_path: xmlPath,
-        status: 'lancada',
-      } as any).select('id').single();
-      if (invErr) throw invErr;
-      const invoiceId = (inv as any).id;
-
-      // 4) itens + criar produtos novos + movimentar estoque
+      // 3) criar produtos novos (fora da transação; se a RPC falhar, apagamos abaixo)
       const gtinUpdates: string[] = []; // nomes dos produtos que tiveram GTIN preenchido
       const gtinDivergentes: string[] = []; // produtos com GTIN cadastrado diferente do XML
+      const createdProductIds: string[] = [];
       const isValidGtin = (g: string) => /^\d{8}$|^\d{12}$|^\d{13}$|^\d{14}$/.test(g);
       // Descobre próximo SKU (P0001, P0002...) para os produtos novos desta nota
       let nextSkuNum = 0;
@@ -687,10 +691,10 @@ export default function PurchaseImportXml() {
           }
         });
       }
+      const rpcItems: any[] = [];
       for (const it of items) {
         if (it.skip) continue;
         const factor = it.conversion_factor > 0 ? it.conversion_factor : 1;
-        const stockQty = it.quantidade * factor;
         const realCost = it.valor_unitario / factor;
         let productId = it.product_id;
         if (!productId && it.createNew) {
@@ -706,7 +710,7 @@ export default function PurchaseImportXml() {
             tax_rule_id: it.tax_rule_id || null,
             gtin: it.xml_ean || null,
             ncm: it.xml_ncm || null,
-            cfop: cfopSaidaParaEntrada(it.xml_cfop),
+            cfop: it.cfop_entrada || cfopSaidaParaEntrada(it.xml_cfop),
             unit: it.stock_unit || it.xml_unidade || null,
             track_stock: true,
             product_type: it.product_type || 'mercado',
@@ -720,6 +724,7 @@ export default function PurchaseImportXml() {
           } as any).select('id').single();
           if (pErr) throw pErr;
           productId = (prod as any).id;
+          if (productId) createdProductIds.push(productId);
         } else if (productId) {
           // Atualiza custo, preço e garante rastreio de estoque no produto existente
           const { error: updateProductErr } = await (supabase.from('products') as any).update({
@@ -743,35 +748,47 @@ export default function PurchaseImportXml() {
             }
           }
         }
-        const { error: itemErr } = await supabase.from('purchase_invoice_items').insert({
-          invoice_id: invoiceId, company_id: company.id, product_id: productId,
-          xml_codigo: it.xml_codigo, xml_descricao: it.xml_descricao,
-          xml_ean: it.xml_ean, xml_ncm: it.xml_ncm, xml_cfop: it.xml_cfop, xml_unidade: it.xml_unidade,
-          quantidade: it.quantidade, valor_unitario: it.valor_unitario, valor_total: it.valor_total,
+        rpcItems.push({
+          product_id: productId,
+          xml_codigo: it.xml_codigo,
+          xml_descricao: it.xml_descricao,
+          xml_ean: it.xml_ean,
+          xml_ncm: it.xml_ncm,
+          xml_cfop: it.cfop_entrada || it.xml_cfop,
+          xml_unidade: it.xml_unidade,
+          quantidade: it.quantidade,
+          valor_unitario: it.valor_unitario,
+          valor_total: it.valor_total,
           conversion_factor: factor,
           stock_unit: it.stock_unit,
           sale_price: it.sale_price,
           unit_weight_kg: it.unit_weight_kg,
-          stock_applied: !!productId,
-        } as any).select('id').single();
-        if (itemErr) throw itemErr;
-
-        if (productId) {
-          const { data: newBalance, error: stockErr } = await supabase.rpc('apply_stock_movement', {
-            _product_id: productId, _qty: stockQty, _type: 'manual_in',
-            _reference_type: 'purchase_invoice', _reference_id: invoiceId,
-            _notes: `NF-e ${header.numero}/${header.serie} - ${header.nome_emit}${factor !== 1 ? ` (fator ${factor})` : ''}`,
-          });
-          if (stockErr) throw stockErr;
-          if (newBalance === null) throw new Error(`Estoque não movimentado para ${it.newName || it.xml_descricao}. Verifique se o produto controla estoque.`);
-        }
+        });
       }
 
-      // 5) atualizar DFe
-      if (dfeId) {
-        await supabase.from('dfe_documentos').update({
-          imported_at: new Date().toISOString(), imported_invoice_id: invoiceId,
-        }).eq('id', dfeId);
+      // 4) Persiste NF-e + itens + estoque em UMA transação (tudo-ou-nada)
+      const { data: invoiceId, error: rpcErr } = await supabase.rpc('import_purchase_invoice', {
+        _company_id: company.id,
+        _dfe_id: dfeId,
+        _supplier_id: supplierId,
+        _header: {
+          chave: header.chave,
+          cnpj_emit: header.cnpj_emit,
+          nome_emit: header.nome_emit,
+          numero: header.numero,
+          serie: header.serie,
+          emissao: header.emissao,
+          valor_total: header.valor_total,
+        },
+        _xml_path: xmlPath,
+        _items: rpcItems,
+      } as any);
+      if (rpcErr) {
+        // Rollback: apaga produtos que criamos antes da RPC falhar.
+        if (createdProductIds.length > 0) {
+          await (supabase.from('products') as any).delete().in('id', createdProductIds);
+        }
+        throw rpcErr;
       }
 
       toast.success('NF-e de entrada lançada e estoque atualizado!');
@@ -919,6 +936,44 @@ export default function PurchaseImportXml() {
                         <Button size="sm" variant="outline" onClick={bulkApplyType}>Aplicar</Button>
                       </div>
                     </div>
+                    <div className="mt-2 pt-2 border-t flex items-center justify-between gap-2 flex-wrap">
+                      <div className="text-[11px] text-muted-foreground">
+                        Categoria/regra padrão salvas serão pré-preenchidas nas próximas importações desta loja.
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={savingDefaults || (!bulkCategoryId && !bulkTaxRuleId)}
+                        onClick={async () => {
+                          if (!company?.id) return;
+                          setSavingDefaults(true);
+                          try {
+                            const rows: { key: string; value: string }[] = [];
+                            if (bulkCategoryId) rows.push({ key: 'purchase_import_default_category_id', value: bulkCategoryId });
+                            if (bulkTaxRuleId) rows.push({ key: 'purchase_import_default_tax_rule_id', value: bulkTaxRuleId });
+                            for (const row of rows) {
+                              const { data: existing } = await supabase
+                                .from('store_settings').select('id')
+                                .eq('company_id', company.id).eq('key', row.key).maybeSingle();
+                              if (existing) {
+                                await supabase.from('store_settings').update({ value: row.value }).eq('id', (existing as any).id);
+                              } else {
+                                await supabase.from('store_settings').insert({ company_id: company.id, key: row.key, value: row.value });
+                              }
+                            }
+                            if (bulkCategoryId) setDefaultCategoryId(bulkCategoryId);
+                            if (bulkTaxRuleId) setDefaultTaxRuleId(bulkTaxRuleId);
+                            toast.success('Padrões salvos para as próximas importações.');
+                          } catch (e: any) {
+                            toast.error(e.message || 'Erro ao salvar padrões');
+                          } finally {
+                            setSavingDefaults(false);
+                          }
+                        }}
+                      >
+                        Salvar como padrão
+                      </Button>
+                    </div>
                   </div>
                 )}
                 {items.map((it, idx) => (
@@ -931,10 +986,16 @@ export default function PurchaseImportXml() {
                         </div>
                         <div className="text-xs text-muted-foreground">
                           Cód {it.xml_codigo} · EAN {it.xml_ean || '—'} · NCM {it.xml_ncm} · CFOP {it.xml_cfop}
-                          {cfopSaidaParaEntrada(it.xml_cfop) && cfopSaidaParaEntrada(it.xml_cfop) !== it.xml_cfop
-                            ? ` → ${cfopSaidaParaEntrada(it.xml_cfop)} (entrada)`
+                          {it.cfop_entrada && it.cfop_entrada !== it.xml_cfop
+                            ? ` → ${it.cfop_entrada} (entrada)`
                             : ''}
                         </div>
+                        {it.gtin_dup_warning && (
+                          <div className="mt-1 flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            EAN já cadastrado no produto "{it.gtin_dup_warning}" — confira o mapeamento.
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <div className="text-right text-sm">
@@ -1118,7 +1179,7 @@ export default function PurchaseImportXml() {
                         ? ((it.sale_price - realCost) / it.sale_price) * 100
                         : 0;
                       return (
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 pt-2 border-t bg-muted/30 -mx-3 px-3 pb-2 rounded-b-lg">
+                        <div className="grid grid-cols-2 md:grid-cols-6 gap-2 pt-2 border-t bg-muted/30 -mx-3 px-3 pb-2 rounded-b-lg">
                           <div>
                             <Label className="text-xs">Fator de conversão</Label>
                             <Input
@@ -1158,6 +1219,14 @@ export default function PurchaseImportXml() {
                               type="number" step="0.01" min="0"
                               value={it.sale_price}
                               onChange={(e) => updateItem(idx, { sale_price: Number(e.target.value) || 0 })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">CFOP entrada</Label>
+                            <Input
+                              value={it.cfop_entrada}
+                              onChange={(e) => updateItem(idx, { cfop_entrada: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                              placeholder="1102"
                             />
                           </div>
                         </div>

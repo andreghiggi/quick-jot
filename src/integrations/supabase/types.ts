@@ -4617,6 +4617,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_purchase_invoice: {
+        Args: {
+          _company_id: string
+          _dfe_id: string
+          _header: Json
+          _items: Json
+          _supplier_id: string
+          _xml_path: string
+        }
+        Returns: string
+      }
       is_company_suspended: { Args: { _company_id: string }; Returns: boolean }
       is_reserved_subdomain: { Args: { _subdomain: string }; Returns: boolean }
       next_finance_document_number: {
