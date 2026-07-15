@@ -440,14 +440,27 @@ export default function PurchaseImportXml() {
         const matched = findProductByGtin(products, ean);
         const uCom = get(prod, 'uCom');
         const vUn = Number(get(prod, 'vUnCom') || 0);
-        const defaultCat = categories[0];
+        const xmlCfop = get(prod, 'CFOP');
+        const cfopEntrada = cfopSaidaParaEntrada(xmlCfop) || xmlCfop;
+        // Defaults inteligentes (Fase 3): usa preferência salva; fallback para primeiro cadastro.
+        const defaultCat =
+          categories.find((c) => c.id === defaultCategoryId) || categories[0];
+        const defaultRuleId =
+          taxRules.find((r) => r.id === defaultTaxRuleId)?.id || null;
         const defaultVis = visibilityFromType('mercado');
+        // GTIN duplicado (Fase 7): já existe outro produto com este EAN?
+        let gtinDup: string | undefined;
+        if (ean) {
+          const dup = findProductByGtin(products, ean);
+          if (dup && matched && dup.id !== matched.id) gtinDup = dup.name;
+        }
         return {
           xml_codigo: get(prod, 'cProd'),
           xml_descricao: descricao,
           xml_ean: ean,
           xml_ncm: get(prod, 'NCM'),
-          xml_cfop: get(prod, 'CFOP'),
+          xml_cfop: xmlCfop,
+          cfop_entrada: cfopEntrada,
           xml_unidade: uCom,
           quantidade: Number(get(prod, 'qCom') || 0),
           valor_unitario: vUn,
@@ -461,10 +474,11 @@ export default function PurchaseImportXml() {
           unit_weight_kg: null,
           category_id: defaultCat?.id || null,
           category_name: defaultCat?.name || 'Mercado',
-          tax_rule_id: null,
+          tax_rule_id: defaultRuleId,
           product_type: 'mercado',
           ...defaultVis,
           skip: false,
+          gtin_dup_warning: gtinDup,
         };
       });
       setItems(its);
