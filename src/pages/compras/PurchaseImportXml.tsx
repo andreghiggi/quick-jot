@@ -636,19 +636,6 @@ export default function PurchaseImportXml() {
     }
     setSaving(true);
     try {
-      // 0) duplicidade: mesma NF (chave) já lançada?
-      if (header.chave) {
-        const { data: dup } = await (supabase.from('purchase_invoices') as any)
-          .select('id, numero_nfe')
-          .eq('company_id', company.id)
-          .eq('chave_acesso', header.chave)
-          .maybeSingle();
-        if (dup) {
-          toast.error(`Esta NF já foi importada anteriormente (nº ${(dup as any).numero_nfe}). Entrada não duplicada.`);
-          setSaving(false);
-          return;
-        }
-      }
       // 1) supplier: busca por CNPJ, cria se não existir
       let supplierId: string | null = null;
       if (header.cnpj_emit) {
@@ -683,27 +670,10 @@ export default function PurchaseImportXml() {
         );
       }
 
-      // 3) criar invoice
-      const { data: inv, error: invErr } = await supabase.from('purchase_invoices').insert({
-        company_id: company.id,
-        dfe_documento_id: dfeId,
-        supplier_id: supplierId,
-        chave_acesso: header.chave,
-        cnpj_emitente: header.cnpj_emit,
-        nome_emitente: header.nome_emit,
-        numero_nfe: header.numero,
-        serie: header.serie,
-        data_emissao: header.emissao,
-        valor_total: header.valor_total,
-        xml_path: xmlPath,
-        status: 'lancada',
-      } as any).select('id').single();
-      if (invErr) throw invErr;
-      const invoiceId = (inv as any).id;
-
-      // 4) itens + criar produtos novos + movimentar estoque
+      // 3) criar produtos novos (fora da transação; se a RPC falhar, apagamos abaixo)
       const gtinUpdates: string[] = []; // nomes dos produtos que tiveram GTIN preenchido
       const gtinDivergentes: string[] = []; // produtos com GTIN cadastrado diferente do XML
+      const createdProductIds: string[] = [];
       const isValidGtin = (g: string) => /^\d{8}$|^\d{12}$|^\d{13}$|^\d{14}$/.test(g);
       // Descobre próximo SKU (P0001, P0002...) para os produtos novos desta nota
       let nextSkuNum = 0;
@@ -721,10 +691,10 @@ export default function PurchaseImportXml() {
           }
         });
       }
+      const rpcItems: any[] = [];
       for (const it of items) {
         if (it.skip) continue;
         const factor = it.conversion_factor > 0 ? it.conversion_factor : 1;
-        const stockQty = it.quantidade * factor;
         const realCost = it.valor_unitario / factor;
         let productId = it.product_id;
         if (!productId && it.createNew) {
@@ -740,7 +710,7 @@ export default function PurchaseImportXml() {
             tax_rule_id: it.tax_rule_id || null,
             gtin: it.xml_ean || null,
             ncm: it.xml_ncm || null,
-            cfop: cfopSaidaParaEntrada(it.xml_cfop),
+            cfop: it.cfop_entrada || cfopSaidaParaEntrada(it.xml_cfop),
             unit: it.stock_unit || it.xml_unidade || null,
             track_stock: true,
             product_type: it.product_type || 'mercado',
@@ -754,6 +724,7 @@ export default function PurchaseImportXml() {
           } as any).select('id').single();
           if (pErr) throw pErr;
           productId = (prod as any).id;
+          if (productId) createdProductIds.push(productId);
         } else if (productId) {
           // Atualiza custo, preço e garante rastreio de estoque no produto existente
           const { error: updateProductErr } = await (supabase.from('products') as any).update({
@@ -777,35 +748,47 @@ export default function PurchaseImportXml() {
             }
           }
         }
-        const { error: itemErr } = await supabase.from('purchase_invoice_items').insert({
-          invoice_id: invoiceId, company_id: company.id, product_id: productId,
-          xml_codigo: it.xml_codigo, xml_descricao: it.xml_descricao,
-          xml_ean: it.xml_ean, xml_ncm: it.xml_ncm, xml_cfop: it.xml_cfop, xml_unidade: it.xml_unidade,
-          quantidade: it.quantidade, valor_unitario: it.valor_unitario, valor_total: it.valor_total,
+        rpcItems.push({
+          product_id: productId,
+          xml_codigo: it.xml_codigo,
+          xml_descricao: it.xml_descricao,
+          xml_ean: it.xml_ean,
+          xml_ncm: it.xml_ncm,
+          xml_cfop: it.cfop_entrada || it.xml_cfop,
+          xml_unidade: it.xml_unidade,
+          quantidade: it.quantidade,
+          valor_unitario: it.valor_unitario,
+          valor_total: it.valor_total,
           conversion_factor: factor,
           stock_unit: it.stock_unit,
           sale_price: it.sale_price,
           unit_weight_kg: it.unit_weight_kg,
-          stock_applied: !!productId,
-        } as any).select('id').single();
-        if (itemErr) throw itemErr;
-
-        if (productId) {
-          const { data: newBalance, error: stockErr } = await supabase.rpc('apply_stock_movement', {
-            _product_id: productId, _qty: stockQty, _type: 'manual_in',
-            _reference_type: 'purchase_invoice', _reference_id: invoiceId,
-            _notes: `NF-e ${header.numero}/${header.serie} - ${header.nome_emit}${factor !== 1 ? ` (fator ${factor})` : ''}`,
-          });
-          if (stockErr) throw stockErr;
-          if (newBalance === null) throw new Error(`Estoque não movimentado para ${it.newName || it.xml_descricao}. Verifique se o produto controla estoque.`);
-        }
+        });
       }
 
-      // 5) atualizar DFe
-      if (dfeId) {
-        await supabase.from('dfe_documentos').update({
-          imported_at: new Date().toISOString(), imported_invoice_id: invoiceId,
-        }).eq('id', dfeId);
+      // 4) Persiste NF-e + itens + estoque em UMA transação (tudo-ou-nada)
+      const { data: invoiceId, error: rpcErr } = await supabase.rpc('import_purchase_invoice', {
+        _company_id: company.id,
+        _dfe_id: dfeId,
+        _supplier_id: supplierId,
+        _header: {
+          chave: header.chave,
+          cnpj_emit: header.cnpj_emit,
+          nome_emit: header.nome_emit,
+          numero: header.numero,
+          serie: header.serie,
+          emissao: header.emissao,
+          valor_total: header.valor_total,
+        },
+        _xml_path: xmlPath,
+        _items: rpcItems,
+      } as any);
+      if (rpcErr) {
+        // Rollback: apaga produtos que criamos antes da RPC falhar.
+        if (createdProductIds.length > 0) {
+          await (supabase.from('products') as any).delete().in('id', createdProductIds);
+        }
+        throw rpcErr;
       }
 
       toast.success('NF-e de entrada lançada e estoque atualizado!');
