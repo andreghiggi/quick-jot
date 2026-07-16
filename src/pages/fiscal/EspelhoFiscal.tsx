@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { BookMarked, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
+import { BookMarked, FileSpreadsheet, FileText, Loader2, Play } from 'lucide-react';
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -301,6 +301,16 @@ export default function EspelhoFiscal() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [seriesDisponiveis, setSeriesDisponiveis] = useState<string[]>([]);
+  const [generatedRows, setGeneratedRows] = useState<Row[] | null>(null);
+  const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
+
+  // Reset dos dados quando o operador altera qualquer filtro relevante.
+  function resetGenerated() {
+    if (generatedRows !== null) {
+      setGeneratedRows(null);
+      setGeneratedAt(null);
+    }
+  }
 
   async function generate(): Promise<Row[] | null> {
     if (!company?.id) return null;
@@ -532,9 +542,33 @@ export default function EspelhoFiscal() {
     }
   }
 
+  async function handleGenerate() {
+    if (!company?.id) {
+      toast.error('Empresa não carregada');
+      return;
+    }
+    if (!dateFrom || !dateTo) {
+      toast.error('Informe o período');
+      return;
+    }
+    const data = await generate();
+    if (!data) return;
+    setGeneratedRows(data);
+    setGeneratedAt(new Date());
+    if (!data.length) {
+      toast.info('Nenhuma nota encontrada para o filtro escolhido.');
+    } else {
+      toast.success(`${data.length} nota(s) processada(s). Baixe o Excel ou PDF.`);
+    }
+  }
+
+  function filteredBySerie(rows: Row[]): Row[] {
+    return serie === 'todas' ? rows : rows.filter((r) => r.serie === serie);
+  }
+
   async function exportExcel() {
-    const rowsToExport = await ensureData();
-    if (!rowsToExport) return;
+    if (!generatedRows) return;
+    const rowsToExport = filteredBySerie(generatedRows);
     if (!rowsToExport.length) {
       toast.info('Nenhuma nota encontrada para o filtro escolhido.');
       return;
@@ -581,8 +615,8 @@ export default function EspelhoFiscal() {
   }
 
   async function exportPDF() {
-    const rowsToExport = await ensureData();
-    if (!rowsToExport) return;
+    if (!generatedRows) return;
+    const rowsToExport = filteredBySerie(generatedRows);
     if (!rowsToExport.length) {
       toast.info('Nenhuma nota encontrada para o filtro escolhido.');
       return;
@@ -641,20 +675,6 @@ export default function EspelhoFiscal() {
     toast.success('PDF gerado');
   }
 
-  async function ensureData(): Promise<Row[] | null> {
-    if (!company?.id) {
-      toast.error('Empresa não carregada');
-      return null;
-    }
-    if (!dateFrom || !dateTo) {
-      toast.error('Informe o período');
-      return null;
-    }
-    const data = await generate();
-    if (!data) return null;
-    return serie === 'todas' ? data : data.filter((r) => r.serie === serie);
-  }
-
   return (
     <AppLayout>
       <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
@@ -679,15 +699,15 @@ export default function EspelhoFiscal() {
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
               <div className="space-y-1.5">
                 <Label>De</Label>
-                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); resetGenerated(); }} />
               </div>
               <div className="space-y-1.5">
                 <Label>Até</Label>
-                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); resetGenerated(); }} />
               </div>
               <div className="space-y-1.5">
                 <Label>Modelo</Label>
-                <Select value={modelo} onValueChange={(v: any) => setModelo(v)}>
+                <Select value={modelo} onValueChange={(v: any) => { setModelo(v); resetGenerated(); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos (55 + 65)</SelectItem>
@@ -698,7 +718,7 @@ export default function EspelhoFiscal() {
               </div>
               <div className="space-y-1.5">
                 <Label>Status</Label>
-                <Select value={statusFiltro} onValueChange={(v: any) => setStatusFiltro(v)}>
+                <Select value={statusFiltro} onValueChange={(v: any) => { setStatusFiltro(v); resetGenerated(); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Autorizada + Cancelada</SelectItem>
@@ -719,14 +739,10 @@ export default function EspelhoFiscal() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end gap-2 md:col-span-2">
-                <Button onClick={exportExcel} disabled={loading} className="flex-1">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileSpreadsheet className="w-4 h-4 mr-2" />}
-                  Gerar Excel
-                </Button>
-                <Button onClick={exportPDF} disabled={loading} variant="outline" className="flex-1">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileText className="w-4 h-4 mr-2" />}
-                  Gerar PDF
+              <div className="flex items-end">
+                <Button onClick={handleGenerate} disabled={loading} className="w-full">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Play className="w-4 h-4 mr-2" />}
+                  Gerar
                 </Button>
               </div>
             </div>
@@ -736,8 +752,26 @@ export default function EspelhoFiscal() {
                 Baixando XML autorizado da SEFAZ: {progress.done}/{progress.total}
               </div>
             )}
+            {generatedRows && !loading && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2 border-t">
+                <div className="text-xs text-muted-foreground flex-1">
+                  <strong>{filteredBySerie(generatedRows).length}</strong> nota(s) processada(s)
+                  {generatedAt && ` • gerado em ${format(generatedAt, 'dd/MM/yyyy HH:mm')}`}
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={exportExcel} size="sm">
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Baixar Excel
+                  </Button>
+                  <Button onClick={exportPDF} size="sm" variant="outline">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Baixar PDF
+                  </Button>
+                </div>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
-              O arquivo será baixado automaticamente após a geração. O relatório é destinado à contabilidade — nenhuma visualização em tela é exibida.
+              Clique em <strong>Gerar</strong> para processar os dados do período. Depois baixe em Excel ou PDF quantas vezes precisar sem reprocessar.
             </p>
           </CardContent>
         </Card>
