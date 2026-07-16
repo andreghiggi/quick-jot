@@ -54,15 +54,16 @@ Deno.serve(async (req) => {
     const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
     const isI9 = companyId === I9_COMPANY_ID
 
-    // ---- Contingência Offline (piloto) --------------------------------------
-    // Empresas habilitadas a usar contingência offline automática na Focus NFe
-    // quando a SEFAZ estourar o timeout. Rollout restrito — expandir só após
-    // validar em produção. Cozinha da Ruiva primeiro.
-    const CONTINGENCIA_OFFLINE_COMPANY_IDS = new Set<string>([
-      '55181771-8b10-4af1-afc3-472c090a49be', // Cozinha da Ruiva
-    ])
-    const contingenciaEnabled = CONTINGENCIA_OFFLINE_COMPANY_IDS.has(companyId)
-    const CONTINGENCIA_TIMEOUT_MS = 8000
+    // ---- Contingência Offline ----------------------------------------------
+    // ATENÇÃO: a contingência automática por timeout foi REMOVIDA (17/07/2026)
+    // porque estava causando duplicidade fiscal — o timeout de 8s abortava a
+    // primeira requisição enquanto a SEFAZ ainda estava autorizando a NFC-e e
+    // o proxy disparava uma segunda emissão em contingência, resultando em duas
+    // notas autorizadas para a mesma venda (13602/13604/13605 etc.).
+    // Agora: timeout = "processando" (aguardando retorno), sem segunda emissão.
+    // Idempotência por (company_id, external_id) garante que retries do cliente
+    // não gerem uma nova NFC-e.
+    const EMIT_TIMEOUT_MS = 60000
 
     let NFCE_API_KEY: string | null = GLOBAL_NFCE_API_KEY ?? null
     try {
