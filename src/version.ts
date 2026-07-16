@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.58.0-beta";
+export const VERSION = "1.58.1-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e: contingência segura Fiscal Flow v2 (abortar-online + tp_emis=9)";
+export const CODENAME = "XML do mês: backfill sob demanda via Fiscal Flow";
 
 export interface Release {
   version: string;
