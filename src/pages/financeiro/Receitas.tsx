@@ -1051,6 +1051,9 @@ export default function Receitas() {
         group={detailsGroup}
         onClose={() => setDetailsGroup(null)}
         today={today}
+        companyId={company?.id}
+        userId={user?.id}
+        onReverse={() => reload()}
       />
 
       {/* Novo diálogo — Efetivar receita (estilo Gweb) */}
