@@ -87,6 +87,23 @@ export default function Receitas() {
   // Overlay sequenciado "Recebendo → Imprimindo comprovantes → Emitindo NFC-e → Imprimindo cupom".
   const [nfcePhase, setNfcePhase] = useState<{ label: string; detail?: string } | null>(null);
   const [nfceError, setNfceError] = useState<string | null>(null);
+  /**
+   * Pausa entre impressões — quando definido, o overlay mostra um botão
+   * "Próximo" e o fluxo só continua quando o operador clica (dando tempo
+   * dele fechar o diálogo de impressão do navegador antes da próxima nota).
+   */
+  const [nfceAck, setNfceAck] = useState<null | {
+    title: string;
+    hint: string;
+    resolve: () => void;
+  }>(null);
+
+  /** Aguarda o operador clicar em "Próximo" antes de seguir o fluxo. */
+  function waitOperatorAck(title: string, hint: string) {
+    return new Promise<void>((resolve) => {
+      setNfceAck({ title, hint, resolve });
+    });
+  }
 
   // NFC-e financeiras (CRED-*) rejeitadas — banner de reemissão.
   type RejectedCredNote = {
