@@ -288,6 +288,10 @@ export type Database = {
           payment_method_id: string | null
           payment_name: string
           receivable_id: string
+          reversal_reason: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+          tef_control_number: string | null
           updated_at: string
         }
         Insert: {
@@ -301,6 +305,10 @@ export type Database = {
           payment_method_id?: string | null
           payment_name: string
           receivable_id: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          tef_control_number?: string | null
           updated_at?: string
         }
         Update: {
@@ -314,6 +322,10 @@ export type Database = {
           payment_method_id?: string | null
           payment_name?: string
           receivable_id?: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          tef_control_number?: string | null
           updated_at?: string
         }
         Relationships: [
