@@ -531,10 +531,15 @@ export default function EspelhoFiscal() {
   }, [filteredRows]);
 
   async function exportExcel() {
-    if (!filteredRows.length) return;
+    const rowsToExport = await ensureData();
+    if (!rowsToExport) return;
+    if (!rowsToExport.length) {
+      toast.info('Nenhuma nota encontrada para o filtro escolhido.');
+      return;
+    }
     const XLSX = await import('xlsx');
     const header = ['Data', 'Modelo', 'Nº', 'Série', 'Chave de Acesso', 'CFOP', 'Natureza', 'Pagamento', 'Valor', 'Status', 'Fonte'];
-    const data = filteredRows.map((r) => [
+    const data = rowsToExport.map((r) => [
       format(new Date(r.dataEmissao), 'dd/MM/yyyy HH:mm'),
       r.modelo,
       r.numero,
@@ -547,6 +552,10 @@ export default function EspelhoFiscal() {
       r.status === 'autorizada' ? 'Autorizada' : 'Cancelada',
       r.fonte,
     ]);
+    const totAut = rowsToExport.filter(r => r.status === 'autorizada');
+    const totCanc = rowsToExport.filter(r => r.status === 'cancelada');
+    const somaAut = totAut.reduce((s, r) => s + r.valor, 0);
+    const somaCanc = totCanc.reduce((s, r) => s + r.valor, 0);
     const ws = XLSX.utils.aoa_to_sheet([
       [`Espelho Fiscal — ${company?.name || ''}`],
       [`Período: ${format(new Date(dateFrom + 'T00:00:00'), 'dd/MM/yyyy')} a ${format(new Date(dateTo + 'T00:00:00'), 'dd/MM/yyyy')}`],
@@ -556,8 +565,8 @@ export default function EspelhoFiscal() {
       ...data,
       [],
       ['Totais'],
-      ['Autorizadas', totals.qtdAut, '', '', '', '', '', '', totals.somaAut],
-      ['Canceladas', totals.qtdCanc, '', '', '', '', '', '', totals.somaCanc],
+      ['Autorizadas', totAut.length, '', '', '', '', '', '', somaAut],
+      ['Canceladas', totCanc.length, '', '', '', '', '', '', somaCanc],
     ]);
     ws['!cols'] = [
       { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 48 },
@@ -566,10 +575,16 @@ export default function EspelhoFiscal() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Espelho Fiscal');
     XLSX.writeFile(wb, `espelho-fiscal-${dateFrom}-a-${dateTo}.xlsx`);
+    toast.success('Excel gerado');
   }
 
   async function exportPDF() {
-    if (!filteredRows.length) return;
+    const rowsToExport = await ensureData();
+    if (!rowsToExport) return;
+    if (!rowsToExport.length) {
+      toast.info('Nenhuma nota encontrada para o filtro escolhido.');
+      return;
+    }
     const { jsPDF } = await import('jspdf');
     const autoTableMod: any = await import('jspdf-autotable');
     const autoTable = autoTableMod.default || autoTableMod;
@@ -586,10 +601,13 @@ export default function EspelhoFiscal() {
     );
     doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 40, 100);
 
+    const totAut = rowsToExport.filter(r => r.status === 'autorizada');
+    const totCanc = rowsToExport.filter(r => r.status === 'cancelada');
+    const somaAut = totAut.reduce((s, r) => s + r.valor, 0);
     autoTable(doc, {
       startY: 115,
       head: [['Data', 'Mod.', 'Nº', 'Sér.', 'Chave', 'CFOP', 'Natureza', 'Pagamento', 'Valor', 'Status', 'Fonte']],
-      body: filteredRows.map((r) => [
+      body: rowsToExport.map((r) => [
         format(new Date(r.dataEmissao), 'dd/MM/yy HH:mm'),
         r.modelo,
         r.numero,
@@ -604,8 +622,8 @@ export default function EspelhoFiscal() {
       ]),
       foot: [[
         '', '', '', '', '', '', '', 
-        `Autoriz.: ${totals.qtdAut}  Canc.: ${totals.qtdCanc}`,
-        fmtMoney(totals.somaAut),
+        `Autoriz.: ${totAut.length}  Canc.: ${totCanc.length}`,
+        fmtMoney(somaAut),
         '', '',
       ]],
       styles: { fontSize: 7, cellPadding: 3 },
@@ -618,13 +636,22 @@ export default function EspelhoFiscal() {
     });
 
     doc.save(`espelho-fiscal-${dateFrom}-a-${dateTo}.pdf`);
+    toast.success('PDF gerado');
   }
 
-  useEffect(() => {
-    // primeira geração automática
-    if (company?.id && !generatedAt) generate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [company?.id]);
+  async function ensureData(): Promise<Row[] | null> {
+    if (!company?.id) {
+      toast.error('Empresa não carregada');
+      return null;
+    }
+    if (!dateFrom || !dateTo) {
+      toast.error('Informe o período');
+      return null;
+    }
+    const data = await generate();
+    if (!data) return null;
+    return serie === 'todas' ? data : data.filter((r) => r.serie === serie);
+  }
 
   return (
     <AppLayout>
