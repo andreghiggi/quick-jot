@@ -122,6 +122,30 @@ export default function EspelhoFiscal() {
           for (const [sid, list] of acc) {
             pagPorVenda.set(sid, Array.from(new Set(list)).join(' + '));
           }
+
+          // Fallback: vendas single-payment não têm split — usa payment_method da pdv_sales
+          const semSplit = saleIds.filter((sid: string) => !pagPorVenda.has(sid));
+          if (semSplit.length) {
+            const { data: sales } = await (supabase as any)
+              .from('pdv_sales')
+              .select('id, payment_method_id')
+              .in('id', semSplit);
+            const pmIds = Array.from(
+              new Set((sales || []).map((s: any) => s.payment_method_id).filter(Boolean)),
+            );
+            const pmMap = new Map<string, string>();
+            if (pmIds.length) {
+              const { data: pms } = await (supabase as any)
+                .from('payment_methods')
+                .select('id, name')
+                .in('id', pmIds);
+              for (const pm of pms || []) pmMap.set(pm.id, pm.name);
+            }
+            for (const s of sales || []) {
+              const nome = s.payment_method_id ? pmMap.get(s.payment_method_id) : null;
+              if (nome) pagPorVenda.set(s.id, nome);
+            }
+          }
         }
 
         for (const r of data || []) {
