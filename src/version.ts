@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.57.0-beta";
+export const VERSION = "1.58.0-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e: fim das duplicidades (idempotência + contingência sem retry)";
+export const CODENAME = "NFC-e: contingência segura Fiscal Flow v2 (abortar-online + tp_emis=9)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,20 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.58.0-beta",
+    date: "2026-07-17",
+    codename: "NFC-e: contingência segura Fiscal Flow v2 (abortar-online + tp_emis=9)",
+    changes: [
+      "Adesão ao protocolo oficial da Fiscal Flow para contingência offline SEGURA: em vez de esperar 60s por qualquer retorno, o proxy agora tenta a emissão online por até 20s.",
+      "Em caso de timeout, o proxy chama POST /nfce-api/abortar-online com o mesmo external_id — assim a SEFAZ não pode autorizar a original atrasada por trás.",
+      "Se a Fiscal Flow confirmar o abort (200), o proxy reemite automaticamente em CONTINGÊNCIA (tp_emis=9) reutilizando o MESMO external_id — o cliente recebe o cupom em ~21s, sem risco de duplicidade fiscal.",
+      "Se a Fiscal Flow retornar 409 (SEFAZ já autorizou a original), o proxy consulta a nota original e devolve ela — sem consumir nova numeração e sem duplicar.",
+      "Em qualquer outro erro, mantém o comportamento anterior: registra 'processando' para consulta manual, sem reemitir.",
+      "Idempotência por (company_id, external_id) e external_id determinístico (`FCX-<sale_id>`) continuam ativos — protegem contra cliques duplicados e retries.",
+      "Sem alteração em TEF, PinPad, PDV V2, Pedido Express, Cobrança, NF-e, Compras, Manifestação Eletrônica, Estoque, Financeiro ou impressão.",
+    ],
+  },
   {
     version: "1.57.0-beta",
     date: "2026-07-17",
