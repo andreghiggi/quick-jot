@@ -697,6 +697,12 @@ export default function EspelhoFiscal() {
                 </Button>
               </div>
             </div>
+            {progress && (
+              <div className="text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Baixando XML autorizado da SEFAZ: {progress.done}/{progress.total}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -781,12 +787,13 @@ export default function EspelhoFiscal() {
                       <TableHead className="w-32">Pagamento</TableHead>
                       <TableHead className="w-28 text-right">Valor</TableHead>
                       <TableHead className="w-24">Status</TableHead>
+                      <TableHead className="w-20">Fonte</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredRows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center text-muted-foreground py-6">
+                        <TableCell colSpan={11} className="text-center text-muted-foreground py-6">
                           Nenhuma nota encontrada para o filtro escolhido.
                         </TableCell>
                       </TableRow>
@@ -820,6 +827,11 @@ export default function EspelhoFiscal() {
                         <TableCell>
                           <Badge variant={r.status === 'autorizada' ? 'default' : 'destructive'}>
                             {r.status === 'autorizada' ? 'Autorizada' : 'Cancelada'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={r.fonte === 'XML' ? 'default' : 'outline'} className={r.fonte === 'XML' ? 'bg-emerald-600 hover:bg-emerald-600' : ''}>
+                            {r.fonte}
                           </Badge>
                         </TableCell>
                       </TableRow>
