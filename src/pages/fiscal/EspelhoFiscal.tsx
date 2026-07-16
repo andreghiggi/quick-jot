@@ -717,10 +717,14 @@ export default function EspelhoFiscal() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end">
-                <Button onClick={generate} disabled={loading} className="w-full">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
-                  Gerar
+              <div className="flex items-end gap-2 md:col-span-2">
+                <Button onClick={exportExcel} disabled={loading} className="flex-1">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileSpreadsheet className="w-4 h-4 mr-2" />}
+                  Gerar Excel
+                </Button>
+                <Button onClick={exportPDF} disabled={loading} variant="outline" className="flex-1">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileText className="w-4 h-4 mr-2" />}
+                  Gerar PDF
                 </Button>
               </div>
             </div>
@@ -730,145 +734,12 @@ export default function EspelhoFiscal() {
                 Baixando XML autorizado da SEFAZ: {progress.done}/{progress.total}
               </div>
             )}
+            <p className="text-xs text-muted-foreground">
+              O arquivo será baixado automaticamente após a geração. O relatório é destinado à contabilidade — nenhuma visualização em tela é exibida.
+            </p>
           </CardContent>
         </Card>
 
-        {generatedAt && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
-              <div>
-                <CardTitle className="text-base">Resultado</CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {filteredRows.length} nota(s) • Gerado em {format(generatedAt, 'dd/MM/yyyy HH:mm')}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={exportPDF} disabled={!filteredRows.length}>
-                  <FileText className="w-4 h-4 mr-2" /> PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={exportExcel} disabled={!filteredRows.length}>
-                  <FileSpreadsheet className="w-4 h-4 mr-2" /> Excel
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Autorizadas</div>
-                  <div className="text-lg font-semibold">{totals.qtdAut}</div>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Valor autorizadas</div>
-                  <div className="text-lg font-semibold text-emerald-600">{fmtMoney(totals.somaAut)}</div>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Canceladas</div>
-                  <div className="text-lg font-semibold">{totals.qtdCanc}</div>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Valor canceladas</div>
-                  <div className="text-lg font-semibold text-destructive">{fmtMoney(totals.somaCanc)}</div>
-                </div>
-              </div>
-
-              {(totals.porCfop.size > 0 || totals.porPag.size > 0) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="border rounded-lg p-3">
-                    <div className="text-xs font-semibold text-muted-foreground mb-2">Por CFOP (valor autorizado)</div>
-                    <div className="space-y-1 text-sm">
-                      {Array.from(totals.porCfop.entries()).map(([k, v]) => (
-                        <div key={k} className="flex justify-between">
-                          <span className="font-mono">{k}</span>
-                          <span>{v.qtd} nota(s) • <strong>{fmtMoney(v.valor)}</strong></span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="border rounded-lg p-3">
-                    <div className="text-xs font-semibold text-muted-foreground mb-2">Por forma de pagamento (valor autorizado)</div>
-                    <div className="space-y-1 text-sm">
-                      {Array.from(totals.porPag.entries()).map(([k, v]) => (
-                        <div key={k} className="flex justify-between">
-                          <span>{k}</span>
-                          <span>{v.qtd} nota(s) • <strong>{fmtMoney(v.valor)}</strong></span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <Separator />
-
-              <div className="border rounded-lg overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-32">Data</TableHead>
-                      <TableHead className="w-16">Mod.</TableHead>
-                      <TableHead className="w-20">Nº</TableHead>
-                      <TableHead className="w-16">Sér.</TableHead>
-                      <TableHead>Chave de Acesso</TableHead>
-                      <TableHead className="w-24">CFOP</TableHead>
-                      <TableHead>Natureza</TableHead>
-                      <TableHead className="w-32">Pagamento</TableHead>
-                      <TableHead className="w-28 text-right">Valor</TableHead>
-                      <TableHead className="w-24">Status</TableHead>
-                      <TableHead className="w-20">Fonte</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRows.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={11} className="text-center text-muted-foreground py-6">
-                          Nenhuma nota encontrada para o filtro escolhido.
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredRows.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="text-xs">{format(new Date(r.dataEmissao), 'dd/MM/yyyy HH:mm')}</TableCell>
-                        <TableCell><Badge variant="outline">{r.modelo}</Badge></TableCell>
-                        <TableCell className="font-mono text-xs">{r.numero}</TableCell>
-                        <TableCell className="font-mono text-xs">{r.serie}</TableCell>
-                        <TableCell className="font-mono text-[10px] break-all">
-                          <div className="flex items-center gap-1">
-                            <span>{r.chave || '—'}</span>
-                            {r.chave && (
-                              <button
-                                type="button"
-                                className="text-primary hover:underline text-[10px]"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(r.chave);
-                                  toast.success('Chave copiada');
-                                }}
-                              >
-                                copiar
-                              </button>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">{r.cfop}</TableCell>
-                        <TableCell className="text-xs">{r.natureza}</TableCell>
-                        <TableCell className="text-xs">{r.pagamento}</TableCell>
-                        <TableCell className="text-right font-medium">{fmtMoney(r.valor)}</TableCell>
-                        <TableCell>
-                          <Badge variant={r.status === 'autorizada' ? 'default' : 'destructive'}>
-                            {r.status === 'autorizada' ? 'Autorizada' : 'Cancelada'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={r.fonte === 'XML' ? 'default' : 'outline'} className={r.fonte === 'XML' ? 'bg-emerald-600 hover:bg-emerald-600' : ''}>
-                            {r.fonte}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </AppLayout>
   );
