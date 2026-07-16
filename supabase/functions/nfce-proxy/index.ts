@@ -1061,11 +1061,20 @@ Deno.serve(async (req) => {
         // Algumas instalações configuram NFCE_API_URL como a base /nfce; outras
         // como uma rota de emissão. Geramos candidatos sem expor a URL em log.
         const baseUrl = NFCE_API_URL.replace(/\/+$/, '')
+        // FiscalFlow / gateways expõem a inutilização em rotas distintas
+        // conforme instalação. Testamos várias variações comuns até obter
+        // resposta != 404. Também tentamos rebaixando de "/nfce" para raiz
+        // e usando "/nfe/inutilizacao" (alguns gateways compartilham a rota).
+        const rootUrl = baseUrl.replace(/\/nfce(?:\/.*)?$/i, '')
         const inutilizacaoUrls = Array.from(new Set([
-          baseUrl.replace(/\/nfce(?:\/.*)?$/i, '/nfce/inutilizacao'),
           `${baseUrl}/inutilizacao`,
           `${baseUrl}/inutilizar`,
-        ]))
+          baseUrl.replace(/\/nfce(?:\/.*)?$/i, '/nfce/inutilizacao'),
+          `${rootUrl}/inutilizacao`,
+          `${rootUrl}/nfe/inutilizacao`,
+          `${rootUrl}/inutilizacoes`,
+          `${baseUrl}/inutilizacoes`,
+        ].filter(Boolean)))
         const apiHeaders = {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -1074,6 +1083,7 @@ Deno.serve(async (req) => {
         }
 
         let lastResult: any = null
+        const attempts: Array<{ path: string; status: number; body?: any }> = []
         for (const url of inutilizacaoUrls) {
           apiResponse = await fetch(url, {
             method: 'POST',
@@ -1081,6 +1091,11 @@ Deno.serve(async (req) => {
             body: JSON.stringify(reqBody),
           })
           lastResult = await safeJson(apiResponse)
+          // Loga só o path para não expor o host em logs.
+          let pathOnly = url
+          try { pathOnly = new URL(url).pathname } catch { /* keep */ }
+          attempts.push({ path: pathOnly, status: apiResponse.status })
+          console.log('[nfce-proxy] inutilizar attempt', pathOnly, '→', apiResponse.status)
           if (apiResponse.status !== 404) break
         }
         result = lastResult
@@ -1089,12 +1104,13 @@ Deno.serve(async (req) => {
         const newStatus = ok ? 'aceita' : 'rejeitada'
         const protocolo = result?.protocolo_sefaz ?? result?.protocolo ?? result?.data?.protocolo ?? result?.data?.protocolo_sefaz ?? null
         const motivo = ok ? null : (result?.error || result?.message || result?.mensagem_sefaz || 'Rejeitado pela SEFAZ')
+        const debugResult = ok ? result : { ...result, _attempts: attempts }
 
         await supabase.from('nfce_inutilizacoes')
           .update({
             status: newStatus,
             protocolo,
-            response_payload: result,
+            response_payload: debugResult,
             motivo_rejeicao: motivo,
             external_id: result?.id ?? result?.data?.id ?? null,
             updated_at: new Date().toISOString(),
