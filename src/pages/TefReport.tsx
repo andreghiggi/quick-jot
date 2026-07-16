@@ -116,10 +116,11 @@ export default function TefReport() {
         // accounts_receivable_payments.notes desde v1.42.x.
         supabase
           .from('accounts_receivable_payments' as any)
-          .select('id, created_at, amount, notes, receivable_id')
+          .select('id, created_at, amount, notes, receivable_id, reversed_at')
           .eq('company_id', company.id)
           .gte('created_at', range.start.toISOString())
           .lte('created_at', range.end.toISOString())
+          .is('reversed_at', null)
           .ilike('notes', '%TEF PinPad:%'),
       ]);
 
