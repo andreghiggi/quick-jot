@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { BookMarked, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
+import { BookMarked, FileSpreadsheet, FileText, Loader2, Play } from 'lucide-react';
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -301,6 +301,16 @@ export default function EspelhoFiscal() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [seriesDisponiveis, setSeriesDisponiveis] = useState<string[]>([]);
+  const [generatedRows, setGeneratedRows] = useState<Row[] | null>(null);
+  const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
+
+  // Reset dos dados quando o operador altera qualquer filtro relevante.
+  function resetGenerated() {
+    if (generatedRows !== null) {
+      setGeneratedRows(null);
+      setGeneratedAt(null);
+    }
+  }
 
   async function generate(): Promise<Row[] | null> {
     if (!company?.id) return null;
@@ -532,9 +542,33 @@ export default function EspelhoFiscal() {
     }
   }
 
+  async function handleGenerate() {
+    if (!company?.id) {
+      toast.error('Empresa não carregada');
+      return;
+    }
+    if (!dateFrom || !dateTo) {
+      toast.error('Informe o período');
+      return;
+    }
+    const data = await generate();
+    if (!data) return;
+    setGeneratedRows(data);
+    setGeneratedAt(new Date());
+    if (!data.length) {
+      toast.info('Nenhuma nota encontrada para o filtro escolhido.');
+    } else {
+      toast.success(`${data.length} nota(s) processada(s). Baixe o Excel ou PDF.`);
+    }
+  }
+
+  function filteredBySerie(rows: Row[]): Row[] {
+    return serie === 'todas' ? rows : rows.filter((r) => r.serie === serie);
+  }
+
   async function exportExcel() {
-    const rowsToExport = await ensureData();
-    if (!rowsToExport) return;
+    if (!generatedRows) return;
+    const rowsToExport = filteredBySerie(generatedRows);
     if (!rowsToExport.length) {
       toast.info('Nenhuma nota encontrada para o filtro escolhido.');
       return;
@@ -581,8 +615,8 @@ export default function EspelhoFiscal() {
   }
 
   async function exportPDF() {
-    const rowsToExport = await ensureData();
-    if (!rowsToExport) return;
+    if (!generatedRows) return;
+    const rowsToExport = filteredBySerie(generatedRows);
     if (!rowsToExport.length) {
       toast.info('Nenhuma nota encontrada para o filtro escolhido.');
       return;
@@ -639,20 +673,6 @@ export default function EspelhoFiscal() {
 
     doc.save(`espelho-fiscal-${dateFrom}-a-${dateTo}.pdf`);
     toast.success('PDF gerado');
-  }
-
-  async function ensureData(): Promise<Row[] | null> {
-    if (!company?.id) {
-      toast.error('Empresa não carregada');
-      return null;
-    }
-    if (!dateFrom || !dateTo) {
-      toast.error('Informe o período');
-      return null;
-    }
-    const data = await generate();
-    if (!data) return null;
-    return serie === 'todas' ? data : data.filter((r) => r.serie === serie);
   }
 
   return (
