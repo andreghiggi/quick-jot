@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
+import { baixarXmlNFCe } from '@/services/nfceService';
 
 interface Props {
   open: boolean;
@@ -67,12 +68,12 @@ export function FrenteCaixaXmlMesDialog({ open, onOpenChange, companyId, company
       const start = new Date(Date.UTC(year, month - 1, 1, 3, 0, 0));
       const end = new Date(Date.UTC(year, month, 1, 3, 0, 0));
 
-      let withXml: Array<{ id: string; baseName: string; xmlPath: string; isStorage: boolean }> = [];
+      let withXml: Array<{ id: string; baseName: string; xmlPath: string | null; isStorage: boolean; nfceId?: string | null }> = [];
 
       if (source === 'nfce') {
         const { data: records, error } = await supabase
           .from('nfce_records')
-          .select('id, numero, serie, chave_acesso, xml_url, status, created_at')
+          .select('id, nfce_id, numero, serie, chave_acesso, xml_url, status, created_at')
           .eq('company_id', companyId)
           .eq('status', 'autorizada')
           .gte('created_at', start.toISOString())
@@ -80,12 +81,15 @@ export function FrenteCaixaXmlMesDialog({ open, onOpenChange, companyId, company
           .order('created_at', { ascending: true });
         if (error) throw error;
         withXml = (records || [])
-          .filter((r: any) => !!r.xml_url)
+          // Inclui todas as autorizadas: usa xml_url quando existir, senão faz
+          // backfill via nfce-proxy action=xml (consulta na Fiscal Flow).
+          .filter((r: any) => !!r.xml_url || !!r.nfce_id)
           .map((r: any) => ({
             id: r.id,
             baseName: r.chave_acesso || `nfce-${r.serie ?? 'X'}-${r.numero ?? r.id.slice(0, 8)}`,
-            xmlPath: r.xml_url as string,
+            xmlPath: (r.xml_url as string) || null,
             isStorage: false,
+            nfceId: r.nfce_id as string | null,
           }));
       } else {
         const { data: records, error } = await supabase
@@ -139,10 +143,15 @@ export function FrenteCaixaXmlMesDialog({ open, onOpenChange, companyId, company
                   .download(rec.xmlPath);
                 if (dlErr || !file) throw dlErr || new Error('download falhou');
                 text = await file.text();
-              } else {
+              } else if (rec.xmlPath) {
                 const resp = await fetch(rec.xmlPath);
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 text = await resp.text();
+              } else if (rec.nfceId) {
+                // Backfill: busca o XML direto na Fiscal Flow via proxy
+                text = await baixarXmlNFCe(companyId, rec.nfceId);
+              } else {
+                throw new Error('sem xml_url e sem nfce_id');
               }
               folder.file(`${rec.baseName}.xml`, text);
               okCount++;
