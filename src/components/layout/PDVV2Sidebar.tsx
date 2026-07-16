@@ -139,6 +139,7 @@ export function PDVV2Sidebar() {
     ? [
         { title: 'Fiscal', icon: Receipt, href: '/fiscal' },
         { title: 'NFC-e Monitor', icon: FileText, href: '/nfce' },
+        { title: 'Espelho Fiscal', icon: FileText, href: '/fiscal/espelho' },
       ]
     : [];
 

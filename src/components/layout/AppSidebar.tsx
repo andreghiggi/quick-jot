@@ -243,6 +243,11 @@ export function AppSidebar() {
       icon: FileText,
       href: '/nfce',
     },
+    {
+      title: 'Espelho Fiscal',
+      icon: FileCheck,
+      href: '/fiscal/espelho',
+    },
   ] : [];
 
   // O grupo "Compras" foi removido — agora há um único link "Compras" dentro de Movimentações

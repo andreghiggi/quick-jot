@@ -41,6 +41,7 @@ import WhatsAppSettings from "./pages/WhatsAppSettings";
 import Changelog from "./pages/Changelog";
 import Fiscal from "./pages/Fiscal";
 import NFCeMonitor from "./pages/NFCeMonitor";
+import EspelhoFiscal from "./pages/fiscal/EspelhoFiscal";
 import Suggestions from "./pages/Suggestions";
 import MenuImport from "./pages/MenuImport";
 import OptionalGroups from "./pages/OptionalGroups";
@@ -523,6 +524,12 @@ function AppRoutes() {
       <Route path="/nfce" element={
         <ProtectedRoute requireCompany>
           <NFCeMonitor />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/fiscal/espelho" element={
+        <ProtectedRoute requireCompany>
+          <EspelhoFiscal />
         </ProtectedRoute>
       } />
       

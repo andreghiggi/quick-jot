@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.58.1-beta";
+export const VERSION = "1.59.0-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "XML do mês: backfill sob demanda via Fiscal Flow";
+export const CODENAME = "Espelho Fiscal — relatório de notas para a contabilidade";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.59.0-beta",
+    date: "2026-07-17",
+    codename: "Espelho Fiscal — relatório de notas para a contabilidade",
+    changes: [
+      "Nova página Fiscal → Espelho Fiscal (/fiscal/espelho): relatório consolidado de NFC-e (65) e NF-e (55) com data de emissão, número, série, chave de acesso, CFOP (natureza de operação), forma de pagamento, valor e status.",
+      "Filtros: período (padrão mês corrente em America/Sao_Paulo), modelo (55/65/todos), status (autorizada/cancelada/ambas), série.",
+      "Totais no rodapé por status, agrupamentos por CFOP e por forma de pagamento.",
+      "Exportação em Excel (.xlsx) e PDF paisagem (via jspdf-autotable) para entrega à contabilidade.",
+      "Somente leitura — não altera emissão, TEF, PinPad, PDV, Frente de Caixa, Compras, Financeiro ou qualquer outro fluxo.",
+    ],
+  },
   {
     version: "1.58.1-beta",
     date: "2026-07-17",
