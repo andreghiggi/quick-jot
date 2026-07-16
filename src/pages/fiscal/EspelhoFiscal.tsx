@@ -535,7 +535,7 @@ export default function EspelhoFiscal() {
   async function exportExcel() {
     if (!filteredRows.length) return;
     const XLSX = await import('xlsx');
-    const header = ['Data', 'Modelo', 'Nº', 'Série', 'Chave de Acesso', 'CFOP', 'Natureza', 'Pagamento', 'Valor', 'Status'];
+    const header = ['Data', 'Modelo', 'Nº', 'Série', 'Chave de Acesso', 'CFOP', 'Natureza', 'Pagamento', 'Valor', 'Status', 'Fonte'];
     const data = filteredRows.map((r) => [
       format(new Date(r.dataEmissao), 'dd/MM/yyyy HH:mm'),
       r.modelo,
@@ -547,6 +547,7 @@ export default function EspelhoFiscal() {
       r.pagamento,
       r.valor,
       r.status === 'autorizada' ? 'Autorizada' : 'Cancelada',
+      r.fonte,
     ]);
     const ws = XLSX.utils.aoa_to_sheet([
       [`Espelho Fiscal — ${company?.name || ''}`],
@@ -562,7 +563,7 @@ export default function EspelhoFiscal() {
     ]);
     ws['!cols'] = [
       { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 48 },
-      { wch: 16 }, { wch: 28 }, { wch: 22 }, { wch: 12 }, { wch: 12 },
+      { wch: 16 }, { wch: 28 }, { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 8 },
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Espelho Fiscal');
@@ -589,7 +590,7 @@ export default function EspelhoFiscal() {
 
     autoTable(doc, {
       startY: 115,
-      head: [['Data', 'Mod.', 'Nº', 'Sér.', 'Chave', 'CFOP', 'Natureza', 'Pagamento', 'Valor', 'Status']],
+      head: [['Data', 'Mod.', 'Nº', 'Sér.', 'Chave', 'CFOP', 'Natureza', 'Pagamento', 'Valor', 'Status', 'Fonte']],
       body: filteredRows.map((r) => [
         format(new Date(r.dataEmissao), 'dd/MM/yy HH:mm'),
         r.modelo,
@@ -601,12 +602,13 @@ export default function EspelhoFiscal() {
         r.pagamento,
         fmtMoney(r.valor),
         r.status === 'autorizada' ? 'AUT' : 'CANC',
+        r.fonte,
       ]),
       foot: [[
-        '', '', '', '', '', '', '',
+        '', '', '', '', '', '', '', 
         `Autoriz.: ${totals.qtdAut}  Canc.: ${totals.qtdCanc}`,
         fmtMoney(totals.somaAut),
-        '',
+        '', '',
       ]],
       styles: { fontSize: 7, cellPadding: 3 },
       headStyles: { fillColor: [51, 65, 85] },
