@@ -699,15 +699,15 @@ export default function EspelhoFiscal() {
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
               <div className="space-y-1.5">
                 <Label>De</Label>
-                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); resetGenerated(); }} />
               </div>
               <div className="space-y-1.5">
                 <Label>Até</Label>
-                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); resetGenerated(); }} />
               </div>
               <div className="space-y-1.5">
                 <Label>Modelo</Label>
-                <Select value={modelo} onValueChange={(v: any) => setModelo(v)}>
+                <Select value={modelo} onValueChange={(v: any) => { setModelo(v); resetGenerated(); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos (55 + 65)</SelectItem>
@@ -718,7 +718,7 @@ export default function EspelhoFiscal() {
               </div>
               <div className="space-y-1.5">
                 <Label>Status</Label>
-                <Select value={statusFiltro} onValueChange={(v: any) => setStatusFiltro(v)}>
+                <Select value={statusFiltro} onValueChange={(v: any) => { setStatusFiltro(v); resetGenerated(); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Autorizada + Cancelada</SelectItem>
@@ -739,14 +739,10 @@ export default function EspelhoFiscal() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end gap-2 md:col-span-2">
-                <Button onClick={exportExcel} disabled={loading} className="flex-1">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileSpreadsheet className="w-4 h-4 mr-2" />}
-                  Gerar Excel
-                </Button>
-                <Button onClick={exportPDF} disabled={loading} variant="outline" className="flex-1">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileText className="w-4 h-4 mr-2" />}
-                  Gerar PDF
+              <div className="flex items-end">
+                <Button onClick={handleGenerate} disabled={loading} className="w-full">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Play className="w-4 h-4 mr-2" />}
+                  Gerar
                 </Button>
               </div>
             </div>
@@ -756,8 +752,26 @@ export default function EspelhoFiscal() {
                 Baixando XML autorizado da SEFAZ: {progress.done}/{progress.total}
               </div>
             )}
+            {generatedRows && !loading && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2 border-t">
+                <div className="text-xs text-muted-foreground flex-1">
+                  <strong>{filteredBySerie(generatedRows).length}</strong> nota(s) processada(s)
+                  {generatedAt && ` • gerado em ${format(generatedAt, 'dd/MM/yyyy HH:mm')}`}
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={exportExcel} size="sm">
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Baixar Excel
+                  </Button>
+                  <Button onClick={exportPDF} size="sm" variant="outline">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Baixar PDF
+                  </Button>
+                </div>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
-              O arquivo será baixado automaticamente após a geração. O relatório é destinado à contabilidade — nenhuma visualização em tela é exibida.
+              Clique em <strong>Gerar</strong> para processar os dados do período. Depois baixe em Excel ou PDF quantas vezes precisar sem reprocessar.
             </p>
           </CardContent>
         </Card>
