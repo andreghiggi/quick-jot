@@ -279,6 +279,7 @@ export type Database = {
       accounts_receivable_payments: {
         Row: {
           amount: number
+          cash_register_id: string | null
           company_id: string
           created_at: string
           id: string
@@ -296,6 +297,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          cash_register_id?: string | null
           company_id: string
           created_at?: string
           id?: string
@@ -313,6 +315,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          cash_register_id?: string | null
           company_id?: string
           created_at?: string
           id?: string
@@ -329,6 +332,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_payments_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "accounts_receivable_payments_company_id_fkey"
             columns: ["company_id"]
