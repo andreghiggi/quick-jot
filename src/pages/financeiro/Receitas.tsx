@@ -613,6 +613,26 @@ export default function Receitas() {
         });
 
         const descricao = `Recebimento de crediário${pvNumero ? ` - Venda #${pvNumero}` : ''}`;
+
+        // Rastreabilidade: busca a NFC-e de mercadoria original desta venda
+        // (registro autorizado cujo external_id NÃO começa com "CRED-").
+        let refOrigem = '';
+        try {
+          const { data: origRecs } = await supabase
+            .from('nfce_records')
+            .select('numero, serie, chave, external_id, status')
+            .eq('sale_id', saleId)
+            .eq('status', 'autorizada')
+            .order('created_at', { ascending: true });
+          const orig = ((origRecs as any[]) || []).find(
+            (r) => !String(r.external_id || '').startsWith('CRED-'),
+          );
+          if (orig) {
+            const numSerie = `${orig.numero || '?'}${orig.serie ? `-${orig.serie}` : ''}`;
+            refOrigem = ` | NFC-e origem: ${numSerie}${orig.chave ? ` | Chave: ${orig.chave}` : ''}`;
+          }
+        } catch { /* noop — rastreabilidade é best-effort */ }
+
         const fiscal = buildNfceFiscalFields({
           product: null,
           taxRule: taxRule as any,
@@ -651,7 +671,7 @@ export default function Receitas() {
           itens: [financeItem],
           valor_desconto: 0,
           valor_frete: 0,
-          observacoes: `${descricao}${arRow.customer_name ? ` | Cliente: ${arRow.customer_name}` : ''}`,
+          observacoes: `${descricao}${arRow.customer_name ? ` | Cliente: ${arRow.customer_name}` : ''}${refOrigem}`,
           pagamentos_split: pagSplit,
           destinatario,
         } as any);
