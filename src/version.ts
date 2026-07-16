@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.59.1-beta";
+export const VERSION = "1.60.0-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Espelho Fiscal — pagamento fiscal pelo XML";
+export const CODENAME = "Espelho Fiscal — leitura direta do XML autorizado";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.60.0-beta",
+    date: "2026-07-17",
+    codename: "Espelho Fiscal — leitura direta do XML autorizado",
+    changes: [
+      "Espelho Fiscal agora lê TODOS os campos direto do XML autorizado pela SEFAZ (fonte oficial do SPED): número, série, chave, data de emissão, natureza da operação, CFOP item a item, valor total, forma de pagamento (`detPag/tPag`) e status via protocolo (`cStat`).",
+      "Nova coluna `xml_content` em `nfce_records` para armazenar o XML autorizado (`nfeProc`). O `nfce-proxy` (action `xml`) passa a cachear o XML na coluna sempre que consulta a Fiscal Flow — próximas leituras são instantâneas.",
+      "Backfill sob demanda: ao gerar o relatório, notas autorizadas ainda sem XML cacheado são baixadas em paralelo (4 por vez) via `nfce-proxy` com barra de progresso.",
+      "Cancelamento via evento (procEventoNFe tpEvento=110111 cStat=135) passa a ser reconhecido no XML — evita mostrar como 'Autorizada' notas já canceladas na SEFAZ.",
+      "Nova coluna 'Fonte' no relatório: badge verde `XML` = dado 100% fiel ao autorizado pela SEFAZ; badge cinza `Local` = XML ainda não disponível (contingência recém-autorizada), usa payload local como fallback transparente.",
+      "Sem alteração em emissão, TEF, PinPad, PDV, Frente de Caixa, NF-e, Compras ou Financeiro.",
+    ],
+  },
   {
     version: "1.59.1-beta",
     date: "2026-07-17",
