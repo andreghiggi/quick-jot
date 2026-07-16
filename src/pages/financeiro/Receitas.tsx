@@ -87,6 +87,23 @@ export default function Receitas() {
   // Overlay sequenciado "Recebendo → Imprimindo comprovantes → Emitindo NFC-e → Imprimindo cupom".
   const [nfcePhase, setNfcePhase] = useState<{ label: string; detail?: string } | null>(null);
   const [nfceError, setNfceError] = useState<string | null>(null);
+  /**
+   * Pausa entre impressões — quando definido, o overlay mostra um botão
+   * "Próximo" e o fluxo só continua quando o operador clica (dando tempo
+   * dele fechar o diálogo de impressão do navegador antes da próxima nota).
+   */
+  const [nfceAck, setNfceAck] = useState<null | {
+    title: string;
+    hint: string;
+    resolve: () => void;
+  }>(null);
+
+  /** Aguarda o operador clicar em "Próximo" antes de seguir o fluxo. */
+  function waitOperatorAck(title: string, hint: string) {
+    return new Promise<void>((resolve) => {
+      setNfceAck({ title, hint, resolve });
+    });
+  }
 
   // NFC-e financeiras (CRED-*) rejeitadas — banner de reemissão.
   type RejectedCredNote = {
@@ -596,6 +613,12 @@ export default function Receitas() {
         if (!hasMercadoria) {
           try {
             await emitNfceForReceivables(arRowsOfSale);
+            // Dá tempo do operador imprimir e fechar o diálogo antes
+            // de disparar a próxima nota (financeira).
+            await waitOperatorAck(
+              'NFC-e da venda emitida',
+              'Confira a impressão do cupom fiscal da mercadoria e feche o diálogo. Clique em "Próximo" quando terminar para emitir a nota financeira do recebimento.',
+            );
           } catch (e: any) {
             console.error('[Receitas] falha ao emitir mercadoria (on_receipt)', e);
           }
@@ -707,6 +730,10 @@ export default function Receitas() {
             }
           }
           toast.success(`NFC-e financeira nº ${rec.numero || ''} autorizada.`);
+          await waitOperatorAck(
+            `NFC-e financeira nº ${rec.numero || ''} emitida`,
+            'Confira a impressão do cupom fiscal financeiro e feche o diálogo. Clique em "Próximo" para imprimir o comprovante de quitação da parcela.',
+          );
         } else if (rec) {
           setNfceError(rec.motivo_rejeicao || `NFC-e financeira ${rec.status}. Verifique no Monitor NFC-e.`);
         } else {
@@ -1086,17 +1113,23 @@ export default function Receitas() {
             const row = efetivarRow;
             setEfetivarRow(null);
             setSelection(new Set());
-            // Imprime 1 comprovante de recebimento para a parcela paga.
             const amountPaid = data.payments.reduce((s, p) => s + p.amount, 0);
-            setNfcePhase({ label: 'Imprimindo comprovante...', detail: 'Recebimento de parcela' });
-            await printReceiptsFor([{
+            const receiptPayload = [{
               row,
               amountPaid,
               payments: data.payments.map((p) => ({ paymentName: p.paymentName, amount: p.amount })),
               interest: data.interest, fine: data.fine, discount: data.discount, surcharge: data.surcharge,
-            }]);
-            if (data.emitNfce) await emitCreditReceiptNFCe([row], data.payments);
-            else setNfcePhase(null);
+            }];
+            if (data.emitNfce) {
+              // Nova ordem: NFC-e mercadoria (se Modo B) → NFC-e financeira → Comprovante.
+              await emitCreditReceiptNFCe([row], data.payments);
+              setNfcePhase({ label: 'Imprimindo comprovante...', detail: 'Recebimento de parcela' });
+              await printReceiptsFor(receiptPayload);
+            } else {
+              setNfcePhase({ label: 'Imprimindo comprovante...', detail: 'Recebimento de parcela' });
+              await printReceiptsFor(receiptPayload);
+            }
+            setNfcePhase(null);
           } else {
             setNfcePhase(null);
           }
@@ -1178,12 +1211,15 @@ export default function Receitas() {
             const rowsForNfce = efetivarRows;
             setEfetivarRows(null);
             setSelection(new Set());
+            // Nova ordem: NFC-e mercadoria (se Modo B) → NFC-e financeira → Comprovantes.
+            if (data.emitNfce && rowsForNfce) {
+              await emitCreditReceiptNFCe(rowsForNfce, data.payments);
+            }
             if (receipts.length) {
               setNfcePhase({ label: 'Imprimindo comprovantes...', detail: `${receipts.length} parcelas — corte automático entre elas` });
               await printReceiptsFor(receipts);
             }
-            if (data.emitNfce && rowsForNfce) await emitCreditReceiptNFCe(rowsForNfce, data.payments);
-            else setNfcePhase(null);
+            setNfcePhase(null);
           } else {
             setNfcePhase(null);
           }
@@ -1292,13 +1328,33 @@ export default function Receitas() {
       <FloatingFab onClick={() => setCreateOpen(true)} label="Nova receita" />
 
       {/* Overlay sequenciado durante Efetivar → Comprovante → NFC-e → DANFE */}
-      {nfcePhase && (
+      {(nfcePhase || nfceAck) && (
         <div className="fixed inset-0 z-[100] bg-background/85 backdrop-blur-sm flex items-center justify-center">
-          <div className="max-w-sm w-full mx-4 rounded-lg border bg-card shadow-xl p-6 text-center">
-            <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-3" />
-            <div className="text-lg font-semibold">{nfcePhase.label}</div>
-            {nfcePhase.detail && (
-              <div className="text-sm text-muted-foreground mt-1">{nfcePhase.detail}</div>
+          <div className="max-w-md w-full mx-4 rounded-lg border bg-card shadow-xl p-6 text-center">
+            {nfceAck ? (
+              <>
+                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary mx-auto mb-3 flex items-center justify-center text-2xl">🖨️</div>
+                <div className="text-lg font-semibold">{nfceAck.title}</div>
+                <div className="text-sm text-muted-foreground mt-2 mb-4">{nfceAck.hint}</div>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    const r = nfceAck.resolve;
+                    setNfceAck(null);
+                    r();
+                  }}
+                >
+                  Próximo
+                </Button>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-3" />
+                <div className="text-lg font-semibold">{nfcePhase!.label}</div>
+                {nfcePhase!.detail && (
+                  <div className="text-sm text-muted-foreground mt-1">{nfcePhase!.detail}</div>
+                )}
+              </>
             )}
           </div>
         </div>
