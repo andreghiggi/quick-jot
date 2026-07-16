@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.60.4-beta";
+export const VERSION = "1.61.0-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Trava Pagamento balcão fora do PDV";
+export const CODENAME = "Crediário — auditoria, estorno e amarração ao caixa";
 
 export interface Release {
   version: string;
@@ -19,6 +19,20 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.0-beta",
+    date: "2026-07-17",
+    codename: "Crediário — auditoria, estorno e amarração ao caixa",
+    changes: [
+      "Crediário passa a vincular cada recebimento (`accounts_receivable_payments`) ao caixa aberto no momento da operação (`cash_register_id`) — habilita auditoria por turno e evita que a mesma parcela apareça em dois relatórios de fechamento sobrepostos.",
+      "Novo botão 'Estornar' no diálogo 'Detalhes da venda' (Financeiro → Receitas): mostra o histórico de recebimentos do título e permite estornar cada linha com motivo obrigatório. Se o recebimento era TEF PinPad, o sistema dispara automaticamente o cancelamento (CNC + CNF) no gerenciador Multiplus antes de marcar como estornado no banco — se o TEF falhar, o estorno é abortado.",
+      "Estornar reabre o saldo do título (volta para 'Em aberto' quando estava quitado) e registra evento em `accounts_renegotiations` para trilha de auditoria.",
+      "Fechamento de caixa: quitações de crediário agora usam o nome canônico 'Dinheiro' quando a forma de pagamento é do tipo `payment_type='cash'` (mesmo que o cadastro use um nome custom como 'Dinheiro Vivo') — evita que o valor deixe de somar no dinheiro esperado do caixa.",
+      "Fechamento de caixa: recebimentos avulsos (título sem venda vinculada) aparecem em uma seção nova 'Receita avulsa efetivada', separada de 'Quitação de crediário' — corrige o mix contábil no relatório.",
+      "Rollback TEF no `receivePaymentSplit`: se a gravação do recebimento falhar após o TEF já ter sido aprovado, o sistema estorna automaticamente cada linha TEF aprovada — mesmo comportamento do PDV V2, evita cliente cobrado sem baixa do título.",
+      "Sem alteração em emissão fiscal (NFC-e/NF-e), PinPad, PDV V2, Frente de Caixa, Cardápio Online, Compras, Manifestação Eletrônica, Estoque ou WhatsApp.",
+    ],
+  },
   {
     version: "1.60.4-beta",
     date: "2026-07-17",
