@@ -500,34 +500,6 @@ export default function EspelhoFiscal() {
     }
   }
 
-  const filteredRows = useMemo(() => {
-    if (serie === 'todas') return rows;
-    return rows.filter((r) => r.serie === serie);
-  }, [rows, serie]);
-
-  const totals = useMemo(() => {
-    let qtdAut = 0, qtdCanc = 0, somaAut = 0, somaCanc = 0;
-    const porCfop = new Map<string, { qtd: number; valor: number }>();
-    const porPag = new Map<string, { qtd: number; valor: number }>();
-    for (const r of filteredRows) {
-      if (r.status === 'autorizada') { qtdAut++; somaAut += r.valor; }
-      else { qtdCanc++; somaCanc += r.valor; }
-      const c = r.cfop || '—';
-      const cAcc = porCfop.get(c) || { qtd: 0, valor: 0 };
-      cAcc.qtd += 1; cAcc.valor += r.status === 'autorizada' ? r.valor : 0;
-      porCfop.set(c, cAcc);
-      const pagamentos = r.pagamentosXml.length ? r.pagamentosXml : [{ code: '—', label: '—', value: r.valor }];
-      for (const p of pagamentos) {
-        const key = p.label || '—';
-        const pAcc = porPag.get(key) || { qtd: 0, valor: 0 };
-        pAcc.qtd += 1;
-        pAcc.valor += r.status === 'autorizada' ? Number(p.value ?? r.valor) : 0;
-        porPag.set(key, pAcc);
-      }
-    }
-    return { qtdAut, qtdCanc, somaAut, somaCanc, porCfop, porPag };
-  }, [filteredRows]);
-
   async function exportExcel() {
     const rowsToExport = await ensureData();
     if (!rowsToExport) return;
