@@ -398,7 +398,9 @@ export default function EspelhoFiscal() {
               chave: r.chave_acesso || '',
               valor: Number(r.valor_total || 0),
               cfop: cfops.join(', ') || '—',
-              natureza: cfops.length > 0 ? 'Venda de mercadoria' : '—',
+              natureza:
+                extractNaturezaFromPayload(r.request_payload) ||
+                naturezaFromCfops(cfops),
               pagamento: formatPayments(pagamentosXml),
               pagamentosXml,
               status: r.status as 'autorizada' | 'cancelada',
@@ -449,7 +451,7 @@ export default function EspelhoFiscal() {
             if (set && set.size) {
               const arr = Array.from(set);
               collected[i].cfop = arr.join(', ');
-              if (collected[i].natureza === '—') collected[i].natureza = 'Venda de mercadoria';
+              if (collected[i].natureza === '—') collected[i].natureza = naturezaFromCfops(arr);
             }
           }
         }
