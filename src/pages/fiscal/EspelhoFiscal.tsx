@@ -277,11 +277,11 @@ export default function EspelhoFiscal() {
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
   const [seriesDisponiveis, setSeriesDisponiveis] = useState<string[]>([]);
 
-  async function generate() {
-    if (!company?.id) return;
+  async function generate(): Promise<Row[] | null> {
+    if (!company?.id) return null;
     if (!dateFrom || !dateTo) {
       toast.error('Informe o período');
-      return;
+      return null;
     }
     setLoading(true);
     setProgress(null);
@@ -490,12 +490,12 @@ export default function EspelhoFiscal() {
       }
 
       collected.sort((a, b) => (a.dataEmissao < b.dataEmissao ? -1 : 1));
-      setRows(collected);
       setSeriesDisponiveis(Array.from(new Set(collected.map((r) => r.serie))).sort());
-      setGeneratedAt(new Date());
+      return collected;
     } catch (err: any) {
       console.error('[EspelhoFiscal] erro:', err);
       toast.error('Falha ao gerar espelho', { description: err?.message });
+      return null;
     } finally {
       setLoading(false);
       setProgress(null);
