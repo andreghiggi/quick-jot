@@ -1023,6 +1023,16 @@ Deno.serve(async (req) => {
 
             if (xmlText) {
               result = { success: true, xml: xmlText }
+              // Cache no banco para relatórios (Espelho Fiscal, backfill etc.)
+              try {
+                await supabase
+                  .from('nfce_records')
+                  .update({ xml_content: xmlText, updated_at: new Date().toISOString() })
+                  .eq('nfce_id', nfceId)
+                  .eq('company_id', companyId)
+              } catch (e) {
+                console.error('[nfce-proxy] xml cache error:', e)
+              }
             } else {
               console.error('[nfce-proxy] XML unrecognized shape:', rawText.substring(0, 400))
               result = {
