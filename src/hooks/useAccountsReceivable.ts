@@ -165,6 +165,17 @@ export function useAccountsReceivable(companyId?: string | null) {
       return false;
     }
 
+    // Vincula ao caixa aberto (quando existir) para auditoria por turno.
+    const { data: openReg } = await supabase
+      .from('cash_registers' as any)
+      .select('id')
+      .eq('company_id', input.companyId)
+      .eq('status', 'open')
+      .order('opened_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const cashRegisterId = (openReg as any)?.id ?? null;
+
     // 2) insere recebimento
     const { error: e2 } = await supabase
       .from('accounts_receivable_payments' as any)
@@ -176,6 +187,7 @@ export function useAccountsReceivable(companyId?: string | null) {
         payment_name: input.paymentName,
         operator_id: input.operatorId ?? null,
         notes: input.notes ?? null,
+        cash_register_id: cashRegisterId,
       });
     if (e2) {
       console.error('[useAccountsReceivable] receive error', e2);
