@@ -1051,6 +1051,9 @@ export default function Receitas() {
         group={detailsGroup}
         onClose={() => setDetailsGroup(null)}
         today={today}
+        companyId={company?.id}
+        userId={user?.id}
+        onReverse={() => reload()}
       />
 
       {/* Novo diálogo — Efetivar receita (estilo Gweb) */}
@@ -1505,11 +1508,14 @@ function SaleGroupCard({
 }
 
 function DetalhesVendaDialog({
-  group, onClose, today,
+  group, onClose, today, companyId, userId, onReverse,
 }: {
   group: GroupItem | null;
   onClose: () => void;
   today: string;
+  companyId?: string;
+  userId?: string | null;
+  onReverse?: () => void;
 }) {
   if (!group) return null;
   const rows = group.kind === 'sale' ? group.parcelas : [group.row];
@@ -1517,6 +1523,46 @@ function DetalhesVendaDialog({
   const total = rows.reduce((s, r) => s + Number(r.amount), 0);
   const paid = rows.reduce((s, r) => s + (Number(r.amount) - Number(r.balance)), 0);
   const balance = rows.reduce((s, r) => s + Number(r.balance), 0);
+  const { reversePayment } = useAccountsReceivable(companyId);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loadingHist, setLoadingHist] = useState(false);
+  const [reversingId, setReversingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (!group) return;
+      setLoadingHist(true);
+      const ids = rows.map((r) => r.id);
+      const { data } = await supabase
+        .from('accounts_receivable_payments' as any)
+        .select('id, receivable_id, amount, payment_name, notes, paid_at, reversed_at, reversal_reason')
+        .in('receivable_id', ids)
+        .order('paid_at', { ascending: true });
+      setHistory(((data as any[]) || []));
+      setLoadingHist(false);
+    })();
+     
+  }, [group]);
+
+  const handleReverse = async (paymentId: string) => {
+    if (!companyId) return;
+    const reason = window.prompt('Motivo do estorno (obrigatório):');
+    if (!reason?.trim()) return;
+    setReversingId(paymentId);
+    const ok = await reversePayment({ paymentId, companyId, reason, userId: userId ?? null });
+    setReversingId(null);
+    if (ok) {
+      // recarrega histórico local
+      const ids = rows.map((r) => r.id);
+      const { data } = await supabase
+        .from('accounts_receivable_payments' as any)
+        .select('id, receivable_id, amount, payment_name, notes, paid_at, reversed_at, reversal_reason')
+        .in('receivable_id', ids)
+        .order('paid_at', { ascending: true });
+      setHistory(((data as any[]) || []));
+      onReverse?.();
+    }
+  };
 
   return (
     <Dialog open={!!group} onOpenChange={(o) => !o && onClose()}>
@@ -1577,6 +1623,64 @@ function DetalhesVendaDialog({
                 </tr>
               </tfoot>
             </table>
+          </div>
+
+          <div className="rounded-md border">
+            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-muted/20">
+              Histórico de recebimentos
+            </div>
+            {loadingHist ? (
+              <div className="p-3 text-xs text-muted-foreground">Carregando…</div>
+            ) : history.length === 0 ? (
+              <div className="p-3 text-xs text-muted-foreground">Nenhum recebimento registrado.</div>
+            ) : (
+              <table className="w-full text-xs">
+                <thead className="text-muted-foreground">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-normal">Data</th>
+                    <th className="text-left px-3 py-2 font-normal">Forma</th>
+                    <th className="text-right px-3 py-2 font-normal">Valor</th>
+                    <th className="text-left px-3 py-2 font-normal">Situação</th>
+                    <th className="px-3 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {history.map((h) => (
+                    <tr key={h.id} className={h.reversed_at ? 'opacity-60' : ''}>
+                      <td className="px-3 py-2 tabular-nums">
+                        {new Date(h.paid_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
+                      </td>
+                      <td className="px-3 py-2">{h.payment_name}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{brl(Number(h.amount))}</td>
+                      <td className="px-3 py-2">
+                        {h.reversed_at ? (
+                          <span className="text-destructive">Estornado</span>
+                        ) : (
+                          <span className="text-emerald-500">Ativo</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {!h.reversed_at && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-destructive hover:text-destructive"
+                            disabled={reversingId === h.id}
+                            onClick={() => handleReverse(h.id)}
+                          >
+                            {reversingId === h.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              'Estornar'
+                            )}
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 

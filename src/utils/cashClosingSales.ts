@@ -150,23 +150,46 @@ export async function loadCashClosingSales(params: {
   // a parte em espécie).
   let credPaymentsQuery = supabase
     .from('accounts_receivable_payments')
-    .select('id, amount, payment_method_id, payment_name, paid_at, notes, receivable:receivable_id(customer_name)')
+    .select('id, amount, payment_method_id, payment_name, paid_at, notes, reversed_at, receivable:receivable_id(customer_name, pdv_sale_id, origin)')
     .eq('company_id', companyId)
+    .is('reversed_at', null)
     .gte('paid_at', openedAt);
   if (closedAt) credPaymentsQuery = credPaymentsQuery.lte('paid_at', closedAt);
   const { data: credPayments } = await credPaymentsQuery;
 
+  // Normaliza formas cujo payment_type='cash' para o nome canônico "Dinheiro"
+  // — garante que caixas com forma custom (ex.: "Dinheiro Vivo") também
+  // entrem no total esperado de espécie do fechamento.
+  const { data: cashMethods } = await supabase
+    .from('payment_methods')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('payment_type', 'cash');
+  const cashMethodIds = new Set(((cashMethods as any[]) || []).map((m) => m.id as string));
+
   const credSales: CloseCashSale[] = ((credPayments as any[]) || [])
-    .map((p: any) => ({
-      id: `arp-${p.id}`,
-      final_total: Number(p.amount) || 0,
-      payment_method_id: p.payment_method_id || null,
-      payment_method_name: appendTefSubtype(p.payment_name || 'Sem forma', p.notes),
-      customer_name: p.receivable?.customer_name || null,
-      created_at: p.paid_at,
-      origin: 'quitacao_crediario' as const,
-      source_module: 'pdv' as const,
-    }))
+    .map((p: any) => {
+      const isCash = p.payment_method_id && cashMethodIds.has(p.payment_method_id);
+      const rawName = p.payment_name || 'Sem forma';
+      // Se a forma é do tipo cash mas o nome não contém "Dinheiro", força o
+      // nome canônico p/ o filtro `isCashPaymentMethodName` casar.
+      const canonicalName = isCash && !/dinheiro/i.test(rawName)
+        ? `Dinheiro (${rawName})`
+        : rawName;
+      const isAvulsa = !p.receivable?.pdv_sale_id
+        || (p.receivable?.origin && p.receivable.origin !== 'crediario');
+      const origin: CloseCashSale['origin'] = isAvulsa ? 'receita_avulsa' : 'quitacao_crediario';
+      return {
+        id: `arp-${p.id}`,
+        final_total: Number(p.amount) || 0,
+        payment_method_id: p.payment_method_id || null,
+        payment_method_name: appendTefSubtype(canonicalName, p.notes),
+        customer_name: p.receivable?.customer_name || null,
+        created_at: p.paid_at,
+        origin,
+        source_module: 'pdv' as const,
+      };
+    })
     .filter((s) => s.final_total > 0);
 
   return [...mapped, ...missingCashSales, ...credSales];

@@ -6,6 +6,7 @@ const ORIGIN_LABEL: Record<CloseCashSale['origin'], string> = {
   cardapio_delivery: 'Deliveries',
   mesa: 'Mesas Importadas',
   quitacao_crediario: 'Quitação de crediário',
+  receita_avulsa: 'Receita avulsa efetivada',
   outros: 'Outros',
 };
 

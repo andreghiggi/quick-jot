@@ -279,6 +279,7 @@ export type Database = {
       accounts_receivable_payments: {
         Row: {
           amount: number
+          cash_register_id: string | null
           company_id: string
           created_at: string
           id: string
@@ -288,10 +289,15 @@ export type Database = {
           payment_method_id: string | null
           payment_name: string
           receivable_id: string
+          reversal_reason: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+          tef_control_number: string | null
           updated_at: string
         }
         Insert: {
           amount: number
+          cash_register_id?: string | null
           company_id: string
           created_at?: string
           id?: string
@@ -301,10 +307,15 @@ export type Database = {
           payment_method_id?: string | null
           payment_name: string
           receivable_id: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          tef_control_number?: string | null
           updated_at?: string
         }
         Update: {
           amount?: number
+          cash_register_id?: string | null
           company_id?: string
           created_at?: string
           id?: string
@@ -314,9 +325,20 @@ export type Database = {
           payment_method_id?: string | null
           payment_name?: string
           receivable_id?: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          tef_control_number?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_payments_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "accounts_receivable_payments_company_id_fkey"
             columns: ["company_id"]
