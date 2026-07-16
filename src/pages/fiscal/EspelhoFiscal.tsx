@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { BookMarked, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
@@ -273,8 +273,6 @@ export default function EspelhoFiscal() {
 
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
-  const [rows, setRows] = useState<Row[]>([]);
-  const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
   const [seriesDisponiveis, setSeriesDisponiveis] = useState<string[]>([]);
 
   async function generate(): Promise<Row[] | null> {
