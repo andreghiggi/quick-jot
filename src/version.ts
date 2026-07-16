@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.60.1-beta";
+export const VERSION = "1.60.2-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Espelho Fiscal — geração direta do arquivo";
+export const CODENAME = "Espelho Fiscal — natureza correta no fallback";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.60.2-beta",
+    date: "2026-07-17",
+    codename: "Espelho Fiscal — natureza correta no fallback",
+    changes: [
+      "Correção no Espelho Fiscal quando a nota ainda não tem XML autorizado cacheado (fonte 'Local'): a natureza da operação agora é lida do `natureza_operacao` do payload fiscal (o mesmo que foi enviado à Fiscal Flow) e, se ausente, derivada do CFOP — 5949/6949 vira 'Recebimento de crediário', devolução vira 'Devolução', transferência vira 'Transferência', e só o restante cai em 'Venda de mercadoria'.",
+      "Antes, qualquer nota sem XML cacheado saía com 'Venda de mercadoria' cravado, mesmo sendo NFC-e financeira (CFOP 5949) — o que confundia a contabilidade.",
+      "Notas com XML autorizado já cacheado continuam usando o `natOp` real do XML da SEFAZ (fonte 'XML'), sem mudança.",
+      "Sem alteração em emissão, TEF, PinPad, PDV, Frente de Caixa, NF-e, Compras ou Financeiro.",
+    ],
+  },
   {
     version: "1.60.1-beta",
     date: "2026-07-17",

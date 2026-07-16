@@ -262,6 +262,33 @@ function extractCfopsFromPayload(payload: any): string[] {
   return Array.from(set);
 }
 
+function extractNaturezaFromPayload(payload: any): string | null {
+  if (!payload) return null;
+  const n =
+    payload?.natureza_operacao ||
+    payload?.naturezaOperacao ||
+    payload?.natOp ||
+    payload?.nfce?.natureza_operacao ||
+    payload?.nfe?.natureza_operacao;
+  return typeof n === 'string' && n.trim().length > 0 ? n.trim() : null;
+}
+
+function naturezaFromCfops(cfops: string[]): string {
+  if (!cfops.length) return '—';
+  const set = new Set(cfops.map((c) => String(c)));
+  // Financeiras (recebimento de crediário/duplicata) — usar 5949/6949
+  if (set.has('5949') || set.has('6949')) return 'Recebimento de crediário';
+  // Devolução
+  if (Array.from(set).some((c) => c.startsWith('5202') || c.startsWith('6202') || c.startsWith('1202') || c.startsWith('2202'))) {
+    return 'Devolução';
+  }
+  // Transferência
+  if (Array.from(set).some((c) => c.startsWith('5152') || c.startsWith('6152'))) {
+    return 'Transferência';
+  }
+  return 'Venda de mercadoria';
+}
+
 export default function EspelhoFiscal() {
   const { company } = useAuthContext();
 
@@ -371,7 +398,9 @@ export default function EspelhoFiscal() {
               chave: r.chave_acesso || '',
               valor: Number(r.valor_total || 0),
               cfop: cfops.join(', ') || '—',
-              natureza: cfops.length > 0 ? 'Venda de mercadoria' : '—',
+              natureza:
+                extractNaturezaFromPayload(r.request_payload) ||
+                naturezaFromCfops(cfops),
               pagamento: formatPayments(pagamentosXml),
               pagamentosXml,
               status: r.status as 'autorizada' | 'cancelada',
@@ -422,7 +451,7 @@ export default function EspelhoFiscal() {
             if (set && set.size) {
               const arr = Array.from(set);
               collected[i].cfop = arr.join(', ');
-              if (collected[i].natureza === '—') collected[i].natureza = 'Venda de mercadoria';
+              if (collected[i].natureza === '—') collected[i].natureza = naturezaFromCfops(arr);
             }
           }
         }
@@ -478,7 +507,10 @@ export default function EspelhoFiscal() {
             chave: r.chave_acesso || '',
             valor: Number(r.valor_total || 0),
             cfop: cfops.join(', ') || '—',
-            natureza: r.natureza_operacao || '—',
+            natureza:
+              r.natureza_operacao ||
+              extractNaturezaFromPayload(r.request_payload) ||
+              naturezaFromCfops(cfops),
             pagamento: formatPayments(pagamentosXml),
             pagamentosXml,
             status: r.status as 'autorizada' | 'cancelada',
