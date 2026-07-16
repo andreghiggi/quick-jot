@@ -346,6 +346,17 @@ export function useAccountsReceivable(companyId?: string | null) {
       return m ? m[1].trim() : null;
     };
 
+    // Vincula ao caixa aberto (quando existir) para auditoria por turno.
+    const { data: openReg } = await supabase
+      .from('cash_registers' as any)
+      .select('id')
+      .eq('company_id', input.companyId)
+      .eq('status', 'open')
+      .order('opened_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const cashRegisterId = (openReg as any)?.id ?? null;
+
     // Inserir cada pagamento individual
     const rows = input.payments.map((p) => ({
       receivable_id: input.receivableId,
@@ -356,6 +367,7 @@ export function useAccountsReceivable(companyId?: string | null) {
       operator_id: input.operatorId ?? null,
       notes: p.notes ?? null,
       tef_control_number: extractControl(p.notes),
+      cash_register_id: cashRegisterId,
     }));
     const { error: e2 } = await supabase.from('accounts_receivable_payments' as any).insert(rows);
     if (e2) {
