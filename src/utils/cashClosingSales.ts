@@ -150,8 +150,9 @@ export async function loadCashClosingSales(params: {
   // a parte em espécie).
   let credPaymentsQuery = supabase
     .from('accounts_receivable_payments')
-    .select('id, amount, payment_method_id, payment_name, paid_at, notes, receivable:receivable_id(customer_name)')
+    .select('id, amount, payment_method_id, payment_name, paid_at, notes, reversed_at, receivable:receivable_id(customer_name)')
     .eq('company_id', companyId)
+    .is('reversed_at', null)
     .gte('paid_at', openedAt);
   if (closedAt) credPaymentsQuery = credPaymentsQuery.lte('paid_at', closedAt);
   const { data: credPayments } = await credPaymentsQuery;
