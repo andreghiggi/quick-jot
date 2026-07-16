@@ -613,6 +613,12 @@ export default function Receitas() {
         if (!hasMercadoria) {
           try {
             await emitNfceForReceivables(arRowsOfSale);
+            // Dá tempo do operador imprimir e fechar o diálogo antes
+            // de disparar a próxima nota (financeira).
+            await waitOperatorAck(
+              'NFC-e da venda emitida',
+              'Confira a impressão do cupom fiscal da mercadoria e feche o diálogo. Clique em "Próximo" quando terminar para emitir a nota financeira do recebimento.',
+            );
           } catch (e: any) {
             console.error('[Receitas] falha ao emitir mercadoria (on_receipt)', e);
           }
@@ -724,6 +730,10 @@ export default function Receitas() {
             }
           }
           toast.success(`NFC-e financeira nº ${rec.numero || ''} autorizada.`);
+          await waitOperatorAck(
+            `NFC-e financeira nº ${rec.numero || ''} emitida`,
+            'Confira a impressão do cupom fiscal financeiro e feche o diálogo. Clique em "Próximo" para imprimir o comprovante de quitação da parcela.',
+          );
         } else if (rec) {
           setNfceError(rec.motivo_rejeicao || `NFC-e financeira ${rec.status}. Verifique no Monitor NFC-e.`);
         } else {
