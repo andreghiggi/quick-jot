@@ -1045,7 +1045,11 @@ export default function FrenteCaixa() {
               : cleanDoc.length === 14
                 ? { cnpj: cleanDoc, nome: params.customerName || undefined }
                 : undefined;
-            const externalId = `FCX-${currentRegister?.id?.substring(0, 8) || 'NOCR'}-${Date.now()}`;
+            // external_id DETERMINÍSTICO por venda: usa o saleId (uuid da
+            // pdv_sales) para garantir idempotência no nfce-proxy. Se o
+            // operador clicar "Cobrar" novamente após timeout, o proxy
+            // devolve a NFC-e já emitida em vez de consumir outra numeração.
+            const externalId = `FCX-${saleId}`;
             return {
               external_id: externalId,
               itens: nfceItems,

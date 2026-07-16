@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.56.3-beta";
-export const RELEASE_DATE = "2026-07-16"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e: inutilização sem bloqueio por CNPJ";
+export const VERSION = "1.57.0-beta";
+export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "NFC-e: fim das duplicidades (idempotência + contingência sem retry)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.57.0-beta",
+    date: "2026-07-17",
+    codename: "NFC-e: fim das duplicidades (idempotência + contingência sem retry)",
+    changes: [
+      "Correção fiscal crítica: REMOVIDA a contingência automática por timeout de 8s no nfce-proxy que causou notas duplicadas na Cozinha da Ruiva (13602/13604/13605 e outras). O timeout abortava a primeira requisição enquanto a SEFAZ ainda estava autorizando e o sistema disparava uma segunda emissão em contingência — resultando em duas NFC-e autorizadas para a mesma venda.",
+      "Novo comportamento: timeout agora significa 'aguardando retorno' — o sistema grava um registro 'processando' com o external_id e NÃO reemite. O operador consulta a NFC-e pelo external_id no Monitor NFC-e em vez de gerar nova numeração.",
+      "Idempotência por (company_id, external_id): antes de emitir, o proxy verifica se já existe uma NFC-e autorizada/processando/pendente para o mesmo external_id. Se existir, devolve o registro em vez de consumir uma nova numeração. Protege contra cliques duplicados, retries do frontend e reprocessos.",
+      "Frente de Caixa: o external_id passa a ser DETERMINÍSTICO por venda (`FCX-<sale_id>`), removendo o `Date.now()` que impedia a idempotência funcionar em reemissões.",
+      "Timeout de emissão elevado de 8s para 60s — SEFAZ lenta agora aguarda em vez de disparar duplicata.",
+      "Sem alteração em TEF, PinPad, PDV V2, Pedido Express, Cobrança, NF-e, Compras, Manifestação Eletrônica, Estoque, Financeiro ou impressão.",
+    ],
+  },
   {
     version: "1.56.3-beta",
     date: "2026-07-16",
