@@ -43,7 +43,204 @@ interface Row {
   cfop: string;
   natureza: string;
   pagamento: string;
+  pagamentosXml: PaymentInfo[];
   status: 'autorizada' | 'cancelada';
+}
+
+type PaymentInfo = {
+  code: string;
+  label: string;
+  value?: number;
+};
+
+const TPAG_LABELS: Record<string, string> = {
+  '01': 'Dinheiro',
+  '02': 'Cheque',
+  '03': 'Cartão de Crédito',
+  '04': 'Cartão de Débito',
+  '05': 'Crédito Loja',
+  '10': 'Vale Alimentação',
+  '11': 'Vale Refeição',
+  '12': 'Vale Presente',
+  '13': 'Vale Combustível',
+  '15': 'Boleto Bancário',
+  '16': 'Depósito Bancário',
+  '17': 'PIX',
+  '18': 'Transferência Bancária',
+  '19': 'Programa de Fidelidade',
+  '90': 'Sem Pagamento',
+  '99': 'Outros',
+};
+
+function paymentLabel(code?: string | number | null): string {
+  const normalized = String(code || '').padStart(2, '0');
+  return `${normalized} - ${TPAG_LABELS[normalized] || 'Outros'}`;
+}
+
+function paymentCodeFromType(type?: string): string {
+  const t = String(type || '').toLowerCase();
+  if (t === 'credit') return '03';
+  if (t === 'debit') return '04';
+  if (t === 'pix') return '17';
+  return '99';
+}
+
+function parseMoneyLike(value: any): number | undefined {
+  if (value === null || value === undefined || value === '') return undefined;
+  const n = typeof value === 'number'
+    ? value
+    : Number(String(value).replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function normalizePayments(payments: PaymentInfo[]): PaymentInfo[] {
+  const map = new Map<string, PaymentInfo>();
+  for (const p of payments) {
+    if (!p.code) continue;
+    const existing = map.get(p.code);
+    if (!existing) {
+      map.set(p.code, { ...p, label: paymentLabel(p.code) });
+      continue;
+    }
+    if (p.value !== undefined) existing.value = Number(existing.value || 0) + p.value;
+  }
+  return Array.from(map.values());
+}
+
+function formatPayments(payments: PaymentInfo[]): string {
+  if (!payments.length) return '—';
+  const showValues = payments.length > 1;
+  return payments
+    .map((p) => showValues && p.value !== undefined ? `${p.label} (${fmtMoney(p.value)})` : p.label)
+    .join(' + ');
+}
+
+function maybeDecodeBase64Xml(value: string): string {
+  if (value.includes('<detPag') || value.includes('<NFe') || value.includes('<nfeProc')) return value;
+  try {
+    const decoded = atob(value);
+    if (decoded.includes('<detPag') || decoded.includes('<NFe') || decoded.includes('<nfeProc')) return decoded;
+  } catch {
+    // não era base64
+  }
+  return value;
+}
+
+function findXmlString(source: any, depth = 0): string | null {
+  if (!source || depth > 5) return null;
+  if (typeof source === 'string') {
+    const xml = maybeDecodeBase64Xml(source);
+    return xml.includes('<detPag') || xml.includes('<NFe') || xml.includes('<nfeProc') ? xml : null;
+  }
+  if (Array.isArray(source)) {
+    for (const item of source) {
+      const xml = findXmlString(item, depth + 1);
+      if (xml) return xml;
+    }
+    return null;
+  }
+  if (typeof source === 'object') {
+    const preferredKeys = ['xml_retorno', 'xmlRetorno', 'xml', 'xml_nfe', 'xmlNfe', 'procNFe', 'conteudo_xml'];
+    for (const key of preferredKeys) {
+      const xml = findXmlString(source[key], depth + 1);
+      if (xml) return xml;
+    }
+    for (const value of Object.values(source)) {
+      const xml = findXmlString(value, depth + 1);
+      if (xml) return xml;
+    }
+  }
+  return null;
+}
+
+function extractPaymentsFromXml(xml: string | null): PaymentInfo[] {
+  if (!xml) return [];
+  try {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    if (!doc.getElementsByTagName('parsererror').length) {
+      const payments = Array.from(doc.getElementsByTagName('detPag')).map((det) => {
+        const code = det.getElementsByTagName('tPag')[0]?.textContent?.trim() || '';
+        const value = parseMoneyLike(det.getElementsByTagName('vPag')[0]?.textContent?.trim());
+        return { code, label: paymentLabel(code), value };
+      });
+      return normalizePayments(payments);
+    }
+  } catch {
+    // fallback regex abaixo
+  }
+
+  const payments: PaymentInfo[] = [];
+  for (const match of xml.matchAll(/<detPag\b[\s\S]*?<\/detPag>/g)) {
+    const block = match[0];
+    const code = block.match(/<tPag>(.*?)<\/tPag>/)?.[1]?.trim() || '';
+    const value = parseMoneyLike(block.match(/<vPag>(.*?)<\/vPag>/)?.[1]?.trim());
+    payments.push({ code, label: paymentLabel(code), value });
+  }
+  return normalizePayments(payments);
+}
+
+function extractPaymentsFromFiscalPayload(payload: any): PaymentInfo[] {
+  if (!payload) return [];
+
+  const detPag = payload?.pag?.detPag || payload?.detPag;
+  if (Array.isArray(detPag) && detPag.length) {
+    return normalizePayments(detPag.map((p: any) => ({
+      code: String(p?.tPag || ''),
+      label: paymentLabel(p?.tPag),
+      value: parseMoneyLike(p?.vPag),
+    })));
+  }
+
+  if (Array.isArray(payload?.pagamentos) && payload.pagamentos.length) {
+    return normalizePayments(payload.pagamentos.map((p: any) => ({
+      code: String(p?.tPag || p?.forma_pagamento || ''),
+      label: paymentLabel(p?.tPag || p?.forma_pagamento),
+      value: parseMoneyLike(p?.vPag || p?.valor_pagamento || p?.valor),
+    })));
+  }
+
+  if (Array.isArray(payload?.formas_pagamento) && payload.formas_pagamento.length) {
+    return normalizePayments(payload.formas_pagamento.map((p: any) => ({
+      code: String(p?.forma_pagamento || p?.tPag || ''),
+      label: paymentLabel(p?.forma_pagamento || p?.tPag),
+      value: parseMoneyLike(p?.valor_pagamento || p?.vPag || p?.valor),
+    })));
+  }
+
+  if (payload?.pagamento) {
+    const p = payload.pagamento;
+    return normalizePayments([{
+      code: String(p?.tPag || p?.forma_pagamento || ''),
+      label: paymentLabel(p?.tPag || p?.forma_pagamento),
+      value: parseMoneyLike(p?.vPag || p?.valor_pagamento || p?.valor),
+    }]);
+  }
+
+  if (Array.isArray(payload?.pagamentos_split) && payload.pagamentos_split.length) {
+    return normalizePayments(payload.pagamentos_split.map((p: any) => {
+      const code = p?.tipo === 'tef'
+        ? paymentCodeFromType(p?.tef?.tipo_pagamento)
+        : p?.tipo === 'crediario'
+          ? '05'
+          : p?.tipo === 'pix'
+            ? '17'
+            : p?.tipo === 'cash'
+              ? '01'
+              : '99';
+      return { code, label: paymentLabel(code), value: parseMoneyLike(p?.valor) };
+    }));
+  }
+
+  return [];
+}
+
+function extractFiscalPayments(record: any): PaymentInfo[] {
+  const xml = findXmlString(record?.response_payload) || findXmlString(record?.webhook_payload);
+  const fromXml = extractPaymentsFromXml(xml);
+  if (fromXml.length) return fromXml;
+
+  // Fallback fiscal: só usa payloads fiscais da nota. Não consulta a venda/caixa.
+  return extractPaymentsFromFiscalPayload(record?.request_payload);
 }
 
 function extractCfopsFromPayload(payload: any): string[] {
@@ -97,7 +294,7 @@ export default function EspelhoFiscal() {
       if (modelo === 'todos' || modelo === '65') {
         const { data, error } = await (supabase as any)
           .from('nfce_records')
-          .select('id, sale_id, numero, serie, chave_acesso, valor_total, status, created_at, request_payload')
+          .select('id, sale_id, numero, serie, chave_acesso, valor_total, status, created_at, request_payload, response_payload, webhook_payload')
           .eq('company_id', company.id)
           .in('status', wantStatus)
           .gte('created_at', fromIso)
@@ -105,51 +302,9 @@ export default function EspelhoFiscal() {
           .order('created_at', { ascending: true });
         if (error) throw error;
 
-        // pagamentos por sale_id
-        const saleIds = (data || []).map((r: any) => r.sale_id).filter(Boolean);
-        const pagPorVenda = new Map<string, string>();
-        if (saleIds.length) {
-          const { data: pags } = await (supabase as any)
-            .from('pdv_sale_payments')
-            .select('sale_id, payment_method_name, amount')
-            .in('sale_id', saleIds);
-          const acc = new Map<string, string[]>();
-          for (const p of pags || []) {
-            const list = acc.get(p.sale_id) || [];
-            list.push(p.payment_method_name || '—');
-            acc.set(p.sale_id, list);
-          }
-          for (const [sid, list] of acc) {
-            pagPorVenda.set(sid, Array.from(new Set(list)).join(' + '));
-          }
-
-          // Fallback: vendas single-payment não têm split — usa payment_method da pdv_sales
-          const semSplit = saleIds.filter((sid: string) => !pagPorVenda.has(sid));
-          if (semSplit.length) {
-            const { data: sales } = await (supabase as any)
-              .from('pdv_sales')
-              .select('id, payment_method_id')
-              .in('id', semSplit);
-            const pmIds = Array.from(
-              new Set((sales || []).map((s: any) => s.payment_method_id).filter(Boolean)),
-            );
-            const pmMap = new Map<string, string>();
-            if (pmIds.length) {
-              const { data: pms } = await (supabase as any)
-                .from('payment_methods')
-                .select('id, name')
-                .in('id', pmIds);
-              for (const pm of pms || []) pmMap.set(pm.id, pm.name);
-            }
-            for (const s of sales || []) {
-              const nome = s.payment_method_id ? pmMap.get(s.payment_method_id) : null;
-              if (nome) pagPorVenda.set(s.id, nome);
-            }
-          }
-        }
-
         for (const r of data || []) {
           const cfops = extractCfopsFromPayload(r.request_payload);
+          const pagamentosXml = extractFiscalPayments(r);
           collected.push({
             id: r.id,
             modelo: '65',
@@ -160,7 +315,8 @@ export default function EspelhoFiscal() {
             valor: Number(r.valor_total || 0),
             cfop: cfops.join(', ') || '—',
             natureza: cfops.length > 0 ? 'Venda de mercadoria' : '—',
-            pagamento: pagPorVenda.get(r.sale_id) || '—',
+            pagamento: formatPayments(pagamentosXml),
+            pagamentosXml,
             status: r.status as 'autorizada' | 'cancelada',
           });
         }
@@ -218,7 +374,7 @@ export default function EspelhoFiscal() {
       if (modelo === 'todos' || modelo === '55') {
         const { data, error } = await (supabase as any)
           .from('nfe_records')
-          .select('id, numero, serie, chave_acesso, valor_total, status, created_at, natureza_operacao, request_payload')
+          .select('id, numero, serie, chave_acesso, valor_total, status, created_at, natureza_operacao, request_payload, response_payload, webhook_payload')
           .eq('company_id', company.id)
           .in('status', wantStatus)
           .gte('created_at', fromIso)
@@ -228,6 +384,7 @@ export default function EspelhoFiscal() {
 
         for (const r of data || []) {
           const cfops = extractCfopsFromPayload(r.request_payload);
+          const pagamentosXml = extractFiscalPayments(r);
           collected.push({
             id: r.id,
             modelo: '55',
@@ -238,7 +395,8 @@ export default function EspelhoFiscal() {
             valor: Number(r.valor_total || 0),
             cfop: cfops.join(', ') || '—',
             natureza: r.natureza_operacao || '—',
-            pagamento: '—', // NF-e não tem vínculo direto com pdv_sale_payments
+            pagamento: formatPayments(pagamentosXml),
+            pagamentosXml,
             status: r.status as 'autorizada' | 'cancelada',
           });
         }
@@ -272,10 +430,14 @@ export default function EspelhoFiscal() {
       const cAcc = porCfop.get(c) || { qtd: 0, valor: 0 };
       cAcc.qtd += 1; cAcc.valor += r.status === 'autorizada' ? r.valor : 0;
       porCfop.set(c, cAcc);
-      const p = r.pagamento || '—';
-      const pAcc = porPag.get(p) || { qtd: 0, valor: 0 };
-      pAcc.qtd += 1; pAcc.valor += r.status === 'autorizada' ? r.valor : 0;
-      porPag.set(p, pAcc);
+      const pagamentos = r.pagamentosXml.length ? r.pagamentosXml : [{ code: '—', label: '—', value: r.valor }];
+      for (const p of pagamentos) {
+        const key = p.label || '—';
+        const pAcc = porPag.get(key) || { qtd: 0, valor: 0 };
+        pAcc.qtd += 1;
+        pAcc.valor += r.status === 'autorizada' ? Number(p.value ?? r.valor) : 0;
+        porPag.set(key, pAcc);
+      }
     }
     return { qtdAut, qtdCanc, somaAut, somaCanc, porCfop, porPag };
   }, [filteredRows]);

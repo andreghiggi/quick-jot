@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.59.0-beta";
+export const VERSION = "1.59.1-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Espelho Fiscal — relatório de notas para a contabilidade";
+export const CODENAME = "Espelho Fiscal — pagamento fiscal pelo XML";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.59.1-beta",
+    date: "2026-07-17",
+    codename: "Espelho Fiscal — pagamento fiscal pelo XML",
+    changes: [
+      "Espelho Fiscal agora prioriza a forma de pagamento fiscal gravada no XML/retorno da nota (`detPag/tPag`), em vez da forma gerencial da venda/caixa.",
+      "O relatório passa a exibir os códigos fiscais oficiais: 01 Dinheiro, 03 Cartão de Crédito, 04 Cartão de Débito, 05 Crédito Loja, 17 PIX, entre outros.",
+      "Em notas com mais de uma forma de pagamento, o relatório mostra as formas combinadas e totaliza pelos valores fiscais de cada `detPag`.",
+      "Fallback restrito ao payload fiscal da própria nota quando o XML não estiver salvo; não consulta `pdv_sales` nem formas customizadas do caixa.",
+    ],
+  },
   {
     version: "1.59.0-beta",
     date: "2026-07-17",
