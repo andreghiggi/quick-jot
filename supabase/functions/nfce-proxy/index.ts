@@ -54,16 +54,28 @@ Deno.serve(async (req) => {
     const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
     const isI9 = companyId === I9_COMPANY_ID
 
-    // ---- Contingência Offline ----------------------------------------------
-    // ATENÇÃO: a contingência automática por timeout foi REMOVIDA (17/07/2026)
-    // porque estava causando duplicidade fiscal — o timeout de 8s abortava a
-    // primeira requisição enquanto a SEFAZ ainda estava autorizando a NFC-e e
-    // o proxy disparava uma segunda emissão em contingência, resultando em duas
-    // notas autorizadas para a mesma venda (13602/13604/13605 etc.).
-    // Agora: timeout = "processando" (aguardando retorno), sem segunda emissão.
-    // Idempotência por (company_id, external_id) garante que retries do cliente
-    // não gerem uma nova NFC-e.
-    const EMIT_TIMEOUT_MS = 60000
+    // ---- Contingência Offline SEGURA (protocolo Fiscal Flow v2) ------------
+    // Fluxo:
+    //  1) Tenta emitir online com timeout curto (20s).
+    //  2) Se estourar, chama POST /nfce-api/abortar-online?external_id=... na
+    //     FF para impedir que a SEFAZ autorize a original atrasada.
+    //     - 200: abortou. Reemitimos com tp_emis=9 (contingência) usando o
+    //       MESMO external_id, mantendo idempotência.
+    //     - 409: SEFAZ já autorizou a original — usamos ela, sem duplicar.
+    //     - outro: mantém como "processando" para consulta posterior.
+    //  3) Idempotência por (company_id, external_id) impede duplicidade.
+    const EMIT_TIMEOUT_MS = 20000
+    const FF_BASE_URL = NFCE_API_URL.replace(/\/emitir\/?$/i, '').replace(/\/+$/, '')
+
+    async function fetchWithTimeout(url: string, init: RequestInit, ms: number) {
+      const ctrl = new AbortController()
+      const t = setTimeout(() => ctrl.abort(), ms)
+      try {
+        return await fetch(url, { ...init, signal: ctrl.signal })
+      } finally {
+        clearTimeout(t)
+      }
+    }
 
     let NFCE_API_KEY: string | null = GLOBAL_NFCE_API_KEY ?? null
     try {
