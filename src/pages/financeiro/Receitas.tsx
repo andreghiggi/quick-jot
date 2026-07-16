@@ -1113,17 +1113,23 @@ export default function Receitas() {
             const row = efetivarRow;
             setEfetivarRow(null);
             setSelection(new Set());
-            // Imprime 1 comprovante de recebimento para a parcela paga.
             const amountPaid = data.payments.reduce((s, p) => s + p.amount, 0);
-            setNfcePhase({ label: 'Imprimindo comprovante...', detail: 'Recebimento de parcela' });
-            await printReceiptsFor([{
+            const receiptPayload = [{
               row,
               amountPaid,
               payments: data.payments.map((p) => ({ paymentName: p.paymentName, amount: p.amount })),
               interest: data.interest, fine: data.fine, discount: data.discount, surcharge: data.surcharge,
-            }]);
-            if (data.emitNfce) await emitCreditReceiptNFCe([row], data.payments);
-            else setNfcePhase(null);
+            }];
+            if (data.emitNfce) {
+              // Nova ordem: NFC-e mercadoria (se Modo B) → NFC-e financeira → Comprovante.
+              await emitCreditReceiptNFCe([row], data.payments);
+              setNfcePhase({ label: 'Imprimindo comprovante...', detail: 'Recebimento de parcela' });
+              await printReceiptsFor(receiptPayload);
+            } else {
+              setNfcePhase({ label: 'Imprimindo comprovante...', detail: 'Recebimento de parcela' });
+              await printReceiptsFor(receiptPayload);
+            }
+            setNfcePhase(null);
           } else {
             setNfcePhase(null);
           }
@@ -1205,12 +1211,15 @@ export default function Receitas() {
             const rowsForNfce = efetivarRows;
             setEfetivarRows(null);
             setSelection(new Set());
+            // Nova ordem: NFC-e mercadoria (se Modo B) → NFC-e financeira → Comprovantes.
+            if (data.emitNfce && rowsForNfce) {
+              await emitCreditReceiptNFCe(rowsForNfce, data.payments);
+            }
             if (receipts.length) {
               setNfcePhase({ label: 'Imprimindo comprovantes...', detail: `${receipts.length} parcelas — corte automático entre elas` });
               await printReceiptsFor(receipts);
             }
-            if (data.emitNfce && rowsForNfce) await emitCreditReceiptNFCe(rowsForNfce, data.payments);
-            else setNfcePhase(null);
+            setNfcePhase(null);
           } else {
             setNfcePhase(null);
           }
