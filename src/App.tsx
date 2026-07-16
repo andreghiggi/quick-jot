@@ -526,6 +526,12 @@ function AppRoutes() {
           <NFCeMonitor />
         </ProtectedRoute>
       } />
+
+      <Route path="/fiscal/espelho" element={
+        <ProtectedRoute requireCompany>
+          <EspelhoFiscal />
+        </ProtectedRoute>
+      } />
       
       <Route path="/novidades" element={
         <ProtectedRoute requireCompany>
