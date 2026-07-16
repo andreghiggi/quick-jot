@@ -178,6 +178,7 @@ export async function loadCashClosingSales(params: {
         : rawName;
       const isAvulsa = !p.receivable?.pdv_sale_id
         || (p.receivable?.origin && p.receivable.origin !== 'crediario');
+      const origin: CloseCashSale['origin'] = isAvulsa ? 'receita_avulsa' : 'quitacao_crediario';
       return {
         id: `arp-${p.id}`,
         final_total: Number(p.amount) || 0,
@@ -185,7 +186,7 @@ export async function loadCashClosingSales(params: {
         payment_method_name: appendTefSubtype(canonicalName, p.notes),
         customer_name: p.receivable?.customer_name || null,
         created_at: p.paid_at,
-        origin: (isAvulsa ? 'receita_avulsa' : 'quitacao_crediario') as const,
+        origin,
         source_module: 'pdv' as const,
       };
     })
