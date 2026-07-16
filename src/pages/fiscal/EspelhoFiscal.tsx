@@ -507,7 +507,10 @@ export default function EspelhoFiscal() {
             chave: r.chave_acesso || '',
             valor: Number(r.valor_total || 0),
             cfop: cfops.join(', ') || '—',
-            natureza: r.natureza_operacao || '—',
+            natureza:
+              r.natureza_operacao ||
+              extractNaturezaFromPayload(r.request_payload) ||
+              naturezaFromCfops(cfops),
             pagamento: formatPayments(pagamentosXml),
             pagamentosXml,
             status: r.status as 'autorizada' | 'cancelada',
