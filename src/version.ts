@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.60.2-beta";
+export const VERSION = "1.60.3-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Espelho Fiscal — natureza correta no fallback";
+export const CODENAME = "Espelho Fiscal — botão Gerar separado do download";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.60.3-beta",
+    date: "2026-07-17",
+    codename: "Espelho Fiscal — botão Gerar separado do download",
+    changes: [
+      "Espelho Fiscal agora tem um botão único 'Gerar' ao lado dos filtros. Ele processa os dados do período (busca no banco + backfill do XML autorizado da SEFAZ) uma única vez.",
+      "Depois de gerar, aparecem os botões 'Baixar Excel' e 'Baixar PDF' — cada clique baixa o arquivo instantaneamente, sem reprocessar nada.",
+      "Alterar qualquer filtro (data, modelo, status) limpa o resultado gerado, forçando um novo 'Gerar' — evita baixar arquivo desatualizado.",
+      "Sem alteração em emissão, TEF, PinPad, PDV, Frente de Caixa, NF-e, Compras ou Financeiro.",
+    ],
+  },
   {
     version: "1.60.2-beta",
     date: "2026-07-17",
