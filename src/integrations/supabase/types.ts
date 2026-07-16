@@ -1737,6 +1737,7 @@ export type Database = {
           updated_at: string
           valor_total: number
           webhook_payload: Json | null
+          xml_content: string | null
           xml_url: string | null
         }
         Insert: {
@@ -1761,6 +1762,7 @@ export type Database = {
           updated_at?: string
           valor_total?: number
           webhook_payload?: Json | null
+          xml_content?: string | null
           xml_url?: string | null
         }
         Update: {
@@ -1785,6 +1787,7 @@ export type Database = {
           updated_at?: string
           valor_total?: number
           webhook_payload?: Json | null
+          xml_content?: string | null
           xml_url?: string | null
         }
         Relationships: [
