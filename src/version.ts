@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.60.0-beta";
+export const VERSION = "1.60.1-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Espelho Fiscal — leitura direta do XML autorizado";
+export const CODENAME = "Espelho Fiscal — geração direta do arquivo";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.60.1-beta",
+    date: "2026-07-17",
+    codename: "Espelho Fiscal — geração direta do arquivo",
+    changes: [
+      "Espelho Fiscal deixou de exibir a lista de notas em tela — o relatório é destinado à contabilidade, que recebe apenas o arquivo.",
+      "Os botões agora são 'Gerar Excel' e 'Gerar PDF'. A busca no banco e o backfill do XML só disparam ao clicar em um deles, e o arquivo é baixado automaticamente ao final.",
+      "Nenhuma alteração em emissão, TEF, PinPad, PDV, Frente de Caixa, NF-e, Compras ou Financeiro.",
+    ],
+  },
   {
     version: "1.60.0-beta",
     date: "2026-07-17",

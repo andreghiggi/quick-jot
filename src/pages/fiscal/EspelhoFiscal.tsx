@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { BookMarked, Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
+import { BookMarked, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -275,15 +273,13 @@ export default function EspelhoFiscal() {
 
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
-  const [rows, setRows] = useState<Row[]>([]);
-  const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
   const [seriesDisponiveis, setSeriesDisponiveis] = useState<string[]>([]);
 
-  async function generate() {
-    if (!company?.id) return;
+  async function generate(): Promise<Row[] | null> {
+    if (!company?.id) return null;
     if (!dateFrom || !dateTo) {
       toast.error('Informe o período');
-      return;
+      return null;
     }
     setLoading(true);
     setProgress(null);
@@ -492,51 +488,28 @@ export default function EspelhoFiscal() {
       }
 
       collected.sort((a, b) => (a.dataEmissao < b.dataEmissao ? -1 : 1));
-      setRows(collected);
       setSeriesDisponiveis(Array.from(new Set(collected.map((r) => r.serie))).sort());
-      setGeneratedAt(new Date());
+      return collected;
     } catch (err: any) {
       console.error('[EspelhoFiscal] erro:', err);
       toast.error('Falha ao gerar espelho', { description: err?.message });
+      return null;
     } finally {
       setLoading(false);
       setProgress(null);
     }
   }
 
-  const filteredRows = useMemo(() => {
-    if (serie === 'todas') return rows;
-    return rows.filter((r) => r.serie === serie);
-  }, [rows, serie]);
-
-  const totals = useMemo(() => {
-    let qtdAut = 0, qtdCanc = 0, somaAut = 0, somaCanc = 0;
-    const porCfop = new Map<string, { qtd: number; valor: number }>();
-    const porPag = new Map<string, { qtd: number; valor: number }>();
-    for (const r of filteredRows) {
-      if (r.status === 'autorizada') { qtdAut++; somaAut += r.valor; }
-      else { qtdCanc++; somaCanc += r.valor; }
-      const c = r.cfop || '—';
-      const cAcc = porCfop.get(c) || { qtd: 0, valor: 0 };
-      cAcc.qtd += 1; cAcc.valor += r.status === 'autorizada' ? r.valor : 0;
-      porCfop.set(c, cAcc);
-      const pagamentos = r.pagamentosXml.length ? r.pagamentosXml : [{ code: '—', label: '—', value: r.valor }];
-      for (const p of pagamentos) {
-        const key = p.label || '—';
-        const pAcc = porPag.get(key) || { qtd: 0, valor: 0 };
-        pAcc.qtd += 1;
-        pAcc.valor += r.status === 'autorizada' ? Number(p.value ?? r.valor) : 0;
-        porPag.set(key, pAcc);
-      }
-    }
-    return { qtdAut, qtdCanc, somaAut, somaCanc, porCfop, porPag };
-  }, [filteredRows]);
-
   async function exportExcel() {
-    if (!filteredRows.length) return;
+    const rowsToExport = await ensureData();
+    if (!rowsToExport) return;
+    if (!rowsToExport.length) {
+      toast.info('Nenhuma nota encontrada para o filtro escolhido.');
+      return;
+    }
     const XLSX = await import('xlsx');
     const header = ['Data', 'Modelo', 'Nº', 'Série', 'Chave de Acesso', 'CFOP', 'Natureza', 'Pagamento', 'Valor', 'Status', 'Fonte'];
-    const data = filteredRows.map((r) => [
+    const data = rowsToExport.map((r) => [
       format(new Date(r.dataEmissao), 'dd/MM/yyyy HH:mm'),
       r.modelo,
       r.numero,
@@ -549,6 +522,10 @@ export default function EspelhoFiscal() {
       r.status === 'autorizada' ? 'Autorizada' : 'Cancelada',
       r.fonte,
     ]);
+    const totAut = rowsToExport.filter(r => r.status === 'autorizada');
+    const totCanc = rowsToExport.filter(r => r.status === 'cancelada');
+    const somaAut = totAut.reduce((s, r) => s + r.valor, 0);
+    const somaCanc = totCanc.reduce((s, r) => s + r.valor, 0);
     const ws = XLSX.utils.aoa_to_sheet([
       [`Espelho Fiscal — ${company?.name || ''}`],
       [`Período: ${format(new Date(dateFrom + 'T00:00:00'), 'dd/MM/yyyy')} a ${format(new Date(dateTo + 'T00:00:00'), 'dd/MM/yyyy')}`],
@@ -558,8 +535,8 @@ export default function EspelhoFiscal() {
       ...data,
       [],
       ['Totais'],
-      ['Autorizadas', totals.qtdAut, '', '', '', '', '', '', totals.somaAut],
-      ['Canceladas', totals.qtdCanc, '', '', '', '', '', '', totals.somaCanc],
+      ['Autorizadas', totAut.length, '', '', '', '', '', '', somaAut],
+      ['Canceladas', totCanc.length, '', '', '', '', '', '', somaCanc],
     ]);
     ws['!cols'] = [
       { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 48 },
@@ -568,10 +545,16 @@ export default function EspelhoFiscal() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Espelho Fiscal');
     XLSX.writeFile(wb, `espelho-fiscal-${dateFrom}-a-${dateTo}.xlsx`);
+    toast.success('Excel gerado');
   }
 
   async function exportPDF() {
-    if (!filteredRows.length) return;
+    const rowsToExport = await ensureData();
+    if (!rowsToExport) return;
+    if (!rowsToExport.length) {
+      toast.info('Nenhuma nota encontrada para o filtro escolhido.');
+      return;
+    }
     const { jsPDF } = await import('jspdf');
     const autoTableMod: any = await import('jspdf-autotable');
     const autoTable = autoTableMod.default || autoTableMod;
@@ -588,10 +571,13 @@ export default function EspelhoFiscal() {
     );
     doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 40, 100);
 
+    const totAut = rowsToExport.filter(r => r.status === 'autorizada');
+    const totCanc = rowsToExport.filter(r => r.status === 'cancelada');
+    const somaAut = totAut.reduce((s, r) => s + r.valor, 0);
     autoTable(doc, {
       startY: 115,
       head: [['Data', 'Mod.', 'Nº', 'Sér.', 'Chave', 'CFOP', 'Natureza', 'Pagamento', 'Valor', 'Status', 'Fonte']],
-      body: filteredRows.map((r) => [
+      body: rowsToExport.map((r) => [
         format(new Date(r.dataEmissao), 'dd/MM/yy HH:mm'),
         r.modelo,
         r.numero,
@@ -606,8 +592,8 @@ export default function EspelhoFiscal() {
       ]),
       foot: [[
         '', '', '', '', '', '', '', 
-        `Autoriz.: ${totals.qtdAut}  Canc.: ${totals.qtdCanc}`,
-        fmtMoney(totals.somaAut),
+        `Autoriz.: ${totAut.length}  Canc.: ${totCanc.length}`,
+        fmtMoney(somaAut),
         '', '',
       ]],
       styles: { fontSize: 7, cellPadding: 3 },
@@ -620,13 +606,22 @@ export default function EspelhoFiscal() {
     });
 
     doc.save(`espelho-fiscal-${dateFrom}-a-${dateTo}.pdf`);
+    toast.success('PDF gerado');
   }
 
-  useEffect(() => {
-    // primeira geração automática
-    if (company?.id && !generatedAt) generate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [company?.id]);
+  async function ensureData(): Promise<Row[] | null> {
+    if (!company?.id) {
+      toast.error('Empresa não carregada');
+      return null;
+    }
+    if (!dateFrom || !dateTo) {
+      toast.error('Informe o período');
+      return null;
+    }
+    const data = await generate();
+    if (!data) return null;
+    return serie === 'todas' ? data : data.filter((r) => r.serie === serie);
+  }
 
   return (
     <AppLayout>
@@ -692,10 +687,14 @@ export default function EspelhoFiscal() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end">
-                <Button onClick={generate} disabled={loading} className="w-full">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
-                  Gerar
+              <div className="flex items-end gap-2 md:col-span-2">
+                <Button onClick={exportExcel} disabled={loading} className="flex-1">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileSpreadsheet className="w-4 h-4 mr-2" />}
+                  Gerar Excel
+                </Button>
+                <Button onClick={exportPDF} disabled={loading} variant="outline" className="flex-1">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileText className="w-4 h-4 mr-2" />}
+                  Gerar PDF
                 </Button>
               </div>
             </div>
@@ -705,145 +704,12 @@ export default function EspelhoFiscal() {
                 Baixando XML autorizado da SEFAZ: {progress.done}/{progress.total}
               </div>
             )}
+            <p className="text-xs text-muted-foreground">
+              O arquivo será baixado automaticamente após a geração. O relatório é destinado à contabilidade — nenhuma visualização em tela é exibida.
+            </p>
           </CardContent>
         </Card>
 
-        {generatedAt && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
-              <div>
-                <CardTitle className="text-base">Resultado</CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {filteredRows.length} nota(s) • Gerado em {format(generatedAt, 'dd/MM/yyyy HH:mm')}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={exportPDF} disabled={!filteredRows.length}>
-                  <FileText className="w-4 h-4 mr-2" /> PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={exportExcel} disabled={!filteredRows.length}>
-                  <FileSpreadsheet className="w-4 h-4 mr-2" /> Excel
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Autorizadas</div>
-                  <div className="text-lg font-semibold">{totals.qtdAut}</div>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Valor autorizadas</div>
-                  <div className="text-lg font-semibold text-emerald-600">{fmtMoney(totals.somaAut)}</div>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Canceladas</div>
-                  <div className="text-lg font-semibold">{totals.qtdCanc}</div>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Valor canceladas</div>
-                  <div className="text-lg font-semibold text-destructive">{fmtMoney(totals.somaCanc)}</div>
-                </div>
-              </div>
-
-              {(totals.porCfop.size > 0 || totals.porPag.size > 0) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="border rounded-lg p-3">
-                    <div className="text-xs font-semibold text-muted-foreground mb-2">Por CFOP (valor autorizado)</div>
-                    <div className="space-y-1 text-sm">
-                      {Array.from(totals.porCfop.entries()).map(([k, v]) => (
-                        <div key={k} className="flex justify-between">
-                          <span className="font-mono">{k}</span>
-                          <span>{v.qtd} nota(s) • <strong>{fmtMoney(v.valor)}</strong></span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="border rounded-lg p-3">
-                    <div className="text-xs font-semibold text-muted-foreground mb-2">Por forma de pagamento (valor autorizado)</div>
-                    <div className="space-y-1 text-sm">
-                      {Array.from(totals.porPag.entries()).map(([k, v]) => (
-                        <div key={k} className="flex justify-between">
-                          <span>{k}</span>
-                          <span>{v.qtd} nota(s) • <strong>{fmtMoney(v.valor)}</strong></span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <Separator />
-
-              <div className="border rounded-lg overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-32">Data</TableHead>
-                      <TableHead className="w-16">Mod.</TableHead>
-                      <TableHead className="w-20">Nº</TableHead>
-                      <TableHead className="w-16">Sér.</TableHead>
-                      <TableHead>Chave de Acesso</TableHead>
-                      <TableHead className="w-24">CFOP</TableHead>
-                      <TableHead>Natureza</TableHead>
-                      <TableHead className="w-32">Pagamento</TableHead>
-                      <TableHead className="w-28 text-right">Valor</TableHead>
-                      <TableHead className="w-24">Status</TableHead>
-                      <TableHead className="w-20">Fonte</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRows.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={11} className="text-center text-muted-foreground py-6">
-                          Nenhuma nota encontrada para o filtro escolhido.
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredRows.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="text-xs">{format(new Date(r.dataEmissao), 'dd/MM/yyyy HH:mm')}</TableCell>
-                        <TableCell><Badge variant="outline">{r.modelo}</Badge></TableCell>
-                        <TableCell className="font-mono text-xs">{r.numero}</TableCell>
-                        <TableCell className="font-mono text-xs">{r.serie}</TableCell>
-                        <TableCell className="font-mono text-[10px] break-all">
-                          <div className="flex items-center gap-1">
-                            <span>{r.chave || '—'}</span>
-                            {r.chave && (
-                              <button
-                                type="button"
-                                className="text-primary hover:underline text-[10px]"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(r.chave);
-                                  toast.success('Chave copiada');
-                                }}
-                              >
-                                copiar
-                              </button>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">{r.cfop}</TableCell>
-                        <TableCell className="text-xs">{r.natureza}</TableCell>
-                        <TableCell className="text-xs">{r.pagamento}</TableCell>
-                        <TableCell className="text-right font-medium">{fmtMoney(r.valor)}</TableCell>
-                        <TableCell>
-                          <Badge variant={r.status === 'autorizada' ? 'default' : 'destructive'}>
-                            {r.status === 'autorizada' ? 'Autorizada' : 'Cancelada'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={r.fonte === 'XML' ? 'default' : 'outline'} className={r.fonte === 'XML' ? 'bg-emerald-600 hover:bg-emerald-600' : ''}>
-                            {r.fonte}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </AppLayout>
   );
