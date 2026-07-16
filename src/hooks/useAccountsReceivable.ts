@@ -303,6 +303,10 @@ export function useAccountsReceivable(companyId?: string | null) {
       /** Fragmento de notas por pagamento (ex.: "TEF PinPad: NSU X | Aut Y | ...").
        *  Persistido em accounts_receivable_payments.notes para o Relatório TEF. */
       notes?: string | null;
+      /** Integração TEF (quando aprovada) — usada para rollback automático. */
+      integration?: 'tef_pinpad' | 'tef_smartpos';
+      /** Dados TEF já aprovados (NSU/aut/bandeira) — usados para rollback. */
+      tef?: NFCeTefData;
     }>;
   }): Promise<boolean> => {
     if (!input.payments.length) { toast.error('Adicione ao menos uma forma de pagamento.'); return false; }
@@ -322,6 +326,14 @@ export function useAccountsReceivable(companyId?: string | null) {
     const paidTotal = input.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
     if (paidTotal <= 0) { toast.error('Valor total inválido.'); return false; }
 
+    // Extrai número de controle TEF (023-000) do fragmento de notes para
+    // habilitar estorno automático via PinPad depois.
+    const extractControl = (n?: string | null) => {
+      if (!n) return null;
+      const m = n.match(/\[TEF023\]([^\[]+)\[\/TEF023\]/);
+      return m ? m[1].trim() : null;
+    };
+
     // Inserir cada pagamento individual
     const rows = input.payments.map((p) => ({
       receivable_id: input.receivableId,
@@ -331,9 +343,33 @@ export function useAccountsReceivable(companyId?: string | null) {
       payment_name: p.paymentName,
       operator_id: input.operatorId ?? null,
       notes: p.notes ?? null,
+      tef_control_number: extractControl(p.notes),
     }));
     const { error: e2 } = await supabase.from('accounts_receivable_payments' as any).insert(rows);
-    if (e2) { toast.error('Falha ao registrar recebimento: ' + e2.message); return false; }
+    if (e2) {
+      // ROLLBACK TEF: qualquer linha TEF já aprovada precisa ser estornada
+      // no PinPad — caso contrário o cliente foi cobrado sem o título ser
+      // baixado no sistema.
+      let rolled = 0;
+      for (const p of input.payments) {
+        if (p.integration && p.tef) {
+          const ok = await rollbackApprovedTef(input.companyId, {
+            payment_method_id: p.paymentMethodId || '',
+            payment_name: p.paymentName,
+            amount: p.amount,
+            integration: p.integration,
+            tef: p.tef,
+            tef_control_number: extractControl(p.notes) || undefined,
+          } as any);
+          if (ok) rolled++;
+        }
+      }
+      toast.error(
+        'Falha ao registrar recebimento: ' + e2.message +
+        (rolled ? ` — ${rolled} cobrança(s) TEF estornada(s) automaticamente.` : ''),
+      );
+      return false;
+    }
 
     // Ajusta saldo: soma juros/multa/acréscimo ao valor devido e subtrai
     // desconto antes de comparar com o total efetivamente recebido.
@@ -357,6 +393,105 @@ export function useAccountsReceivable(companyId?: string | null) {
 
     await load();
     toast.success(isPaid ? 'Título quitado.' : 'Recebimento registrado.');
+    return true;
+  }, [load]);
+
+  /**
+   * Estorna um recebimento já lançado:
+   *  - Se a linha era TEF (tem tef_control_number + notes com NSU/rede),
+   *    tenta cancelar no PinPad via CNC (mesmo helper do PDV V2).
+   *  - Marca `reversed_at/by/reason` no `accounts_receivable_payments`.
+   *  - Devolve o valor ao saldo do título (reabre se estava quitado).
+   *  - Registra evento em `accounts_renegotiations` para trilha de auditoria.
+   */
+  const reversePayment = useCallback(async (input: {
+    paymentId: string;
+    companyId: string;
+    reason: string;
+    userId?: string | null;
+  }): Promise<boolean> => {
+    if (!input.reason?.trim()) {
+      toast.error('Informe o motivo do estorno.');
+      return false;
+    }
+    const { data: p, error: ep } = await supabase
+      .from('accounts_receivable_payments' as any)
+      .select('*')
+      .eq('id', input.paymentId)
+      .maybeSingle();
+    if (ep || !p) { toast.error('Recebimento não encontrado.'); return false; }
+    const pay = p as any;
+    if (pay.reversed_at) { toast.error('Este recebimento já foi estornado.'); return false; }
+
+    // Tenta CNC no PinPad quando havia TEF aprovado.
+    let tefReversed: boolean | null = null;
+    if (pay.tef_control_number && pay.notes) {
+      const nsu = (pay.notes.match(/NSU\s*[:=]?\s*(\d+)/i)?.[1]) || '';
+      const rede = (pay.notes.match(/(?:Rede|Bandeira|Adq(?:uirente)?)\s*[:=]?\s*([A-Za-z0-9]+)/i)?.[1]) || '';
+      if (nsu && rede) {
+        const line: any = {
+          payment_method_id: pay.payment_method_id || '',
+          payment_name: pay.payment_name,
+          amount: Number(pay.amount) || 0,
+          integration: 'tef_pinpad' as const,
+          tef: { nsu, adquirente: rede } as unknown as NFCeTefData,
+          tef_control_number: pay.tef_control_number,
+        };
+        tefReversed = await rollbackApprovedTef(input.companyId, line);
+        if (!tefReversed) {
+          toast.error('Falha ao estornar TEF no PinPad. Cancele manualmente antes de confirmar.');
+          return false;
+        }
+      }
+    }
+
+    // Marca o pagamento como estornado.
+    const { error: eupd } = await supabase
+      .from('accounts_receivable_payments' as any)
+      .update({
+        reversed_at: new Date().toISOString(),
+        reversed_by: input.userId ?? null,
+        reversal_reason: input.reason.trim(),
+      })
+      .eq('id', input.paymentId);
+    if (eupd) { toast.error('Falha ao registrar estorno: ' + eupd.message); return false; }
+
+    // Devolve saldo ao título e reabre se necessário.
+    const { data: r } = await supabase
+      .from('accounts_receivable' as any)
+      .select('id, balance, amount, status')
+      .eq('id', pay.receivable_id)
+      .maybeSingle();
+    if (r) {
+      const row = r as any;
+      const newBalance = +(Number(row.balance) + Number(pay.amount)).toFixed(2);
+      const cappedBalance = Math.min(newBalance, Number(row.amount));
+      await supabase.from('accounts_receivable' as any).update({
+        balance: cappedBalance,
+        status: cappedBalance > 0.005 ? 'open' : row.status,
+        paid_at: cappedBalance > 0.005 ? null : row.paid_at,
+      }).eq('id', pay.receivable_id);
+    }
+
+    // Trilha de auditoria.
+    await supabase.from('accounts_renegotiations' as any).insert({
+      company_id: input.companyId,
+      account_type: 'receivable',
+      account_id: pay.receivable_id,
+      old_amount: pay.amount,
+      new_amount: 0,
+      old_due_date: null,
+      new_due_date: null,
+      reason: `Estorno de recebimento (${pay.payment_name} R$ ${Number(pay.amount).toFixed(2)}): ${input.reason.trim()}${tefReversed === true ? ' [TEF estornado no PinPad]' : ''}`,
+      created_by: input.userId ?? null,
+    });
+
+    await load();
+    toast.success(
+      tefReversed === true
+        ? 'Recebimento estornado (TEF cancelado no PinPad).'
+        : 'Recebimento estornado.',
+    );
     return true;
   }, [load]);
 
