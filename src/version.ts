@@ -20,6 +20,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.58.1-beta",
+    date: "2026-07-17",
+    codename: "XML do mês: backfill sob demanda via Fiscal Flow",
+    changes: [
+      "Botão 'XML do mês' (Frente de Caixa) agora inclui NFC-e autorizadas mesmo quando o campo `xml_url` está vazio no banco (webhook da Fiscal Flow não recebido).",
+      "Backfill sob demanda: para cada NFC-e sem `xml_url` mas com `nfce_id`, o dialog chama a action `xml` do nfce-proxy (consulta na Fiscal Flow) e coloca o conteúdo direto no .zip.",
+      "Primeiro download do mês fica mais lento (uma consulta por nota), mas o ZIP finalmente vem completo. Notas com `xml_url` já preenchido continuam usando o caminho rápido.",
+      "Sem alteração em NF-e de entrada (fluxo 'Compras'), Monitor NFC-e, PDV, TEF ou emissão.",
+    ],
+  },
+  {
     version: "1.58.0-beta",
     date: "2026-07-17",
     codename: "NFC-e: contingência segura Fiscal Flow v2 (abortar-online + tp_emis=9)",
