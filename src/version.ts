@@ -20,6 +20,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.60.4-beta",
+    date: "2026-07-17",
+    codename: "Trava Pagamento balcão fora do PDV",
+    changes: [
+      "Correção: pedidos do cardápio online cuja forma escolhida é 'Pagamento balcão' (channel='menu') deixam de ser registrados em pdv_sales com essa forma — ela existia apenas como placeholder da escolha do cliente no cardápio, mas estava vazando para o caixa quando o pedido era auto-registrado, causando divergência de fechamento (o valor real recebido em Dinheiro/PIX/TEF não somava na forma real e ficava contabilizado num placeholder).",
+      "Agora, ao auto-registrar um pedido do cardápio no caixa (`registerOrderToCashRegister`), o match e o fallback consideram apenas formas com channel='pdv' — Dinheiro, PIX, Débito, Crédito, TEF, Crediário. Nunca formas do menu.",
+      "Impacto: fechamentos de caixa passam a refletir o dinheiro real recebido; o operador continua obrigado a escolher a forma real no checkout do Frente de Caixa/PDV.",
+      "Sem alteração em emissão fiscal, TEF, PinPad, PDV V2, Cardápio Online, NF-e, Compras ou Financeiro.",
+    ],
+  },
+  {
     version: "1.60.3-beta",
     date: "2026-07-17",
     codename: "Espelho Fiscal — botão Gerar separado do download",
