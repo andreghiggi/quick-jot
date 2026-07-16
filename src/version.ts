@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.56.2-beta";
+export const VERSION = "1.56.3-beta";
 export const RELEASE_DATE = "2026-07-16"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e: inutilização com retorno claro";
+export const CODENAME = "NFC-e: inutilização sem bloqueio por CNPJ";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.56.3-beta",
+    date: "2026-07-16",
+    codename: "NFC-e: inutilização sem bloqueio por CNPJ",
+    changes: [
+      "Frente de Caixa → Inutilizar numeração: corrigido bloqueio indevido quando o CNPJ está vazio no cadastro local da loja. A rota atual da Fiscal Flow identifica o emitente pelo token da loja, não pelo CNPJ enviado no corpo da requisição.",
+      "Mantidos fallbacks legados apenas quando houver CNPJ válido disponível, evitando erro genérico antes da chamada real de inutilização.",
+      "Sem alteração em emissão de NFC-e, TEF, PinPad, caixa, vendas, Financeiro ou importação de XML.",
+    ],
+  },
   {
     version: "1.56.2-beta",
     date: "2026-07-16",
