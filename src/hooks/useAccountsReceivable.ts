@@ -646,5 +646,5 @@ export function useAccountsReceivable(companyId?: string | null) {
     return true;
   }, [load]);
 
-  return { items, loading, reload: load, create, receivePayment, receivePaymentSplit, cancel, remove, update, renegotiate, renegotiateSplit, renegotiateManySplit, listPayments };
+  return { items, loading, reload: load, create, receivePayment, receivePaymentSplit, reversePayment, cancel, remove, update, renegotiate, renegotiateSplit, renegotiateManySplit, listPayments };
 }
