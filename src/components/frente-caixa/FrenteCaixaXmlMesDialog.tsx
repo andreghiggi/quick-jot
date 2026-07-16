@@ -140,7 +140,7 @@ export function FrenteCaixaXmlMesDialog({ open, onOpenChange, companyId, company
               if (rec.isStorage) {
                 const { data: file, error: dlErr } = await supabase.storage
                   .from('dfe-xmls')
-                  .download(rec.xmlPath);
+                  .download(rec.xmlPath as string);
                 if (dlErr || !file) throw dlErr || new Error('download falhou');
                 text = await file.text();
               } else if (rec.xmlPath) {
