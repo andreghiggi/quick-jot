@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { parseNfceXml, labelTPag, type ParsedFiscalXml } from '@/utils/parseNfceXml';
 
 function fmtMoney(v: number) {
   return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -45,6 +46,7 @@ interface Row {
   pagamento: string;
   pagamentosXml: PaymentInfo[];
   status: 'autorizada' | 'cancelada';
+  fonte: 'XML' | 'Local';
 }
 
 type PaymentInfo = {
@@ -272,6 +274,7 @@ export default function EspelhoFiscal() {
   const [serie, setSerie] = useState<string>('todas');
 
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
   const [seriesDisponiveis, setSeriesDisponiveis] = useState<string[]>([]);
@@ -283,6 +286,7 @@ export default function EspelhoFiscal() {
       return;
     }
     setLoading(true);
+    setProgress(null);
     try {
       const fromIso = `${dateFrom}T00:00:00-03:00`;
       const toIso = `${dateTo}T23:59:59-03:00`;
@@ -294,7 +298,7 @@ export default function EspelhoFiscal() {
       if (modelo === 'todos' || modelo === '65') {
         const { data, error } = await (supabase as any)
           .from('nfce_records')
-          .select('id, sale_id, numero, serie, chave_acesso, valor_total, status, created_at, request_payload, response_payload, webhook_payload')
+          .select('id, nfce_id, sale_id, numero, serie, chave_acesso, valor_total, status, created_at, xml_content, request_payload, response_payload, webhook_payload')
           .eq('company_id', company.id)
           .in('status', wantStatus)
           .gte('created_at', fromIso)
@@ -302,31 +306,89 @@ export default function EspelhoFiscal() {
           .order('created_at', { ascending: true });
         if (error) throw error;
 
-        for (const r of data || []) {
-          const cfops = extractCfopsFromPayload(r.request_payload);
-          const pagamentosXml = extractFiscalPayments(r);
-          collected.push({
-            id: r.id,
-            modelo: '65',
-            dataEmissao: r.created_at,
-            numero: r.numero || '—',
-            serie: r.serie || '—',
-            chave: r.chave_acesso || '',
-            valor: Number(r.valor_total || 0),
-            cfop: cfops.join(', ') || '—',
-            natureza: cfops.length > 0 ? 'Venda de mercadoria' : '—',
-            pagamento: formatPayments(pagamentosXml),
-            pagamentosXml,
-            status: r.status as 'autorizada' | 'cancelada',
-          });
+        // Backfill sob demanda: para cada registro sem xml_content mas com nfce_id,
+        // busca via nfce-proxy (que também persiste em xml_content).
+        const semXml = (data || []).filter((r: any) => !r.xml_content && r.nfce_id && r.status === 'autorizada');
+        if (semXml.length) {
+          setProgress({ done: 0, total: semXml.length });
+          const CONCURRENCY = 4;
+          let idx = 0;
+          let done = 0;
+          async function worker() {
+            while (idx < semXml.length) {
+              const my = idx++;
+              const rec = semXml[my];
+              try {
+                const { data: resp } = await supabase.functions.invoke('nfce-proxy', {
+                  body: { action: 'xml', companyId: company.id, nfceId: rec.nfce_id },
+                });
+                const xml = resp?.xml || resp?.data?.xml;
+                if (xml && typeof xml === 'string') {
+                  rec.xml_content = xml;
+                }
+              } catch (e) {
+                console.warn('[EspelhoFiscal] xml backfill falhou', rec.id, e);
+              }
+              done++;
+              setProgress({ done, total: semXml.length });
+            }
+          }
+          await Promise.all(Array.from({ length: Math.min(CONCURRENCY, semXml.length) }, worker));
         }
 
-        // Fallback CFOP: para registros sem CFOP no payload (ex.: sincronizados
-        // via backfill da Fiscal Flow), tenta derivar dos produtos da venda.
+        for (const r of data || []) {
+          const parsed: ParsedFiscalXml | null = parseNfceXml(r.xml_content);
+          if (parsed) {
+            // Fonte de verdade: XML autorizado da SEFAZ
+            const pagamentosXml: PaymentInfo[] = parsed.pagamentos.map((p) => ({
+              code: p.tPag,
+              label: labelTPag(p.tPag),
+              value: p.vPag,
+            }));
+            const statusXml: 'autorizada' | 'cancelada' = parsed.cStat === '101' ? 'cancelada' : (r.status as any);
+            collected.push({
+              id: r.id,
+              modelo: parsed.modelo,
+              dataEmissao: parsed.dhEmi || r.created_at,
+              numero: parsed.numero || r.numero || '—',
+              serie: parsed.serie || r.serie || '—',
+              chave: parsed.chave || r.chave_acesso || '',
+              valor: parsed.vNF || Number(r.valor_total || 0),
+              cfop: parsed.cfops.join(', ') || '—',
+              natureza: parsed.natOp || '—',
+              pagamento: formatPayments(pagamentosXml),
+              pagamentosXml,
+              status: statusXml,
+              fonte: 'XML',
+            });
+          } else {
+            // Fallback: XML ainda indisponível (contingência recém-autorizada,
+            // erro de download etc.). Marca como fonte "Local" e usa payload.
+            const cfops = extractCfopsFromPayload(r.request_payload);
+            const pagamentosXml = extractFiscalPayments(r);
+            collected.push({
+              id: r.id,
+              modelo: '65',
+              dataEmissao: r.created_at,
+              numero: r.numero || '—',
+              serie: r.serie || '—',
+              chave: r.chave_acesso || '',
+              valor: Number(r.valor_total || 0),
+              cfop: cfops.join(', ') || '—',
+              natureza: cfops.length > 0 ? 'Venda de mercadoria' : '—',
+              pagamento: formatPayments(pagamentosXml),
+              pagamentosXml,
+              status: r.status as 'autorizada' | 'cancelada',
+              fonte: 'Local',
+            });
+          }
+        }
+
+        // Fallback CFOP secundário: só para linhas ainda em fonte "Local".
         const idxSemCfop: number[] = [];
         const salesSemCfop: string[] = [];
         collected.forEach((row, i) => {
-          if (row.modelo === '65' && row.cfop === '—') {
+          if (row.modelo === '65' && row.cfop === '—' && row.fonte === 'Local') {
             const original = (data || []).find((r: any) => r.id === row.id);
             if (original?.sale_id) {
               idxSemCfop.push(i);
@@ -383,6 +445,32 @@ export default function EspelhoFiscal() {
         if (error) throw error;
 
         for (const r of data || []) {
+          // NF-e (modelo 55): tenta parsear XML embutido em response/webhook payload.
+          const xmlStr = findXmlString(r.response_payload) || findXmlString(r.webhook_payload);
+          const parsed = parseNfceXml(xmlStr);
+          if (parsed) {
+            const pagamentosXml: PaymentInfo[] = parsed.pagamentos.map((p) => ({
+              code: p.tPag,
+              label: labelTPag(p.tPag),
+              value: p.vPag,
+            }));
+            collected.push({
+              id: r.id,
+              modelo: '55',
+              dataEmissao: parsed.dhEmi || r.created_at,
+              numero: parsed.numero || r.numero || '—',
+              serie: parsed.serie || r.serie || '—',
+              chave: parsed.chave || r.chave_acesso || '',
+              valor: parsed.vNF || Number(r.valor_total || 0),
+              cfop: parsed.cfops.join(', ') || '—',
+              natureza: parsed.natOp || r.natureza_operacao || '—',
+              pagamento: formatPayments(pagamentosXml),
+              pagamentosXml,
+              status: (parsed.cStat === '101' ? 'cancelada' : r.status) as 'autorizada' | 'cancelada',
+              fonte: 'XML',
+            });
+            continue;
+          }
           const cfops = extractCfopsFromPayload(r.request_payload);
           const pagamentosXml = extractFiscalPayments(r);
           collected.push({
@@ -398,6 +486,7 @@ export default function EspelhoFiscal() {
             pagamento: formatPayments(pagamentosXml),
             pagamentosXml,
             status: r.status as 'autorizada' | 'cancelada',
+            fonte: 'Local',
           });
         }
       }
@@ -411,6 +500,7 @@ export default function EspelhoFiscal() {
       toast.error('Falha ao gerar espelho', { description: err?.message });
     } finally {
       setLoading(false);
+      setProgress(null);
     }
   }
 
