@@ -164,6 +164,54 @@ export default function EspelhoFiscal() {
             status: r.status as 'autorizada' | 'cancelada',
           });
         }
+
+        // Fallback CFOP: para registros sem CFOP no payload (ex.: sincronizados
+        // via backfill da Fiscal Flow), tenta derivar dos produtos da venda.
+        const idxSemCfop: number[] = [];
+        const salesSemCfop: string[] = [];
+        collected.forEach((row, i) => {
+          if (row.modelo === '65' && row.cfop === '—') {
+            const original = (data || []).find((r: any) => r.id === row.id);
+            if (original?.sale_id) {
+              idxSemCfop.push(i);
+              salesSemCfop.push(original.sale_id);
+            }
+          }
+        });
+        if (salesSemCfop.length) {
+          const { data: itens } = await (supabase as any)
+            .from('pdv_sale_items')
+            .select('sale_id, product_id')
+            .in('sale_id', Array.from(new Set(salesSemCfop)));
+          const prodIds = Array.from(
+            new Set((itens || []).map((it: any) => it.product_id).filter(Boolean)),
+          );
+          const prodCfop = new Map<string, string>();
+          if (prodIds.length) {
+            const { data: prods } = await (supabase as any)
+              .from('products')
+              .select('id, cfop')
+              .in('id', prodIds);
+            for (const p of prods || []) if (p.cfop) prodCfop.set(p.id, String(p.cfop));
+          }
+          const cfopsPorVenda = new Map<string, Set<string>>();
+          for (const it of itens || []) {
+            const c = prodCfop.get(it.product_id);
+            if (!c) continue;
+            const set = cfopsPorVenda.get(it.sale_id) || new Set<string>();
+            set.add(c);
+            cfopsPorVenda.set(it.sale_id, set);
+          }
+          for (const i of idxSemCfop) {
+            const original = (data || []).find((r: any) => r.id === collected[i].id);
+            const set = cfopsPorVenda.get(original?.sale_id);
+            if (set && set.size) {
+              const arr = Array.from(set);
+              collected[i].cfop = arr.join(', ');
+              if (collected[i].natureza === '—') collected[i].natureza = 'Venda de mercadoria';
+            }
+          }
+        }
       }
 
       // NF-e (modelo 55)
