@@ -530,29 +530,84 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Emissão única com timeout longo. Timeout NÃO dispara segunda
-        // emissão — apenas registra "processando" para consulta posterior.
+        // Emissão online com timeout curto (20s). Em caso de timeout aciona o
+        // protocolo de contingência SEGURA da Fiscal Flow: abortar-online +
+        // reemissão em contingência (tp_emis=9), sempre com o MESMO external_id
+        // para preservar idempotência e não gerar nota duplicada.
         let networkTimedOut = false
+        let contingencyOk = false
         try {
-          const ctrl = new AbortController()
-          const timer = setTimeout(() => ctrl.abort(), EMIT_TIMEOUT_MS)
-          try {
-            apiResponse = await fetch(NFCE_API_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'x-api-key': NFCE_API_KEY },
-              body: JSON.stringify(emitPayload),
-              signal: ctrl.signal,
-            })
-            result = await safeJson(apiResponse)
-          } finally {
-            clearTimeout(timer)
-          }
+          apiResponse = await fetchWithTimeout(NFCE_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': NFCE_API_KEY },
+            body: JSON.stringify(emitPayload),
+          }, EMIT_TIMEOUT_MS)
+          result = await safeJson(apiResponse)
         } catch (err: any) {
           networkTimedOut = err?.name === 'AbortError'
-          console.error('[nfce-proxy] Emitir: falha de rede/timeout. timedOut=', networkTimedOut, err)
-          // Persiste registro "processando" para o cliente consultar depois.
-          // NÃO reemitir — a NFC-e pode estar autorizada na Fiscal Flow/SEFAZ.
-          if (payload.external_id) {
+          console.error('[nfce-proxy] Emitir online: timeout/erro. timedOut=', networkTimedOut, err)
+
+          if (networkTimedOut && payload.external_id) {
+            // 1) abortar-online: impede que a SEFAZ autorize a original atrasada.
+            let abortStatus = 0
+            try {
+              const abortResp = await fetchWithTimeout(
+                `${FF_BASE_URL}/nfce-api/abortar-online`,
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'x-api-key': NFCE_API_KEY },
+                  body: JSON.stringify({ external_id: payload.external_id }),
+                },
+                10000,
+              )
+              abortStatus = abortResp.status
+              console.log('[nfce-proxy][contingencia] abortar-online status=', abortStatus)
+            } catch (e) {
+              console.error('[nfce-proxy][contingencia] abortar-online falhou:', e)
+            }
+
+            if (abortStatus === 200) {
+              // 2a) Reemite em contingência (tp_emis=9), mesmo external_id.
+              const contingPayload = {
+                ...emitPayload,
+                tp_emis: 9,
+                tpEmis: 9,
+                contingencia_offline: true,
+                justificativa_contingencia:
+                  emitPayload.justificativa_contingencia ||
+                  'Timeout online SEFAZ/Fiscal Flow — emissão em contingência offline',
+              }
+              try {
+                apiResponse = await fetchWithTimeout(NFCE_API_URL, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'x-api-key': NFCE_API_KEY },
+                  body: JSON.stringify(contingPayload),
+                }, EMIT_TIMEOUT_MS)
+                result = await safeJson(apiResponse)
+                contingencyOk = true
+                console.log('[nfce-proxy][contingencia] reemissão tp_emis=9 concluída')
+              } catch (e2) {
+                console.error('[nfce-proxy][contingencia] reemissão falhou:', e2)
+              }
+            } else if (abortStatus === 409) {
+              // 2b) Original já autorizada — consulta e usa ela.
+              console.log('[nfce-proxy][contingencia] original já autorizada (409). Consultando…')
+              try {
+                const cons = await fetchWithTimeout(
+                  `${FF_BASE_URL}/nfce-api/consultar?external_id=${encodeURIComponent(payload.external_id)}`,
+                  { method: 'GET', headers: { 'x-api-key': NFCE_API_KEY } },
+                  10000,
+                )
+                result = await safeJson(cons)
+                apiResponse = cons
+                contingencyOk = true
+              } catch (e3) {
+                console.error('[nfce-proxy][contingencia] consultar falhou:', e3)
+              }
+            }
+          }
+
+          if (!contingencyOk && payload.external_id) {
             try {
               await supabase.from('nfce_records').insert({
                 company_id: companyId,
@@ -566,7 +621,7 @@ Deno.serve(async (req) => {
                       sum + Number(item.quantidade || 1) * Number(item.valor_unitario || 0), 0)
                   : 0,
                 motivo_rejeicao: networkTimedOut
-                  ? 'Aguardando retorno da SEFAZ/Fiscal Flow (timeout de rede — NÃO reemitir, consultar por external_id)'
+                  ? 'Contingência não concluída (timeout + abortar-online falhou). NÃO reemitir — consultar por external_id.'
                   : `Erro de rede: ${String(err?.message || err).substring(0, 500)}`,
                 request_payload: isI9 ? emitPayload : payload,
                 response_payload: null,
@@ -576,15 +631,13 @@ Deno.serve(async (req) => {
             } catch (e) {
               console.error('[nfce-proxy] Falha ao gravar processando:', e)
             }
+            return new Response(JSON.stringify({
+              success: false,
+              processando: true,
+              error: 'NFC-e sem retorno definitivo da SEFAZ. NÃO reemita — consulte pelo external_id.',
+              external_id: payload.external_id,
+            }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
           }
-          return new Response(JSON.stringify({
-            success: false,
-            processando: true,
-            error: networkTimedOut
-              ? 'NFC-e enviada mas sem retorno da SEFAZ ainda. NÃO reemita — consulte pelo external_id.'
-              : 'Erro de rede ao emitir NFC-e. Consulte pelo external_id antes de reemitir.',
-            external_id: payload.external_id,
-          }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
         }
 
         console.log('[nfce-proxy] Emitir raw result:', JSON.stringify(result).substring(0, 1000))
