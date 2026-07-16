@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.60.3-beta";
+export const VERSION = "1.60.4-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Espelho Fiscal — botão Gerar separado do download";
+export const CODENAME = "Trava Pagamento balcão fora do PDV";
 
 export interface Release {
   version: string;
