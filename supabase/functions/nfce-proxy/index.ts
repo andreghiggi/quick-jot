@@ -1029,13 +1029,18 @@ Deno.serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
         }
 
-        const reqBody = {
-          cnpj,
-          serie,
-          numero_inicial: String(numero_inicial),
-          numero_final: String(numero_final),
-          ano,
+        // Formato oficial Fiscal Flow (rota /inutilizar):
+        //   { serie: int, numero_inicial: int, numero_final?: int, justificativa: string }
+        // Alguns gateways antigos aceitam também cnpj/ano — enviamos ambos
+        // para maximizar compatibilidade sem quebrar a rota nova.
+        const reqBody: Record<string, unknown> = {
+          serie: Number(serie),
+          numero_inicial,
+          numero_final,
           justificativa,
+          // campos extras tolerados por versões antigas
+          cnpj,
+          ano,
         }
         const { data: inserted, error: insErr } = await supabase
           .from('nfce_inutilizacoes')
@@ -1061,19 +1066,19 @@ Deno.serve(async (req) => {
         // Algumas instalações configuram NFCE_API_URL como a base /nfce; outras
         // como uma rota de emissão. Geramos candidatos sem expor a URL em log.
         const baseUrl = NFCE_API_URL.replace(/\/+$/, '')
-        // FiscalFlow / gateways expõem a inutilização em rotas distintas
-        // conforme instalação. Testamos várias variações comuns até obter
-        // resposta != 404. Também tentamos rebaixando de "/nfce" para raiz
-        // e usando "/nfe/inutilizacao" (alguns gateways compartilham a rota).
-        const rootUrl = baseUrl.replace(/\/nfce(?:\/.*)?$/i, '')
+        // Fiscal Flow expõe /inutilizar tanto em /nfce-api quanto em /nfe-api.
+        // Como a numeração é da NFC-e, priorizamos o path nfce; a NF-e fica
+        // como fallback caso o gateway compartilhe a rota.
+        const rootUrl = baseUrl.replace(/\/(nfce|nfe)(?:-api)?(?:\/.*)?$/i, '')
         const inutilizacaoUrls = Array.from(new Set([
-          `${baseUrl}/inutilizacao`,
           `${baseUrl}/inutilizar`,
-          baseUrl.replace(/\/nfce(?:\/.*)?$/i, '/nfce/inutilizacao'),
-          `${rootUrl}/inutilizacao`,
+          `${baseUrl}/inutilizacao`,
+          `${rootUrl}/nfce-api/inutilizar`,
+          `${rootUrl}/nfce/inutilizar`,
+          `${rootUrl}/nfe-api/inutilizar`,
           `${rootUrl}/nfe/inutilizacao`,
-          `${rootUrl}/inutilizacoes`,
-          `${baseUrl}/inutilizacoes`,
+          `${rootUrl}/inutilizar`,
+          `${rootUrl}/inutilizacao`,
         ].filter(Boolean)))
         const apiHeaders = {
           'Content-Type': 'application/json',
@@ -1094,8 +1099,11 @@ Deno.serve(async (req) => {
           // Loga só o path para não expor o host em logs.
           let pathOnly = url
           try { pathOnly = new URL(url).pathname } catch { /* keep */ }
-          attempts.push({ path: pathOnly, status: apiResponse.status })
+          attempts.push({ path: pathOnly, status: apiResponse.status, body: lastResult })
           console.log('[nfce-proxy] inutilizar attempt', pathOnly, '→', apiResponse.status)
+          // Só continua tentando outras rotas quando o gateway responde
+          // 404 (rota inexistente). Qualquer outro status (200/400/422/502)
+          // significa que a rota existe e devemos usar a resposta.
           if (apiResponse.status !== 404) break
         }
         result = lastResult
