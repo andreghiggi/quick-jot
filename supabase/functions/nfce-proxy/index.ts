@@ -804,11 +804,59 @@ Deno.serve(async (req) => {
       }
 
       case 'reprocessar': {
+        // Carrega o payload persistido na nota para permitir reprocessar com
+        // ajustes fiscais (ex.: CSOSN 900) SEM consumir nova numeração.
+        // O endpoint /reprocessar da Fiscal Flow reaproveita o nNF/série da nota
+        // rejeitada; enviamos o payload atualizado no corpo para que a FF
+        // regenere o XML com os novos dados fiscais antes de retransmitir.
+        let reprocPayload: any = null
+        try {
+          const { data: rec } = await supabase
+            .from('nfce_records')
+            .select('request_payload')
+            .eq('nfce_id', nfceId)
+            .eq('company_id', companyId)
+            .maybeSingle()
+          reprocPayload = rec?.request_payload || null
+        } catch (e) {
+          console.error('[nfce-proxy] Reprocessar: falha ao carregar payload:', e)
+        }
+        console.log('[nfce-proxy] Reprocessar nfceId:', nfceId, 'com payload override:', !!reprocPayload)
         apiResponse = await fetch(`${NFCE_API_URL}/${nfceId}/reprocessar`, {
           method: 'POST',
-          headers: { 'x-api-key': NFCE_API_KEY },
+          headers: {
+            'x-api-key': NFCE_API_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: reprocPayload ? JSON.stringify(reprocPayload) : undefined,
         })
         result = await safeJson(apiResponse)
+        console.log('[nfce-proxy] Reprocessar HTTP', apiResponse.status, 'result:', JSON.stringify(result).substring(0, 500))
+        // Se a Fiscal Flow autorizar, refletimos o status no banco para o
+        // Monitor exibir corretamente sem esperar novo polling.
+        if (result?.success || result?.sucesso || result?.data?.aceito) {
+          const data = result?.data || result
+          await supabase.from('nfce_records')
+            .update({
+              status: 'autorizada',
+              chave_acesso: data?.chave || data?.chave_acesso || null,
+              protocolo: data?.protocolo || null,
+              motivo_rejeicao: null,
+              response_payload: result,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('nfce_id', nfceId)
+            .eq('company_id', companyId)
+        } else {
+          await supabase.from('nfce_records')
+            .update({
+              motivo_rejeicao: typeof result === 'string' ? result : JSON.stringify(result).substring(0, 500),
+              response_payload: result,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('nfce_id', nfceId)
+            .eq('company_id', companyId)
+        }
         break
       }
 
