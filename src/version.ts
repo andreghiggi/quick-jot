@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.0-beta";
+export const VERSION = "1.61.1-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Crediário — auditoria, estorno e amarração ao caixa";
+export const CODENAME = "Crediário — impressão sequenciada Venda → Financeira → Comprovante";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.1-beta",
+    date: "2026-07-17",
+    codename: "Crediário — impressão sequenciada Venda → Financeira → Comprovante",
+    changes: [
+      "Efetivar recebimento de crediário com NFC-e passa a organizar as impressões em fila, uma de cada vez: (1) NFC-e da mercadoria (só no Modo B, quando ainda não foi emitida); (2) NFC-e financeira do recebimento (CFOP 5949); (3) Comprovante de quitação da parcela.",
+      "Entre cada impressão o sistema mostra um overlay com o que acabou de sair e um botão 'Próximo' — o operador imprime e fecha o diálogo do navegador no seu tempo antes da próxima nota ser emitida. Fim dos dois diálogos de impressão sobrepostos ao mesmo tempo.",
+      "Nada muda no conteúdo/fiscal das notas — só na ordem e na cadência da impressão. Sem alteração em PDV V2, Pedido Express, TEF, PinPad, Cardápio, NF-e, Compras, Manifestação Eletrônica, Estoque ou Frente de Caixa.",
+    ],
+  },
   {
     version: "1.61.0-beta",
     date: "2026-07-17",
