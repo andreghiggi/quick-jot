@@ -1328,13 +1328,33 @@ export default function Receitas() {
       <FloatingFab onClick={() => setCreateOpen(true)} label="Nova receita" />
 
       {/* Overlay sequenciado durante Efetivar → Comprovante → NFC-e → DANFE */}
-      {nfcePhase && (
+      {(nfcePhase || nfceAck) && (
         <div className="fixed inset-0 z-[100] bg-background/85 backdrop-blur-sm flex items-center justify-center">
-          <div className="max-w-sm w-full mx-4 rounded-lg border bg-card shadow-xl p-6 text-center">
-            <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-3" />
-            <div className="text-lg font-semibold">{nfcePhase.label}</div>
-            {nfcePhase.detail && (
-              <div className="text-sm text-muted-foreground mt-1">{nfcePhase.detail}</div>
+          <div className="max-w-md w-full mx-4 rounded-lg border bg-card shadow-xl p-6 text-center">
+            {nfceAck ? (
+              <>
+                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary mx-auto mb-3 flex items-center justify-center text-2xl">🖨️</div>
+                <div className="text-lg font-semibold">{nfceAck.title}</div>
+                <div className="text-sm text-muted-foreground mt-2 mb-4">{nfceAck.hint}</div>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    const r = nfceAck.resolve;
+                    setNfceAck(null);
+                    r();
+                  }}
+                >
+                  Próximo
+                </Button>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-3" />
+                <div className="text-lg font-semibold">{nfcePhase!.label}</div>
+                {nfcePhase!.detail && (
+                  <div className="text-sm text-muted-foreground mt-1">{nfcePhase!.detail}</div>
+                )}
+              </>
             )}
           </div>
         </div>
