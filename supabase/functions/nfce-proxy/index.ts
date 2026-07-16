@@ -1013,20 +1013,23 @@ Deno.serve(async (req) => {
           )
         }
 
-        const { data: companyRow, error: companyErr } = await supabase
-          .from('companies')
-          .select('cnpj')
-          .eq('id', companyId)
-          .maybeSingle()
-        if (companyErr) {
-          return new Response(JSON.stringify({ error: 'Falha ao carregar CNPJ da loja: ' + companyErr.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-        }
-
-        const cnpj = String(companyRow?.cnpj ?? '').replace(/\D/g, '')
-        if (cnpj.length !== 14) {
-          return new Response(JSON.stringify({ error: 'CNPJ da loja inválido ou não cadastrado. Corrija o cadastro da empresa antes de inutilizar numeração.' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        // A rota oficial atual da Fiscal Flow identifica o emitente pelo token,
+        // não pelo CNPJ no body. Portanto, CNPJ ausente no cadastro local não
+        // pode bloquear a inutilização. Ele é buscado apenas para fallbacks
+        // legados que ainda exigem CNPJ/ano.
+        let cnpj = ''
+        try {
+          const { data: companyRow, error: companyErr } = await supabase
+            .from('companies')
+            .select('cnpj')
+            .eq('id', companyId)
+            .maybeSingle()
+          if (companyErr) {
+            console.warn('[nfce-proxy] Inutilizar: não foi possível carregar CNPJ para fallback legado:', companyErr.message)
+          }
+          cnpj = String(companyRow?.cnpj ?? '').replace(/\D/g, '')
+        } catch (e) {
+          console.warn('[nfce-proxy] Inutilizar: erro ao carregar CNPJ para fallback legado:', e)
         }
 
         // Formato oficial Fiscal Flow (rota /inutilizar):
@@ -1042,7 +1045,7 @@ Deno.serve(async (req) => {
         }
         const legacyReqBody: Record<string, unknown> = {
           ...officialReqBody,
-          cnpj,
+          ...(cnpj.length === 14 ? { cnpj } : {}),
           ano,
         }
         const { data: inserted, error: insErr } = await supabase
@@ -1073,7 +1076,7 @@ Deno.serve(async (req) => {
         // Como a numeração é da NFC-e, priorizamos o path nfce; a NF-e fica
         // como fallback caso o gateway compartilhe a rota.
         const rootUrl = baseUrl.replace(/\/(nfce|nfe)(?:-api)?(?:\/.*)?$/i, '')
-        const inutilizacaoAttempts = Array.from(new Map([
+        const rawAttempts: Array<[string, Record<string, unknown>]> = [
           [`${baseUrl}/inutilizar`, officialReqBody],
           [`${rootUrl}/nfce-api/inutilizar`, officialReqBody],
           [`${rootUrl}/nfe-api/inutilizar`, officialReqBody],
@@ -1082,7 +1085,14 @@ Deno.serve(async (req) => {
           [`${rootUrl}/nfe/inutilizacao`, legacyReqBody],
           [`${rootUrl}/inutilizar`, officialReqBody],
           [`${rootUrl}/inutilizacao`, legacyReqBody],
-        ].filter(([url]) => Boolean(url)) as Array<[string, Record<string, unknown>]>).entries())
+        ]
+        const inutilizacaoAttempts = Array.from(new Map(
+          rawAttempts.filter(([url, attemptBody]) => {
+            if (!url) return false
+            const isLegacyBody = attemptBody === legacyReqBody
+            return !isLegacyBody || cnpj.length === 14
+          })
+        ).entries())
         const apiHeaders = {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
