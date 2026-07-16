@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { rollbackApprovedTef } from '@/utils/pdvV2MultiPayment';
+import type { NFCeTefData } from '@/services/nfceService';
 
 export type ARStatus = 'open' | 'paid' | 'canceled';
 
@@ -43,6 +45,10 @@ export interface AccountReceivablePayment {
   operator_id: string | null;
   notes: string | null;
   created_at: string;
+  reversed_at?: string | null;
+  reversed_by?: string | null;
+  reversal_reason?: string | null;
+  tef_control_number?: string | null;
 }
 
 interface CreateReceivableInput {
