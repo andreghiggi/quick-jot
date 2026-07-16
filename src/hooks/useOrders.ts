@@ -389,7 +389,11 @@ export function useOrders(options: UseOrdersOptions = {}) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
 
-    // Try to find a payment method from order notes
+    // Try to find a payment method from order notes.
+    // IMPORTANTE: nunca gravar uma forma de pagamento do cardápio online
+    // (channel='menu', ex.: "Pagamento balcão") em pdv_sales — essas formas
+    // são apenas placeholders da escolha do cliente no cardápio e não têm
+    // equivalência fiscal/financeira no PDV. Filtramos por channel='pdv'.
     let paymentMethodId: string | null = null;
     if (order.notes) {
       const paymentMatch = order.notes.match(/Pagamento:\s*(.+?)(\s*[\(|]|$)/i);
@@ -397,11 +401,12 @@ export function useOrders(options: UseOrdersOptions = {}) {
       if (paymentName) {
         const { data: methods } = await supabase
           .from('payment_methods')
-          .select('id, name')
+          .select('id, name, channel')
           .eq('company_id', companyId)
-          .eq('active', true);
+          .eq('active', true)
+          .eq('channel', 'pdv');
 
-        const matched = methods?.find(m => 
+        const matched = methods?.find(m =>
           m.name.toLowerCase().includes(paymentName.toLowerCase()) ||
           paymentName.toLowerCase().includes(m.name.toLowerCase())
         );
@@ -409,13 +414,14 @@ export function useOrders(options: UseOrdersOptions = {}) {
       }
     }
 
-    // If no match found, use first active payment method
+    // If no match found, use first active PDV payment method
     if (!paymentMethodId) {
       const { data: defaultMethod } = await supabase
         .from('payment_methods')
         .select('id')
         .eq('company_id', companyId)
         .eq('active', true)
+        .eq('channel', 'pdv')
         .limit(1)
         .maybeSingle();
       paymentMethodId = defaultMethod?.id || null;
