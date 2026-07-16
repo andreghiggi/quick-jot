@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.56.1-beta";
-export const RELEASE_DATE = "2026-07-09"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Cobrar com itens extras: não cobra em duplicidade";
+export const VERSION = "1.56.2-beta";
+export const RELEASE_DATE = "2026-07-16"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "NFC-e: inutilização com retorno claro";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.56.2-beta",
+    date: "2026-07-16",
+    codename: "NFC-e: inutilização com retorno claro",
+    changes: [
+      "Frente de Caixa → Inutilizar numeração: ajustado o envio para o padrão atual da Fiscal Flow, usando o body oficial da rota /inutilizar e autenticação Bearer.",
+      "Quando a SEFAZ ou o provedor rejeitar a inutilização, a tela agora consegue exibir o motivo real em vez do erro genérico 'Edge Function returned a non-2xx status code'.",
+      "Sem alteração em emissão de NFC-e, TEF, PinPad, caixa, vendas, Financeiro ou importação de XML.",
+    ],
+  },
   {
     version: "1.56.1-beta",
     date: "2026-07-09",

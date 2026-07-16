@@ -1031,14 +1031,17 @@ Deno.serve(async (req) => {
 
         // Formato oficial Fiscal Flow (rota /inutilizar):
         //   { serie: int, numero_inicial: int, numero_final?: int, justificativa: string }
-        // Alguns gateways antigos aceitam também cnpj/ano — enviamos ambos
-        // para maximizar compatibilidade sem quebrar a rota nova.
-        const reqBody: Record<string, unknown> = {
+        // Mantemos o body oficial estrito nas rotas novas; os campos extras
+        // ficam apenas para fallbacks legados, evitando validação 400/422 por
+        // parâmetros inesperados no gateway atual.
+        const officialReqBody: Record<string, unknown> = {
           serie: Number(serie),
           numero_inicial,
           numero_final,
           justificativa,
-          // campos extras tolerados por versões antigas
+        }
+        const legacyReqBody: Record<string, unknown> = {
+          ...officialReqBody,
           cnpj,
           ano,
         }
@@ -1052,7 +1055,7 @@ Deno.serve(async (req) => {
             ano,
             justificativa,
             status: 'pendente',
-            request_payload: reqBody,
+            request_payload: officialReqBody,
             created_by: userId,
           })
           .select('id')
@@ -1070,30 +1073,30 @@ Deno.serve(async (req) => {
         // Como a numeração é da NFC-e, priorizamos o path nfce; a NF-e fica
         // como fallback caso o gateway compartilhe a rota.
         const rootUrl = baseUrl.replace(/\/(nfce|nfe)(?:-api)?(?:\/.*)?$/i, '')
-        const inutilizacaoUrls = Array.from(new Set([
-          `${baseUrl}/inutilizar`,
-          `${baseUrl}/inutilizacao`,
-          `${rootUrl}/nfce-api/inutilizar`,
-          `${rootUrl}/nfce/inutilizar`,
-          `${rootUrl}/nfe-api/inutilizar`,
-          `${rootUrl}/nfe/inutilizacao`,
-          `${rootUrl}/inutilizar`,
-          `${rootUrl}/inutilizacao`,
-        ].filter(Boolean)))
+        const inutilizacaoAttempts = Array.from(new Map([
+          [`${baseUrl}/inutilizar`, officialReqBody],
+          [`${rootUrl}/nfce-api/inutilizar`, officialReqBody],
+          [`${rootUrl}/nfe-api/inutilizar`, officialReqBody],
+          [`${baseUrl}/inutilizacao`, legacyReqBody],
+          [`${rootUrl}/nfce/inutilizar`, legacyReqBody],
+          [`${rootUrl}/nfe/inutilizacao`, legacyReqBody],
+          [`${rootUrl}/inutilizar`, officialReqBody],
+          [`${rootUrl}/inutilizacao`, legacyReqBody],
+        ].filter(([url]) => Boolean(url)) as Array<[string, Record<string, unknown>]>).entries())
         const apiHeaders = {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'x-api-key': NFCE_API_KEY,
-          'Authorization': `Basic ${btoa(`${NFCE_API_KEY}:`)}`,
+          'Authorization': `Bearer ${NFCE_API_KEY}`,
         }
 
         let lastResult: any = null
         const attempts: Array<{ path: string; status: number; body?: any }> = []
-        for (const url of inutilizacaoUrls) {
+        for (const [url, attemptBody] of inutilizacaoAttempts) {
           apiResponse = await fetch(url, {
             method: 'POST',
             headers: apiHeaders,
-            body: JSON.stringify(reqBody),
+            body: JSON.stringify(attemptBody),
           })
           lastResult = await safeJson(apiResponse)
           // Loga só o path para não expor o host em logs.
@@ -1126,6 +1129,10 @@ Deno.serve(async (req) => {
           .eq('id', inserted.id)
 
         result = { ...result, inutilizacao_id: inserted.id, status: newStatus }
+        // Rejeição de inutilização é resposta de negócio, não falha técnica da
+        // edge function. Forçamos 200 para o frontend conseguir mostrar o
+        // motivo real em vez de "Edge Function returned a non-2xx status code".
+        apiResponse = new Response(null, { status: 200 })
         break
       }
 
