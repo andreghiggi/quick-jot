@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.5-beta";
+export const VERSION = "1.61.6-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e órfã — sync roda mesmo sem contingência pendente";
+export const CODENAME = "NFC-e órfã — consulta correta por external_id";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.6-beta",
+    date: "2026-07-17",
+    codename: "NFC-e órfã — consulta correta por external_id",
+    changes: [
+      "Correção da reconciliação de NFC-e órfã: além do endpoint `/consultar`, o sistema agora usa a listagem da Fiscal Flow com filtro exato por `external_id`, que é onde a nota autorizada da Cozinha da Ruiva estava aparecendo.",
+      "O sincronizador e a ação manual filtram pelo `external_id` exato antes de atualizar o registro local, evitando vincular nota errada quando a API retorna uma lista ampla.",
+      "Sem emissão nova e sem duplicidade: continua sendo apenas consulta e UPDATE do registro local existente.",
+    ],
+  },
   {
     version: "1.61.5-beta",
     date: "2026-07-17",
