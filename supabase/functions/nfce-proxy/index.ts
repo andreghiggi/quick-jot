@@ -796,7 +796,7 @@ Deno.serve(async (req) => {
                   : (networkTimedOut
                       ? 'Contingência não concluída (timeout + abortar-online falhou). NÃO reemitir — consultar por external_id.'
                       : `Erro de rede: ${String(err?.message || err).substring(0, 500)}`),
-                request_payload: isI9 ? emitPayload : payload,
+                request_payload: (isI9 || isCrediarioFinanceiroEmit) ? emitPayload : payload,
                 response_payload: ffData || null,
                 contingencia_offline: false,
                 contingencia_efetivada: false,
@@ -863,7 +863,7 @@ Deno.serve(async (req) => {
             qrcode_url: emitData.qrcode_url || emitData.qr_code_url || emitData.url_qrcode || emitData.qrcode || (chave ? buildQrcodeUrl(chave, ambienteResolved) : null),
             xml_url: emitData.xml_url || emitData.url_xml || null,
             motivo_rejeicao: emitData.motivo_rejeicao || emitData.motivo || null,
-            request_payload: isI9 ? emitPayload : payload,
+            request_payload: (isI9 || isCrediarioFinanceiroEmit) ? emitPayload : payload,
             response_payload: result,
             contingencia_offline: emittedInContingencia,
             contingencia_efetivada: emittedInContingencia && (
@@ -923,7 +923,7 @@ Deno.serve(async (req) => {
               qrcode_url: null,
               xml_url: null,
               motivo_rejeicao: String(motivo).substring(0, 1000),
-              request_payload: isI9 ? emitPayload : payload,
+              request_payload: (isI9 || isCrediarioFinanceiroEmit) ? emitPayload : payload,
               response_payload: result,
               contingencia_offline: false,
               contingencia_efetivada: false,
