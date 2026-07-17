@@ -56,32 +56,22 @@ function onlyDigits(s: string) {
 
 /** Máscara BR de telefone: (99) 9999-9999 ou (99) 99999-9999. Não limita quantos dígitos digitar. */
 function maskPhoneBR(v: string) {
-  const d = onlyDigits(v);
+  const d = onlyDigits(v).slice(0, 11);
   if (d.length === 0) return '';
   if (d.length <= 2) return `(${d}`;
   if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
   if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-  if (d.length <= 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-  // aceita mais dígitos que 11 (usuário pediu poder digitar quantos quiser)
-  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7, 11)}`;
 }
 
-/** Máscara CPF/CNPJ: XXX.XXX.XXX-XX ou XX.XXX.XXX/XXXX-XX. Não limita entrada. */
+/** Máscara de CPF (11 dígitos): XXX.XXX.XXX-XX. Limita a entrada a 11 dígitos. */
 function maskCpfCnpj(v: string) {
-  const d = onlyDigits(v);
+  const d = onlyDigits(v).slice(0, 11);
   if (d.length === 0) return '';
-  if (d.length <= 11) {
-    // CPF
-    if (d.length <= 3) return d;
-    if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-    if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9, 11)}`;
-  }
-  // CNPJ
-  if (d.length <= 14) {
-    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`;
-  }
-  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`;
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9, 11)}`;
 }
 
 /** Aceita fixo (10 dígitos) ou celular (11 dígitos) BR. DDD 11–99. */
@@ -191,9 +181,6 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
         !selected.name?.trim() && 'nome',
         !selected.cpf?.trim() && 'CPF',
         !selected.phone?.trim() && 'telefone',
-        !selected.address?.trim() && 'rua',
-        !selected.number?.trim() && 'número',
-        !selected.neighborhood?.trim() && 'bairro',
       ].filter(Boolean) as string[]
     : [];
 
@@ -288,26 +275,14 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
     }
     if (cpf) {
       const cd = onlyDigits(cpf);
-      if (cd.length !== 11 && cd.length !== 14) {
-        toast.error('CPF deve ter 11 dígitos ou CNPJ 14 dígitos.');
+      if (cd.length !== 11) {
+        toast.error('CPF deve ter 11 dígitos.');
         return;
       }
     }
     if (requireFull) {
       if (!cpf) {
         toast.error('CPF é obrigatório para venda no crediário.');
-        return;
-      }
-      if (!address) {
-        toast.error('Rua/logradouro é obrigatório para venda no crediário.');
-        return;
-      }
-      if (!number) {
-        toast.error('Número do endereço é obrigatório para venda no crediário.');
-        return;
-      }
-      if (!neighborhood) {
-        toast.error('Bairro é obrigatório para venda no crediário.');
         return;
       }
     }
@@ -391,7 +366,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
               </p>
               {requireFull && (
                 <p className="mt-2 text-[11px] text-amber-500">
-                  Venda no crediário: cadastro completo obrigatório (nome, CPF, telefone e endereço).
+                  Venda no crediário: obrigatório nome completo, CPF e telefone.
                 </p>
               )}
             </div>
@@ -588,7 +563,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <Label className="text-xs text-muted-foreground">Rua / Logradouro {requireFull ? '*' : ''}</Label>
+                  <Label className="text-xs text-muted-foreground">Rua / Logradouro</Label>
                   <Input
                     value={form.address}
                     onChange={(e) => setForm({ ...form, address: e.target.value })}
@@ -596,7 +571,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Número {requireFull ? '*' : ''}</Label>
+                  <Label className="text-xs text-muted-foreground">Número</Label>
                   <Input
                     value={form.number}
                     onChange={(e) => setForm({ ...form, number: e.target.value })}
@@ -606,7 +581,7 @@ export function FrenteCaixaCustomerDialog({ open, onOpenChange, companyId, onPic
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-muted-foreground">Bairro {requireFull ? '*' : ''}</Label>
+                  <Label className="text-xs text-muted-foreground">Bairro</Label>
                   <Input
                     value={form.neighborhood}
                     onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
