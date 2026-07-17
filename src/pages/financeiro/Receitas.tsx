@@ -173,12 +173,15 @@ export default function Receitas() {
         const cur = (it.ncm || '').replace(/\D/g, '');
         const withNcm = (!cur || cur === '00000000') ? { ...it, ncm: ncmReal } : it;
         // Reemissão financeira (CFOP 5949):
-        //  • CSOSN 400 (não tributada – Simples Nacional): não gera grupo
-        //    ICMS-ST, evitando a rejeição [385] que a Fiscal Flow provocava
-        //    ao usar 900 (o provider preenchia modBCST/pICMSST automaticamente).
-        //  • cClassTrib '000001': classificação tributária alinhada à Reforma
-        //    Tributária, idêntica à regra usada em outro ERP homologado.
-        return { ...withNcm, csosn: '400', cClassTrib: '000001', classTrib: '000001' };
+        //  • CSOSN 900 (Outros — Simples Nacional): padrão confirmado pela
+        //    Fiscal Flow para NFC-e financeira. Com alíquotas zeradas, o
+        //    API2 omite as tags de ICMS/ST (correção deles p/ rejeições
+        //    385/531). CSOSN 400 combinada com CFOP 5949 dispara rejeição
+        //    [725] na SEFAZ (CFOP inválido).
+        //  • cClassTrib '000001': classificação tributária alinhada à
+        //    Reforma Tributária, idêntica à regra usada em outro ERP
+        //    homologado.
+        return { ...withNcm, csosn: '900', cClassTrib: '000001', classTrib: '000001' };
       });
 
       // Reutiliza o MESMO external_id da nota rejeitada. Isso força a Fiscal
