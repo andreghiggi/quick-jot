@@ -291,18 +291,37 @@ Deno.serve(async (req) => {
     }
 
     async function atualizarNFCeFiscalFlow(nfceId: string, fixedPayload: any): Promise<{ response: Response, result: any, url: string }> {
-      const candidates = Array.from(new Set([
-        `${NFCE_API_URL}/${nfceId}`,
-        `${FF_BASE_URL}/nfce-api/${nfceId}`,
-      ]))
+      // A Fiscal Flow expõe o "PUT /nfce-api/{id}" em algumas instalações e
+      // "PUT /nfce-api/atualizar/{id}" em outras. Também aceitamos POST no
+      // mesmo path como fallback (algumas rotas serverless não aceitam PUT).
+      // Testamos todas as variantes até uma responder OK.
+      const attempts: Array<{ url: string; method: 'PUT' | 'POST' | 'PATCH' }> = []
+      const seen = new Set<string>()
+      const push = (url: string, method: 'PUT' | 'POST' | 'PATCH') => {
+        const key = `${method} ${url}`
+        if (seen.has(key)) return
+        seen.add(key)
+        attempts.push({ url, method })
+      }
+      // PUT clássico como documentado no bilhete técnico
+      push(`${NFCE_API_URL}/${nfceId}`, 'PUT')
+      push(`${FF_BASE_URL}/nfce-api/${nfceId}`, 'PUT')
+      push(`${FF_BASE_URL}/nfce-api/atualizar/${nfceId}`, 'PUT')
+      push(`${FF_BASE_URL}/nfce-api/${nfceId}/atualizar`, 'PUT')
+      // PATCH nas mesmas rotas
+      push(`${NFCE_API_URL}/${nfceId}`, 'PATCH')
+      push(`${FF_BASE_URL}/nfce-api/${nfceId}`, 'PATCH')
+      // POST /atualizar como último fallback (algumas serverless bloqueiam PUT/PATCH)
+      push(`${FF_BASE_URL}/nfce-api/atualizar/${nfceId}`, 'POST')
+      push(`${FF_BASE_URL}/nfce-api/${nfceId}/atualizar`, 'POST')
 
       let lastResponse = new Response(null, { status: 404 })
       let lastResult: any = { success: false, error: 'Nenhuma rota de atualização testada' }
-      let lastUrl = candidates[0]
+      let lastUrl = attempts[0].url
 
-      for (const url of candidates) {
+      for (const { url, method } of attempts) {
         const response = await fetch(url, {
-          method: 'PUT',
+          method,
           headers: {
             'x-api-key': NFCE_API_KEY,
             'Content-Type': 'application/json',
@@ -312,12 +331,14 @@ Deno.serve(async (req) => {
         })
         const result = await safeJson(response)
         const rejectedByBody = result?.success === false || result?.sucesso === false || Boolean(result?.error || result?.erro)
-        console.log('[nfce-proxy] Atualizar NFC-e antes do reprocessamento:', url, 'HTTP', response.status, 'ok=', response.ok, 'bodyRejected=', rejectedByBody)
+        console.log('[nfce-proxy] Atualizar NFC-e antes do reprocessamento:', method, url, 'HTTP', response.status, 'ok=', response.ok, 'bodyRejected=', rejectedByBody)
 
         lastResponse = response
         lastResult = result
         lastUrl = url
 
+        // 404/405: rota/método inexistente — tenta próximo. Outros erros: também
+        // tenta próximo para maximizar chance, mas registra o último.
         if (response.ok && !rejectedByBody) {
           return { response, result, url }
         }
