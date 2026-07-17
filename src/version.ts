@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.1-beta";
+export const VERSION = "1.61.2-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Crediário — impressão sequenciada Venda → Financeira → Comprovante";
+export const CODENAME = "Crediário — cadastro de cliente com validação de CPF e telefone BR";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.2-beta",
+    date: "2026-07-17",
+    codename: "Crediário — cadastro de cliente com validação de CPF e telefone BR",
+    changes: [
+      "Cadastro de cliente do Frente de Caixa: os campos CPF e Telefone agora limitam a digitação ao padrão brasileiro — CPF aceita no máximo 11 dígitos, Telefone no máximo 11 dígitos (fixo 10 ou celular 11 com 9). O operador não consegue mais digitar quantidades absurdas de dígitos.",
+      "Cadastro de cliente na venda em crediário: obrigatoriedade reduzida a Nome completo, CPF e Telefone. Rua, número e bairro voltam a ser opcionais neste fluxo — a validação anterior que exigia endereço completo foi removida.",
+      "Sem alteração em emissão fiscal, TEF, PinPad, PDV V2, Cardápio Online, Compras, Financeiro, Estoque ou impressão.",
+    ],
+  },
   {
     version: "1.61.1-beta",
     date: "2026-07-17",
