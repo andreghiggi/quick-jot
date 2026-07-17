@@ -251,6 +251,14 @@ Deno.serve(async (req) => {
             'icms_st', 'icmsST', 'base_icms_st', 'valor_icms_st', 'aliquota_icms_st', 'mva_st',
             'modBCST', 'pMVAST', 'pRedBCST', 'vBCST', 'pICMSST', 'vICMSST',
             'vBCFCPST', 'pFCPST', 'vFCPST', 'CEST', 'cest',
+            // NFC-e financeira CSOSN 900 zerada: a Fiscal Flow/API2 já sabe omitir
+            // ICMS/ST e montar PIS/COFINS corretamente com CST 49. Enviar aliases
+            // diretos de XML aqui (vBC/vPIS/vCOFINS etc.) faz o provider gerar
+            // PISOutr/COFINSOutr inválido. A nota autorizada nº 13699 NÃO tinha
+            // esses aliases no payload; manter exatamente esse padrão.
+            'vBC', 'pICMS', 'vICMS', 'base_icms', 'valor_icms',
+            'vBCPIS', 'base_pis', 'valor_base_pis', 'pPIS', 'vPIS', 'qBCProd', 'vAliqProd',
+            'vBCCOFINS', 'base_cofins', 'valor_base_cofins', 'pCOFINS', 'vCOFINS', 'qBCProdCOFINS', 'vAliqProdCOFINS',
           ]) delete rest[key]
           return {
             ...rest,
@@ -265,15 +273,8 @@ Deno.serve(async (req) => {
             cofins_cst: '49',
             CSTCOFINS: '49',
             aliquota_icms: 0,
-            pICMS: '0.00',
-            vICMS: '0.00',
-            vBC: '0.00',
             aliquota_pis: 0,
-            pPIS: '0.00',
-            vPIS: '0.00',
             aliquota_cofins: 0,
-            pCOFINS: '0.00',
-            vCOFINS: '0.00',
             cClassTrib: '000001',
             classTrib: '000001',
           }
@@ -405,9 +406,11 @@ Deno.serve(async (req) => {
               cofins_cst: cofinsCst,
               CSTCOFINS: cofinsCst,
               aliquota_pis: Number(it.aliquota_pis) || 0,
-              pPIS: money(Number(it.aliquota_pis) || 0),
               aliquota_cofins: Number(it.aliquota_cofins) || 0,
-              pCOFINS: money(Number(it.aliquota_cofins) || 0),
+              ...(isCrediarioFinanceiroEmit ? {} : {
+                pPIS: money(Number(it.aliquota_pis) || 0),
+                pCOFINS: money(Number(it.aliquota_cofins) || 0),
+              }),
             }
           })
           // Total geral consolidado, descontando desconto e somando frete

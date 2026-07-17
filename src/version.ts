@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.11-beta";
+export const VERSION = "1.61.12-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "CRED rejeitada reemite XML limpo";
+export const CODENAME = "CRED financeira sem aliases XML";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.12-beta",
+    date: "2026-07-17",
+    codename: "CRED financeira sem aliases XML",
+    changes: [
+      "Correção crítica na NFC-e financeira de crediário: o retry já estava saindo com CFOP 5949 + CSOSN 900 + PIS/COFINS CST 49, mas o payload ainda incluía aliases diretos de XML zerados (`vBC`, `pPIS`, `vPIS`, `pCOFINS`, `vCOFINS`) que a Fiscal Flow transformava em `PISOutr/COFINSOutr` inválido.",
+      "O `nfce-proxy` agora mantém o mesmo padrão da nota financeira autorizada nº 13699 da Cozinha da Ruiva: envia CFOP 5949, CSOSN 900, CST 49, alíquotas zeradas e cClassTrib 000001, sem aliases XML de ICMS/PIS/COFINS no item financeiro.",
+      "Sem alteração em TEF, PinPad, PDV, Frente de Caixa venda normal, NF-e, Compras, Estoque ou impressão. O ajuste é restrito à NFC-e financeira de crediário no Monitor NFC-e e emissão financeira normal.",
+    ],
+  },
   {
     version: "1.61.11-beta",
     date: "2026-07-17",
