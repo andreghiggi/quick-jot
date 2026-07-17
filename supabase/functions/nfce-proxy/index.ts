@@ -1094,86 +1094,14 @@ Deno.serve(async (req) => {
             .eq('company_id', companyId)
             .maybeSingle()
           reprocPayload = rec?.request_payload || null
-          // NFC-e financeira de crediário (external_id começando com "CRED-"):
-          // força o padrão homologado — CFOP 5949 + CSOSN 900 + CST 49 +
-          // cClassTrib 000001 + alíquotas zeradas — mesmo que o payload
-          // original tenha sido salvo com CSOSN 400 (padrão antigo que
-          // gerava rejeição [725] da SEFAZ).
+          // NFC-e financeira de crediário (external_id CRED-): NUNCA reemitir
+          // com novo external_id, porque isso consome nova numeração fiscal.
+          // O Monitor deve acionar somente o /reprocessar da Fiscal Flow para a
+          // própria nfceId rejeitada, enviando o payload saneado no padrão 13699.
           const isCredFinanceiro = isCrediarioFinanceiroPayload(rec?.external_id, reprocPayload)
           if (isCredFinanceiro && reprocPayload && Array.isArray(reprocPayload.itens)) {
-            attemptedCredFinanceiroReissue = true
-            const retryExternalId = `${String(rec.external_id)}-RETRY-${Date.now()}`
-            reprocPayload = sanitizeCrediarioFinanceiroPayload(reprocPayload, retryExternalId)
-            applyPagamentoSplitToPayload(reprocPayload)
-            console.log('[nfce-proxy] Reprocessar CRED financeiro: reemitindo payload saneado em novo external_id', retryExternalId)
-
-            apiResponse = await fetchWithTimeout(NFCE_API_URL, {
-              method: 'POST',
-              headers: {
-                'x-api-key': NFCE_API_KEY,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(reprocPayload),
-            }, EMIT_TIMEOUT_MS)
-            result = await safeJson(apiResponse)
-            console.log('[nfce-proxy] Reemissão CRED financeira HTTP', apiResponse.status, 'result:', JSON.stringify(result).substring(0, 700))
-
-            const d = result?.data || result || {}
-            const chave = d?.chave_acesso || d?.chave || d?.access_key || null
-            const fromChave = chave ? extractFromChave(chave) : { numero: null, serie: null }
-            const statusResolved = d?.status || (apiResponse.ok ? 'pendente' : 'rejeitada')
-            const motivo = d?.motivo_rejeicao || d?.motivo || d?.mensagem_sefaz || d?.mensagem || d?.message || d?.erro || d?.error || null
-
-            const newRecord: Record<string, any> = {
-              company_id: companyId,
-              sale_id: rec?.sale_id || null,
-              external_id: retryExternalId,
-              nfce_id: d?.id || d?.nfce_id || null,
-              numero: d?.numero || d?.number || fromChave.numero || null,
-              serie: d?.serie || d?.series || fromChave.serie || null,
-              status: String(statusResolved).toLowerCase().includes('rejeit') ? 'rejeitada' : statusResolved,
-              ambiente: d?.ambiente || d?.environment || reprocPayload?.ambiente || 'producao',
-              valor_total: d?.valor_total || d?.total || reprocPayload.valor_total || 0,
-              chave_acesso: chave,
-              protocolo: d?.protocolo || d?.protocol || null,
-              qrcode_url: d?.qrcode_url || d?.qr_code_url || d?.url_qrcode || d?.qrcode || (chave ? buildQrcodeUrl(chave, d?.ambiente || reprocPayload?.ambiente || 'producao') : null),
-              xml_url: d?.xml_url || d?.url_xml || null,
-              motivo_rejeicao: motivo,
-              request_payload: reprocPayload,
-              response_payload: result,
-              contingencia_offline: false,
-              contingencia_efetivada: false,
-            }
-            const { data: inserted, error: insertErr } = await supabase
-              .from('nfce_records')
-              .insert(newRecord)
-              .select('id')
-              .single()
-            if (insertErr) {
-              console.error('[nfce-proxy] Reemissão CRED financeira insert error:', insertErr)
-              result = { success: false, reissued: false, error: 'NFC-e enviada, mas falhou ao gravar o novo registro local: ' + insertErr.message }
-              apiResponse = new Response(null, { status: 500 })
-              break
-            }
-
-            await supabase.from('nfce_records')
-              .update({
-                motivo_rejeicao: `Reemitida pelo Monitor com CSOSN 900 em ${retryExternalId}. Registro original mantido apenas como rejeição histórica.`,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', rec.id)
-              .eq('company_id', companyId)
-
-            result = {
-              success: apiResponse.ok,
-              reissued: true,
-              recordId: inserted?.id || null,
-              nfce_id: newRecord.nfce_id,
-              external_id: retryExternalId,
-              status: newRecord.status,
-              result,
-            }
-            break
+            reprocPayload = sanitizeCrediarioFinanceiroPayload(reprocPayload, String(rec.external_id))
+            console.log('[nfce-proxy] Reprocessar CRED financeiro: usando /reprocessar sem nova numeração para', nfceId)
           }
         } catch (e) {
           console.error('[nfce-proxy] Reprocessar: falha ao carregar payload:', e)
