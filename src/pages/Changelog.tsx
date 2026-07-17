@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '17/07/2026',
+    version: '1.61.12-beta',
+    type: 'fix',
+    description: 'NFC-e financeira de crediário: removidos aliases diretos de XML zerados (vBC, pPIS, vPIS, pCOFINS, vCOFINS) do payload CRED-*. O padrão agora fica igual ao da nota financeira autorizada nº 13699 da Cozinha da Ruiva: CFOP 5949, CSOSN 900, PIS/COFINS CST 49, alíquotas 0 e cClassTrib 000001, sem tags manuais que geravam PISOutr/COFINSOutr inválido. Ajuste restrito ao fluxo financeiro de crediário/Monitor NFC-e.',
+  },
+  {
     date: '09/07/2026',
     version: '1.56.0-beta',
     type: 'feature',
