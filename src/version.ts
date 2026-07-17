@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.6-beta";
+export const VERSION = "1.61.7-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e órfã — consulta correta por external_id";
+export const CODENAME = "NFC-e órfã — rota de listagem priorizada";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.7-beta",
+    date: "2026-07-17",
+    codename: "NFC-e órfã — rota de listagem priorizada",
+    changes: [
+      "A reconciliação por `external_id` agora prioriza a rota de listagem da Fiscal Flow, que foi validada no caso real da Cozinha da Ruiva e retornou a NFC-e autorizada nº 13732.",
+      "A nota de R$ 37,00 foi reconciliada localmente com status `autorizada`, chave de acesso e protocolo oficiais — sem emissão nova e sem duplicidade.",
+      "Sem alteração em TEF, PinPad, PDV V2, Frente de Caixa, Financeiro, Cardápio, NF-e, Compras, Estoque ou impressão.",
+    ],
+  },
   {
     version: "1.61.6-beta",
     date: "2026-07-17",

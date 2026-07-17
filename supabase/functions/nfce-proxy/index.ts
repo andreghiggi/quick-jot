@@ -202,8 +202,8 @@ Deno.serve(async (req) => {
     async function consultarPorExternalId(extId: string): Promise<{ response: Response, raw: any, data: any | null, source: string }> {
       const encoded = encodeURIComponent(extId)
       const attempts = [
-        { source: 'consultar', url: `${FF_BASE_URL}/nfce-api/consultar?external_id=${encoded}` },
         { source: 'listar', url: `${NFCE_API_URL}?external_id=${encoded}` },
+        { source: 'consultar', url: `${FF_BASE_URL}/nfce-api/consultar?external_id=${encoded}` },
       ]
 
       let lastResponse = new Response(null, { status: 404 })

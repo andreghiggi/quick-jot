@@ -124,8 +124,8 @@ Deno.serve(async (req) => {
     async function consultarPorExternalId(apiKey: string, externalId: string): Promise<any | null> {
       const encoded = encodeURIComponent(externalId)
       const attempts = [
-        `${FF_BASE_URL}/nfce-api/consultar?external_id=${encoded}`,
         `${NFCE_API_URL}?external_id=${encoded}`,
+        `${FF_BASE_URL}/nfce-api/consultar?external_id=${encoded}`,
       ]
 
       for (const url of attempts) {
@@ -134,6 +134,7 @@ Deno.serve(async (req) => {
         let result: any = null
         try { result = JSON.parse(text) } catch { result = null }
         const match = pickExternalIdMatch(result, externalId)
+        console.log('[nfce-contingencia-sync] consulta external_id status=', resp.status, 'match=', Boolean(match))
         if (match) return match
       }
 
