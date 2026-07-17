@@ -240,46 +240,44 @@ Deno.serve(async (req) => {
       })
     }
 
+    function sanitizeCrediarioFinanceiroItem(item: any): any {
+      const quantidade = Number(item?.quantidade ?? item?.qCom ?? 1) || 1
+      const valorUnitario = Number(item?.valor_unitario ?? item?.valorUnitario ?? item?.vUnCom ?? item?.valor ?? 0) || 0
+      return {
+        codigo: item?.codigo || item?.cProd || 'REC-CRED',
+        descricao: item?.descricao || item?.xProd || 'Recebimento de crediário',
+        unidade: item?.unidade || item?.uCom || 'UN',
+        quantidade,
+        valor_unitario: valorUnitario,
+        ncm: item?.ncm || item?.NCM || '19059090',
+        cfop: '5949',
+        csosn: '900',
+        cst_pis: '49',
+        cst_cofins: '49',
+        aliquota_icms: 0,
+        aliquota_pis: 0,
+        aliquota_cofins: 0,
+        cClassTrib: '000001',
+        classTrib: '000001',
+      }
+    }
+
     function sanitizeCrediarioFinanceiroPayload(sourcePayload: any, externalId?: string): any {
       const sanitized = { ...sourcePayload }
       if (externalId) sanitized.external_id = externalId
       sanitized.natureza_operacao = sanitized.natureza_operacao || 'Recebimento de crediário'
       sanitized.itens = Array.isArray(sourcePayload?.itens)
-        ? sourcePayload.itens.map((item: any) => {
-          const rest = { ...(item || {}) }
-          for (const key of [
-            'icms_st', 'icmsST', 'base_icms_st', 'valor_icms_st', 'aliquota_icms_st', 'mva_st',
-            'modBCST', 'pMVAST', 'pRedBCST', 'vBCST', 'pICMSST', 'vICMSST',
-            'vBCFCPST', 'pFCPST', 'vFCPST', 'CEST', 'cest',
-            // NFC-e financeira CSOSN 900 zerada: a Fiscal Flow/API2 já sabe omitir
-            // ICMS/ST e montar PIS/COFINS corretamente com CST 49. Enviar aliases
-            // diretos de XML aqui (vBC/vPIS/vCOFINS etc.) faz o provider gerar
-            // PISOutr/COFINSOutr inválido. A nota autorizada nº 13699 NÃO tinha
-            // esses aliases no payload; manter exatamente esse padrão.
-            'vBC', 'pICMS', 'vICMS', 'base_icms', 'valor_icms',
-            'vBCPIS', 'base_pis', 'valor_base_pis', 'pPIS', 'vPIS', 'qBCProd', 'vAliqProd',
-            'vBCCOFINS', 'base_cofins', 'valor_base_cofins', 'pCOFINS', 'vCOFINS', 'qBCProdCOFINS', 'vAliqProdCOFINS',
-          ]) delete rest[key]
-          return {
-            ...rest,
-            cfop: '5949',
-            CFOP: '5949',
-            csosn: '900',
-            CSOSN: '900',
-            cst_pis: '49',
-            pis_cst: '49',
-            CSTPIS: '49',
-            cst_cofins: '49',
-            cofins_cst: '49',
-            CSTCOFINS: '49',
-            aliquota_icms: 0,
-            aliquota_pis: 0,
-            aliquota_cofins: 0,
-            cClassTrib: '000001',
-            classTrib: '000001',
-          }
-        })
+        ? sourcePayload.itens.map(sanitizeCrediarioFinanceiroItem)
         : []
+      // Mantém o payload igual ao padrão autorizado nº 13699: a API fiscal recebe
+      // `pagamentos_split` e monta o detPag. Não enviar aliases fiscais nem grupos
+      // manuais `pag`/`detPag`/`formas_pagamento`, pois isso já gerou XML inválido.
+      delete sanitized.pagamento
+      delete sanitized.pagamentos
+      delete sanitized.formas_pagamento
+      delete sanitized.pag
+      delete sanitized.detPag
+      delete sanitized.tef
       return sanitized
     }
 
@@ -370,7 +368,18 @@ Deno.serve(async (req) => {
           const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
           const money = (n: number) => round2(n).toFixed(2)
           const qty = (n: number) => (Number(n) || 0).toFixed(4)
-          emitPayload.itens = emitPayload.itens.map((it: any) => {
+          if (isCrediarioFinanceiroEmit) {
+            emitPayload.itens = emitPayload.itens.map(sanitizeCrediarioFinanceiroItem)
+            const subtotal = emitPayload.itens.reduce(
+              (s: number, it: any) => s + ((Number(it.quantidade) || 0) * (Number(it.valor_unitario) || 0)),
+              0
+            )
+            const desconto = round2(Number(emitPayload.valor_desconto) || 0)
+            const frete = round2(Number(emitPayload.valor_frete) || 0)
+            emitPayload.valor_total = round2(subtotal - desconto + frete)
+            console.log('[nfce-proxy] CRED financeiro saneado sem aliases:', JSON.stringify(emitPayload.itens))
+          } else {
+            emitPayload.itens = emitPayload.itens.map((it: any) => {
             const qtd = Number(it.quantidade) || 0
             const vUnit = round2(Number(it.valor_unitario) || 0)
             const vTot = round2(qtd * vUnit)
@@ -412,17 +421,18 @@ Deno.serve(async (req) => {
                 pCOFINS: money(Number(it.aliquota_cofins) || 0),
               }),
             }
-          })
-          // Total geral consolidado, descontando desconto e somando frete
-          const subtotal = emitPayload.itens.reduce(
-            (s: number, it: any) => s + (Number(it.valor_total) || 0),
-            0
-          )
-          const desconto = round2(Number(emitPayload.valor_desconto) || 0)
-          const frete = round2(Number(emitPayload.valor_frete) || 0)
-          emitPayload.valor_total = round2(subtotal - desconto + frete)
-          console.log('[nfce-proxy] Itens normalizados:', JSON.stringify(emitPayload.itens))
-          console.log('[nfce-proxy] valor_total calculado:', emitPayload.valor_total)
+            })
+            // Total geral consolidado, descontando desconto e somando frete
+            const subtotal = emitPayload.itens.reduce(
+              (s: number, it: any) => s + (Number(it.valor_total) || 0),
+              0
+            )
+            const desconto = round2(Number(emitPayload.valor_desconto) || 0)
+            const frete = round2(Number(emitPayload.valor_frete) || 0)
+            emitPayload.valor_total = round2(subtotal - desconto + frete)
+            console.log('[nfce-proxy] Itens normalizados:', JSON.stringify(emitPayload.itens))
+            console.log('[nfce-proxy] valor_total calculado:', emitPayload.valor_total)
+          }
         }
 
         // Map optional destinatário (CPF/CNPJ) to the Fiscal API format.
@@ -444,7 +454,7 @@ Deno.serve(async (req) => {
           delete emitPayload.destinatario
         }
 
-        if (payload.tef) {
+        if (!isCrediarioFinanceiroEmit && payload.tef) {
           const tef = payload.tef
           const tPagMap: Record<string, string> = {
             'credit': '03',
@@ -563,7 +573,7 @@ Deno.serve(async (req) => {
         // tenha montado e gera 1 detPag por linha (cash + N TEFs).
         // Não altera o fluxo single-payment (continua igual quando ausente).
         // -----------------------------------------------------------------
-        if (Array.isArray(payload.pagamentos_split) && payload.pagamentos_split.length > 0) {
+        if (!isCrediarioFinanceiroEmit && Array.isArray(payload.pagamentos_split) && payload.pagamentos_split.length > 0) {
           const tPagMap: Record<string, string> = {
             'credit': '03',
             'debit': '04',
