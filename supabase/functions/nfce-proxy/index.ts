@@ -246,11 +246,12 @@ Deno.serve(async (req) => {
       sanitized.natureza_operacao = sanitized.natureza_operacao || 'Recebimento de crediário'
       sanitized.itens = Array.isArray(sourcePayload?.itens)
         ? sourcePayload.itens.map((item: any) => {
-          const {
-            icms_st, icmsST, base_icms_st, valor_icms_st, aliquota_icms_st, mva_st,
-            modBCST, pMVAST, pRedBCST, vBCST, pICMSST, vICMSST,
-            vBCFCPST, pFCPST, vFCPST, CEST, cest, ...rest
-          } = item || {}
+          const rest = { ...(item || {}) }
+          for (const key of [
+            'icms_st', 'icmsST', 'base_icms_st', 'valor_icms_st', 'aliquota_icms_st', 'mva_st',
+            'modBCST', 'pMVAST', 'pRedBCST', 'vBCST', 'pICMSST', 'vICMSST',
+            'vBCFCPST', 'pFCPST', 'vFCPST', 'CEST', 'cest',
+          ]) delete rest[key]
           return {
             ...rest,
             cfop: '5949',
@@ -1071,6 +1072,7 @@ Deno.serve(async (req) => {
         // rejeitada; enviamos o payload atualizado no corpo para que a FF
         // regenere o XML com os novos dados fiscais antes de retransmitir.
         let reprocPayload: any = null
+        let attemptedCredFinanceiroReissue = false
         try {
           const { data: rec } = await supabase
             .from('nfce_records')
@@ -1086,6 +1088,7 @@ Deno.serve(async (req) => {
           // gerava rejeição [725] da SEFAZ).
           const isCredFinanceiro = isCrediarioFinanceiroPayload(rec?.external_id, reprocPayload)
           if (isCredFinanceiro && reprocPayload && Array.isArray(reprocPayload.itens)) {
+            attemptedCredFinanceiroReissue = true
             const retryExternalId = `${String(rec.external_id)}-RETRY-${Date.now()}`
             reprocPayload = sanitizeCrediarioFinanceiroPayload(reprocPayload, retryExternalId)
             applyPagamentoSplitToPayload(reprocPayload)
@@ -1133,7 +1136,12 @@ Deno.serve(async (req) => {
               .insert(newRecord)
               .select('id')
               .single()
-            if (insertErr) console.error('[nfce-proxy] Reemissão CRED financeira insert error:', insertErr)
+            if (insertErr) {
+              console.error('[nfce-proxy] Reemissão CRED financeira insert error:', insertErr)
+              result = { success: false, reissued: false, error: 'NFC-e enviada, mas falhou ao gravar o novo registro local: ' + insertErr.message }
+              apiResponse = new Response(null, { status: 500 })
+              break
+            }
 
             await supabase.from('nfce_records')
               .update({
@@ -1156,6 +1164,11 @@ Deno.serve(async (req) => {
           }
         } catch (e) {
           console.error('[nfce-proxy] Reprocessar: falha ao carregar payload:', e)
+          if (attemptedCredFinanceiroReissue) {
+            apiResponse = new Response(null, { status: 500 })
+            result = { success: false, error: 'Falha na reemissão limpa da NFC-e financeira. O reprocessamento antigo foi bloqueado para não reenviar CSOSN 400.' }
+            break
+          }
         }
         console.log('[nfce-proxy] Reprocessar nfceId:', nfceId, 'com payload override:', !!reprocPayload)
         apiResponse = await fetch(`${NFCE_API_URL}/${nfceId}/reprocessar`, {
