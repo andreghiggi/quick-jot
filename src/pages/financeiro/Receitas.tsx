@@ -679,8 +679,8 @@ export default function Receitas() {
           // estejam gravadas com CSOSN 400 (que dispara rejeição [725] da
           // SEFAZ — CFOP inválido).
           csosn: '900',
-          pis_cst: '49',
-          cofins_cst: '49',
+          cst_pis: '49',
+          cst_cofins: '49',
           cClassTrib: '000001',
           classTrib: '000001',
         };
