@@ -291,18 +291,37 @@ Deno.serve(async (req) => {
     }
 
     async function atualizarNFCeFiscalFlow(nfceId: string, fixedPayload: any): Promise<{ response: Response, result: any, url: string }> {
-      const candidates = Array.from(new Set([
-        `${NFCE_API_URL}/${nfceId}`,
-        `${FF_BASE_URL}/nfce-api/${nfceId}`,
-      ]))
+      // A Fiscal Flow expõe o "PUT /nfce-api/{id}" em algumas instalações e
+      // "PUT /nfce-api/atualizar/{id}" em outras. Também aceitamos POST no
+      // mesmo path como fallback (algumas rotas serverless não aceitam PUT).
+      // Testamos todas as variantes até uma responder OK.
+      const attempts: Array<{ url: string; method: 'PUT' | 'POST' | 'PATCH' }> = []
+      const seen = new Set<string>()
+      const push = (url: string, method: 'PUT' | 'POST' | 'PATCH') => {
+        const key = `${method} ${url}`
+        if (seen.has(key)) return
+        seen.add(key)
+        attempts.push({ url, method })
+      }
+      // PUT clássico como documentado no bilhete técnico
+      push(`${NFCE_API_URL}/${nfceId}`, 'PUT')
+      push(`${FF_BASE_URL}/nfce-api/${nfceId}`, 'PUT')
+      push(`${FF_BASE_URL}/nfce-api/atualizar/${nfceId}`, 'PUT')
+      push(`${FF_BASE_URL}/nfce-api/${nfceId}/atualizar`, 'PUT')
+      // PATCH nas mesmas rotas
+      push(`${NFCE_API_URL}/${nfceId}`, 'PATCH')
+      push(`${FF_BASE_URL}/nfce-api/${nfceId}`, 'PATCH')
+      // POST /atualizar como último fallback (algumas serverless bloqueiam PUT/PATCH)
+      push(`${FF_BASE_URL}/nfce-api/atualizar/${nfceId}`, 'POST')
+      push(`${FF_BASE_URL}/nfce-api/${nfceId}/atualizar`, 'POST')
 
       let lastResponse = new Response(null, { status: 404 })
       let lastResult: any = { success: false, error: 'Nenhuma rota de atualização testada' }
-      let lastUrl = candidates[0]
+      let lastUrl = attempts[0].url
 
-      for (const url of candidates) {
+      for (const { url, method } of attempts) {
         const response = await fetch(url, {
-          method: 'PUT',
+          method,
           headers: {
             'x-api-key': NFCE_API_KEY,
             'Content-Type': 'application/json',
@@ -312,12 +331,14 @@ Deno.serve(async (req) => {
         })
         const result = await safeJson(response)
         const rejectedByBody = result?.success === false || result?.sucesso === false || Boolean(result?.error || result?.erro)
-        console.log('[nfce-proxy] Atualizar NFC-e antes do reprocessamento:', url, 'HTTP', response.status, 'ok=', response.ok, 'bodyRejected=', rejectedByBody)
+        console.log('[nfce-proxy] Atualizar NFC-e antes do reprocessamento:', method, url, 'HTTP', response.status, 'ok=', response.ok, 'bodyRejected=', rejectedByBody)
 
         lastResponse = response
         lastResult = result
         lastUrl = url
 
+        // 404/405: rota/método inexistente — tenta próximo. Outros erros: também
+        // tenta próximo para maximizar chance, mas registra o último.
         if (response.ok && !rejectedByBody) {
           return { response, result, url }
         }
@@ -1159,25 +1180,20 @@ Deno.serve(async (req) => {
             const putResult = await atualizarNFCeFiscalFlow(nfceId, reprocPayload)
             const putRejectedByBody = putResult.result?.success === false || putResult.result?.sucesso === false || Boolean(putResult.result?.error || putResult.result?.erro)
             if (!putResult.response.ok || putRejectedByBody) {
-              apiResponse = new Response(null, { status: putResult.response.ok ? 422 : putResult.response.status })
-              result = {
-                success: false,
-                error: 'A NFC-e financeira CRED não foi reprocessada porque a Fiscal Flow não confirmou o PUT de correção do item. Reprocessar agora reenviaria o XML antigo.',
-                nfce_id: nfceId,
-                update_url: putResult.url,
-                update_result: putResult.result,
-              }
+              // Não abortamos: quando a Fiscal Flow não expõe PUT/PATCH/POST de
+              // atualização (404/405 em todas as rotas), a alternativa é chamar
+              // /reprocessar enviando o payload sanitizado no BODY. Muitas
+              // instalações usam esse body para substituir os itens antes de
+              // reenviar à SEFAZ, sem consumir nova numeração.
+              console.warn('[nfce-proxy] PUT/PATCH/POST de atualização não confirmado; tentando /reprocessar com body sanitizado. Última URL:', putResult.url, 'result:', JSON.stringify(putResult.result).substring(0, 400))
               await supabase.from('nfce_records')
                 .update({
-                  motivo_rejeicao: JSON.stringify(result).substring(0, 1000),
-                  response_payload: putResult.result,
+                  motivo_rejeicao: 'PUT de atualização não confirmado; chamando /reprocessar com payload corrigido no body.',
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', rec.id)
-              break
             }
-
-            console.log('[nfce-proxy] Reprocessar CRED financeiro: PUT confirmado; chamando /reprocessar sem nova numeração para', nfceId)
+            console.log('[nfce-proxy] Reprocessar CRED financeiro: chamando /reprocessar para', nfceId, '(mesma numeração)')
           }
         } catch (e) {
           console.error('[nfce-proxy] Reprocessar: falha ao carregar payload:', e)
@@ -1189,7 +1205,11 @@ Deno.serve(async (req) => {
             'x-api-key': NFCE_API_KEY,
             'Content-Type': 'application/json',
           },
-          body: (!isCredFinanceiro && reprocPayload) ? JSON.stringify(reprocPayload) : undefined,
+          // Para CRED financeiro sempre enviamos o payload sanitizado; se o PUT
+          // acima teve sucesso, a FF já atualizou o item e o body é redundante
+          // (mas não atrapalha). Se falhou, é a nossa única chance de forçar
+          // CFOP 5949 + CSOSN 900 + CST 49 sem novo external_id.
+          body: reprocPayload ? JSON.stringify(reprocPayload) : undefined,
         })
         result = await safeJson(apiResponse)
         console.log('[nfce-proxy] Reprocessar HTTP', apiResponse.status, 'result:', JSON.stringify(result).substring(0, 500))

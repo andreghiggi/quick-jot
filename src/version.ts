@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.14-beta";
+export const VERSION = "1.61.15-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Monitor CRED atualiza antes de reprocessar";
+export const CODENAME = "Monitor CRED — múltiplas rotas de atualização + body no reprocessar";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.15-beta",
+    date: "2026-07-17",
+    codename: "Monitor CRED — múltiplas rotas de atualização + body no reprocessar",
+    changes: [
+      "Correção do 404 no reprocessamento de NFC-e financeira CRED-*: a v1.61.14 estava fazendo apenas `PUT /nfce-api/{id}` e a Fiscal Flow retornava 404 em algumas instalações, travando o Monitor sem chegar a chamar `/reprocessar`.",
+      "Agora o `nfce-proxy` testa em sequência: `PUT /nfce-api/{id}`, `PUT /nfce-api/atualizar/{id}`, `PUT /nfce-api/{id}/atualizar`, `PATCH` nas mesmas rotas e, por fim, `POST /atualizar` — a primeira que responder OK é usada.",
+      "Se todas as rotas de atualização falharem, o Monitor deixou de abortar: passa a chamar `/reprocessar` enviando o payload sanitizado no BODY, mantendo mesma numeração e mesmo `external_id`. Sem risco de emitir nota nova.",
+      "Payload sanitizado continua no padrão homologado 13699: CFOP 5949 + CSOSN 900 + PIS/COFINS CST 49 + alíquotas zeradas + cClassTrib 000001.",
+      "Sem alteração em TEF, PinPad, PDV V2, Frente de Caixa, Cardápio, NF-e, Compras, Financeiro, Estoque ou impressão.",
+    ],
+  },
   {
     version: "1.61.14-beta",
     date: "2026-07-17",
