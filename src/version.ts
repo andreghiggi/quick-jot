@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.8-beta";
+export const VERSION = "1.61.9-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e financeira — CSOSN 900 restaurado";
+export const CODENAME = "Reprocessamento só pelo Monitor NFC-e";
 
 export interface Release {
   version: string;
@@ -19,6 +19,14 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.9-beta",
+    date: "2026-07-17",
+    codename: "Reprocessamento só pelo Monitor NFC-e",
+    changes: [
+      "Removido o banner de reemissão de NFC-e financeira rejeitada da tela Financeiro → Receitas. Reprocessamento de notas rejeitadas agora acontece exclusivamente pelo Monitor NFC-e, evitando dois caminhos concorrentes para a mesma ação.",
+    ],
+  },
   {
     version: "1.61.8-beta",
     date: "2026-07-17",
