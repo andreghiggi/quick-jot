@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/07/2026',
+    version: '1.61.13-beta',
+    type: 'fix',
+    description: 'Monitor NFC-e: reprocessar NFC-e financeira de crediário (CRED-*) não reemite mais com novo external_id e não consome nova numeração fiscal. Agora usa somente o /reprocessar da Fiscal Flow para a própria nfce_id rejeitada, com payload limpo igual ao padrão autorizado nº 13699: CFOP 5949, CSOSN 900, CST 49, alíquotas 0 e cClassTrib 000001, sem aliases duplicados ou grupos manuais que geravam XML inválido.',
+  },
+  {
+    date: '17/07/2026',
     version: '1.61.12-beta',
     type: 'fix',
     description: 'NFC-e financeira de crediário: removidos aliases diretos de XML zerados (vBC, pPIS, vPIS, pCOFINS, vCOFINS) do payload CRED-*. O padrão agora fica igual ao da nota financeira autorizada nº 13699 da Cozinha da Ruiva: CFOP 5949, CSOSN 900, PIS/COFINS CST 49, alíquotas 0 e cClassTrib 000001, sem tags manuais que geravam PISOutr/COFINSOutr inválido. Ajuste restrito ao fluxo financeiro de crediário/Monitor NFC-e.',
