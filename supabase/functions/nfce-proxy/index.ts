@@ -223,13 +223,126 @@ Deno.serve(async (req) => {
       return { response: lastResponse, raw: lastRaw, data: null, source: 'none' }
     }
 
+    function isCrediarioFinanceiroPayload(externalId: unknown, sourcePayload: any): boolean {
+      if (!String(externalId || '').startsWith('CRED-')) return false
+      const text = [
+        sourcePayload?.natureza_operacao,
+        sourcePayload?.observacoes,
+        sourcePayload?.infCpl,
+        sourcePayload?.informacoes_complementares,
+      ].filter(Boolean).join(' ').toLowerCase()
+      if (text.includes('recebimento') && text.includes('credi')) return true
+      return Array.isArray(sourcePayload?.itens) && sourcePayload.itens.some((it: any) => {
+        const cfop = String(it?.cfop || it?.CFOP || '')
+        const codigo = String(it?.codigo || it?.cProd || '').toUpperCase()
+        const desc = String(it?.descricao || it?.xProd || '').toLowerCase()
+        return cfop === '5949' || cfop === '6949' || codigo === 'REC-CRED' || (desc.includes('recebimento') && desc.includes('credi'))
+      })
+    }
+
+    function sanitizeCrediarioFinanceiroPayload(sourcePayload: any, externalId?: string): any {
+      const sanitized = { ...sourcePayload }
+      if (externalId) sanitized.external_id = externalId
+      sanitized.natureza_operacao = sanitized.natureza_operacao || 'Recebimento de crediário'
+      sanitized.itens = Array.isArray(sourcePayload?.itens)
+        ? sourcePayload.itens.map((item: any) => {
+          const {
+            icms_st, icmsST, base_icms_st, valor_icms_st, aliquota_icms_st, mva_st,
+            modBCST, pMVAST, pRedBCST, vBCST, pICMSST, vICMSST,
+            vBCFCPST, pFCPST, vFCPST, CEST, cest, ...rest
+          } = item || {}
+          return {
+            ...rest,
+            cfop: '5949',
+            CFOP: '5949',
+            csosn: '900',
+            CSOSN: '900',
+            cst_pis: '49',
+            pis_cst: '49',
+            CSTPIS: '49',
+            cst_cofins: '49',
+            cofins_cst: '49',
+            CSTCOFINS: '49',
+            aliquota_icms: 0,
+            pICMS: '0.00',
+            vICMS: '0.00',
+            vBC: '0.00',
+            aliquota_pis: 0,
+            pPIS: '0.00',
+            vPIS: '0.00',
+            aliquota_cofins: 0,
+            pCOFINS: '0.00',
+            vCOFINS: '0.00',
+            cClassTrib: '000001',
+            classTrib: '000001',
+          }
+        })
+        : []
+      return sanitized
+    }
+
+    function applyPagamentoSplitToPayload(emitPayload: any): void {
+      if (!Array.isArray(emitPayload.pagamentos_split) || emitPayload.pagamentos_split.length === 0) return
+      const tPagMap: Record<string, string> = { credit: '03', debit: '04', pix: '17' }
+      const tBandMap: Record<string, string> = {
+        'VISA': '01', 'MASTERCARD': '02', 'AMEX': '03', 'AMERICAN EXPRESS': '03',
+        'MAESTRO': '02', 'SOROCRED': '04', 'DINERS': '05', 'ELO': '06',
+        'HIPERCARD': '07', 'AURA': '08', 'CABAL': '09',
+      }
+      const cnpjAdquirenteMap: Record<string, string> = {
+        'GETNET': '10440482000154', 'CIELO': '01027058000191', 'STONE': '16501555000157',
+        'REDE': '01425787000104', 'PAGSEGURO': '08561701000101', 'PAGBANK': '08561701000101',
+        'SAFRAPAY': '58160789000128', 'MERCADOPAGO': '10573521000191', 'SUMUP': '18188384000123',
+        'VERO': '01425787000104', 'BANRISUL': '92702067000196', 'SICREDI': '01181521000155',
+      }
+      const pagamentosArr: any[] = []
+      const detPagArr: any[] = []
+      const formasArr: any[] = []
+      for (const linha of emitPayload.pagamentos_split) {
+        const valor = Number(linha.valor || 0)
+        if (valor <= 0) continue
+        const vPagStr = valor.toFixed(2)
+        if (linha.tipo === 'tef' && linha.tef) {
+          const t = linha.tef
+          const tPag = tPagMap[t.tipo_pagamento] || '99'
+          const bandeiraNorm = String(t.bandeira || '').toUpperCase()
+          const adquirenteNorm = String(t.adquirente || '').toUpperCase()
+          const cnpj = cnpjAdquirenteMap[adquirenteNorm] || null
+          const tBand = tBandMap[bandeiraNorm] || '99'
+          pagamentosArr.push({ tPag, vPag: vPagStr, tpIntegra: 1, card: { tpIntegra: '1', CNPJ: cnpj, tBand, cAut: t.autorizacao, NSU: t.nsu } })
+          detPagArr.push({ indPag: '0', tPag, vPag: vPagStr, tpIntegra: '1', card: { tpIntegra: '1', CNPJ: cnpj, tBand, cAut: t.autorizacao, NSU: t.nsu }, CNPJ: cnpj, tBand, cAut: t.autorizacao, NSU: t.nsu })
+          formasArr.push({ forma_pagamento: tPag, valor_pagamento: valor, tipo_integracao: 1, cnpj_credenciadora: cnpj, bandeira_operadora: tBand, numero_autorizacao: t.autorizacao })
+        } else if (linha.tipo === 'pix') {
+          pagamentosArr.push({ tPag: '17', vPag: vPagStr })
+          detPagArr.push({ indPag: '0', tPag: '17', vPag: vPagStr })
+          formasArr.push({ forma_pagamento: '17', valor_pagamento: valor })
+        } else if (linha.tipo === 'crediario') {
+          pagamentosArr.push({ tPag: '05', vPag: vPagStr })
+          detPagArr.push({ indPag: '1', tPag: '05', vPag: vPagStr })
+          formasArr.push({ forma_pagamento: '05', valor_pagamento: valor })
+        } else {
+          pagamentosArr.push({ tPag: '01', vPag: vPagStr })
+          detPagArr.push({ indPag: '0', tPag: '01', vPag: vPagStr })
+          formasArr.push({ forma_pagamento: '01', valor_pagamento: valor })
+        }
+      }
+      delete emitPayload.pagamento
+      emitPayload.pagamentos = pagamentosArr
+      emitPayload.formas_pagamento = formasArr
+      emitPayload.pag = { detPag: detPagArr }
+      emitPayload.detPag = detPagArr
+    }
+
     switch (action) {
 
       case 'emitir': {
         console.log('[nfce-proxy] Emitir NFC-e, URL:', NFCE_API_URL)
 
         // If TEF data is present, add payment group to payload
-        const emitPayload = { ...payload }
+        const emitPayload = isCrediarioFinanceiroPayload(payload?.external_id, payload)
+          ? sanitizeCrediarioFinanceiroPayload(payload)
+          : { ...payload }
+        const isCrediarioFinanceiroEmit = isCrediarioFinanceiroPayload(emitPayload?.external_id, emitPayload)
 
         // Mapeia "observacoes" (vindo do front) para os campos que a Fiscal Flow
         // aceita como informações complementares (infCpl no XML). Mantemos
@@ -263,6 +376,8 @@ Deno.serve(async (req) => {
             // Trocar para 07 (isento) elimina o grupo PISOutr/COFINSOutr inválido.
             const fixCst = (cst: string, aliq: number) =>
               (cst === '49' || cst === '99') && (!aliq || aliq === 0) ? '07' : cst
+            const pisCst = isCrediarioFinanceiroEmit ? '49' : fixCst(String(it.cst_pis || it.pis_cst || '49'), Number(it.aliquota_pis) || 0)
+            const cofinsCst = isCrediarioFinanceiroEmit ? '49' : fixCst(String(it.cst_cofins || it.cofins_cst || '49'), Number(it.aliquota_cofins) || 0)
             // CEST é opcional: só repassa quando vier preenchido (string com 7 dígitos).
             // Alguns produtos não exigem CEST e enviar vazio quebra o XML.
             const cestRaw = (it.cest ?? it.CEST ?? '').toString().replace(/\D/g, '')
@@ -282,10 +397,12 @@ Deno.serve(async (req) => {
               valorTotal: money(vTot),
               total: money(vTot),
               vProd: money(vTot),
-              cst_pis: fixCst(String(it.cst_pis || '49'), Number(it.aliquota_pis) || 0),
-              CSTPIS: fixCst(String(it.cst_pis || '49'), Number(it.aliquota_pis) || 0),
-              cst_cofins: fixCst(String(it.cst_cofins || '49'), Number(it.aliquota_cofins) || 0),
-              CSTCOFINS: fixCst(String(it.cst_cofins || '49'), Number(it.aliquota_cofins) || 0),
+              cst_pis: pisCst,
+              pis_cst: pisCst,
+              CSTPIS: pisCst,
+              cst_cofins: cofinsCst,
+              cofins_cst: cofinsCst,
+              CSTCOFINS: cofinsCst,
               aliquota_pis: Number(it.aliquota_pis) || 0,
               pPIS: money(Number(it.aliquota_pis) || 0),
               aliquota_cofins: Number(it.aliquota_cofins) || 0,
@@ -957,7 +1074,7 @@ Deno.serve(async (req) => {
         try {
           const { data: rec } = await supabase
             .from('nfce_records')
-            .select('request_payload, external_id')
+            .select('id, sale_id, request_payload, external_id')
             .eq('nfce_id', nfceId)
             .eq('company_id', companyId)
             .maybeSingle()
@@ -967,26 +1084,75 @@ Deno.serve(async (req) => {
           // cClassTrib 000001 + alíquotas zeradas — mesmo que o payload
           // original tenha sido salvo com CSOSN 400 (padrão antigo que
           // gerava rejeição [725] da SEFAZ).
-          const isCred = String(rec?.external_id || '').startsWith('CRED-')
-          if (isCred && reprocPayload && Array.isArray(reprocPayload.itens)) {
-            reprocPayload = {
-              ...reprocPayload,
-              itens: reprocPayload.itens.map((it: any) => ({
-                ...it,
-                cfop: '5949',
-                csosn: '900',
-                cst_pis: '49',
-                cst_cofins: '49',
-                pis_cst: '49',
-                cofins_cst: '49',
-                aliquota_icms: 0,
-                aliquota_pis: 0,
-                aliquota_cofins: 0,
-                cClassTrib: '000001',
-                classTrib: '000001',
-              })),
+          const isCredFinanceiro = isCrediarioFinanceiroPayload(rec?.external_id, reprocPayload)
+          if (isCredFinanceiro && reprocPayload && Array.isArray(reprocPayload.itens)) {
+            const retryExternalId = `${String(rec.external_id)}-RETRY-${Date.now()}`
+            reprocPayload = sanitizeCrediarioFinanceiroPayload(reprocPayload, retryExternalId)
+            applyPagamentoSplitToPayload(reprocPayload)
+            console.log('[nfce-proxy] Reprocessar CRED financeiro: reemitindo payload saneado em novo external_id', retryExternalId)
+
+            apiResponse = await fetchWithTimeout(NFCE_API_URL, {
+              method: 'POST',
+              headers: {
+                'x-api-key': NFCE_API_KEY,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(reprocPayload),
+            }, EMIT_TIMEOUT_MS)
+            result = await safeJson(apiResponse)
+            console.log('[nfce-proxy] Reemissão CRED financeira HTTP', apiResponse.status, 'result:', JSON.stringify(result).substring(0, 700))
+
+            const d = result?.data || result || {}
+            const chave = d?.chave_acesso || d?.chave || d?.access_key || null
+            const fromChave = chave ? extractFromChave(chave) : { numero: null, serie: null }
+            const statusResolved = d?.status || (apiResponse.ok ? 'pendente' : 'rejeitada')
+            const motivo = d?.motivo_rejeicao || d?.motivo || d?.mensagem_sefaz || d?.mensagem || d?.message || d?.erro || d?.error || null
+
+            const newRecord: Record<string, any> = {
+              company_id: companyId,
+              sale_id: rec?.sale_id || null,
+              external_id: retryExternalId,
+              nfce_id: d?.id || d?.nfce_id || null,
+              numero: d?.numero || d?.number || fromChave.numero || null,
+              serie: d?.serie || d?.series || fromChave.serie || null,
+              status: String(statusResolved).toLowerCase().includes('rejeit') ? 'rejeitada' : statusResolved,
+              ambiente: d?.ambiente || d?.environment || reprocPayload?.ambiente || 'producao',
+              valor_total: d?.valor_total || d?.total || reprocPayload.valor_total || 0,
+              chave_acesso: chave,
+              protocolo: d?.protocolo || d?.protocol || null,
+              qrcode_url: d?.qrcode_url || d?.qr_code_url || d?.url_qrcode || d?.qrcode || (chave ? buildQrcodeUrl(chave, d?.ambiente || reprocPayload?.ambiente || 'producao') : null),
+              xml_url: d?.xml_url || d?.url_xml || null,
+              motivo_rejeicao: motivo,
+              request_payload: reprocPayload,
+              response_payload: result,
+              contingencia_offline: false,
+              contingencia_efetivada: false,
             }
-            console.log('[nfce-proxy] Reprocessar CRED-*: payload sanitizado para CSOSN 900')
+            const { data: inserted, error: insertErr } = await supabase
+              .from('nfce_records')
+              .insert(newRecord)
+              .select('id')
+              .single()
+            if (insertErr) console.error('[nfce-proxy] Reemissão CRED financeira insert error:', insertErr)
+
+            await supabase.from('nfce_records')
+              .update({
+                motivo_rejeicao: `Reemitida pelo Monitor com CSOSN 900 em ${retryExternalId}. Registro original mantido apenas como rejeição histórica.`,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', rec.id)
+              .eq('company_id', companyId)
+
+            result = {
+              success: apiResponse.ok,
+              reissued: true,
+              recordId: inserted?.id || null,
+              nfce_id: newRecord.nfce_id,
+              external_id: retryExternalId,
+              status: newRecord.status,
+              result,
+            }
+            break
           }
         } catch (e) {
           console.error('[nfce-proxy] Reprocessar: falha ao carregar payload:', e)
