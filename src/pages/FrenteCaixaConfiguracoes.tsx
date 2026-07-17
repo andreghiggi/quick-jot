@@ -383,7 +383,7 @@ export default function FrenteCaixaConfiguracoes() {
                 </SelectContent>
               </Select>
               <p className="text-[11px] text-muted-foreground">
-                Já criamos automaticamente a regra "Recebimento de Crediário" (CFOP 5949, NCM 00000000, CSOSN 400, PIS/COFINS 49 zerados). Você pode editá-la em <b>Fiscal → Regras tributárias</b>.
+                Já criamos automaticamente a regra "Recebimento de Crediário" (CFOP 5949, NCM 00000000, CSOSN 900, PIS/COFINS CST 49 zerados) — padrão confirmado pela Fiscal Flow para NFC-e financeira. Você pode editá-la em <b>Fiscal → Regras tributárias</b>.
               </p>
             </div>
           </CardContent>

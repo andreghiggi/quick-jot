@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.7-beta";
+export const VERSION = "1.61.8-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e órfã — rota de listagem priorizada";
+export const CODENAME = "NFC-e financeira — CSOSN 900 restaurado";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.8-beta",
+    date: "2026-07-17",
+    codename: "NFC-e financeira — CSOSN 900 restaurado",
+    changes: [
+      "Correção crítica na NFC-e financeira (CFOP 5949) do recebimento de crediário: voltamos ao padrão homologado pela Fiscal Flow — CSOSN 900 (Outros) + PIS/COFINS CST 49 + alíquotas zeradas + cClassTrib/classTrib 000001. É o mesmo padrão da NFC-e financeira nº 13699 da Cozinha da Ruiva, que foi autorizada.",
+      "A tentativa anterior de usar CSOSN 400 (para contornar as rejeições 385/531 que o provider provocava) estava gerando rejeição [725] da SEFAZ — 'NFC-e com CFOP inválido' — porque a combinação CSOSN 400 + CFOP 5949 não é aceita no modelo 65. A Fiscal Flow confirmou que o API2 deles já omite as tags de ICMS/ST quando o CSOSN é 900 com alíquotas 0, então a nota passa direto.",
+      "Migração aplicada nas regras tributárias existentes: toda regra 'Recebimento de Crediário' que estava com CSOSN 400 foi corrigida para 900. Novas empresas já nascem com o valor certo.",
+      "Blindagem no emissor: mesmo se a regra tributária cadastrada estiver com CSOSN 400 legado, a NFC-e financeira sempre sai com CSOSN 900 / CST 49 / cClassTrib 000001 forçados no item.",
+      "Reemissão manual (banner de rejeitadas na tela de Receitas) também passa a usar CSOSN 900.",
+      "Sem alteração em TEF, PinPad, PDV V2, Frente de Caixa (venda comum), Cardápio, NF-e, Compras, Estoque ou impressão. Só toca no item da NFC-e financeira de crediário.",
+    ],
+  },
   {
     version: "1.61.7-beta",
     date: "2026-07-17",
