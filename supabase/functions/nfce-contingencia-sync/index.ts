@@ -70,6 +70,23 @@ Deno.serve(async (req) => {
 
     console.log(`[nfce-contingencia-sync] Verificando ${pending.length} notas em contingência`)
 
+    // Reconciliação de ÓRFÃS: notas em 'processando' que ficaram sem
+    // nfce_id local (timeout do proxy sem gravar o id retornado pela FF).
+    // Buscamos pela chave (company_id, external_id) e consultamos a Fiscal
+    // Flow para recuperar o id/chave/status. Apenas UPDATE — não emite.
+    const { data: orphans } = await supabase
+      .from('nfce_records')
+      .select('id, company_id, external_id, ambiente')
+      .is('nfce_id', null)
+      .not('external_id', 'is', null)
+      .in('status', ['processando', 'pendente'])
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (orphans && orphans.length > 0) {
+      console.log(`[nfce-contingencia-sync] ${orphans.length} órfãs para reconciliar`)
+    }
+
     // Cache de token por empresa para não consultar store_settings repetidas vezes
     const tokenCache = new Map<string, string | null>()
     async function tokenFor(companyId: string): Promise<string | null> {
@@ -88,6 +105,56 @@ Deno.serve(async (req) => {
 
     let effected = 0
     let errors = 0
+    let reconciled = 0
+
+    const FF_BASE_URL = NFCE_API_URL.replace(/\/emitir\/?$/i, '').replace(/\/+$/, '')
+
+    for (const record of (orphans || [])) {
+      try {
+        const apiKey = await tokenFor(record.company_id)
+        if (!apiKey) continue
+        const resp = await fetch(
+          `${FF_BASE_URL}/nfce-api/consultar?external_id=${encodeURIComponent(record.external_id!)}`,
+          { headers: { 'x-api-key': apiKey } },
+        )
+        const text = await resp.text()
+        let result: any
+        try { result = JSON.parse(text) } catch { result = null }
+        const d = result?.data || result || {}
+        const remoteId = d?.id || d?.nfce_id || null
+        if (!remoteId && !d?.chave_acesso) continue
+
+        const chave = d.chave_acesso || d.chave || d.access_key || null
+        const proto = d.protocolo || d.protocol || d.nProt || null
+        const rawStatus = (d.status || d.situacao || 'processando').toString().toLowerCase()
+        const qr = d.qrcode_url || d.qr_code_url || d.url_qrcode || d.qrcode || d.qr_code || null
+        const builtQr = qr || (chave ? buildQrcodeUrl(chave, record.ambiente || 'producao') : null)
+
+        const upd: Record<string, any> = {
+          nfce_id: remoteId,
+          status: rawStatus.includes('autoriz') ? 'autorizada' : rawStatus,
+          chave_acesso: chave,
+          protocolo: proto,
+          qrcode_url: builtQr,
+          xml_url: d.xml_url || d.url_xml || null,
+          webhook_payload: { recovered_from: 'contingencia-sync-orphan', response: d },
+          updated_at: new Date().toISOString(),
+        }
+        const { error: upErr } = await supabase
+          .from('nfce_records')
+          .update(upd)
+          .eq('id', record.id)
+          .is('nfce_id', null)
+        if (upErr) errors++
+        else {
+          reconciled++
+          console.log(`[nfce-contingencia-sync] Órfã reconciliada: ${record.id} → nfce_id=${remoteId} status=${upd.status}`)
+        }
+      } catch (err) {
+        console.error('[nfce-contingencia-sync] Erro órfã', record.id, err)
+        errors++
+      }
+    }
 
     for (const record of pending) {
       try {
@@ -186,7 +253,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, checked: pending.length, effected, errors }),
+      JSON.stringify({ ok: true, checked: pending.length, effected, reconciled, errors }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (err) {

@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.3-beta";
+export const VERSION = "1.61.4-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Efetivar receita — trava TEF força NFC-e e oculta crediário";
+export const CODENAME = "NFC-e órfã — reconciliação por external_id (webhook + proxy)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.4-beta",
+    date: "2026-07-17",
+    codename: "NFC-e órfã — reconciliação por external_id (webhook + proxy)",
+    changes: [
+      "Correção estrutural para notas presas em 'processando' (caso Cozinha da Ruiva, R$ 37,00 de 17/07): quando o timeout do proxy impedia salvar o `nfce_id` local, o webhook da Fiscal Flow não conseguia vincular o retorno da SEFAZ ao registro — a nota autorizava do lado deles e ficava eterna do nosso lado.",
+      "nfce-webhook: agora, se o update por `nfce_id` não afetar nenhuma linha, o webhook tenta um segundo update pelo `external_id` (que a Fiscal Flow sempre envia no payload) restrito a registros com `nfce_id IS NULL`. Reconcilia automaticamente sem intervenção manual. Sem risco de duplicidade — é apenas UPDATE em registro existente, nunca INSERT nem reemissão.",
+      "nfce-proxy: quando o timeout ocorre durante a emissão, antes de gravar o registro como órfão, o proxy faz uma consulta imediata à Fiscal Flow por `external_id` e persiste o `nfce_id` retornado. Reduz drasticamente o número de notas que caem no estado 'processando' sem vínculo.",
+      "nfce-proxy: nova action `reconciliar_por_external_id` para reconciliar manualmente notas órfãs históricas — consulta a Fiscal Flow pelo external_id e preenche `nfce_id`, `chave_acesso`, `protocolo`, `status`, `qrcode_url` e `xml_url` no registro local.",
+      "Idempotência determinística por `FCX-<sale_id>` (v1.58) permanece — nenhum destes caminhos emite nova nota; todos apenas amarram um registro local ao retorno da SEFAZ já existente.",
+      "Sem alteração em TEF, PinPad, PDV V2, Frente de Caixa, Cardápio Online, NF-e, Compras, Financeiro, Estoque ou impressão.",
+    ],
+  },
   {
     version: "1.61.3-beta",
     date: "2026-07-17",

@@ -608,23 +608,48 @@ Deno.serve(async (req) => {
           }
 
           if (!contingencyOk && payload.external_id) {
+            // ITEM 3 — Antes de gravar como "processando" órfão (sem nfce_id),
+            // faz uma última tentativa: consultar a Fiscal Flow pelo
+            // external_id. Se a FF já criou o registro do lado dela (o que
+            // acontece na maioria dos timeouts), pegamos o `id` real e
+            // amarramos ao registro local — assim o webhook e o
+            // nfce-contingencia-sync conseguem reconciliar depois em vez de
+            // deixar a nota presa em "processando" para sempre.
+            let ffId: string | null = null
+            let ffData: any = null
+            try {
+              const cons = await fetchWithTimeout(
+                `${FF_BASE_URL}/nfce-api/consultar?external_id=${encodeURIComponent(payload.external_id)}`,
+                { method: 'GET', headers: { 'x-api-key': NFCE_API_KEY } },
+                10000,
+              )
+              const consJson = await safeJson(cons)
+              ffData = consJson?.data || consJson
+              ffId = ffData?.id || ffData?.nfce_id || null
+              console.log('[nfce-proxy][fallback-consultar] ffId=', ffId)
+            } catch (e) {
+              console.error('[nfce-proxy][fallback-consultar] falhou:', e)
+            }
+
             try {
               await supabase.from('nfce_records').insert({
                 company_id: companyId,
                 sale_id: saleId || null,
                 external_id: payload.external_id,
-                nfce_id: null,
-                status: 'processando',
+                nfce_id: ffId,
+                status: ffData?.status || 'processando',
                 ambiente: emitPayload?.ambiente || payload?.ambiente || 'homologacao',
                 valor_total: emitPayload?.itens
                   ? emitPayload.itens.reduce((sum: number, item: any) =>
                       sum + Number(item.quantidade || 1) * Number(item.valor_unitario || 0), 0)
                   : 0,
-                motivo_rejeicao: networkTimedOut
-                  ? 'Contingência não concluída (timeout + abortar-online falhou). NÃO reemitir — consultar por external_id.'
-                  : `Erro de rede: ${String(err?.message || err).substring(0, 500)}`,
+                motivo_rejeicao: ffId
+                  ? 'Timeout na emissão — nfce_id vinculado via consulta pelo external_id. Aguardando webhook/sync.'
+                  : (networkTimedOut
+                      ? 'Contingência não concluída (timeout + abortar-online falhou). NÃO reemitir — consultar por external_id.'
+                      : `Erro de rede: ${String(err?.message || err).substring(0, 500)}`),
                 request_payload: isI9 ? emitPayload : payload,
-                response_payload: null,
+                response_payload: ffData || null,
                 contingencia_offline: false,
                 contingencia_efetivada: false,
               })
@@ -634,7 +659,10 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({
               success: false,
               processando: true,
-              error: 'NFC-e sem retorno definitivo da SEFAZ. NÃO reemita — consulte pelo external_id.',
+              nfce_id: ffId,
+              error: ffId
+                ? 'NFC-e enviada; aguardando confirmação da SEFAZ. NÃO reemita.'
+                : 'NFC-e sem retorno definitivo da SEFAZ. NÃO reemita — consulte pelo external_id.',
               external_id: payload.external_id,
             }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
           }
@@ -1337,6 +1365,87 @@ Deno.serve(async (req) => {
           updated: updRows?.length ?? 0,
           record: updateData,
           message: 'NFC-e recuperada e sincronizada com o SEFAZ.',
+        }
+        break
+      }
+
+      case 'reconciliar_por_external_id': {
+        // Reconciliação de nota órfã: consulta a Fiscal Flow pelo external_id
+        // e atualiza o registro local com nfce_id/chave/protocolo/status.
+        const extId = String(payload?.external_id || '').trim()
+        const localRecordId = payload?.record_id ?? null
+        if (!extId) {
+          return new Response(
+            JSON.stringify({ error: 'external_id obrigatório' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          )
+        }
+
+        console.log('[nfce-proxy] Reconciliar por external_id:', extId)
+        const consResp = await fetch(
+          `${FF_BASE_URL}/nfce-api/consultar?external_id=${encodeURIComponent(extId)}`,
+          { headers: { 'x-api-key': NFCE_API_KEY } },
+        )
+        const consJson = await safeJson(consResp)
+        const d: any = consJson?.data || consJson || {}
+        const remoteId = d?.id || d?.nfce_id || null
+
+        if (!remoteId && !d?.chave_acesso && !d?.status) {
+          apiResponse = consResp
+          result = {
+            success: false,
+            error: 'Fiscal Flow não retornou nota para este external_id.',
+            raw: consJson,
+          }
+          break
+        }
+
+        const chave = d.chave_acesso || d.chave || d.access_key || null
+        const fromChaveRec = chave ? extractFromChave(chave) : { numero: null, serie: null }
+        const ambienteRec = d.ambiente || d.environment || ambienteFromXml(pickXmlField(d)) || 'producao'
+        const statusResolved = (d.status || d.situacao || 'pendente').toString().toLowerCase()
+
+        const updateData: Record<string, any> = {
+          nfce_id: remoteId,
+          status: statusResolved.includes('autoriz') ? 'autorizada' : statusResolved,
+          chave_acesso: chave || null,
+          protocolo: d.protocolo || d.protocol || d.nProt || null,
+          numero: fromChaveRec.numero || d.numero || d.number || null,
+          serie: fromChaveRec.serie || d.serie || d.series || null,
+          ambiente: ambienteRec,
+          qrcode_url:
+            d.qrcode_url || d.qr_code_url || d.url_qrcode || d.qrcode || d.qr_code ||
+            (chave ? buildQrcodeUrl(chave, ambienteRec) : null),
+          xml_url: d.xml_url || d.url_xml || null,
+          motivo_rejeicao:
+            statusResolved.includes('rejeit') || statusResolved.includes('deneg')
+              ? (d.motivo_rejeicao || d.motivo || null)
+              : null,
+          webhook_payload: { recovered_from: 'reconciliar_por_external_id', response: d },
+          updated_at: new Date().toISOString(),
+        }
+
+        let updQuery = supabase.from('nfce_records').update(updateData).eq('company_id', companyId)
+        if (localRecordId) {
+          updQuery = updQuery.eq('id', localRecordId)
+        } else {
+          updQuery = updQuery.eq('external_id', extId)
+        }
+        const { error: updErr, data: updRows } = await updQuery.select('id')
+        if (updErr) {
+          apiResponse = consResp
+          result = { success: false, error: 'Falha ao atualizar registro local: ' + updErr.message }
+          break
+        }
+
+        apiResponse = consResp
+        result = {
+          success: true,
+          updated: updRows?.length ?? 0,
+          nfce_id: remoteId,
+          status: updateData.status,
+          chave_acesso: updateData.chave_acesso,
+          record: updateData,
         }
         break
       }
