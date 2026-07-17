@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.12-beta";
+export const VERSION = "1.61.13-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "CRED financeira sem aliases XML";
+export const CODENAME = "Monitor CRED sem nova numeração";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.13-beta",
+    date: "2026-07-17",
+    codename: "Monitor CRED sem nova numeração",
+    changes: [
+      "Correção crítica no Monitor NFC-e: o botão Reprocessar de NFC-e financeira de crediário (CRED-*) não cria mais `external_id` novo, não insere novo registro local e não chama emissão nova — portanto não consome nova numeração fiscal.",
+      "O reprocessamento agora chama somente o endpoint `/reprocessar` da Fiscal Flow para a própria `nfce_id` rejeitada, enviando o payload saneado no padrão da nota autorizada nº 13699: CFOP 5949, CSOSN 900, PIS/COFINS CST 49, alíquotas zeradas e cClassTrib 000001.",
+      "O payload CRED-* foi reduzido ao formato limpo da 13699: sem aliases duplicados `CFOP/CSOSN/CSTPIS/CSTCOFINS`, sem `pag/detPag/formas_pagamento` manuais e sem campos XML diretos que causavam PISOutr/COFINSOutr inválido.",
+    ],
+  },
   {
     version: "1.61.12-beta",
     date: "2026-07-17",
