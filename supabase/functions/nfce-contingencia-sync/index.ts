@@ -61,14 +61,11 @@ Deno.serve(async (req) => {
       })
     }
 
-    if (!pending || pending.length === 0) {
-      return new Response(JSON.stringify({ ok: true, checked: 0, effected: 0 }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+    if (pending && pending.length > 0) {
+      console.log(`[nfce-contingencia-sync] Verificando ${pending.length} notas em contingência`)
+    } else {
+      console.log('[nfce-contingencia-sync] Nenhuma contingência pendente; verificando órfãs mesmo assim')
     }
-
-    console.log(`[nfce-contingencia-sync] Verificando ${pending.length} notas em contingência`)
 
     // Reconciliação de ÓRFÃS: notas em 'processando' que ficaram sem
     // nfce_id local (timeout do proxy sem gravar o id retornado pela FF).
@@ -156,7 +153,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    for (const record of pending) {
+    for (const record of (pending || [])) {
       try {
         const apiKey = await tokenFor(record.company_id)
         if (!apiKey) {
@@ -253,7 +250,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, checked: pending.length, effected, reconciled, errors }),
+      JSON.stringify({ ok: true, checked: pending?.length ?? 0, effected, reconciled, errors }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (err) {

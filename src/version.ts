@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.4-beta";
+export const VERSION = "1.61.5-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e órfã — reconciliação por external_id (webhook + proxy)";
+export const CODENAME = "NFC-e órfã — sync roda mesmo sem contingência pendente";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.5-beta",
+    date: "2026-07-17",
+    codename: "NFC-e órfã — sync roda mesmo sem contingência pendente",
+    changes: [
+      "Correção do sincronizador fiscal: a reconciliação de NFC-e órfã agora roda mesmo quando não existe nenhuma contingência offline pendente. Antes havia um retorno antecipado que impedia a busca por `external_id` nesse cenário, mantendo a nota da Cozinha da Ruiva presa em 'processando'.",
+      "Sem emissão nova e sem risco de duplicidade: a rotina apenas consulta a Fiscal Flow pelo `external_id` e atualiza o registro local já existente.",
+      "Sem alteração em TEF, PinPad, PDV V2, Frente de Caixa, Financeiro, Cardápio, NF-e, Compras, Estoque ou impressão.",
+    ],
+  },
   {
     version: "1.61.4-beta",
     date: "2026-07-17",
