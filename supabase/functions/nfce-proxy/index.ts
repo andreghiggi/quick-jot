@@ -957,11 +957,37 @@ Deno.serve(async (req) => {
         try {
           const { data: rec } = await supabase
             .from('nfce_records')
-            .select('request_payload')
+            .select('request_payload, external_id')
             .eq('nfce_id', nfceId)
             .eq('company_id', companyId)
             .maybeSingle()
           reprocPayload = rec?.request_payload || null
+          // NFC-e financeira de crediário (external_id começando com "CRED-"):
+          // força o padrão homologado — CFOP 5949 + CSOSN 900 + CST 49 +
+          // cClassTrib 000001 + alíquotas zeradas — mesmo que o payload
+          // original tenha sido salvo com CSOSN 400 (padrão antigo que
+          // gerava rejeição [725] da SEFAZ).
+          const isCred = String(rec?.external_id || '').startsWith('CRED-')
+          if (isCred && reprocPayload && Array.isArray(reprocPayload.itens)) {
+            reprocPayload = {
+              ...reprocPayload,
+              itens: reprocPayload.itens.map((it: any) => ({
+                ...it,
+                cfop: '5949',
+                csosn: '900',
+                cst_pis: '49',
+                cst_cofins: '49',
+                pis_cst: '49',
+                cofins_cst: '49',
+                aliquota_icms: 0,
+                aliquota_pis: 0,
+                aliquota_cofins: 0,
+                cClassTrib: '000001',
+                classTrib: '000001',
+              })),
+            }
+            console.log('[nfce-proxy] Reprocessar CRED-*: payload sanitizado para CSOSN 900')
+          }
         } catch (e) {
           console.error('[nfce-proxy] Reprocessar: falha ao carregar payload:', e)
         }

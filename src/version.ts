@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.9-beta";
+export const VERSION = "1.61.10-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Reprocessamento só pelo Monitor NFC-e";
+export const CODENAME = "Reprocessar CRED-* força CSOSN 900";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.10-beta",
+    date: "2026-07-17",
+    codename: "Reprocessar CRED-* força CSOSN 900",
+    changes: [
+      "Correção no reprocessamento pelo Monitor NFC-e: NFC-e financeira de crediário (external_id CRED-*) que foi emitida antes da v1.61.8 tinha CSOSN 400 salvo no payload original — ao clicar em 'Reprocessar', o proxy reenviava o mesmo 400 e a SEFAZ continuava rejeitando com [725] CFOP inválido.",
+      "Agora o `nfce-proxy` sanitiza o payload no ato do reprocessamento em qualquer nota CRED-*: força CFOP 5949 + CSOSN 900 + PIS/COFINS CST 49 + alíquotas zeradas + cClassTrib 000001, mesmo que o payload original esteja com valores legados. Sem consumir nova numeração.",
+      "As notas financeiras já rejeitadas da Cozinha da Ruiva podem ser reprocessadas normalmente pelo Monitor NFC-e agora.",
+    ],
+  },
   {
     version: "1.61.9-beta",
     date: "2026-07-17",
