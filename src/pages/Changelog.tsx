@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/07/2026',
+    version: '1.61.15-beta',
+    type: 'fix',
+    description: 'Monitor NFC-e: corrigido o 404 no PUT de atualização da NFC-e financeira CRED-*. O nfce-proxy agora testa múltiplas rotas (PUT/PATCH/POST em /nfce-api/{id}, /nfce-api/atualizar/{id} e /nfce-api/{id}/atualizar) e, se todas falharem, chama /reprocessar enviando o payload sanitizado no body — sem consumir nova numeração e sem novo external_id. Padrão homologado 13699 mantido (CFOP 5949, CSOSN 900, CST 49, alíquotas 0, cClassTrib 000001).',
+  },
+  {
+    date: '17/07/2026',
     version: '1.61.14-beta',
     type: 'fix',
     description: 'Monitor NFC-e: NFC-e financeira de crediário (CRED-*) rejeitada agora é corrigida na própria Fiscal Flow via PUT antes do /reprocessar. Isso impede reenviar o XML antigo com CSOSN 400 / CST 07; se o PUT não for confirmado, o reprocessamento é abortado e o motivo fica registrado. Continua sem novo external_id e sem consumir nova numeração fiscal.',
