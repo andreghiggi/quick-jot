@@ -673,17 +673,19 @@ export default function Receitas() {
           quantidade: 1,
           valor_unitario: financeForSale,
           ...fiscal,
-          // Padrão confirmado pela Fiscal Flow para NFC-e financeira
-          // (CFOP 5949): CSOSN 900 + PIS/COFINS CST 49 + alíquotas 0.
-          // Forçamos aqui para blindar contra tax_rules antigas que ainda
-          // estejam gravadas com CSOSN 400 (que dispara rejeição [725] da
-          // SEFAZ — CFOP inválido).
-          csosn: '900',
-          cst_pis: '49',
-          cst_cofins: '49',
-          cClassTrib: '000001',
-          classTrib: '000001',
         };
+        // Padrão confirmado pela Fiscal Flow para NFC-e financeira
+        // (CFOP 5949): CSOSN 900 + PIS/COFINS CST 49 + alíquotas 0.
+        // Forçamos aqui para blindar contra tax_rules antigas que ainda
+        // estejam gravadas com CSOSN 400 (que dispara rejeição [725] da
+        // SEFAZ — CFOP inválido). cClassTrib/classTrib acompanham o padrão
+        // homologado (Reforma Tributária, mesma classificação usada em
+        // outro ERP com essa nota autorizada).
+        (financeItem as any).csosn = '900';
+        (financeItem as any).cst_pis = '49';
+        (financeItem as any).cst_cofins = '49';
+        (financeItem as any).cClassTrib = '000001';
+        (financeItem as any).classTrib = '000001';
 
         // Split de pagamento: reflete o(s) TEF(s) que compõem este rateio.
         // Cada linha (TEF/dinheiro/PIX) entra proporcionalmente ao share
