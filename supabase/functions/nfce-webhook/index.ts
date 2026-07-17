@@ -110,13 +110,28 @@ Deno.serve(async (req) => {
       updateData.motivo_rejeicao = dados.motivo_retorno || dados.motivo
     }
 
-    const { error } = await supabase
+    // Tenta atualizar por nfce_id (caminho normal). Se nenhum registro for
+    // afetado — o que acontece com notas órfãs, cujo insert do proxy falhou
+    // em salvar o nfce_id por timeout — cai para o external_id, que a Fiscal
+    // Flow envia junto no payload. Isso reconcilia o registro sem precisar de
+    // intervenção manual.
+    const { data: byId, error: err1 } = await supabase
       .from('nfce_records')
       .update(updateData)
       .eq('nfce_id', dados.id)
+      .select('id')
 
-    if (error) {
-      console.error('[nfce-webhook] Update error:', error)
+    if (err1) console.error('[nfce-webhook] Update error (nfce_id):', err1)
+
+    if ((!byId || byId.length === 0) && dados.external_id) {
+      const { data: byExt, error: err2 } = await supabase
+        .from('nfce_records')
+        .update({ ...updateData, nfce_id: dados.id })
+        .eq('external_id', dados.external_id)
+        .is('nfce_id', null)
+        .select('id')
+      if (err2) console.error('[nfce-webhook] Update error (external_id):', err2)
+      else console.log('[nfce-webhook] Reconciliado por external_id:', dados.external_id, 'rows=', byExt?.length ?? 0)
     }
 
     return new Response(JSON.stringify({ received: true }), {
