@@ -1085,7 +1085,6 @@ Deno.serve(async (req) => {
         // rejeitada; enviamos o payload atualizado no corpo para que a FF
         // regenere o XML com os novos dados fiscais antes de retransmitir.
         let reprocPayload: any = null
-        let attemptedCredFinanceiroReissue = false
         try {
           const { data: rec } = await supabase
             .from('nfce_records')
@@ -1105,11 +1104,6 @@ Deno.serve(async (req) => {
           }
         } catch (e) {
           console.error('[nfce-proxy] Reprocessar: falha ao carregar payload:', e)
-          if (attemptedCredFinanceiroReissue) {
-            apiResponse = new Response(null, { status: 500 })
-            result = { success: false, error: 'Falha na reemissão limpa da NFC-e financeira. O reprocessamento antigo foi bloqueado para não reenviar CSOSN 400.' }
-            break
-          }
         }
         console.log('[nfce-proxy] Reprocessar nfceId:', nfceId, 'com payload override:', !!reprocPayload)
         apiResponse = await fetch(`${NFCE_API_URL}/${nfceId}/reprocessar`, {
