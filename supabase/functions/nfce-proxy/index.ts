@@ -1180,25 +1180,20 @@ Deno.serve(async (req) => {
             const putResult = await atualizarNFCeFiscalFlow(nfceId, reprocPayload)
             const putRejectedByBody = putResult.result?.success === false || putResult.result?.sucesso === false || Boolean(putResult.result?.error || putResult.result?.erro)
             if (!putResult.response.ok || putRejectedByBody) {
-              apiResponse = new Response(null, { status: putResult.response.ok ? 422 : putResult.response.status })
-              result = {
-                success: false,
-                error: 'A NFC-e financeira CRED não foi reprocessada porque a Fiscal Flow não confirmou o PUT de correção do item. Reprocessar agora reenviaria o XML antigo.',
-                nfce_id: nfceId,
-                update_url: putResult.url,
-                update_result: putResult.result,
-              }
+              // Não abortamos: quando a Fiscal Flow não expõe PUT/PATCH/POST de
+              // atualização (404/405 em todas as rotas), a alternativa é chamar
+              // /reprocessar enviando o payload sanitizado no BODY. Muitas
+              // instalações usam esse body para substituir os itens antes de
+              // reenviar à SEFAZ, sem consumir nova numeração.
+              console.warn('[nfce-proxy] PUT/PATCH/POST de atualização não confirmado; tentando /reprocessar com body sanitizado. Última URL:', putResult.url, 'result:', JSON.stringify(putResult.result).substring(0, 400))
               await supabase.from('nfce_records')
                 .update({
-                  motivo_rejeicao: JSON.stringify(result).substring(0, 1000),
-                  response_payload: putResult.result,
+                  motivo_rejeicao: 'PUT de atualização não confirmado; chamando /reprocessar com payload corrigido no body.',
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', rec.id)
-              break
             }
-
-            console.log('[nfce-proxy] Reprocessar CRED financeiro: PUT confirmado; chamando /reprocessar sem nova numeração para', nfceId)
+            console.log('[nfce-proxy] Reprocessar CRED financeiro: chamando /reprocessar para', nfceId, '(mesma numeração)')
           }
         } catch (e) {
           console.error('[nfce-proxy] Reprocessar: falha ao carregar payload:', e)
@@ -1210,7 +1205,11 @@ Deno.serve(async (req) => {
             'x-api-key': NFCE_API_KEY,
             'Content-Type': 'application/json',
           },
-          body: (!isCredFinanceiro && reprocPayload) ? JSON.stringify(reprocPayload) : undefined,
+          // Para CRED financeiro sempre enviamos o payload sanitizado; se o PUT
+          // acima teve sucesso, a FF já atualizou o item e o body é redundante
+          // (mas não atrapalha). Se falhou, é a nossa única chance de forçar
+          // CFOP 5949 + CSOSN 900 + CST 49 sem novo external_id.
+          body: reprocPayload ? JSON.stringify(reprocPayload) : undefined,
         })
         result = await safeJson(apiResponse)
         console.log('[nfce-proxy] Reprocessar HTTP', apiResponse.status, 'result:', JSON.stringify(result).substring(0, 500))
