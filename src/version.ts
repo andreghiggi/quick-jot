@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.10-beta";
+export const VERSION = "1.61.11-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Reprocessar CRED-* força CSOSN 900";
+export const CODENAME = "CRED rejeitada reemite XML limpo";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.11-beta",
+    date: "2026-07-17",
+    codename: "CRED rejeitada reemite XML limpo",
+    changes: [
+      "Correção crítica no Monitor NFC-e: para NFC-e financeira de crediário já rejeitada com XML antigo, o botão Reprocessar não chama mais o endpoint `/reprocessar` da Fiscal Flow, porque ele reaproveitava o XML velho com CSOSN 400 mesmo recebendo payload corrigido.",
+      "Agora o Monitor reemite a financeira rejeitada como uma nova tentativa fiscal com `external_id` derivado `-RETRY-`, payload saneado antes do envio e padrão homologado CFOP 5949 + CSOSN 900 + PIS/COFINS CST 49 + cClassTrib 000001 + alíquotas zeradas.",
+      "O registro original rejeitado fica preservado como histórico, e o Monitor passa a acompanhar o novo registro gerado pela tentativa limpa.",
+    ],
+  },
   {
     version: "1.61.10-beta",
     date: "2026-07-17",

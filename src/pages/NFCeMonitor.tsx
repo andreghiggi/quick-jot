@@ -162,8 +162,14 @@ export default function NFCeMonitor() {
     if (!company?.id || !record.nfce_id) return;
     setActionLoading(record.id);
     try {
-      await reprocessarNFCe(company.id, record.nfce_id);
+      const reprocessResult: any = await reprocessarNFCe(company.id, record.nfce_id);
       toast.info('Reprocessamento solicitado. Aguardando retorno...');
+      const targetRecordId = reprocessResult?.reissued && reprocessResult?.recordId
+        ? reprocessResult.recordId
+        : record.id;
+      const targetNfceId = reprocessResult?.reissued && reprocessResult?.nfce_id
+        ? reprocessResult.nfce_id
+        : record.nfce_id;
       
       // Poll for updated status after reprocessing
       let attempts = 0;
@@ -171,7 +177,7 @@ export default function NFCeMonitor() {
       const pollReprocess = async (): Promise<void> => {
         attempts++;
         try {
-          await consultarNFCe(company!.id, record.nfce_id!);
+          if (targetNfceId) await consultarNFCe(company!.id, targetNfceId);
         } catch (e) {
           console.error('[NFCeMonitor] Consult after reprocess error:', e);
         }
@@ -179,7 +185,7 @@ export default function NFCeMonitor() {
         const { data } = await supabase
           .from('nfce_records')
           .select('*')
-          .eq('id', record.id)
+          .eq('id', targetRecordId)
           .maybeSingle();
         
         if (data) {
