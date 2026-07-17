@@ -1369,6 +1369,87 @@ Deno.serve(async (req) => {
         break
       }
 
+      case 'reconciliar_por_external_id': {
+        // Reconciliação de nota órfã: consulta a Fiscal Flow pelo external_id
+        // e atualiza o registro local com nfce_id/chave/protocolo/status.
+        const extId = String(payload?.external_id || '').trim()
+        const localRecordId = payload?.record_id ?? null
+        if (!extId) {
+          return new Response(
+            JSON.stringify({ error: 'external_id obrigatório' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          )
+        }
+
+        console.log('[nfce-proxy] Reconciliar por external_id:', extId)
+        const consResp = await fetch(
+          `${FF_BASE_URL}/nfce-api/consultar?external_id=${encodeURIComponent(extId)}`,
+          { headers: { 'x-api-key': NFCE_API_KEY } },
+        )
+        const consJson = await safeJson(consResp)
+        const d: any = consJson?.data || consJson || {}
+        const remoteId = d?.id || d?.nfce_id || null
+
+        if (!remoteId && !d?.chave_acesso && !d?.status) {
+          apiResponse = consResp
+          result = {
+            success: false,
+            error: 'Fiscal Flow não retornou nota para este external_id.',
+            raw: consJson,
+          }
+          break
+        }
+
+        const chave = d.chave_acesso || d.chave || d.access_key || null
+        const fromChaveRec = chave ? extractFromChave(chave) : { numero: null, serie: null }
+        const ambienteRec = d.ambiente || d.environment || ambienteFromXml(pickXmlField(d)) || 'producao'
+        const statusResolved = (d.status || d.situacao || 'pendente').toString().toLowerCase()
+
+        const updateData: Record<string, any> = {
+          nfce_id: remoteId,
+          status: statusResolved.includes('autoriz') ? 'autorizada' : statusResolved,
+          chave_acesso: chave || null,
+          protocolo: d.protocolo || d.protocol || d.nProt || null,
+          numero: fromChaveRec.numero || d.numero || d.number || null,
+          serie: fromChaveRec.serie || d.serie || d.series || null,
+          ambiente: ambienteRec,
+          qrcode_url:
+            d.qrcode_url || d.qr_code_url || d.url_qrcode || d.qrcode || d.qr_code ||
+            (chave ? buildQrcodeUrl(chave, ambienteRec) : null),
+          xml_url: d.xml_url || d.url_xml || null,
+          motivo_rejeicao:
+            statusResolved.includes('rejeit') || statusResolved.includes('deneg')
+              ? (d.motivo_rejeicao || d.motivo || null)
+              : null,
+          webhook_payload: { recovered_from: 'reconciliar_por_external_id', response: d },
+          updated_at: new Date().toISOString(),
+        }
+
+        let updQuery = supabase.from('nfce_records').update(updateData).eq('company_id', companyId)
+        if (localRecordId) {
+          updQuery = updQuery.eq('id', localRecordId)
+        } else {
+          updQuery = updQuery.eq('external_id', extId)
+        }
+        const { error: updErr, data: updRows } = await updQuery.select('id')
+        if (updErr) {
+          apiResponse = consResp
+          result = { success: false, error: 'Falha ao atualizar registro local: ' + updErr.message }
+          break
+        }
+
+        apiResponse = consResp
+        result = {
+          success: true,
+          updated: updRows?.length ?? 0,
+          nfce_id: remoteId,
+          status: updateData.status,
+          chave_acesso: updateData.chave_acesso,
+          record: updateData,
+        }
+        break
+      }
+
       default:
         return new Response(JSON.stringify({ error: 'Ação inválida' }), { status: 400, headers: corsHeaders })
     }
