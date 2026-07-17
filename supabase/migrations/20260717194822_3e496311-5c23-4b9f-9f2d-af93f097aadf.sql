@@ -1,0 +1,1 @@
+UPDATE public.tax_rules SET csosn = '900' WHERE name = 'Recebimento de Crediário' AND csosn = '400';
