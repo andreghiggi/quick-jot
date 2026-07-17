@@ -243,20 +243,29 @@ Deno.serve(async (req) => {
     function sanitizeCrediarioFinanceiroItem(item: any): any {
       const quantidade = Number(item?.quantidade ?? item?.qCom ?? 1) || 1
       const valorUnitario = Number(item?.valor_unitario ?? item?.valorUnitario ?? item?.vUnCom ?? item?.valor ?? 0) || 0
+      const valorTotalOriginal = Number(item?.valor_total ?? item?.valorTotal ?? item?.vProd ?? (quantidade * valorUnitario)) || 0
+      const valorTotal = Math.round(valorTotalOriginal * 100) / 100
       return {
         codigo: item?.codigo || item?.cProd || 'REC-CRED',
         descricao: item?.descricao || item?.xProd || 'Recebimento de crediário',
         unidade: item?.unidade || item?.uCom || 'UN',
         quantidade,
         valor_unitario: valorUnitario,
+        valor_total: valorTotal,
         ncm: item?.ncm || item?.NCM || '19059090',
         cfop: '5949',
         csosn: '900',
         cst_pis: '49',
         cst_cofins: '49',
+        base_calculo_icms: 0,
         aliquota_icms: 0,
+        valor_icms: 0,
+        base_calculo_pis: 0,
         aliquota_pis: 0,
+        valor_pis: 0,
+        base_calculo_cofins: 0,
         aliquota_cofins: 0,
+        valor_cofins: 0,
         cClassTrib: '000001',
         classTrib: '000001',
       }
@@ -279,6 +288,42 @@ Deno.serve(async (req) => {
       delete sanitized.detPag
       delete sanitized.tef
       return sanitized
+    }
+
+    async function atualizarNFCeFiscalFlow(nfceId: string, fixedPayload: any): Promise<{ response: Response, result: any, url: string }> {
+      const candidates = Array.from(new Set([
+        `${NFCE_API_URL}/${nfceId}`,
+        `${FF_BASE_URL}/nfce-api/${nfceId}`,
+      ]))
+
+      let lastResponse = new Response(null, { status: 404 })
+      let lastResult: any = { success: false, error: 'Nenhuma rota de atualização testada' }
+      let lastUrl = candidates[0]
+
+      for (const url of candidates) {
+        const response = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            'x-api-key': NFCE_API_KEY,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(fixedPayload),
+        })
+        const result = await safeJson(response)
+        const rejectedByBody = result?.success === false || result?.sucesso === false || Boolean(result?.error || result?.erro)
+        console.log('[nfce-proxy] Atualizar NFC-e antes do reprocessamento:', url, 'HTTP', response.status, 'ok=', response.ok, 'bodyRejected=', rejectedByBody)
+
+        lastResponse = response
+        lastResult = result
+        lastUrl = url
+
+        if (response.ok && !rejectedByBody) {
+          return { response, result, url }
+        }
+      }
+
+      return { response: lastResponse, result: lastResult, url: lastUrl }
     }
 
     function applyPagamentoSplitToPayload(emitPayload: any): void {
@@ -1081,26 +1126,58 @@ Deno.serve(async (req) => {
       case 'reprocessar': {
         // Carrega o payload persistido na nota para permitir reprocessar com
         // ajustes fiscais (ex.: CSOSN 900) SEM consumir nova numeração.
-        // O endpoint /reprocessar da Fiscal Flow reaproveita o nNF/série da nota
-        // rejeitada; enviamos o payload atualizado no corpo para que a FF
-        // regenere o XML com os novos dados fiscais antes de retransmitir.
+        // Para CRED-*, primeiro atualizamos a própria nota na Fiscal Flow via
+        // PUT /nfce-api/{id}; só depois chamamos /reprocessar. O reprocessamento
+        // sozinho reaproveita o item salvo na FF e manteria CSOSN/CST antigos.
         let reprocPayload: any = null
+        let isCredFinanceiro = false
+        let rec: any = null
         try {
-          const { data: rec } = await supabase
+          const { data } = await supabase
             .from('nfce_records')
             .select('id, sale_id, request_payload, external_id')
             .eq('nfce_id', nfceId)
             .eq('company_id', companyId)
             .maybeSingle()
+          rec = data
           reprocPayload = rec?.request_payload || null
           // NFC-e financeira de crediário (external_id CRED-): NUNCA reemitir
           // com novo external_id, porque isso consome nova numeração fiscal.
-          // O Monitor deve acionar somente o /reprocessar da Fiscal Flow para a
-          // própria nfceId rejeitada, enviando o payload saneado no padrão 13699.
-          const isCredFinanceiro = isCrediarioFinanceiroPayload(rec?.external_id, reprocPayload)
+          // Antes do /reprocessar, atualizamos a nota rejeitada na Fiscal Flow
+          // com o item corrigido; sem isso a FF reenvia o XML antigo com 400/07.
+          isCredFinanceiro = isCrediarioFinanceiroPayload(rec?.external_id, reprocPayload)
           if (isCredFinanceiro && reprocPayload && Array.isArray(reprocPayload.itens)) {
             reprocPayload = sanitizeCrediarioFinanceiroPayload(reprocPayload, String(rec.external_id))
-            console.log('[nfce-proxy] Reprocessar CRED financeiro: usando /reprocessar sem nova numeração para', nfceId)
+            await supabase.from('nfce_records')
+              .update({
+                request_payload: reprocPayload,
+                motivo_rejeicao: 'Payload CRED corrigido localmente para CFOP 5949 + CSOSN 900 + CST 49; aguardando atualização Fiscal Flow/reprocessamento.',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', rec.id)
+
+            const putResult = await atualizarNFCeFiscalFlow(nfceId, reprocPayload)
+            const putRejectedByBody = putResult.result?.success === false || putResult.result?.sucesso === false || Boolean(putResult.result?.error || putResult.result?.erro)
+            if (!putResult.response.ok || putRejectedByBody) {
+              apiResponse = new Response(null, { status: putResult.response.ok ? 422 : putResult.response.status })
+              result = {
+                success: false,
+                error: 'A NFC-e financeira CRED não foi reprocessada porque a Fiscal Flow não confirmou o PUT de correção do item. Reprocessar agora reenviaria o XML antigo.',
+                nfce_id: nfceId,
+                update_url: putResult.url,
+                update_result: putResult.result,
+              }
+              await supabase.from('nfce_records')
+                .update({
+                  motivo_rejeicao: JSON.stringify(result).substring(0, 1000),
+                  response_payload: putResult.result,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', rec.id)
+              break
+            }
+
+            console.log('[nfce-proxy] Reprocessar CRED financeiro: PUT confirmado; chamando /reprocessar sem nova numeração para', nfceId)
           }
         } catch (e) {
           console.error('[nfce-proxy] Reprocessar: falha ao carregar payload:', e)
@@ -1112,7 +1189,7 @@ Deno.serve(async (req) => {
             'x-api-key': NFCE_API_KEY,
             'Content-Type': 'application/json',
           },
-          body: reprocPayload ? JSON.stringify(reprocPayload) : undefined,
+          body: (!isCredFinanceiro && reprocPayload) ? JSON.stringify(reprocPayload) : undefined,
         })
         result = await safeJson(apiResponse)
         console.log('[nfce-proxy] Reprocessar HTTP', apiResponse.status, 'result:', JSON.stringify(result).substring(0, 500))

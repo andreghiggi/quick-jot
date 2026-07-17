@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.13-beta";
+export const VERSION = "1.61.14-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Monitor CRED sem nova numeração";
+export const CODENAME = "Monitor CRED atualiza antes de reprocessar";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.14-beta",
+    date: "2026-07-17",
+    codename: "Monitor CRED atualiza antes de reprocessar",
+    changes: [
+      "Correção crítica no Monitor NFC-e: para NFC-e financeira de crediário (CRED-*) rejeitada, o sistema agora atualiza a própria nota na Fiscal Flow via PUT antes de chamar `/reprocessar`, evitando reenviar o XML antigo salvo com CSOSN 400 / CST 07.",
+      "Se a Fiscal Flow não confirmar o PUT de correção do item, o Monitor aborta o reprocessamento e registra o motivo — melhor falhar sem ação do que gastar nova tentativa fiscal inútil ou reenviar dados antigos.",
+      "O item financeiro CRED-* fica padronizado no payload local e remoto com CFOP 5949, CSOSN 900, PIS/COFINS CST 49, bases/alíquotas/valores de impostos zerados e cClassTrib 000001, sem criar novo external_id e sem consumir nova numeração.",
+    ],
+  },
   {
     version: "1.61.13-beta",
     date: "2026-07-17",

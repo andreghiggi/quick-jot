@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '17/07/2026',
+    version: '1.61.14-beta',
+    type: 'fix',
+    description: 'Monitor NFC-e: NFC-e financeira de crediário (CRED-*) rejeitada agora é corrigida na própria Fiscal Flow via PUT antes do /reprocessar. Isso impede reenviar o XML antigo com CSOSN 400 / CST 07; se o PUT não for confirmado, o reprocessamento é abortado e o motivo fica registrado. Continua sem novo external_id e sem consumir nova numeração fiscal.',
+  },
+  {
+    date: '17/07/2026',
     version: '1.61.13-beta',
     type: 'fix',
     description: 'Monitor NFC-e: reprocessar NFC-e financeira de crediário (CRED-*) não reemite mais com novo external_id e não consome nova numeração fiscal. Agora usa somente o /reprocessar da Fiscal Flow para a própria nfce_id rejeitada, com payload limpo igual ao padrão autorizado nº 13699: CFOP 5949, CSOSN 900, CST 49, alíquotas 0 e cClassTrib 000001, sem aliases duplicados ou grupos manuais que geravam XML inválido.',
