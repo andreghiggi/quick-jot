@@ -608,23 +608,48 @@ Deno.serve(async (req) => {
           }
 
           if (!contingencyOk && payload.external_id) {
+            // ITEM 3 — Antes de gravar como "processando" órfão (sem nfce_id),
+            // faz uma última tentativa: consultar a Fiscal Flow pelo
+            // external_id. Se a FF já criou o registro do lado dela (o que
+            // acontece na maioria dos timeouts), pegamos o `id` real e
+            // amarramos ao registro local — assim o webhook e o
+            // nfce-contingencia-sync conseguem reconciliar depois em vez de
+            // deixar a nota presa em "processando" para sempre.
+            let ffId: string | null = null
+            let ffData: any = null
+            try {
+              const cons = await fetchWithTimeout(
+                `${FF_BASE_URL}/nfce-api/consultar?external_id=${encodeURIComponent(payload.external_id)}`,
+                { method: 'GET', headers: { 'x-api-key': NFCE_API_KEY } },
+                10000,
+              )
+              const consJson = await safeJson(cons)
+              ffData = consJson?.data || consJson
+              ffId = ffData?.id || ffData?.nfce_id || null
+              console.log('[nfce-proxy][fallback-consultar] ffId=', ffId)
+            } catch (e) {
+              console.error('[nfce-proxy][fallback-consultar] falhou:', e)
+            }
+
             try {
               await supabase.from('nfce_records').insert({
                 company_id: companyId,
                 sale_id: saleId || null,
                 external_id: payload.external_id,
-                nfce_id: null,
-                status: 'processando',
+                nfce_id: ffId,
+                status: ffData?.status || 'processando',
                 ambiente: emitPayload?.ambiente || payload?.ambiente || 'homologacao',
                 valor_total: emitPayload?.itens
                   ? emitPayload.itens.reduce((sum: number, item: any) =>
                       sum + Number(item.quantidade || 1) * Number(item.valor_unitario || 0), 0)
                   : 0,
-                motivo_rejeicao: networkTimedOut
-                  ? 'Contingência não concluída (timeout + abortar-online falhou). NÃO reemitir — consultar por external_id.'
-                  : `Erro de rede: ${String(err?.message || err).substring(0, 500)}`,
+                motivo_rejeicao: ffId
+                  ? 'Timeout na emissão — nfce_id vinculado via consulta pelo external_id. Aguardando webhook/sync.'
+                  : (networkTimedOut
+                      ? 'Contingência não concluída (timeout + abortar-online falhou). NÃO reemitir — consultar por external_id.'
+                      : `Erro de rede: ${String(err?.message || err).substring(0, 500)}`),
                 request_payload: isI9 ? emitPayload : payload,
-                response_payload: null,
+                response_payload: ffData || null,
                 contingencia_offline: false,
                 contingencia_efetivada: false,
               })
@@ -634,7 +659,10 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({
               success: false,
               processando: true,
-              error: 'NFC-e sem retorno definitivo da SEFAZ. NÃO reemita — consulte pelo external_id.',
+              nfce_id: ffId,
+              error: ffId
+                ? 'NFC-e enviada; aguardando confirmação da SEFAZ. NÃO reemita.'
+                : 'NFC-e sem retorno definitivo da SEFAZ. NÃO reemita — consulte pelo external_id.',
               external_id: payload.external_id,
             }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
           }
