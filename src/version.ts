@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.2-beta";
+export const VERSION = "1.61.3-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Crediário — cadastro de cliente com validação de CPF e telefone BR";
+export const CODENAME = "Efetivar receita — trava TEF força NFC-e e oculta crediário";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.3-beta",
+    date: "2026-07-17",
+    codename: "Efetivar receita — trava TEF força NFC-e e oculta crediário",
+    changes: [
+      "Correção: no diálogo 'Efetivar receita' (Financeiro → Receitas), a detecção de linha TEF estava comparando com o valor genérico 'tef' em vez dos reais 'tef_pinpad' / 'tef_smartpos'. Resultado: o botão 'EFETIVAR' (sem NFC-e) continuava aparecendo mesmo com TEF selecionado. Agora, ao lançar valor em qualquer forma TEF, o botão 'EFETIVAR' some e só fica ativo 'EFETIVAR COM NFC-E' — a NFC-e financeira é obrigatória por lei nesse caso.",
+      "Diálogo de recebimento de parcela deixa de listar formas do tipo 'Crediário' — não faz sentido quitar uma parcela abrindo outro crediário. Só aparecem Dinheiro, PIX, Débito, Crédito e TEF.",
+      "Sem alteração em emissão fiscal, PinPad, PDV V2, Frente de Caixa, Cardápio, NF-e, Compras ou Estoque.",
+    ],
+  },
   {
     version: "1.61.2-beta",
     date: "2026-07-17",

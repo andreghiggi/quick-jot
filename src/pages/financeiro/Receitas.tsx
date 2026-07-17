@@ -1088,7 +1088,9 @@ export default function Receitas() {
         open={!!efetivarRow}
         onOpenChange={(o) => !o && setEfetivarRow(null)}
         receivable={efetivarRow}
-        paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name, integrationType: m.integration_type }))}
+        paymentMethods={activePaymentMethods
+          .filter((m) => m.payment_type !== 'crediario')
+          .map((m) => ({ id: m.id, name: m.name, integrationType: m.integration_type }))}
         companyId={company?.id}
         busy={busy}
         onConfirm={async (data) => {
@@ -1144,7 +1146,9 @@ export default function Receitas() {
         onOpenChange={(o) => !o && setEfetivarRows(null)}
         receivable={null}
         receivables={efetivarRows}
-        paymentMethods={activePaymentMethods.map((m) => ({ id: m.id, name: m.name, integrationType: m.integration_type }))}
+        paymentMethods={activePaymentMethods
+          .filter((m) => m.payment_type !== 'crediario')
+          .map((m) => ({ id: m.id, name: m.name, integrationType: m.integration_type }))}
         companyId={company?.id}
         busy={busy}
         onConfirm={async (data) => {

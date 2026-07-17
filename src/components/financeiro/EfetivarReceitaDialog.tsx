@@ -111,11 +111,13 @@ export function EfetivarReceitaDialog({
 
   // Detecta se alguma linha usa forma de pagamento TEF com valor > 0.
   // Nesse caso, a emissão da NFC-e é obrigatória (não pode desmarcar).
-  const hasTefLine = paymentMethods.some(
-    (m) =>
-      (m.integrationType || '').toLowerCase() === 'tef' &&
-      parseCurrencyInput(lines[m.id] || '') > 0,
-  );
+  const hasTefLine = paymentMethods.some((m) => {
+    const integ = (m.integrationType || '').toLowerCase();
+    return (
+      (integ === 'tef_pinpad' || integ === 'tef_smartpos') &&
+      parseCurrencyInput(lines[m.id] || '') > 0
+    );
+  });
   const effectiveEmitNfce = hasTefLine ? true : emitNfce;
 
   useEffect(() => {
