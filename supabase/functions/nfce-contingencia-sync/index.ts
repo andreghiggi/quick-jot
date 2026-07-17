@@ -23,6 +23,21 @@ function buildQrcodeUrl(chave: string, ambiente: string): string | null {
   return `${base}?chNFe=${chave}&tpAmb=${ambiente === 'producao' ? '1' : '2'}`
 }
 
+function pickExternalIdMatch(result: any, externalId: string): any | null {
+  const top = result?.data ?? result
+  if (Array.isArray(top)) {
+    return top.find((item: any) =>
+      String(item?.external_id || item?.externalId || item?.id_externo || item?.idExterno || '') === externalId
+    ) || null
+  }
+  if (top && typeof top === 'object') {
+    const returnedExternalId = top.external_id || top.externalId || top.id_externo || top.idExterno
+    if (returnedExternalId && String(returnedExternalId) !== externalId) return null
+    return top
+  }
+  return null
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -61,14 +76,11 @@ Deno.serve(async (req) => {
       })
     }
 
-    if (!pending || pending.length === 0) {
-      return new Response(JSON.stringify({ ok: true, checked: 0, effected: 0 }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+    if (pending && pending.length > 0) {
+      console.log(`[nfce-contingencia-sync] Verificando ${pending.length} notas em contingência`)
+    } else {
+      console.log('[nfce-contingencia-sync] Nenhuma contingência pendente; verificando órfãs mesmo assim')
     }
-
-    console.log(`[nfce-contingencia-sync] Verificando ${pending.length} notas em contingência`)
 
     // Reconciliação de ÓRFÃS: notas em 'processando' que ficaram sem
     // nfce_id local (timeout do proxy sem gravar o id retornado pela FF).
@@ -109,18 +121,31 @@ Deno.serve(async (req) => {
 
     const FF_BASE_URL = NFCE_API_URL.replace(/\/emitir\/?$/i, '').replace(/\/+$/, '')
 
+    async function consultarPorExternalId(apiKey: string, externalId: string): Promise<any | null> {
+      const encoded = encodeURIComponent(externalId)
+      const attempts = [
+        `${NFCE_API_URL}?external_id=${encoded}`,
+        `${FF_BASE_URL}/nfce-api/consultar?external_id=${encoded}`,
+      ]
+
+      for (const url of attempts) {
+        const resp = await fetch(url, { headers: { 'x-api-key': apiKey, 'Accept': 'application/json' } })
+        const text = await resp.text()
+        let result: any = null
+        try { result = JSON.parse(text) } catch { result = null }
+        const match = pickExternalIdMatch(result, externalId)
+        console.log('[nfce-contingencia-sync] consulta external_id status=', resp.status, 'match=', Boolean(match))
+        if (match) return match
+      }
+
+      return null
+    }
+
     for (const record of (orphans || [])) {
       try {
         const apiKey = await tokenFor(record.company_id)
         if (!apiKey) continue
-        const resp = await fetch(
-          `${FF_BASE_URL}/nfce-api/consultar?external_id=${encodeURIComponent(record.external_id!)}`,
-          { headers: { 'x-api-key': apiKey } },
-        )
-        const text = await resp.text()
-        let result: any
-        try { result = JSON.parse(text) } catch { result = null }
-        const d = result?.data || result || {}
+        const d = await consultarPorExternalId(apiKey, record.external_id!) || {}
         const remoteId = d?.id || d?.nfce_id || null
         if (!remoteId && !d?.chave_acesso) continue
 
@@ -156,7 +181,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    for (const record of pending) {
+    for (const record of (pending || [])) {
       try {
         const apiKey = await tokenFor(record.company_id)
         if (!apiKey) {
@@ -253,7 +278,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, checked: pending.length, effected, reconciled, errors }),
+      JSON.stringify({ ok: true, checked: pending?.length ?? 0, effected, reconciled, errors }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (err) {

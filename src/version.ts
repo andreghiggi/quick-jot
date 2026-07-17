@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.4-beta";
+export const VERSION = "1.61.7-beta";
 export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e órfã — reconciliação por external_id (webhook + proxy)";
+export const CODENAME = "NFC-e órfã — rota de listagem priorizada";
 
 export interface Release {
   version: string;
@@ -19,6 +19,36 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.7-beta",
+    date: "2026-07-17",
+    codename: "NFC-e órfã — rota de listagem priorizada",
+    changes: [
+      "A reconciliação por `external_id` agora prioriza a rota de listagem da Fiscal Flow, que foi validada no caso real da Cozinha da Ruiva e retornou a NFC-e autorizada nº 13732.",
+      "A nota de R$ 37,00 foi reconciliada localmente com status `autorizada`, chave de acesso e protocolo oficiais — sem emissão nova e sem duplicidade.",
+      "Sem alteração em TEF, PinPad, PDV V2, Frente de Caixa, Financeiro, Cardápio, NF-e, Compras, Estoque ou impressão.",
+    ],
+  },
+  {
+    version: "1.61.6-beta",
+    date: "2026-07-17",
+    codename: "NFC-e órfã — consulta correta por external_id",
+    changes: [
+      "Correção da reconciliação de NFC-e órfã: além do endpoint `/consultar`, o sistema agora usa a listagem da Fiscal Flow com filtro exato por `external_id`, que é onde a nota autorizada da Cozinha da Ruiva estava aparecendo.",
+      "O sincronizador e a ação manual filtram pelo `external_id` exato antes de atualizar o registro local, evitando vincular nota errada quando a API retorna uma lista ampla.",
+      "Sem emissão nova e sem duplicidade: continua sendo apenas consulta e UPDATE do registro local existente.",
+    ],
+  },
+  {
+    version: "1.61.5-beta",
+    date: "2026-07-17",
+    codename: "NFC-e órfã — sync roda mesmo sem contingência pendente",
+    changes: [
+      "Correção do sincronizador fiscal: a reconciliação de NFC-e órfã agora roda mesmo quando não existe nenhuma contingência offline pendente. Antes havia um retorno antecipado que impedia a busca por `external_id` nesse cenário, mantendo a nota da Cozinha da Ruiva presa em 'processando'.",
+      "Sem emissão nova e sem risco de duplicidade: a rotina apenas consulta a Fiscal Flow pelo `external_id` e atualiza o registro local já existente.",
+      "Sem alteração em TEF, PinPad, PDV V2, Frente de Caixa, Financeiro, Cardápio, NF-e, Compras, Estoque ou impressão.",
+    ],
+  },
   {
     version: "1.61.4-beta",
     date: "2026-07-17",

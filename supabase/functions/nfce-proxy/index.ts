@@ -184,6 +184,45 @@ Deno.serve(async (req) => {
       return d.xml_retorno || d.xml || d.xml_autorizado || d.xmlNFe || d.xml_proc || null
     }
 
+    function pickExternalIdMatch(payload: any, extId: string): any | null {
+      const top = payload?.data ?? payload
+      if (Array.isArray(top)) {
+        return top.find((item: any) =>
+          String(item?.external_id || item?.externalId || item?.id_externo || item?.idExterno || '') === extId
+        ) || null
+      }
+      if (top && typeof top === 'object') {
+        const returnedExternalId = top.external_id || top.externalId || top.id_externo || top.idExterno
+        if (returnedExternalId && String(returnedExternalId) !== extId) return null
+        return top
+      }
+      return null
+    }
+
+    async function consultarPorExternalId(extId: string): Promise<{ response: Response, raw: any, data: any | null, source: string }> {
+      const encoded = encodeURIComponent(extId)
+      const attempts = [
+        { source: 'listar', url: `${NFCE_API_URL}?external_id=${encoded}` },
+        { source: 'consultar', url: `${FF_BASE_URL}/nfce-api/consultar?external_id=${encoded}` },
+      ]
+
+      let lastResponse = new Response(null, { status: 404 })
+      let lastRaw: any = null
+      for (const attempt of attempts) {
+        const response = await fetch(attempt.url, {
+          headers: { 'x-api-key': NFCE_API_KEY, 'Accept': 'application/json' },
+        })
+        const raw = await safeJson(response)
+        const data = pickExternalIdMatch(raw, extId)
+        lastResponse = response
+        lastRaw = raw
+        console.log('[nfce-proxy] consulta external_id via', attempt.source, 'status=', response.status, 'match=', Boolean(data))
+        if (data) return { response, raw, data, source: attempt.source }
+      }
+
+      return { response: lastResponse, raw: lastRaw, data: null, source: 'none' }
+    }
+
     switch (action) {
 
       case 'emitir': {
@@ -593,13 +632,9 @@ Deno.serve(async (req) => {
               // 2b) Original já autorizada — consulta e usa ela.
               console.log('[nfce-proxy][contingencia] original já autorizada (409). Consultando…')
               try {
-                const cons = await fetchWithTimeout(
-                  `${FF_BASE_URL}/nfce-api/consultar?external_id=${encodeURIComponent(payload.external_id)}`,
-                  { method: 'GET', headers: { 'x-api-key': NFCE_API_KEY } },
-                  10000,
-                )
-                result = await safeJson(cons)
-                apiResponse = cons
+              const lookup = await consultarPorExternalId(payload.external_id)
+              result = lookup.data || lookup.raw
+              apiResponse = lookup.response
                 contingencyOk = true
               } catch (e3) {
                 console.error('[nfce-proxy][contingencia] consultar falhou:', e3)
@@ -618,13 +653,8 @@ Deno.serve(async (req) => {
             let ffId: string | null = null
             let ffData: any = null
             try {
-              const cons = await fetchWithTimeout(
-                `${FF_BASE_URL}/nfce-api/consultar?external_id=${encodeURIComponent(payload.external_id)}`,
-                { method: 'GET', headers: { 'x-api-key': NFCE_API_KEY } },
-                10000,
-              )
-              const consJson = await safeJson(cons)
-              ffData = consJson?.data || consJson
+              const lookup = await consultarPorExternalId(payload.external_id)
+              ffData = lookup.data
               ffId = ffData?.id || ffData?.nfce_id || null
               console.log('[nfce-proxy][fallback-consultar] ffId=', ffId)
             } catch (e) {
@@ -1382,12 +1412,10 @@ Deno.serve(async (req) => {
         }
 
         console.log('[nfce-proxy] Reconciliar por external_id:', extId)
-        const consResp = await fetch(
-          `${FF_BASE_URL}/nfce-api/consultar?external_id=${encodeURIComponent(extId)}`,
-          { headers: { 'x-api-key': NFCE_API_KEY } },
-        )
-        const consJson = await safeJson(consResp)
-        const d: any = consJson?.data || consJson || {}
+        const lookup = await consultarPorExternalId(extId)
+        const consResp = lookup.response
+        const consJson = lookup.raw
+        const d: any = lookup.data || {}
         const remoteId = d?.id || d?.nfce_id || null
 
         if (!remoteId && !d?.chave_acesso && !d?.status) {
