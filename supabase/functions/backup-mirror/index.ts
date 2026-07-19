@@ -112,6 +112,13 @@ Deno.serve(async (req) => {
   const source = postgres(sourceUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
   const target = postgres(targetUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
 
+  // Desliga triggers e FKs no destino: evita erros como
+  // "O serial da loja não pode ser alterado", FKs para linhas ainda não copiadas
+  // e uniques secundárias que quebravam o UPSERT.
+  try {
+    await target`SET session_replication_role = 'replica'`;
+  } catch (_) { /* ignore */ }
+
   // Estado da execução (pode ser continuação de uma invocação anterior)
   const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
   const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
@@ -138,6 +145,18 @@ Deno.serve(async (req) => {
       if (det && typeof det === "object") perTable = det;
     }
   } else {
+    // Self-heal: marca runs 'running' antigos (>30min) como erro para
+    // não ficarem pendurados quando a cadeia de continuação quebra.
+    try {
+      await sourceMeta`
+        UPDATE public.backup_runs
+        SET status = 'error',
+            finished_at = now(),
+            error_message = COALESCE(error_message,'') || ' [auto: chain interrompida]'
+        WHERE status = 'running'
+          AND started_at < now() - interval '30 minutes'
+      `;
+    } catch (_) { /* ignore */ }
     const [runRow] = await sourceMeta`
       INSERT INTO public.backup_runs (status) VALUES ('running') RETURNING id
     `;
@@ -146,6 +165,65 @@ Deno.serve(async (req) => {
 
   // Auto-sync de schema: cria tabelas/colunas novas no destino antes do mirror
   async function syncSchema() {
+    // 0) Sincroniza enums (novos valores adicionados na origem)
+    try {
+      const srcEnums = await source`
+        SELECT t.typname, e.enumlabel, e.enumsortorder
+        FROM pg_type t
+        JOIN pg_enum e ON e.enumtypid = t.oid
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE n.nspname = 'public'
+        ORDER BY t.typname, e.enumsortorder
+      `;
+      const tgtEnums = await target`
+        SELECT t.typname, e.enumlabel
+        FROM pg_type t
+        JOIN pg_enum e ON e.enumtypid = t.oid
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE n.nspname = 'public'
+      `;
+      const tgtMap = new Map<string, Set<string>>();
+      for (const r of tgtEnums) {
+        const t = r.typname as string;
+        if (!tgtMap.has(t)) tgtMap.set(t, new Set());
+        tgtMap.get(t)!.add(r.enumlabel as string);
+      }
+      const srcMap = new Map<string, string[]>();
+      for (const r of srcEnums) {
+        const t = r.typname as string;
+        if (!srcMap.has(t)) srcMap.set(t, []);
+        srcMap.get(t)!.push(r.enumlabel as string);
+      }
+      for (const [typname, labels] of srcMap) {
+        const existing = tgtMap.get(typname);
+        if (!existing) {
+          // Cria o enum inteiro no destino
+          const vals = labels.map((v) => `'${v.replace(/'/g, "''")}'`).join(",");
+          try {
+            await target.unsafe(`CREATE TYPE public."${typname}" AS ENUM (${vals})`);
+            schemaChanges.push(`CREATE ENUM ${typname}`);
+          } catch (e) {
+            schemaChanges.push(`ERR CREATE ENUM ${typname}: ${e instanceof Error ? e.message : String(e)}`);
+          }
+          continue;
+        }
+        for (const label of labels) {
+          if (!existing.has(label)) {
+            try {
+              await target.unsafe(
+                `ALTER TYPE public."${typname}" ADD VALUE IF NOT EXISTS '${label.replace(/'/g, "''")}'`,
+              );
+              schemaChanges.push(`ADD ENUM ${typname}.${label}`);
+            } catch (e) {
+              schemaChanges.push(`ERR ENUM ${typname}.${label}: ${e instanceof Error ? e.message : String(e)}`);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      schemaChanges.push(`syncEnums error: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
     const srcCols = await source`
       SELECT table_name, column_name, data_type, udt_name, is_nullable, column_default,
              character_maximum_length, numeric_precision, numeric_scale
@@ -289,18 +367,25 @@ Deno.serve(async (req) => {
         `;
         const colNames = cols.map((c) => c.column_name as string);
         const quotedCols = colNames.map((c) => `"${c}"`).join(",");
-        const updateSet = colNames
-          .filter((c) => !pkCols.includes(c))
-          .map((c) => `"${c}" = EXCLUDED."${c}"`)
-          .join(",");
-        const conflictCols = pkCols.map((c) => `"${c}"`).join(",");
-
-        // Pagina a leitura (com filtro opcional pra tabelas grandes)
         const orderBy = pkCols.map((c) => `"${c}"`).join(",");
         const recent = RECENT_ONLY_TABLES[table];
         const whereClause = recent
           ? `WHERE "${recent.column}" >= now() - interval '${recent.days} days'`
           : "";
+
+        // Espelho = substituição total. Para RECENT_ONLY apagamos só a janela.
+        // Como session_replication_role='replica', FKs/triggers não bloqueiam.
+        // TRUNCATE ignora session_replication_role e falha em tabelas
+        // referenciadas por FK. Usamos DELETE, que respeita 'replica'
+        // (FKs/triggers desabilitados) e roda mesmo com dependências.
+        if (recent) {
+          await target.unsafe(
+            `DELETE FROM public."${table}" WHERE "${recent.column}" >= now() - interval '${recent.days} days'`,
+          );
+        } else {
+          await target.unsafe(`DELETE FROM public."${table}"`);
+        }
+
         let offset = 0;
         while (true) {
           if (Date.now() - startedAt > MAX_RUNTIME_MS) {
@@ -311,7 +396,7 @@ Deno.serve(async (req) => {
           );
           if (batch.length === 0) break;
 
-          // Monta INSERT ... ON CONFLICT
+          // INSERT em massa (destino já foi limpo acima)
           const placeholders: string[] = [];
           const flatValues: unknown[] = [];
           let p = 1;
@@ -323,10 +408,8 @@ Deno.serve(async (req) => {
             }
             placeholders.push(`(${ph.join(",")})`);
           }
-          const sql = updateSet.length > 0
-            ? `INSERT INTO public."${table}" (${quotedCols}) VALUES ${placeholders.join(",")} ON CONFLICT (${conflictCols}) DO UPDATE SET ${updateSet}`
-            : `INSERT INTO public."${table}" (${quotedCols}) VALUES ${placeholders.join(",")} ON CONFLICT (${conflictCols}) DO NOTHING`;
-
+          const conflictCols = pkCols.map((c) => `"${c}"`).join(",");
+          const sql = `INSERT INTO public."${table}" (${quotedCols}) VALUES ${placeholders.join(",")} ON CONFLICT (${conflictCols}) DO NOTHING`;
           await target.unsafe(sql, flatValues);
           rowsForTable += batch.length;
           offset += BATCH_SIZE;
