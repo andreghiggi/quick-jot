@@ -551,16 +551,12 @@ export default function Receitas() {
           valor_unitario: financeForSale,
           ...fiscal,
         };
-        // Padrão confirmado pela Fiscal Flow para NFC-e financeira
-        // (CFOP 5949): CSOSN 900 + PIS/COFINS CST 49 + alíquotas 0.
-        // Forçamos aqui para blindar contra tax_rules antigas que ainda
-        // estejam gravadas com CSOSN 400 (que dispara rejeição [725] da
-        // SEFAZ — CFOP inválido). cClassTrib/classTrib acompanham o padrão
-        // homologado (Reforma Tributária, mesma classificação usada em
-        // outro ERP com essa nota autorizada).
-        (financeItem as any).csosn = '900';
-        (financeItem as any).cst_pis = '49';
-        (financeItem as any).cst_cofins = '49';
+        // Valores fiscais lidos da regra tributária "Quitação de Crediário"
+        // (editável em Regras Tributárias). Fallback para o padrão homologado
+        // pela Fiscal Flow: CFOP 5949 + CSOSN 900 + PIS/COFINS CST 49 + alíquotas 0.
+        (financeItem as any).csosn = (taxRule?.csosn && String(taxRule.csosn).trim()) || '900';
+        (financeItem as any).cst_pis = (taxRule?.pis_cst && String(taxRule.pis_cst).trim()) || '49';
+        (financeItem as any).cst_cofins = (taxRule?.cofins_cst && String(taxRule.cofins_cst).trim()) || '49';
         (financeItem as any).cClassTrib = '000001';
         (financeItem as any).classTrib = '000001';
 
