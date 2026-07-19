@@ -4626,6 +4626,10 @@ export type Database = {
       }
       cleanup_old_whatsapp_messages: { Args: never; Returns: Json }
       close_inventory_count: { Args: { _count_id: string }; Returns: Json }
+      ensure_credit_receipt_tax_rule: {
+        Args: { _company_id: string }
+        Returns: string
+      }
       generate_clean_subdomain: { Args: { _input: string }; Returns: string }
       generate_company_serial: { Args: never; Returns: string }
       generate_internal_ean13: {
