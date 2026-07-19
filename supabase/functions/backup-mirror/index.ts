@@ -165,6 +165,65 @@ Deno.serve(async (req) => {
 
   // Auto-sync de schema: cria tabelas/colunas novas no destino antes do mirror
   async function syncSchema() {
+    // 0) Sincroniza enums (novos valores adicionados na origem)
+    try {
+      const srcEnums = await source`
+        SELECT t.typname, e.enumlabel, e.enumsortorder
+        FROM pg_type t
+        JOIN pg_enum e ON e.enumtypid = t.oid
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE n.nspname = 'public'
+        ORDER BY t.typname, e.enumsortorder
+      `;
+      const tgtEnums = await target`
+        SELECT t.typname, e.enumlabel
+        FROM pg_type t
+        JOIN pg_enum e ON e.enumtypid = t.oid
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE n.nspname = 'public'
+      `;
+      const tgtMap = new Map<string, Set<string>>();
+      for (const r of tgtEnums) {
+        const t = r.typname as string;
+        if (!tgtMap.has(t)) tgtMap.set(t, new Set());
+        tgtMap.get(t)!.add(r.enumlabel as string);
+      }
+      const srcMap = new Map<string, string[]>();
+      for (const r of srcEnums) {
+        const t = r.typname as string;
+        if (!srcMap.has(t)) srcMap.set(t, []);
+        srcMap.get(t)!.push(r.enumlabel as string);
+      }
+      for (const [typname, labels] of srcMap) {
+        const existing = tgtMap.get(typname);
+        if (!existing) {
+          // Cria o enum inteiro no destino
+          const vals = labels.map((v) => `'${v.replace(/'/g, "''")}'`).join(",");
+          try {
+            await target.unsafe(`CREATE TYPE public."${typname}" AS ENUM (${vals})`);
+            schemaChanges.push(`CREATE ENUM ${typname}`);
+          } catch (e) {
+            schemaChanges.push(`ERR CREATE ENUM ${typname}: ${e instanceof Error ? e.message : String(e)}`);
+          }
+          continue;
+        }
+        for (const label of labels) {
+          if (!existing.has(label)) {
+            try {
+              await target.unsafe(
+                `ALTER TYPE public."${typname}" ADD VALUE IF NOT EXISTS '${label.replace(/'/g, "''")}'`,
+              );
+              schemaChanges.push(`ADD ENUM ${typname}.${label}`);
+            } catch (e) {
+              schemaChanges.push(`ERR ENUM ${typname}.${label}: ${e instanceof Error ? e.message : String(e)}`);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      schemaChanges.push(`syncEnums error: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
     const srcCols = await source`
       SELECT table_name, column_name, data_type, udt_name, is_nullable, column_default,
              character_maximum_length, numeric_precision, numeric_scale
