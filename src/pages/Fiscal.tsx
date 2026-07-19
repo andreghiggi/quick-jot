@@ -63,6 +63,7 @@ const CFOP_COMMON = [
   { value: '5405', label: '5405 - Venda de mercadoria adquirida sujeita ao regime de ST' },
   { value: '5656', label: '5656 - Venda de combustível/lubrificante adquiridos' },
   { value: '5933', label: '5933 - Prestação de serviço tributada pelo ISSQN' },
+  { value: '5949', label: '5949 - Outra saída de mercadoria ou prestação de serviço não especificado' },
 ];
 
 const EMPTY_FORM: TaxRuleFormData = {
