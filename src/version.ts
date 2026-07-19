@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.15-beta";
-export const RELEASE_DATE = "2026-07-17"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Monitor CRED — múltiplas rotas de atualização + body no reprocessar";
+export const VERSION = "1.61.16-beta";
+export const RELEASE_DATE = "2026-07-19"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Regra tributária 'Quitação de Crediário' editável";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.61.16-beta",
+    date: "2026-07-19",
+    codename: "Regra tributária 'Quitação de Crediário' editável",
+    changes: [
+      "Criada a regra tributária 'Quitação de Crediário' (CFOP 5949 · CSOSN 900 · PIS/COFINS CST 49 · alíquotas 0) para todas as lojas com crediário ativo (Cozinha da Ruiva e Lancheria da i9) e vinculada automaticamente ao campo 'Regra tributária de recebimento de crediário' das Configurações do PDV.",
+      "A regra fica editável normalmente em Fiscal → Regras Tributárias — se um dia o padrão mudar, a loja ajusta pela interface sem precisar de código.",
+      "A NFC-e financeira do recebimento de crediário agora lê CSOSN e PIS/COFINS CST diretamente da regra tributária, com fallback para o padrão homologado 900/49 caso a regra esteja com o campo em branco.",
+      "Sem alteração em TEF, PinPad, PDV V2, Frente de Caixa, Cardápio, NF-e, Compras, Financeiro (fluxo), Estoque ou impressão.",
+    ],
+  },
   {
     version: "1.61.15-beta",
     date: "2026-07-17",
