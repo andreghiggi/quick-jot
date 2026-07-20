@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { BlockLicenseDialog } from '@/components/reseller/BlockLicenseDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -23,6 +24,7 @@ import {
   Copy,
   EyeOff,
   Pencil,
+  Lock,
 } from 'lucide-react';
 
 interface Company {
@@ -35,6 +37,10 @@ interface Company {
   login_email: string | null;
   initial_password: string | null;
   reseller_id: string | null;
+  serial: string | null;
+  license_status: string | null;
+  license_block_reason: string | null;
+  license_block_message: string | null;
 }
 
 export default function AdminDashboard() {
@@ -53,6 +59,9 @@ export default function AdminDashboard() {
   const [editEmail, setEditEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
+
+  // Block license dialog
+  const [blockStore, setBlockStore] = useState<Company | null>(null);
 
   // New company form
   const [newCompanyName, setNewCompanyName] = useState('');
