@@ -425,9 +425,15 @@ export default function AdminDashboard() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={comp.active ? 'default' : 'secondary'}>
-                            {comp.active ? 'Ativa' : 'Inativa'}
-                          </Badge>
+                          {comp.license_status === 'canceled' ? (
+                            <Badge variant="destructive">Cancelada</Badge>
+                          ) : comp.license_status === 'blocked' ? (
+                            <Badge variant="destructive">Bloqueada</Badge>
+                          ) : (
+                            <Badge variant={comp.active ? 'default' : 'secondary'}>
+                              {comp.active ? 'Ativa' : 'Inativa'}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2 flex-wrap">
@@ -437,6 +443,16 @@ export default function AdminDashboard() {
                                 Módulos
                               </Button>
                             </Link>
+                            <Button
+                              variant={comp.license_status === 'blocked' ? 'default' : 'outline'}
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => setBlockStore(comp)}
+                              title="Bloquear/liberar licença"
+                            >
+                              <Lock className="w-3 h-3" />
+                              {comp.license_status === 'blocked' ? 'Bloqueada' : 'Bloquear'}
+                            </Button>
                             <Button
                               variant="secondary"
                               size="sm"
