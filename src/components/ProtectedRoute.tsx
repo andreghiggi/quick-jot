@@ -19,6 +19,7 @@ interface SuspendInfo {
   licenseStatus: string;
   blockReason: string | null;
   blockMessage: string | null;
+  hasReseller: boolean;
 }
 
 export function ProtectedRoute({ children, requiredRole, requireCompany = false }: ProtectedRouteProps) {
@@ -67,13 +68,14 @@ export function ProtectedRoute({ children, requiredRole, requireCompany = false 
           licenseStatus: (comp as any)?.license_status || 'active',
           blockReason: (comp as any)?.license_block_reason ?? null,
           blockMessage: (comp as any)?.license_block_message ?? null,
+          hasReseller: !!comp?.reseller_id,
         });
       } else {
-        setSuspendCheck({ suspended: false, resellerName: null, resellerPhone: null, licenseStatus: 'active', blockReason: null, blockMessage: null });
+        setSuspendCheck({ suspended: false, resellerName: null, resellerPhone: null, licenseStatus: 'active', blockReason: null, blockMessage: null, hasReseller: false });
       }
     } catch (err) {
       console.error('Error checking suspension:', err);
-      setSuspendCheck({ suspended: false, resellerName: null, resellerPhone: null, licenseStatus: 'active', blockReason: null, blockMessage: null });
+      setSuspendCheck({ suspended: false, resellerName: null, resellerPhone: null, licenseStatus: 'active', blockReason: null, blockMessage: null, hasReseller: false });
     } finally {
       setChecking(false);
     }
@@ -108,6 +110,7 @@ export function ProtectedRoute({ children, requiredRole, requireCompany = false 
         licenseStatus={suspendCheck.licenseStatus}
         blockReason={suspendCheck.blockReason}
         blockMessage={suspendCheck.blockMessage}
+        hasReseller={suspendCheck.hasReseller}
       />
     );
   }
