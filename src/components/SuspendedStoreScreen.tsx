@@ -30,7 +30,7 @@ export function SuspendedStoreScreen({
   const title = isCanceled
     ? 'Licença cancelada'
     : isManuallyBlocked
-      ? (hasReseller ? 'Acesso bloqueado pelo revendedor' : 'Licença suspensa')
+      ? 'Licença suspensa'
       : 'Loja bloqueada por inadimplência';
 
   const Icon = isCanceled ? Ban : isManuallyBlocked ? Lock : AlertTriangle;
@@ -58,12 +58,6 @@ export function SuspendedStoreScreen({
             </p>
           ) : isManuallyBlocked ? (
             <>
-              {hasReseller && (
-                <p className="text-sm text-muted-foreground text-center">
-                  O acesso ao sistema da loja <span className="font-semibold">{companyName ?? 'sua loja'}</span> foi
-                  bloqueado pelo revendedor.
-                </p>
-              )}
               {(blockReason || blockMessage) && (
                 <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm space-y-1">
                   {blockReason && (
@@ -82,14 +76,14 @@ export function SuspendedStoreScreen({
             </p>
           )}
 
-          {!isCanceled && hasReseller && (
+          {!isCanceled && !isManuallyBlocked && hasReseller && (
             <p className="text-sm text-center">
               Para regularizar e liberar o acesso, entre em contato com{' '}
               <span className="font-semibold">{resellerName || 'seu revendedor'}</span>:
             </p>
           )}
 
-          {hasReseller && (whatsappLink ? (
+          {!isManuallyBlocked && hasReseller && (whatsappLink ? (
             <Button asChild className="w-full" size="lg">
               <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                 Falar pelo WhatsApp
