@@ -520,6 +520,20 @@ export default function AdminDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <BlockLicenseDialog
+        open={!!blockStore}
+        onClose={() => setBlockStore(null)}
+        store={blockStore ? {
+          id: blockStore.id,
+          name: blockStore.name,
+          serial: blockStore.serial,
+          license_status: blockStore.license_status,
+          license_block_reason: blockStore.license_block_reason,
+          license_block_message: blockStore.license_block_message,
+        } : null}
+        onSaved={fetchCompanies}
+      />
     </AppLayout>
   );
 }
