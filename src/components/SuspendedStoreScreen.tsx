@@ -10,6 +10,7 @@ interface Props {
   licenseStatus?: string;
   blockReason?: string | null;
   blockMessage?: string | null;
+  hasReseller?: boolean;
 }
 
 export function SuspendedStoreScreen({
@@ -19,6 +20,7 @@ export function SuspendedStoreScreen({
   licenseStatus = 'active',
   blockReason,
   blockMessage,
+  hasReseller = true,
 }: Props) {
   const { signOut } = useAuthContext();
 
@@ -28,7 +30,7 @@ export function SuspendedStoreScreen({
   const title = isCanceled
     ? 'Licença cancelada'
     : isManuallyBlocked
-      ? 'Acesso bloqueado pelo revendedor'
+      ? (hasReseller ? 'Acesso bloqueado pelo revendedor' : 'Licença suspensa')
       : 'Loja bloqueada por inadimplência';
 
   const Icon = isCanceled ? Ban : isManuallyBlocked ? Lock : AlertTriangle;
@@ -56,10 +58,12 @@ export function SuspendedStoreScreen({
             </p>
           ) : isManuallyBlocked ? (
             <>
-              <p className="text-sm text-muted-foreground text-center">
-                O acesso ao sistema da loja <span className="font-semibold">{companyName ?? 'sua loja'}</span> foi
-                bloqueado pelo revendedor.
-              </p>
+              {hasReseller && (
+                <p className="text-sm text-muted-foreground text-center">
+                  O acesso ao sistema da loja <span className="font-semibold">{companyName ?? 'sua loja'}</span> foi
+                  bloqueado pelo revendedor.
+                </p>
+              )}
               {(blockReason || blockMessage) && (
                 <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm space-y-1">
                   {blockReason && (
@@ -78,14 +82,14 @@ export function SuspendedStoreScreen({
             </p>
           )}
 
-          {!isCanceled && (
+          {!isCanceled && hasReseller && (
             <p className="text-sm text-center">
               Para regularizar e liberar o acesso, entre em contato com{' '}
               <span className="font-semibold">{resellerName || 'seu revendedor'}</span>:
             </p>
           )}
 
-          {whatsappLink ? (
+          {hasReseller && (whatsappLink ? (
             <Button asChild className="w-full" size="lg">
               <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                 Falar pelo WhatsApp
@@ -95,7 +99,7 @@ export function SuspendedStoreScreen({
             <p className="text-sm text-muted-foreground text-center italic">
               Contato do revendedor não cadastrado.
             </p>
-          )}
+          ))}
 
           <Button variant="outline" className="w-full gap-2" onClick={() => signOut()}>
             <LogOut className="w-4 h-4" />
