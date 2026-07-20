@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { BlockLicenseDialog } from '@/components/reseller/BlockLicenseDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -23,6 +24,7 @@ import {
   Copy,
   EyeOff,
   Pencil,
+  Lock,
 } from 'lucide-react';
 
 interface Company {
@@ -35,6 +37,10 @@ interface Company {
   login_email: string | null;
   initial_password: string | null;
   reseller_id: string | null;
+  serial: string | null;
+  license_status: string | null;
+  license_block_reason: string | null;
+  license_block_message: string | null;
 }
 
 export default function AdminDashboard() {
@@ -53,6 +59,9 @@ export default function AdminDashboard() {
   const [editEmail, setEditEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
+
+  // Block license dialog
+  const [blockStore, setBlockStore] = useState<Company | null>(null);
 
   // New company form
   const [newCompanyName, setNewCompanyName] = useState('');
@@ -416,9 +425,15 @@ export default function AdminDashboard() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={comp.active ? 'default' : 'secondary'}>
-                            {comp.active ? 'Ativa' : 'Inativa'}
-                          </Badge>
+                          {comp.license_status === 'canceled' ? (
+                            <Badge variant="destructive">Cancelada</Badge>
+                          ) : comp.license_status === 'blocked' ? (
+                            <Badge variant="destructive">Bloqueada</Badge>
+                          ) : (
+                            <Badge variant={comp.active ? 'default' : 'secondary'}>
+                              {comp.active ? 'Ativa' : 'Inativa'}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2 flex-wrap">
@@ -428,6 +443,16 @@ export default function AdminDashboard() {
                                 Módulos
                               </Button>
                             </Link>
+                            <Button
+                              variant={comp.license_status === 'blocked' ? 'default' : 'outline'}
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => setBlockStore(comp)}
+                              title="Bloquear/liberar licença"
+                            >
+                              <Lock className="w-3 h-3" />
+                              {comp.license_status === 'blocked' ? 'Bloqueada' : 'Bloquear'}
+                            </Button>
                             <Button
                               variant="secondary"
                               size="sm"
@@ -495,6 +520,20 @@ export default function AdminDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <BlockLicenseDialog
+        open={!!blockStore}
+        onClose={() => setBlockStore(null)}
+        store={blockStore ? {
+          id: blockStore.id,
+          name: blockStore.name,
+          serial: blockStore.serial,
+          license_status: blockStore.license_status,
+          license_block_reason: blockStore.license_block_reason,
+          license_block_message: blockStore.license_block_message,
+        } : null}
+        onSaved={fetchCompanies}
+      />
     </AppLayout>
   );
 }
