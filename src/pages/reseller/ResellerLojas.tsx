@@ -436,7 +436,7 @@ export default function ResellerLojas() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar loja..."
+            placeholder="Buscar por nome, razão social, CNPJ ou serial..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="pl-10"
