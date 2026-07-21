@@ -443,47 +443,108 @@ export default function ResellerLojas() {
           />
         </div>
 
-        <div className="rounded-md border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Serial</TableHead>
-                <TableHead>Loja</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Criação</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCompanies.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Nenhuma loja encontrada
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredCompanies.map(c => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-mono text-xs font-bold tracking-wider select-all">
-                      {(c as any).serial || '—'}
-                    </TableCell>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{c.slug}</TableCell>
-                    <TableCell>
-                      {c.active ? (
-                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          Ativa
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">Inativa</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(c.created_at), 'dd/MM/yyyy', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2 flex-wrap">
+        {filteredCompanies.length === 0 ? (
+          <div className="rounded-md border py-10 text-center text-muted-foreground text-sm">
+            Nenhuma loja encontrada
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredCompanies.map(c => {
+              const any = c as any;
+              const info = enrichment.data.get(c.id);
+              const modules = info?.modules ?? [];
+              const openInv = info?.nextOpenInvoice ?? null;
+
+              const licStatus: string = any.license_status || 'active';
+              const isCanceled = licStatus === 'canceled';
+              const isManuallyBlocked = licStatus === 'blocked';
+              const isSuspended = !!openInv && openInv.days_overdue > 3;
+              const isOverdue = !!openInv && openInv.is_overdue;
+
+              const statusPill = (() => {
+                if (isCanceled) return <Badge variant="destructive" className="gap-1"><Ban className="w-3 h-3" />Cancelada</Badge>;
+                if (isManuallyBlocked) return <Badge variant="destructive" className="gap-1"><Ban className="w-3 h-3" />Travada</Badge>;
+                if (!c.active) return <Badge variant="outline">Inativa</Badge>;
+                if (isSuspended) return <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-3 h-3" />Suspensa</Badge>;
+                if (isOverdue) return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 gap-1"><AlertTriangle className="w-3 h-3" />Vencida</Badge>;
+                if (openInv) return <Badge variant="outline" className="text-yellow-700 border-yellow-400">Fatura em aberto</Badge>;
+                return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Ativa</Badge>;
+              })();
+
+              return (
+                <Card key={c.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+                      {/* Coluna 1: Serial + identidade */}
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="rounded-md bg-primary/10 text-primary p-2 shrink-0">
+                          <Building2 className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-[11px] font-bold tracking-wider bg-muted px-1.5 py-0.5 rounded select-all">
+                              {any.serial || '—'}
+                            </span>
+                            {statusPill}
+                          </div>
+                          <div className="font-semibold truncate mt-1">{c.name}</div>
+                          {any.razao_social && (
+                            <div className="text-xs text-muted-foreground truncate">
+                              {any.razao_social}
+                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                            {any.cnpj && <span>CNPJ: {any.cnpj}</span>}
+                            {any.address_city && (
+                              <span>{any.address_city}{any.address_state ? `/${any.address_state}` : ''}</span>
+                            )}
+                            <span>Criada em {format(new Date(c.created_at), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Coluna 2: Módulos */}
+                      <div className="lg:w-64 xl:w-72 shrink-0">
+                        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                          Módulos ({modules.length})
+                        </div>
+                        {modules.length === 0 ? (
+                          <span className="text-xs text-muted-foreground italic">Nenhum</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {modules.slice(0, 6).map(m => (
+                              <Badge key={m} variant="secondary" className="text-[10px] px-1.5 py-0">
+                                {moduleShortLabel(m)}
+                              </Badge>
+                            ))}
+                            {modules.length > 6 && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                +{modules.length - 6}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Coluna 3: Mensalidade / fatura */}
+                      <div className="lg:w-44 shrink-0 lg:text-right">
+                        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                          Mensalidade
+                        </div>
+                        <div className="font-bold text-base">{fmtMoney(monthlyFee)}</div>
+                        {openInv ? (
+                          <div className={`text-xs mt-0.5 ${isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+                            {isOverdue
+                              ? `Vencida há ${openInv.days_overdue}d`
+                              : `Vence em ${format(new Date(openInv.due_date + 'T12:00:00'), 'dd/MM')}`}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-green-600 mt-0.5">Em dia</div>
+                        )}
+                      </div>
+
+                      {/* Coluna 4: Ações */}
+                      <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap lg:justify-end">
                         <Button
                           variant="outline"
                           size="sm"
@@ -514,13 +575,13 @@ export default function ResellerLojas() {
                           <span className="hidden sm:inline">Acessar</span>
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <StoreDetailDialog
