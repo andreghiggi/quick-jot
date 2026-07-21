@@ -105,15 +105,18 @@ import ResellerConfiguracoes from "./pages/reseller/ResellerConfiguracoes";
 const queryClient = new QueryClient();
 
 function RootRedirect() {
-  const { user, loading, isSuperAdmin, isWaiter, isReseller, company } = useAuthContext();
+  const { user, loading, isSuperAdmin, isWaiter, isReseller, company, impersonatedCompany } = useAuthContext();
   const { enabled: pdvV2Enabled, loading: pdvV2Loading } = usePdvV2Enabled(company?.id);
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { enabled: cardapioEnabled, loading: cardapioLoading } = useCardapioEnabled(company?.id);
 
   if (loading) return null;
   if (!user) return <Navigate to="/auth" replace />;
-  if (isSuperAdmin()) return <Navigate to="/admin" replace />;
-  if (isReseller()) return <Navigate to="/revendedor/home" replace />;
+  // Quando super_admin/revendedor está impersonando uma loja, comporta-se como a loja.
+  if (!impersonatedCompany) {
+    if (isSuperAdmin()) return <Navigate to="/admin" replace />;
+    if (isReseller()) return <Navigate to="/revendedor/home" replace />;
+  }
   if (isWaiter()) return <Navigate to="/garcom" replace />;
   if (!pdvV2Loading && pdvV2Enabled) return <Navigate to="/pdv-v2" replace />;
   // Loja SÓ Mercado (sem Cardápio e sem PDV V2) → abre direto na Frente de Caixa.
