@@ -10,8 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Loader2, Search, Eye, Settings, Building2, AlertTriangle, Ban } from 'lucide-react';
+import { Plus, Loader2, Search, Eye, Settings, Building2, AlertTriangle, Ban, X, FileText, MessageCircle, Lock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { StoreDetailDialog, StoreDetail } from '@/components/reseller/StoreDetailDialog';
@@ -34,6 +36,13 @@ export default function ResellerLojas() {
   
   const [selectedStore, setSelectedStore] = useState<StoreDetail | null>(null);
   const [modulesCompany, setModulesCompany] = useState<{ id: string; name: string } | null>(null);
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [showBulkBlock, setShowBulkBlock] = useState(false);
+  const [bulkBlockReason, setBulkBlockReason] = useState('Pendência financeira');
+  const [bulkBlockMessage, setBulkBlockMessage] = useState('Entre em contato com o suporte.');
 
   // form state — Empresa
   const [newName, setNewName] = useState('');
