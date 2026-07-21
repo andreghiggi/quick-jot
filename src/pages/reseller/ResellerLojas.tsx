@@ -26,6 +26,9 @@ export default function ResellerLojas() {
   const { reseller, companies, settings, loading, createCompany, refetch } = useResellerPortal();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchField, setSearchField] = useState<'all' | 'name' | 'razao' | 'cnpj' | 'serial' | 'city'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'open' | 'overdue' | 'suspended' | 'blocked' | 'canceled' | 'inactive'>('all');
+  const [moduleFilter, setModuleFilter] = useState<string>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   
@@ -147,20 +150,80 @@ export default function ResellerLojas() {
 
   const normalize = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const term = normalize(searchTerm);
-  const filteredCompanies = companies.filter(c => {
-    if (!term) return true;
-    const any = c as any;
-    const digits = term.replace(/\D/g, '');
-    return (
-      normalize(c.name).includes(term) ||
-      normalize(c.slug).includes(term) ||
-      normalize(any.razao_social || '').includes(term) ||
-      normalize(any.serial || '').includes(term) ||
-      (digits && (any.cnpj || '').replace(/\D/g, '').includes(digits))
-    );
-  });
+  // Enrichment loads for ALL companies so we can filter by status/module without circular deps.
+  const enrichment = useResellerCompanyEnrichment(companies.map(c => c.id));
 
-  const enrichment = useResellerCompanyEnrichment(filteredCompanies.map(c => c.id));
+  const matchesSearch = (c: any) => {
+    if (!term) return true;
+    const digits = term.replace(/\D/g, '');
+    const nName = normalize(c.name);
+    const nSlug = normalize(c.slug);
+    const nRazao = normalize(c.razao_social || '');
+    const nSerial = normalize(c.serial || '');
+    const nCity = normalize(c.address_city || '');
+    const cnpjDigits = (c.cnpj || '').replace(/\D/g, '');
+    switch (searchField) {
+      case 'name': return nName.includes(term) || nSlug.includes(term);
+      case 'razao': return nRazao.includes(term);
+      case 'cnpj': return !!digits && cnpjDigits.includes(digits);
+      case 'serial': return nSerial.includes(term);
+      case 'city': return nCity.includes(term);
+      default:
+        return (
+          nName.includes(term) || nSlug.includes(term) || nRazao.includes(term) ||
+          nSerial.includes(term) || nCity.includes(term) ||
+          (!!digits && cnpjDigits.includes(digits))
+        );
+    }
+  };
+
+  const matchesStatus = (c: any) => {
+    if (statusFilter === 'all') return true;
+    const info = enrichment.data.get(c.id);
+    const openInv = info?.nextOpenInvoice ?? null;
+    const licStatus: string = c.license_status || 'active';
+    const isCanceled = licStatus === 'canceled';
+    const isBlocked = licStatus === 'blocked';
+    const isSuspended = !!openInv && openInv.days_overdue > 3;
+    const isOverdue = !!openInv && openInv.is_overdue;
+    switch (statusFilter) {
+      case 'canceled': return isCanceled;
+      case 'blocked': return isBlocked;
+      case 'inactive': return !c.active && !isCanceled && !isBlocked;
+      case 'suspended': return isSuspended && !isCanceled && !isBlocked;
+      case 'overdue': return isOverdue && !isSuspended && !isCanceled && !isBlocked;
+      case 'open': return !!openInv && !isOverdue;
+      case 'active': return c.active && !isCanceled && !isBlocked && !openInv;
+    }
+    return true;
+  };
+
+  const matchesModule = (c: any) => {
+    if (moduleFilter === 'all') return true;
+    const info = enrichment.data.get(c.id);
+    return (info?.modules ?? []).includes(moduleFilter);
+  };
+
+  const filteredCompanies = companies.filter(c => matchesSearch(c) && matchesStatus(c) && matchesModule(c));
+
+  // Distinct list of modules across ALL companies (for the module filter dropdown).
+  const moduleOptions = Array.from(
+    new Set(
+      companies.flatMap(c => enrichment.data.get(c.id)?.modules ?? [])
+    )
+  ).sort();
+
+  const statusChips: { value: typeof statusFilter; label: string }[] = [
+    { value: 'all', label: 'Todas' },
+    { value: 'active', label: 'Em dia' },
+    { value: 'open', label: 'Fatura em aberto' },
+    { value: 'overdue', label: 'Vencidas' },
+    { value: 'suspended', label: 'Suspensas' },
+    { value: 'blocked', label: 'Travadas' },
+    { value: 'canceled', label: 'Canceladas' },
+    { value: 'inactive', label: 'Inativas' },
+  ];
+
   const monthlyFee = settings?.monthly_fee ?? 0;
   const fmtMoney = (n: number) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -433,14 +496,66 @@ export default function ResellerLojas() {
   return (
     <ResellerLayout title="Lojas" actions={headerActions}>
       <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, razão social, CNPJ ou serial..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Select value={searchField} onValueChange={(v: any) => setSearchField(v)}>
+              <SelectTrigger className="sm:w-48 shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os campos</SelectItem>
+                <SelectItem value="name">Nome / Slug</SelectItem>
+                <SelectItem value="razao">Razão Social</SelectItem>
+                <SelectItem value="cnpj">CNPJ</SelectItem>
+                <SelectItem value="serial">Serial</SelectItem>
+                <SelectItem value="city">Cidade</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder={
+                  searchField === 'cnpj' ? 'Buscar por CNPJ...' :
+                  searchField === 'serial' ? 'Buscar por serial...' :
+                  searchField === 'razao' ? 'Buscar por razão social...' :
+                  searchField === 'city' ? 'Buscar por cidade...' :
+                  searchField === 'name' ? 'Buscar por nome ou slug...' :
+                  'Buscar em todos os campos...'
+                }
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={moduleFilter} onValueChange={setModuleFilter}>
+              <SelectTrigger className="sm:w-56 shrink-0">
+                <SelectValue placeholder="Módulo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os módulos</SelectItem>
+                {moduleOptions.map(m => (
+                  <SelectItem key={m} value={m}>{moduleShortLabel(m)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {statusChips.map(chip => (
+              <Button
+                key={chip.value}
+                variant={statusFilter === chip.value ? 'default' : 'outline'}
+                size="sm"
+                className="h-7 rounded-full text-xs px-3"
+                onClick={() => setStatusFilter(chip.value)}
+              >
+                {chip.label}
+              </Button>
+            ))}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {filteredCompanies.length} {filteredCompanies.length === 1 ? 'loja' : 'lojas'}
+            {filteredCompanies.length !== companies.length && ` de ${companies.length}`}
+          </div>
         </div>
 
         {filteredCompanies.length === 0 ? (
