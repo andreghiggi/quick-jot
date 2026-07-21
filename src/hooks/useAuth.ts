@@ -291,10 +291,18 @@ export function useAuth() {
   }, [roles]);
 
   const exitImpersonation = useCallback(() => {
-    setImpersonatedCompany(null);
-    setImpersonatedReseller(null);
-    sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
-    sessionStorage.removeItem(IMPERSONATED_RESELLER_KEY);
+    // If both company + reseller impersonation are active, exit only the
+    // company layer so the user returns to the reseller panel. Otherwise,
+    // exit everything.
+    setImpersonatedCompany((prevCompany) => {
+      const hasReseller = !!sessionStorage.getItem(IMPERSONATED_RESELLER_KEY);
+      sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
+      if (!prevCompany || !hasReseller) {
+        setImpersonatedReseller(null);
+        sessionStorage.removeItem(IMPERSONATED_RESELLER_KEY);
+      }
+      return null;
+    });
     toast.info('Modo de suporte encerrado');
   }, []);
 
