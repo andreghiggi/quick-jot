@@ -4,6 +4,7 @@ import {
   Store,
   Settings,
   LogOut,
+  FolderOpen,
 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import {
@@ -25,6 +26,7 @@ import logoIcon from '@/assets/logo-icon.png';
 const menuItems = [
   { title: 'Home', icon: LayoutDashboard, href: '/revendedor/home' },
   { title: 'Lojas', icon: Store, href: '/revendedor/lojas' },
+  { title: 'Mídia Kit', icon: FolderOpen, href: '/revendedor/midia-kit' },
   { title: 'Configurações', icon: Settings, href: '/revendedor/configuracoes' },
 ];
 

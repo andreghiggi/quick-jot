@@ -98,6 +98,8 @@ import SuggestionsAdmin from "./pages/admin/SuggestionsAdmin";
 import ResellersPage from "./pages/admin/ResellersPage";
 import AdminSettings from "./pages/admin/AdminSettings";
 import CampaignSettings from "./pages/admin/CampaignSettings";
+import MediaKitAdmin from "./pages/admin/MediaKitAdmin";
+import ResellerMediaKit from "./pages/reseller/ResellerMediaKit";
 import ResellerHome from "./pages/reseller/ResellerHome";
 import ResellerLojas from "./pages/reseller/ResellerLojas";
 import ResellerConfiguracoes from "./pages/reseller/ResellerConfiguracoes";
@@ -674,7 +676,13 @@ function AppRoutes() {
           <CampaignSettings />
         </ProtectedRoute>
       } />
-      
+
+      <Route path="/admin/midia-kit" element={
+        <ProtectedRoute requiredRole="super_admin">
+          <MediaKitAdmin />
+        </ProtectedRoute>
+      } />
+
       {/* Reseller Routes */}
       <Route path="/revendedor/home" element={
         <ProtectedRoute requiredRole="reseller">
@@ -691,6 +699,11 @@ function AppRoutes() {
       <Route path="/revendedor/configuracoes" element={
         <ProtectedRoute requiredRole="reseller">
           <ResellerConfiguracoes />
+        </ProtectedRoute>
+      } />
+      <Route path="/revendedor/midia-kit" element={
+        <ProtectedRoute requiredRole="reseller">
+          <ResellerMediaKit />
         </ProtectedRoute>
       } />
       

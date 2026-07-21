@@ -292,6 +292,11 @@ export function AppSidebar() {
       icon: Megaphone,
       href: '/admin/campanhas-config',
     },
+    {
+      title: 'Mídia Kit',
+      icon: FolderOpen,
+      href: '/admin/midia-kit',
+    },
   ];
 
   const getInitials = (name: string | null | undefined) => {
