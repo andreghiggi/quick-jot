@@ -10,14 +10,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Loader2, Search, Eye, FileText, Settings } from 'lucide-react';
+import { Plus, Loader2, Search, Eye, Settings, Building2, AlertTriangle, Ban } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { StoreDetailDialog, StoreDetail } from '@/components/reseller/StoreDetailDialog';
 import { CompanyModulesDialog } from '@/components/admin/CompanyModulesDialog';
 import { toast } from 'sonner';
+import { useResellerCompanyEnrichment } from '@/hooks/useResellerCompanyEnrichment';
+import { moduleShortLabel } from '@/lib/moduleLabels';
 
 export default function ResellerLojas() {
   const navigate = useNavigate();
@@ -144,10 +145,24 @@ export default function ResellerLojas() {
 
 
 
-  const filteredCompanies = companies.filter(c =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.slug.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const normalize = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const term = normalize(searchTerm);
+  const filteredCompanies = companies.filter(c => {
+    if (!term) return true;
+    const any = c as any;
+    const digits = term.replace(/\D/g, '');
+    return (
+      normalize(c.name).includes(term) ||
+      normalize(c.slug).includes(term) ||
+      normalize(any.razao_social || '').includes(term) ||
+      normalize(any.serial || '').includes(term) ||
+      (digits && (any.cnpj || '').replace(/\D/g, '').includes(digits))
+    );
+  });
+
+  const enrichment = useResellerCompanyEnrichment(filteredCompanies.map(c => c.id));
+  const monthlyFee = settings?.monthly_fee ?? 0;
+  const fmtMoney = (n: number) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   if (loading) {
     return (
