@@ -371,6 +371,27 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
             </CardContent>
           </Card>
 
+          {/* Módulos habilitados */}
+          <div>
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Módulos habilitados
+            </h4>
+            {modules.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">
+                Nenhum módulo habilitado.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {modules.map(m => (
+                  <Badge key={m} variant="secondary" className="text-xs">
+                    {moduleShortLabel(m)}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Summary */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-md border p-3">
