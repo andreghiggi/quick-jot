@@ -676,7 +676,13 @@ function AppRoutes() {
           <CampaignSettings />
         </ProtectedRoute>
       } />
-      
+
+      <Route path="/admin/midia-kit" element={
+        <ProtectedRoute requiredRole="super_admin">
+          <MediaKitAdmin />
+        </ProtectedRoute>
+      } />
+
       {/* Reseller Routes */}
       <Route path="/revendedor/home" element={
         <ProtectedRoute requiredRole="reseller">
@@ -693,6 +699,11 @@ function AppRoutes() {
       <Route path="/revendedor/configuracoes" element={
         <ProtectedRoute requiredRole="reseller">
           <ResellerConfiguracoes />
+        </ProtectedRoute>
+      } />
+      <Route path="/revendedor/midia-kit" element={
+        <ProtectedRoute requiredRole="reseller">
+          <ResellerMediaKit />
         </ProtectedRoute>
       } />
       
