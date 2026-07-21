@@ -215,6 +215,128 @@ export default function ResellerLojas() {
 
   const filteredCompanies = companies.filter(c => matchesSearch(c) && matchesStatus(c) && matchesModule(c));
 
+  // ============ Bulk selection helpers ============
+  const toggleOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const filteredIds = filteredCompanies.map(c => c.id);
+  const allFilteredSelected = filteredIds.length > 0 && filteredIds.every(id => selectedIds.has(id));
+  const someFilteredSelected = filteredIds.some(id => selectedIds.has(id));
+  const toggleAllFiltered = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        filteredIds.forEach(id => next.delete(id));
+      } else {
+        filteredIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+
+  async function handleBulkGenerateCharges() {
+    const targets = companies.filter(c => selectedIds.has(c.id));
+    const invoices = targets
+      .map(c => ({ company: c, inv: enrichment.data.get(c.id)?.nextOpenInvoice }))
+      .filter(x => !!x.inv);
+    if (invoices.length === 0) {
+      toast.error('Nenhuma das lojas selecionadas possui fatura em aberto.');
+      return;
+    }
+    setBulkRunning(true);
+    let ok = 0, fail = 0;
+    const toastId = toast.loading(`Gerando cobranças 0/${invoices.length}...`);
+    for (let i = 0; i < invoices.length; i++) {
+      const { inv } = invoices[i];
+      try {
+        const { data, error } = await supabase.functions.invoke('asaas-billing', {
+          body: { action: 'create_charge', invoice_id: inv!.id },
+        });
+        if (error || !data?.ok) throw new Error(data?.error || error?.message || 'falha');
+        ok++;
+      } catch (e) {
+        fail++;
+      }
+      toast.loading(`Gerando cobranças ${i + 1}/${invoices.length}...`, { id: toastId });
+    }
+    toast.dismiss(toastId);
+    if (fail === 0) toast.success(`${ok} cobrança(s) gerada(s) com sucesso!`);
+    else toast.warning(`${ok} sucesso · ${fail} falha(s)`);
+    setBulkRunning(false);
+    await refetch();
+  }
+
+  function handleBulkWhatsAppReminder() {
+    const targets = companies.filter(c => selectedIds.has(c.id));
+    const items = targets
+      .map(c => {
+        const any = c as any;
+        const info = enrichment.data.get(c.id);
+        const inv = info?.nextOpenInvoice;
+        const phone = (any.phone || '').replace(/\D/g, '');
+        if (!phone || !inv) return null;
+        const digits = phone.startsWith('55') ? phone : `55${phone}`;
+        const monthLabel = inv.month;
+        const valueTxt = `R$ ${inv.total_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        const dueTxt = format(new Date(inv.due_date + 'T12:00:00'), 'dd/MM/yyyy');
+        const status = inv.is_overdue ? `vencida há ${inv.days_overdue} dia(s)` : `com vencimento em ${dueTxt}`;
+        const msg = `Olá! Passando para lembrar da mensalidade *${monthLabel}* da ${c.name}, no valor de *${valueTxt}*, ${status}. Qualquer dúvida estamos à disposição.`;
+        return { url: `https://wa.me/${digits}?text=${encodeURIComponent(msg)}` };
+      })
+      .filter(Boolean) as { url: string }[];
+
+    if (items.length === 0) {
+      toast.error('Nenhuma loja selecionada tem telefone e fatura em aberto.');
+      return;
+    }
+
+    if (items.length > 5) {
+      const ok = confirm(`Serão abertas ${items.length} janelas do WhatsApp Web. Continuar?`);
+      if (!ok) return;
+    }
+    items.forEach((it, i) => {
+      setTimeout(() => window.open(it.url, '_blank', 'noopener,noreferrer'), i * 350);
+    });
+    toast.success(`Abrindo ${items.length} conversa(s) no WhatsApp...`);
+  }
+
+  async function handleBulkBlock() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkRunning(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          license_status: 'blocked',
+          license_block_reason: bulkBlockReason.trim().slice(0, 60) || 'Pendência financeira',
+          license_block_message: bulkBlockMessage.trim().slice(0, 120) || null,
+          license_blocked_at: new Date().toISOString(),
+        })
+        .in('id', ids);
+      if (error) throw error;
+      toast.success(`${ids.length} licença(s) travada(s).`);
+      setShowBulkBlock(false);
+      clearSelection();
+      await refetch();
+    } catch (e: any) {
+      toast.error('Erro ao travar licenças: ' + e.message);
+    } finally {
+      setBulkRunning(false);
+    }
+  }
+
+  const selectionCount = selectedIds.size;
+
+  const openInvoicesInSelection = filteredCompanies.filter(
+    c => selectedIds.has(c.id) && !!enrichment.data.get(c.id)?.nextOpenInvoice
+  ).length;
+
   // Distinct list of modules across ALL companies (for the module filter dropdown).
   const moduleOptions = Array.from(
     new Set(
