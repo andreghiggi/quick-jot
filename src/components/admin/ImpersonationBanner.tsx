@@ -10,7 +10,7 @@ export function ImpersonationBanner() {
     impersonatedReseller,
     exitImpersonation,
     isSuperAdmin,
-    isReseller,
+    isReseller: isResellerRole,
   } = useAuthContext();
   const navigate = useNavigate();
 
@@ -30,7 +30,7 @@ export function ImpersonationBanner() {
     }
     if (wasCompany) {
       if (isSuperAdmin()) navigate('/admin');
-      else if (isReseller()) navigate('/revendedor/lojas');
+      else if (isResellerRole()) navigate('/revendedor/lojas');
       return;
     }
     if (wasReseller && isSuperAdmin()) {
