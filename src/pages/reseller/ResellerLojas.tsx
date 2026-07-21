@@ -870,6 +870,105 @@ export default function ResellerLojas() {
         companyName={modulesCompany?.name}
         onClose={() => setModulesCompany(null)}
       />
+
+      {/* Sticky bulk-action bar */}
+      {selectionCount > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-1rem)] sm:w-auto max-w-3xl">
+          <div className="rounded-full border bg-background/95 backdrop-blur shadow-lg px-3 py-2 flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 pl-1 pr-2">
+              <Badge className="rounded-full">{selectionCount}</Badge>
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                selecionada(s){openInvoicesInSelection > 0 ? ` · ${openInvoicesInSelection} c/ fatura aberta` : ''}
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="default"
+              className="gap-1"
+              disabled={bulkRunning}
+              onClick={handleBulkGenerateCharges}
+              title="Gerar cobrança PIX/Boleto (Asaas) para as faturas em aberto das lojas selecionadas"
+            >
+              {bulkRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+              <span className="hidden sm:inline">Gerar cobranças</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-1"
+              disabled={bulkRunning}
+              onClick={handleBulkWhatsAppReminder}
+              title="Abrir WhatsApp Web com lembrete pré-preenchido para cada loja"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Lembrar por WhatsApp</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="gap-1"
+              disabled={bulkRunning}
+              onClick={() => setShowBulkBlock(true)}
+              title="Travar licença das lojas selecionadas"
+            >
+              <Lock className="w-4 h-4" />
+              <span className="hidden sm:inline">Travar</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="gap-1"
+              onClick={clearSelection}
+              disabled={bulkRunning}
+            >
+              <X className="w-4 h-4" />
+              <span className="hidden sm:inline">Limpar</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm bulk block dialog */}
+      <Dialog open={showBulkBlock} onOpenChange={(o) => !bulkRunning && setShowBulkBlock(o)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Travar {selectionCount} licença(s)?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              As lojas selecionadas serão bloqueadas imediatamente e exibirão a mensagem de licença suspensa ao acessarem o sistema.
+            </p>
+            <div className="space-y-1.5">
+              <Label>Motivo (interno, até 60 caracteres)</Label>
+              <Input
+                value={bulkBlockReason}
+                maxLength={60}
+                onChange={(e) => setBulkBlockReason(e.target.value)}
+                disabled={bulkRunning}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Mensagem para a loja (até 120 caracteres)</Label>
+              <Textarea
+                value={bulkBlockMessage}
+                maxLength={120}
+                rows={2}
+                onChange={(e) => setBulkBlockMessage(e.target.value)}
+                disabled={bulkRunning}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowBulkBlock(false)} disabled={bulkRunning}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleBulkBlock} disabled={bulkRunning}>
+              {bulkRunning && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Travar {selectionCount} licença(s)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </ResellerLayout>
   );
 }
