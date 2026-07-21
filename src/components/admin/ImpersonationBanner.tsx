@@ -10,6 +10,7 @@ export function ImpersonationBanner() {
     impersonatedReseller,
     exitImpersonation,
     isSuperAdmin,
+    isReseller,
   } = useAuthContext();
   const navigate = useNavigate();
 
@@ -18,13 +19,22 @@ export function ImpersonationBanner() {
   }
 
   function handleExit() {
+    const wasCompany = !!impersonatedCompany;
+    const wasReseller = !!impersonatedReseller;
     exitImpersonation();
-    if (isSuperAdmin()) {
-      if (impersonatedReseller) {
-        navigate('/admin/revendedores');
-      } else {
-        navigate('/admin');
-      }
+
+    if (wasCompany && wasReseller) {
+      // Exiting company layer, stay in reseller panel
+      navigate('/revendedor/lojas');
+      return;
+    }
+    if (wasCompany) {
+      if (isSuperAdmin()) navigate('/admin');
+      else if (isReseller()) navigate('/revendedor/lojas');
+      return;
+    }
+    if (wasReseller && isSuperAdmin()) {
+      navigate('/admin/revendedores');
     }
   }
 
