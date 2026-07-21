@@ -695,6 +695,20 @@ export default function ResellerLojas() {
           </div>
         ) : (
           <div className="space-y-2">
+            <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+              <Checkbox
+                checked={allFilteredSelected ? true : (someFilteredSelected ? 'indeterminate' : false)}
+                onCheckedChange={toggleAllFiltered}
+                aria-label="Selecionar todas"
+              />
+              <span>
+                {allFilteredSelected
+                  ? 'Todas as lojas visíveis selecionadas'
+                  : someFilteredSelected
+                    ? `${selectionCount} selecionada(s)`
+                    : 'Selecionar todas as lojas visíveis'}
+              </span>
+            </div>
             {filteredCompanies.map(c => {
               const any = c as any;
               const info = enrichment.data.get(c.id);
@@ -717,10 +731,22 @@ export default function ResellerLojas() {
                 return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Ativa</Badge>;
               })();
 
+              const isSelected = selectedIds.has(c.id);
               return (
-                <Card key={c.id} className="hover:shadow-md transition-shadow">
+                <Card
+                  key={c.id}
+                  className={`hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-primary/60 border-primary/40' : ''}`}
+                >
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+                      {/* Coluna 0: Seleção */}
+                      <div className="flex items-start pt-1 lg:pt-0 lg:self-center">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleOne(c.id)}
+                          aria-label={`Selecionar ${c.name}`}
+                        />
+                      </div>
                       {/* Coluna 1: Serial + identidade */}
                       <div className="flex items-start gap-3 flex-1 min-w-0">
                         <div className="rounded-md bg-primary/10 text-primary p-2 shrink-0">
