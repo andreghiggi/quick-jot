@@ -32,6 +32,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { moduleShortLabel } from '@/lib/moduleLabels';
 
 export interface StoreDetail {
   id: string;
@@ -87,6 +88,7 @@ interface Props {
 export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [modules, setModules] = useState<string[]>([]);
   const [reseller, setReseller] = useState<{ name: string; email: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<InvoiceForEdit | null>(null);
@@ -156,7 +158,7 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
 
   async function loadData(companyId: string, resellerId: string | null = store?.reseller_id ?? null) {
     setLoading(true);
-    const [invRes, planRes, resellerRes] = await Promise.all([
+    const [invRes, planRes, resellerRes, modRes] = await Promise.all([
       supabase
         .from('reseller_invoices')
         .select('*')
@@ -174,11 +176,17 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
             .eq('id', resellerId)
             .maybeSingle()
         : Promise.resolve({ data: null }),
+      supabase
+        .from('company_modules')
+        .select('module_name, enabled')
+        .eq('company_id', companyId)
+        .eq('enabled', true),
     ]);
 
     setInvoices((invRes.data as any[]) || []);
     setPlan((planRes.data as Plan) || null);
     setReseller((resellerRes.data as any) || null);
+    setModules(((modRes.data as any[]) || []).map((m: any) => m.module_name));
     setLoading(false);
   }
 
@@ -362,6 +370,27 @@ export function StoreDetailDialog({ store, canEdit, onClose }: Props) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Módulos habilitados */}
+          <div>
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Módulos habilitados
+            </h4>
+            {modules.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">
+                Nenhum módulo habilitado.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {modules.map(m => (
+                  <Badge key={m} variant="secondary" className="text-xs">
+                    {moduleShortLabel(m)}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Summary */}
           <div className="grid grid-cols-2 gap-3">
