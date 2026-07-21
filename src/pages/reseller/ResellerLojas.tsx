@@ -10,8 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Loader2, Search, Eye, Settings, Building2, AlertTriangle, Ban } from 'lucide-react';
+import { Plus, Loader2, Search, Eye, Settings, Building2, AlertTriangle, Ban, X, FileText, MessageCircle, Lock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { StoreDetailDialog, StoreDetail } from '@/components/reseller/StoreDetailDialog';
@@ -34,6 +36,13 @@ export default function ResellerLojas() {
   
   const [selectedStore, setSelectedStore] = useState<StoreDetail | null>(null);
   const [modulesCompany, setModulesCompany] = useState<{ id: string; name: string } | null>(null);
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [showBulkBlock, setShowBulkBlock] = useState(false);
+  const [bulkBlockReason, setBulkBlockReason] = useState('Pendência financeira');
+  const [bulkBlockMessage, setBulkBlockMessage] = useState('Entre em contato com o suporte.');
 
   // form state — Empresa
   const [newName, setNewName] = useState('');
@@ -205,6 +214,128 @@ export default function ResellerLojas() {
   };
 
   const filteredCompanies = companies.filter(c => matchesSearch(c) && matchesStatus(c) && matchesModule(c));
+
+  // ============ Bulk selection helpers ============
+  const toggleOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const filteredIds = filteredCompanies.map(c => c.id);
+  const allFilteredSelected = filteredIds.length > 0 && filteredIds.every(id => selectedIds.has(id));
+  const someFilteredSelected = filteredIds.some(id => selectedIds.has(id));
+  const toggleAllFiltered = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        filteredIds.forEach(id => next.delete(id));
+      } else {
+        filteredIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+
+  async function handleBulkGenerateCharges() {
+    const targets = companies.filter(c => selectedIds.has(c.id));
+    const invoices = targets
+      .map(c => ({ company: c, inv: enrichment.data.get(c.id)?.nextOpenInvoice }))
+      .filter(x => !!x.inv);
+    if (invoices.length === 0) {
+      toast.error('Nenhuma das lojas selecionadas possui fatura em aberto.');
+      return;
+    }
+    setBulkRunning(true);
+    let ok = 0, fail = 0;
+    const toastId = toast.loading(`Gerando cobranças 0/${invoices.length}...`);
+    for (let i = 0; i < invoices.length; i++) {
+      const { inv } = invoices[i];
+      try {
+        const { data, error } = await supabase.functions.invoke('asaas-billing', {
+          body: { action: 'create_charge', invoice_id: inv!.id },
+        });
+        if (error || !data?.ok) throw new Error(data?.error || error?.message || 'falha');
+        ok++;
+      } catch (e) {
+        fail++;
+      }
+      toast.loading(`Gerando cobranças ${i + 1}/${invoices.length}...`, { id: toastId });
+    }
+    toast.dismiss(toastId);
+    if (fail === 0) toast.success(`${ok} cobrança(s) gerada(s) com sucesso!`);
+    else toast.warning(`${ok} sucesso · ${fail} falha(s)`);
+    setBulkRunning(false);
+    await refetch();
+  }
+
+  function handleBulkWhatsAppReminder() {
+    const targets = companies.filter(c => selectedIds.has(c.id));
+    const items = targets
+      .map(c => {
+        const any = c as any;
+        const info = enrichment.data.get(c.id);
+        const inv = info?.nextOpenInvoice;
+        const phone = (any.phone || '').replace(/\D/g, '');
+        if (!phone || !inv) return null;
+        const digits = phone.startsWith('55') ? phone : `55${phone}`;
+        const monthLabel = inv.month;
+        const valueTxt = `R$ ${inv.total_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        const dueTxt = format(new Date(inv.due_date + 'T12:00:00'), 'dd/MM/yyyy');
+        const status = inv.is_overdue ? `vencida há ${inv.days_overdue} dia(s)` : `com vencimento em ${dueTxt}`;
+        const msg = `Olá! Passando para lembrar da mensalidade *${monthLabel}* da ${c.name}, no valor de *${valueTxt}*, ${status}. Qualquer dúvida estamos à disposição.`;
+        return { url: `https://wa.me/${digits}?text=${encodeURIComponent(msg)}` };
+      })
+      .filter(Boolean) as { url: string }[];
+
+    if (items.length === 0) {
+      toast.error('Nenhuma loja selecionada tem telefone e fatura em aberto.');
+      return;
+    }
+
+    if (items.length > 5) {
+      const ok = confirm(`Serão abertas ${items.length} janelas do WhatsApp Web. Continuar?`);
+      if (!ok) return;
+    }
+    items.forEach((it, i) => {
+      setTimeout(() => window.open(it.url, '_blank', 'noopener,noreferrer'), i * 350);
+    });
+    toast.success(`Abrindo ${items.length} conversa(s) no WhatsApp...`);
+  }
+
+  async function handleBulkBlock() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkRunning(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          license_status: 'blocked',
+          license_block_reason: bulkBlockReason.trim().slice(0, 60) || 'Pendência financeira',
+          license_block_message: bulkBlockMessage.trim().slice(0, 120) || null,
+          license_blocked_at: new Date().toISOString(),
+        })
+        .in('id', ids);
+      if (error) throw error;
+      toast.success(`${ids.length} licença(s) travada(s).`);
+      setShowBulkBlock(false);
+      clearSelection();
+      await refetch();
+    } catch (e: any) {
+      toast.error('Erro ao travar licenças: ' + e.message);
+    } finally {
+      setBulkRunning(false);
+    }
+  }
+
+  const selectionCount = selectedIds.size;
+
+  const openInvoicesInSelection = filteredCompanies.filter(
+    c => selectedIds.has(c.id) && !!enrichment.data.get(c.id)?.nextOpenInvoice
+  ).length;
 
   // Distinct list of modules across ALL companies (for the module filter dropdown).
   const moduleOptions = Array.from(
@@ -564,6 +695,20 @@ export default function ResellerLojas() {
           </div>
         ) : (
           <div className="space-y-2">
+            <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+              <Checkbox
+                checked={allFilteredSelected ? true : (someFilteredSelected ? 'indeterminate' : false)}
+                onCheckedChange={toggleAllFiltered}
+                aria-label="Selecionar todas"
+              />
+              <span>
+                {allFilteredSelected
+                  ? 'Todas as lojas visíveis selecionadas'
+                  : someFilteredSelected
+                    ? `${selectionCount} selecionada(s)`
+                    : 'Selecionar todas as lojas visíveis'}
+              </span>
+            </div>
             {filteredCompanies.map(c => {
               const any = c as any;
               const info = enrichment.data.get(c.id);
@@ -586,10 +731,22 @@ export default function ResellerLojas() {
                 return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Ativa</Badge>;
               })();
 
+              const isSelected = selectedIds.has(c.id);
               return (
-                <Card key={c.id} className="hover:shadow-md transition-shadow">
+                <Card
+                  key={c.id}
+                  className={`hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-primary/60 border-primary/40' : ''}`}
+                >
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+                      {/* Coluna 0: Seleção */}
+                      <div className="flex items-start pt-1 lg:pt-0 lg:self-center">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleOne(c.id)}
+                          aria-label={`Selecionar ${c.name}`}
+                        />
+                      </div>
                       {/* Coluna 1: Serial + identidade */}
                       <div className="flex items-start gap-3 flex-1 min-w-0">
                         <div className="rounded-md bg-primary/10 text-primary p-2 shrink-0">
@@ -713,6 +870,105 @@ export default function ResellerLojas() {
         companyName={modulesCompany?.name}
         onClose={() => setModulesCompany(null)}
       />
+
+      {/* Sticky bulk-action bar */}
+      {selectionCount > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-1rem)] sm:w-auto max-w-3xl">
+          <div className="rounded-full border bg-background/95 backdrop-blur shadow-lg px-3 py-2 flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 pl-1 pr-2">
+              <Badge className="rounded-full">{selectionCount}</Badge>
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                selecionada(s){openInvoicesInSelection > 0 ? ` · ${openInvoicesInSelection} c/ fatura aberta` : ''}
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="default"
+              className="gap-1"
+              disabled={bulkRunning}
+              onClick={handleBulkGenerateCharges}
+              title="Gerar cobrança PIX/Boleto (Asaas) para as faturas em aberto das lojas selecionadas"
+            >
+              {bulkRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+              <span className="hidden sm:inline">Gerar cobranças</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-1"
+              disabled={bulkRunning}
+              onClick={handleBulkWhatsAppReminder}
+              title="Abrir WhatsApp Web com lembrete pré-preenchido para cada loja"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Lembrar por WhatsApp</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="gap-1"
+              disabled={bulkRunning}
+              onClick={() => setShowBulkBlock(true)}
+              title="Travar licença das lojas selecionadas"
+            >
+              <Lock className="w-4 h-4" />
+              <span className="hidden sm:inline">Travar</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="gap-1"
+              onClick={clearSelection}
+              disabled={bulkRunning}
+            >
+              <X className="w-4 h-4" />
+              <span className="hidden sm:inline">Limpar</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm bulk block dialog */}
+      <Dialog open={showBulkBlock} onOpenChange={(o) => !bulkRunning && setShowBulkBlock(o)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Travar {selectionCount} licença(s)?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              As lojas selecionadas serão bloqueadas imediatamente e exibirão a mensagem de licença suspensa ao acessarem o sistema.
+            </p>
+            <div className="space-y-1.5">
+              <Label>Motivo (interno, até 60 caracteres)</Label>
+              <Input
+                value={bulkBlockReason}
+                maxLength={60}
+                onChange={(e) => setBulkBlockReason(e.target.value)}
+                disabled={bulkRunning}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Mensagem para a loja (até 120 caracteres)</Label>
+              <Textarea
+                value={bulkBlockMessage}
+                maxLength={120}
+                rows={2}
+                onChange={(e) => setBulkBlockMessage(e.target.value)}
+                disabled={bulkRunning}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowBulkBlock(false)} disabled={bulkRunning}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleBulkBlock} disabled={bulkRunning}>
+              {bulkRunning && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Travar {selectionCount} licença(s)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </ResellerLayout>
   );
 }
