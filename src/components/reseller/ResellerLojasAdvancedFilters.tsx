@@ -361,53 +361,6 @@ export function ResellerLojasAdvancedFilters({
         </div>
       </div>
 
-      {/* Dia de vencimento */}
-      <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-          Dia de vencimento {draft.dueDays.length > 0 && `(${draft.dueDays.length})`}
-        </Label>
-        <div className="flex flex-wrap gap-1">
-          {Array.from({ length: 31 }, (_, i) => i + 1).map(d => {
-            const active = draft.dueDays.includes(d);
-            return (
-              <button
-                key={d}
-                type="button"
-                onClick={() => toggle('dueDays', d)}
-                className={`h-7 w-7 rounded text-xs border transition ${active ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'}`}
-              >
-                {d}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Salvar como favorito */}
-      <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wide text-muted-foreground">Salvar como favorito</Label>
-        <div className="flex gap-2 max-w-md">
-          <Input
-            placeholder='Ex: "Inadimplentes SP"'
-            value={newPresetName}
-            onChange={e => setNewPresetName(e.target.value)}
-            disabled={!isAdvancedFiltersActive(draft)}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1 shrink-0"
-            onClick={savePreset}
-            disabled={!isAdvancedFiltersActive(draft) || !newPresetName.trim()}
-          >
-            <Save className="w-4 h-4" />
-            Salvar
-          </Button>
-        </div>
-      </div>
-
       <div className="flex justify-between gap-2 pt-2 border-t">
         <Button variant="outline" size="sm" onClick={clear} className="gap-1 uppercase">
           <Trash2 className="w-4 h-4" />
