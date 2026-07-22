@@ -27,7 +27,6 @@ import {
   countActiveFilters,
   type AdvancedFilters,
 } from '@/components/reseller/ResellerLojasAdvancedFilters';
-import { SheetTrigger } from '@/components/ui/sheet';
 
 export default function ResellerLojas() {
   const navigate = useNavigate();
@@ -733,34 +732,29 @@ export default function ResellerLojas() {
             >
               <Search className="w-4 h-4" />
             </Button>
-            <ResellerLojasAdvancedFilters
-              value={advanced}
-              onChange={setAdvanced}
-              availableStates={availableStates}
-              availableModules={moduleOptions}
-              availablePlans={availablePlans}
-              open={filtersOpen}
-              onOpenChange={setFiltersOpen}
-              trigger={
-                <SheetTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0 h-10 w-10 relative"
-                    title="Filtros avançados"
-                  >
-                    <SlidersHorizontal className="w-4 h-4" />
-                    {countActiveFilters(advanced) > 0 && (
-                      <Badge className="absolute -top-1 -right-1 rounded-full h-4 min-w-4 px-1 text-[10px]">
-                        {countActiveFilters(advanced)}
-                      </Badge>
-                    )}
-                  </Button>
-                </SheetTrigger>
-              }
-            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0 h-10 w-10 relative"
+              title="Filtros avançados"
+              onClick={() => setFiltersOpen(v => !v)}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {countActiveFilters(advanced) > 0 && (
+                <Badge className="absolute -top-1 -right-1 rounded-full h-4 min-w-4 px-1 text-[10px]">
+                  {countActiveFilters(advanced)}
+                </Badge>
+              )}
+            </Button>
           </div>
+          <ResellerLojasAdvancedFilters
+            value={advanced}
+            onChange={setAdvanced}
+            availableModules={moduleOptions}
+            open={filtersOpen}
+            onOpenChange={setFiltersOpen}
+          />
           {countActiveFilters(advanced) > 0 && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>{countActiveFilters(advanced)} filtro(s) ativo(s)</span>
