@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Loader2, Search, Eye, Settings, Building2, AlertTriangle, Ban, X, FileText, MessageCircle, Lock, SlidersHorizontal, Copy, Printer, QrCode, HandCoins, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Plus, Loader2, Search, Eye, Settings, Building2, AlertTriangle, Ban, X, FileText, MessageCircle, Lock, SlidersHorizontal, Copy, Printer, QrCode, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -973,15 +973,6 @@ export default function ResellerLojas() {
                             onClick={() => setSelectedStore(c as unknown as StoreDetail)}
                           >
                             <QrCode className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 text-primary hover:text-primary hover:bg-primary/10"
-                            title="Cobrar"
-                            onClick={() => setSelectedStore(c as unknown as StoreDetail)}
-                          >
-                            <HandCoins className="w-4 h-4" />
                           </Button>
                         </>
                       )}
