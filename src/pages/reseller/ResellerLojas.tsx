@@ -868,11 +868,10 @@ export default function ResellerLojas() {
                       className={`${sealColor} text-white text-left px-4 py-3 lg:w-52 shrink-0 hover:brightness-110 transition-all group relative`}
                       title="Abrir detalhes da licença"
                     >
-                      <div className="font-bold text-lg leading-tight truncate">{shortName}</div>
-                      <div className="font-mono text-xs opacity-90 mt-0.5 truncate">
+                      <div className="font-mono font-bold text-base leading-tight truncate">
                         {any.serial || '—'}
                       </div>
-                      <div className="text-xs opacity-90 mt-0.5">{sealText}</div>
+                      <div className="text-xs opacity-90 mt-1">{sealText}</div>
                       {any.serial && (
                         <button
                           type="button"
