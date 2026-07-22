@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Loader2, Search, Eye, Settings, Building2, AlertTriangle, Ban, X, FileText, MessageCircle, Lock, SlidersHorizontal } from 'lucide-react';
+import { Plus, Loader2, Search, Eye, Settings, Building2, AlertTriangle, Ban, X, FileText, MessageCircle, Lock, SlidersHorizontal, Copy, Printer, QrCode, HandCoins, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -806,134 +806,207 @@ export default function ResellerLojas() {
               const isSuspended = !!openInv && openInv.days_overdue > 3;
               const isOverdue = !!openInv && openInv.is_overdue;
 
-              const statusPill = (() => {
-                if (isCanceled) return <Badge variant="destructive" className="gap-1"><Ban className="w-3 h-3" />Cancelada</Badge>;
-                if (isManuallyBlocked) return <Badge variant="destructive" className="gap-1"><Ban className="w-3 h-3" />Travada</Badge>;
-                if (!c.active) return <Badge variant="outline">Inativa</Badge>;
-                if (isSuspended) return <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-3 h-3" />Suspensa</Badge>;
-                if (isOverdue) return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 gap-1"><AlertTriangle className="w-3 h-3" />Vencida</Badge>;
-                if (openInv) return <Badge variant="outline" className="text-yellow-700 border-yellow-400">Fatura em aberto</Badge>;
-                return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Ativa</Badge>;
+              // Status para o selo verde ("Liberado" / "Travada" / etc)
+              const sealText = (() => {
+                if (isCanceled) return 'Cancelada';
+                if (isManuallyBlocked) return 'Travada';
+                if (!c.active) return 'Inativa';
+                if (isSuspended) return 'Bloqueada';
+                return 'Liberado';
+              })();
+              const sealColor = (() => {
+                if (isCanceled || isManuallyBlocked || isSuspended) return 'bg-red-600';
+                if (!c.active) return 'bg-gray-500';
+                return 'bg-green-600';
+              })();
+
+              // Nome curto (mostrado grande no selo): primeira palavra da fantasia
+              const shortName = (c.name || '—').split(' ')[0].slice(0, 12);
+
+              const invoiceStatusPill = (() => {
+                if (!openInv) return null;
+                if (isOverdue) {
+                  return <Badge className="bg-red-500 hover:bg-red-500 text-white text-xs">Vencida</Badge>;
+                }
+                return <Badge className="bg-primary hover:bg-primary text-white text-xs">Aberta</Badge>;
               })();
 
               const isSelected = selectedIds.has(c.id);
+              const activationDate = info?.activatedAt || c.created_at;
+              const validityDate = (() => {
+                if (!openInv) return null;
+                const d = new Date(openInv.due_date + 'T12:00:00');
+                d.setMonth(d.getMonth() + 1);
+                return d;
+              })();
+
+              function copySerial(e: React.MouseEvent) {
+                e.stopPropagation();
+                navigator.clipboard.writeText(any.serial || '');
+                toast.success('Serial copiado');
+              }
+
               return (
                 <Card
                   key={c.id}
-                  className={`hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-primary/60 border-primary/40' : ''}`}
+                  className={`overflow-hidden transition-shadow hover:shadow-md ${isSelected ? 'ring-2 ring-primary/60 border-primary/40' : ''}`}
                 >
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-                      {/* Coluna 0: Seleção */}
-                      <div className="flex items-start pt-1 lg:pt-0 lg:self-center">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleOne(c.id)}
-                          aria-label={`Selecionar ${c.name}`}
-                        />
-                      </div>
-                      {/* Coluna 1: Serial + identidade */}
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="rounded-md bg-primary/10 text-primary p-2 shrink-0">
-                          <Building2 className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono text-[11px] font-bold tracking-wider bg-muted px-1.5 py-0.5 rounded select-all">
-                              {any.serial || '—'}
-                            </span>
-                            {statusPill}
-                          </div>
-                          <div className="font-semibold truncate mt-1">{c.name}</div>
-                          {any.razao_social && (
-                            <div className="text-xs text-muted-foreground truncate">
-                              {any.razao_social}
-                            </div>
-                          )}
-                          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                            {any.cnpj && <span>CNPJ: {any.cnpj}</span>}
-                            {any.address_city && (
-                              <span>{any.address_city}{any.address_state ? `/${any.address_state}` : ''}</span>
-                            )}
-                            <span>Criada em {format(new Date(c.created_at), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                          </div>
-                        </div>
-                      </div>
+                  <div className="flex flex-col lg:flex-row items-stretch">
+                    {/* Checkbox lateral */}
+                    <div className="flex items-center px-3 py-3 lg:py-0 lg:border-r bg-muted/30">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleOne(c.id)}
+                        aria-label={`Selecionar ${c.name}`}
+                      />
+                    </div>
 
-                      {/* Coluna 2: Módulos */}
-                      <div className="lg:w-64 xl:w-72 shrink-0">
-                        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                          Módulos ({modules.length})
-                        </div>
+                    {/* Selo verde (clicável → abre detalhes) */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStore(c as unknown as StoreDetail)}
+                      className={`${sealColor} text-white text-left px-4 py-3 lg:w-52 shrink-0 hover:brightness-110 transition-all group relative`}
+                      title="Abrir detalhes da licença"
+                    >
+                      <div className="font-bold text-lg leading-tight truncate">{shortName}</div>
+                      <div className="font-mono text-xs opacity-90 mt-0.5 truncate">
+                        {any.serial || '—'}
+                      </div>
+                      <div className="text-xs opacity-90 mt-0.5">{sealText}</div>
+                      {any.serial && (
+                        <button
+                          type="button"
+                          onClick={copySerial}
+                          className="absolute bottom-2 right-2 opacity-60 hover:opacity-100"
+                          title="Copiar serial"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </button>
+
+                    {/* Meio: razão social + fantasia + datas */}
+                    <div className="flex-1 min-w-0 px-4 py-3">
+                      <div className="font-semibold text-sm uppercase truncate">
+                        {any.razao_social || c.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate mt-0.5">
+                        {c.name}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs mt-2">
+                        <span className="flex items-center gap-1.5">
+                          <CalendarIcon className="w-3.5 h-3.5 text-green-600" />
+                          <span className="text-muted-foreground">
+                            {activationDate ? format(new Date(activationDate), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
+                          </span>
+                        </span>
+                        {validityDate && (
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-primary" />
+                            <span className="text-muted-foreground">
+                              {format(validityDate, 'dd/MM/yyyy', { locale: ptBR })}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Módulos (badges) */}
+                    <div className="px-3 py-3 flex items-center lg:w-48 shrink-0">
+                      <div className="flex flex-wrap gap-1">
                         {modules.length === 0 ? (
-                          <span className="text-xs text-muted-foreground italic">Nenhum</span>
+                          <span className="text-xs text-muted-foreground italic">Sem adicionais</span>
                         ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {modules.slice(0, 6).map(m => (
-                              <Badge key={m} variant="secondary" className="text-[10px] px-1.5 py-0">
+                          <>
+                            {modules.slice(0, 3).map(m => (
+                              <Badge
+                                key={m}
+                                className="bg-primary hover:bg-primary text-white text-[10px] px-2 py-0 rounded-full"
+                              >
                                 {moduleShortLabel(m)}
                               </Badge>
                             ))}
-                            {modules.length > 6 && (
+                            {modules.length > 3 && (
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                +{modules.length - 6}
+                                +{modules.length - 3}
                               </Badge>
                             )}
-                          </div>
+                          </>
                         )}
-                      </div>
-
-                      {/* Coluna 3: Mensalidade / fatura */}
-                      <div className="lg:w-44 shrink-0 lg:text-right">
-                        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                          Mensalidade
-                        </div>
-                        <div className="font-bold text-base">{fmtMoney(monthlyFee)}</div>
-                        {openInv ? (
-                          <div className={`text-xs mt-0.5 ${isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
-                            {isOverdue
-                              ? `Vencida há ${openInv.days_overdue}d`
-                              : `Vence em ${format(new Date(openInv.due_date + 'T12:00:00'), 'dd/MM')}`}
-                          </div>
-                        ) : (
-                          <div className="text-xs text-green-600 mt-0.5">Em dia</div>
-                        )}
-                      </div>
-
-                      {/* Coluna 4: Ações */}
-                      <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap lg:justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1"
-                          onClick={() => setSelectedStore(c as unknown as StoreDetail)}
-                          title="Ver detalhes da loja e faturas"
-                        >
-                          <Eye className="w-3 h-3" />
-                          <span className="hidden sm:inline">Detalhes</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1"
-                          onClick={() => setModulesCompany({ id: c.id, name: c.name })}
-                          title="Habilitar/Desabilitar módulos"
-                        >
-                          <Settings className="w-3 h-3" />
-                          <span className="hidden sm:inline">Módulos</span>
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="gap-1"
-                          onClick={() => handleAccess(c.id)}
-                        >
-                          <Eye className="w-3 h-3" />
-                          <span className="hidden sm:inline">Acessar</span>
-                        </Button>
                       </div>
                     </div>
-                  </CardContent>
+
+                    {/* Mensalidade + status fatura */}
+                    <div className="px-4 py-3 lg:w-40 shrink-0 lg:text-right">
+                      <div className="font-bold text-base">{fmtMoney(monthlyFee)}</div>
+                      <div className="flex items-center gap-2 mt-1 lg:justify-end">
+                        {invoiceStatusPill}
+                        {openInv && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <CalendarIcon className="w-3 h-3" />
+                            {format(new Date(openInv.due_date + 'T12:00:00'), 'dd/MM/yyyy')}
+                          </span>
+                        )}
+                        {!openInv && (
+                          <span className="text-xs text-green-600 font-medium">Em dia</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Ícones de ação (imprimir/QR/cobrar/acessar) */}
+                    <div className="px-3 py-3 lg:border-l flex items-center gap-1 shrink-0">
+                      {openInv && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-primary hover:text-primary hover:bg-primary/10"
+                            title="Boleto"
+                            onClick={() => setSelectedStore(c as unknown as StoreDetail)}
+                          >
+                            <Printer className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-primary hover:text-primary hover:bg-primary/10"
+                            title="QR Code PIX"
+                            onClick={() => setSelectedStore(c as unknown as StoreDetail)}
+                          >
+                            <QrCode className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-primary hover:text-primary hover:bg-primary/10"
+                            title="Cobrar"
+                            onClick={() => setSelectedStore(c as unknown as StoreDetail)}
+                          >
+                            <HandCoins className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        title="Módulos"
+                        onClick={() => setModulesCompany({ id: c.id, name: c.name })}
+                      >
+                        <Settings className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="gap-1 h-9"
+                        onClick={() => handleAccess(c.id)}
+                        title="Acessar como esta loja"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="hidden xl:inline">Acessar</span>
+                      </Button>
+                    </div>
+                  </div>
                 </Card>
               );
             })}
