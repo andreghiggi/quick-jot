@@ -27,7 +27,6 @@ import {
   countActiveFilters,
   type AdvancedFilters,
 } from '@/components/reseller/ResellerLojasAdvancedFilters';
-import { SheetTrigger } from '@/components/ui/sheet';
 
 export default function ResellerLojas() {
   const navigate = useNavigate();
