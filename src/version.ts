@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.62.0-beta";
+export const VERSION = "1.63.0-beta";
 export const RELEASE_DATE = "2026-07-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Painel Revendedor — Home gerencial";
+export const CODENAME = "Painel Revendedor — Card GDoor + Detalhes 2 colunas";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.63.0-beta",
+    date: "2026-07-22",
+    codename: "Painel Revendedor — Card GDoor + Detalhes 2 colunas",
+    changes: [
+      "Listagem de lojas do Painel do Revendedor redesenhada no estilo GDoor: cada loja agora aparece como uma linha horizontal com selo verde à esquerda (nome curto + serial + status 'Liberado/Travada/Bloqueada/Cancelada'), razão social e fantasia no meio, badges de módulos, mensalidade e status da fatura corrente, e ícones de ação (boleto, PIX, cobrar, módulos, acessar).",
+      "O selo verde é clicável e abre a nova tela de detalhes da licença. O ícone de copiar dentro do selo copia o serial sem abrir os detalhes.",
+      "Diálogo 'Detalhes da licença' completamente refeito em layout de 2 colunas: coluna esquerda com card 'Dados da licença' (serial + tipo + status + validade + botão laranja 'AÇÕES DA LICENÇA') e card 'Informações do Cliente' (CNPJ, razão, telefone, e-mail, endereço).",
+      "Coluna direita com accordion 'Adicionais da licença' listando cada módulo contratado (nome, data de inclusão, validade) e card 'Mensalidades' expandido com colunas Data vencimento / Status / Valor / Valor atual / Pagamentos / Ações, checkbox por linha e botão laranja 'GERAR PRÓXIMAS MENSALIDADES' que dispara o backfill do reseller-billing.",
+      "Menu 'Ações da licença' mantém as 3 ações já homologadas: Trava da revenda, Editar licença e Cancelar licença. Opções 'Trocar licença', 'Arquivo off-line' e 'Instalação completa' foram descartadas — não se aplicam a um SaaS 100% web.",
+      "Sem alteração em Frente de Caixa, PDV, TEF, PinPad, NFC-e, NF-e, Compras, Financeiro (fluxo da loja), Cardápio, Estoque, WhatsApp ou impressão. Só mexe na apresentação do Painel do Revendedor.",
+    ],
+  },
   {
     version: "1.62.0-beta",
     date: "2026-07-22",
