@@ -50,7 +50,7 @@ export function useResellerCompanyEnrichment(companyIds: string[]) {
           .from('reseller_invoices')
           .select('id, company_id, status, due_date, total_value, month')
           .in('company_id', companyIds)
-          .not('status', 'in', '(paid,canceled)')
+          .not('status', 'in', '(paid,canceled,bonificada)')
           .order('due_date', { ascending: true }),
         supabase
           .from('company_plans')
