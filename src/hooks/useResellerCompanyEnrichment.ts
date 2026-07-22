@@ -15,6 +15,8 @@ export interface CompanyEnrichment {
   modules: string[]; // enabled module names
   nextOpenInvoice: CompanyInvoiceSummary | null;
   hasOverdue: boolean;
+  planName: string | null;
+  activatedAt: string | null;
 }
 
 /**
@@ -38,7 +40,7 @@ export function useResellerCompanyEnrichment(companyIds: string[]) {
     setLoading(true);
 
     (async () => {
-      const [mods, invs] = await Promise.all([
+      const [mods, invs, plans] = await Promise.all([
         supabase
           .from('company_modules')
           .select('company_id, module_name, enabled')
@@ -50,18 +52,30 @@ export function useResellerCompanyEnrichment(companyIds: string[]) {
           .in('company_id', companyIds)
           .not('status', 'in', '(paid,canceled)')
           .order('due_date', { ascending: true }),
+        supabase
+          .from('company_plans')
+          .select('company_id, plan_name, activated_at')
+          .in('company_id', companyIds),
       ]);
 
       if (cancelled) return;
 
       const map = new Map<string, CompanyEnrichment>();
       for (const id of companyIds) {
-        map.set(id, { modules: [], nextOpenInvoice: null, hasOverdue: false });
+        map.set(id, { modules: [], nextOpenInvoice: null, hasOverdue: false, planName: null, activatedAt: null });
       }
 
       (mods.data || []).forEach((m: any) => {
         const entry = map.get(m.company_id);
         if (entry) entry.modules.push(m.module_name);
+      });
+
+      (plans.data || []).forEach((p: any) => {
+        const entry = map.get(p.company_id);
+        if (entry) {
+          entry.planName = p.plan_name || null;
+          entry.activatedAt = p.activated_at || null;
+        }
       });
 
       const today = new Date();

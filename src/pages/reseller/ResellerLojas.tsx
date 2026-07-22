@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Loader2, Search, Eye, Settings, Building2, AlertTriangle, Ban, X, FileText, MessageCircle, Lock } from 'lucide-react';
+import { Plus, Loader2, Search, Eye, Settings, Building2, AlertTriangle, Ban, X, FileText, MessageCircle, Lock, SlidersHorizontal } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,6 +27,7 @@ import {
   countActiveFilters,
   type AdvancedFilters,
 } from '@/components/reseller/ResellerLojasAdvancedFilters';
+import { SheetTrigger } from '@/components/ui/sheet';
 
 export default function ResellerLojas() {
   const navigate = useNavigate();
@@ -35,9 +36,8 @@ export default function ResellerLojas() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [searchField, setSearchField] = useState<'all' | 'name' | 'razao' | 'cnpj' | 'serial' | 'city'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'open' | 'overdue' | 'suspended' | 'blocked' | 'canceled' | 'inactive'>('all');
-  const [moduleFilter, setModuleFilter] = useState<string>('all');
   const [advanced, setAdvanced] = useState<AdvancedFilters>(EMPTY_ADVANCED_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   
@@ -193,43 +193,79 @@ export default function ResellerLojas() {
     }
   };
 
-  const matchesStatus = (c: any) => {
-    if (statusFilter === 'all') return true;
-    const info = enrichment.data.get(c.id);
-    const openInv = info?.nextOpenInvoice ?? null;
-    const licStatus: string = c.license_status || 'active';
-    const isCanceled = licStatus === 'canceled';
-    const isBlocked = licStatus === 'blocked';
-    const isSuspended = !!openInv && openInv.days_overdue > 3;
-    const isOverdue = !!openInv && openInv.is_overdue;
-    switch (statusFilter) {
-      case 'canceled': return isCanceled;
-      case 'blocked': return isBlocked;
-      case 'inactive': return !c.active && !isCanceled && !isBlocked;
-      case 'suspended': return isSuspended && !isCanceled && !isBlocked;
-      case 'overdue': return isOverdue && !isSuspended && !isCanceled && !isBlocked;
-      case 'open': return !!openInv && !isOverdue;
-      case 'active': return c.active && !isCanceled && !isBlocked && !openInv;
-    }
-    return true;
-  };
-
-  const matchesModule = (c: any) => {
-    if (moduleFilter === 'all') return true;
-    const info = enrichment.data.get(c.id);
-    return (info?.modules ?? []).includes(moduleFilter);
-  };
-
   const matchesAdvanced = (c: any) => {
-    // Data de cadastro
-    if (advanced.createdFrom) {
-      const from = new Date(advanced.createdFrom + 'T00:00:00');
-      if (new Date(c.created_at) < from) return false;
+    const info = enrichment.data.get(c.id);
+
+    // Bloco A — Data (cadastro / ativação / vencimento)
+    if (advanced.dateFrom || advanced.dateTo) {
+      if (advanced.dateType === 'due') {
+        const day = Number(c.next_invoice_due_day);
+        const fromDay = advanced.dateFrom ? Number(advanced.dateFrom.slice(8, 10)) : null;
+        const toDay = advanced.dateTo ? Number(advanced.dateTo.slice(8, 10)) : null;
+        if (fromDay && (!day || day < fromDay)) return false;
+        if (toDay && (!day || day > toDay)) return false;
+      } else {
+        const base = advanced.dateType === 'activated'
+          ? info?.activatedAt
+          : c.created_at;
+        if (!base) return false;
+        const d = new Date(base);
+        if (advanced.dateFrom && d < new Date(advanced.dateFrom + 'T00:00:00')) return false;
+        if (advanced.dateTo && d > new Date(advanced.dateTo + 'T23:59:59')) return false;
+      }
     }
-    if (advanced.createdTo) {
-      const to = new Date(advanced.createdTo + 'T23:59:59');
-      if (new Date(c.created_at) > to) return false;
+
+    // Bloco B — Contato
+    if (advanced.contactValue.trim()) {
+      const q = advanced.contactValue.trim().toLowerCase();
+      if (advanced.contactType === 'phone') {
+        const digits = q.replace(/\D/g, '');
+        const phone = (c.phone || '').replace(/\D/g, '');
+        if (!digits || !phone.includes(digits)) return false;
+      } else {
+        const email = ((c as any).login_email || (c as any).email || '').toLowerCase();
+        if (!email.includes(q)) return false;
+      }
     }
+
+    // Bloco C — Endereço
+    if (advanced.addressValue.trim()) {
+      const q = normalize(advanced.addressValue);
+      const target = advanced.addressType === 'city'
+        ? normalize((c as any).address_city || '')
+        : normalize((c as any).address_neighborhood || '');
+      if (!target.includes(q)) return false;
+    }
+
+    // Bloco D — Produtos (planos)
+    if (advanced.plans.length > 0) {
+      const plan = info?.planName || '';
+      if (!advanced.plans.includes(plan)) return false;
+    }
+
+    // Bloco D — Status
+    if (advanced.statuses.length > 0) {
+      const openInv = info?.nextOpenInvoice ?? null;
+      const licStatus: string = c.license_status || 'active';
+      const isCanceled = licStatus === 'canceled';
+      const isBlocked = licStatus === 'blocked';
+      const isSuspended = !!openInv && openInv.days_overdue > 3;
+      const isOverdue = !!openInv && openInv.is_overdue;
+      const matches = advanced.statuses.some(s => {
+        switch (s) {
+          case 'canceled': return isCanceled;
+          case 'blocked': return isBlocked;
+          case 'inactive': return !c.active && !isCanceled && !isBlocked;
+          case 'suspended': return isSuspended && !isCanceled && !isBlocked;
+          case 'overdue': return isOverdue && !isSuspended && !isCanceled && !isBlocked;
+          case 'open': return !!openInv && !isOverdue;
+          case 'active': return c.active && !isCanceled && !isBlocked && !openInv;
+        }
+        return false;
+      });
+      if (!matches) return false;
+    }
+
     // Dia de vencimento
     if (advanced.dueDays.length > 0) {
       const day = Number(c.next_invoice_due_day);
@@ -242,14 +278,14 @@ export default function ResellerLojas() {
     }
     // Módulos (todos precisam estar ativos)
     if (advanced.modulesAll.length > 0) {
-      const mods = enrichment.data.get(c.id)?.modules ?? [];
+      const mods = info?.modules ?? [];
       if (!advanced.modulesAll.every(m => mods.includes(m))) return false;
     }
     return true;
   };
 
   const filteredCompanies = companies.filter(c =>
-    matchesSearch(c) && matchesStatus(c) && matchesModule(c) && matchesAdvanced(c)
+    matchesSearch(c) && matchesAdvanced(c)
   );
 
   const availableStates = Array.from(
@@ -387,16 +423,11 @@ export default function ResellerLojas() {
     )
   ).sort();
 
-  const statusChips: { value: typeof statusFilter; label: string }[] = [
-    { value: 'all', label: 'Todas' },
-    { value: 'active', label: 'Em dia' },
-    { value: 'open', label: 'Fatura em aberto' },
-    { value: 'overdue', label: 'Vencidas' },
-    { value: 'suspended', label: 'Suspensas' },
-    { value: 'blocked', label: 'Travadas' },
-    { value: 'canceled', label: 'Canceladas' },
-    { value: 'inactive', label: 'Inativas' },
-  ];
+  const availablePlans = Array.from(
+    new Set(
+      companies.map(c => enrichment.data.get(c.id)?.planName || '').filter(Boolean)
+    )
+  ).sort();
 
   const monthlyFee = settings?.monthly_fee ?? 0;
   const fmtMoney = (n: number) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -671,77 +702,78 @@ export default function ResellerLojas() {
     <ResellerLayout title="Lojas" actions={headerActions}>
       <div className="space-y-4">
         <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-2">
+          {/* Header de busca — padrão GDoor */}
+          <div className="rounded-lg border bg-card p-2 flex flex-col sm:flex-row items-stretch gap-2">
             <Select value={searchField} onValueChange={(v: any) => setSearchField(v)}>
-              <SelectTrigger className="sm:w-48 shrink-0">
+              <SelectTrigger className="sm:w-52 shrink-0 border-0 shadow-none focus:ring-0 bg-transparent">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os campos</SelectItem>
-                <SelectItem value="name">Nome / Slug</SelectItem>
-                <SelectItem value="razao">Razão Social</SelectItem>
-                <SelectItem value="cnpj">CNPJ</SelectItem>
-                <SelectItem value="serial">Serial</SelectItem>
-                <SelectItem value="city">Cidade</SelectItem>
+                <SelectItem value="all">Buscar em todos os campos</SelectItem>
+                <SelectItem value="name">Buscar por Nome / Slug</SelectItem>
+                <SelectItem value="razao">Buscar por Razão Social</SelectItem>
+                <SelectItem value="cnpj">Buscar por CNPJ</SelectItem>
+                <SelectItem value="serial">Buscar por Serial</SelectItem>
+                <SelectItem value="city">Buscar por Cidade</SelectItem>
               </SelectContent>
             </Select>
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder={
-                  searchField === 'cnpj' ? 'Buscar por CNPJ...' :
-                  searchField === 'serial' ? 'Buscar por serial...' :
-                  searchField === 'razao' ? 'Buscar por razão social...' :
-                  searchField === 'city' ? 'Buscar por cidade...' :
-                  searchField === 'name' ? 'Buscar por nome ou slug...' :
-                  'Buscar em todos os campos...'
-                }
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={moduleFilter} onValueChange={setModuleFilter}>
-              <SelectTrigger className="sm:w-56 shrink-0">
-                <SelectValue placeholder="Módulo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os módulos</SelectItem>
-                {moduleOptions.map(m => (
-                  <SelectItem key={m} value={m}>{moduleShortLabel(m)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="hidden sm:block w-px bg-border" />
+            <Input
+              placeholder="Digite sua busca..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="flex-1 border-0 shadow-none focus-visible:ring-0 bg-transparent"
+            />
+            <Button
+              type="button"
+              size="icon"
+              className="shrink-0 h-10 w-10"
+              onClick={() => { /* filtro reativo, botão apenas UX */ }}
+              title="Buscar"
+            >
+              <Search className="w-4 h-4" />
+            </Button>
             <ResellerLojasAdvancedFilters
               value={advanced}
               onChange={setAdvanced}
               availableStates={availableStates}
               availableModules={moduleOptions}
+              availablePlans={availablePlans}
+              open={filtersOpen}
+              onOpenChange={setFiltersOpen}
+              trigger={
+                <SheetTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-10 w-10 relative"
+                    title="Filtros avançados"
+                  >
+                    <SlidersHorizontal className="w-4 h-4" />
+                    {countActiveFilters(advanced) > 0 && (
+                      <Badge className="absolute -top-1 -right-1 rounded-full h-4 min-w-4 px-1 text-[10px]">
+                        {countActiveFilters(advanced)}
+                      </Badge>
+                    )}
+                  </Button>
+                </SheetTrigger>
+              }
             />
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {statusChips.map(chip => (
-              <Button
-                key={chip.value}
-                variant={statusFilter === chip.value ? 'default' : 'outline'}
-                size="sm"
-                className="h-7 rounded-full text-xs px-3"
-                onClick={() => setStatusFilter(chip.value)}
-              >
-                {chip.label}
-              </Button>
-            ))}
-            {countActiveFilters(advanced) > 0 && (
+          {countActiveFilters(advanced) > 0 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{countActiveFilters(advanced)} filtro(s) ativo(s)</span>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 rounded-full text-xs px-3 text-muted-foreground"
+                className="h-6 rounded-full text-xs px-2"
                 onClick={() => setAdvanced(EMPTY_ADVANCED_FILTERS)}
               >
-                Limpar filtros avançados ({countActiveFilters(advanced)})
+                Limpar
               </Button>
-            )}
-          </div>
+            </div>
+          )}
           <div className="text-xs text-muted-foreground">
             {filteredCompanies.length} {filteredCompanies.length === 1 ? 'loja' : 'lojas'}
             {filteredCompanies.length !== companies.length && ` de ${companies.length}`}
