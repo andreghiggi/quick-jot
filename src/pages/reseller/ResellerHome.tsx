@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Loader2, Store, Ban, Lock, TrendingUp, DollarSign, Eye, EyeOff, Plus, ImageIcon,
-  Calendar, AlertTriangle, ArrowDownRight, ArrowUpRight,
+  Calendar, AlertTriangle, ArrowUpRight,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';

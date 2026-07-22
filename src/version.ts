@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.61.16-beta";
-export const RELEASE_DATE = "2026-07-19"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Regra tributária 'Quitação de Crediário' editável";
+export const VERSION = "1.62.0-beta";
+export const RELEASE_DATE = "2026-07-22"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Painel Revendedor — Home gerencial";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.62.0-beta",
+    date: "2026-07-22",
+    codename: "Painel Revendedor — Home gerencial",
+    changes: [
+      "Home do Painel do Revendedor redesenhada como dashboard gerencial: 4 cards de saúde da carteira (Lojas ativas, Bloqueadas, Trava da revenda, Ativações no mês), card MRR com sparkline de 6 meses e ticket médio por loja, card 'A vencer nos próximos 7 dias' com botão 'Ver lista'.",
+      "Diálogo 'Mensalidades a vencer' com seleção múltipla (checkbox por linha + selecionar todas), total selecionado em destaque e botão 'Marcar como pago' em lote — grava status='paid' e paid_at nas faturas escolhidas.",
+      "Alerta no topo quando existem lojas com fatura vencida há mais de 15 dias.",
+      "Atalhos rápidos: 'Ativar nova loja' (leva direto ao cadastro) e 'Mídia Kit'.",
+      "Sem alteração em Frente de Caixa, PDV, TEF, PinPad, NFC-e, NF-e, Compras, Financeiro (fluxo da loja), Cardápio, Estoque ou impressão.",
+    ],
+  },
   {
     version: "1.61.16-beta",
     date: "2026-07-19",
