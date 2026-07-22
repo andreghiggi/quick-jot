@@ -28,6 +28,7 @@ export interface ResellerCompany {
   created_at: string;
   login_email?: string | null;
   initial_password?: string | null;
+  license_status?: string | null;
 }
 
 export function useResellerPortal() {
