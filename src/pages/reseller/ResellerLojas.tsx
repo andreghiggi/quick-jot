@@ -21,6 +21,12 @@ import { CompanyModulesDialog } from '@/components/admin/CompanyModulesDialog';
 import { toast } from 'sonner';
 import { useResellerCompanyEnrichment } from '@/hooks/useResellerCompanyEnrichment';
 import { moduleShortLabel } from '@/lib/moduleLabels';
+import {
+  ResellerLojasAdvancedFilters,
+  EMPTY_ADVANCED_FILTERS,
+  countActiveFilters,
+  type AdvancedFilters,
+} from '@/components/reseller/ResellerLojasAdvancedFilters';
 
 export default function ResellerLojas() {
   const navigate = useNavigate();
@@ -31,6 +37,7 @@ export default function ResellerLojas() {
   const [searchField, setSearchField] = useState<'all' | 'name' | 'razao' | 'cnpj' | 'serial' | 'city'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'open' | 'overdue' | 'suspended' | 'blocked' | 'canceled' | 'inactive'>('all');
   const [moduleFilter, setModuleFilter] = useState<string>('all');
+  const [advanced, setAdvanced] = useState<AdvancedFilters>(EMPTY_ADVANCED_FILTERS);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   
@@ -213,7 +220,43 @@ export default function ResellerLojas() {
     return (info?.modules ?? []).includes(moduleFilter);
   };
 
-  const filteredCompanies = companies.filter(c => matchesSearch(c) && matchesStatus(c) && matchesModule(c));
+  const matchesAdvanced = (c: any) => {
+    // Data de cadastro
+    if (advanced.createdFrom) {
+      const from = new Date(advanced.createdFrom + 'T00:00:00');
+      if (new Date(c.created_at) < from) return false;
+    }
+    if (advanced.createdTo) {
+      const to = new Date(advanced.createdTo + 'T23:59:59');
+      if (new Date(c.created_at) > to) return false;
+    }
+    // Dia de vencimento
+    if (advanced.dueDays.length > 0) {
+      const day = Number(c.next_invoice_due_day);
+      if (!day || !advanced.dueDays.includes(day)) return false;
+    }
+    // UF
+    if (advanced.states.length > 0) {
+      const uf = (c.address_state || '').toUpperCase();
+      if (!uf || !advanced.states.includes(uf)) return false;
+    }
+    // Módulos (todos precisam estar ativos)
+    if (advanced.modulesAll.length > 0) {
+      const mods = enrichment.data.get(c.id)?.modules ?? [];
+      if (!advanced.modulesAll.every(m => mods.includes(m))) return false;
+    }
+    return true;
+  };
+
+  const filteredCompanies = companies.filter(c =>
+    matchesSearch(c) && matchesStatus(c) && matchesModule(c) && matchesAdvanced(c)
+  );
+
+  const availableStates = Array.from(
+    new Set(
+      companies.map(c => ((c as any).address_state || '').toUpperCase()).filter(Boolean)
+    )
+  ).sort();
 
   // ============ Bulk selection helpers ============
   const toggleOne = (id: string) => {
@@ -669,6 +712,12 @@ export default function ResellerLojas() {
                 ))}
               </SelectContent>
             </Select>
+            <ResellerLojasAdvancedFilters
+              value={advanced}
+              onChange={setAdvanced}
+              availableStates={availableStates}
+              availableModules={moduleOptions}
+            />
           </div>
           <div className="flex flex-wrap gap-1.5">
             {statusChips.map(chip => (
@@ -682,6 +731,16 @@ export default function ResellerLojas() {
                 {chip.label}
               </Button>
             ))}
+            {countActiveFilters(advanced) > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 rounded-full text-xs px-3 text-muted-foreground"
+                onClick={() => setAdvanced(EMPTY_ADVANCED_FILTERS)}
+              >
+                Limpar filtros avançados ({countActiveFilters(advanced)})
+              </Button>
+            )}
           </div>
           <div className="text-xs text-muted-foreground">
             {filteredCompanies.length} {filteredCompanies.length === 1 ? 'loja' : 'lojas'}
