@@ -142,14 +142,10 @@ export function AsaasPaymentDialog({ charge, onClose, onUpdated, defaultTab }: P
                 <FileText className="w-4 h-4 mr-2" /> Abrir Boleto (PDF)
               </Button>
             )}
-            {charge.invoice_url && (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => window.open(charge.invoice_url!, '_blank')}
-              >
-                <ExternalLink className="w-4 h-4 mr-2" /> Página da Cobrança
-              </Button>
+            {!charge.boleto_url && charge.invoice_url && (
+              <p className="text-xs text-muted-foreground text-center">
+                Boleto ainda não disponível.
+              </p>
             )}
           </TabsContent>
         </Tabs>
