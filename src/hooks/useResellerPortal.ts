@@ -16,7 +16,6 @@ export interface ResellerPortalSettings {
   activation_fee: number;
   monthly_fee: number;
   invoice_due_day: number;
-  asaas_api_key: string | null;
 }
 
 export interface ResellerCompany {
@@ -66,7 +65,6 @@ export function useResellerPortal() {
           activation_fee: settingsData.activation_fee,
           monthly_fee: settingsData.monthly_fee,
           invoice_due_day: settingsData.invoice_due_day,
-          asaas_api_key: settingsData.asaas_api_key,
         });
       }
 
@@ -240,7 +238,6 @@ export function useResellerPortal() {
 
   async function updateSettings(data: {
     invoice_due_day?: number;
-    asaas_api_key?: string | null;
   }): Promise<boolean> {
     if (!reseller) return false;
     try {
