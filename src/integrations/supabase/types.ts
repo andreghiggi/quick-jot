@@ -3649,7 +3649,6 @@ export type Database = {
       reseller_settings: {
         Row: {
           activation_fee: number
-          asaas_api_key: string | null
           created_at: string
           id: string
           invoice_due_day: number
@@ -3659,7 +3658,6 @@ export type Database = {
         }
         Insert: {
           activation_fee?: number
-          asaas_api_key?: string | null
           created_at?: string
           id?: string
           invoice_due_day?: number
@@ -3669,7 +3667,6 @@ export type Database = {
         }
         Update: {
           activation_fee?: number
-          asaas_api_key?: string | null
           created_at?: string
           id?: string
           invoice_due_day?: number
