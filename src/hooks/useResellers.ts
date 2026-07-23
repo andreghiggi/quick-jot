@@ -30,7 +30,6 @@ export interface ResellerSettings {
   activation_fee: number;
   monthly_fee: number;
   invoice_due_day: number;
-  asaas_api_key: string | null;
 }
 
 export interface ResellerWithStats extends Reseller {
