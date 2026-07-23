@@ -5,21 +5,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Loader2, Save, Lock, AlertCircle } from 'lucide-react';
+import { Loader2, Save, Lock } from 'lucide-react';
 
 export default function ResellerConfiguracoes() {
-  const { reseller, settings, loading, updateProfile, updateSettings } = useResellerPortal();
+  const { reseller, settings, loading, updateProfile } = useResellerPortal();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  
-  const [asaasKey, setAsaasKey] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
-  const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
     if (reseller) {
@@ -27,11 +21,7 @@ export default function ResellerConfiguracoes() {
       setEmail(reseller.email);
       setPhone(reseller.phone || '');
     }
-    if (settings) {
-      
-      setAsaasKey(settings.asaas_api_key || '');
-    }
-  }, [reseller, settings]);
+  }, [reseller]);
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -42,15 +32,6 @@ export default function ResellerConfiguracoes() {
       phone: phone.trim() || null,
     });
     setSavingProfile(false);
-  }
-
-  async function handleSaveSettings(e: React.FormEvent) {
-    e.preventDefault();
-    setSavingSettings(true);
-    await updateSettings({
-      asaas_api_key: asaasKey.trim() || null,
-    });
-    setSavingSettings(false);
   }
 
   if (loading) {
@@ -96,61 +77,32 @@ export default function ResellerConfiguracoes() {
         <Card>
           <CardHeader>
             <CardTitle>Faturamento</CardTitle>
-            <CardDescription>Configurações de cobrança</CardDescription>
+            <CardDescription>Valores definidos pelo administrador</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSaveSettings} className="space-y-4">
-              {/* Read-only fees */}
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2">
-                  <Lock className="w-3 h-3" />
-                  Valores (somente leitura)
-                </Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Taxa de ativação</p>
-                    <p className="text-sm font-medium">
-                      R$ {(settings?.activation_fee || 180).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Mensalidade</p>
-                    <p className="text-sm font-medium">
-                      R$ {(settings?.monthly_fee || 29.90).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
+                <Lock className="w-3 h-3" />
+                Valores (somente leitura)
+              </Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Taxa de ativação</p>
+                  <p className="text-sm font-medium">
+                    R$ {(settings?.activation_fee || 180).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Estes valores são definidos pelo administrador master.
-                </p>
-              </div>
-
-              <Separator />
-
-              {/* Asaas API Key */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  Chave API Asaas
-                  <Badge variant="outline" className="text-xs">Em breve</Badge>
-                </Label>
-                <Input
-                  type="password"
-                  value={asaasKey}
-                  onChange={e => setAsaasKey(e.target.value)}
-                  placeholder="Chave será utilizada para integração de cobranças"
-                  disabled={savingSettings}
-                />
-                <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                  <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
-                  <span>A integração com Asaas será ativada em breve. Você já pode deixar sua chave configurada.</span>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Mensalidade</p>
+                  <p className="text-sm font-medium">
+                    R$ {(settings?.monthly_fee || 29.90).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
                 </div>
               </div>
-
-              <Button type="submit" disabled={savingSettings} className="gap-2">
-                {savingSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Salvar Configurações
-              </Button>
-            </form>
+              <p className="text-xs text-muted-foreground">
+                Estes valores são definidos pelo administrador master.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
