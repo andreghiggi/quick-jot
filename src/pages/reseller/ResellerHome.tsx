@@ -251,42 +251,9 @@ export default function ResellerHome() {
         </section>
 
         {/* Linha 2 — Financeiro operacional */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* MRR + sparkline */}
-          <Card className="md:col-span-1">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">MRR</CardTitle>
-              <div className="flex items-center gap-1">
-                <DollarSign className="w-4 h-4 text-green-600" />
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowMRR(!showMRR)}>
-                  {showMRR ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {showMRR ? BRL(stats.mrr) : '••••••'}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Ticket médio: {showMRR ? BRL(ticketMedio) : '••••'} / loja
-              </p>
-              {/* Sparkline recebido últimos 6 meses */}
-              <div className="mt-3 flex items-end gap-1 h-10">
-                {paidHistory.map(p => (
-                  <div
-                    key={p.month}
-                    className={`flex-1 rounded-sm ${p.month === currentMonth ? 'bg-primary' : 'bg-primary/30'}`}
-                    style={{ height: `${Math.max(4, (p.total / maxSpark) * 100)}%` }}
-                    title={`${p.month}: ${BRL(p.total)}`}
-                  />
-                ))}
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-1">Recebido — últimos 6 meses</p>
-            </CardContent>
-          </Card>
-
+        <section className="grid grid-cols-1 gap-4">
           {/* A vencer 7 dias */}
-          <Card className="md:col-span-2">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">A vencer nos próximos 7 dias</CardTitle>
               <Calendar className="w-4 h-4 text-amber-600" />
