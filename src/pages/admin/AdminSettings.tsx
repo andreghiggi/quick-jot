@@ -142,7 +142,7 @@ export default function AdminSettings() {
   return (
     <AppLayout>
       <div className="space-y-6 max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold">Dados da Empresa</h1>
+        <h1 className="text-2xl font-bold">Minha Empresa</h1>
 
         <Card>
           <CardHeader>
