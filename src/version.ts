@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.63.0-beta";
-export const RELEASE_DATE = "2026-07-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Painel Revendedor — Card GDoor + Detalhes 2 colunas";
+export const VERSION = "1.63.2-beta";
+export const RELEASE_DATE = "2026-07-24"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Super Admin — Cadastro completo da ComandaTech";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.63.2-beta",
+    date: "2026-07-24",
+    codename: "Super Admin — Cadastro completo da ComandaTech",
+    changes: [
+      "Tela 'Dados da Empresa' do Super Admin ampliada com cadastro institucional completo da ComandaTech: Nome Fantasia, Inscrição Estadual, Inscrição Municipal, Site, Complemento de endereço, Cargo do responsável e URL do logo institucional.",
+      "Novo card 'Contatos' separa E-mail Comercial, E-mail Financeiro, E-mail Suporte, Telefone e WhatsApp em campos dedicados — antes só existiam dois campos genéricos.",
+      "Novo card 'Identidade Visual' com preview do logo institucional (usado em faturas e comunicações do painel administrativo).",
+      "Migração de banco apenas adiciona colunas em `admin_settings` (tabela exclusiva do Super Admin). Nenhuma loja em produção é tocada — sem alteração em PDV, TEF, PinPad, Frente de Caixa, NFC-e, NF-e, Cardápio, Financeiro, Compras, Estoque, Impressão ou WhatsApp.",
+    ],
+  },
   {
     version: "1.63.0-beta",
     date: "2026-07-22",
