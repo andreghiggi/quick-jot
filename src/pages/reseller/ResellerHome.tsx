@@ -55,7 +55,7 @@ export default function ResellerHome() {
     (async () => {
       setLoadingData(true);
       const now = new Date();
-      const last30 = new Date(now.getTime() - 30 * 86400000);
+      const monthStart = startOfMonth(now);
 
       const companyIds = companies.map(c => c.id);
 
@@ -71,7 +71,7 @@ export default function ResellerHome() {
               .from('company_plans')
               .select('company_id, activated_at')
               .in('company_id', companyIds)
-              .gte('activated_at', last30.toISOString())
+              .gte('activated_at', monthStart.toISOString())
           : Promise.resolve({ data: [] as any[], error: null } as any),
         companyIds.length
           ? supabase
@@ -79,7 +79,7 @@ export default function ResellerHome() {
               .select('id, license_canceled_at')
               .in('id', companyIds)
               .not('license_canceled_at', 'is', null)
-              .gte('license_canceled_at', last30.toISOString())
+              .gte('license_canceled_at', monthStart.toISOString())
           : Promise.resolve({ data: [] as any[], error: null } as any),
         supabase
           .from('reseller_invoices')
