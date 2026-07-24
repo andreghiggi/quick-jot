@@ -29,7 +29,7 @@ import logoIcon from '@/assets/logo-icon.png';
 
 const adminMenuItems = [
   { title: 'Minha Empresa', icon: FileText, href: '/admin/dados-empresa' },
-  { title: 'Empresas', icon: Building2, href: '/admin' },
+  { title: 'Lojas Diretas', icon: Building2, href: '/admin' },
   { title: 'Revendedores', icon: UserCheck, href: '/admin/revendedores' },
   { title: 'Sugestões', icon: Lightbulb, href: '/admin/sugestoes' },
   { title: 'Usuários', icon: Users, href: '/admin/usuarios' },
