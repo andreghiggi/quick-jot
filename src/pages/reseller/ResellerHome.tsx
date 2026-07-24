@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Loader2, Store, Ban, Lock, TrendingUp, DollarSign, Eye, EyeOff, Plus, ImageIcon,
-  Calendar, AlertTriangle, ArrowUpRight,
+  Calendar, AlertTriangle, ArrowUpRight, TrendingDown,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -42,7 +42,8 @@ export default function ResellerHome() {
 
   const [invoices, setInvoices] = useState<OpenInvoice[]>([]);
   const [paidHistory, setPaidHistory] = useState<{ month: string; total: number }[]>([]);
-  const [activationsMonth, setActivationsMonth] = useState(0);
+  const [activations30d, setActivations30d] = useState(0);
+  const [churn30d, setChurn30d] = useState(0);
   const [loadingData, setLoadingData] = useState(true);
 
   const [dueListOpen, setDueListOpen] = useState(false);
@@ -54,12 +55,11 @@ export default function ResellerHome() {
     (async () => {
       setLoadingData(true);
       const now = new Date();
-      const som = startOfMonth(now);
-      const eom = endOfMonth(now);
+      const last30 = new Date(now.getTime() - 30 * 86400000);
 
       const companyIds = companies.map(c => c.id);
 
-      const [invRes, activationsRes, paidRes] = await Promise.all([
+      const [invRes, activationsRes, churnRes, paidRes] = await Promise.all([
         supabase
           .from('reseller_invoices')
           .select('id, company_id, due_date, total_value, status, month')
@@ -71,8 +71,15 @@ export default function ResellerHome() {
               .from('company_plans')
               .select('company_id, activated_at')
               .in('company_id', companyIds)
-              .gte('activated_at', som.toISOString())
-              .lte('activated_at', eom.toISOString())
+              .gte('activated_at', last30.toISOString())
+          : Promise.resolve({ data: [] as any[], error: null } as any),
+        companyIds.length
+          ? supabase
+              .from('companies')
+              .select('id, license_canceled_at')
+              .in('id', companyIds)
+              .not('license_canceled_at', 'is', null)
+              .gte('license_canceled_at', last30.toISOString())
           : Promise.resolve({ data: [] as any[], error: null } as any),
         supabase
           .from('reseller_invoices')
@@ -84,7 +91,8 @@ export default function ResellerHome() {
       ]);
 
       setInvoices((invRes.data || []) as OpenInvoice[]);
-      setActivationsMonth((activationsRes.data || []).length);
+      setActivations30d((activationsRes.data || []).length);
+      setChurn30d((churnRes.data || []).length);
 
       // Agrupa MRR pago por mês (últimos 6)
       const buckets: Record<string, number> = {};
@@ -135,17 +143,6 @@ export default function ResellerHome() {
       return days > 15;
     });
   }, [invoices, today]);
-
-  const churnMonth = useMemo(() => {
-    const som = startOfMonth();
-    return companies.filter(c => {
-      const st = (c.license_status || 'active').toLowerCase();
-      if (!['blocked', 'canceled'].includes(st)) return false;
-      // Sem updated_at no tipo — usamos created_at do enrichment não, aproximamos por qualquer bloqueio existente do mês
-      return true;
-    }).length;
-    // Nota: sem coluna dedicada de blocked_at, mostramos o total de bloqueadas — refinar quando existir carimbo.
-  }, [companies]);
 
   const ticketMedio = cards.active > 0 ? stats.mrr / cards.active : 0;
 
@@ -205,7 +202,7 @@ export default function ResellerHome() {
         )}
 
         {/* Linha 1 — Saúde da carteira */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Lojas ativas</CardTitle>
@@ -238,14 +235,22 @@ export default function ResellerHome() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Ativações no mês</CardTitle>
+              <CardTitle className="text-sm font-medium">Ativações (30d)</CardTitle>
               <TrendingUp className="w-4 h-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{activationsMonth}</div>
-              <p className="text-xs text-muted-foreground">
-                {format(new Date(), 'MMMM', { locale: ptBR })}
-              </p>
+              <div className="text-2xl font-bold text-primary">{activations30d}</div>
+              <p className="text-xs text-muted-foreground">novas lojas nos últimos 30 dias</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Churn (30d)</CardTitle>
+              <TrendingDown className="w-4 h-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">{churn30d}</div>
+              <p className="text-xs text-muted-foreground">lojas canceladas nos últimos 30 dias</p>
             </CardContent>
           </Card>
         </section>
@@ -276,7 +281,6 @@ export default function ResellerHome() {
                 </Button>
               </div>
               <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                <Badge variant="outline">Churn (bloqueadas): {churnMonth}</Badge>
                 <Badge variant="outline">Vencidas +15d: {overdueSevere.length}</Badge>
               </div>
             </CardContent>
