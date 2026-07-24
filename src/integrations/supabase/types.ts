@@ -410,63 +410,93 @@ export type Database = {
           cnpj: string | null
           created_at: string
           email_comercial: string | null
+          email_financeiro: string | null
+          email_suporte: string | null
           endereco_bairro: string | null
           endereco_cep: string | null
           endereco_cidade: string | null
+          endereco_complemento: string | null
           endereco_estado: string | null
           endereco_numero: string | null
           endereco_rua: string | null
           id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
+          logo_url: string | null
+          nome_fantasia: string | null
           razao_social: string | null
+          responsavel_cargo: string | null
           responsavel_cpf: string | null
           responsavel_email: string | null
           responsavel_nome: string | null
           responsavel_rg: string | null
           responsavel_telefone: string | null
+          site: string | null
           telefone: string | null
           updated_at: string
+          whatsapp: string | null
         }
         Insert: {
           asaas_env?: string | null
           cnpj?: string | null
           created_at?: string
           email_comercial?: string | null
+          email_financeiro?: string | null
+          email_suporte?: string | null
           endereco_bairro?: string | null
           endereco_cep?: string | null
           endereco_cidade?: string | null
+          endereco_complemento?: string | null
           endereco_estado?: string | null
           endereco_numero?: string | null
           endereco_rua?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          logo_url?: string | null
+          nome_fantasia?: string | null
           razao_social?: string | null
+          responsavel_cargo?: string | null
           responsavel_cpf?: string | null
           responsavel_email?: string | null
           responsavel_nome?: string | null
           responsavel_rg?: string | null
           responsavel_telefone?: string | null
+          site?: string | null
           telefone?: string | null
           updated_at?: string
+          whatsapp?: string | null
         }
         Update: {
           asaas_env?: string | null
           cnpj?: string | null
           created_at?: string
           email_comercial?: string | null
+          email_financeiro?: string | null
+          email_suporte?: string | null
           endereco_bairro?: string | null
           endereco_cep?: string | null
           endereco_cidade?: string | null
+          endereco_complemento?: string | null
           endereco_estado?: string | null
           endereco_numero?: string | null
           endereco_rua?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          logo_url?: string | null
+          nome_fantasia?: string | null
           razao_social?: string | null
+          responsavel_cargo?: string | null
           responsavel_cpf?: string | null
           responsavel_email?: string | null
           responsavel_nome?: string | null
           responsavel_rg?: string | null
           responsavel_telefone?: string | null
+          site?: string | null
           telefone?: string | null
           updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: []
       }
