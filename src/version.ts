@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.63.2-beta";
-export const RELEASE_DATE = "2026-07-24"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Super Admin — Cadastro completo da ComandaTech";
+export const VERSION = "1.63.3-beta";
+export const RELEASE_DATE = "2026-07-25"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "TEF — Auditoria de modalidade escolhida pelo operador";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.63.3-beta",
+    date: "2026-07-25",
+    codename: "TEF — Auditoria de modalidade escolhida pelo operador",
+    changes: [
+      "Toda cobrança TEF (CRT) agora envia junto ao log qual modalidade foi escolhida pelo operador na tela (débito, crédito ou PIX), no novo campo `intended_modality` da tabela `tef_webservice_logs`.",
+      "Permite, a partir de agora, cruzar com 100% de certeza o que o operador clicou versus o que a maquininha efetivamente cobrou — encerra a dúvida das últimas investigações da Bon Appetit e Cozinha da Ruiva.",
+      "Alteração puramente aditiva: coluna nullable, log continua fire-and-forget, nada muda no fluxo do TEF, PDV, PinPad, Multiplus, NFC-e, Frente de Caixa ou qualquer loja em produção. Registros antigos ficam com o campo em branco.",
+    ],
+  },
   {
     version: "1.63.2-beta",
     date: "2026-07-24",

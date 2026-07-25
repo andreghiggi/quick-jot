@@ -720,6 +720,11 @@ async function logTefCall(
       resBody?.bandeira ?? parsed?.['010-000'] ?? null;
     const errorMessage = resBody?.errorMessage ?? null;
 
+    // Intended modality (debit/credit/pix) selected by the operator in the UI.
+    // Sent by the client for audit trail — never affects processing.
+    const intendedModality =
+      typeof reqBody?.intendedModality === 'string' ? reqBody.intendedModality : null;
+
     const row = {
       company_id: companyId,
       action,
@@ -738,6 +743,7 @@ async function logTefCall(
       valor: typeof amount === 'number' ? amount : null,
       error_message: errorMessage,
       duration_ms: durationMs,
+      intended_modality: intendedModality,
     };
 
     await fetch(`${SUPABASE_URL}/rest/v1/tef_webservice_logs`, {

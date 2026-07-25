@@ -168,6 +168,9 @@ export async function sendPinpadPayment(
       amount: options.amount,
       identificacao: String(Date.now()),
       paymentType: mapPaymentTypeToTef(options.paymentType),
+      // Audit-only: registra a modalidade escolhida pelo operador na UI.
+      // Não altera o processamento — o campo numérico `paymentType` continua sendo o que a Multiplus lê.
+      intendedModality: options.paymentType,
       installments: options.installments || 1,
       installmentType: options.installmentType || 'loja',
       documentoFiscal: options.documentoFiscal,

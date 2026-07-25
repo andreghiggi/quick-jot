@@ -4449,6 +4449,7 @@ export type Database = {
           http_status: number | null
           id: string
           identifier: string | null
+          intended_modality: string | null
           nsu: string | null
           parsed_response: Json | null
           pdv: string | null
@@ -4470,6 +4471,7 @@ export type Database = {
           http_status?: number | null
           id?: string
           identifier?: string | null
+          intended_modality?: string | null
           nsu?: string | null
           parsed_response?: Json | null
           pdv?: string | null
@@ -4491,6 +4493,7 @@ export type Database = {
           http_status?: number | null
           id?: string
           identifier?: string | null
+          intended_modality?: string | null
           nsu?: string | null
           parsed_response?: Json | null
           pdv?: string | null
