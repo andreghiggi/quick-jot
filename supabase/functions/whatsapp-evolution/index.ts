@@ -343,6 +343,21 @@ serve(async (req) => {
 
         const apiHeaders = { 'apikey': EVOLUTION_API_KEY };
 
+        // Try Evolution's native "restart" endpoint first — it clears the
+        // Baileys pairing state without needing a full delete (which often
+        // returns 400 while the instance is stuck in "connecting").
+        try {
+          const rr = await fetch(`${baseUrl}/instance/restart/${instanceName}`, {
+            method: 'POST',
+            headers: apiHeaders,
+          });
+          console.log(`[reset_instance] restart status=${rr.status}`);
+        } catch (e) {
+          console.warn('[reset_instance] restart error:', e);
+        }
+        // Give Evolution a moment to reset internal state
+        await new Promise((r) => setTimeout(r, 1500));
+
         // Helper: check if instance still exists on Evolution
         const instanceExists = async (): Promise<boolean> => {
           try {
@@ -409,8 +424,37 @@ serve(async (req) => {
         }
 
         if (exists) {
-          const msg = `Não foi possível remover a instância "${instanceName}" na Evolution. Tente novamente em alguns segundos.`;
-          console.error('[reset_instance] giving up: instance still exists');
+          // Fallback: could not delete on Evolution (often 400 while stuck in
+          // "connecting"). Instead of failing, request a fresh QR via /connect
+          // on the SAME instance — the restart above already cleared the
+          // Baileys session, so this yields a usable pairing code.
+          console.warn('[reset_instance] delete blocked; falling back to /instance/connect on existing instance');
+          let fallbackQr: string | null = null;
+          try {
+            const qrRes = await fetch(`${baseUrl}/instance/connect/${instanceName}`, {
+              method: 'GET',
+              headers: apiHeaders,
+            });
+            const qrData = await qrRes.json();
+            fallbackQr = qrData?.base64 || qrData?.qrcode?.base64 || qrData?.code || null;
+          } catch (e) {
+            console.warn('[reset_instance] fallback QR fetch failed:', e);
+          }
+          if (companyId) {
+            await supabase.from('whatsapp_instances').upsert({
+              company_id: companyId,
+              instance_name: instanceName,
+              instance_id: instanceName,
+              status: 'disconnected',
+            }, { onConflict: 'company_id' });
+          }
+          if (fallbackQr) {
+            return new Response(JSON.stringify({ success: true, reused: true, qrCode: fallbackQr }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          const msg = `Não foi possível resetar a instância "${instanceName}" na Evolution. Tente novamente em alguns segundos.`;
+          console.error('[reset_instance] giving up: instance still exists and no QR');
           return new Response(JSON.stringify({ success: false, error: msg }), {
             status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -445,14 +489,20 @@ serve(async (req) => {
         try { createData = JSON.parse(createText); } catch { createData = { raw: createText }; }
 
         if (!createRes.ok) {
-          console.error('[reset_instance] recreate failed:', createRes.status, createText);
-          return new Response(JSON.stringify({
-            success: false,
-            error: `Falha ao recriar instância (HTTP ${createRes.status}): ${createData?.response?.message?.[0] || createData?.message || createText.slice(0, 200)}`,
-          }), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          const alreadyInUse =
+            (createRes.status === 403 || createRes.status === 409) &&
+            /already/i.test(createText);
+          if (!alreadyInUse) {
+            console.error('[reset_instance] recreate failed:', createRes.status, createText);
+            return new Response(JSON.stringify({
+              success: false,
+              error: `Falha ao recriar instância (HTTP ${createRes.status}): ${createData?.response?.message?.[0] || createData?.message || createText.slice(0, 200)}`,
+            }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          console.log('[reset_instance] recreate said "already in use" — reusing existing instance');
         }
 
         // Update DB
