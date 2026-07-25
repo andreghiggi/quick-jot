@@ -1,0 +1,1 @@
+ALTER TABLE public.tef_webservice_logs ADD COLUMN IF NOT EXISTS intended_modality TEXT; COMMENT ON COLUMN public.tef_webservice_logs.intended_modality IS 'Modalidade escolhida pelo operador na UI (debit/credit/pix). Registrada no cliente para auditoria clique x cobrança.';
