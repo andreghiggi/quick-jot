@@ -489,14 +489,20 @@ serve(async (req) => {
         try { createData = JSON.parse(createText); } catch { createData = { raw: createText }; }
 
         if (!createRes.ok) {
-          console.error('[reset_instance] recreate failed:', createRes.status, createText);
-          return new Response(JSON.stringify({
-            success: false,
-            error: `Falha ao recriar instância (HTTP ${createRes.status}): ${createData?.response?.message?.[0] || createData?.message || createText.slice(0, 200)}`,
-          }), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          const alreadyInUse =
+            (createRes.status === 403 || createRes.status === 409) &&
+            /already/i.test(createText);
+          if (!alreadyInUse) {
+            console.error('[reset_instance] recreate failed:', createRes.status, createText);
+            return new Response(JSON.stringify({
+              success: false,
+              error: `Falha ao recriar instância (HTTP ${createRes.status}): ${createData?.response?.message?.[0] || createData?.message || createText.slice(0, 200)}`,
+            }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          console.log('[reset_instance] recreate said "already in use" — reusing existing instance');
         }
 
         // Update DB
