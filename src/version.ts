@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.63.3-beta";
-export const RELEASE_DATE = "2026-07-25"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "TEF — Auditoria de modalidade escolhida pelo operador";
+export const VERSION = "1.63.4-beta";
+export const RELEASE_DATE = "2026-07-26"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "WhatsApp — Reconexão e QR Code seguro";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.63.4-beta",
+    date: "2026-07-26",
+    codename: "WhatsApp — Reconexão e QR Code seguro",
+    changes: [
+      "Corrigido o fluxo de QR Code do WhatsApp quando a Evolution ainda mantém a instância como aberta, mas a loja precisa conectar outro número.",
+      "Ao gerar QR Code, o backend agora verifica o estado real da instância, faz logout seguro quando necessário e limpa o número anterior somente daquela loja antes de pedir um novo QR.",
+      "Desconectar WhatsApp agora também sincroniza o status no backend, deixando a loja livre para conectar e desconectar quantas vezes precisar sem ficar presa em sessão antiga.",
+    ],
+  },
   {
     version: "1.63.3-beta",
     date: "2026-07-25",
