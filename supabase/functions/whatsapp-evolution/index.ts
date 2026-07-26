@@ -48,6 +48,33 @@ serve(async (req) => {
       });
       return parseJsonResponse(stateRes);
     };
+    const createEvolutionInstance = async (instanceName: string) => {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook`;
+      const createRes = await fetch(`${baseUrl}/instance/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': EVOLUTION_API_KEY,
+        },
+        body: JSON.stringify({
+          instanceName,
+          integration: 'WHATSAPP-BAILEYS',
+          qrcode: true,
+          rejectCall: false,
+          alwaysOnline: false,
+          readMessages: false,
+          readStatus: false,
+          webhook: {
+            url: webhookUrl,
+            byEvents: false,
+            base64: false,
+            events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
+          },
+        }),
+      });
+      return { response: createRes, data: await parseJsonResponse(createRes) };
+    };
 
     switch (action) {
       case 'create_instance': {
@@ -192,6 +219,47 @@ serve(async (req) => {
             headers: apiHeaders,
           });
           data = await parseJsonResponse(res);
+        }
+
+        // Final fallback for corrupted/open sessions that refuse logout/delete:
+        // create a fresh instance name for the same store and bind the DB to it.
+        // This releases the store immediately without touching other companies.
+        if (!extractQrCode(data) && companyId && data?.instance?.state === 'open') {
+          const baseInstanceName = instanceName.replace(/-[a-f0-9]{4,8}$/i, '');
+          const rolloverName = `${baseInstanceName}-${crypto.randomUUID().slice(0, 4)}`;
+          console.warn(`[get_qrcode] ${instanceName} stayed open; rolling over to ${rolloverName}`);
+
+          const created = await createEvolutionInstance(rolloverName);
+          if (!created.response.ok) {
+            console.error('[get_qrcode] rollover create failed:', JSON.stringify(created.data).slice(0, 300));
+          } else {
+            await delay(800);
+            const qrRes = await fetch(`${baseUrl}/instance/connect/${rolloverName}`, {
+              method: 'GET',
+              headers: apiHeaders,
+            });
+            const qrData = await parseJsonResponse(qrRes);
+            const rolloverQr = extractQrCode(qrData);
+            if (rolloverQr) {
+              await supabase.from('whatsapp_instances').upsert({
+                company_id: companyId,
+                instance_name: rolloverName,
+                instance_id: created.data?.instance?.instanceId || created.data?.instanceId || rolloverName,
+                status: 'disconnected',
+                phone_number: null,
+              }, { onConflict: 'company_id' });
+
+              return new Response(JSON.stringify({
+                ...qrData,
+                success: true,
+                instanceName: rolloverName,
+                rolledOver: true,
+              }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+            data = { ...qrData, instanceName: rolloverName, rolledOver: true };
+          }
         }
 
         if (companyId && extractQrCode(data)) {
