@@ -29,6 +29,25 @@ serve(async (req) => {
   try {
     const { action, ...params } = await req.json();
     const baseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
+    const apiHeaders = { 'apikey': EVOLUTION_API_KEY };
+    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const parseJsonResponse = async (response: Response) => {
+      const text = await response.text();
+      try {
+        return text ? JSON.parse(text) : {};
+      } catch {
+        return { raw: text };
+      }
+    };
+    const extractQrCode = (data: any): string | null =>
+      data?.base64 || data?.qrcode?.base64 || data?.code || data?.pairingCode || null;
+    const fetchConnectionState = async (instanceName: string) => {
+      const stateRes = await fetch(`${baseUrl}/instance/connectionState/${instanceName}`, {
+        method: 'GET',
+        headers: apiHeaders,
+      });
+      return parseJsonResponse(stateRes);
+    };
 
     switch (action) {
       case 'create_instance': {
@@ -124,12 +143,62 @@ serve(async (req) => {
       }
 
       case 'get_qrcode': {
-        const { instanceName } = params;
-        const res = await fetch(`${baseUrl}/instance/connect/${instanceName}`, {
+        const { instanceName, companyId } = params;
+
+        // If Evolution still has this instance as "open" while the app expects
+        // a QR, force a logout first. Otherwise /instance/connect returns only
+        // { state: "open" } and the store cannot reconnect a different number.
+        try {
+          const stateData = await fetchConnectionState(instanceName);
+          if (stateData?.instance?.state === 'open') {
+            console.log(`[get_qrcode] ${instanceName} is open; logging out before generating a new QR`);
+            await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
+              method: 'DELETE',
+              headers: apiHeaders,
+            }).catch((e) => console.warn('[get_qrcode] logout before QR failed:', e));
+            await delay(1800);
+            if (companyId) {
+              await supabase.from('whatsapp_instances')
+                .update({ status: 'disconnected', phone_number: null })
+                .eq('company_id', companyId);
+            }
+          }
+        } catch (e) {
+          console.warn('[get_qrcode] could not pre-check state:', e);
+        }
+
+        let res = await fetch(`${baseUrl}/instance/connect/${instanceName}`, {
           method: 'GET',
-          headers: { 'apikey': EVOLUTION_API_KEY },
+          headers: apiHeaders,
         });
-        const data = await res.json();
+        let data = await parseJsonResponse(res);
+
+        // Some Evolution states need one restart before a fresh QR is emitted.
+        // Keep this scoped to the requested instance only.
+        if (!extractQrCode(data) && data?.instance?.state === 'open') {
+          console.log(`[get_qrcode] ${instanceName} still open after connect; restarting and retrying QR`);
+          await fetch(`${baseUrl}/instance/restart/${instanceName}`, {
+            method: 'POST',
+            headers: apiHeaders,
+          }).catch((e) => console.warn('[get_qrcode] restart before QR failed:', e));
+          await delay(1800);
+          await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
+            method: 'DELETE',
+            headers: apiHeaders,
+          }).catch((e) => console.warn('[get_qrcode] second logout before QR failed:', e));
+          await delay(1200);
+          res = await fetch(`${baseUrl}/instance/connect/${instanceName}`, {
+            method: 'GET',
+            headers: apiHeaders,
+          });
+          data = await parseJsonResponse(res);
+        }
+
+        if (companyId && extractQrCode(data)) {
+          await supabase.from('whatsapp_instances')
+            .update({ status: 'disconnected', phone_number: null })
+            .eq('company_id', companyId);
+        }
 
         return new Response(JSON.stringify(data), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -297,12 +366,18 @@ serve(async (req) => {
       }
 
       case 'disconnect': {
-        const { instanceName } = params;
+        const { instanceName, companyId } = params;
         const res = await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
           method: 'DELETE',
-          headers: { 'apikey': EVOLUTION_API_KEY },
+          headers: apiHeaders,
         });
-        const data = await res.json();
+        const data = await parseJsonResponse(res);
+
+        if (companyId) {
+          await supabase.from('whatsapp_instances')
+            .update({ status: 'disconnected', phone_number: null })
+            .eq('company_id', companyId);
+        }
 
         return new Response(JSON.stringify({ success: true, data }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -311,11 +386,24 @@ serve(async (req) => {
 
       case 'delete_instance': {
         const { instanceName, companyId } = params;
+        // Logout first to release the WhatsApp session before deleting the instance.
+        try {
+          const logoutRes = await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
+            method: 'DELETE',
+            headers: apiHeaders,
+          });
+          console.log(`[delete_instance] logout ${instanceName} status=${logoutRes.status}`);
+          await logoutRes.text();
+          await delay(1000);
+        } catch (e) {
+          console.warn('[delete_instance] logout before delete failed:', e);
+        }
+
         const res = await fetch(`${baseUrl}/instance/delete/${instanceName}`, {
           method: 'DELETE',
-          headers: { 'apikey': EVOLUTION_API_KEY },
+          headers: apiHeaders,
         });
-        const data = await res.json();
+        const data = await parseJsonResponse(res);
 
         if (companyId) {
           await supabase.from('whatsapp_instances')
