@@ -66,13 +66,16 @@ export function useWhatsApp(companyId?: string) {
     setConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
-        body: { action: 'get_qrcode', instanceName },
+        body: { action: 'get_qrcode', instanceName, companyId },
       });
       if (error) throw error;
       
       // Evolution API returns base64 QR code
       const qr = data?.base64 || data?.qrcode?.base64 || data?.code || null;
       setQrCode(qr);
+      if (data?.rolledOver) {
+        await fetchInstance();
+      }
     } catch (e) {
       console.error('Error getting QR code:', e);
       toast.error('Erro ao obter QR Code');
@@ -107,7 +110,7 @@ export function useWhatsApp(companyId?: string) {
     if (!instance?.instance_name || !companyId) return;
     try {
       await supabase.functions.invoke('whatsapp-evolution', {
-        body: { action: 'disconnect', instanceName: instance.instance_name },
+        body: { action: 'disconnect', instanceName: instance.instance_name, companyId },
       });
       await supabase.from('whatsapp_instances')
         .update({ status: 'disconnected' })

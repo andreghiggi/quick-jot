@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '26/07/2026',
+    version: '1.63.4-beta',
+    type: 'fix',
+    description: 'WhatsApp: corrigida a geração de QR Code quando a instância ainda ficava aberta no servidor, mas a loja precisava conectar outro número. Agora o sistema força logout seguro, limpa o número antigo daquela loja e libera novo QR Code para reconectar quantas vezes precisar.',
+  },
+  {
     date: '17/07/2026',
     version: '1.61.15-beta',
     type: 'fix',

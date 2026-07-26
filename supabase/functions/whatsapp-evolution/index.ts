@@ -29,6 +29,52 @@ serve(async (req) => {
   try {
     const { action, ...params } = await req.json();
     const baseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
+    const apiHeaders = { 'apikey': EVOLUTION_API_KEY };
+    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const parseJsonResponse = async (response: Response) => {
+      const text = await response.text();
+      try {
+        return text ? JSON.parse(text) : {};
+      } catch {
+        return { raw: text };
+      }
+    };
+    const extractQrCode = (data: any): string | null =>
+      data?.base64 || data?.qrcode?.base64 || data?.code || data?.pairingCode || null;
+    const fetchConnectionState = async (instanceName: string) => {
+      const stateRes = await fetch(`${baseUrl}/instance/connectionState/${instanceName}`, {
+        method: 'GET',
+        headers: apiHeaders,
+      });
+      return parseJsonResponse(stateRes);
+    };
+    const createEvolutionInstance = async (instanceName: string) => {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook`;
+      const createRes = await fetch(`${baseUrl}/instance/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': EVOLUTION_API_KEY,
+        },
+        body: JSON.stringify({
+          instanceName,
+          integration: 'WHATSAPP-BAILEYS',
+          qrcode: true,
+          rejectCall: false,
+          alwaysOnline: false,
+          readMessages: false,
+          readStatus: false,
+          webhook: {
+            url: webhookUrl,
+            byEvents: false,
+            base64: false,
+            events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
+          },
+        }),
+      });
+      return { response: createRes, data: await parseJsonResponse(createRes) };
+    };
 
     switch (action) {
       case 'create_instance': {
@@ -124,12 +170,103 @@ serve(async (req) => {
       }
 
       case 'get_qrcode': {
-        const { instanceName } = params;
-        const res = await fetch(`${baseUrl}/instance/connect/${instanceName}`, {
+        const { instanceName, companyId } = params;
+
+        // If Evolution still has this instance as "open" while the app expects
+        // a QR, force a logout first. Otherwise /instance/connect returns only
+        // { state: "open" } and the store cannot reconnect a different number.
+        try {
+          const stateData = await fetchConnectionState(instanceName);
+          if (stateData?.instance?.state === 'open') {
+            console.log(`[get_qrcode] ${instanceName} is open; logging out before generating a new QR`);
+            await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
+              method: 'DELETE',
+              headers: apiHeaders,
+            }).catch((e) => console.warn('[get_qrcode] logout before QR failed:', e));
+            await delay(1800);
+            if (companyId) {
+              await supabase.from('whatsapp_instances')
+                .update({ status: 'disconnected', phone_number: null })
+                .eq('company_id', companyId);
+            }
+          }
+        } catch (e) {
+          console.warn('[get_qrcode] could not pre-check state:', e);
+        }
+
+        let res = await fetch(`${baseUrl}/instance/connect/${instanceName}`, {
           method: 'GET',
-          headers: { 'apikey': EVOLUTION_API_KEY },
+          headers: apiHeaders,
         });
-        const data = await res.json();
+        let data = await parseJsonResponse(res);
+
+        // Some Evolution states need one restart before a fresh QR is emitted.
+        // Keep this scoped to the requested instance only.
+        if (!extractQrCode(data) && data?.instance?.state === 'open') {
+          console.log(`[get_qrcode] ${instanceName} still open after connect; restarting and retrying QR`);
+          await fetch(`${baseUrl}/instance/restart/${instanceName}`, {
+            method: 'POST',
+            headers: apiHeaders,
+          }).catch((e) => console.warn('[get_qrcode] restart before QR failed:', e));
+          await delay(1800);
+          await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
+            method: 'DELETE',
+            headers: apiHeaders,
+          }).catch((e) => console.warn('[get_qrcode] second logout before QR failed:', e));
+          await delay(1200);
+          res = await fetch(`${baseUrl}/instance/connect/${instanceName}`, {
+            method: 'GET',
+            headers: apiHeaders,
+          });
+          data = await parseJsonResponse(res);
+        }
+
+        // Final fallback for corrupted/open sessions that refuse logout/delete:
+        // create a fresh instance name for the same store and bind the DB to it.
+        // This releases the store immediately without touching other companies.
+        if (!extractQrCode(data) && companyId && data?.instance?.state === 'open') {
+          const baseInstanceName = instanceName.replace(/-[a-f0-9]{4,8}$/i, '');
+          const rolloverName = `${baseInstanceName}-${crypto.randomUUID().slice(0, 4)}`;
+          console.warn(`[get_qrcode] ${instanceName} stayed open; rolling over to ${rolloverName}`);
+
+          const created = await createEvolutionInstance(rolloverName);
+          if (!created.response.ok) {
+            console.error('[get_qrcode] rollover create failed:', JSON.stringify(created.data).slice(0, 300));
+          } else {
+            await delay(800);
+            const qrRes = await fetch(`${baseUrl}/instance/connect/${rolloverName}`, {
+              method: 'GET',
+              headers: apiHeaders,
+            });
+            const qrData = await parseJsonResponse(qrRes);
+            const rolloverQr = extractQrCode(qrData);
+            if (rolloverQr) {
+              await supabase.from('whatsapp_instances').upsert({
+                company_id: companyId,
+                instance_name: rolloverName,
+                instance_id: created.data?.instance?.instanceId || created.data?.instanceId || rolloverName,
+                status: 'disconnected',
+                phone_number: null,
+              }, { onConflict: 'company_id' });
+
+              return new Response(JSON.stringify({
+                ...qrData,
+                success: true,
+                instanceName: rolloverName,
+                rolledOver: true,
+              }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+            data = { ...qrData, instanceName: rolloverName, rolledOver: true };
+          }
+        }
+
+        if (companyId && extractQrCode(data)) {
+          await supabase.from('whatsapp_instances')
+            .update({ status: 'disconnected', phone_number: null })
+            .eq('company_id', companyId);
+        }
 
         return new Response(JSON.stringify(data), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -297,12 +434,18 @@ serve(async (req) => {
       }
 
       case 'disconnect': {
-        const { instanceName } = params;
+        const { instanceName, companyId } = params;
         const res = await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
           method: 'DELETE',
-          headers: { 'apikey': EVOLUTION_API_KEY },
+          headers: apiHeaders,
         });
-        const data = await res.json();
+        const data = await parseJsonResponse(res);
+
+        if (companyId) {
+          await supabase.from('whatsapp_instances')
+            .update({ status: 'disconnected', phone_number: null })
+            .eq('company_id', companyId);
+        }
 
         return new Response(JSON.stringify({ success: true, data }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -311,11 +454,24 @@ serve(async (req) => {
 
       case 'delete_instance': {
         const { instanceName, companyId } = params;
+        // Logout first to release the WhatsApp session before deleting the instance.
+        try {
+          const logoutRes = await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
+            method: 'DELETE',
+            headers: apiHeaders,
+          });
+          console.log(`[delete_instance] logout ${instanceName} status=${logoutRes.status}`);
+          await logoutRes.text();
+          await delay(1000);
+        } catch (e) {
+          console.warn('[delete_instance] logout before delete failed:', e);
+        }
+
         const res = await fetch(`${baseUrl}/instance/delete/${instanceName}`, {
           method: 'DELETE',
-          headers: { 'apikey': EVOLUTION_API_KEY },
+          headers: apiHeaders,
         });
-        const data = await res.json();
+        const data = await parseJsonResponse(res);
 
         if (companyId) {
           await supabase.from('whatsapp_instances')
