@@ -66,7 +66,7 @@ export function useWhatsApp(companyId?: string) {
     setConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
-        body: { action: 'get_qrcode', instanceName },
+        body: { action: 'get_qrcode', instanceName, companyId },
       });
       if (error) throw error;
       
@@ -107,7 +107,7 @@ export function useWhatsApp(companyId?: string) {
     if (!instance?.instance_name || !companyId) return;
     try {
       await supabase.functions.invoke('whatsapp-evolution', {
-        body: { action: 'disconnect', instanceName: instance.instance_name },
+        body: { action: 'disconnect', instanceName: instance.instance_name, companyId },
       });
       await supabase.from('whatsapp_instances')
         .update({ status: 'disconnected' })
