@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.63.7-beta";
+export const VERSION = "1.64.0-beta";
 export const RELEASE_DATE = "2026-07-27"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Monitor NFC-e — Inutilizar direto pelo card de ação";
+export const CODENAME = "PinPDV SmartPOS v1 — piloto Margen";
 
 export interface Release {
   version: string;
@@ -19,6 +19,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.64.0-beta",
+    date: "2026-07-27",
+    codename: "PinPDV SmartPOS v1 — piloto Margen",
+    changes: [
+      "Nova infraestrutura do módulo PinPDV (SmartPOS Multiplus) como recurso NOVO — não altera absolutamente nada do TEF/PinPad atual em produção. As lojas que hoje usam TEF PinPad Multiplus (Lancheria I9, Bon Appetit, Cozinha da Ruiva) continuam com o fluxo idêntico ao anterior.",
+      "Criadas tabelas `pinpdv_terminals` (cadastro de maquininhas SmartPOS por empresa) e `pinpdv_terminal_locks` (trava efêmera para cenários com múltiplos caixas — scaffold da v1.1, ainda não usada).",
+      "Módulo `pinpdv_v1` habilitado APENAS na Margen Pizzaria (piloto — 1 caixa, 1 terminal, sem lock). Demais lojas ficam com o módulo desligado por padrão.",
+      "Versões v1.1 (múltiplos caixas com lock por serial + `default_cash_register_id`) e v2 (dashboard de terminais + heartbeat) documentadas em `.lovable/memory/features/pinpdv-integration.md` e scaffoldadas para ativação futura, sem código em runtime.",
+      "Módulo aparece no controle de Módulos por Empresa (Super Admin) como `PinPDV v1 — SmartPOS (piloto)`. Rótulo curto `PinPDV v1` no badge do painel do revendedor.",
+      "Sem alteração em TEF, PinPad, PDV V1, PDV V2, Pedido Express, Frente de Caixa, NFC-e, NF-e, Cardápio, Compras, Financeiro, Estoque, WhatsApp ou impressão. Migração 100% aditiva.",
+    ],
+  },
   {
     version: "1.63.7-beta",
     date: "2026-07-27",
