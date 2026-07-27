@@ -3013,6 +3013,103 @@ export type Database = {
           },
         ]
       }
+      pinpdv_terminal_locks: {
+        Row: {
+          cash_register_id: string | null
+          company_id: string
+          expires_at: string
+          external_id: string | null
+          locked_at: string
+          terminal_id: string
+        }
+        Insert: {
+          cash_register_id?: string | null
+          company_id: string
+          expires_at?: string
+          external_id?: string | null
+          locked_at?: string
+          terminal_id: string
+        }
+        Update: {
+          cash_register_id?: string | null
+          company_id?: string
+          expires_at?: string
+          external_id?: string | null
+          locked_at?: string
+          terminal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinpdv_terminal_locks_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinpdv_terminal_locks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinpdv_terminal_locks_terminal_id_fkey"
+            columns: ["terminal_id"]
+            isOneToOne: true
+            referencedRelation: "pinpdv_terminals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pinpdv_terminals: {
+        Row: {
+          active: boolean
+          apelido: string | null
+          company_id: string
+          created_at: string
+          default_cash_register_id: string | null
+          id: string
+          serial: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          apelido?: string | null
+          company_id: string
+          created_at?: string
+          default_cash_register_id?: string | null
+          id?: string
+          serial: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          apelido?: string | null
+          company_id?: string
+          created_at?: string
+          default_cash_register_id?: string | null
+          id?: string
+          serial?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinpdv_terminals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinpdv_terminals_default_cash_register_id_fkey"
+            columns: ["default_cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       print_queue: {
         Row: {
           company_id: string
