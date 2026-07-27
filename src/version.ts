@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.63.5-beta";
+export const VERSION = "1.63.6-beta";
 export const RELEASE_DATE = "2026-07-27"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Reprocessar NFC-e — recarrega cadastro atual";
+export const CODENAME = "Reprocessar NFC-e — atualização Fiscal Flow corrigida";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.63.6-beta",
+    date: "2026-07-27",
+    codename: "Reprocessar NFC-e — atualização Fiscal Flow corrigida",
+    changes: [
+      "Corrigida a rota usada antes do reprocessamento: quando a URL fiscal já apontava para `/nfce-api`, o sistema montava `/nfce-api/nfce-api/...` e a Fiscal Flow retornava 404, mantendo o XML antigo rejeitado.",
+      "O Monitor NFC-e agora tenta as rotas corretas de atualização sem duplicar o path, depois chama `/reprocessar` com o payload já recarregado do cadastro atual do produto/regra tributária.",
+      "A resposta `success: true` com status `pendente` não é mais tratada como autorizada; o status local só vira autorizada quando houver autorização real, chave/protocolo ou status autorizado.",
+      "Sem alteração em TEF, PinPad, PDV V2, Frente de Caixa, Cardápio, NF-e, Compras, Financeiro, Estoque, WhatsApp ou impressão.",
+    ],
+  },
   {
     version: "1.63.5-beta",
     date: "2026-07-27",
