@@ -12,22 +12,33 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    const adminSecret = req.headers.get('x-admin-secret')
+    const isAdminBypass = !!adminSecret && adminSecret === Deno.env.get('NFCE_WEBHOOK_SECRET')
+    if (!isAdminBypass && !authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    )
+    const supabase = isAdminBypass
+      ? createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+      : createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_ANON_KEY')!,
+          { global: { headers: { Authorization: authHeader! } } }
+        )
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
+    let userId: string
+    if (isAdminBypass) {
+      // Reemissão administrativa (uso interno): usa o adminUserId enviado no body
+      // ou fallback para o created_by do registro original quando aplicável.
+      const b = await req.clone().json().catch(() => ({}))
+      userId = b?.adminUserId || '00000000-0000-0000-0000-000000000000'
+    } else {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
+      }
+      userId = user.id
     }
-
-    const userId = user.id
     const GLOBAL_NFCE_API_KEY = Deno.env.get('NFCE_API_KEY')
     const NFCE_API_URL = Deno.env.get('NFCE_API_URL')
 
@@ -39,12 +50,14 @@ Deno.serve(async (req) => {
     const { action, companyId, saleId, nfceId, payload } = body
 
     // Verify user belongs to company
-    const { data: belongs } = await supabase.rpc('user_belongs_to_company', {
-      _user_id: userId,
-      _company_id: companyId
-    })
-    if (!belongs) {
-      return new Response(JSON.stringify({ error: 'Acesso negado' }), { status: 403, headers: corsHeaders })
+    if (!isAdminBypass) {
+      const { data: belongs } = await supabase.rpc('user_belongs_to_company', {
+        _user_id: userId,
+        _company_id: companyId
+      })
+      if (!belongs) {
+        return new Response(JSON.stringify({ error: 'Acesso negado' }), { status: 403, headers: corsHeaders })
+      }
     }
 
     // ---- Per-company token (Fiscal Flow) ----------------------------------
