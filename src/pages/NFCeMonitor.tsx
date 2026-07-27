@@ -11,6 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { 
   FileText, Loader2, RefreshCw, Search, CheckCircle, XCircle, 
-  Clock, AlertTriangle, Ban, Eye, Copy, RotateCcw, X, Printer, CloudDownload, MoreVertical, Download
+  Clock, AlertTriangle, Ban, Eye, Copy, RotateCcw, X, Printer, CloudDownload, MoreVertical, Download, FileX2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -59,7 +62,10 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; cl
   rejeitada: { label: 'Rejeitada', icon: XCircle, className: 'bg-destructive/15 text-destructive border-destructive/30' },
   cancelada: { label: 'Cancelada', icon: Ban, className: 'bg-muted text-muted-foreground border-border' },
   denegada: { label: 'Denegada', icon: AlertTriangle, className: 'bg-destructive/15 text-destructive border-destructive/30' },
+  inutilizada: { label: 'Inutilizada', icon: FileX2, className: 'bg-slate-500/15 text-slate-700 border-slate-500/30' },
 };
+
+const DEFAULT_INUT_JUSTIFICATIVA = 'nfce nao consta na base de dados';
 
 export default function NFCeMonitor() {
   const { company } = useAuthContext();
@@ -70,6 +76,9 @@ export default function NFCeMonitor() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRecord, setSelectedRecord] = useState<NFCeRecord | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [inutRecord, setInutRecord] = useState<NFCeRecord | null>(null);
+  const [inutJust, setInutJust] = useState(DEFAULT_INUT_JUSTIFICATIVA);
+  const [inutSending, setInutSending] = useState(false);
   const recordsRef = useRef<NFCeRecord[]>([]);
 
   const loadRecords = useCallback(async () => {
@@ -315,6 +324,68 @@ export default function NFCeMonitor() {
     }
   }
 
+  function openInutilizar(record: NFCeRecord) {
+    setInutRecord(record);
+    setInutJust(DEFAULT_INUT_JUSTIFICATIVA);
+  }
+
+  async function handleConfirmInutilizar() {
+    if (!company?.id || !inutRecord) return;
+    const numero = parseInt(String(inutRecord.numero || '').replace(/\D/g, ''), 10);
+    const serie = String(inutRecord.serie || '1').replace(/\D/g, '') || '1';
+    if (!Number.isFinite(numero) || numero <= 0) {
+      toast.error('NFC-e sem número — impossível inutilizar.');
+      return;
+    }
+    const just = inutJust.trim();
+    if (just.length < 15) {
+      toast.error('Justificativa precisa ter ao menos 15 caracteres.');
+      return;
+    }
+    setInutSending(true);
+    setActionLoading(inutRecord.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('nfce-proxy', {
+        body: {
+          action: 'inutilizar',
+          companyId: company.id,
+          payload: {
+            serie,
+            numero_inicial: numero,
+            numero_final: numero,
+            ano: new Date(inutRecord.created_at).getFullYear(),
+            justificativa: just,
+          },
+        },
+      });
+      if (error) throw error;
+      if (data?.error && data?.status !== 'aceita') throw new Error(data.error);
+      if (data?.status === 'aceita') {
+        // Marca o próprio registro como inutilizada
+        await supabase
+          .from('nfce_records')
+          .update({
+            status: 'inutilizada',
+            motivo_rejeicao: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', inutRecord.id);
+        toast.success(`NFC-e ${inutRecord.numero} inutilizada com sucesso na SEFAZ.`);
+        setInutRecord(null);
+        loadRecords();
+      } else if (data?.status === 'rejeitada') {
+        toast.error('Inutilização rejeitada pela SEFAZ. Verifique o histórico em Inutilizações.');
+      } else {
+        toast.info('Pedido de inutilização enviado. Aguarde retorno da SEFAZ.');
+      }
+    } catch (e: any) {
+      toast.error('Falha ao inutilizar: ' + (e?.message || 'desconhecido'));
+    } finally {
+      setInutSending(false);
+      setActionLoading(null);
+    }
+  }
+
   const filteredRecords = records.filter((r) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
@@ -547,6 +618,18 @@ export default function NFCeMonitor() {
                                   >
                                     <X className="h-4 w-4 mr-2" /> Cancelar
                                   </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => openInutilizar(record)}
+                                    disabled={
+                                      !record.numero ||
+                                      record.status === 'autorizada' ||
+                                      record.status === 'cancelada' ||
+                                      record.status === 'inutilizada'
+                                    }
+                                    className="text-amber-700 focus:text-amber-700"
+                                  >
+                                    <FileX2 className="h-4 w-4 mr-2" /> Inutilizar
+                                  </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
                                     onClick={() => handleDownloadXml(record)}
@@ -752,6 +835,61 @@ export default function NFCeMonitor() {
               </div>
             </ScrollArea>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Inutilizar Dialog */}
+      <Dialog open={!!inutRecord} onOpenChange={(o) => !inutSending && !o && setInutRecord(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileX2 className="h-5 w-5 text-amber-600" />
+              Inutilizar NFC-e {inutRecord?.numero}
+            </DialogTitle>
+            <DialogDescription>
+              Solicita à SEFAZ a inutilização desta numeração. A operação é
+              definitiva e o número não poderá mais ser utilizado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-muted-foreground text-xs">Série</span>
+                <p className="font-medium">{inutRecord?.serie || '1'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">Número</span>
+                <p className="font-medium">{inutRecord?.numero}</p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="inut-just-monitor">
+                Justificativa{' '}
+                <span className={`text-xs ${inutJust.trim().length >= 15 ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                  ({inutJust.trim().length}/15 min)
+                </span>
+              </Label>
+              <Textarea
+                id="inut-just-monitor"
+                rows={3}
+                value={inutJust}
+                onChange={(e) => setInutJust(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInutRecord(null)} disabled={inutSending}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmInutilizar}
+              disabled={inutSending || inutJust.trim().length < 15}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {inutSending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Inutilizar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppLayout>
