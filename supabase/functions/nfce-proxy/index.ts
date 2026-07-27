@@ -290,6 +290,118 @@ Deno.serve(async (req) => {
       return sanitized
     }
 
+    // Reprocessamento "normal" (não-CRED): antes de reenviar à Fiscal Flow,
+    // recarrega os campos fiscais de cada item a partir do cadastro atual do
+    // produto + regra tributária vinculada. Assim, quando o operador corrige
+    // NCM/CEST/CFOP na regra tributária (ou no produto) e clica em Reprocessar,
+    // a nota vai à SEFAZ com os valores atualizados.
+    //
+    // Casamento de itens: procuramos o produto pela coluna `code` (mesma que
+    // o emissor grava em `codigo` no payload). Se não achar, tentamos por
+    // `gtin` e, em último caso, mantemos o item como estava.
+    async function refreshItemFiscalFieldsFromDb(sourcePayload: any, companyId: string): Promise<{ payload: any; changed: boolean; changes: string[] }> {
+      const changes: string[] = []
+      if (!sourcePayload || !Array.isArray(sourcePayload.itens) || sourcePayload.itens.length === 0) {
+        return { payload: sourcePayload, changed: false, changes }
+      }
+
+      const codes = Array.from(new Set(
+        sourcePayload.itens
+          .map((it: any) => String(it?.codigo || it?.cProd || '').trim())
+          .filter((v: string) => v.length > 0)
+      ))
+      const gtins = Array.from(new Set(
+        sourcePayload.itens
+          .map((it: any) => String(it?.gtin || it?.cEAN || '').replace(/\D/g, ''))
+          .filter((v: string) => v.length >= 8 && v !== 'SEM GTIN')
+      ))
+
+      const productsByCode = new Map<string, any>()
+      const productsByGtin = new Map<string, any>()
+
+      if (codes.length > 0) {
+        const { data } = await supabase
+          .from('products')
+          .select('id, code, gtin, ncm, cest, cfop, tax_rule_id')
+          .eq('company_id', companyId)
+          .in('code', codes)
+        for (const p of data || []) {
+          if (p.code) productsByCode.set(String(p.code), p)
+          if (p.gtin) productsByGtin.set(String(p.gtin), p)
+        }
+      }
+      if (gtins.length > 0) {
+        const { data } = await supabase
+          .from('products')
+          .select('id, code, gtin, ncm, cest, cfop, tax_rule_id')
+          .eq('company_id', companyId)
+          .in('gtin', gtins)
+        for (const p of data || []) {
+          if (p.gtin) productsByGtin.set(String(p.gtin), p)
+          if (p.code && !productsByCode.has(String(p.code))) productsByCode.set(String(p.code), p)
+        }
+      }
+
+      const ruleIds = Array.from(new Set(
+        [...productsByCode.values(), ...productsByGtin.values()]
+          .map((p) => p.tax_rule_id)
+          .filter(Boolean)
+      ))
+      const rulesById = new Map<string, any>()
+      if (ruleIds.length > 0) {
+        const { data } = await supabase
+          .from('tax_rules')
+          .select('id, ncm, cest, cfop, csosn, icms_aliquot, pis_cst, pis_aliquot, cofins_cst, cofins_aliquot')
+          .in('id', ruleIds)
+        for (const r of data || []) rulesById.set(String(r.id), r)
+      }
+
+      const clean = (v: any) => (typeof v === 'string' ? v.trim() : '')
+      const newItens = sourcePayload.itens.map((it: any, idx: number) => {
+        const code = String(it?.codigo || it?.cProd || '').trim()
+        const gtin = String(it?.gtin || it?.cEAN || '').replace(/\D/g, '')
+        const product = (code && productsByCode.get(code)) || (gtin && productsByGtin.get(gtin)) || null
+        if (!product) return it
+        const rule = product.tax_rule_id ? rulesById.get(String(product.tax_rule_id)) : null
+
+        const oldNcm = clean(it.ncm)
+        const oldCfop = clean(it.cfop)
+        const oldCest = clean(it.cest)
+        const oldCsosn = clean(it.csosn)
+
+        const newNcm = clean(product.ncm) || clean(rule?.ncm) || oldNcm
+        const newCfop = clean(rule?.cfop) || oldCfop
+        const newCest = clean(product.cest) || clean(rule?.cest) || oldCest
+        const newCsosn = clean(rule?.csosn) || oldCsosn
+
+        const merged: any = {
+          ...it,
+          ncm: newNcm,
+          cfop: newCfop,
+          csosn: newCsosn,
+        }
+        if (newCest) merged.cest = newCest
+        if (rule) {
+          merged.cst_pis = clean(rule.pis_cst) || it.cst_pis || '49'
+          merged.cst_cofins = clean(rule.cofins_cst) || it.cst_cofins || '49'
+          merged.aliquota_icms = rule.icms_aliquot ?? it.aliquota_icms ?? 0
+          merged.aliquota_pis = rule.pis_aliquot ?? it.aliquota_pis ?? 0
+          merged.aliquota_cofins = rule.cofins_aliquot ?? it.aliquota_cofins ?? 0
+        }
+
+        const diffs: string[] = []
+        if (newNcm !== oldNcm) diffs.push(`ncm ${oldNcm || '∅'}→${newNcm || '∅'}`)
+        if (newCfop !== oldCfop) diffs.push(`cfop ${oldCfop || '∅'}→${newCfop || '∅'}`)
+        if (newCest !== oldCest) diffs.push(`cest ${oldCest || '∅'}→${newCest || '∅'}`)
+        if (newCsosn !== oldCsosn) diffs.push(`csosn ${oldCsosn || '∅'}→${newCsosn || '∅'}`)
+        if (diffs.length > 0) changes.push(`item ${idx + 1} (${code || gtin || '?'}): ${diffs.join(', ')}`)
+        return merged
+      })
+
+      const payload = { ...sourcePayload, itens: newItens }
+      return { payload, changed: changes.length > 0, changes }
+    }
+
     async function atualizarNFCeFiscalFlow(nfceId: string, fixedPayload: any): Promise<{ response: Response, result: any, url: string }> {
       // A Fiscal Flow expõe o "PUT /nfce-api/{id}" em algumas instalações e
       // "PUT /nfce-api/atualizar/{id}" em outras. Também aceitamos POST no
