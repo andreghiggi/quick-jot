@@ -1272,6 +1272,7 @@ Deno.serve(async (req) => {
         // sozinho reaproveita o item salvo na FF e manteria CSOSN/CST antigos.
         let reprocPayload: any = null
         let isCredFinanceiro = false
+        let abortReprocessReason: string | null = null
         let rec: any = null
         try {
           const { data } = await supabase
@@ -1335,7 +1336,15 @@ Deno.serve(async (req) => {
                 const putResult = await atualizarNFCeFiscalFlow(nfceId, reprocPayload)
                 const putRejectedByBody = putResult.result?.success === false || putResult.result?.sucesso === false || Boolean(putResult.result?.error || putResult.result?.erro)
                 if (!putResult.response.ok || putRejectedByBody) {
-                  console.warn('[nfce-proxy] Reprocessar: PUT de atualização não confirmado; /reprocessar seguirá com body sanitizado. url=', putResult.url, 'result=', JSON.stringify(putResult.result).substring(0, 400))
+                  abortReprocessReason = 'A Fiscal Flow não confirmou a atualização do XML com o cadastro atual. Reprocessamento bloqueado para evitar reenviar o XML antigo rejeitado. Última rota: ' + putResult.url
+                  console.warn('[nfce-proxy] Reprocessar: atualização remota não confirmada; reprocessamento bloqueado para evitar XML antigo. url=', putResult.url, 'result=', JSON.stringify(putResult.result).substring(0, 400))
+                  await supabase.from('nfce_records')
+                    .update({
+                      motivo_rejeicao: abortReprocessReason,
+                      response_payload: putResult.result,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', rec.id)
                 }
               } else {
                 console.log('[nfce-proxy] Reprocessar: nenhum campo fiscal mudou vs. cadastro; enviando payload original.')
@@ -1348,6 +1357,15 @@ Deno.serve(async (req) => {
           console.error('[nfce-proxy] Reprocessar: falha ao carregar payload:', e)
         }
         console.log('[nfce-proxy] Reprocessar nfceId:', nfceId, 'com payload override:', !!reprocPayload)
+        if (abortReprocessReason) {
+          apiResponse = new Response(null, { status: 200 })
+          result = {
+            success: false,
+            blocked: true,
+            error: abortReprocessReason,
+          }
+          break
+        }
         apiResponse = await fetch(`${NFCE_API_URL}/${nfceId}/reprocessar`, {
           method: 'POST',
           headers: {
