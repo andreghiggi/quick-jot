@@ -1,0 +1,1 @@
+UPDATE public.products SET ncm='21069090', tax_rule_id=NULL, updated_at=now() WHERE id='525b7855-96b0-4630-8f82-804d9e90c690';
