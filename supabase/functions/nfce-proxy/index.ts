@@ -1306,6 +1306,35 @@ Deno.serve(async (req) => {
                 .eq('id', rec.id)
             }
             console.log('[nfce-proxy] Reprocessar CRED financeiro: chamando /reprocessar para', nfceId, '(mesma numeração)')
+          } else if (reprocPayload && Array.isArray(reprocPayload.itens)) {
+            // NFC-e "normal": recarrega NCM/CEST/CFOP/CSOSN/alíquotas do
+            // cadastro atual (produto + regra tributária) antes de reenviar.
+            try {
+              const refreshed = await refreshItemFiscalFieldsFromDb(reprocPayload, companyId)
+              if (refreshed.changed) {
+                reprocPayload = refreshed.payload
+                console.log('[nfce-proxy] Reprocessar: campos fiscais atualizados a partir do cadastro:', refreshed.changes.join(' | '))
+                await supabase.from('nfce_records')
+                  .update({
+                    request_payload: reprocPayload,
+                    motivo_rejeicao: 'Payload atualizado a partir do cadastro (produto/regra tributária) antes do reprocessamento: ' + refreshed.changes.join(' | '),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', rec.id)
+                // Tenta atualizar a NFC-e na Fiscal Flow com os itens corrigidos
+                // (mesma lógica do CRED). Se a FF não aceitar o PUT, o body do
+                // /reprocessar abaixo já vai levar o payload corrigido.
+                const putResult = await atualizarNFCeFiscalFlow(nfceId, reprocPayload)
+                const putRejectedByBody = putResult.result?.success === false || putResult.result?.sucesso === false || Boolean(putResult.result?.error || putResult.result?.erro)
+                if (!putResult.response.ok || putRejectedByBody) {
+                  console.warn('[nfce-proxy] Reprocessar: PUT de atualização não confirmado; /reprocessar seguirá com body sanitizado. url=', putResult.url, 'result=', JSON.stringify(putResult.result).substring(0, 400))
+                }
+              } else {
+                console.log('[nfce-proxy] Reprocessar: nenhum campo fiscal mudou vs. cadastro; enviando payload original.')
+              }
+            } catch (e) {
+              console.error('[nfce-proxy] Reprocessar: falha ao recarregar campos fiscais:', e)
+            }
           }
         } catch (e) {
           console.error('[nfce-proxy] Reprocessar: falha ao carregar payload:', e)
