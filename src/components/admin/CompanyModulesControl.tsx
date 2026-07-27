@@ -67,6 +67,11 @@ const AVAILABLE_MODULES = [
     name: 'financeiro',
     label: 'Financeiro (Crediário / Contas a Receber)',
     description: 'Habilita o módulo Financeiro: Contas a Receber alimentado automaticamente pelo Crediário na Frente de Caixa. Requer o módulo Loja / Frente de Caixa. Não altera Caixa, TEF, NFC-e, PDV V2, Pedido Express ou impressão. Contas a Pagar e Fluxo de Caixa consolidado ficam para fases futuras.'
+  },
+  {
+    name: 'pinpdv_v1',
+    label: 'PinPDV v1 — SmartPOS (piloto)',
+    description: 'Integração com maquininha SmartPOS PinPDV (Multiplus) como recurso NOVO — não altera nada do TEF/PinPad atual, que continua funcionando exatamente como hoje. v1 cobre 1 terminal por loja (ideal para lojas com 1 caixa). v1.1 (múltiplos caixas + trava) e v2 (pool de terminais + dashboard online) ficam scaffoldados e desligados por padrão.'
   }
 ];
 
