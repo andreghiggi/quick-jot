@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.63.4-beta";
-export const RELEASE_DATE = "2026-07-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "WhatsApp — Reconexão e QR Code seguro";
+export const VERSION = "1.63.5-beta";
+export const RELEASE_DATE = "2026-07-27"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Reprocessar NFC-e — recarrega cadastro atual";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.63.5-beta",
+    date: "2026-07-27",
+    codename: "Reprocessar NFC-e — recarrega cadastro atual",
+    changes: [
+      "Monitor NFC-e: o botão Reprocessar agora recarrega NCM, CEST, CFOP, CSOSN e alíquotas de PIS/COFINS/ICMS de cada item a partir do cadastro atual do produto e da regra tributária vinculada, antes de reenviar à Fiscal Flow.",
+      "Corrige o cenário em que a loja edita o NCM (ou CFOP) na regra tributária depois de uma rejeição, clica em Reprocessar e a nota continua rejeitando — antes o proxy reenviava o payload congelado no momento da emissão. Agora as correções feitas na regra ou no produto são aplicadas automaticamente.",
+      "Casamento por código do produto (com fallback para GTIN). Itens que não são encontrados no cadastro seguem com os valores originais — sem risco de quebrar notas antigas de produtos excluídos.",
+      "Antes de chamar `/reprocessar`, o proxy tenta atualizar a NFC-e na Fiscal Flow via PUT/PATCH/POST (mesma lógica já usada no CRED). Se a Fiscal Flow não aceitar a atualização, o payload corrigido segue no body do `/reprocessar`. Sem consumir nova numeração fiscal.",
+      "Sem alteração em TEF, PinPad, PDV V2, Frente de Caixa, Cardápio, NF-e, Compras, Financeiro, Estoque, WhatsApp ou impressão. Fluxo CRED-crediário permanece intacto.",
+    ],
+  },
   {
     version: "1.63.4-beta",
     date: "2026-07-26",
