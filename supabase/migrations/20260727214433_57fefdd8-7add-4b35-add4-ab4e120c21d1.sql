@@ -1,0 +1,1 @@
+UPDATE public.products SET ncm='22011010', updated_at=now() WHERE id='525b7855-96b0-4630-8f82-804d9e90c690';
