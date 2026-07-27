@@ -571,7 +571,7 @@ export default function NFCeMonitor() {
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedRecord} onOpenChange={(open) => !open && setSelectedRecord(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh]">
+        <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Detalhes da NFC-e</DialogTitle>
           </DialogHeader>
