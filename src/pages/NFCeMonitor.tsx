@@ -571,7 +571,7 @@ export default function NFCeMonitor() {
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedRecord} onOpenChange={(open) => !open && setSelectedRecord(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh]">
+        <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Detalhes da NFC-e</DialogTitle>
           </DialogHeader>
@@ -656,6 +656,81 @@ export default function NFCeMonitor() {
                     </div>
                   </>
                 )}
+
+                {(() => {
+                  const itens: any[] = Array.isArray(selectedRecord.request_payload?.itens)
+                    ? selectedRecord.request_payload.itens
+                    : Array.isArray(selectedRecord.request_payload?.items)
+                    ? selectedRecord.request_payload.items
+                    : [];
+                  if (itens.length === 0) return null;
+                  const motivo = selectedRecord.motivo_rejeicao || '';
+                  const m = motivo.match(/item\s*[:#]?\s*(\d+)/i);
+                  const highlightIdx = m ? parseInt(m[1], 10) : -1;
+                  const num = (v: any) => Number(v ?? 0);
+                  return (
+                    <>
+                      <Separator />
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">Itens da nota ({itens.length})</span>
+                          {highlightIdx > 0 && (
+                            <span className="text-xs text-destructive">Item {highlightIdx} destacado</span>
+                          )}
+                        </div>
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-10">#</TableHead>
+                                <TableHead>Descrição</TableHead>
+                                <TableHead className="text-right">Qtd</TableHead>
+                                <TableHead className="text-right">Vl. Unit</TableHead>
+                                <TableHead className="text-right">Total</TableHead>
+                                <TableHead>CFOP</TableHead>
+                                <TableHead>NCM</TableHead>
+                                <TableHead>CST</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {itens.map((it: any, idx: number) => {
+                                const n = idx + 1;
+                                const desc = it.descricao || it.xProd || it.nome || it.name || '—';
+                                const qtd = num(it.quantidade ?? it.qCom ?? it.qtd);
+                                const vUnit = num(it.valor_unitario ?? it.vUnCom ?? it.preco_unitario ?? it.preco);
+                                const vTotal = num(it.valor_total ?? it.vProd ?? (qtd * vUnit));
+                                const cfop = it.cfop ?? it.CFOP ?? '—';
+                                const ncm = it.ncm ?? it.NCM ?? '—';
+                                const cst = it.csosn ?? it.CSOSN ?? it.cst ?? it.CST ?? '—';
+                                const isHl = n === highlightIdx;
+                                return (
+                                  <TableRow key={idx} className={isHl ? 'bg-destructive/10' : ''}>
+                                    <TableCell className={isHl ? 'font-bold text-destructive' : ''}>{n}</TableCell>
+                                    <TableCell className="max-w-[220px] truncate" title={desc}>{desc}</TableCell>
+                                    <TableCell className="text-right">{qtd.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</TableCell>
+                                    <TableCell className="text-right">R$ {vUnit.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">R$ {vTotal.toFixed(2)}</TableCell>
+                                    <TableCell className="font-mono text-xs">{cfop}</TableCell>
+                                    <TableCell className="font-mono text-xs">{ncm}</TableCell>
+                                    <TableCell className="font-mono text-xs">{cst}</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                        <details className="mt-2">
+                          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                            Ver JSON completo do payload
+                          </summary>
+                          <pre className="text-[10px] bg-muted p-2 rounded mt-1 overflow-auto max-h-64">
+                            {JSON.stringify(selectedRecord.request_payload, null, 2)}
+                          </pre>
+                        </details>
+                      </div>
+                    </>
+                  );
+                })()}
 
                 {selectedRecord.qrcode_url && (
                   <div>
