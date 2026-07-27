@@ -1,0 +1,1 @@
+UPDATE public.nfce_records SET status='substituida', motivo_rejeicao='Substituída por TAB-MULTI-1b85383b-1785028363675-R2 (NFC-e 000005328)' WHERE id IN ('5e7173ca-e774-431f-9d35-2927cb48e767','765cd5f8-3c36-4a1d-adba-55298c4f2381');
