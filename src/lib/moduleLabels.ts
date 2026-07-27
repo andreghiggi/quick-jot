@@ -13,6 +13,7 @@ export const MODULE_SHORT_LABEL: Record<string, string> = {
   mercado: 'Loja',
   cardapio: 'Cardápio',
   financeiro: 'Financeiro',
+  pinpdv_v1: 'PinPDV v1',
 };
 
 export function moduleShortLabel(name: string): string {
