@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.63.6-beta";
+export const VERSION = "1.63.7-beta";
 export const RELEASE_DATE = "2026-07-27"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Reprocessar NFC-e — atualização Fiscal Flow corrigida";
+export const CODENAME = "Monitor NFC-e — Inutilizar direto pelo card de ação";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.63.7-beta",
+    date: "2026-07-27",
+    codename: "Monitor NFC-e — Inutilizar direto pelo card de ação",
+    changes: [
+      "Novo item 'Inutilizar' no menu de 3 pontinhos da coluna Ações do Monitor NFC-e. Solicita à SEFAZ a inutilização da numeração da NFC-e selecionada (série + número da própria linha).",
+      "Justificativa vem pré-preenchida como 'nfce nao consta na base de dados' e pode ser ajustada antes do envio. Mínimo de 15 caracteres, conforme regra da SEFAZ.",
+      "Quando a SEFAZ aceita a inutilização, o status do registro no monitor é atualizado imediatamente para 'Inutilizada' (badge cinza) — sem precisar sincronizar manualmente.",
+      "Ação bloqueada para notas 'Autorizada' (para essas o caminho continua sendo Cancelar), 'Cancelada' e 'Inutilizada'. Sem alteração em TEF, PinPad, PDV V2, Frente de Caixa, Cardápio, NF-e, Compras, Financeiro, Estoque, WhatsApp ou impressão.",
+    ],
+  },
   {
     version: "1.63.6-beta",
     date: "2026-07-27",
