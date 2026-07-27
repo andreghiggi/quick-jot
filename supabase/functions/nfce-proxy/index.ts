@@ -403,10 +403,11 @@ Deno.serve(async (req) => {
     }
 
     async function atualizarNFCeFiscalFlow(nfceId: string, fixedPayload: any): Promise<{ response: Response, result: any, url: string }> {
-      // A Fiscal Flow expõe o "PUT /nfce-api/{id}" em algumas instalações e
-      // "PUT /nfce-api/atualizar/{id}" em outras. Também aceitamos POST no
-      // mesmo path como fallback (algumas rotas serverless não aceitam PUT).
-      // Testamos todas as variantes até uma responder OK.
+      // A Fiscal Flow expõe variações de atualização dependendo da instalação.
+      // Quando NFCE_API_URL já aponta para /nfce-api, NÃO podemos concatenar
+      // outro /nfce-api — isso foi exatamente o que manteve o XML antigo no
+      // reprocessamento da Bon Appetit. Por isso testamos primeiro as rotas
+      // relativas à URL configurada e só depois os fallbacks pela raiz.
       const attempts: Array<{ url: string; method: 'PUT' | 'POST' | 'PATCH' }> = []
       const seen = new Set<string>()
       const push = (url: string, method: 'PUT' | 'POST' | 'PATCH') => {
@@ -415,17 +416,24 @@ Deno.serve(async (req) => {
         seen.add(key)
         attempts.push({ url, method })
       }
-      // PUT clássico como documentado no bilhete técnico
-      push(`${NFCE_API_URL}/${nfceId}`, 'PUT')
-      push(`${FF_BASE_URL}/nfce-api/${nfceId}`, 'PUT')
-      push(`${FF_BASE_URL}/nfce-api/atualizar/${nfceId}`, 'PUT')
-      push(`${FF_BASE_URL}/nfce-api/${nfceId}/atualizar`, 'PUT')
-      // PATCH nas mesmas rotas
-      push(`${NFCE_API_URL}/${nfceId}`, 'PATCH')
-      push(`${FF_BASE_URL}/nfce-api/${nfceId}`, 'PATCH')
-      // POST /atualizar como último fallback (algumas serverless bloqueiam PUT/PATCH)
-      push(`${FF_BASE_URL}/nfce-api/atualizar/${nfceId}`, 'POST')
-      push(`${FF_BASE_URL}/nfce-api/${nfceId}/atualizar`, 'POST')
+
+      const configuredBase = NFCE_API_URL.replace(/\/+$/, '')
+      const rootBase = configuredBase
+        .replace(/\/nfce-api(?:\/emitir)?$/i, '')
+        .replace(/\/emitir$/i, '')
+        .replace(/\/+$/, '')
+      const updatePaths = [
+        `${configuredBase}/${nfceId}`,
+        `${configuredBase}/atualizar/${nfceId}`,
+        `${configuredBase}/${nfceId}/atualizar`,
+        `${rootBase}/nfce-api/${nfceId}`,
+        `${rootBase}/nfce-api/atualizar/${nfceId}`,
+        `${rootBase}/nfce-api/${nfceId}/atualizar`,
+      ]
+
+      for (const url of updatePaths) push(url, 'PUT')
+      for (const url of updatePaths) push(url, 'PATCH')
+      for (const url of updatePaths) push(url, 'POST')
 
       let lastResponse = new Response(null, { status: 404 })
       let lastResult: any = { success: false, error: 'Nenhuma rota de atualização testada' }
@@ -1355,9 +1363,17 @@ Deno.serve(async (req) => {
         result = await safeJson(apiResponse)
         console.log('[nfce-proxy] Reprocessar HTTP', apiResponse.status, 'result:', JSON.stringify(result).substring(0, 500))
         // Se a Fiscal Flow autorizar, refletimos o status no banco para o
-        // Monitor exibir corretamente sem esperar novo polling.
-        if (result?.success || result?.sucesso || result?.data?.aceito) {
-          const data = result?.data || result
+        // Monitor exibir corretamente sem esperar novo polling. Importante:
+        // `success: true` com `status: pendente` significa apenas que a chamada
+        // de reprocessamento foi aceita, NÃO que a NFC-e foi autorizada.
+        const data = result?.data || result
+        const statusText = String(data?.status || data?.situacao || data?.situation || '').toLowerCase()
+        const hasFiscalAuthorization =
+          statusText.includes('autoriz') ||
+          Boolean(data?.chave || data?.chave_acesso || data?.protocolo || data?.nProt) ||
+          data?.aceito === true
+
+        if (hasFiscalAuthorization) {
           await supabase.from('nfce_records')
             .update({
               status: 'autorizada',
@@ -1370,8 +1386,12 @@ Deno.serve(async (req) => {
             .eq('nfce_id', nfceId)
             .eq('company_id', companyId)
         } else {
+          const statusForRecord = statusText.includes('rejeit')
+            ? 'rejeitada'
+            : (statusText || 'processando')
           await supabase.from('nfce_records')
             .update({
+              status: statusForRecord,
               motivo_rejeicao: typeof result === 'string' ? result : JSON.stringify(result).substring(0, 500),
               response_payload: result,
               updated_at: new Date().toISOString(),
