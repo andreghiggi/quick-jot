@@ -133,7 +133,7 @@ export function PDVV2CancelSaleDialog({ open, onOpenChange, sale, companyId, reg
           <DialogDescription>
             Valor: <strong>{formatPrice(sale.final_total)}</strong>. Esta ação não pode ser desfeita
             {hasReversibleTef && ` e disparará o estorno TEF (${tefLabel}) automaticamente`}.
-            {' '}Se houver NFC-e autorizada, ela também será cancelada na SEFAZ.
+            {shouldCancelNfce && ' Se houver NFC-e autorizada, ela também será cancelada na SEFAZ.'}
           </DialogDescription>
         </DialogHeader>
 
