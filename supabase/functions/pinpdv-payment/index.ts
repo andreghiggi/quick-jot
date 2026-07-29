@@ -94,6 +94,9 @@ serve(async (req) => {
       identifier = rawIdentifier;
 
       const sentBody: Record<string, unknown> = {
+        // A API PinPDV valida o campo como "DispositivoId" (mensagem 422 refere-se a esse nome).
+        // Mantemos "PinPdvId" como alias para retrocompatibilidade caso a doc antiga ainda seja aceita.
+        DispositivoId: pinpdvId,
         PinPdvId: pinpdvId,
         Identificador: rawIdentifier,
         Valor: amount,
@@ -125,7 +128,22 @@ serve(async (req) => {
       try { parsed = JSON.parse(text); } catch { parsed = text; }
 
       if (!response.ok) {
-        const out = { success: false, errorMessage: `Erro ao criar venda: ${response.status}`, raw: parsed };
+        // Extrai mensagem legível da validação da PinPDV (ex.: "O Dispositivo não está ativo...")
+        let friendly = `Erro ao criar venda: ${response.status}`;
+        try {
+          const errObj = parsed?.errors;
+          if (errObj && typeof errObj === 'object') {
+            const firstKey = Object.keys(errObj)[0];
+            const firstMsg = Array.isArray(errObj[firstKey]) ? errObj[firstKey][0] : errObj[firstKey];
+            if (firstMsg) friendly = String(firstMsg);
+          } else if (parsed?.detail) {
+            friendly = String(parsed.detail);
+          }
+          if (response.status === 422 && /dispositivo/i.test(friendly)) {
+            friendly = 'SmartPOS offline. Abra o app PinPDV na tela inicial da maquininha e tente novamente.';
+          }
+        } catch { /* mantém default */ }
+        const out = { success: false, errorMessage: friendly, raw: parsed };
         await logCall({ companyId, action, identifier, requestPayload: sentBody, responsePayload: parsed, httpStatus: response.status, durationMs: Date.now() - startedAt, errorMessage: out.errorMessage });
         return new Response(JSON.stringify(out), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
