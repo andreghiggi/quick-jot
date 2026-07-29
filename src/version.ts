@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.64.1-beta";
+export const VERSION = "1.64.2-beta";
 export const RELEASE_DATE = "2026-07-29"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "PinPDV SmartPOS — payload NFC-e igual ao PinPad";
+export const CODENAME = "TEF — popup de processamento visível";
 
 export interface Release {
   version: string;
@@ -19,6 +19,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.64.2-beta",
+    date: "2026-07-29",
+    codename: "TEF — popup de processamento visível",
+    changes: [
+      "O aviso 'Aguardando pagamento na maquininha…' que aparece durante uma cobrança TEF (SmartPOS PinPDV e PinPad Multiplus) no PDV V2 agora é exibido como popup centralizado sobre a tela, com backdrop escurecido e loader grande, em vez de um banner que ficava dentro da área rolável do diálogo de pagamento (e não era visto quando o operador havia rolado para baixo).",
+      "Sem alteração no fluxo do TEF: nenhum toque em `pinpdv-payment`, `multiplusCardService`, `pinpadService`, `pdvV2Tef.ts`, edge functions, NFC-e, impressão ou PinPad Multiplus. É pura mudança de apresentação do overlay já existente em `PDVV2PaymentDialog`.",
+    ],
+  },
   {
     version: "1.64.1-beta",
     date: "2026-07-29",
