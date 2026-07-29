@@ -8,6 +8,7 @@ import {
   pollPinpadStatus,
   confirmPinpadTransaction,
 } from '@/services/pinpadService';
+import { reverseMultiplusCardSale } from '@/services/multiplusCardService';
 
 export interface TefInfoFromNotes {
   type: 'pinpad' | 'smartpos';
@@ -20,6 +21,8 @@ export interface TefInfoFromNotes {
   operationType?: string;
   /** 023-000 retornado pela venda original (número de controle, deve ser ecoado no CNC). */
   controlNumber?: string;
+  /** Identificador da venda na API PinPDV (SmartPOS) — usado para estorno. */
+  saleIdentifier?: string;
 }
 
 /**
@@ -50,6 +53,10 @@ export function parseTefDataFromNotes(notes: string | null | undefined): TefInfo
   const ctrlMatch = notes.match(/\[TEF023\]([^\[]+)\[\/TEF023\]/);
   const controlNumber = ctrlMatch ? ctrlMatch[1].trim() : undefined;
 
+  // Identificador da venda SmartPOS (PinPDV). Persistido como [SPVENDA]xxx[/SPVENDA].
+  const spMatch = notes.match(/\[SPVENDA\]([^\[]+)\[\/SPVENDA\]/);
+  const saleIdentifier = spMatch ? spMatch[1].trim() : undefined;
+
   // PinPad: "TEF PinPad: NSU 123 | Aut 456 | BRAND | ACQUIRER [| OPERAÇÃO]"
   const pinpadRegex = /TEF PinPad: NSU (\S+) \| Aut (\S+) \| ([^|]+) \| ([^|\n\[]+)/;
   const pinpadMatch = notes.match(pinpadRegex);
@@ -64,11 +71,12 @@ export function parseTefDataFromNotes(notes: string | null | undefined): TefInfo
       receipt,
       operationType: extractTefOperationType(notes, matchEnd),
       controlNumber,
+      saleIdentifier,
     };
   }
 
-  // SmartPOS: "TEF: NSU 123 | Aut 456 | BRAND [| OPERAÇÃO]"
-  const smartposRegex = /TEF: NSU (\S+) \| Aut (\S+) \| ([^|\n\[]+)/;
+  // SmartPOS: "TEF SmartPOS: NSU 123 | Aut 456 | BRAND | ACQUIRER [| OPERAÇÃO]"
+  const smartposRegex = /TEF SmartPOS: NSU (\S+) \| Aut (\S+) \| ([^|]+) \| ([^|\n\[]+)/;
   const smartposMatch = notes.match(smartposRegex);
   if (smartposMatch) {
     const matchEnd = (smartposMatch.index ?? 0) + smartposMatch[0].length;
@@ -77,10 +85,11 @@ export function parseTefDataFromNotes(notes: string | null | undefined): TefInfo
       nsu: smartposMatch[1],
       authCode: smartposMatch[2],
       cardBrand: smartposMatch[3].trim(),
-      acquirer: '',
+      acquirer: smartposMatch[4].trim(),
       receipt,
       operationType: extractTefOperationType(notes, matchEnd),
       controlNumber,
+      saleIdentifier,
     };
   }
 
@@ -121,9 +130,28 @@ export async function estornarTefPedido(opts: EstornoOptions): Promise<EstornoRe
     return { success: false, message: 'Dados TEF não encontrados neste pedido' };
   }
 
-  if (tefInfo.type !== 'pinpad') {
-    return { success: false, message: 'Estorno automático disponível apenas para PinPad' };
+  // SmartPOS PinPDV: chama endpoint /pos-venda/cancelamento via edge function.
+  if (tefInfo.type === 'smartpos') {
+    if (!tefInfo.nsu) {
+      return { success: false, message: 'Venda SmartPOS sem NSU salvo — cancele manualmente na maquininha.' };
+    }
+    toast.info('Estorno enviado à SmartPOS. Aguarde...');
+    const result = await reverseMultiplusCardSale(companyId, {
+      vendaIdentificador: tefInfo.saleIdentifier,
+      nsu: tefInfo.nsu,
+      amount,
+    });
+    if (!result.success) {
+      return { success: false, message: result.errorMessage || 'Falha ao estornar SmartPOS' };
+    }
+    return {
+      success: true,
+      cancelledNotes: `[CANCELADA] ${notes || ''}`.trim(),
+      message: `Estorno SmartPOS aprovado! NSU: ${tefInfo.nsu}`,
+    };
   }
+
+  // PinPad Multiplus: fluxo CNC/CNF homologado (inalterado).
 
   const saleDate = new Date(createdAt);
   const dataTransacao = format(saleDate, 'ddMMyyyy');

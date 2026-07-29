@@ -229,10 +229,15 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
             : '';
         const controlNumber: string | undefined = (statusResult as any).controlNumber;
         const ctrlTag = controlNumber ? ` | [TEF023]${controlNumber}[/TEF023]` : '';
+        // Identificador da venda na API PinPDV — persistido para permitir
+        // estorno posterior via `reverse-sale` (endpoint /pos-venda/cancelamento).
+        const vendaIdentificador: string | undefined =
+          (statusResult as any).vendaIdentificador || (statusResult as any).identifier;
+        const spTag = vendaIdentificador ? ` | [SPVENDA]${vendaIdentificador}[/SPVENDA]` : '';
 
         return {
           success: true,
-          notesFragment: `TEF SmartPOS: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}${receiptData}${ctrlTag}`,
+          notesFragment: `TEF SmartPOS: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}${receiptData}${ctrlTag}${spTag}`,
           tefData: {
             nsu: statusResult.nsu || '',
             autorizacao: statusResult.authorizationCode || '',
