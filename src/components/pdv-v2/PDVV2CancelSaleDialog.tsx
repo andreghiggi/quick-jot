@@ -47,6 +47,8 @@ export function PDVV2CancelSaleDialog({ open, onOpenChange, sale, companyId, reg
   // Estorno automático suportado para PinPad Multiplus e SmartPOS PinPDV.
   const hasReversibleTef = !!tefInfo && !isOrderTefCancelled(sale.notes);
   const tefLabel = tefInfo?.type === 'smartpos' ? 'SmartPOS' : 'PinPad';
+  // Cancelamento encadeado da NFC-e só se aplica ao SmartPOS — PinPad mantém o fluxo antigo (apenas estorno TEF).
+  const shouldCancelNfce = tefInfo?.type === 'smartpos';
 
   async function handleConfirm() {
     if (!canSubmit || !companyId || !sale) return;
@@ -55,9 +57,9 @@ export function PDVV2CancelSaleDialog({ open, onOpenChange, sale, companyId, reg
       let baseNotes = sale.notes || '';
       let tefReversed = false;
 
-      // 1) Cancela a NFC-e vinculada à venda (se autorizada e dentro da janela SEFAZ).
+      // 1) Cancela a NFC-e vinculada à venda (SOMENTE para SmartPOS).
       //    Falha aqui aborta o cancelamento — o operador precisa decidir o caminho fiscal.
-      try {
+      if (shouldCancelNfce) try {
         const nfce = await getNFCeRecordBySaleId(sale.id);
         if (nfce && nfce.nfce_id && nfce.status === 'autorizada') {
           const justificativa = `Cancelamento de venda no PDV V2: ${trimmed}`.slice(0, 255);
