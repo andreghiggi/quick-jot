@@ -1,4 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -510,9 +511,9 @@ export function PDVV2PaymentDialog({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
-        {(tefStatus || internalTefStatus) && (
+        {(tefStatus || internalTefStatus) && typeof document !== 'undefined' && createPortal(
           <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm"
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 backdrop-blur-sm"
             role="dialog"
             aria-modal="true"
             aria-label="Operação TEF em andamento"
@@ -526,7 +527,8 @@ export function PDVV2PaymentDialog({
                 </p>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body,
         )}
 
         {transferLog && transferLog.length > 0 && (
