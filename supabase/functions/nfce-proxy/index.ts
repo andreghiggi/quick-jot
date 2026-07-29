@@ -628,6 +628,38 @@ Deno.serve(async (req) => {
             )
             const desconto = round2(Number(emitPayload.valor_desconto) || 0)
             const frete = round2(Number(emitPayload.valor_frete) || 0)
+            // Rateio proporcional do desconto de cabeçalho para cada item.
+            // Sem isso, a SEFAZ rejeita com cStat 610 ("Total da NF difere do
+            // somatório..."): o header envia vNF = subtotal - desconto, mas
+            // como o desconto não é distribuído nos itens, Σ(vProd item) -
+            // Σ(vDesc item) não bate com vNF. Depois do rateio, zeramos o
+            // desconto de cabeçalho para não haver dupla contagem.
+            if (desconto > 0 && subtotal > 0) {
+              let acumulado = 0
+              const lastIdx = emitPayload.itens.length - 1
+              emitPayload.itens = emitPayload.itens.map((it: any, idx: number) => {
+                const vProd = Number(it.valor_total) || 0
+                let vDesc: number
+                if (idx === lastIdx) {
+                  // último item absorve arredondamento para fechar exato
+                  vDesc = round2(desconto - acumulado)
+                } else {
+                  vDesc = round2((desconto * vProd) / subtotal)
+                  acumulado = round2(acumulado + vDesc)
+                }
+                // não deixa desconto por item ultrapassar o vProd
+                if (vDesc > vProd) vDesc = vProd
+                return {
+                  ...it,
+                  valor_desconto: vDesc,
+                  valorDesconto: money(vDesc),
+                  desconto: money(vDesc),
+                  vDesc: money(vDesc),
+                }
+              })
+              emitPayload.valor_desconto = 0
+              console.log('[nfce-proxy] Desconto R$', desconto, 'rateado por item; header zerado.')
+            }
             emitPayload.valor_total = round2(subtotal - desconto + frete)
             console.log('[nfce-proxy] Itens normalizados:', JSON.stringify(emitPayload.itens))
             console.log('[nfce-proxy] valor_total calculado:', emitPayload.valor_total)
