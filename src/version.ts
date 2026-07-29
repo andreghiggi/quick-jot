@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.64.4-beta";
+export const VERSION = "1.64.5-beta";
 export const RELEASE_DATE = "2026-07-29"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "NFC-e — rateio de desconto por item (fix cStat 610)";
+export const CODENAME = "Cancelar venda — estorno SmartPOS + cancelamento NFC-e encadeados";
 
 export interface Release {
   version: string;
@@ -19,6 +19,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.64.5-beta",
+    date: "2026-07-29",
+    codename: "Cancelar venda — estorno SmartPOS + cancelamento NFC-e encadeados",
+    changes: [
+      "Ao clicar em 'Cancelar venda' no PDV V2 (mesmo diálogo com motivo obrigatório de 20 caracteres), o sistema agora encadeia — em modo tudo-ou-nada — o cancelamento da NFC-e autorizada na SEFAZ, o estorno TEF (PinPad Multiplus OU SmartPOS PinPDV) e a marcação [CANCELADA] com auditoria em `pdv_sale_cancellations`.",
+      "Estorno SmartPOS PinPDV: nova ação `reverse-sale` na edge function `pinpdv-payment` que aciona o endpoint `/pos-venda/cancelamento` da Multiplus (com fallback para rotas alternativas conhecidas). Requer que a venda tenha sido feita após esta versão para trazer o identificador da venda salvo em `[SPVENDA]`.",
+      "Corrigido o parser de dados TEF: SmartPOS agora é reconhecido pelo prefixo correto `TEF SmartPOS:` com bandeira e adquirente, e o identificador da venda (`[SPVENDA]`) é persistido no momento da aprovação para permitir o estorno posterior.",
+      "Se a NFC-e estiver fora da janela SEFAZ ou a maquininha recusar o estorno, o cancelamento é abortado com mensagem clara — a venda permanece ativa para o operador decidir o próximo passo (nenhum estado intermediário fica gravado).",
+      "Cancelamento de venda no Histórico de Comandas continua bloqueado — só é permitido dentro do caixa aberto (regra atual mantida). Sem alteração em TEF PinPad Multiplus homologado (fluxo CNC/CNF intacto), Frente de Caixa, Cardápio, NF-e, Compras, Financeiro, Estoque, WhatsApp ou impressão.",
+    ],
+  },
   {
     version: "1.64.4-beta",
     date: "2026-07-29",

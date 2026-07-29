@@ -220,6 +220,98 @@ serve(async (req) => {
       return new Response(JSON.stringify(out), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Reverse an APPROVED sale (estorno / cancelamento de transação já efetivada).
+    // A API PinPDV expõe o cancelamento de transações aprovadas via
+    // POST/DELETE em /pos-venda/cancelamento (confirmado no probing: retorna 401
+    // sem token e valida body). Como as instalações da Multiplus variam o
+    // formato aceito, tentamos rotas conhecidas em sequência e paramos na
+    // primeira que responder OK. Payload defensivo: enviamos todos os campos
+    // que identificam a transação original (Identificador da venda, NSU, valor).
+    if (action === 'reverse-sale') {
+      identifier = params.identifier;
+      const {
+        vendaIdentificador,
+        nsu,
+        amount,
+        pinpdvId,
+      } = params;
+
+      const bodyBase: Record<string, unknown> = {
+        Identificador: vendaIdentificador || identifier,
+        NSU: nsu,
+        Valor: amount,
+      };
+      if (pinpdvId) {
+        bodyBase.DispositivoId = pinpdvId;
+        bodyBase.PinPdvId = pinpdvId;
+      }
+      requestPayloadForLog = bodyBase;
+
+      const attempts: Array<{ method: string; url: string; body?: string }> = [
+        { method: 'POST', url: `${PINPDV_BASE_URL}/pos-venda/cancelamento`, body: JSON.stringify(bodyBase) },
+        { method: 'DELETE', url: `${PINPDV_BASE_URL}/pos-venda/cancelamento`, body: JSON.stringify(bodyBase) },
+        { method: 'POST', url: `${PINPDV_BASE_URL}/pos-cancelamento`, body: JSON.stringify(bodyBase) },
+        // Fallback: DELETE da venda original com forca=true (algumas versões
+        // aceitam para estornar transações já aprovadas dentro da janela).
+        { method: 'DELETE', url: `${PINPDV_BASE_URL}/pos-venda/${vendaIdentificador || identifier}?forca=true` },
+      ];
+
+      let lastStatus = 0;
+      let lastParsed: any = null;
+      let ok = false;
+      let usedAttempt: any = null;
+      for (const att of attempts) {
+        try {
+          const resp = await fetch(att.url, {
+            method: att.method,
+            headers: authHeaders,
+            body: att.body,
+          });
+          lastStatus = resp.status;
+          const text = await resp.text();
+          try { lastParsed = JSON.parse(text); } catch { lastParsed = text; }
+          usedAttempt = att;
+          if (resp.ok) { ok = true; break; }
+          // 401/403: token inválido — não adianta tentar outras rotas.
+          if (resp.status === 401 || resp.status === 403) break;
+        } catch (e) {
+          lastParsed = { error: e instanceof Error ? e.message : String(e) };
+        }
+      }
+
+      let friendly: string | undefined;
+      if (!ok) {
+        try {
+          const errObj = lastParsed?.errors;
+          if (errObj && typeof errObj === 'object') {
+            const firstKey = Object.keys(errObj)[0];
+            const firstMsg = Array.isArray(errObj[firstKey]) ? errObj[firstKey][0] : errObj[firstKey];
+            if (firstMsg) friendly = String(firstMsg);
+          } else if (lastParsed?.detail) {
+            friendly = String(lastParsed.detail);
+          } else if (typeof lastParsed === 'string' && lastParsed.trim()) {
+            friendly = lastParsed.slice(0, 200);
+          }
+        } catch { /* ignore */ }
+        if (!friendly) friendly = `Falha ao estornar SmartPOS (HTTP ${lastStatus || 'sem resposta'}).`;
+      }
+
+      const out = ok
+        ? { success: true, raw: lastParsed }
+        : { success: false, errorMessage: friendly, raw: lastParsed };
+      await logCall({
+        companyId,
+        action,
+        identifier,
+        requestPayload: { attempts: attempts.map((a) => ({ method: a.method, url: a.url })), body: bodyBase, usedAttempt },
+        responsePayload: lastParsed,
+        httpStatus: lastStatus,
+        durationMs: Date.now() - startedAt,
+        errorMessage: ok ? undefined : friendly,
+      });
+      return new Response(JSON.stringify(out), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const resp = { success: false, errorMessage: 'Ação inválida' };
     await logCall({ companyId, action, errorMessage: resp.errorMessage, httpStatus: 400, durationMs: Date.now() - startedAt });
     return new Response(JSON.stringify(resp), {

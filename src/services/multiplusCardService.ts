@@ -264,3 +264,46 @@ export async function abortMultiplusCardSale(
     return false;
   }
 }
+
+// Reverse (estorno) an APPROVED SmartPOS sale
+export interface ReverseMultiplusCardArgs {
+  /** Identificador da venda original (o "vendaIdentificador" que a API devolveu em check-status). */
+  vendaIdentificador?: string;
+  /** Fallback: identificador que enviamos no create-sale (pdvv2-<ts>). */
+  identifier?: string;
+  nsu: string;
+  amount: number;
+}
+
+export async function reverseMultiplusCardSale(
+  companyId: string,
+  args: ReverseMultiplusCardArgs,
+): Promise<{ success: boolean; errorMessage?: string }> {
+  const config = await getMultiplusCardConfig(companyId);
+  if (!config) {
+    return { success: false, errorMessage: 'SmartPOS PinPDV não configurado nesta loja.' };
+  }
+
+  try {
+    const { data, error } = await supabase.functions.invoke('pinpdv-payment', {
+      body: {
+        action: 'reverse-sale',
+        companyId,
+        apiToken: config.apiToken,
+        pinpdvId: config.pinpdvId,
+        identifier: args.identifier || args.vendaIdentificador,
+        vendaIdentificador: args.vendaIdentificador || args.identifier,
+        nsu: args.nsu,
+        amount: args.amount,
+      },
+    });
+
+    if (error) return { success: false, errorMessage: error.message };
+    return {
+      success: !!data?.success,
+      errorMessage: data?.success ? undefined : (data?.errorMessage || 'Falha ao estornar SmartPOS'),
+    };
+  } catch (e: any) {
+    return { success: false, errorMessage: e?.message || 'Erro ao chamar estorno SmartPOS' };
+  }
+}

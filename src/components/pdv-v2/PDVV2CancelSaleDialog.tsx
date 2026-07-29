@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { brl as formatPrice } from './_format';
 import { CANCEL_REASON_MIN_LENGTH, buildCancelledNotes, insertSaleCancellation } from '@/utils/saleCancellation';
 import { parseTefDataFromNotes, estornarTefPedido, isOrderTefCancelled } from '@/utils/tefOrderActions';
+import { cancelarNFCe, getNFCeRecordBySaleId } from '@/services/nfceService';
 
 export interface CancelSaleTarget {
   id: string;
@@ -43,7 +44,9 @@ export function PDVV2CancelSaleDialog({ open, onOpenChange, sale, companyId, reg
   const canSubmit = trimmed.length >= CANCEL_REASON_MIN_LENGTH && !submitting && !!companyId;
 
   const tefInfo = parseTefDataFromNotes(sale.notes);
-  const hasPinpadTef = tefInfo?.type === 'pinpad' && !isOrderTefCancelled(sale.notes);
+  // Estorno automático suportado para PinPad Multiplus e SmartPOS PinPDV.
+  const hasReversibleTef = !!tefInfo && !isOrderTefCancelled(sale.notes);
+  const tefLabel = tefInfo?.type === 'smartpos' ? 'SmartPOS' : 'PinPad';
 
   async function handleConfirm() {
     if (!canSubmit || !companyId || !sale) return;
@@ -52,7 +55,29 @@ export function PDVV2CancelSaleDialog({ open, onOpenChange, sale, companyId, reg
       let baseNotes = sale.notes || '';
       let tefReversed = false;
 
-      if (hasPinpadTef) {
+      // 1) Cancela a NFC-e vinculada à venda (se autorizada e dentro da janela SEFAZ).
+      //    Falha aqui aborta o cancelamento — o operador precisa decidir o caminho fiscal.
+      try {
+        const nfce = await getNFCeRecordBySaleId(sale.id);
+        if (nfce && nfce.nfce_id && nfce.status === 'autorizada') {
+          const justificativa = `Cancelamento de venda no PDV V2: ${trimmed}`.slice(0, 255);
+          const result: any = await cancelarNFCe(companyId, nfce.nfce_id, justificativa);
+          const ok = result?.success !== false && !result?.error;
+          if (!ok) {
+            const msg = result?.errorMessage || result?.error || 'SEFAZ recusou o cancelamento da NFC-e';
+            toast.error(`NFC-e não cancelada: ${msg}. Venda mantida.`);
+            return;
+          }
+          toast.success(`NFC-e ${nfce.numero || ''} cancelada na SEFAZ.`);
+        }
+      } catch (e: any) {
+        console.error('[CancelSale] NFC-e cancel error', e);
+        toast.error(`Erro ao cancelar NFC-e: ${e?.message || 'desconhecido'}. Venda mantida.`);
+        return;
+      }
+
+      // 2) Estorno TEF (PinPad Multiplus ou SmartPOS PinPDV).
+      if (hasReversibleTef) {
         const estorno = await estornarTefPedido({
           companyId,
           amount: sale.final_total,
@@ -105,7 +130,8 @@ export function PDVV2CancelSaleDialog({ open, onOpenChange, sale, companyId, reg
           </DialogTitle>
           <DialogDescription>
             Valor: <strong>{formatPrice(sale.final_total)}</strong>. Esta ação não pode ser desfeita
-            {hasPinpadTef && ' e disparará o estorno TEF (PinPad) automaticamente'}.
+            {hasReversibleTef && ` e disparará o estorno TEF (${tefLabel}) automaticamente`}.
+            {' '}Se houver NFC-e autorizada, ela também será cancelada na SEFAZ.
           </DialogDescription>
         </DialogHeader>
 
