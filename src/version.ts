@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.64.2-beta";
+export const VERSION = "1.64.3-beta";
 export const RELEASE_DATE = "2026-07-29"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "TEF — popup de processamento visível";
+export const CODENAME = "TEF — popup de processamento centralizado no viewport";
 
 export interface Release {
   version: string;
@@ -19,6 +19,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.64.3-beta",
+    date: "2026-07-29",
+    codename: "TEF — popup de processamento centralizado no viewport",
+    changes: [
+      "Overlay 'Processando pagamento…' do TEF (SmartPOS PinPDV e PinPad Multiplus) no PDV V2 agora é renderizado via portal no `document.body`, ficando centralizado sobre a tela inteira em vez de aparecer colado no topo do diálogo de pagamento.",
+      "Nenhuma alteração no fluxo TEF/NFC-e/impressão. Apenas apresentação do overlay em `PDVV2PaymentDialog`.",
+    ],
+  },
   {
     version: "1.64.2-beta",
     date: "2026-07-29",
