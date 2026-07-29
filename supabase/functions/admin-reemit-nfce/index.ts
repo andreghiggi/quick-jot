@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     }
 
     // Modo REPROCESS: aciona /reprocessar mantendo a mesma numeração/nfceId.
-    if (mode === 'reprocess') {
+    if (mode === 'reprocess' || mode === 'consultar') {
       if (!rec.nfce_id) {
         return new Response(JSON.stringify({ error: 'Registro sem nfce_id — não é possível reprocessar' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
           'apikey': Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
         },
         body: JSON.stringify({
-          action: 'reprocessar',
+          action: mode === 'consultar' ? 'consultar' : 'reprocessar',
           companyId: rec.company_id,
           nfceId: rec.nfce_id,
         }),
