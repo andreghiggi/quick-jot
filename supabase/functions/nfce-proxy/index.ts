@@ -1411,6 +1411,61 @@ Deno.serve(async (req) => {
           }
           break
         }
+        // Aplica rateio proporcional do desconto de cabeçalho também no
+        // reprocessamento: o payload persistido pode ter sido salvo antes
+        // do fix do rateio, o que causa cStat 610 ("Total da NF difere do
+        // somatório..."). Só executa quando não é CRED financeiro e há
+        // desconto de cabeçalho > 0.
+        if (!isCredFinanceiro && reprocPayload && Array.isArray(reprocPayload.itens)) {
+          const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
+          const money = (n: number) => round2(n).toFixed(2)
+          const desconto = round2(Number(reprocPayload.valor_desconto) || 0)
+          const subtotal = reprocPayload.itens.reduce(
+            (s: number, it: any) => s + (Number(it.valor_total) || (Number(it.quantidade) || 0) * (Number(it.valor_unitario) || 0)),
+            0
+          )
+          const frete = round2(Number(reprocPayload.valor_frete) || 0)
+          if (desconto > 0 && subtotal > 0) {
+            let acumulado = 0
+            const lastIdx = reprocPayload.itens.length - 1
+            reprocPayload.itens = reprocPayload.itens.map((it: any, idx: number) => {
+              const vProd = Number(it.valor_total) || (Number(it.quantidade) || 0) * (Number(it.valor_unitario) || 0)
+              let vDesc: number
+              if (idx === lastIdx) {
+                vDesc = round2(desconto - acumulado)
+              } else {
+                vDesc = round2((desconto * vProd) / subtotal)
+                acumulado = round2(acumulado + vDesc)
+              }
+              if (vDesc > vProd) vDesc = vProd
+              return {
+                ...it,
+                valor_desconto: vDesc,
+                valorDesconto: money(vDesc),
+                desconto: money(vDesc),
+                vDesc: money(vDesc),
+              }
+            })
+            reprocPayload.valor_desconto = 0
+            reprocPayload.valor_total = round2(subtotal - desconto + frete)
+            console.log('[nfce-proxy] Reprocessar: desconto R$', desconto, 'rateado por item; header zerado.')
+            try {
+              await supabase.from('nfce_records')
+                .update({ request_payload: reprocPayload, updated_at: new Date().toISOString() })
+                .eq('nfce_id', nfceId)
+                .eq('company_id', companyId)
+            } catch (e) {
+              console.warn('[nfce-proxy] Reprocessar: falha ao persistir payload com rateio:', e)
+            }
+            // Também tenta atualizar a nota na Fiscal Flow com o payload rateado
+            try {
+              const putResult = await atualizarNFCeFiscalFlow(nfceId, reprocPayload)
+              console.log('[nfce-proxy] Reprocessar: PUT rateio status', putResult.response.status, 'url', putResult.url)
+            } catch (e) {
+              console.warn('[nfce-proxy] Reprocessar: PUT rateio falhou:', e)
+            }
+          }
+        }
         apiResponse = await fetch(`${NFCE_API_URL}/${nfceId}/reprocessar`, {
           method: 'POST',
           headers: {
