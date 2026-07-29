@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.64.0-beta";
-export const RELEASE_DATE = "2026-07-27"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "PinPDV SmartPOS v1 — piloto Margen";
+export const VERSION = "1.64.1-beta";
+export const RELEASE_DATE = "2026-07-29"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "PinPDV SmartPOS — payload NFC-e igual ao PinPad";
 
 export interface Release {
   version: string;
@@ -19,6 +19,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.64.1-beta",
+    date: "2026-07-29",
+    codename: "PinPDV SmartPOS — payload NFC-e igual ao PinPad",
+    changes: [
+      "Fluxo pós-aprovação do TEF SmartPOS (PinPDV) agora entrega para a NFC-e o mesmo pacote de dados que o TEF PinPad Multiplus já entregava: adquirente no rótulo, sufixo ADM/Loja em parcelado, bloco [COMPROVANTE]…[/COMPROVANTE] com as linhas do cupom retornadas pela PinPDV e bloco [TEF023]…[/TEF023] com o número de controle (quando a API devolver).",
+      "Comprovante TEF do SmartPOS agora é despachado para impressão ANTES de abrir o dialog de NFC-e (mesma ordem do PinPad), evitando que a janela da NFC-e apareça por cima do prompt do TEF.",
+      "Ajuste isolado ao trecho SmartPOS de `src/utils/pdvV2Tef.ts`. NÃO altera edge function `pinpdv-payment`, `multiplusCardService`, TEF PinPad Multiplus, PDV V1, Frente de Caixa, NFC-e, NF-e, Cardápio, Compras, Financeiro, Estoque, WhatsApp ou impressão. Piloto continua exclusivo da Margen Pizzaria.",
+    ],
+  },
   {
     version: "1.64.0-beta",
     date: "2026-07-27",

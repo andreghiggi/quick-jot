@@ -202,18 +202,37 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
         onStatus?.('Pagamento aprovado!');
         toast.success(`TEF aprovado! NSU: ${statusResult.nsu}`);
 
+        // Auto-print v1 (idêntico ao PinPad): awaited para despachar o prompt TEF
+        // ANTES do dialog de NFC-e abrir por cima.
+        try {
+          await imprimirComprovanteTefAutomatico({
+            companyId,
+            receiptLines: (statusResult as any).receiptLines,
+          });
+        } catch (e) {
+          console.error('[pdvV2Tef] auto-print SmartPOS falhou:', e);
+        }
+
+        const installTypeLabel = installmentType === 'adm' ? ' ADM' : ' Loja';
         const installLabel =
           tefPaymentType === 'debit'
             ? ' | Débito'
             : tefPaymentType === 'pix'
               ? ' | PIX'
               : installmentCount > 1
-                ? ` | ${installmentCount}x Crédito`
+                ? ` | ${installmentCount}x Cartão${installTypeLabel}`
                 : ' | Crédito à Vista';
+        const receiptLines: string[] | undefined = (statusResult as any).receiptLines;
+        const receiptData =
+          receiptLines && receiptLines.length > 0
+            ? ` | [COMPROVANTE]${receiptLines.join('\\n')}[/COMPROVANTE]`
+            : '';
+        const controlNumber: string | undefined = (statusResult as any).controlNumber;
+        const ctrlTag = controlNumber ? ` | [TEF023]${controlNumber}[/TEF023]` : '';
 
         return {
           success: true,
-          notesFragment: `TEF: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand}${installLabel}`,
+          notesFragment: `TEF SmartPOS: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode} | ${statusResult.cardBrand} | ${statusResult.acquirer}${installLabel}${receiptData}${ctrlTag}`,
           tefData: {
             nsu: statusResult.nsu || '',
             autorizacao: statusResult.authorizationCode || '',
