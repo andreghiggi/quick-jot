@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.64.3-beta";
+export const VERSION = "1.64.4-beta";
 export const RELEASE_DATE = "2026-07-29"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "TEF — popup de processamento centralizado no viewport";
+export const CODENAME = "NFC-e — rateio de desconto por item (fix cStat 610)";
 
 export interface Release {
   version: string;
@@ -19,6 +19,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.64.4-beta",
+    date: "2026-07-29",
+    codename: "NFC-e — rateio de desconto por item (fix cStat 610)",
+    changes: [
+      "Correção crítica na emissão de NFC-e com desconto: o `nfce-proxy` agora rateia proporcionalmente o `valor_desconto` do cabeçalho em cada item (campo `valor_desconto` / `vDesc` por item) e zera o desconto de cabeçalho, evitando a rejeição SEFAZ cStat 610 ('Total da NF difere do somatório dos Valores que compõem o valor Total da NF').",
+      "O arredondamento de centavos é absorvido no último item para o somatório fechar exato com o `vNF`. Descontos por item nunca ultrapassam o `vProd` correspondente.",
+      "Vale para toda emissão de NFC-e com desconto — Frente de Caixa, Pedido Express, PDV V2 e reprocessamento. Vendas sem desconto não são afetadas.",
+      "Sem alteração em TEF, PinPad, SmartPOS PinPDV, NF-e, NFC-e financeira de crediário, Cardápio, Compras, Financeiro, Estoque, WhatsApp ou impressão.",
+    ],
+  },
   {
     version: "1.64.3-beta",
     date: "2026-07-29",
