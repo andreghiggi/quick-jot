@@ -523,7 +523,7 @@ export function PDVV2PaymentDialog({
               <div className="space-y-1">
                 <p className="font-semibold text-base">{tefStatus || internalTefStatus}</p>
                 <p className="text-xs text-muted-foreground">
-                  Operação TEF em andamento. Aguarde a confirmação na maquininha.
+                  Operação TEF em andamento. Aguardando pagamento na Smart PDV.
                 </p>
               </div>
             </div>
