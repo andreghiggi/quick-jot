@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
     const recordId: string = body.recordId
     const productPatches: any[] = body.productPatches || []
     const itemOverridesByCodigo: Record<string, any> = body.itemOverridesByCodigo || {}
+    const mode: string = body.mode || 'reemit' // 'reemit' (nova numeração) | 'reprocess' (mesma numeração)
 
     // 1) Atualiza cadastro de produtos (NCM/CEST) se pedido
     for (const p of productPatches) {
@@ -36,11 +37,45 @@ Deno.serve(async (req) => {
     // 2) Lê o registro original
     const { data: rec, error: recErr } = await supabase
       .from('nfce_records')
-      .select('id, company_id, external_id, request_payload, status')
+      .select('id, company_id, external_id, request_payload, status, nfce_id')
       .eq('id', recordId)
       .single()
     if (recErr || !rec) {
       return new Response(JSON.stringify({ error: 'Registro não encontrado', details: recErr }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // Modo REPROCESS: aciona /reprocessar mantendo a mesma numeração/nfceId.
+    if (mode === 'reprocess' || mode === 'consultar') {
+      if (!rec.nfce_id) {
+        return new Response(JSON.stringify({ error: 'Registro sem nfce_id — não é possível reprocessar' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      const proxyUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/nfce-proxy`
+      const proxyResp = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': Deno.env.get('NFCE_WEBHOOK_SECRET') || '',
+          'apikey': Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
+        },
+        body: JSON.stringify({
+          action: mode === 'consultar' ? 'consultar' : 'reprocessar',
+          companyId: rec.company_id,
+          nfceId: rec.nfce_id,
+        }),
+      })
+      const proxyText = await proxyResp.text()
+      let proxyJson: any
+      try { proxyJson = JSON.parse(proxyText) } catch { proxyJson = { raw: proxyText } }
+      return new Response(JSON.stringify({
+        ok: proxyResp.ok,
+        mode: 'reprocess',
+        nfceId: rec.nfce_id,
+        proxyStatus: proxyResp.status,
+        proxyResult: proxyJson,
+      }, null, 2), {
+        status: proxyResp.ok ? 200 : 422,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     // 3) Monta payload corrigido: mesmo tef/observacoes, external_id com sufixo -R{n}
