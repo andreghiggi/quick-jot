@@ -511,11 +511,20 @@ export function PDVV2PaymentDialog({
         </DialogHeader>
 
         {(tefStatus || internalTefStatus) && (
-          <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin text-primary flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="font-medium text-sm">{tefStatus || internalTefStatus}</p>
-              <p className="text-xs text-muted-foreground">Operação TEF em andamento. Aguarde a confirmação na maquininha.</p>
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Operação TEF em andamento"
+          >
+            <div className="mx-4 w-full max-w-sm rounded-lg border border-primary/30 bg-background p-6 shadow-lg flex flex-col items-center gap-4 text-center">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <div className="space-y-1">
+                <p className="font-semibold text-base">{tefStatus || internalTefStatus}</p>
+                <p className="text-xs text-muted-foreground">
+                  Operação TEF em andamento. Aguarde a confirmação na maquininha.
+                </p>
+              </div>
             </div>
           </div>
         )}
