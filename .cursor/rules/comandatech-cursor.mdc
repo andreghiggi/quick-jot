@@ -1,0 +1,29 @@
+---
+description: Regras de desenvolvimento ComandaTech no Cursor (branch Cursor)
+globs:
+alwaysApply: true
+---
+
+# ComandaTech — fluxo Cursor
+
+## Branch
+
+- Trabalhe sempre na branch **Cursor**, nunca commitar direto no `main` durante a transição.
+- Antes de cada sessão: `git fetch origin` e `git merge origin/main` para sincronizar com a Lovable.
+
+## Commits
+
+- Todo commit deste PC deve começar com **`Cursor - `**
+- Exemplo: `Cursor - corrige validação de cancelamento NFC-e`
+
+## Push
+
+- Push apenas para `origin Cursor`.
+- O CI (`.github/workflows/cursor-ci.yml`) roda build/lint — **sem deploy** na VPS.
+- Deploy produção continua só pelo `main` (Lovable → deploy-vps.yml).
+
+## Ambiente local
+
+- App Vite/React na porta **8080** (`npm run dev`).
+- Supabase externo via `.env.local` (não commitar).
+- Não alterar stack, linguagem ou deploy sem pedido explícito.
