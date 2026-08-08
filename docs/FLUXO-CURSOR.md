@@ -45,3 +45,9 @@ git push origin Cursor
 ## Cutover (semana 2)
 
 Ver [docs/CUTOVER-SEMANA2.md](./CUTOVER-SEMANA2.md).
+
+## Skills e backup auth
+
+- Roteamento de skills: `.cursor/skills/comandatech-skills-router/`
+- Produção intocável: `.cursor/skills/comandatech-prod-safe/`
+- Espelhar login Lovable → externo: [docs/BACKUP-AUTH-MIRROR.md](./BACKUP-AUTH-MIRROR.md) → `npm run mirror-auth`

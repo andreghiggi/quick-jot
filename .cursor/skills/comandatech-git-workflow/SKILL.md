@@ -52,6 +52,8 @@ Ver `docs/CUTOVER-SEMANA2.md` — merge `Cursor → main` só quando o usuário 
 
 ## Regras
 
-- Não commitar `.env.local`
+- Não commitar `.env.local` nem `.env.backup`
 - Não alterar `deploy-vps.yml` sem pedido explícito
 - Commits só quando o usuário solicitar
+- **Produção intocável** — ver skill `comandatech-prod-safe`
+- Início de tarefa: skill `comandatech-skills-router`

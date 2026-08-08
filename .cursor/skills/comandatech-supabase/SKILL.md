@@ -42,7 +42,12 @@ Principais:
 - `nfe-proxy` — NFe
 - `send-whatsapp`, `whatsapp-evolution`, `whatsapp-webhook` — WhatsApp
 - `tef-webservice`, `pinpdv-payment` — pagamentos
-- `backup-mirror` — espelhamento backup
+## Backup externo (espelho Lovable → vyotbtmnnosiejyltlxc)
+
+- `backup-mirror` — espelha `auth.users`, `auth.identities` + schema `public`
+- `npm run mirror-auth` — sync auth local sem deploy (ver `docs/BACKUP-AUTH-MIRROR.md`)
+- Origem: **somente leitura**. Destino externo: escrita.
+- **Não deployar** edge function na Lovable sem pedido explícito — skill `comandatech-prod-safe`
 - `create-company-user`, `create-reseller-user` — onboarding
 
 Deploy de functions: Supabase CLI (`supabase functions deploy`) — confirmar com usuário qual projeto (externo vs prod).

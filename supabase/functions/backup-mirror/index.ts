@@ -1,5 +1,6 @@
 import postgres from "npm:postgres@3.4.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { mirrorAuthTables } from "./mirror-auth.ts";
 
 // Limites por invocação (mantidos baixos pra caber no CPU budget da edge function).
 // O backup é fatiado: cada chamada processa algumas tabelas e dispara a próxima via fetch.
@@ -105,6 +106,33 @@ Deno.serve(async (req) => {
     } finally {
       await sourceHealth.end({ timeout: 2 });
       await targetHealth.end({ timeout: 2 });
+    }
+  }
+
+  // Modo auth-only: espelha auth.users + auth.identities (origem → destino externo).
+  // Somente LEITURA na origem; escrita apenas no destino. Não altera dados da Lovable/produção.
+  if (body?.mode === "auth-only" || body?.mode === "auth") {
+    const authStarted = Date.now();
+    const sourceAuth = postgres(sourceUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
+    const targetAuth = postgres(targetUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
+    try {
+      const authResult = await mirrorAuthTables(sourceAuth, targetAuth, {
+        batchSize: 500,
+        maxRuntimeMs: 55_000,
+        startedAt: authStarted,
+        clearTarget: true,
+      });
+      return json({
+        mode: "auth-only",
+        status: authResult.status,
+        rows_copied: authResult.totalRows,
+        error_message: authResult.errorMessage,
+        details: authResult.perTable,
+        duration_ms: Date.now() - authStarted,
+      });
+    } finally {
+      await sourceAuth.end({ timeout: 5 });
+      await targetAuth.end({ timeout: 5 });
     }
   }
 
@@ -306,7 +334,38 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 0) Sincroniza schema só na primeira invocação (custosa em CPU)
+    // 0) Espelha auth (users + identities) na 1ª invocação — antes do public.
+    // Preserva encrypted_password para login funcionar no espelho externo.
+    const skipAuth = body?.skip_auth === true;
+    if (!isContinuation && !skipAuth) {
+      try {
+        const authResult = await mirrorAuthTables(source, target, {
+          batchSize: 500,
+          maxRuntimeMs: 20_000,
+          startedAt,
+          clearTarget: true,
+        });
+        for (const [k, v] of Object.entries(authResult.perTable)) {
+          perTable[k] = v;
+          if (!v.error) {
+            totalRows += v.rows;
+            tablesProcessed++;
+          }
+        }
+        if (authResult.errorMessage) {
+          errorMessage = authResult.errorMessage;
+          status = authResult.status === "error" ? "error" : status === "success" ? authResult.status : status;
+        }
+        schemaChanges.push(`auth mirror: ${authResult.totalRows} rows (${authResult.status})`);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        schemaChanges.push(`auth mirror error: ${msg}`);
+        errorMessage = (errorMessage ? errorMessage + "; " : "") + `auth: ${msg}`;
+        status = status === "success" ? "partial" : status;
+      }
+    }
+
+    // 1) Sincroniza schema public só na primeira invocação (custosa em CPU)
     if (!isContinuation) {
       try { await syncSchema(); } catch (e) {
         schemaChanges.push(`syncSchema error: ${e instanceof Error ? e.message : String(e)}`);
