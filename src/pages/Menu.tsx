@@ -1241,27 +1241,27 @@ export default function Menu() {
         const cleanPhone = customerPhone.replace(/\D/g, '');
         if (cleanPhone.length >= 10) {
           try {
-            const { data: upsertedCustomer } = await supabase
-              .from('customers')
-              .upsert({
+            const cleanCpf = customerCpf.replace(/\D/g, '');
+            const { data: upsertRes } = await supabase.functions.invoke('public-customer', {
+              body: {
+                action: 'upsert',
                 company_id: company.id,
                 phone: cleanPhone,
-                name: customerName,
-                cpf: customerCpf.replace(/\D/g, '') || null,
+                name: customerName.trim().slice(0, 100),
+                cpf: cleanCpf.length === 11 ? cleanCpf : null,
                 birth_date: (() => {
                   const bd = customerBirthDate.replace(/\D/g, '');
                   if (bd.length === 8) return `${bd.slice(4,8)}-${bd.slice(2,4)}-${bd.slice(0,2)}`;
                   return null;
                 })(),
-                address: `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood} | Ref: ${deliveryReference}`,
+                address: `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood} | Ref: ${deliveryReference}`.slice(0, 500),
                 city: deliveryCity || null,
                 state: deliveryState || null,
-              }, { 
-                onConflict: 'company_id,phone',
-                ignoreDuplicates: false 
-              })
-              .select('id')
-              .maybeSingle();
+              },
+            });
+            const upsertedCustomer = (upsertRes as any)?.customer_id
+              ? { id: (upsertRes as any).customer_id as string }
+              : null;
 
             // Múltiplos endereços (aditivo, best-effort, não bloqueia o fluxo).
             const resolvedCustomerId = upsertedCustomer?.id ?? customerId;
