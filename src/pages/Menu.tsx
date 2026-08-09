@@ -1189,12 +1189,32 @@ export default function Menu() {
     // Save order to database
     setIsSubmitting(true);
     try {
+      // Validação/sanitização dos dados do cliente antes de persistir
+      const publicOrderSchema = z.object({
+        customerName: z.string().trim().min(2, 'Nome inválido').max(100, 'Nome muito longo'),
+        customerPhone: z.string().trim().regex(/^[\d\s()+-]{10,20}$/, 'Telefone inválido').optional().or(z.literal('')),
+        deliveryAddress: z.string().trim().max(500, 'Endereço muito longo').optional().or(z.literal('')),
+        paymentMethod: z.string().trim().min(1).max(50),
+      });
+      const validation = publicOrderSchema.safeParse({
+        customerName,
+        customerPhone,
+        deliveryAddress: fullAddress,
+        paymentMethod,
+      });
+      if (!validation.success) {
+        setIsSubmitting(false);
+        toast.error(validation.error.issues[0]?.message || 'Dados inválidos');
+        return;
+      }
+      const safe = validation.data;
+
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
-          customer_name: customerName,
-          customer_phone: customerPhone || null,
-          delivery_address: fullAddress || null,
+          customer_name: safe.customerName,
+          customer_phone: safe.customerPhone || null,
+          delivery_address: safe.deliveryAddress || null,
           notes: `Pagamento: ${paymentMethod}${(() => { const pm = activePaymentMethods.find(m => m.name === paymentMethod); return pm?.pix_key ? ` (Chave PIX: ${pm.pix_key})` : ''; })()}${changeFor.trim() ? ` (Troco para R$ ${changeFor.trim()})` : ''} | ${deliveryTypeLabel}${deliveryFee > 0 ? ` (R$ ${deliveryFee.toFixed(2)})` : ''}`,
           total: orderTotal,
           status: 'pending',
