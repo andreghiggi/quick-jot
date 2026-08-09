@@ -505,12 +505,10 @@ export default function Menu() {
 
     const timer = setTimeout(async () => {
       try {
-        const { data, error } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('company_id', company.id)
-          .eq('phone', cleanPhone)
-          .maybeSingle();
+        const { data: res, error } = await supabase.functions.invoke('public-customer', {
+          body: { action: 'lookup', company_id: company.id, phone: cleanPhone },
+        });
+        const data = (res as any)?.customer as any;
 
         if (data && !error) {
           // Captura o ID do cliente para a feature de múltiplos endereços (aditivo)
