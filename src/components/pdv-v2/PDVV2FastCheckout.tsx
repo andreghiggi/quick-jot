@@ -44,9 +44,27 @@ export function PDVV2FastCheckout({ companyId }: Props) {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     return activeProducts
-      .filter((p) => p.name.toLowerCase().includes(q) || (p.code && p.code.toLowerCase().includes(q)))
+      .filter((p) => 
+        p.name.toLowerCase().includes(q) || 
+        (p.code && p.code.toLowerCase().includes(q)) ||
+        (p.scale_barcode && p.scale_barcode.toLowerCase() === q)
+      )
       .slice(0, 10);
   }, [activeProducts, query]);
+
+  // Efeito para adicionar produto automaticamente se houver match exato no código de balança
+  useEffect(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return;
+
+    const exactMatch = activeProducts.find(p => 
+      p.scale_barcode && p.scale_barcode.toLowerCase() === q
+    );
+
+    if (exactMatch) {
+      handleAddProduct(exactMatch);
+    }
+  }, [query, activeProducts]);
 
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0), [cart]);
 
@@ -170,7 +188,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Buscar ou Bipar..."
+            placeholder="Buscar ou Bipar (Atalho numérico)..."
             className="pl-8"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
