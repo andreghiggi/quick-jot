@@ -37,6 +37,10 @@ interface StoreSettings {
   tefAutoPrintVias: 'none' | 'estabelecimento' | 'ambas';
   freeDeliveryEnabled: boolean;
   freeDeliveryMinOrder: number;
+  scaleEnabled: boolean;
+  scaleModel: string;
+  scalePort: string;
+  scaleBaudRate: string;
 }
 
 interface UseStoreSettingsOptions {
