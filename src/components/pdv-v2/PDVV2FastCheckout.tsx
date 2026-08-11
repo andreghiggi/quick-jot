@@ -24,7 +24,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
   const { products, loading: productsLoading } = useProducts({ companyId });
   const { settings: storeSettings } = useStoreSettings({ companyId });
   const { getWeight, reading: readingScale } = useScale();
-  const { currentRegister } = useCashRegister({ companyId });
+  const { addOrder } = useOrders({ companyId });
   const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
   
   const [query, setQuery] = useState('');
