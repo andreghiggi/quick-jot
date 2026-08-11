@@ -224,18 +224,19 @@ export function PDVV2FastCheckout({ companyId }: Props) {
 
           <div className="grid grid-cols-1 gap-2">
             {pdvPaymentMethods.map((method) => {
-              const Icon = method.type === 'pix' ? QrCode : 
-                          method.type === 'card' ? CreditCard : 
-                          method.type === 'cash' ? Banknote : Wallet;
+              const nameLower = method.name.toLowerCase();
+              const Icon = nameLower.includes('pix') ? QrCode : 
+                          (nameLower.includes('cartao') || nameLower.includes('cartão') || nameLower.includes('tef')) ? CreditCard : 
+                          (nameLower.includes('dinheiro') || nameLower.includes('especie')) ? Banknote : Wallet;
               
-              const isCash = method.type === 'cash';
+              const isCash = nameLower.includes('dinheiro') || nameLower.includes('especie');
               
               return (
                 <Button
                   key={method.id}
                   className={cn(
                     "h-12 text-xs font-bold w-full justify-start px-4",
-                    isCash ? "bg-green-600 hover:bg-green-700" : ""
+                    isCash ? "bg-green-600 hover:bg-green-700 text-white" : ""
                   )}
                   variant={isCash ? "default" : "secondary"}
                   disabled={cart.length === 0 || isSubmitting}
