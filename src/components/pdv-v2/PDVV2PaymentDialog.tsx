@@ -14,6 +14,8 @@ import { Plug, Loader2, Users, ListChecks, Printer, ArrowLeftRight, Split } from
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
+import { openCashDrawer } from '@/utils/cashDrawer';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 
 type CheckoutItem = { name: string; quantity: number; unit_price: number; id?: string; paid?: boolean; paidQty?: number };
 
@@ -143,6 +145,7 @@ export function PDVV2PaymentDialog({
   // operador desmarcar/remarcar o checkbox da linha (sem isto, o re-check
   // resetava silenciosamente a fração para 1, cobrando o item inteiro).
   const [splitMemory, setSplitMemory] = useState<Map<number, number>>(new Map());
+  const { settings: storeSettings } = useStoreSettings({ companyId });
   const getPaidQty = (item: CheckoutItem) => Math.min(item.quantity, Math.max(0, item.paidQty ?? (item.paid ? item.quantity : 0)));
   const getPendingQty = (item: CheckoutItem) => Math.max(0, item.quantity - getPaidQty(item));
 
@@ -368,6 +371,17 @@ export function PDVV2PaymentDialog({
       : undefined;
     const cleanDoc = customerDocument.replace(/\D/g, '');
     const isNfce = docMode === 'sale_with_nfce' || isTef;
+    
+    // Acionar gaveta de caixa se habilitada
+    if (storeSettings.drawerEnabled) {
+      openCashDrawer(companyId!, {
+        enabled: true,
+        model: storeSettings.drawerModel,
+        pin: storeSettings.drawerPin,
+        pulse: storeSettings.drawerPulse
+      });
+    }
+
     setSubmitting(true);
     await onConfirm({
       paymentMethodId,
