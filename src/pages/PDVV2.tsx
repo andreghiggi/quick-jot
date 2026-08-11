@@ -1367,36 +1367,56 @@ export default function PDVV2() {
               showRevenue={showRevenue}
               onToggleRevenue={() => setShowRevenue((v) => !v)}
             />
-            <PDVV2StatusFilters active={filter} onChange={setFilter} counts={counts} />
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
-              {filteredOrders.length === 0 ? (
-                <Card>
-                  <CardContent className="py-16 text-center text-muted-foreground">
-                    Nenhum pedido neste filtro.
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-min items-start gap-3 pb-4">
-                  {filteredOrders.map((o) => {
-                    const ready = o.status === 'ready';
-                    const isDel = isDelivery(o);
-                    const showCobrar = ready && !isDel;
-                   const alreadyCharged = !!o.notes?.includes('[COBRADO]');
-                   const hideBtnAdvance = chargeBeforeDeliverEnabled && showCobrar && !alreadyCharged;
-                    return (
-                      <div key={o.id} className="space-y-2">
-                        <OrderCard
-                          order={o}
-                          paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
-                          storeName={company?.name}
-                          disableAdvance={hideBtnAdvance}
-                          disableAdvanceReason="Finalize o pagamento em 'Cobrar' antes de entregar"
-                          hideAdvance={hideBtnAdvance}
-                          onCharged={refetchOrders}
-                         />
-                      </div>
-                    );
-                  })}
+            <div className="flex items-center gap-2 pr-4">
+              <PDVV2StatusFilters active={filter} onChange={setFilter} counts={counts} />
+              {settings.scaleEnabled && (
+                <Button
+                  variant={showFastCheckout ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowFastCheckout(!showFastCheckout)}
+                  className={cn("h-8 ml-auto", showFastCheckout && "bg-primary text-primary-foreground")}
+                >
+                  <Zap className={cn("h-3.5 w-3.5 mr-2", showFastCheckout && "fill-current")} />
+                  Venda Rápida
+                </Button>
+              )}
+            </div>
+            <div className="flex-1 min-h-0 flex overflow-hidden">
+              <ScrollArea className="flex-1 h-full px-4 pb-4">
+                {filteredOrders.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-16 text-center text-muted-foreground">
+                      Nenhum pedido neste filtro.
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-min items-start gap-3 pb-4">
+                    {filteredOrders.map((o) => {
+                      const ready = o.status === 'ready';
+                      const isDel = isDelivery(o);
+                      const showCobrar = ready && !isDel;
+                      const alreadyCharged = !!o.notes?.includes('[COBRADO]');
+                      const hideBtnAdvance = chargeBeforeDeliverEnabled && showCobrar && !alreadyCharged;
+                      return (
+                        <div key={o.id} className="space-y-2">
+                          <OrderCard
+                            order={o}
+                            paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
+                            storeName={company?.name}
+                            disableAdvance={hideBtnAdvance}
+                            disableAdvanceReason="Finalize o pagamento em 'Cobrar' antes de entregar"
+                            hideAdvance={hideBtnAdvance}
+                            onCharged={refetchOrders}
+                           />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+              {showFastCheckout && settings.scaleEnabled && companyId && (
+                <div className="w-80 border-l bg-card hidden lg:block h-full">
+                  <PDVV2FastCheckout companyId={companyId} />
                 </div>
               )}
             </div>
