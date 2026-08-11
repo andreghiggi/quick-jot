@@ -1,5 +1,6 @@
 import postgres from "npm:postgres@3.4.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { mirrorAuth } from "./mirror-auth.ts";
 
 // Limites por invocação (mantidos baixos pra caber no CPU budget da edge function).
 // O backup é fatiado: cada chamada processa algumas tabelas e dispara a próxima via fetch.
@@ -112,18 +113,68 @@ Deno.serve(async (req) => {
   const source = postgres(sourceUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
   const target = postgres(targetUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
 
-  // Desliga triggers e FKs no destino: evita erros como
-  // "O serial da loja não pode ser alterado", FKs para linhas ainda não copiadas
-  // e uniques secundárias que quebravam o UPSERT.
+  // Desliga triggers e FKs no destino
   try {
     await target`SET session_replication_role = 'replica'`;
   } catch (_) { /* ignore */ }
 
-  // Estado da execução (pode ser continuação de uma invocação anterior)
+  // 0.5) Mirror Auth se solicitado ou se for início de backup completo
+  let authResult: any = null;
   const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
   const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
+
+  const sendNotify = async (text: string) => {
+    try {
+      const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
+      const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
+      if (EVOLUTION_API_URL && EVOLUTION_API_KEY) {
+        const baseUrl = EVOLUTION_API_URL.replace(/\/$/, "");
+        await fetch(`${baseUrl}/message/sendText/ct-8c9e7a0e`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: EVOLUTION_API_KEY },
+          body: JSON.stringify({ number: "5554999061836", text }),
+        });
+      }
+    } catch (_) { /* ignore */ }
+  };
+
+  if (body?.mode === "auth-only" || (!isContinuation && !body?.skip_auth)) {
+    authResult = await mirrorAuth(source, target, sendNotify);
+    if (body?.mode === "auth-only") {
+      const authOk = authResult.errors.length === 0;
+      
+      const [runRow] = await sourceMeta`
+        INSERT INTO public.backup_runs (
+          status, 
+          tables_processed, 
+          rows_copied, 
+          error_message, 
+          details
+        ) VALUES (
+          ${authOk ? 'success' : 'error'},
+          0,
+          ${authResult.users + authResult.identities},
+          ${authOk ? null : authResult.errors.join('; ')},
+          ${sourceMeta.json({ auth: authResult })}
+        ) RETURNING id
+      `;
+
+      await source.end();
+      await target.end();
+      await sourceMeta.end();
+
+      return json({ 
+        ok: authOk, 
+        run_id: runRow.id,
+        auth: authResult,
+        message: authOk ? "Auth mirror concluído" : "Erro no auth mirror"
+      });
+    }
+  }
+
+  // Estado da execução (pode ser continuação de uma invocação anterior)
   const startAfterTable: string | null = typeof body?.start_after === "string" ? body.start_after : null;
-  let runId: string;
+  let runId = "";
   let tablesProcessed = 0;
   let totalRows = 0;
   let status = "success";
@@ -144,7 +195,7 @@ Deno.serve(async (req) => {
       const det = prev.details as any;
       if (det && typeof det === "object") perTable = det;
     }
-  } else {
+  } else if (body?.mode !== "auth-only") {
     // Self-heal: marca runs 'running' antigos (>30min) como erro para
     // não ficarem pendurados quando a cadeia de continuação quebra.
     try {
@@ -496,12 +547,18 @@ Deno.serve(async (req) => {
     if (EVOLUTION_API_URL && EVOLUTION_API_KEY) {
       const nowBrt = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
       const emoji = status === "success" ? "✅" : status === "partial" ? "⚠️" : "❌";
-      const text = `${emoji} *Backup Comanda Tech*\n` +
+      let text = `${emoji} *Backup Comanda Tech*\n` +
         `Status: ${status}\n` +
         `Data: ${nowBrt}\n` +
         `Tabelas: ${tablesProcessed}\n` +
-        `Linhas: ${totalRows.toLocaleString("pt-BR")}\n` +
-        `Duração: ${(durationMs / 1000).toFixed(1)}s` +
+        `Linhas: ${totalRows.toLocaleString("pt-BR")}\n`;
+      
+      if (authResult) {
+        text += `Usuários (Auth): ${authResult.users}\n`;
+        text += `Identidades (Auth): ${authResult.identities}\n`;
+      }
+
+      text += `Duração: ${(durationMs / 1000).toFixed(1)}s` +
         (errorMessage ? `\nErro: ${errorMessage.slice(0, 200)}` : "");
 
       const baseUrl = EVOLUTION_API_URL.replace(/\/$/, "");
