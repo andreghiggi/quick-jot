@@ -1,41 +1,29 @@
-# Plano de Implementação: Módulo Balança (Integração Wind D3)
+# Plano de Implementação: Módulo Balança e Venda por Peso no PDV V2
 
-Este plano descreve a implementação do suporte a balanças no sistema, começando pelo modelo **Wind D3**, integrando-a tanto ao PDV (frontend) quanto ao script de comunicação local (Python).
+Este plano descreve a implementação do suporte a balanças (inicialmente **Wind D3**) e a otimização do fluxo de venda por peso no **PDV V2**, permitindo uma operação ágil sem a burocracia do fluxo de pedidos tradicional.
 
-## 1. Módulo de Configuração (Admin/Configurações)
+## 1. Módulo de Configuração (Aba Balança)
 - Criar a aba **Balança** em `Settings.tsx`.
-- Opções: 
-  - Habilitar Balança (Sim/Não).
-  - Modelo da Balança: **Wind D3** (inicialmente).
-  - Porta Serial (COM1, COM2, etc - configurável no script local).
-  - Baud Rate e Paridade (padrão Wind D3).
+- Configurações: Habilitar Balança, Modelo (**Wind D3**), Porta Serial e Baud Rate.
+- Fornecer os scripts atualizados (`auto_printer.py`) e instaladores.
 
 ## 2. Ajuste no Script Local (Python - auto_printer.py)
-- Atualmente o script lida apenas com impressão. Vamos adicionar um servidor local simples ou uma rotina de leitura de porta serial.
-- Implementar a leitura do protocolo da **Wind D3** (normalmente envia o peso em formato ASCII sob demanda ou contínuo).
-- O frontend fará uma requisição local (ex: `http://localhost:8081/peso`) para obter o valor atual da balança.
+- Integrar servidor local (ex: porta 8081) para expor o peso da balança via HTTP.
+- Implementar protocolo da Wind D3 via `pyserial`.
+- Atualizar o `.bat` de instalação para incluir dependências de balança.
 
-## 3. Integração com PDV (Frontend)
-- No **PDV V2** e **Pedido Express**, ao selecionar um produto configurado como "Venda por Peso" (kg):
-  - Exibir um botão "Ler Balança".
-  - Fazer o fetch do peso via script local.
-  - Calcular automaticamente o preço total (Peso x Preço unitário).
+## 3. Fluxo Ágil de Venda por Peso no PDV V2
+- **Identificação de Itens por Peso**: No cadastro de produtos, identificar itens que usam balança (unidade 'kg').
+- **Atalho no PDV V2**:
+  - No componente de busca/seleção de itens do PDV V2 (`PDVV2AddItemSearch` ou `PDVV2CategoryBrowser`), ao selecionar um item de balança:
+  - Disparar automaticamente (ou via botão de destaque) a leitura do peso.
+  - Se o peso for > 0, adicionar o item ao rascunho de venda instantaneamente com o cálculo `Peso x Preço`.
+  - Evitar a abertura do wizard de opcionais se não houver seleções obrigatórias, priorizando a velocidade.
+
+## 4. Integração com a Comanda/Mesa
+- Permitir que o peso lido seja lançado diretamente em uma comanda aberta com apenas um clique/atalho, mantendo o operador na tela de lançamento.
 
 ## Detalhes Técnicos
-
-### Protocolo Wind D3 (Sugestão Inicial)
-A balança Wind D3 costuma usar o protocolo P03 ou similar.
-- Conexão: RS232 (ou USB-Serial).
-- Comando de leitura: `ENQ` (0x05) ou fluxo contínuo.
-- Formato de resposta: `[STX][PESO][ETX]` ou similar.
-
-### Alterações nos Arquivos:
-- `scripts/auto_printer.py`: Adicionar `pyserial` (opcional, ou usar comandos de sistema) e lógica de leitura.
-- `src/pages/Settings.tsx`: Interface para download do script atualizado e configuração do modelo.
-- `src/hooks/useStoreSettings.ts`: Adicionar chaves `scale_enabled`, `scale_model`.
-- `src/components/PedidoExpressDialog.tsx` e `src/components/pdv/PDVProductList.tsx`: Adicionar lógica de captura de peso.
-
-### Verificação de Viabilidade
-- **Frontend**: 100% viável via requisições para o agent local.
-- **Agent Local (Python)**: 100% viável, requer que o usuário instale a biblioteca `pyserial` (vamos incluir no `.bat` de instalação).
-- **Hardware**: Necessário cabo serial/USB compatível com a Wind D3.
+- `scripts/auto_printer.py`: Adicionar classe `ScaleService`.
+- `src/components/pdv-v2/PDVV2AddItemSearch.tsx`: Injetar lógica de "Auto-Balancê" (leitura automática ao selecionar item kg).
+- `src/hooks/useScale.ts`: Novo hook para abstrair a comunicação com o `localhost:8081`.
