@@ -1524,12 +1524,12 @@ pause
                       desinstale e baixe o 3.12 em
                       {' '}
                       <a
-                        href="https://www.python.org/downloads/release/python-3122/"
+                        href="https://www.python.org/ftp/python/3.12.2/python-3.12.2-amd64.exe"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="underline"
+                        className="underline font-bold text-primary"
                       >
-                        python.org/3.12.2
+                        Clique aqui para baixar o Python 3.12.2 (64-bit)
                       </a>
                       .
                     </p>
