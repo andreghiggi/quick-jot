@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Loader2, Split, CheckCircle2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { brl, maskCurrencyInput, parseCurrencyInput } from './_format';
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import {
