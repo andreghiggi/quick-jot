@@ -1479,11 +1479,10 @@ pause
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  O script usa o <strong>slug</strong> para identificar a empresa. Se precisar corrigir manualmente, 
-                  edite a variável <code className="bg-background px-1 rounded">COMPANY_SLUG</code> no arquivo printer.py.
+                  O script usa o <strong>ID da empresa</strong> e a <strong>Chave de API</strong> para buscar pedidos reais no banco de dados em tempo real.
                 </p>
                 <p className="text-xs text-destructive mt-2 font-bold animate-pulse">
-                  ⚠️ Erro de inicialização? Baixe o printer.py de novo! ainda não está imprimindo automaticamente. Substitua o arquivo antigo em C:\ComandaTech.
+                  ⚠️ Versão {VERSION} corrigiu a impressão automática e busca real. Baixe o printer.py de novo e substitua o arquivo antigo em C:\ComandaTech.
                 </p>
               </div>
 
