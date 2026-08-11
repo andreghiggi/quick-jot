@@ -1,7 +1,22 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { ShoppingCart, Search, X, Loader2, Plus, Minus, CreditCard, Banknote, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { useProducts } from '@/hooks/useProducts';
+import { useScale } from '@/hooks/useScale';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { brl as formatPrice } from '@/components/pdv-v2/_format';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { useOrders } from '@/hooks/useOrders';
+import { useCashRegister } from '@/hooks/useCashRegister';
+import { usePaymentMethods } from '@/hooks/usePaymentMethods';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -26,7 +41,8 @@ export function PDVV2FastCheckout({ companyId }: Props) {
   const { getWeight, reading: readingScale } = useScale();
   const { currentRegister, addSale } = useCashRegister({ companyId });
   const { addOrder } = useOrders({ companyId });
-  const { activePaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
+  const { user } = useAuthContext();
+  const { activePaymentMethods: pdvPaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
   
   const [query, setQuery] = useState('');
   const [cart, setCart] = useState<any[]>([]);
@@ -79,23 +95,75 @@ export function PDVV2FastCheckout({ companyId }: Props) {
     ).filter(item => item.quantity > 0));
   }
 
-  async function handleFinish(methodId: string) {
+  async function handleFinish(methodName: string) {
     if (cart.length === 0) return;
     if (!currentRegister) {
       toast.error('Abra o caixa antes de vender');
       return;
     }
+    if (!user) return;
 
     setIsSubmitting(true);
     try {
-      // Simplificado: usa a lógica de criar venda PDV direta
-      // No mundo real, aqui chamaria o hook de venda que já temos no PedidoExpress
-      toast.info('Finalizando venda...');
-      
-      // Mock de sucesso para o piloto
+      // 1. Encontrar o ID da forma de pagamento pelo nome (aproximado)
+      const method = pdvPaymentMethods.find(m => m.name.toLowerCase().includes(methodName.toLowerCase()));
+      if (!method) {
+        toast.error(`Forma de pagamento "${methodName}" não encontrada no PDV`);
+        return;
+      }
+
+      // 2. Registrar a venda no caixa (pdv_sales)
+      const saleData = {
+        company_id: companyId,
+        cash_register_id: currentRegister.id,
+        payment_method_id: method.id,
+        total: subtotal,
+        discount: 0,
+        final_total: subtotal,
+        notes: '[VENDA RÁPIDA]',
+        created_by: user.id,
+      };
+
+      const { data: sale, error: saleError } = await supabase
+        .from('pdv_sales')
+        .insert(saleData as any)
+        .select()
+        .single();
+
+      if (saleError) throw saleError;
+
+      // 3. Registrar itens da venda
+      const saleItems = cart.map(item => ({
+        sale_id: sale.id,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.unit_price * item.quantity,
+      }));
+
+      const { error: itemsError } = await supabase.from('pdv_sale_items').insert(saleItems);
+      if (itemsError) throw itemsError;
+
+      // 4. Criar o pedido (opcional, mas bom para histórico unificado)
+      await addOrder({
+        customerName: 'Cliente Balcão',
+        total: subtotal,
+        status: 'delivered',
+        origin: 'balcao',
+        items: cart.map(it => ({
+          productId: it.product_id,
+          name: it.product_name,
+          quantity: it.quantity,
+          price: it.unit_price,
+        })),
+        notes: `[EXPRESS] [COBRADO] [VENDA RÁPIDA] Pagamento: ${method.name}`,
+      });
+
       setCart([]);
-      toast.success('Venda realizada com sucesso!');
+      toast.success('Venda rápida finalizada!');
     } catch (e) {
+      console.error(e);
       toast.error('Erro ao finalizar venda');
     } finally {
       setIsSubmitting(false);
