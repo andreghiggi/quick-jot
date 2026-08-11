@@ -17,19 +17,6 @@ import { useCashRegister } from '@/hooks/useCashRegister';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { useProducts } from '@/hooks/useProducts';
-import { useScale } from '@/hooks/useScale';
-import { useStoreSettings } from '@/hooks/useStoreSettings';
-import { brl as formatPrice } from '@/components/pdv-v2/_format';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
-import { useOrders } from '@/hooks/useOrders';
-import { useCashRegister } from '@/hooks/useCashRegister';
-import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 
 interface Props {
   companyId: string;
@@ -152,6 +139,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
         status: 'delivered',
         origin: 'balcao',
         items: cart.map(it => ({
+          id: crypto.randomUUID(),
           productId: it.product_id,
           name: it.product_name,
           quantity: it.quantity,
