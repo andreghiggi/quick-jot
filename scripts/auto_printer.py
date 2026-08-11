@@ -10,16 +10,19 @@ from datetime import datetime
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.5.0"
+SCRIPT_VERSION = "1.5.1"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
+API_KEY = "" # Injetado pelo frontend
 LOG_FILE = "printer_log.txt"
 STORE_NAME = ""
 STORE_INFO = {}
+COMPANY_ID = "" # Injetado pelo frontend
 
 # Controle de sessão
 pedidos_impressos_sessao = []
 ids_com_falha = set()
+ids_processados = set()
 
 def log(mensagem, tipo="INFO"):
     agora = datetime.now().strftime("%H:%M:%S")
