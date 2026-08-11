@@ -1681,7 +1681,7 @@ pause
                           pin: storeSettings.drawerPin,
                           pulse: storeSettings.drawerPulse
                         });
-                        toast.success('Comando de abertura enviado!');
+                        toast({ title: 'Comando de abertura enviado!' });
                       });
                     }}
                   >
