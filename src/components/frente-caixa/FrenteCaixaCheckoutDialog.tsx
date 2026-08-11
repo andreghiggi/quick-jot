@@ -417,6 +417,16 @@ export function FrenteCaixaCheckoutDialog({
           creditInstallmentsCount: Math.max(1, creditInstallments || 1),
           creditFirstDueDate: creditFirstDue || undefined,
         });
+
+        // Acionar gaveta de caixa se habilitada (venda crediário)
+        if (storeSettings.drawerEnabled && companyId) {
+          openCashDrawer(companyId, {
+            enabled: true,
+            model: storeSettings.drawerModel,
+            pin: storeSettings.drawerPin,
+            pulse: storeSettings.drawerPulse,
+          });
+        }
         return;
       }
 
@@ -462,6 +472,16 @@ export function FrenteCaixaCheckoutDialog({
           : '';
         toast.error((mp.errorMessage || 'Cobrança recusada') + extra);
         return;
+      }
+
+      // Acionar gaveta de caixa se habilitada
+      if (storeSettings.drawerEnabled && companyId) {
+        openCashDrawer(companyId, {
+          enabled: true,
+          model: storeSettings.drawerModel,
+          pin: storeSettings.drawerPin,
+          pulse: storeSettings.drawerPulse,
+        });
       }
 
       await onConfirm({
