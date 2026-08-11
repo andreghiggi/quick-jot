@@ -12,7 +12,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { brl as formatPrice } from '@/components/pdv-v2/_format';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useOrderOperations } from '@/hooks/useOrderOperations';
+import { useOrders } from '@/hooks/useOrders';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 
