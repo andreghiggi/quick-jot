@@ -382,6 +382,9 @@ pause
           <TabsTrigger value="entrega">Entrega</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="impressao">Impressão</TabsTrigger>
+          {company?.id === 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8' && (
+            <TabsTrigger value="balanca">Balança</TabsTrigger>
+          )}
         </TabsList>
 
         {/* Tab Empresa */}
