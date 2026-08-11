@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen, Image, Upload, AlertTriangle, Mail, DoorClosed, ArrowUpFromLine } from 'lucide-react';
+import { VERSION } from '@/version';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
@@ -242,9 +243,13 @@ export default function Settings() {
     const paperSize = storeSettings.printerPaperSize === '80mm' ? '80mm' : '58mm';
     const printLayout = storeSettings.printLayout || 'v1';
 
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+    const companyId = company?.id || '';
+
     return autoPrinterTemplate
-      .replace('STORE_NAME = "Comanda Tech"', `STORE_NAME = "${storeName}"`)
-      .replace('COMPANY_SLUG = ""', `COMPANY_SLUG = "${companySlug}"`)
+      .replace('STORE_NAME = ""', `STORE_NAME = "${storeName}"`)
+      .replace('COMPANY_ID = ""', `COMPANY_ID = "${companyId}"`)
+      .replace('API_KEY = ""', `API_KEY = "${anonKey}"`)
       .replace('PAPER_SIZE = "58mm"', `PAPER_SIZE = "${paperSize}"`)
       .replace('PRINT_LAYOUT = "v1"', `PRINT_LAYOUT = "${printLayout}"`);
   };
@@ -1475,11 +1480,10 @@ pause
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  O script usa o <strong>slug</strong> para identificar a empresa. Se precisar corrigir manualmente, 
-                  edite a variável <code className="bg-background px-1 rounded">COMPANY_SLUG</code> no arquivo printer.py.
+                  O script usa o <strong>ID da empresa</strong> e a <strong>Chave de API</strong> para buscar pedidos reais no banco de dados em tempo real.
                 </p>
                 <p className="text-xs text-destructive mt-2 font-bold animate-pulse">
-                  ⚠️ Erro de inicialização? Baixe o printer.py de novo! ainda não está imprimindo automaticamente. Substitua o arquivo antigo em C:\ComandaTech.
+                  ⚠️ Versão {VERSION} corrigiu a impressão automática e busca real. Baixe o printer.py de novo e substitua o arquivo antigo em C:\ComandaTech.
                 </p>
               </div>
 
