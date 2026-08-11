@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.65.4-beta";
+export const VERSION = "1.65.5-beta";
 export const RELEASE_DATE = "2026-08-11"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Correção crítica IndentationError no auto_printer.py";
+export const CODENAME = "Fix IndentationError auto_printer.py";
 
 
 export interface Release {
@@ -21,13 +21,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.65.5-beta",
+    date: "2026-08-11",
+    codename: "Fix IndentationError auto_printer.py",
+    changes: [
+      "Reescrita completa do script `auto_printer.py` para eliminar erros de indentação e caracteres invisíveis que impediam a inicialização do monitoramento na Amore Mio.",
+      "Mantida a thread de balança Wind D3 e a lógica de polling de pedidos/fila de impressão.",
+    ],
+  },
+  {
     version: "1.65.4-beta",
     date: "2026-08-11",
     codename: "Correção crítica IndentationError no auto_printer.py",
     changes: [
       "Corrigido erro de indentação no loop principal do script `auto_printer.py` (linha 1986) que impedia a inicialização da impressão automática na Amore Mio.",
-      "O erro 'IndentationError: expected an indented block after try statement' ocorria porque o bloco de código dentro do `try` não estava corretamente recuado, causando a falha capturada no log do terminal da loja.",
-      "Nenhuma alteração em TEF, PinPad, SmartPOS, NFC-e, PDV V2 ou outras funcionalidades. A correção é exclusiva do script local de impressão.",
+      "O erro 'IndentationError: expected an indented block after try statement' ocorria porque o bloco de código dentro do `try` não estava corretamente recuado.",
     ],
   },
 
