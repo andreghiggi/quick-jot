@@ -183,6 +183,7 @@ export default function PDVV2() {
   const [multiPayTab, setMultiPayTab] = useState<OccupiedTab | null>(null);
   // Status do processamento TEF (banner no topo do diálogo de cobrança)
   const [tefStatus, setTefStatus] = useState('');
+  const [showFastCheckout, setShowFastCheckout] = useState(false);
 
   // ---- Lancheria I9: serializa NFC-e ↔ prompt TEF -----------------------
   // Isolado por companyId para não impactar outras lojas. O overlay de
