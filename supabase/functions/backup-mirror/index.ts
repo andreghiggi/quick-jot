@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
   const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
   const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
   const startAfterTable: string | null = typeof body?.start_after === "string" ? body.start_after : null;
-  let runId: string;
+  let runId = "";
   let tablesProcessed = 0;
   let totalRows = 0;
   let status = "success";
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
       const det = prev.details as any;
       if (det && typeof det === "object") perTable = det;
     }
-  } else {
+  } else if (body?.mode !== "auth-only") {
     // Self-heal: marca runs 'running' antigos (>30min) como erro para
     // não ficarem pendurados quando a cadeia de continuação quebra.
     try {
@@ -171,10 +171,12 @@ Deno.serve(async (req) => {
           AND started_at < now() - interval '30 minutes'
       `;
     } catch (_) { /* ignore */ }
-    const [runRow] = await sourceMeta`
-      INSERT INTO public.backup_runs (status) VALUES ('running') RETURNING id
-    `;
-    runId = runRow.id as string;
+    if (body?.mode !== "auth-only") {
+      const [runRow] = await sourceMeta`
+        INSERT INTO public.backup_runs (status) VALUES ('running') RETURNING id
+      `;
+      runId = runRow.id as string;
+    }
   }
 
   // Auto-sync de schema: cria tabelas/colunas novas no destino antes do mirror
