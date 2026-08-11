@@ -1,29 +1,27 @@
-# Plano de Implementação: Módulo Balança e Venda por Peso no PDV V2
+# Plano de Implementação: Venda Ágil por Peso no PDV V2 (Balança Wind D3)
 
-Este plano descreve a implementação do suporte a balanças (inicialmente **Wind D3**) e a otimização do fluxo de venda por peso no **PDV V2**, permitindo uma operação ágil sem a burocracia do fluxo de pedidos tradicional.
+Este plano foca em transformar o lançamento de itens por peso (como sorvete) em uma operação de um clique, integrando a balança diretamente ao fluxo do PDV V2.
 
-## 1. Módulo de Configuração (Aba Balança)
-- Criar a aba **Balança** em `Settings.tsx`.
-- Configurações: Habilitar Balança, Modelo (**Wind D3**), Porta Serial e Baud Rate.
-- Fornecer os scripts atualizados (`auto_printer.py`) e instaladores.
+## Como funcionará na tela (Exemplo do Sorvete):
 
-## 2. Ajuste no Script Local (Python - auto_printer.py)
-- Integrar servidor local (ex: porta 8081) para expor o peso da balança via HTTP.
-- Implementar protocolo da Wind D3 via `pyserial`.
-- Atualizar o `.bat` de instalação para incluir dependências de balança.
+1. **Seleção Direta**: O operador clica no botão "Sorvete" (ou digita o código).
+2. **Captura Automática**: O sistema detecta que é um produto por KG e já "puxa" o peso da balança instantaneamente (ex: 0,450 kg).
+3. **Lançamento Imediato**: O item entra no carrinho já com o valor calculado (ex: 0,450 x R$ 60,00 = R$ 27,00) sem abrir nenhuma tela extra ou burocracia.
+4. **Finalização**: Se for apenas o sorvete, o operador já clica em "Receber" e finaliza. Tudo em menos de 5 segundos.
 
-## 3. Fluxo Ágil de Venda por Peso no PDV V2
-- **Identificação de Itens por Peso**: No cadastro de produtos, identificar itens que usam balança (unidade 'kg').
-- **Atalho no PDV V2**:
-  - No componente de busca/seleção de itens do PDV V2 (`PDVV2AddItemSearch` ou `PDVV2CategoryBrowser`), ao selecionar um item de balança:
-  - Disparar automaticamente (ou via botão de destaque) a leitura do peso.
-  - Se o peso for > 0, adicionar o item ao rascunho de venda instantaneamente com o cálculo `Peso x Preço`.
-  - Evitar a abertura do wizard de opcionais se não houver seleções obrigatórias, priorizando a velocidade.
+## Etapas Técnicas:
 
-## 4. Integração com a Comanda/Mesa
-- Permitir que o peso lido seja lançado diretamente em uma comanda aberta com apenas um clique/atalho, mantendo o operador na tela de lançamento.
+### 1. Configuração da Balança
+- Nova aba em **Configurações** para ativar a balança e definir o modelo (**Wind D3**).
+- Script local (`auto_printer.py`) atualizado para ler a porta serial e servir o peso para o navegador.
 
-## Detalhes Técnicos
-- `scripts/auto_printer.py`: Adicionar classe `ScaleService`.
-- `src/components/pdv-v2/PDVV2AddItemSearch.tsx`: Injetar lógica de "Auto-Balancê" (leitura automática ao selecionar item kg).
-- `src/hooks/useScale.ts`: Novo hook para abstrair a comunicação com o `localhost:8081`.
+### 2. Identificação de Produtos "Peso"
+- Campo no cadastro de produtos para marcar como "Usa Balança".
+- Unidade de medida configurada como "kg".
+
+### 3. "Fast Path" no PDV V2
+- Ao selecionar um produto de balança no `PDVV2AddItemSearch` ou `PDVV2CategoryBrowser`, o sistema pula o wizard de opcionais (se não houver obrigatórios) e realiza a leitura do peso via API local.
+- Feedback visual rápido de "Lendo balança..." caso haja atraso na comunicação.
+
+### 4. Integração com Comandas
+- O peso lido pode ser lançado direto em uma comanda aberta (Mesa/Ficha) com o mesmo fluxo simplificado.
