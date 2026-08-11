@@ -15,6 +15,8 @@ import { PDVV2CategoryBrowser } from './PDVV2CategoryBrowser';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { useScale } from '@/hooks/useScale';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 
 export interface ExtraItem {
   id: string;
