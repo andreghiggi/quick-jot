@@ -43,7 +43,8 @@ import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PDVV2ClosedTabsDialog, ClosedTabSale } from '@/components/pdv-v2/PDVV2ClosedTabsDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ClipboardList, UtensilsCrossed } from 'lucide-react';
+import { ClipboardList, UtensilsCrossed, Zap } from 'lucide-react';
+import { PDVV2FastCheckout } from '@/components/pdv-v2/PDVV2FastCheckout';
 
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
