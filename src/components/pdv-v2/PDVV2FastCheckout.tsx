@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { ShoppingCart, Search, X, Loader2, Plus, Minus, CreditCard, Banknote, QrCode } from 'lucide-react';
+import { ShoppingCart, Search, X, Loader2, Plus, Minus, CreditCard, Banknote, QrCode, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -222,28 +222,31 @@ export function PDVV2FastCheckout({ companyId }: Props) {
             <span className="text-2xl font-black text-primary">{formatPrice(subtotal)}</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button 
-              className="h-12 text-xs font-bold bg-green-600 hover:bg-green-700" 
-              disabled={cart.length === 0 || isSubmitting}
-              onClick={() => handleFinish('dinheiro')}
-            >
-              <Banknote className="w-4 h-4 mr-1" /> DINHEIRO
-            </Button>
-            <Button 
-              className="h-12 text-xs font-bold"
-              disabled={cart.length === 0 || isSubmitting}
-              onClick={() => handleFinish('pix')}
-            >
-              <QrCode className="w-4 h-4 mr-1" /> PIX
-            </Button>
-            <Button 
-              className="h-12 text-xs font-bold col-span-2"
-              disabled={cart.length === 0 || isSubmitting}
-              onClick={() => handleFinish('cartao')}
-            >
-              <CreditCard className="w-4 h-4 mr-1" /> CARTÃO / TEF
-            </Button>
+          <div className="grid grid-cols-1 gap-2">
+            {pdvPaymentMethods.map((method) => {
+              const nameLower = method.name.toLowerCase();
+              const Icon = nameLower.includes('pix') ? QrCode : 
+                          (nameLower.includes('cartao') || nameLower.includes('cartão') || nameLower.includes('tef')) ? CreditCard : 
+                          (nameLower.includes('dinheiro') || nameLower.includes('especie')) ? Banknote : Wallet;
+              
+              const isCash = nameLower.includes('dinheiro') || nameLower.includes('especie');
+              
+              return (
+                <Button
+                  key={method.id}
+                  className={cn(
+                    "h-12 text-xs font-bold w-full justify-start px-4",
+                    isCash ? "bg-green-600 hover:bg-green-700 text-white" : ""
+                  )}
+                  variant={isCash ? "default" : "secondary"}
+                  disabled={cart.length === 0 || isSubmitting}
+                  onClick={() => handleFinish(method.name)}
+                >
+                  <Icon className="w-4 h-4 mr-3" />
+                  {method.name.toUpperCase()}
+                </Button>
+              );
+            })}
           </div>
         </div>
       </CardContent>
