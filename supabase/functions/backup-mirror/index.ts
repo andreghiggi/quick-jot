@@ -120,12 +120,26 @@ Deno.serve(async (req) => {
 
   // 0.5) Mirror Auth se solicitado ou se for início de backup completo
   let authResult: any = null;
-  // Precisamos definir sourceMeta antes se for usar para logar auth-only
   const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
   const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
 
+  const sendNotify = async (text: string) => {
+    try {
+      const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
+      const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
+      if (EVOLUTION_API_URL && EVOLUTION_API_KEY) {
+        const baseUrl = EVOLUTION_API_URL.replace(/\/$/, "");
+        await fetch(`${baseUrl}/message/sendText/ct-8c9e7a0e`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: EVOLUTION_API_KEY },
+          body: JSON.stringify({ number: "5554999061836", text }),
+        });
+      }
+    } catch (_) { /* ignore */ }
+  };
+
   if (body?.mode === "auth-only" || (!isContinuation && !body?.skip_auth)) {
-    authResult = await mirrorAuth(source, target);
+    authResult = await mirrorAuth(source, target, sendNotify);
     if (body?.mode === "auth-only") {
       const authOk = authResult.errors.length === 0;
       
