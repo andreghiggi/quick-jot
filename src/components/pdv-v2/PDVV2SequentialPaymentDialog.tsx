@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Loader2, Split, CheckCircle2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { brl, maskCurrencyInput, parseCurrencyInput } from './_format';
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import {
@@ -17,6 +18,7 @@ import {
   type MultiPaymentResolvedLine,
 } from '@/utils/pdvV2MultiPayment';
 import { supabase } from '@/integrations/supabase/client';
+import { openCashDrawer } from '@/utils/cashDrawer';
 
 /**
  * Multi-pagamento sequencial v1.7 (beta).
@@ -113,6 +115,7 @@ export function PDVV2SequentialPaymentDialog({
   const { activePaymentMethods: rawList } = usePaymentMethods({ companyId, channel });
   const { activePaymentMethods: allList } = usePaymentMethods({ companyId });
   const methods = rawList.length > 0 ? rawList : allList;
+  const { settings: storeSettings } = useStoreSettings({ companyId });
 
   // Linhas aprovadas até agora (persistidas em pdv_v2_open_charges).
   const [resolved, setResolved] = useState<MultiPaymentResolvedLine[]>([]);
@@ -374,6 +377,17 @@ export function PDVV2SequentialPaymentDialog({
       // Regra: se houver TEF aprovado → NFC-e obrigatória (auto). Senão,
       // respeita a escolha do operador. Sem módulo fiscal → nunca emite.
       const wantsNfce = fiscalEnabled && (hasTefApproved || documentMode === 'sale_with_nfce');
+      
+      // Acionar gaveta de caixa se habilitada
+      if (storeSettings.drawerEnabled && companyId) {
+        openCashDrawer(companyId, {
+          enabled: true,
+          model: storeSettings.drawerModel,
+          pin: storeSettings.drawerPin,
+          pulse: storeSettings.drawerPulse
+        });
+      }
+
       await onConfirm(lines, { wantsNfce });
       await markCompleted();
       setCompleted(true);

@@ -1607,7 +1607,7 @@ pause
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <p className="font-medium">Ativar Gaveta</p>
-                  <p className="text-sm text-muted-foreground">Abre a gaveta automaticamente em todas as cobranças</p>
+                  <p className="text-sm text-muted-foreground">Abre a gaveta automaticamente em todas as cobranças e cancelamentos</p>
                 </div>
                 <Switch
                   checked={storeSettings.drawerEnabled}

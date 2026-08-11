@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, ArrowLeft, Save, X, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { openCashDrawer } from '@/utils/cashDrawer';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { brl, maskCurrencyInput, parseCurrencyInput } from '@/components/pdv-v2/_format';
@@ -99,6 +101,7 @@ export function FrenteCaixaCheckoutDialog({
   creditSaleFiscalMode = 'on_sale',
   onConfirm,
 }: Props) {
+  const { settings: storeSettings } = useStoreSettings({ companyId });
   const { activePaymentMethods: allActivePaymentMethods } = usePaymentMethods({
     companyId,
     channel: 'pdv',
@@ -414,6 +417,16 @@ export function FrenteCaixaCheckoutDialog({
           creditInstallmentsCount: Math.max(1, creditInstallments || 1),
           creditFirstDueDate: creditFirstDue || undefined,
         });
+
+        // Acionar gaveta de caixa se habilitada (venda crediário)
+        if (storeSettings.drawerEnabled && companyId) {
+          openCashDrawer(companyId, {
+            enabled: true,
+            model: storeSettings.drawerModel,
+            pin: storeSettings.drawerPin,
+            pulse: storeSettings.drawerPulse,
+          });
+        }
         return;
       }
 
@@ -459,6 +472,16 @@ export function FrenteCaixaCheckoutDialog({
           : '';
         toast.error((mp.errorMessage || 'Cobrança recusada') + extra);
         return;
+      }
+
+      // Acionar gaveta de caixa se habilitada
+      if (storeSettings.drawerEnabled && companyId) {
+        openCashDrawer(companyId, {
+          enabled: true,
+          model: storeSettings.drawerModel,
+          pin: storeSettings.drawerPin,
+          pulse: storeSettings.drawerPulse,
+        });
       }
 
       await onConfirm({

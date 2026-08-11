@@ -54,6 +54,7 @@ import {
 import { Plus, Minus, ShoppingBag, X, Loader2, ArrowLeft, ArrowRight, Phone, User, Package, MapPin, CreditCard, Copy } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
+import { openCashDrawer } from '@/utils/cashDrawer';
 
 interface PedidoExpressDialogProps {
   open: boolean;
@@ -1181,6 +1182,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       });
     }
 
+    // Acionar gaveta de caixa se habilitada
+    if (settings.drawerEnabled && company?.id) {
+      openCashDrawer(company.id, {
+        enabled: true,
+        model: settings.drawerModel,
+        pin: settings.drawerPin,
+        pulse: settings.drawerPulse
+      });
+    }
+
     const created = await addOrder({
       customerName: customerName.trim(),
       customerPhone: phoneDigits || undefined,
@@ -1659,6 +1670,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           notes: item.notes || undefined,
         };
       });
+
+      // Acionar gaveta de caixa se habilitada
+      if (settings.drawerEnabled && company?.id) {
+        openCashDrawer(company.id, {
+          enabled: true,
+          model: settings.drawerModel,
+          pin: settings.drawerPin,
+          pulse: settings.drawerPulse
+        });
+      }
 
       const created = await addOrder({
         customerName: customerName.trim(),
@@ -2228,6 +2249,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     // apenas marcamos como pago — não criamos um novo pedido para evitar
     // duplicidade na listagem.
     if (expressOpenOrderId) {
+      // Acionar gaveta de caixa se habilitada
+      if (settings.drawerEnabled && company?.id) {
+        openCashDrawer(company.id, {
+          enabled: true,
+          model: settings.drawerModel,
+          pin: settings.drawerPin,
+          pulse: settings.drawerPulse
+        });
+      }
+
       await supabase
         .from('orders')
         .update({
@@ -2240,6 +2271,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         .eq('id', expressOpenOrderId);
       setPartialResumeCandidate(null);
     } else {
+      // Acionar gaveta de caixa se habilitada
+      if (settings.drawerEnabled && company?.id) {
+        openCashDrawer(company.id, {
+          enabled: true,
+          model: settings.drawerModel,
+          pin: settings.drawerPin,
+          pulse: settings.drawerPulse
+        });
+      }
+
       await addOrder({
         customerName: customerName.trim(),
         customerPhone: phoneDigitsLocal || undefined,
