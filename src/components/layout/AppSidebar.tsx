@@ -44,6 +44,8 @@ import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { useFinanceiroEnabled } from '@/hooks/useFinanceiroEnabled';
 import { useCardapioEnabled } from '@/hooks/useCardapioEnabled';
+import { useFiscalEnabled } from '@/hooks/useFiscalEnabled';
+import { useTefEnabled } from '@/hooks/useTefEnabled';
 import {
   Sidebar,
   SidebarContent,
@@ -78,6 +80,8 @@ export function AppSidebar() {
   const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
   const { enabled: financeiroEnabled } = useFinanceiroEnabled(company?.id);
   const { enabled: cardapioEnabled } = useCardapioEnabled(company?.id);
+  const { enabled: fiscalTokensEnabled } = useFiscalEnabled(company?.id);
+  const { enabled: tefTokensEnabled } = useTefEnabled(company?.id);
   // Fallback robusto: useMercadoEnabled depende de cache em localStorage e pode
   // ficar momentaneamente desatualizado. O useCompanyModules tem realtime e é a
   // fonte da verdade — combinamos os dois para evitar sumiço do grupo Movimentações.
@@ -244,11 +248,11 @@ export function AppSidebar() {
       icon: Receipt,
       href: '/fiscal',
     },
-    {
+    ...(fiscalTokensEnabled ? [{
       title: 'NFC-e Monitor',
       icon: FileText,
       href: '/nfce',
-    },
+    }] : []),
     {
       title: 'Espelho Fiscal',
       icon: FileCheck,
@@ -784,17 +788,19 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={location.pathname === '/relatorios/tef'}
-                >
-                  <Link to="/relatorios/tef">
-                    <CreditCard className="w-4 h-4" />
-                    <span>Relatório TEF</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {tefTokensEnabled && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/relatorios/tef'}
+                  >
+                    <Link to="/relatorios/tef">
+                      <CreditCard className="w-4 h-4" />
+                      <span>Relatório TEF</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               {mercadoEnabled && (
                 <SidebarMenuItem>
                   <SidebarMenuButton

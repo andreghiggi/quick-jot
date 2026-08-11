@@ -33,6 +33,8 @@ import { ShoppingCart } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useFinanceiroEnabled } from '@/hooks/useFinanceiroEnabled';
+import { useFiscalEnabled } from '@/hooks/useFiscalEnabled';
+import { useTefEnabled } from '@/hooks/useTefEnabled';
 import {
   Sidebar,
   SidebarContent,
@@ -63,6 +65,8 @@ export function PDVV2Sidebar() {
   const { user, profile, company, signOut } = useAuthContext();
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { enabled: financeiroEnabled } = useFinanceiroEnabled(company?.id);
+  const { enabled: fiscalTokensEnabled } = useFiscalEnabled(company?.id);
+  const { enabled: tefTokensEnabled } = useTefEnabled(company?.id);
   const financeiroActive = financeiroEnabled || isModuleEnabled('financeiro');
 
   const getInitials = (name: string | null | undefined) => {
@@ -138,7 +142,7 @@ export function PDVV2Sidebar() {
   const fiscal = isModuleEnabled('fiscal')
     ? [
         { title: 'Fiscal', icon: Receipt, href: '/fiscal' },
-        { title: 'NFC-e Monitor', icon: FileText, href: '/nfce' },
+        ...(fiscalTokensEnabled ? [{ title: 'NFC-e Monitor', icon: FileText, href: '/nfce' }] : []),
         { title: 'Espelho Fiscal', icon: FileText, href: '/fiscal/espelho' },
       ]
     : [];
@@ -148,7 +152,7 @@ export function PDVV2Sidebar() {
     { title: 'Relatório de Caixa', icon: CircleDollarSign, href: '/relatorios/caixa' },
     { title: 'Relatório de Clientes', icon: BarChart3, href: '/relatorios/clientes' },
     { title: 'Curva ABC', icon: BarChart3, href: '/relatorios/curva-abc' },
-    { title: 'Relatório TEF', icon: CreditCard, href: '/relatorios/tef' },
+    ...(tefTokensEnabled ? [{ title: 'Relatório TEF', icon: CreditCard, href: '/relatorios/tef' }] : []),
     ...(isModuleEnabled('mercado')
       ? [{ title: 'Relatório de Estoque', icon: Package, href: '/estoque' }]
       : []),
@@ -157,7 +161,7 @@ export function PDVV2Sidebar() {
   const settings = [
     { title: 'Configurações', icon: Settings, href: '/configuracoes' },
     { title: 'Integrações', icon: Settings, href: '/configuracoes/integracoes' },
-    { title: 'TEF ADM (Manutenção)', icon: Settings2, href: '/tef-adm' },
+    ...(tefTokensEnabled ? [{ title: 'TEF ADM (Manutenção)', icon: Settings2, href: '/tef-adm' }] : []),
     { title: 'WhatsApp', icon: Settings, href: '/configuracoes/whatsapp' },
   ];
 
