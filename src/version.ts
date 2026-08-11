@@ -7,9 +7,10 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.64.5-beta";
-export const RELEASE_DATE = "2026-07-29"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Cancelar venda — estorno SmartPOS + cancelamento NFC-e encadeados";
+export const VERSION = "1.65.4-beta";
+export const RELEASE_DATE = "2026-08-11"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Correção crítica IndentationError no auto_printer.py";
+
 
 export interface Release {
   version: string;
@@ -19,6 +20,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.65.4-beta",
+    date: "2026-08-11",
+    codename: "Correção crítica IndentationError no auto_printer.py",
+    changes: [
+      "Corrigido erro de indentação no loop principal do script `auto_printer.py` (linha 1986) que impedia a inicialização da impressão automática na Amore Mio.",
+      "O erro 'IndentationError: expected an indented block after try statement' ocorria porque o bloco de código dentro do `try` não estava corretamente recuado, causando a falha capturada no log do terminal da loja.",
+      "Nenhuma alteração em TEF, PinPad, SmartPOS, NFC-e, PDV V2 ou outras funcionalidades. A correção é exclusiva do script local de impressão.",
+    ],
+  },
+
   {
     version: "1.64.5-beta",
     date: "2026-07-29",
