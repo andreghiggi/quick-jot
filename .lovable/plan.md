@@ -1,18 +1,23 @@
-# Plano: Atalhos Numéricos para Balança (Venda Rápida)
+# Integração de Gaveta de Caixa (Elgin/Bematech)
 
-Propomos a implementação de códigos curtos (ex: "1", "2") para produtos de balança, otimizando o fluxo da Amore Mio na **Venda Rápida**.
+Implementação do suporte a abertura automática de gavetas de dinheiro via comandos ESC/POS enviados pela impressora térmica.
 
-## O que será construído
-- Campo `scale_barcode` já existe no banco; vamos usá-lo como "Atalho Numérico".
-- A **Venda Rápida** agora prioriza a busca por esse código exato antes da busca textual.
-- Se o operador digitar "1" e existir um produto com `scale_barcode = '1'`, ele será adicionado instantaneamente (lendo a balança se necessário).
+## O que temos hoje
+- Infraestrutura de `pdv_settings` para a Frente de Caixa.
+- Toggle `auto_open_drawer_cash` já existente no banco de dados (mas sem lógica de acionamento real de hardware).
+- Impressão baseada em HTML/Browser para NFC-e e Crediário.
+
+## O que vamos implementar
+1. **Configurações**: Novo card em `FrenteCaixaConfiguracoes.tsx` para selecionar o modelo da gaveta e o método de conexão.
+2. **Protocolo ESC/POS**: Utilitário para gerar o comando binário de abertura (`CHR(27) + "p" + CHR(0) + CHR(25) + CHR(250)`).
+3. **Agente de Impressão (Fase 1)**: Para gavetas USB/Serial conectadas à impressora, utilizaremos o `nfce-proxy` ou o instalador local para despachar o comando de "Pulse" (abertura).
+4. **Trigger**: Acionamento automático ao finalizar vendas em Dinheiro e botão manual "Abrir Gaveta" na sidebar.
 
 ## Detalhes Técnicos
-- Alteração no `useMemo` do filtro em `PDVV2FastCheckout.tsx` para detectar entradas numéricas curtas.
-- Adição de lógica no `useEffect` do `query` para disparar `handleAddProduct` automaticamente se houver um match exato no `scale_barcode`.
-- Atualização da UI de busca para indicar que aceita códigos de balança.
+- **Modelos**: Elgin, Bematech, Epson (padrão ESC/POS).
+- **Interface**: A gaveta é conectada via cabo RJ11 na impressora. O comando de abertura é enviado para a impressora, que repassa o pulso elétrico para a gaveta.
 
-## Como usar
-1. No cadastro do produto (ex: Sorvete Kilo), preencha o campo "Código de Balança" com um número (ex: 1).
-2. Na Venda Rápida, basta digitar "1" no campo de busca.
-3. O sistema identificará o código, capturará o peso e lançará no carrinho sem cliques extras.
+## Próximos Passos
+- Adicionar `drawer_model` e `drawer_connection_type` ao `usePdvSettings`.
+- Implementar aba "Periféricos" na configuração.
+- Criar a lógica de disparo no checkout da Frente de Caixa.
