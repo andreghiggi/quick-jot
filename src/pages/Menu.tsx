@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { z } from 'zod';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { Progress } from '@/components/ui/progress';
@@ -505,12 +506,10 @@ export default function Menu() {
 
     const timer = setTimeout(async () => {
       try {
-        const { data, error } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('company_id', company.id)
-          .eq('phone', cleanPhone)
-          .maybeSingle();
+        const { data: res, error } = await supabase.functions.invoke('public-customer', {
+          body: { action: 'lookup', company_id: company.id, phone: cleanPhone },
+        });
+        const data = (res as any)?.customer as any;
 
         if (data && !error) {
           // Captura o ID do cliente para a feature de múltiplos endereços (aditivo)
@@ -1191,12 +1190,32 @@ export default function Menu() {
     // Save order to database
     setIsSubmitting(true);
     try {
+      // Validação/sanitização dos dados do cliente antes de persistir
+      const publicOrderSchema = z.object({
+        customerName: z.string().trim().min(2, 'Nome inválido').max(100, 'Nome muito longo'),
+        customerPhone: z.string().trim().regex(/^[\d\s()+-]{10,20}$/, 'Telefone inválido').optional().or(z.literal('')),
+        deliveryAddress: z.string().trim().max(500, 'Endereço muito longo').optional().or(z.literal('')),
+        paymentMethod: z.string().trim().min(1).max(50),
+      });
+      const validation = publicOrderSchema.safeParse({
+        customerName,
+        customerPhone,
+        deliveryAddress: fullAddress,
+        paymentMethod,
+      });
+      if (!validation.success) {
+        setIsSubmitting(false);
+        toast.error(validation.error.issues[0]?.message || 'Dados inválidos');
+        return;
+      }
+      const safe = validation.data;
+
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
-          customer_name: customerName,
-          customer_phone: customerPhone || null,
-          delivery_address: fullAddress || null,
+          customer_name: safe.customerName,
+          customer_phone: safe.customerPhone || null,
+          delivery_address: safe.deliveryAddress || null,
           notes: `Pagamento: ${paymentMethod}${(() => { const pm = activePaymentMethods.find(m => m.name === paymentMethod); return pm?.pix_key ? ` (Chave PIX: ${pm.pix_key})` : ''; })()}${changeFor.trim() ? ` (Troco para R$ ${changeFor.trim()})` : ''} | ${deliveryTypeLabel}${deliveryFee > 0 ? ` (R$ ${deliveryFee.toFixed(2)})` : ''}`,
           total: orderTotal,
           status: 'pending',
@@ -1243,27 +1262,27 @@ export default function Menu() {
         const cleanPhone = customerPhone.replace(/\D/g, '');
         if (cleanPhone.length >= 10) {
           try {
-            const { data: upsertedCustomer } = await supabase
-              .from('customers')
-              .upsert({
+            const cleanCpf = customerCpf.replace(/\D/g, '');
+            const { data: upsertRes } = await supabase.functions.invoke('public-customer', {
+              body: {
+                action: 'upsert',
                 company_id: company.id,
                 phone: cleanPhone,
-                name: customerName,
-                cpf: customerCpf.replace(/\D/g, '') || null,
+                name: customerName.trim().slice(0, 100),
+                cpf: cleanCpf.length === 11 ? cleanCpf : null,
                 birth_date: (() => {
                   const bd = customerBirthDate.replace(/\D/g, '');
                   if (bd.length === 8) return `${bd.slice(4,8)}-${bd.slice(2,4)}-${bd.slice(0,2)}`;
                   return null;
                 })(),
-                address: `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood} | Ref: ${deliveryReference}`,
+                address: `${deliveryAddress}, ${deliveryNumber}${deliveryComplement ? ` - ${deliveryComplement}` : ''} - ${deliveryNeighborhood} | Ref: ${deliveryReference}`.slice(0, 500),
                 city: deliveryCity || null,
                 state: deliveryState || null,
-              }, { 
-                onConflict: 'company_id,phone',
-                ignoreDuplicates: false 
-              })
-              .select('id')
-              .maybeSingle();
+              },
+            });
+            const upsertedCustomer = (upsertRes as any)?.customer_id
+              ? { id: (upsertRes as any).customer_id as string }
+              : null;
 
             // Múltiplos endereços (aditivo, best-effort, não bloqueia o fluxo).
             const resolvedCustomerId = upsertedCustomer?.id ?? customerId;
