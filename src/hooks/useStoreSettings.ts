@@ -37,6 +37,10 @@ interface StoreSettings {
   tefAutoPrintVias: 'none' | 'estabelecimento' | 'ambas';
   freeDeliveryEnabled: boolean;
   freeDeliveryMinOrder: number;
+  scaleEnabled: boolean;
+  scaleModel: string;
+  scalePort: string;
+  scaleBaudRate: string;
 }
 
 interface UseStoreSettingsOptions {
@@ -80,6 +84,10 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     tefAutoPrintVias: 'ambas',
     freeDeliveryEnabled: false,
     freeDeliveryMinOrder: 0,
+    scaleEnabled: false,
+    scaleModel: 'wind_d3',
+    scalePort: 'COM1',
+    scaleBaudRate: '9600',
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
@@ -138,6 +146,10 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         tefAutoPrintVias: ((settingsMap['tef_auto_print_vias'] as 'none' | 'estabelecimento' | 'ambas') || 'ambas'),
         freeDeliveryEnabled: settingsMap['free_delivery_enabled'] === 'true',
         freeDeliveryMinOrder: parseFloat(settingsMap['free_delivery_min_order']) || 0,
+        scaleEnabled: settingsMap['scale_enabled'] === 'true',
+        scaleModel: settingsMap['scale_model'] || 'wind_d3',
+        scalePort: settingsMap['scale_port'] || 'COM1',
+        scaleBaudRate: settingsMap['scale_baud_rate'] || '9600',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);

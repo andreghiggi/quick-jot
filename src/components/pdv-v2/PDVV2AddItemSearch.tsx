@@ -15,6 +15,8 @@ import { PDVV2CategoryBrowser } from './PDVV2CategoryBrowser';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
+import { useScale } from '@/hooks/useScale';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 
 export interface ExtraItem {
   id: string;
@@ -35,8 +37,11 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
   const { products, loading } = useProducts({ companyId });
   const { categories } = useCategories({ companyId });
   const { groups: optionalGroups } = useOptionalGroups({ companyId });
+  const { settings: storeSettings } = useStoreSettings({ companyId });
+  const { getWeight, reading: readingScale } = useScale();
   const isLancheriaI9 = true;
   const { enabled: mercadoEnabled } = useMercadoEnabled(companyId);
+  const isAmoreMio = companyId === 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -113,7 +118,16 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
   const productOldOptionals = selectedProduct?.optionals?.filter((o) => o.active) || [];
   const hasOptionals = productGroups.length > 0 || productOldOptionals.length > 0;
 
-  function pickProduct(p: Product) {
+  async function pickProduct(p: Product) {
+    // Lógica de balança para Amore Mio
+    if (isAmoreMio && storeSettings.scaleEnabled && (p.unit?.toLowerCase() === 'kg' || p.sellByWeight)) {
+      const weight = await getWeight();
+      if (weight !== null && weight > 0) {
+        addItem(p, [], [], [], weight);
+        return;
+      }
+    }
+
     const groups = getGroupsFor(p);
     const oldOpt = p.optionals?.filter((o) => o.active) || [];
     if (groups.length === 0 && oldOpt.length === 0) {
@@ -234,15 +248,25 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
     oldOpts: ProductOptional[],
     groupOpts: { name: string; price: number }[],
     groupedNames: string[] = [],
+    scaleWeight?: number
   ) {
     const optPrice = [...oldOpts, ...groupOpts].reduce((s, o) => s + o.price, 0);
-    const namesStr = groupedNames.length > 0 ? ` (${groupedNames.join(' | ')})` : '';
+    let namesStr = groupedNames.length > 0 ? ` (${groupedNames.join(' | ')})` : '';
+    
+    let quantity = 1;
+    let unitPrice = p.price + optPrice;
+
+    if (scaleWeight !== undefined && scaleWeight > 0) {
+      quantity = scaleWeight;
+      namesStr = ` [PESO: ${scaleWeight.toFixed(3)}kg]${namesStr}`;
+    }
+
     const newItem: ExtraItem = {
       id: crypto.randomUUID(),
       product_id: p.id,
       product_name: p.name + namesStr,
-      quantity: 1,
-      unit_price: p.price + optPrice,
+      quantity,
+      unit_price: unitPrice,
     };
     onChange([...items, newItem]);
     toast.success(`${p.name} adicionado`);
@@ -315,13 +339,21 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
           )}
 
           {open && !selectedProduct && isLancheriaI9 && (
-            // I9: navegador estilo cardápio público (categorias com foto → subcategorias → produtos)
-            <PDVV2CategoryBrowser
-              companyId={companyId}
-              pdvOnly
-              onProductSelect={pickProduct}
-              maxHeightClassName="max-h-[55vh]"
-            />
+            <>
+              {readingScale && (
+                <div className="flex items-center justify-center py-2 bg-primary/10 rounded mb-2">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2 text-primary" />
+                  <span className="text-xs font-medium text-primary">Lendo balança...</span>
+                </div>
+              )}
+              {/* I9: navegador estilo cardápio público (categorias com foto → subcategorias → produtos) */}
+              <PDVV2CategoryBrowser
+                companyId={companyId}
+                pdvOnly
+                onProductSelect={pickProduct}
+                maxHeightClassName="max-h-[55vh]"
+              />
+            </>
           )}
 
           {open && !selectedProduct && !isLancheriaI9 && (
@@ -337,6 +369,12 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
                 />
               </div>
               <ScrollArea className="max-h-48">
+                {readingScale && (
+                  <div className="flex items-center justify-center py-2 bg-primary/10 rounded mb-2">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2 text-primary" />
+                    <span className="text-xs font-medium text-primary">Lendo balança...</span>
+                  </div>
+                )}
                 <div className="space-y-1">
                   {loading ? (
                     <div className="flex justify-center py-3">

@@ -20,6 +20,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
 import { ButtonColorPicker } from '@/components/settings/ButtonColorPicker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import autoPrinterTemplate from '../../scripts/auto_printer.py?raw';
 import instalarImpressaoCmd from '../../scripts/instalar_impressao.cmd?raw';
 import iniciarImpressaoCmd from '../../scripts/iniciar_impressao.cmd?raw';
@@ -382,6 +383,9 @@ pause
           <TabsTrigger value="entrega">Entrega</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="impressao">Impressão</TabsTrigger>
+          {company?.id === 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8' && (
+            <TabsTrigger value="balanca">Balança</TabsTrigger>
+          )}
         </TabsList>
 
         {/* Tab Empresa */}
@@ -1583,6 +1587,68 @@ pause
                   post-install. O launcher (<code className="bg-background px-1 rounded">iniciar_impressao.cmd</code>) auto-repara
                   dependências antes de subir o serviço.
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="balanca" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Printer className="w-5 h-5" />
+                Configuração da Balança (Beta Amore Mio)
+              </CardTitle>
+              <CardDescription>
+                Configure a integração com a balança Wind D3 via script local.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Ativar Balança</p>
+                  <p className="text-sm text-muted-foreground">Habilita a leitura de peso no PDV V2</p>
+                </div>
+                <Switch
+                  checked={storeSettings.scaleEnabled}
+                  onCheckedChange={async (v) => {
+                    await updateSetting('scale_enabled', v ? 'true' : 'false');
+                  }}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Modelo da Balança</Label>
+                  <Select
+                    value={storeSettings.scaleModel}
+                    onValueChange={async (v) => await updateSetting('scale_model', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o modelo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="wind_d3">Wind D3 (Protocolo P03)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Porta Serial (COM)</Label>
+                  <Input
+                    value={storeSettings.scalePort}
+                    onChange={(e) => updateSetting('scale_port', e.target.value)}
+                    placeholder="Ex: COM1"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-muted p-4 rounded-lg">
+                <h4 className="font-semibold text-sm mb-2">Instruções para Balança:</h4>
+                <ol className="text-xs space-y-2 list-decimal list-inside text-muted-foreground">
+                  <li>Certifique-se de que a balança está conectada ao computador.</li>
+                  <li>O script <code className="bg-background px-1 rounded">auto_printer.py</code> deve estar atualizado (versão com ScaleService).</li>
+                  <li>O script abrirá um servidor local na porta 8081 para fornecer o peso ao sistema.</li>
+                </ol>
               </div>
             </CardContent>
           </Card>
