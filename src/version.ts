@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.65.5-beta";
+export const VERSION = "1.65.6-beta";
 export const RELEASE_DATE = "2026-08-11"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Fix IndentationError auto_printer.py";
+export const CODENAME = "Final Indentation Fix auto_printer.py";
 
 
 export interface Release {
@@ -20,6 +20,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.65.6-beta",
+    date: "2026-08-11",
+    codename: "Final Indentation Fix auto_printer.py",
+    changes: [
+      "Aplicação de correção final de caracteres de controle e tabulações no script `auto_printer.py` para garantir compatibilidade total com o interpretador Python 3.12/3.13 no Windows.",
+      "Aviso adicionado na tela de configurações para download da versão corrigida.",
+    ],
+  },
   {
     version: "1.65.5-beta",
     date: "2026-08-11",

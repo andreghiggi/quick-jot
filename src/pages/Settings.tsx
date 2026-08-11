@@ -1478,8 +1478,8 @@ pause
                   O script usa o <strong>slug</strong> para identificar a empresa. Se precisar corrigir manualmente, 
                   edite a variável <code className="bg-background px-1 rounded">COMPANY_SLUG</code> no arquivo printer.py.
                 </p>
-                <p className="text-xs text-destructive mt-2">
-                  Se a loja ainda imprimir V3 com V2 selecionado, baixe novamente o printer.py abaixo e substitua o arquivo antigo em C:\ComandaTech.
+                <p className="text-xs text-destructive mt-2 font-bold animate-pulse">
+                  ⚠️ Erro de inicialização? Baixe o printer.py de novo! A versão v1.65.6-beta corrigiu o erro de indentação. Substitua o arquivo antigo em C:\ComandaTech.
                 </p>
               </div>
 
