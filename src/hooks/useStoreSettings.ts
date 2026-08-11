@@ -84,6 +84,10 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     tefAutoPrintVias: 'ambas',
     freeDeliveryEnabled: false,
     freeDeliveryMinOrder: 0,
+    scaleEnabled: false,
+    scaleModel: 'wind_d3',
+    scalePort: 'COM1',
+    scaleBaudRate: '9600',
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
