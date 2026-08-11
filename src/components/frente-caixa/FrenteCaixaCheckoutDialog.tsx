@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, ArrowLeft, Save, X, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { openCashDrawer } from '@/utils/cashDrawer';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { brl, maskCurrencyInput, parseCurrencyInput } from '@/components/pdv-v2/_format';
@@ -99,6 +101,7 @@ export function FrenteCaixaCheckoutDialog({
   creditSaleFiscalMode = 'on_sale',
   onConfirm,
 }: Props) {
+  const { settings: storeSettings } = useStoreSettings({ companyId });
   const { activePaymentMethods: allActivePaymentMethods } = usePaymentMethods({
     companyId,
     channel: 'pdv',
