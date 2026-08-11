@@ -1984,7 +1984,11 @@ if __name__ == "__main__":
     
     contador = 0
     try:
-        while True:
+    # Inicia servidor de balança em uma thread separada
+    scale_thread = threading.Thread(target=run_scale_server, daemon=True)
+    scale_thread.start()
+
+    while True:
             # 1. Pedidos do cardápio online / express / garçom
             pedidos = buscar_pedidos_nao_impressos(company_id)
             # Filtra pedidos que já falharam nesta sessão (evita loop infinito)
