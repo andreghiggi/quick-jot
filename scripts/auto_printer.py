@@ -192,6 +192,10 @@ def processar_pedido(pedido, store_name, store_info):
 def main(company_id, company_name):
     global STORE_NAME
     
+    if not API_KEY:
+        log("ERRO CRÍTICO: Chave de API (API_KEY) não encontrada. Baixe o script novamente pelo painel.", "ERRO")
+        return
+
     log(f"Versão do script: {SCRIPT_VERSION}", "OK")
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
