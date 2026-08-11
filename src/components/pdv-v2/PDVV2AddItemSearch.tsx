@@ -339,13 +339,21 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
           )}
 
           {open && !selectedProduct && isLancheriaI9 && (
-            // I9: navegador estilo cardápio público (categorias com foto → subcategorias → produtos)
-            <PDVV2CategoryBrowser
-              companyId={companyId}
-              pdvOnly
-              onProductSelect={pickProduct}
-              maxHeightClassName="max-h-[55vh]"
-            />
+            <>
+              {readingScale && (
+                <div className="flex items-center justify-center py-2 bg-primary/10 rounded mb-2">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2 text-primary" />
+                  <span className="text-xs font-medium text-primary">Lendo balança...</span>
+                </div>
+              )}
+              {/* I9: navegador estilo cardápio público (categorias com foto → subcategorias → produtos) */}
+              <PDVV2CategoryBrowser
+                companyId={companyId}
+                pdvOnly
+                onProductSelect={pickProduct}
+                maxHeightClassName="max-h-[55vh]"
+              />
+            </>
           )}
 
           {open && !selectedProduct && !isLancheriaI9 && (
