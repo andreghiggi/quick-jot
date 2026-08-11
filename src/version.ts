@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.65.6-beta";
+export const VERSION = "1.65.7-beta";
 export const RELEASE_DATE = "2026-08-11"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Final Indentation Fix auto_printer.py";
+export const CODENAME = "Real Data Fetching in auto_printer.py";
 
 
 export interface Release {
@@ -20,6 +20,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.65.7-beta",
+    date: "2026-08-11",
+    codename: "Real Data Fetching in auto_printer.py",
+    changes: [
+      "Implementação das funções de busca real via API Supabase no script `auto_printer.py` (v1.5.1).",
+      "O monitor agora consulta as tabelas `orders` e `print_queue` em tempo real.",
+      "Injeção automática da chave de API e ID da empresa no download do script.",
+      "Correção definitiva do status 'PEDIDOS IMPRESSOS HOJE: 0' quando há pedidos pendentes.",
+    ],
+  },
   {
     version: "1.65.6-beta",
     date: "2026-08-11",
