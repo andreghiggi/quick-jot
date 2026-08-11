@@ -120,22 +120,45 @@ Deno.serve(async (req) => {
 
   // 0.5) Mirror Auth se solicitado ou se for início de backup completo
   let authResult: any = null;
+  // Precisamos definir sourceMeta antes se for usar para logar auth-only
+  const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
+  const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
+
   if (body?.mode === "auth-only" || (!isContinuation && !body?.skip_auth)) {
     authResult = await mirrorAuth(source, target);
     if (body?.mode === "auth-only") {
+      const authOk = authResult.errors.length === 0;
+      
+      const [runRow] = await sourceMeta`
+        INSERT INTO public.backup_runs (
+          status, 
+          tables_processed, 
+          rows_copied, 
+          error_message, 
+          details
+        ) VALUES (
+          ${authOk ? 'success' : 'error'},
+          0,
+          ${authResult.users + authResult.identities},
+          ${authOk ? null : authResult.errors.join('; ')},
+          ${sourceMeta.json({ auth: authResult })}
+        ) RETURNING id
+      `;
+
       await source.end();
       await target.end();
+      await sourceMeta.end();
+
       return json({ 
-        ok: authResult.errors.length === 0, 
+        ok: authOk, 
+        run_id: runRow.id,
         auth: authResult,
-        message: authResult.errors.length === 0 ? "Auth mirror concluído" : "Erro no auth mirror"
+        message: authOk ? "Auth mirror concluído" : "Erro no auth mirror"
       });
     }
   }
 
   // Estado da execução (pode ser continuação de uma invocação anterior)
-  const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
-  const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
   const startAfterTable: string | null = typeof body?.start_after === "string" ? body.start_after : null;
   let runId = "";
   let tablesProcessed = 0;
