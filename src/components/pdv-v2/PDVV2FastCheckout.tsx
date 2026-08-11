@@ -47,7 +47,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
       .filter((p) => 
         p.name.toLowerCase().includes(q) || 
         (p.code && p.code.toLowerCase().includes(q)) ||
-        (p.scale_barcode && p.scale_barcode.toLowerCase() === q)
+        (p.scaleBarcode && p.scaleBarcode.toLowerCase() === q)
       )
       .slice(0, 10);
   }, [activeProducts, query]);
@@ -58,7 +58,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
     if (!q) return;
 
     const exactMatch = activeProducts.find(p => 
-      p.scale_barcode && p.scale_barcode.toLowerCase() === q
+      p.scaleBarcode && p.scaleBarcode.toLowerCase() === q
     );
 
     if (exactMatch) {
