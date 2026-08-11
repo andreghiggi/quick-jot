@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Split, Loader2 } from 'lucide-react';
 import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { openCashDrawer } from '@/utils/cashDrawer';
 import { brl } from './_format';
 import type { MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 
@@ -55,6 +57,7 @@ export function PDVV2MultiPaymentDialog({
   const { activePaymentMethods: rawList } = usePaymentMethods({ companyId, channel });
   const { activePaymentMethods: allList } = usePaymentMethods({ companyId });
   const methods = rawList.length > 0 ? rawList : allList;
+  const { settings: storeSettings } = useStoreSettings({ companyId });
 
   const [lines, setLines] = useState<LineDraft[]>([]);
 
@@ -121,6 +124,17 @@ export function PDVV2MultiPaymentDialog({
       })
       .filter((l): l is MultiPaymentInputLine => l !== null);
     if (out.length < 2) return;
+    
+    // Acionar gaveta de caixa se habilitada
+    if (storeSettings.drawerEnabled) {
+      openCashDrawer(companyId!, {
+        enabled: true,
+        model: storeSettings.drawerModel,
+        pin: storeSettings.drawerPin,
+        pulse: storeSettings.drawerPulse
+      });
+    }
+
     await onConfirm(out);
   }
 

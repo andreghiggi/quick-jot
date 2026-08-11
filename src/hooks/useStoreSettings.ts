@@ -41,6 +41,10 @@ interface StoreSettings {
   scaleModel: string;
   scalePort: string;
   scaleBaudRate: string;
+  drawerEnabled: boolean;
+  drawerModel: string;
+  drawerPin: string;
+  drawerPulse: string;
 }
 
 interface UseStoreSettingsOptions {
@@ -88,6 +92,10 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     scaleModel: 'wind_d3',
     scalePort: 'COM1',
     scaleBaudRate: '9600',
+    drawerEnabled: false,
+    drawerModel: 'epson',
+    drawerPin: '2',
+    drawerPulse: 'medium',
   });
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
@@ -150,6 +158,10 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         scaleModel: settingsMap['scale_model'] || 'wind_d3',
         scalePort: settingsMap['scale_port'] || 'COM1',
         scaleBaudRate: settingsMap['scale_baud_rate'] || '9600',
+        drawerEnabled: settingsMap['drawer_enabled'] === 'true',
+        drawerModel: settingsMap['drawer_model'] || 'epson',
+        drawerPin: settingsMap['drawer_pin'] || '2',
+        drawerPulse: settingsMap['drawer_pulse'] || 'medium',
       });
     } catch (error) {
       console.error('Error fetching store settings:', error);

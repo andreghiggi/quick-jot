@@ -17,6 +17,7 @@ import { useCashRegister } from '@/hooks/useCashRegister';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { openCashDrawer } from '@/utils/cashDrawer';
 
 interface Props {
   companyId: string;
@@ -167,6 +168,17 @@ export function PDVV2FastCheckout({ companyId }: Props) {
       });
 
       setCart([]);
+      
+      // Acionar gaveta de caixa se habilitada
+      if (storeSettings.drawerEnabled) {
+        openCashDrawer(companyId, {
+          enabled: true,
+          model: storeSettings.drawerModel,
+          pin: storeSettings.drawerPin,
+          pulse: storeSettings.drawerPulse
+        });
+      }
+
       toast.success('Venda rápida finalizada!');
     } catch (e) {
       console.error(e);

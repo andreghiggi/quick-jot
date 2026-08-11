@@ -28,7 +28,10 @@ import {
   History,
   ChevronDown,
   CreditCard as CardIcon,
+  DoorOpen,
 } from 'lucide-react';
+import { openCashDrawer } from '@/utils/cashDrawer';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { ShoppingCart } from 'lucide-react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -67,6 +70,7 @@ export function PDVV2Sidebar() {
   const { enabled: financeiroEnabled } = useFinanceiroEnabled(company?.id);
   const { enabled: fiscalTokensEnabled } = useFiscalEnabled(company?.id);
   const { enabled: tefTokensEnabled } = useTefEnabled(company?.id);
+  const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   const financeiroActive = financeiroEnabled || isModuleEnabled('financeiro');
 
   const getInitials = (name: string | null | undefined) => {
@@ -229,6 +233,29 @@ export function PDVV2Sidebar() {
 
       <SidebarContent>
         {renderGroup('Operação', [...home, ...operations], false)}
+        {storeSettings.drawerEnabled && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() =>
+                      openCashDrawer(company!.id, {
+                        enabled: true,
+                        model: storeSettings.drawerModel,
+                        pin: storeSettings.drawerPin,
+                        pulse: storeSettings.drawerPulse,
+                      })
+                    }
+                  >
+                    <DoorOpen className="w-4 h-4" />
+                    <span>Abrir Gaveta</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         {renderGroup('Salão', tables)}
         {renderGroup('Movimentações', movimentacoes)}
         <Collapsible className="group/grp-cadastros">

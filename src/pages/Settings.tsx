@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen, Image, Upload, AlertTriangle, Mail } from 'lucide-react';
+import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen, Image, Upload, AlertTriangle, Mail, DoorClosed, ArrowUpFromLine } from 'lucide-react';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
@@ -1587,6 +1587,117 @@ pause
                   post-install. O launcher (<code className="bg-background px-1 rounded">iniciar_impressao.cmd</code>) auto-repara
                   dependências antes de subir o serviço.
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="gaveta" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DoorClosed className="w-5 h-5" />
+                Configuração da Gaveta de Dinheiro
+              </CardTitle>
+              <CardDescription>
+                Configure o acionamento automático da gaveta conectada à impressora térmica.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Ativar Gaveta</p>
+                  <p className="text-sm text-muted-foreground">Abre a gaveta automaticamente em todas as cobranças</p>
+                </div>
+                <Switch
+                  checked={storeSettings.drawerEnabled}
+                  onCheckedChange={async (v) => {
+                    await updateSetting('drawer_enabled', v ? 'true' : 'false');
+                  }}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Modelo da Gaveta/Impressora</Label>
+                  <Select
+                    value={storeSettings.drawerModel}
+                    onValueChange={async (v) => await updateSetting('drawer_model', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o modelo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="elgin">Elgin</SelectItem>
+                      <SelectItem value="bematech">Bematech</SelectItem>
+                      <SelectItem value="epson">Epson / Genérica ESC/POS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Pino do Conector (RJ11)</Label>
+                  <Select
+                    value={storeSettings.drawerPin}
+                    onValueChange={async (v) => await updateSetting('drawer_pin', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o pino" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2">Pino 2 (Padrão)</SelectItem>
+                      <SelectItem value="5">Pino 5</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Duração do Pulso</Label>
+                  <Select
+                    value={storeSettings.drawerPulse}
+                    onValueChange={async (v) => await updateSetting('drawer_pulse', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a duração" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="short">Curto (30ms)</SelectItem>
+                      <SelectItem value="medium">Médio (50ms)</SelectItem>
+                      <SelectItem value="long">Longo (100ms)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button 
+                    variant="outline" 
+                    className="w-full gap-2"
+                    disabled={!storeSettings.drawerEnabled}
+                    onClick={() => {
+                      import('@/utils/cashDrawer').then(({ openCashDrawer }) => {
+                        openCashDrawer(company!.id, {
+                          enabled: true,
+                          model: storeSettings.drawerModel,
+                          pin: storeSettings.drawerPin,
+                          pulse: storeSettings.drawerPulse
+                        });
+                        toast({ title: 'Comando de abertura enviado!' });
+                      });
+                    }}
+                  >
+                    <ArrowUpFromLine className="w-4 h-4" />
+                    Testar abertura
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-muted p-4 rounded-lg">
+                <h4 className="font-semibold text-sm mb-2">Como funciona:</h4>
+                <ul className="text-xs space-y-2 list-disc list-inside text-muted-foreground">
+                  <li>A gaveta deve estar conectada à porta DK (Drawer Kick-out) da sua impressora térmica.</li>
+                  <li>O acionamento ocorre via comando ESC/POS enviado para a impressora.</li>
+                  <li>Funciona com o script local <code className="bg-background px-1 rounded">auto_printer.py</code> atualizado.</li>
+                </ul>
               </div>
             </CardContent>
           </Card>
