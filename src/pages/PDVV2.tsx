@@ -55,6 +55,7 @@ import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2Sequentia
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import { recordSalePayments } from '@/utils/recordSalePayments';
 import { getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
+import { cn } from '@/lib/utils';
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
 }
