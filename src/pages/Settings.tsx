@@ -1479,7 +1479,7 @@ pause
                   edite a variável <code className="bg-background px-1 rounded">COMPANY_SLUG</code> no arquivo printer.py.
                 </p>
                 <p className="text-xs text-destructive mt-2 font-bold animate-pulse">
-                  ⚠️ Erro de inicialização? Baixe o printer.py de novo! A versão na amore mio é a 24.0, qual deve ser a versão baixada? Substitua o arquivo antigo em C:\ComandaTech.
+                  ⚠️ Erro de inicialização? Baixe o printer.py de novo! ainda não está imprimindo automaticamente. Substitua o arquivo antigo em C:\ComandaTech.
                 </p>
               </div>
 
