@@ -243,7 +243,7 @@ export default function Settings() {
     const paperSize = storeSettings.printerPaperSize === '80mm' ? '80mm' : '58mm';
     const printLayout = storeSettings.printLayout || 'v1';
 
-    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
     const companyId = company?.id || '';
 
     return autoPrinterTemplate
