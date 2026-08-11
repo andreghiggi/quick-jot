@@ -54,6 +54,7 @@ import {
 import { Plus, Minus, ShoppingBag, X, Loader2, ArrowLeft, ArrowRight, Phone, User, Package, MapPin, CreditCard, Copy } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
+import { openCashDrawer } from '@/utils/cashDrawer';
 
 interface PedidoExpressDialogProps {
   open: boolean;

@@ -14,6 +14,8 @@ import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { openCashDrawer } from '@/utils/cashDrawer';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { Order } from '@/types/order';
 import { emitirNFCe, type NFCeItem, type NFCeRecord, type NFCeTefData } from '@/services/nfceService';
 import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
@@ -51,6 +53,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const fiscalEnabled = isModuleEnabled('fiscal');
+  const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
 
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
@@ -325,6 +328,16 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       }
 
       const saleNotes = `[CARDAPIO #${order.orderCode || order.dailyNumber}] Pagamento: ${params.paymentName}${tefNote}`;
+
+      // Acionar gaveta de caixa se habilitada
+      if (storeSettings.drawerEnabled && company?.id) {
+        openCashDrawer(company.id, {
+          enabled: true,
+          model: storeSettings.drawerModel,
+          pin: storeSettings.drawerPin,
+          pulse: storeSettings.drawerPulse
+        });
+      }
 
       // 1) Registra a venda no caixa, vinculada ao pedido
       const saleId = await addSale(

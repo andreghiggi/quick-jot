@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { openCashDrawer } from '@/utils/cashDrawer';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { stripDescMarkers, parseItemNotes, extractPaymentName } from '@/utils/orderNotesDisplay';
 import {
   AlertDialog,
@@ -88,6 +90,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
   const { company, isSuperAdmin, isCompanyAdmin } = useAuthContext();
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
+  const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   
   const config = statusConfig[order.status];
   const [confirming, setConfirming] = useState(false);
@@ -307,6 +310,17 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
         .update({ notes: newNotes, status: 'canceled' as any })
         .eq('id', order.id);
       if (error) throw error;
+
+      // Acionar gaveta ao cancelar (finalizar ciclo) se habilitada
+      if (storeSettings.drawerEnabled && company?.id) {
+        openCashDrawer(company.id, {
+          enabled: true,
+          model: storeSettings.drawerModel,
+          pin: storeSettings.drawerPin,
+          pulse: storeSettings.drawerPulse
+        });
+      }
+
       toast.success(`Pedido #${order.shortCode || order.orderCode || order.dailyNumber} cancelado`);
       setCancelDialogOpen(false);
       setCancelReason('');
