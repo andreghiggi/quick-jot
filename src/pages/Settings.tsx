@@ -242,9 +242,13 @@ export default function Settings() {
     const paperSize = storeSettings.printerPaperSize === '80mm' ? '80mm' : '58mm';
     const printLayout = storeSettings.printLayout || 'v1';
 
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+    const companyId = company?.id || '';
+
     return autoPrinterTemplate
-      .replace('STORE_NAME = "Comanda Tech"', `STORE_NAME = "${storeName}"`)
-      .replace('COMPANY_SLUG = ""', `COMPANY_SLUG = "${companySlug}"`)
+      .replace('STORE_NAME = ""', `STORE_NAME = "${storeName}"`)
+      .replace('COMPANY_ID = ""', `COMPANY_ID = "${companyId}"`)
+      .replace('API_KEY = ""', `API_KEY = "${anonKey}"`)
       .replace('PAPER_SIZE = "58mm"', `PAPER_SIZE = "${paperSize}"`)
       .replace('PRINT_LAYOUT = "v1"', `PRINT_LAYOUT = "${printLayout}"`);
   };
