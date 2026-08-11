@@ -1,10 +1,9 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { ShoppingCart, Search, X, Loader2, Plus, Minus, CreditCard, Banknote, QrCode, Wallet } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { ShoppingCart, Search, Minus, Plus, CreditCard, Banknote, QrCode, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useProducts } from '@/hooks/useProducts';
 import { useScale } from '@/hooks/useScale';
@@ -18,6 +17,10 @@ import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { openCashDrawer } from '@/utils/cashDrawer';
+import { printOnlyReceipt } from '@/utils/pdvV2Print';
+import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
+import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
+
 
 interface Props {
   companyId: string;
@@ -152,7 +155,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
       if (itemsError) throw itemsError;
 
       // 4. Criar o pedido (opcional, mas bom para histórico unificado)
-      await addOrder({
+      const created = await addOrder({
         customerName: 'Cliente Balcão',
         total: subtotal,
         status: 'delivered',
@@ -166,6 +169,67 @@ export function PDVV2FastCheckout({ companyId }: Props) {
         })),
         notes: `[EXPRESS] [COBRADO] [VENDA RÁPIDA] Pagamento: ${method.name}`,
       });
+
+      if (created) {
+        // Impressão automática (mesmo padrão do Pedido Express)
+        try {
+          const createdShortCode = created.shortCode;
+          const createdOrderCode = created.orderCode || 'EXPRESS';
+          const createdDailyNumber = created.dailyNumber ?? 0;
+          const paperSize = storeSettings.printerPaperSize || '80mm';
+
+          // 1. Recibo de Venda
+          const printItems = cart.map((item) => ({
+            name: item.product_name,
+            quantity: item.quantity,
+            price: item.unit_price,
+          }));
+
+          await printOnlyReceipt({
+            companyId,
+            orderCode: createdOrderCode,
+            dailyNumber: createdDailyNumber,
+            shortCode: createdShortCode,
+            customerName: 'Cliente Balcão',
+            items: printItems,
+            total: subtotal,
+            notes: `Pagamento: ${method.name} | [VENDA RÁPIDA]`,
+            paperSize,
+            printLayout: storeSettings.printLayout,
+          });
+
+          // 2. Comanda de Produção (Cozinha)
+          if (storeSettings.autoPrintProductionTicket) {
+            const productionItems = cart.map((item) => ({
+              productName: item.product_name,
+              quantity: item.quantity,
+            }));
+
+            const html = generateProductionTicketHTML({
+              tabNumber: createdDailyNumber,
+              customerName: 'Cliente Balcão',
+              items: productionItems,
+              createdAt: new Date(),
+              paperSize: storeSettings.printerPaperSize,
+              referenceLabel: createdShortCode ? `PEDIDO ${createdShortCode}` : 'VENDA RÁPIDA',
+              layout: storeSettings.printLayout,
+              companyId: companyId,
+              orderType: 'counter',
+              showReadyTime: true,
+              readyOffsetMinutes: computeReadyOffsetMinutes(storeSettings.estimatedWaitTime, 30),
+            });
+
+            await supabase.from('print_queue').insert({
+              company_id: companyId,
+              html_content: html,
+              label: createdShortCode ? `Produção ${createdShortCode}` : `Venda Rápida - ${createdOrderCode}`,
+            });
+          }
+        } catch (printErr) {
+          console.error('[FastCheckout] Erro ao enfileirar impressão:', printErr);
+        }
+      }
+
 
       setCart([]);
       
@@ -200,11 +264,12 @@ export function PDVV2FastCheckout({ companyId }: Props) {
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Buscar ou Bipar (Atalho numérico)..."
+            placeholder="Buscar ou Bipar (Atalho)..."
             className="pl-8"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+
           {query && filtered.length > 0 && (
             <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border rounded-md shadow-lg">
               <ScrollArea className="max-h-60">
