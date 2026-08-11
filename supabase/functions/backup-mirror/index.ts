@@ -194,12 +194,10 @@ Deno.serve(async (req) => {
           AND started_at < now() - interval '30 minutes'
       `;
     } catch (_) { /* ignore */ }
-    if (body?.mode !== "auth-only") {
-      const [runRow] = await sourceMeta`
-        INSERT INTO public.backup_runs (status) VALUES ('running') RETURNING id
-      `;
-      runId = runRow.id as string;
-    }
+    const [runRow] = await sourceMeta`
+      INSERT INTO public.backup_runs (status) VALUES ('running') RETURNING id
+    `;
+    runId = runRow.id as string;
   }
 
   // Auto-sync de schema: cria tabelas/colunas novas no destino antes do mirror
