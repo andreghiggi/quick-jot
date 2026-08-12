@@ -28,17 +28,28 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     const srcIdentCols = await source`
       SELECT column_name FROM information_schema.columns 
       WHERE table_schema = 'auth' AND table_name = 'identities'
-      AND column_name NOT IN ('email')
+      AND column_name NOT IN ('email', 'identity_data')
     `;
     const tgtIdentCols = await target`
       SELECT column_name FROM information_schema.columns 
       WHERE table_schema = 'auth' AND table_name = 'identities'
-      AND column_name NOT IN ('email')
+      AND column_name NOT IN ('email', 'identity_data')
     `;
 
     const commonIdentCols = srcIdentCols
       .map(c => c.column_name as string)
       .filter(name => tgtIdentCols.some(tc => tc.column_name === name));
+    
+    // Check if target identities table has identity_data column
+    const tgtIdentDataCol = await target`
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_schema = 'auth' AND table_name = 'identities' AND column_name = 'identity_data'
+    `;
+    const hasIdentityData = tgtIdentDataCol.length > 0;
+    
+    if (hasIdentityData) {
+      commonIdentCols.push('identity_data');
+    }
 
     // 3. CLEAN DESTINATION (Order: identities -> users)
     await target`SET session_replication_role = 'replica'`;
