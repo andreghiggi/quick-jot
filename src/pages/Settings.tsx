@@ -1548,11 +1548,11 @@ pause
                 <div className="grid grid-cols-2 gap-2">
                   <Button onClick={handleDownloadScript} size="lg" className="w-full">
                     <Download className="w-4 h-4 mr-2" />
-                    1. printer.py
+                    1. auto_printer.py
                   </Button>
-                  <Button onClick={handleDownloadBat} size="lg" variant="secondary" className="w-full">
+                  <Button onClick={handleDownloadInstalador} size="lg" variant="secondary" className="w-full">
                     <Download className="w-4 h-4 mr-2" />
-                    2. iniciar.bat
+                    2. instalar.cmd
                   </Button>
                 </div>
                 
@@ -1625,7 +1625,7 @@ pause
                     verificar_pywin32.py
                   </Button>
                   <Button
-                    onClick={() => downloadTextFile(autoPrinterWin11Py, 'auto_printer.py')}
+                    onClick={() => downloadTextFile(autoPrinterTemplate, 'auto_printer.py')}
                     size="sm"
                     variant="outline"
                     className="w-full"
