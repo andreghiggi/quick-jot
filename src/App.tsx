@@ -99,10 +99,12 @@ import ResellersPage from "./pages/admin/ResellersPage";
 import AdminSettings from "./pages/admin/AdminSettings";
 import CampaignSettings from "./pages/admin/CampaignSettings";
 import MediaKitAdmin from "./pages/admin/MediaKitAdmin";
+import BackupMonitor from "./pages/admin/BackupMonitor";
 import ResellerMediaKit from "./pages/reseller/ResellerMediaKit";
 import ResellerHome from "./pages/reseller/ResellerHome";
 import ResellerLojas from "./pages/reseller/ResellerLojas";
 import ResellerConfiguracoes from "./pages/reseller/ResellerConfiguracoes";
+
 
 const queryClient = new QueryClient();
 
@@ -682,6 +684,13 @@ function AppRoutes() {
           <MediaKitAdmin />
         </ProtectedRoute>
       } />
+
+      <Route path="/admin/backup-monitor" element={
+        <ProtectedRoute requiredRole="super_admin">
+          <BackupMonitor />
+        </ProtectedRoute>
+      } />
+
 
       {/* Reseller Routes */}
       <Route path="/revendedor/home" element={
