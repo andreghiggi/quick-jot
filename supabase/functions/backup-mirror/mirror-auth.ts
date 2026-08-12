@@ -48,20 +48,20 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     if (users.length > 0) {
       // Use postgres-js batch insert with parameterization
       // Syntax: sql`INSERT INTO table ${ sql(array, ...columns) }`
-      await target.unsafe(`
-        INSERT INTO auth.users (${commonUserCols.map(c => `"${c}"`).join(",")}) 
-        ${target(users, ...commonUserCols)}
-      `);
+      await target`
+        INSERT INTO auth.users (${target.unsafe(commonUserCols.map(c => `"${c}"`).join(","))}) 
+        ${target(users, commonUserCols)}
+      `;
       results.users = users.length;
     }
 
     // 5. COPY IDENTITIES
     const identities = await source.unsafe(`SELECT ${commonIdentCols.map(c => `"${c}"`).join(",")} FROM auth.identities`);
     if (identities.length > 0) {
-      await target.unsafe(`
-        INSERT INTO auth.identities (${commonIdentCols.map(c => `"${c}"`).join(",")}) 
-        ${target(identities, ...commonIdentCols)}
-      `);
+      await target`
+        INSERT INTO auth.identities (${target.unsafe(commonIdentCols.map(c => `"${c}"`).join(","))}) 
+        ${target(identities, commonIdentCols)}
+      `;
       results.identities = identities.length;
     }
 
