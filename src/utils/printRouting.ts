@@ -124,7 +124,11 @@ export async function enqueueProductionByStation(
       text += `--------------------------------\n`;
       items.forEach(item => {
         text += `${item.quantity}x ${item.name}\n`;
-        if (item.notes) text += `  Obs: ${item.notes}\n`;
+        if (item.notes) {
+          const { additionals, observations } = parseNotes(item.notes);
+          additionals.forEach(a => text += `  + ${a.toUpperCase()}\n`);
+          observations.forEach(o => text += `  * ${o.toUpperCase()}\n`);
+        }
       });
       text += `--------------------------------\n`;
       return `<html><body><pre>${text}</pre></body></html>`;
