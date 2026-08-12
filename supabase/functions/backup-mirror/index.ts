@@ -16,10 +16,17 @@ const SKIP_TABLES = new Set<string>([
   "whatsapp_auto_reply_locks",
 ]);
 
+const LOGIN_PRIORITY_TABLES = [
+  "companies",
+  "profiles",
+  "user_roles",
+  "company_users",
+  "resellers",
+  "reseller_settings",
+  "reseller_companies",
+];
+
 // Tabelas grandes onde só copiamos os últimos N dias
-const RECENT_ONLY_TABLES: Record<string, { column: string; days: number }> = {
-  whatsapp_messages: { column: "created_at", days: 90 },
-};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -181,6 +188,45 @@ Deno.serve(async (req) => {
       });
     }
   }
+
+  if (body?.mode === "login-tables-only") {
+    const tableList = tablesToProcess(LOGIN_PRIORITY_TABLES);
+    let totalRowsProcessed = 0;
+    const errors: string[] = [];
+    
+    for (const t of tableList) {
+      try {
+        const rows = await mirrorTable(t.name, t.pk);
+        totalRowsProcessed += rows;
+        perTable[t.name] = { rows, ms: 0 };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        errors.push(`${t.name}: ${msg}`);
+        perTable[t.name] = { rows: 0, ms: 0, error: msg };
+      }
+    }
+
+    const [runRow] = await sourceMeta`
+      INSERT INTO public.backup_runs (status, tables_processed, rows_copied, error_message, details)
+      VALUES (
+        ${errors.length === 0 ? 'success' : 'error'},
+        ${tableList.length},
+        ${totalRowsProcessed},
+        ${errors.length === 0 ? null : errors.join('; ')},
+        ${sourceMeta.json(perTable)}
+      ) RETURNING id
+    `;
+
+    await source.end();
+    await target.end();
+    await sourceMeta.end();
+
+    return json({ 
+      ok: errors.length === 0, 
+      run_id: runRow.id,
+      processed: perTable,
+      message: "Mirror de tabelas de login concluído"
+    });
 
   // Estado da execução (pode ser continuação de uma invocação anterior)
   const startAfterTable: string | null = typeof body?.start_after === "string" ? body.start_after : null;
