@@ -40,8 +40,6 @@ Deno.serve(async (req) => {
       console.error("Error parsing JSON body:", e);
     }
   }
-  if (body?.mode === "query-run") {
-    const sMeta = postgres(Deno.env.get("SUPABASE_DB_URL")!, { max: 1, prepare: false });
     const [run] = await sMeta`SELECT * FROM public.backup_runs WHERE id = ${body.run_id}`;
     await sMeta.end();
     return json(run);
@@ -91,7 +89,7 @@ Deno.serve(async (req) => {
   const isSkipAuth = body?.skip_auth === true;
   const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
 
-  if (body?.mode !== "auth-only" && !isSkipAuth && !isContinuation && body?.mode !== "health" && (!expected || provided !== expected)) {
+  if (body?.mode !== "auth-only" && !isSkipAuth && !isContinuation && (!expected || provided !== expected)) {
     return json({ error: "unauthorized", vaultLen, vaultErr, providedLen: provided.length, expectedLen: expected.length }, 401);
   }
 
