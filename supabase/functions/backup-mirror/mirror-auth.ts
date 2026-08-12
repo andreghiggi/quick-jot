@@ -81,7 +81,18 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
               data = JSON.stringify(data);
             }
             
-            finalValues.push(data);
+            finalValues.push({ sub: id.user_id });
+          } else if (hasIdentityDataInTarget && commonIdentCols.includes('identity_data')) {
+            const dataIdx = finalCols.indexOf('identity_data');
+            if (finalValues[dataIdx] === null || finalValues[dataIdx] === undefined || finalValues[dataIdx] === "") {
+              finalValues[dataIdx] = { sub: id.user_id };
+            } else if (typeof finalValues[dataIdx] === 'string') {
+               try {
+                 finalValues[dataIdx] = JSON.parse(finalValues[dataIdx]);
+               } catch (_) {
+                 finalValues[dataIdx] = { sub: id.user_id };
+               }
+            }
           }
 
           const placeholders = finalCols.map((_, i) => `$${i + 1}`).join(",");
