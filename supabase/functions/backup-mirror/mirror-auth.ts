@@ -46,22 +46,27 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     // 4. COPY USERS
     const users = await source.unsafe(`SELECT ${commonUserCols.map(c => `"${c}"`).join(",")} FROM auth.users`);
     if (users.length > 0) {
-      // Use postgres-js batch insert with parameterization
-      // Syntax: sql`INSERT INTO table ${ sql(array, ...columns) }`
-      await target.unsafe(`
-        INSERT INTO auth.users (${commonUserCols.map(c => `"${c}"`).join(",")}) 
-        ${target(users)}
-      `);
+      // Manual batch insert for auth schema (avoids postgres-js helper ambiguity in internal schemas)
+      const colNames = commonUserCols.map(c => `"${c}"`).join(",");
+      const placeholders = users.map((_, i) => 
+        `(${commonUserCols.map((_, j) => `$${i * commonUserCols.length + j + 1}`).join(",")})`
+      ).join(",");
+      const values = users.flatMap(u => commonUserCols.map(c => u[c]));
+      
+      await target.unsafe(`INSERT INTO auth.users (${colNames}) VALUES ${placeholders}`, values);
       results.users = users.length;
     }
 
     // 5. COPY IDENTITIES
     const identities = await source.unsafe(`SELECT ${commonIdentCols.map(c => `"${c}"`).join(",")} FROM auth.identities`);
     if (identities.length > 0) {
-      await target.unsafe(`
-        INSERT INTO auth.identities (${commonIdentCols.map(c => `"${c}"`).join(",")}) 
-        ${target(identities)}
-      `);
+      const colNames = commonIdentCols.map(c => `"${c}"`).join(",");
+      const placeholders = identities.map((_, i) => 
+        `(${commonIdentCols.map((_, j) => `$${i * commonIdentCols.length + j + 1}`).join(",")})`
+      ).join(",");
+      const values = identities.flatMap(id => commonIdentCols.map(c => id[c]));
+      
+      await target.unsafe(`INSERT INTO auth.identities (${colNames}) VALUES ${placeholders}`, values);
       results.identities = identities.length;
     }
 
