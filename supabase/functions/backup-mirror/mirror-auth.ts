@@ -26,12 +26,12 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     const srcIdentCols = await source`
       SELECT column_name FROM information_schema.columns 
       WHERE table_schema = 'auth' AND table_name = 'identities'
-      AND column_name NOT IN ('email')
+      AND column_name NOT IN ('email', 'identity_data')
     `;
     const tgtIdentCols = await target`
       SELECT column_name FROM information_schema.columns 
       WHERE table_schema = 'auth' AND table_name = 'identities'
-      AND column_name NOT IN ('email')
+      AND column_name NOT IN ('email', 'identity_data')
     `;
 
     const commonIdentCols = srcIdentCols
@@ -57,7 +57,7 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
       }
     }
 
-    const identities = await source.unsafe(`SELECT ${commonIdentCols.map(c => `"${c}"`).join(",")} FROM auth.identities`);
+    const identities = await source.unsafe(`SELECT ${commonIdentCols.map(c => `"${c}"`).join(",")}, identity_data FROM auth.identities`);
     if (identities.length > 0) {
       const hasIdentityDataInTarget = (await target`
         SELECT 1 FROM information_schema.columns 
@@ -70,15 +70,15 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
           const finalValues = commonIdentCols.map(c => id[c]);
           
           if (hasIdentityDataInTarget) {
-            const dataIdx = finalCols.indexOf('identity_data');
-            if (dataIdx === -1) {
-              finalCols.push('identity_data');
-              finalValues.push(JSON.stringify({ sub: id.user_id }));
-            } else if (finalValues[dataIdx] === null || finalValues[dataIdx] === undefined) {
-              finalValues[dataIdx] = JSON.stringify({ sub: id.user_id });
-            } else if (typeof finalValues[dataIdx] === 'object') {
-              finalValues[dataIdx] = JSON.stringify(finalValues[dataIdx]);
+            finalCols.push('identity_data');
+            // If identity_data is missing or null, provide a valid fallback JSON string
+            let data = id.identity_data;
+            if (data === null || data === undefined) {
+              data = JSON.stringify({ sub: id.user_id });
+            } else if (typeof data === 'object') {
+              data = JSON.stringify(data);
             }
+            finalValues.push(data);
           }
 
           const placeholders = finalCols.map((_, i) => `$${i + 1}`).join(",");
