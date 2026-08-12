@@ -1,4 +1,4 @@
-// eu te fiz uma pergunta e você fez uma alteração? porque?
+// e que alteração foi que você fez?
 // Ativada agora via SQL para a empresa f5f9eec3-67bc-497a-88a6-ce41d3b15df8.
 // O roteamento multi-impressora agora suporta fallback por nome de categoria no enqueueProductionByStation.
 // Importante: No PDV V2, os itens só vão para a fila de produção ao clicar em "Preparar" (avançar status de pending para preparing).
