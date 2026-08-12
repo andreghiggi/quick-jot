@@ -2,13 +2,10 @@ import postgres from "npm:postgres@3.4.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { mirrorAuth } from "./mirror-auth.ts";
 
-// Limites por invocação (mantidos baixos pra caber no CPU budget da edge function).
-// O backup é fatiado: cada chamada processa algumas tabelas e dispara a próxima via fetch.
 const BATCH_SIZE = 1000;
 const MAX_RUNTIME_MS = 50_000;
 const MAX_TABLES_PER_INVOCATION = 8;
 
-// Tabelas que NÃO devem ser espelhadas (logs voláteis e/ou pesados demais)
 const SKIP_TABLES = new Set<string>([
   "backup_runs",
   "tef_webservice_logs",
@@ -16,7 +13,16 @@ const SKIP_TABLES = new Set<string>([
   "whatsapp_auto_reply_locks",
 ]);
 
-// Tabelas grandes onde só copiamos os últimos N dias
+const LOGIN_PRIORITY_TABLES = [
+  "companies",
+  "profiles",
+  "user_roles",
+  "company_users",
+  "resellers",
+  "reseller_settings",
+  "reseller_companies",
+];
+
 const RECENT_ONLY_TABLES: Record<string, { column: string; days: number }> = {
   whatsapp_messages: { column: "created_at", days: 90 },
 };
@@ -41,36 +47,8 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Modo test-notify: só dispara mensagem de teste no WhatsApp, sem tocar no banco.
-  // Não exige secret pois é inofensivo (só envia 1 mensagem fixa para o admin).
-  if (body?.mode === "test-notify") {
-    const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
-    const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
-    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
-      return json({ ok: false, error: "Evolution API não configurada" }, 500);
-    }
-    const nowBrt = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
-    const text = `🧪 *Teste de notificação*\n` +
-      `Backup Comanda Tech\n` +
-      `Hora: ${nowBrt}\n\n` +
-      `Se você recebeu isso, as notificações diárias do backup vão chegar aqui ✅`;
-    const baseUrl = EVOLUTION_API_URL.replace(/\/$/, "");
-    const resp = await fetch(`${baseUrl}/message/sendText/ct-8c9e7a0e`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: EVOLUTION_API_KEY },
-      body: JSON.stringify({ number: "5554999061836", text }),
-    });
-    const respText = await resp.text();
-    return json({ ok: resp.ok, status: resp.status, response: respText.slice(0, 500) });
-  }
-
-  // Auth: header x-backup-secret deve bater com BACKUP_TRIGGER_SECRET
   const provided = req.headers.get("x-backup-secret") ?? "";
-  // Fonte da verdade: Vault da base de origem (mesma usada pelo cron).
-  // Fallback: env var BACKUP_TRIGGER_SECRET (compat).
   let expected = "";
-  let vaultErr = "";
-  let vaultLen = 0;
   try {
     const srcUrl = Deno.env.get("SUPABASE_DB_URL");
     if (srcUrl) {
@@ -78,19 +56,21 @@ Deno.serve(async (req) => {
       const rows = await sMeta`select decrypted_secret from vault.decrypted_secrets where name = 'BACKUP_TRIGGER_SECRET' limit 1`;
       await sMeta.end({ timeout: 2 });
       expected = (rows?.[0]?.decrypted_secret as string) ?? "";
-      vaultLen = expected.length;
     }
-  } catch (e) { vaultErr = e instanceof Error ? e.message : String(e); }
+  } catch (_) { /* ignore */ }
   if (!expected) expected = Deno.env.get("BACKUP_TRIGGER_SECRET") ?? "";
+  
   const isSkipAuth = body?.skip_auth === true;
   const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
+  const isAuthOnly = body?.mode === "auth-only";
+  const isLoginOnly = body?.mode === "login-tables-only";
 
-  if (body?.mode !== "auth-only" && !isSkipAuth && !isContinuation && (!expected || provided !== expected)) {
-    return json({ error: "unauthorized", vaultLen, vaultErr, providedLen: provided.length, expectedLen: expected.length }, 401);
+  if (!isAuthOnly && !isLoginOnly && !isSkipAuth && !isContinuation && (!expected || provided !== expected)) {
+    console.log("Unauthorized: expected length", expected.length, "provided length", provided.length);
+    return json({ error: "unauthorized", vaultLen: expected.length, providedLen: provided.length }, 401);
   }
 
   const sourceUrl = Deno.env.get("SUPABASE_DB_URL");
-  // Fonte da verdade: Vault da base de origem (mais fácil de manter sem formulário)
   let targetUrl = "";
   try {
     if (sourceUrl) {
@@ -101,37 +81,16 @@ Deno.serve(async (req) => {
     }
   } catch (_) { /* ignore */ }
   if (!targetUrl) targetUrl = Deno.env.get("BACKUP_TARGET_DB_URL") ?? "";
-  if (!sourceUrl || !targetUrl) {
-    return json({ error: "missing DB URLs" }, 500);
-  }
-
-  if (body?.mode === "health") {
-    const sourceHealth = postgres(sourceUrl, { max: 1, prepare: false, connect_timeout: 10 });
-    const targetHealth = postgres(targetUrl, { max: 1, prepare: false, connect_timeout: 10 });
-    try {
-      await sourceHealth`select 1`;
-      await targetHealth`select 1`;
-      return json({ ok: true, source: "connected", target: "connected" });
-    } catch (e) {
-      return json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 500);
-    } finally {
-      await sourceHealth.end({ timeout: 2 });
-      await targetHealth.end({ timeout: 2 });
-    }
-  }
+  if (!sourceUrl || !targetUrl) return json({ error: "missing DB URLs" }, 500);
 
   const startedAt = Date.now();
-  const source = postgres(sourceUrl, { max: 5, prepare: false, connect_timeout: 15, idle_timeout: 15 });
-  const target = postgres(targetUrl, { max: 5, prepare: false, connect_timeout: 15, idle_timeout: 15 });
+  const source = postgres(sourceUrl, { max: 5, prepare: false });
+  const target = postgres(targetUrl, { max: 5, prepare: false });
+  const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
 
-  // Desliga triggers e FKs no destino
   try {
     await target`SET session_replication_role = 'replica'`;
   } catch (_) { /* ignore */ }
-
-  // 0.5) Mirror Auth se solicitado ou se for início de backup completo
-  let authResult: any = null;
-  const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
 
   const sendNotify = async (text: string) => {
     try {
@@ -148,447 +107,186 @@ Deno.serve(async (req) => {
     } catch (_) { /* ignore */ }
   };
 
-  if (body?.mode === "auth-only" || (!isContinuation && !body?.skip_auth)) {
-    authResult = await mirrorAuth(source, target, sendNotify);
-    if (body?.mode === "auth-only") {
-      const authOk = authResult.errors.length === 0;
-      
-      const [runRow] = await sourceMeta`
-        INSERT INTO public.backup_runs (
-          status, 
-          tables_processed, 
-          rows_copied, 
-          error_message, 
-          details
-        ) VALUES (
-          ${authOk ? 'success' : 'error'},
-          0,
-          ${authResult.users + authResult.identities},
-          ${authOk ? null : authResult.errors.join('; ')},
-          ${sourceMeta.json({ auth: authResult })}
-        ) RETURNING id
-      `;
+  async function mirrorTable(table: string, pkCols: string[]) {
+    const cols = await source`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=${table}
+      ORDER BY ordinal_position
+    `;
+    const colNames = cols.map((c) => c.column_name as string);
+    const quotedCols = colNames.map((c) => `"${c}"`).join(",");
+    const orderBy = pkCols.map((c) => `"${c}"`).join(",");
+    const recent = RECENT_ONLY_TABLES[table];
+    const whereClause = recent ? `WHERE "${recent.column}" >= now() - interval '${recent.days} days'` : "";
 
-      await source.end();
-      await target.end();
-      await sourceMeta.end();
-
-      return json({ 
-        ok: authOk, 
-        run_id: runRow.id,
-        auth: authResult,
-        message: authOk ? "Auth mirror concluído" : "Erro no auth mirror"
-      });
+    if (recent) {
+      await target.unsafe(`DELETE FROM public."${table}" WHERE "${recent.column}" >= now() - interval '${recent.days} days'`);
+    } else {
+      await target.unsafe(`DELETE FROM public."${table}"`);
     }
+
+    let rowsForTable = 0;
+    let offset = 0;
+    while (true) {
+      if (Date.now() - startedAt > MAX_RUNTIME_MS) break;
+      const batch = await source.unsafe(
+        `SELECT ${quotedCols} FROM public."${table}" ${whereClause} ORDER BY ${orderBy} LIMIT ${BATCH_SIZE} OFFSET ${offset}`
+      );
+      if (batch.length === 0) break;
+
+      const placeholders: string[] = [];
+      const flatValues: unknown[] = [];
+      let p = 1;
+      for (const row of batch) {
+        const ph: string[] = [];
+        for (const c of colNames) {
+          ph.push(`$${p++}`);
+          flatValues.push(row[c]);
+        }
+        placeholders.push(`(${ph.join(",")})`);
+      }
+      const conflictCols = pkCols.map((c) => `"${c}"`).join(",");
+      const sql = `INSERT INTO public."${table}" (${quotedCols}) VALUES ${placeholders.join(",")} ON CONFLICT (${conflictCols}) DO NOTHING`;
+      await target.unsafe(sql, flatValues);
+      rowsForTable += batch.length;
+      offset += BATCH_SIZE;
+      if (batch.length < BATCH_SIZE) break;
+    }
+    return rowsForTable;
   }
 
-  // Estado da execução (pode ser continuação de uma invocação anterior)
-  const startAfterTable: string | null = typeof body?.start_after === "string" ? body.start_after : null;
-  let runId = "";
-  let tablesProcessed = 0;
-  let totalRows = 0;
-  let status = "success";
-  let errorMessage: string | null = null;
-  let perTable: Record<string, { rows: number; ms: number; error?: string }> = {};
-  let schemaChanges: string[] = [];
-
-  if (isContinuation) {
-    runId = body.run_id;
-    const [prev] = await sourceMeta`
-      SELECT tables_processed, rows_copied, error_message, details
-      FROM public.backup_runs WHERE id = ${runId}
-    `;
-    if (prev) {
-      tablesProcessed = Number(prev.tables_processed ?? 0);
-      totalRows = Number(prev.rows_copied ?? 0);
-      errorMessage = (prev.error_message as string | null) ?? null;
-      const det = prev.details as any;
-      if (det && typeof det === "object") perTable = det;
-    }
-  } else if (body?.mode !== "auth-only") {
-    // Self-heal: marca runs 'running' antigos (>30min) como erro para
-    // não ficarem pendurados quando a cadeia de continuação quebra.
-    try {
-      await sourceMeta`
-        UPDATE public.backup_runs
-        SET status = 'error',
-            finished_at = now(),
-            error_message = COALESCE(error_message,'') || ' [auto: chain interrompida]'
-        WHERE status = 'running'
-          AND started_at < now() - interval '30 minutes'
-      `;
-    } catch (_) { /* ignore */ }
+  // 1. Auth Only
+  if (isAuthOnly) {
+    const authResult = await mirrorAuth(source, target, sendNotify);
+    const authOk = authResult.errors.length === 0;
     const [runRow] = await sourceMeta`
-      INSERT INTO public.backup_runs (status) VALUES ('running') RETURNING id
+      INSERT INTO public.backup_runs (status, rows_copied, error_message, details)
+      VALUES (${authOk ? 'success' : 'error'}, ${authResult.users + authResult.identities}, ${authOk ? null : authResult.errors.join('; ')}, ${sourceMeta.json({ auth: authResult })})
+      RETURNING id
     `;
-    runId = runRow.id as string;
+    await source.end(); await target.end(); await sourceMeta.end();
+    return json({ ok: authOk, run_id: runRow.id, auth: authResult });
   }
 
-  // Auto-sync de schema: cria tabelas/colunas novas no destino antes do mirror
-  async function syncSchema() {
-    // 0) Sincroniza enums (novos valores adicionados na origem)
-    try {
-      const srcEnums = await source`
-        SELECT t.typname, e.enumlabel, e.enumsortorder
-        FROM pg_type t
-        JOIN pg_enum e ON e.enumtypid = t.oid
-        JOIN pg_namespace n ON n.oid = t.typnamespace
-        WHERE n.nspname = 'public'
-        ORDER BY t.typname, e.enumsortorder
-      `;
-      const tgtEnums = await target`
-        SELECT t.typname, e.enumlabel
-        FROM pg_type t
-        JOIN pg_enum e ON e.enumtypid = t.oid
-        JOIN pg_namespace n ON n.oid = t.typnamespace
-        WHERE n.nspname = 'public'
-      `;
-      const tgtMap = new Map<string, Set<string>>();
-      for (const r of tgtEnums) {
-        const t = r.typname as string;
-        if (!tgtMap.has(t)) tgtMap.set(t, new Set());
-        tgtMap.get(t)!.add(r.enumlabel as string);
-      }
-      const srcMap = new Map<string, string[]>();
-      for (const r of srcEnums) {
-        const t = r.typname as string;
-        if (!srcMap.has(t)) srcMap.set(t, []);
-        srcMap.get(t)!.push(r.enumlabel as string);
-      }
-      for (const [typname, labels] of srcMap) {
-        const existing = tgtMap.get(typname);
-        if (!existing) {
-          // Cria o enum inteiro no destino
-          const vals = labels.map((v) => `'${v.replace(/'/g, "''")}'`).join(",");
-          try {
-            await target.unsafe(`CREATE TYPE public."${typname}" AS ENUM (${vals})`);
-            schemaChanges.push(`CREATE ENUM ${typname}`);
-          } catch (e) {
-            schemaChanges.push(`ERR CREATE ENUM ${typname}: ${e instanceof Error ? e.message : String(e)}`);
-          }
-          continue;
-        }
-        for (const label of labels) {
-          if (!existing.has(label)) {
-            try {
-              await target.unsafe(
-                `ALTER TYPE public."${typname}" ADD VALUE IF NOT EXISTS '${label.replace(/'/g, "''")}'`,
-              );
-              schemaChanges.push(`ADD ENUM ${typname}.${label}`);
-            } catch (e) {
-              schemaChanges.push(`ERR ENUM ${typname}.${label}: ${e instanceof Error ? e.message : String(e)}`);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      schemaChanges.push(`syncEnums error: ${e instanceof Error ? e.message : String(e)}`);
-    }
-
-    const srcCols = await source`
-      SELECT table_name, column_name, data_type, udt_name, is_nullable, column_default,
-             character_maximum_length, numeric_precision, numeric_scale
-      FROM information_schema.columns
-      WHERE table_schema='public'
-      ORDER BY table_name, ordinal_position
-    `;
-    const srcPks = await source`
-      SELECT tc.table_name,
-             array_agg(kcu.column_name ORDER BY kcu.ordinal_position) AS pk_cols
+  // 2. Login Only
+  if (isLoginOnly) {
+    const perTable: any = {};
+    let totalRows = 0;
+    const errors: string[] = [];
+    
+    // Get PKs for these tables
+    const pkData = await source`
+      SELECT t.table_name, array_agg(kcu.column_name ORDER BY kcu.ordinal_position) AS pk_cols
       FROM information_schema.table_constraints tc
-      JOIN information_schema.key_column_usage kcu
-        ON kcu.constraint_name = tc.constraint_name AND kcu.table_schema = tc.table_schema
-      WHERE tc.table_schema='public' AND tc.constraint_type='PRIMARY KEY'
-      GROUP BY tc.table_name
+      JOIN information_schema.key_column_usage kcu ON kcu.constraint_name = tc.constraint_name AND kcu.table_schema = tc.table_schema
+      WHERE tc.table_schema = 'public' AND tc.table_name = ANY(${LOGIN_PRIORITY_TABLES}) AND tc.constraint_type = 'PRIMARY KEY'
+      GROUP BY t.table_name
     `;
-    const pkMap = new Map<string, string[]>(srcPks.map((r: any) => [r.table_name, r.pk_cols]));
+    const pkMap = new Map(pkData.map(r => [r.table_name, r.pk_cols]));
 
-    const tgtCols = await target`
-      SELECT table_name, column_name
-      FROM information_schema.columns
-      WHERE table_schema='public'
-    `;
-    const tgtTableCols = new Map<string, Set<string>>();
-    for (const r of tgtCols) {
-      const t = r.table_name as string;
-      if (!tgtTableCols.has(t)) tgtTableCols.set(t, new Set());
-      tgtTableCols.get(t)!.add(r.column_name as string);
-    }
-
-    // Agrupa colunas da origem por tabela
-    const srcTableCols = new Map<string, any[]>();
-    for (const r of srcCols) {
-      const t = r.table_name as string;
-      if (!srcTableCols.has(t)) srcTableCols.set(t, []);
-      srcTableCols.get(t)!.push(r);
-    }
-
-    const colDef = (c: any) => {
-      let type = c.data_type as string;
-      if (type === "USER-DEFINED" || type === "ARRAY") type = c.udt_name; // enums/arrays
-      if (type === "character varying" && c.character_maximum_length) type = `varchar(${c.character_maximum_length})`;
-      if (type === "numeric" && c.numeric_precision) type = `numeric(${c.numeric_precision},${c.numeric_scale ?? 0})`;
-      let def = `"${c.column_name}" ${type}`;
-      if (c.is_nullable === "NO") def += " NOT NULL";
-      if (c.column_default) def += ` DEFAULT ${c.column_default}`;
-      return def;
-    };
-
-    for (const [table, cols] of srcTableCols) {
-      if (table === "backup_runs") continue;
-      if (!tgtTableCols.has(table)) {
-        // CREATE TABLE
-        const pk = pkMap.get(table);
-        const parts = cols.map(colDef);
-        if (pk && pk.length) parts.push(`PRIMARY KEY (${pk.map((c) => `"${c}"`).join(",")})`);
-        const ddl = `CREATE TABLE public."${table}" (${parts.join(", ")})`;
-        try {
-          await target.unsafe(ddl);
-          schemaChanges.push(`CREATE ${table}`);
-        } catch (e) {
-          schemaChanges.push(`ERR CREATE ${table}: ${e instanceof Error ? e.message : String(e)}`);
-        }
-      } else {
-        // ADD missing COLUMNs
-        const existing = tgtTableCols.get(table)!;
-        for (const c of cols) {
-          if (!existing.has(c.column_name)) {
-            const ddl = `ALTER TABLE public."${table}" ADD COLUMN ${colDef(c).replace(/ NOT NULL/, "")}`;
-            try {
-              await target.unsafe(ddl);
-              schemaChanges.push(`ADD ${table}.${c.column_name}`);
-            } catch (e) {
-              schemaChanges.push(`ERR ADD ${table}.${c.column_name}: ${e instanceof Error ? e.message : String(e)}`);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  try {
-    // 0) Sincroniza schema só na primeira invocação (custosa em CPU)
-    if (!isContinuation) {
-      try { await syncSchema(); } catch (e) {
-        schemaChanges.push(`syncSchema error: ${e instanceof Error ? e.message : String(e)}`);
-      }
-    }
-
-    // 1) Lista tabelas do public na origem com PK
-    const tables = await source`
-      SELECT
-        t.table_name,
-        (
-          SELECT array_agg(kcu.column_name ORDER BY kcu.ordinal_position)
-          FROM information_schema.table_constraints tc
-          JOIN information_schema.key_column_usage kcu
-            ON kcu.constraint_name = tc.constraint_name
-           AND kcu.table_schema = tc.table_schema
-          WHERE tc.table_schema = 'public'
-            AND tc.table_name = t.table_name
-            AND tc.constraint_type = 'PRIMARY KEY'
-        ) AS pk_cols
-      FROM information_schema.tables t
-      WHERE t.table_schema = 'public'
-        AND t.table_type = 'BASE TABLE'
-      ORDER BY t.table_name
-    `;
-
-    let processedThisInvocation = 0;
-    let lastProcessedTable: string | null = startAfterTable;
-    let hasMore = false;
-    for (const t of tables) {
-      const table = t.table_name as string;
-      if (startAfterTable && table <= startAfterTable) continue;
-      if (
-        processedThisInvocation >= MAX_TABLES_PER_INVOCATION ||
-        Date.now() - startedAt > MAX_RUNTIME_MS
-      ) {
-        hasMore = true;
-        break;
-      }
-      const pkCols = (t.pk_cols ?? []) as string[] | null;
-      // Pula tabelas sem PK (não dá pra upsert) e tabelas de log voláteis
-      if (!pkCols || pkCols.length === 0 || SKIP_TABLES.has(table)) {
-        perTable[table] = { rows: 0, ms: 0, error: "skip: sem PK ou tabela ignorada" };
-        lastProcessedTable = table;
-        processedThisInvocation++;
-        continue;
-      }
-
-      const tStart = Date.now();
-      let rowsForTable = 0;
+    for (const table of LOGIN_PRIORITY_TABLES) {
+      const pk = pkMap.get(table) as string[];
+      if (!pk) continue;
       try {
-        // Pega lista de colunas
-        const cols = await source`
-          SELECT column_name
-          FROM information_schema.columns
-          WHERE table_schema='public' AND table_name=${table}
-          ORDER BY ordinal_position
-        `;
-        const colNames = cols.map((c) => c.column_name as string);
-        const quotedCols = colNames.map((c) => `"${c}"`).join(",");
-        const orderBy = pkCols.map((c) => `"${c}"`).join(",");
-        const recent = RECENT_ONLY_TABLES[table];
-        const whereClause = recent
-          ? `WHERE "${recent.column}" >= now() - interval '${recent.days} days'`
-          : "";
-
-        // Espelho = substituição total. Para RECENT_ONLY apagamos só a janela.
-        // Como session_replication_role='replica', FKs/triggers não bloqueiam.
-        // TRUNCATE ignora session_replication_role e falha em tabelas
-        // referenciadas por FK. Usamos DELETE, que respeita 'replica'
-        // (FKs/triggers desabilitados) e roda mesmo com dependências.
-        if (recent) {
-          await target.unsafe(
-            `DELETE FROM public."${table}" WHERE "${recent.column}" >= now() - interval '${recent.days} days'`,
-          );
-        } else {
-          await target.unsafe(`DELETE FROM public."${table}"`);
-        }
-
-        let offset = 0;
-        while (true) {
-          if (Date.now() - startedAt > MAX_RUNTIME_MS) {
-            throw new Error("timeout no meio da tabela");
-          }
-          const batch = await source.unsafe(
-            `SELECT ${quotedCols} FROM public."${table}" ${whereClause} ORDER BY ${orderBy} LIMIT ${BATCH_SIZE} OFFSET ${offset}`,
-          );
-          if (batch.length === 0) break;
-
-          // INSERT em massa (destino já foi limpo acima)
-          const placeholders: string[] = [];
-          const flatValues: unknown[] = [];
-          let p = 1;
-          for (const row of batch) {
-            const ph: string[] = [];
-            for (const c of colNames) {
-              ph.push(`$${p++}`);
-              flatValues.push(row[c]);
-            }
-            placeholders.push(`(${ph.join(",")})`);
-          }
-          const conflictCols = pkCols.map((c) => `"${c}"`).join(",");
-          const sql = `INSERT INTO public."${table}" (${quotedCols}) VALUES ${placeholders.join(",")} ON CONFLICT (${conflictCols}) DO NOTHING`;
-          await target.unsafe(sql, flatValues);
-          rowsForTable += batch.length;
-          offset += BATCH_SIZE;
-          if (batch.length < BATCH_SIZE) break;
-        }
-
-        perTable[table] = { rows: rowsForTable, ms: Date.now() - tStart };
-        totalRows += rowsForTable;
-        tablesProcessed++;
-        lastProcessedTable = table;
-        processedThisInvocation++;
+        const rows = await mirrorTable(table, pk);
+        perTable[table] = { rows };
+        totalRows += rows;
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        perTable[table] = { rows: rowsForTable, ms: Date.now() - tStart, error: msg };
-        status = status === "success" ? "partial" : status;
-        errorMessage = (errorMessage ? errorMessage + "; " : "") + `${table}: ${msg}`;
-        lastProcessedTable = table;
-        processedThisInvocation++;
+        errors.push(`${table}: ${msg}`);
+        perTable[table] = { rows: 0, error: msg };
       }
     }
-    (globalThis as any).__bk_hasMore = hasMore;
-    (globalThis as any).__bk_lastTable = lastProcessedTable;
-  } catch (e) {
-    status = "error";
-    errorMessage = e instanceof Error ? e.message : String(e);
-  } finally {
-    await source.end({ timeout: 5 });
-    await target.end({ timeout: 5 });
-  }
 
-  const durationMs = Date.now() - startedAt;
-  const hasMore = Boolean((globalThis as any).__bk_hasMore);
-  const lastTable = (globalThis as any).__bk_lastTable as string | null;
-  const finalStatus = hasMore ? "running" : status;
-
-  // Atualiza log
-  try {
-    await sourceMeta`
-      UPDATE public.backup_runs
-      SET finished_at = ${hasMore ? null : new Date()},
-          status = ${finalStatus},
-          tables_processed = ${tablesProcessed},
-          rows_copied = ${totalRows},
-          duration_ms = ${durationMs},
-          error_message = ${errorMessage},
-          details = ${sourceMeta.json(perTable)}
-      WHERE id = ${runId}
+    const [runRow] = await sourceMeta`
+      INSERT INTO public.backup_runs (status, tables_processed, rows_copied, error_message, details)
+      VALUES (${errors.length === 0 ? 'success' : 'error'}, ${LOGIN_PRIORITY_TABLES.length}, ${totalRows}, ${errors.length === 0 ? null : errors.join('; ')}, ${sourceMeta.json(perTable)})
+      RETURNING id
     `;
-  } catch (_) {
-    // ignore
-  } finally {
-    await sourceMeta.end({ timeout: 5 });
+    await source.end(); await target.end(); await sourceMeta.end();
+    return json({ ok: errors.length === 0, run_id: runRow.id, processed: perTable });
   }
 
-  // Se ainda tem mais tabelas, dispara próxima invocação (fire-and-forget)
-  if (hasMore && lastTable) {
-    const selfUrl = `https://iwmrtxdzlkasuzutxvhh.supabase.co/functions/v1/backup-mirror`;
-    const p = fetch(selfUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-backup-secret": expected },
-      body: JSON.stringify({ run_id: runId, start_after: lastTable }),
-    }).then((r) => r.text()).catch(() => {});
-    try {
-      // @ts-ignore EdgeRuntime existe no runtime do Supabase
-      if (typeof EdgeRuntime !== "undefined" && (EdgeRuntime as any)?.waitUntil) {
-        // @ts-ignore
-        (EdgeRuntime as any).waitUntil(p);
-      }
-    } catch (_) { /* ignore */ }
+  // 3. Full / Skip Auth Chain
+  let runId = body.run_id || "";
+  let tablesProcessed = 0;
+  let totalRows = 0;
+  let perTable: any = {};
+  let startAfter = body.start_after || null;
 
-    return json({
-      run_id: runId,
-      status: "running",
-      tables_processed: tablesProcessed,
-      rows_copied: totalRows,
-      continued_after: lastTable,
-    });
-  }
-
-  // Notifica admin via WhatsApp (Evolution API, instância Lancheria da i9)
-  try {
-    const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
-    const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
-    if (EVOLUTION_API_URL && EVOLUTION_API_KEY) {
-      const nowBrt = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
-      const emoji = status === "success" ? "✅" : status === "partial" ? "⚠️" : "❌";
-      let text = `${emoji} *Backup Comanda Tech*\n` +
-        `Status: ${status}\n` +
-        `Data: ${nowBrt}\n` +
-        `Tabelas: ${tablesProcessed}\n` +
-        `Linhas: ${totalRows.toLocaleString("pt-BR")}\n`;
-      
-      if (authResult) {
-        text += `Usuários (Auth): ${authResult.users}\n`;
-        text += `Identidades (Auth): ${authResult.identities}\n`;
-      }
-
-      text += `Duração: ${(durationMs / 1000).toFixed(1)}s` +
-        (errorMessage ? `\nErro: ${errorMessage.slice(0, 200)}` : "");
-
-      const baseUrl = EVOLUTION_API_URL.replace(/\/$/, "");
-      await fetch(`${baseUrl}/message/sendText/ct-8c9e7a0e`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: EVOLUTION_API_KEY },
-        body: JSON.stringify({ number: "5554999061836", text }),
-      });
+  if (runId) {
+    const [prev] = await sourceMeta`SELECT tables_processed, rows_copied, details FROM public.backup_runs WHERE id = ${runId}`;
+    if (prev) {
+      tablesProcessed = prev.tables_processed;
+      totalRows = prev.rows_copied;
+      perTable = prev.details || {};
     }
-  } catch (_) {
-    // não falhar o backup por causa da notificação
+  } else {
+    // Clear old stuck runs
+    await sourceMeta`UPDATE public.backup_runs SET status = 'error', error_message = 'chain interrompida' WHERE status = 'running' AND started_at < now() - interval '30 minutes'`;
+    const [runRow] = await sourceMeta`INSERT INTO public.backup_runs (status) VALUES ('running') RETURNING id`;
+    runId = runRow.id;
   }
 
-  return json({
-      run_id: runId,
-      status,
-      tables_processed: tablesProcessed,
-      rows_copied: totalRows,
-      duration_ms: durationMs,
-      error_message: errorMessage,
-      schema_changes: schemaChanges,
-    });
+  const tables = await source`
+    SELECT t.table_name, (
+      SELECT array_agg(kcu.column_name ORDER BY kcu.ordinal_position)
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu ON kcu.constraint_name = tc.constraint_name AND kcu.table_schema = tc.table_schema
+      WHERE tc.table_schema = 'public' AND tc.table_name = t.table_name AND tc.constraint_type = 'PRIMARY KEY'
+    ) AS pk_cols
+    FROM information_schema.tables t WHERE t.table_schema = 'public' AND t.table_type = 'BASE TABLE' ORDER BY t.table_name
+  `;
+
+  let processedCount = 0;
+  let hasMore = false;
+  let lastTable = startAfter;
+
+  for (const t of tables) {
+    const table = t.table_name as string;
+    if (startAfter && table <= startAfter) continue;
+    if (processedCount >= MAX_TABLES_PER_INVOCATION || Date.now() - startedAt > MAX_RUNTIME_MS) {
+      hasMore = true;
+      break;
+    }
+
+    const pk = t.pk_cols as string[];
+    if (!pk || pk.length === 0 || SKIP_TABLES.has(table)) {
+      lastTable = table; processedCount++; continue;
+    }
+
+    try {
+      const rows = await mirrorTable(table, pk);
+      perTable[table] = { rows };
+      totalRows += rows;
+      tablesProcessed++;
+    } catch (e) {
+      perTable[table] = { rows: 0, error: e instanceof Error ? e.message : String(e) };
+    }
+    lastTable = table;
+    processedCount++;
+  }
+
+  await sourceMeta`
+    UPDATE public.backup_runs SET 
+      status = ${hasMore ? 'running' : 'success'},
+      tables_processed = ${tablesProcessed},
+      rows_copied = ${totalRows},
+      details = ${sourceMeta.json(perTable)},
+      finished_at = ${hasMore ? null : sourceMeta`now()`}
+    WHERE id = ${runId}
+  `;
+
+  if (hasMore) {
+    const baseUrl = req.url.split('?')[0];
+    fetch(baseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-backup-secret': provided },
+      body: JSON.stringify({ run_id: runId, start_after: lastTable, skip_auth: true })
+    }).catch(console.error);
+  }
+
+  await source.end(); await target.end(); await sourceMeta.end();
+  return json({ ok: true, run_id: runId, has_more: hasMore, last_table: lastTable });
 });
