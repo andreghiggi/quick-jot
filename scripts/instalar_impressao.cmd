@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-set "INSTALLER_VERSION=v1.7-cmd"
+set "INSTALLER_VERSION=v1.8-cmd"
 title Comanda Tech - Instalador Autossuficiente (.cmd) %INSTALLER_VERSION%
 color 0B
 
@@ -40,6 +40,7 @@ echo [1/8] Verificando e limpando conflitos de Python...
 echo [LOG] Listando pacotes instalados antes da limpeza >> "%LOG%"
 powershell -NoProfile -Command "Get-Package -Name '*Python*' | Select-Object Name, Version" >> "%LOG%" 2>&1
 
+echo [INFO] Removendo versoes conflitantes...
 powershell -NoProfile -Command "Get-Package -Name '*Python 3.14*' | Uninstall-Package -Force" >> "%LOG%" 2>&1
 powershell -NoProfile -Command "Get-Package -Name '*Python Launcher*' | Uninstall-Package -Force" >> "%LOG%" 2>&1
 echo [OK] Conflitos removidos. >> "%LOG%"
@@ -73,14 +74,15 @@ if not defined PY_PATH (
 if defined PY_PATH (
     echo [LOG] Python encontrado no registro: %PY_PATH% >> "%LOG%"
     set "PY=%PY_PATH%python.exe"
-    set "PATH=%PY_PATH%;%PY_PATH%Scripts;%PATH%"
+    set "PY_SCRIPTS=%PY_PATH%Scripts"
+    set "PATH=%PY_PATH%;!PY_SCRIPTS!;%PATH%"
 ) else (
     echo [LOG] Python nao encontrado no registro, tentando fallback 'python' >> "%LOG%"
     set "PY=python"
 )
 
-echo [LOG] Testando comando: %PY% --version >> "%LOG%"
-%PY% --version >> "%LOG%" 2>&1
+echo [LOG] Testando comando: "!PY!" --version >> "%LOG%"
+"!PY!" --version >> "%LOG%" 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo [ERRO] Python nao foi localizado. Tentando via 'where'...
     echo [LOG] 'where python' output: >> "%LOG%"
@@ -100,25 +102,25 @@ REM ==========================================================
 REM  ETAPA 3 - Pip e Upgrade
 REM ==========================================================
 echo [3/8] Verificando o pip...
-%PY% -m ensurepip --upgrade >> "%LOG%" 2>&1
-%PY% -m pip install --upgrade pip >> "%LOG%" 2>&1
+"!PY!" -m ensurepip --upgrade >> "%LOG%" 2>&1
+"!PY!" -m pip install --upgrade pip >> "%LOG%" 2>&1
 echo [OK] Pip atualizado. >> "%LOG%"
 
 REM ==========================================================
 REM  ETAPA 4 - Limpeza de bibliotecas antigas
 REM ==========================================================
 echo [4/8] Limpando pacotes antigos...
-%PY% -m pip uninstall -y pywin32 requests >> "%LOG%" 2>&1
-%PY% -m pip cache purge >> "%LOG%" 2>&1
+"!PY!" -m pip uninstall -y pywin32 requests >> "%LOG%" 2>&1
+"!PY!" -m pip cache purge >> "%LOG%" 2>&1
 
 REM ==========================================================
 REM  ETAPA 5 - Instalacao de dependencias
 REM ==========================================================
 echo [5/8] Instalando dependencias (requests, pywin32)...
-%PY% -m pip install --upgrade --force-reinstall --no-cache-dir requests pywin32 >> "%LOG%" 2>&1
+"!PY!" -m pip install --upgrade --force-reinstall --no-cache-dir requests pywin32 >> "%LOG%" 2>&1
 if errorlevel 1 (
     echo [AVISO] Tentando instalacao --user...
-    %PY% -m pip install --user --upgrade --force-reinstall --no-cache-dir requests pywin32 >> "%LOG%" 2>&1
+    "!PY!" -m pip install --user --upgrade --force-reinstall --no-cache-dir requests pywin32 >> "%LOG%" 2>&1
 )
 echo [OK] Dependencias instaladas. >> "%LOG%"
 
@@ -126,14 +128,14 @@ REM ==========================================================
 REM  ETAPA 6 - Registro de DLLs do pywin32
 REM ==========================================================
 echo [6/8] Registrando DLLs de impressao...
-%PY% -m pywin32_postinstall -install >> "%LOG%" 2>&1
+"!PY!" -m pywin32_postinstall -install >> "%LOG%" 2>&1
 echo [OK] DLLs registradas. >> "%LOG%"
 
 REM ==========================================================
 REM  ETAPA 7 - Teste de impressao
 REM ==========================================================
 echo [7/8] Testando modulo de impressao...
-%PY% -c "import win32print; print('Sucesso:', win32print.GetDefaultPrinter())" >> "%LOG%" 2>&1
+"!PY!" -c "import win32print; print('Sucesso:', win32print.GetDefaultPrinter())" >> "%LOG%" 2>&1
 if errorlevel 1 (
     echo [ERRO] O modulo de impressao falhou. Tente reiniciar o Windows.
     echo [LOG] Erro no teste de win32print. >> "%LOG%"
@@ -146,7 +148,7 @@ REM ==========================================================
 REM  ETAPA 8 - Finalizacao
 REM ==========================================================
 echo [8/8] Salvando configuracoes...
-> "%~dp0python_detectado.txt" echo %PY%
+> "%~dp0python_detectado.txt" echo !PY!
 
 echo ==========================================================
 echo   INSTALACAO CONCLUIDA COM SUCESSO!
