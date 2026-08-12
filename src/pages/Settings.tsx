@@ -1433,7 +1433,42 @@ pause
                 Imprime automaticamente uma comanda de produção (somente itens, sem preços) junto com o pedido do cardápio
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Estações de Impressão
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Crie estações lógicas (Ex: Cozinha, Bar) para separar as comandas por categoria de produto.
+                </p>
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="Nome da estação" 
+                    value={newStationName}
+                    onChange={(e) => setNewStationName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && newStationName.trim() && (addStation(newStationName.trim()), setNewStationName(''))}
+                  />
+                  <Button onClick={() => {
+                    if (newStationName.trim()) {
+                      addStation(newStationName.trim());
+                      setNewStationName('');
+                    }
+                  }}>Adicionar</Button>
+                </div>
+
+                <div className="space-y-2">
+                  {stations.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between p-2 border rounded bg-background">
+                      <span className="text-sm font-medium">{s.name}</span>
+                      <Button variant="ghost" size="sm" onClick={() => deleteStation(s.id)} className="text-destructive h-8 w-8 p-0">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <p className="font-medium">Impressão Comanda Produção</p>
