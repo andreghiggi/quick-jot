@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-set "LAUNCHER_VERSION=v1.3-cmd"
+set "LAUNCHER_VERSION=v1.4-cmd"
 title Comanda Tech - Impressao Automatica (.cmd) %LAUNCHER_VERSION%
 color 0A
 
@@ -15,9 +15,7 @@ if exist "%~dp0python_detectado.txt" (
 
 REM Fallback: detecta de novo se o arquivo nao existir
 if not defined PY (
-    where py >nul 2>nul && set "PY=py -3"
-    if not defined PY ( where python >nul 2>nul && set "PY=python" )
-    if not defined PY ( where python3 >nul 2>nul && set "PY=python3" )
+    where python >nul 2>nul && set "PY=python"
 )
 
 if not defined PY (
@@ -56,7 +54,16 @@ if errorlevel 1 (
     )
 )
 
-%PY% "%~dp0auto_printer.py"
+%PY% "%~dp0auto_printer.py" || (
+    echo.
+    echo [ERRO] O script de impressao parou inesperadamente.
+    echo Tentando reiniciar em 5 segundos...
+    timeout /t 5 >nul
+    goto :retry_start
+)
+
+:retry_start
+%PY% "%~dp0auto_printer.py" || goto :retry_start
 echo.
 echo [Servico encerrado] - pressione qualquer tecla para fechar.
 pause >nul
