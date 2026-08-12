@@ -51,7 +51,7 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
       for (const user of users) {
         const placeholders = commonUserCols.map((_, i) => `$${i + 1}`).join(",");
         const values = commonUserCols.map(c => user[c]);
-        await target.unsafe(`INSERT INTO auth.users (${colNames}) VALUES (${placeholders})`, values);
+        await target.unsafe(`INSERT INTO auth.users (${colNames}) VALUES (${placeholders})`, values, { prepare: false });
         results.users++;
       }
     }
@@ -63,7 +63,7 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
       for (const id of identities) {
         const placeholders = commonIdentCols.map((_, i) => `$${i + 1}`).join(",");
         const values = commonIdentCols.map(c => id[c]);
-        await target.unsafe(`INSERT INTO auth.identities (${colNames}) VALUES (${placeholders})`, values);
+        await target.unsafe(`INSERT INTO auth.identities (${colNames}) VALUES (${placeholders})`, values, { prepare: false });
         results.identities++;
       }
     }
