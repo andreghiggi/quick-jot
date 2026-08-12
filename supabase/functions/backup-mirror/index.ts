@@ -66,7 +66,8 @@ Deno.serve(async (req) => {
   const isLoginOnly = body?.mode === "login-tables-only";
 
   if (!isAuthOnly && !isLoginOnly && !isSkipAuth && !isContinuation && (!expected || provided !== expected)) {
-    return json({ error: "unauthorized" }, 401);
+    console.log("Unauthorized: expected length", expected.length, "provided length", provided.length);
+    return json({ error: "unauthorized", vaultLen: expected.length, providedLen: provided.length }, 401);
   }
 
   const sourceUrl = Deno.env.get("SUPABASE_DB_URL");
