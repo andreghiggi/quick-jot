@@ -1,1 +1,1 @@
-crie a extensao
+execue o plano
