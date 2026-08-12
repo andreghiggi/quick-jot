@@ -685,6 +685,13 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/admin/backup-monitor" element={
+        <ProtectedRoute requiredRole="super_admin">
+          <BackupMonitor />
+        </ProtectedRoute>
+      } />
+
+
       {/* Reseller Routes */}
       <Route path="/revendedor/home" element={
         <ProtectedRoute requiredRole="reseller">
