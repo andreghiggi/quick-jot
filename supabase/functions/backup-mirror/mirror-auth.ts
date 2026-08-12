@@ -46,13 +46,14 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     // 4. COPY USERS
     const users = await source.unsafe(`SELECT ${commonUserCols.map(c => `"${c}"`).join(",")} FROM auth.users`);
     if (users.length > 0) {
-      // OVERRIDE FOR auth.users: postgres-js tagged template for better type inference
-      // AND session_replication_role already set to replica at start of function
+      // Manual batch insert for auth schema
+      const colNames = commonUserCols.map(c => `"${c}"`).join(",");
       for (const user of users) {
         try {
-          await target`
-            INSERT INTO auth.users ${target(user, commonUserCols)}
-          `;
+          const placeholders = commonUserCols.map((_, i) => `$${i + 1}`).join(",");
+          const values = commonUserCols.map(c => user[c]);
+          // Use unsafe with manual placeholders to completely bypass postgres-js schema helpers
+          await target.unsafe(`INSERT INTO auth.users (${colNames}) VALUES (${placeholders})`, values);
           results.users++;
         } catch (err) {
           results.errors.push(`User ${user.id} error: ${err instanceof Error ? err.message : String(err)}`);
@@ -63,11 +64,12 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     // 5. COPY IDENTITIES
     const identities = await source.unsafe(`SELECT ${commonIdentCols.map(c => `"${c}"`).join(",")} FROM auth.identities`);
     if (identities.length > 0) {
+      const colNames = commonIdentCols.map(c => `"${c}"`).join(",");
       for (const id of identities) {
         try {
-          await target`
-            INSERT INTO auth.identities ${target(id, commonIdentCols)}
-          `;
+          const placeholders = commonIdentCols.map((_, i) => `$${i + 1}`).join(",");
+          const values = commonIdentCols.map(c => id[c]);
+          await target.unsafe(`INSERT INTO auth.identities (${colNames}) VALUES (${placeholders})`, values);
           results.identities++;
         } catch (err) {
           results.errors.push(`Identity ${id.id} error: ${err instanceof Error ? err.message : String(err)}`);
