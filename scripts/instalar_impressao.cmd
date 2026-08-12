@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-set "INSTALLER_VERSION=v1.4-cmd"
+set "INSTALLER_VERSION=v1.5-cmd"
 title Comanda Tech - Instalador Autossuficiente (.cmd) %INSTALLER_VERSION%
 color 0B
 
