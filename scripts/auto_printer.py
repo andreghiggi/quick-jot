@@ -282,7 +282,18 @@ def main(company_id, company_name):
         print("=" * 50)
 
 if __name__ == "__main__":
-    # Em produção, esses seriam passados via linha de comando ou arquivo config
-    test_id = "test-company-id"
-    test_name = "Loja Teste"
-    main(test_id, test_name)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--company_id", help="ID da empresa")
+    parser.add_argument("--company_name", help="Nome da empresa")
+    args = parser.parse_args()
+
+    # Fallback para variáveis injetadas via build se não vier por argumento
+    company_id = args.company_id or COMPANY_ID
+    company_name = args.company_name or STORE_NAME
+
+    if not company_id:
+        print("ERRO: company_id nao fornecido.")
+        sys.exit(1)
+
+    main(company_id, company_name)
