@@ -17,6 +17,7 @@ import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { openCashDrawer } from '@/utils/cashDrawer';
+import { enqueueProductionByStation } from '@/utils/printRouting';
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
@@ -201,29 +202,23 @@ export function PDVV2FastCheckout({ companyId }: Props) {
           // 2. Comanda de Produção (Cozinha)
           if (storeSettings.autoPrintProductionTicket) {
             const productionItems = cart.map((item) => ({
-              productName: item.product_name,
+              id: item.product_id,
+              product_id: item.product_id,
+              name: item.product_name,
+              product_name: item.product_name,
               quantity: item.quantity,
+              category: item.category,
+              category_name: item.category,
             }));
 
-            const html = generateProductionTicketHTML({
-              tabNumber: createdDailyNumber,
-              customerName: 'Cliente Balcão',
-              items: productionItems,
-              createdAt: new Date(),
-              paperSize: storeSettings.printerPaperSize,
-              referenceLabel: createdShortCode ? `PEDIDO ${createdShortCode}` : 'VENDA RÁPIDA',
-              layout: storeSettings.printLayout,
-              companyId: companyId,
-              orderType: 'counter',
-              showReadyTime: true,
-              readyOffsetMinutes: computeReadyOffsetMinutes(storeSettings.estimatedWaitTime, 30),
-            });
-
-            await supabase.from('print_queue').insert({
-              company_id: companyId,
-              html_content: html,
-              label: createdShortCode ? `Produção ${createdShortCode}` : `Venda Rápida - ${createdOrderCode}`,
-            });
+            await enqueueProductionByStation(
+              companyId,
+              createdOrderCode,
+              productionItems,
+              createdShortCode || createdDailyNumber.toString(),
+              'Cliente Balcão',
+              'balcao'
+            );
           }
         } catch (printErr) {
           console.error('[FastCheckout] Erro ao enfileirar impressão:', printErr);

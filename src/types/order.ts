@@ -56,4 +56,5 @@ export interface Category {
   printDescription?: boolean;
   /** Editar Pedido (PDV V2): itens desta categoria podem ser trocados em pedidos enviados. */
   swappableInOrder?: boolean;
+  productionPrint?: boolean;
 }

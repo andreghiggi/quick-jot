@@ -20,6 +20,7 @@ import { usePrintStations } from '@/hooks/usePrintStations';
 export default function Categories() {
   const { company } = useAuthContext();
   const showPrintDescriptionToggle = true;
+  const showProductionPrintToggle = true;
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const {
     categories,
@@ -346,6 +347,27 @@ export default function Categories() {
                         </Popover>
                         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                           {categoryMappings[cat.id] ? `Imprime em: ${stations.find(s => s.id === categoryMappings[cat.id])?.name}` : 'Impressão padrão'}
+                        </span>
+                      </div>
+                    )}
+                    {showProductionPrintToggle && (
+                      <div className="relative group">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={cn("h-8 w-8 p-0", !(cat as any).productionPrint && "text-muted-foreground/40")}
+                          onClick={async () => {
+                            const newValue = !(cat as any).productionPrint;
+                            const success = await updateCategory(cat.id, { productionPrint: newValue } as any);
+                            if (success) {
+                              toast.success(newValue ? 'Impressão de produção ativada para esta categoria' : 'Impressão de produção desativada');
+                            }
+                          }}
+                        >
+                          <UtensilsCrossed className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                          {(cat as any).productionPrint ? 'Envia para produção' : 'Não envia para produção'}
                         </span>
                       </div>
                     )}

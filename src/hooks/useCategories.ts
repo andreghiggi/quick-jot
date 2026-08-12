@@ -50,6 +50,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         waiterItem: (cat as any).waiter_item ?? true,
         printDescription: (cat as any).print_description ?? false,
         swappableInOrder: (cat as any).swappable_in_order ?? false,
+        productionPrint: cat.production_print ?? true,
       }));
 
       setCategories(mapped);
@@ -191,6 +192,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
       if (data.waiterItem !== undefined) updateData.waiter_item = data.waiterItem;
       if (data.printDescription !== undefined) (updateData as any).print_description = data.printDescription;
       if (data.swappableInOrder !== undefined) (updateData as any).swappable_in_order = data.swappableInOrder;
+      if (data.productionPrint !== undefined) updateData.production_print = data.productionPrint;
 
       const { error } = await supabase
         .from('categories')
