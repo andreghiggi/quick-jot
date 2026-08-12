@@ -5,3 +5,4 @@
 // O mesmo arquivo precisa funcionar caso o sistema não tenha duas impressoras.
 // Erro na execução: crie uma verificação no Windows e, se precisar, inclua no arquivo a remoção deles para fazer isso automaticamente. Deixe o arquivo rodando de qualquer forma.
 // Mude a versão do python para 3.12 pra facilitar a instalação e faça tudo em um processo só.
+// Solução definitiva: o instalador agora busca o caminho do Python diretamente no Registro do Windows, garantindo que ele seja encontrado mesmo que o PATH não tenha sido atualizado na sessão atual.

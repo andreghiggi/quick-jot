@@ -56,16 +56,28 @@ start /wait "" "%PYTHON_EXE%" /quiet InstallAllUsers=1 PrependPath=1 Include_tes
 del "%PYTHON_EXE%" /q >nul 2>nul
 
 REM Refresh PATH
-for /f "tokens=2*" %%A in ('reg query "HKLM\System\CurrentControlSet\Control\Session Manager\Environment" /v Path') do set "NEWPATH=%%B"
-for /f "tokens=2*" %%A in ('reg query "HKCU\Environment" /v Path') do set "USERPATH=%%B"
-set "PATH=%NEWPATH%;%USERPATH%"
+for /f "tokens=2*" %%A in ('reg query "HKLM\Software\Python\PythonCore\3.12\InstallPath" /ve 2^>nul') do set "PY_PATH=%%B"
+if not defined PY_PATH (
+    for /f "tokens=2*" %%A in ('reg query "HKCU\Software\Python\PythonCore\3.12\InstallPath" /ve 2^>nul') do set "PY_PATH=%%B"
+)
 
-set "PY=python"
-where %PY% >nul 2>nul
+if defined PY_PATH (
+    set "PY=%PY_PATH%python.exe"
+    set "PATH=%PY_PATH%;%PY_PATH%Scripts;%PATH%"
+) else (
+    set "PY=python"
+)
+
+%PY% --version >nul 2>nul
 if %ERRORLEVEL% NEQ 0 (
-    echo [ERRO] Python nao foi localizado no PATH apos instalacao.
-    pause
-    exit /b 1
+    echo [ERRO] Python nao foi localizado. Tentando via 'where'...
+    where python >nul 2>nul
+    if %ERRORLEVEL% NEQ 0 (
+        echo [FATAL] Nao foi possivel encontrar o Python.
+        echo [DICA] Reinicie este instalador ou adicione o Python ao PATH manualmente.
+        pause
+        exit /b 1
+    )
 )
 echo [OK] Python 3.12 instalado com sucesso. >> "%LOG%"
 
