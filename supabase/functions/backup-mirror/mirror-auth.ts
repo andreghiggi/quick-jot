@@ -50,7 +50,7 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
       // Syntax: sql`INSERT INTO table ${ sql(array, ...columns) }`
       await target.unsafe(`
         INSERT INTO auth.users (${commonUserCols.map(c => `"${c}"`).join(",")}) 
-        ${target(users, commonUserCols)}
+        ${target(users)}
       `);
       results.users = users.length;
     }
@@ -60,7 +60,7 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     if (identities.length > 0) {
       await target.unsafe(`
         INSERT INTO auth.identities (${commonIdentCols.map(c => `"${c}"`).join(",")}) 
-        ${target(identities, commonIdentCols)}
+        ${target(identities)}
       `);
       results.identities = identities.length;
     }
