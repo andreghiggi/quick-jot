@@ -1,2 +1,2 @@
 export const PLAN_READY = true;
-// Para rotear os produtos para impressoras diferentes, você deve ir em Categorias e usar o ícone de impressora que aparece ao lado de cada categoria. Ali você seleciona em qual estação (Cozinha, Bar, etc) aquela categoria deve imprimir. Todos os produtos dessa categoria seguirão essa regra.
+// Para rotear por impressora, vá em Categorias e clique no ícone de impressora ao lado de cada uma. Se o ícone não aparecer, verifique em Configurações > Impressão se você já criou as Estações de Impressão (ex: Cozinha, Bar). Sem estações cadastradas, a opção de roteamento não fica visível nas categorias.
