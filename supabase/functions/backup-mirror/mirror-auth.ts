@@ -59,40 +59,22 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
 
     const identities = await source.unsafe(`SELECT ${commonIdentCols.map(c => `"${c}"`).join(",")}, identity_data FROM auth.identities`);
     if (identities.length > 0) {
-      const hasIdentityDataInTarget = (await target`
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'auth' AND table_name = 'identities' AND column_name = 'identity_data'
-      `).length > 0;
-
       for (const id of identities) {
         try {
           const finalCols = [...commonIdentCols];
           const finalValues = commonIdentCols.map(c => id[c]);
           
-          if (hasIdentityDataInTarget) {
-            finalCols.push('identity_data');
-            let data = id.identity_data;
-            
-            // Critical fix: Ensure identity_data is never null or undefined
-            // and is provided as a valid JSON object or string
-            if (data === null || data === undefined || data === "") {
-              data = JSON.stringify({ sub: id.user_id });
-            } else if (typeof data === 'object') {
-              data = JSON.stringify(data);
-            }
-            
-            finalValues.push({ sub: id.user_id });
-          } else if (hasIdentityDataInTarget && commonIdentCols.includes('identity_data')) {
-            const dataIdx = finalCols.indexOf('identity_data');
-            // SE O VALOR É NULO, FORÇAMOS UM OBJETO VÁLIDO
-            if (finalValues[dataIdx] === null || finalValues[dataIdx] === undefined || finalValues[dataIdx] === "") {
-              finalValues[dataIdx] = { sub: id.user_id };
-            }
+          finalCols.push('identity_data');
+          let data = id.identity_data;
+          if (data === null || data === undefined || data === "" || (typeof data === 'object' && Object.keys(data).length === 0)) {
+            data = { sub: id.user_id };
           }
+          finalValues.push(data);
 
           const placeholders = finalCols.map((_, i) => `$${i + 1}`).join(",");
           const colNamesStr = finalCols.map(c => `"${c}"`).join(",");
-          await target.unsafe(`INSERT INTO auth.identities (${colNamesStr}) VALUES (${placeholders})`, finalValues);
+          // USAMOS UM CAST EXPLICÍTO PARA JSONB NO DESTINO
+          await target.unsafe(`INSERT INTO auth.identities (${colNamesStr}) VALUES (${finalCols.map((c, i) => c === 'identity_data' ? `$${i + 1}::jsonb` : `$${i + 1}`).join(",")})`, finalValues);
           results.identities++;
         } catch (err) {
           results.errors.push(`Identity ${id.id} error: ${err instanceof Error ? err.message : String(err)}`);
