@@ -28,10 +28,12 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     const srcIdentCols = await source`
       SELECT column_name FROM information_schema.columns 
       WHERE table_schema = 'auth' AND table_name = 'identities'
+      AND column_name NOT IN ('email')
     `;
     const tgtIdentCols = await target`
       SELECT column_name FROM information_schema.columns 
       WHERE table_schema = 'auth' AND table_name = 'identities'
+      AND column_name NOT IN ('email')
     `;
 
     const commonIdentCols = srcIdentCols
