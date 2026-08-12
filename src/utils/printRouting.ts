@@ -69,7 +69,7 @@ export async function enqueueProductionByStation(
     const generateSimpleText = async (items: any[]) => {
       // For V2 layout, we fetch the full HTML from generateProductionTicketHTML
       // but only for the specific items of this station.
-      const { generateProductionTicketHTML } = await import('@/utils/printProductionTicket');
+      const { generateProductionTicketHTML, parseNotes } = await import('@/utils/printProductionTicket');
       const { computeReadyOffsetMinutes } = await import('@/utils/estimatedReadyOffset');
       
       // Fetch store settings for this company to check print_layout
@@ -87,21 +87,32 @@ export async function enqueueProductionByStation(
       const showReady = printLayout === 'v2';
 
       if (printLayout === 'v2') {
+        // Get order details for full layout features (like orderType, tableNumber, etc.)
+        const { data: orderData } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('id', orderId)
+          .single();
+
         return generateProductionTicketHTML({
-          tabNumber: parseInt(orderNumber.replace('#', '')) || 0,
+          tabNumber: (orderData as any)?.daily_number || parseInt(orderNumber.replace('#', '')) || 0,
+          tableNumber: (orderData as any)?.table_number,
           customerName: customerName,
           items: items.map((i) => ({
             productName: i.name,
             quantity: i.quantity,
-            notes: i.notes || null
+            notes: i.notes || null,
+            groupedOptionals: i.product?.groupedOptionals || i.groupedOptionals
           })),
           createdAt: new Date(),
           paperSize: paperSize,
-          referenceLabel: `PEDIDO #${orderNumber}`,
+          referenceLabel: (orderData as any)?.order_code || `PEDIDO #${orderNumber}`,
           companyId: companyId,
           layout: 'v2',
           showReadyTime: showReady,
           readyOffsetMinutes: showReady ? computeReadyOffsetMinutes(estimatedWaitTime, 30) : undefined,
+          orderType: (orderData as any)?.origin === 'mesa' ? 'table' : (orderData as any)?.origin === 'balcao' ? 'counter' : ((orderData as any)?.delivery_address ? 'delivery' : 'pickup'),
+          deliveryAddress: (orderData as any)?.delivery_address
         });
       }
 
@@ -113,7 +124,11 @@ export async function enqueueProductionByStation(
       text += `--------------------------------\n`;
       items.forEach(item => {
         text += `${item.quantity}x ${item.name}\n`;
-        if (item.notes) text += `  Obs: ${item.notes}\n`;
+        if (item.notes) {
+          const { additionals, observations } = parseNotes(item.notes);
+          additionals.forEach(a => text += `  + ${a.toUpperCase()}\n`);
+          observations.forEach(o => text += `  * ${o.toUpperCase()}\n`);
+        }
       });
       text += `--------------------------------\n`;
       return `<html><body><pre>${text}</pre></body></html>`;

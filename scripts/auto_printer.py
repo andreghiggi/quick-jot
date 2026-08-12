@@ -10,7 +10,7 @@ from datetime import datetime
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.6.1"
+SCRIPT_VERSION = "1.6.2"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -170,16 +170,61 @@ def imprimir_html(html_content, station_id=None):
                 return False
 
         # Simplificação extrema para o MVP: extrai texto do HTML
+        # Mas para Layout V2, preservamos os marcadores de formatação básica
+        # e garantimos que o texto saia o mais próximo possível do layout original.
         class MyHTMLParser(HTMLParser):
             def __init__(self):
                 super().__init__()
                 self.text = ""
+                self.in_badge = False
+                self.in_obs = False
+                self.in_add = False
+            
+            def handle_starttag(self, tag, attrs):
+                attrs_dict = dict(attrs)
+                classes = attrs_dict.get('class', '').split()
+                
+                if 'order-type-badge' in classes:
+                    self.text += "\n" + "="*32 + "\n"
+                    self.in_badge = True
+                elif 'obs-block' in classes:
+                    self.text += "\n" + "-"*32 + "\n"
+                    self.in_obs = True
+                elif 'additionals' in classes:
+                    self.in_add = True
+                elif 'item' in classes:
+                    self.text += "\n"
+                elif tag == 'br':
+                    self.text += "\n"
+
+            def handle_endtag(self, tag):
+                if self.in_badge:
+                    self.text += "="*32 + "\n"
+                    self.in_badge = False
+                elif self.in_obs:
+                    self.text += "-"*32 + "\n"
+                    self.in_obs = False
+                elif self.in_add:
+                    self.in_add = False
+
             def handle_data(self, data):
-                self.text += data + "\n"
+                clean_data = data.strip()
+                if not clean_data: return
+                
+                if self.in_badge or self.in_obs:
+                    self.text += clean_data.upper() + "\n"
+                elif self.in_add:
+                    # Adicionais geralmente já vem com >> do routing
+                    self.text += clean_data + "\n"
+                else:
+                    self.text += clean_data + "\n"
 
         parser = MyHTMLParser()
         parser.feed(html_content)
         texto_puro = parser.text.strip()
+        
+        # Garante corte de papel/espaço no fim
+        texto_puro += "\n\n\n\n\n"
 
         try:
             hPrinter = win32print.OpenPrinter(printer_name)
@@ -188,9 +233,18 @@ def imprimir_html(html_content, station_id=None):
             return False
             
         try:
+            # Tenta enviar como RAW para a impressora
             hJob = win32print.StartDocPrinter(hPrinter, 1, ("ComandaTech Print", None, "RAW"))
             win32print.StartPagePrinter(hPrinter)
-            win32print.WritePrinter(hPrinter, texto_puro.encode('latin-1', 'replace'))
+            
+            # Converte para bytes usando CP850 (comum em impressoras térmicas no BR) ou Latin-1
+            # Tenta CP850 primeiro para melhores caracteres de borda se houver
+            try:
+                raw_data = texto_puro.encode('cp850', 'replace')
+            except:
+                raw_data = texto_puro.encode('latin-1', 'replace')
+                
+            win32print.WritePrinter(hPrinter, raw_data)
             win32print.EndPagePrinter(hPrinter)
             win32print.EndDocPrinter(hPrinter)
         finally:

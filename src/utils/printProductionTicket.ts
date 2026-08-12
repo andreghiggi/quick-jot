@@ -91,7 +91,7 @@ function renderOrderTypeBadgeHTML(orderType?: OrderTicketType): string {
  * and "observations" (everything else, e.g. customer notes).
  * Used by layout v2 to render them differently.
  */
-function parseNotes(notes?: string | null): { additionals: string[]; observations: string[] } {
+export function parseNotes(notes?: string | null): { additionals: string[]; observations: string[] } {
   const result = { additionals: [] as string[], observations: [] as string[] };
   if (!notes) return result;
 
