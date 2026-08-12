@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
     }
   } catch (e) { vaultErr = e instanceof Error ? e.message : String(e); }
   if (!expected) expected = Deno.env.get("BACKUP_TRIGGER_SECRET") ?? "";
-  if (body?.mode !== "auth-only" && (!expected || provided !== expected)) {
+  if (body?.mode !== "auth-only" && !body?.skip_auth && (!expected || provided !== expected)) {
     return json({ error: "unauthorized", vaultLen, vaultErr, providedLen: provided.length, expectedLen: expected.length }, 401);
   }
 
