@@ -776,6 +776,52 @@ export type Database = {
           },
         ]
       }
+      category_print_stations: {
+        Row: {
+          category_id: string
+          company_id: string
+          created_at: string | null
+          id: string
+          station_id: string
+        }
+        Insert: {
+          category_id: string
+          company_id: string
+          created_at?: string | null
+          id?: string
+          station_id: string
+        }
+        Update: {
+          category_id?: string
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          station_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_print_stations_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: true
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_print_stations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_print_stations_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "print_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       combo_categories: {
         Row: {
           category_id: string
@@ -3116,31 +3162,73 @@ export type Database = {
           created_at: string
           html_content: string
           id: string
+          job_type: string | null
           label: string | null
           printed: boolean
           printed_at: string | null
+          station_id: string | null
         }
         Insert: {
           company_id: string
           created_at?: string
           html_content: string
           id?: string
+          job_type?: string | null
           label?: string | null
           printed?: boolean
           printed_at?: string | null
+          station_id?: string | null
         }
         Update: {
           company_id?: string
           created_at?: string
           html_content?: string
           id?: string
+          job_type?: string | null
           label?: string | null
           printed?: boolean
           printed_at?: string | null
+          station_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "print_queue_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_queue_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "print_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_stations: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_stations_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"

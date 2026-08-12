@@ -1,2 +1,2 @@
 export const PLAN_READY = true;
-// Para rotear por impressora, vá em Categorias e clique no ícone de impressora ao lado de cada uma. Se o ícone não aparecer, verifique em Configurações > Impressão se você já criou as Estações de Impressão (ex: Cozinha, Bar). Sem estações cadastradas, a opção de roteamento não fica visível nas categorias.
+// O erro ao adicionar estação ocorria porque as tabelas de estações de impressão não estavam criadas no banco de dados. Eu acabei de executar a migração que cria as tabelas print_stations e category_print_stations e configura as permissões de acesso (RLS). Agora você já pode adicionar as estações em Configurações > Impressão e vinculá-las às Categorias.
