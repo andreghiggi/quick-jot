@@ -32,6 +32,8 @@ export default function Categories() {
     moveCategory,
   } = useCategories({ companyId: company?.id, includeInactive: true });
 
+  const { stations, categoryMappings, mapCategoryToStation } = usePrintStations(company?.id);
+
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [editingCatName, setEditingCatName] = useState('');
@@ -307,6 +309,43 @@ export default function Categories() {
                         </Button>
                         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                           {cat.swappableInOrder ? 'Itens podem ser trocados no pedido pelo PDV (aplica em subcategorias e produtos)' : 'Itens não podem ser trocados no pedido pelo PDV'}
+                        </span>
+                      </div>
+                    )}
+                    {stations.length > 0 && (
+                      <div className="relative group">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={cn("h-8 w-8 p-0", !categoryMappings[cat.id] && "text-muted-foreground/40")}
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56" align="end">
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-muted-foreground">Estação de Impressão</p>
+                              <Select 
+                                value={categoryMappings[cat.id] || "default"} 
+                                onValueChange={(v) => mapCategoryToStation(cat.id, v === "default" ? null : v)}
+                              >
+                                <SelectTrigger className="h-8">
+                                  <SelectValue placeholder="Padrão" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="default">Padrão</SelectItem>
+                                  {stations.map(s => (
+                                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                          {categoryMappings[cat.id] ? `Imprime em: ${stations.find(s => s.id === categoryMappings[cat.id])?.name}` : 'Impressão padrão'}
                         </span>
                       </div>
                     )}

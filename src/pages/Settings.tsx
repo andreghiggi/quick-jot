@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +27,7 @@ import instalarImpressaoCmd from '../../scripts/instalar_impressao.cmd?raw';
 import iniciarImpressaoCmd from '../../scripts/iniciar_impressao.cmd?raw';
 import verificarPywin32Py from '../../scripts/verificar_pywin32.py?raw';
 import autoPrinterWin11Py from '../../scripts/auto_printer.py?raw';
+import { usePrintStations } from '@/hooks/usePrintStations';
 
 const escapePythonString = (value: string) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
@@ -34,6 +35,8 @@ export default function Settings() {
   const { company, profile, refetchUserData, isSuperAdmin } = useAuthContext();
   const { toast } = useToast();
   const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
+  const { stations, addStation, deleteStation } = usePrintStations(company?.id);
+  const [newStationName, setNewStationName] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
   const [isBannerUploading, setIsBannerUploading] = useState(false);
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
