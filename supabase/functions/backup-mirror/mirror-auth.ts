@@ -46,25 +46,32 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     // 4. COPY USERS
     const users = await source.unsafe(`SELECT ${commonUserCols.map(c => `"${c}"`).join(",")} FROM auth.users`);
     if (users.length > 0) {
-      // Manual batch insert for auth schema
-      const colNames = commonUserCols.map(c => `"${c}"`).join(",");
+      // OVERRIDE FOR auth.users: postgres-js tagged template for better type inference
+      // AND session_replication_role already set to replica at start of function
       for (const user of users) {
-        const placeholders = commonUserCols.map((_, i) => `$${i + 1}`).join(",");
-        const values = commonUserCols.map(c => user[c]);
-        await target.unsafe(`INSERT INTO auth.users (${colNames}) VALUES (${placeholders})`, values, { prepare: false });
-        results.users++;
+        try {
+          await target`
+            INSERT INTO auth.users ${target(user, commonUserCols)}
+          `;
+          results.users++;
+        } catch (err) {
+          results.errors.push(`User ${user.id} error: ${err instanceof Error ? err.message : String(err)}`);
+        }
       }
     }
 
     // 5. COPY IDENTITIES
     const identities = await source.unsafe(`SELECT ${commonIdentCols.map(c => `"${c}"`).join(",")} FROM auth.identities`);
     if (identities.length > 0) {
-      const colNames = commonIdentCols.map(c => `"${c}"`).join(",");
       for (const id of identities) {
-        const placeholders = commonIdentCols.map((_, i) => `$${i + 1}`).join(",");
-        const values = commonIdentCols.map(c => id[c]);
-        await target.unsafe(`INSERT INTO auth.identities (${colNames}) VALUES (${placeholders})`, values, { prepare: false });
-        results.identities++;
+        try {
+          await target`
+            INSERT INTO auth.identities ${target(id, commonIdentCols)}
+          `;
+          results.identities++;
+        } catch (err) {
+          results.errors.push(`Identity ${id.id} error: ${err instanceof Error ? err.message : String(err)}`);
+        }
       }
     }
 
