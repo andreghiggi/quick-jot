@@ -69,7 +69,7 @@ export async function enqueueProductionByStation(
     const generateSimpleText = async (items: any[]) => {
       // For V2 layout, we fetch the full HTML from generateProductionTicketHTML
       // but only for the specific items of this station.
-      const { generateProductionTicketHTML } = await import('@/utils/printProductionTicket');
+      const { generateProductionTicketHTML, parseNotes } = await import('@/utils/printProductionTicket');
       const { computeReadyOffsetMinutes } = await import('@/utils/estimatedReadyOffset');
       
       // Fetch store settings for this company to check print_layout
