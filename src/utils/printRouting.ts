@@ -66,7 +66,46 @@ export async function enqueueProductionByStation(
     const jobs: any[] = [];
 
     // Helper to format production ticket text (Simple version for script consumption)
-    const generateSimpleText = (items: any[]) => {
+    const generateSimpleText = async (items: any[]) => {
+      // For V2 layout, we fetch the full HTML from generateProductionTicketHTML
+      // but only for the specific items of this station.
+      const { generateProductionTicketHTML } = await import('@/utils/printProductionTicket');
+      const { computeReadyOffsetMinutes } = await import('@/utils/estimatedReadyOffset');
+      
+      // Fetch store settings for this company to check print_layout
+      const { data: settingsData } = await supabase
+        .from('store_settings')
+        .select('key, value')
+        .eq('company_id', companyId);
+      
+      const settings: Record<string, string> = {};
+      settingsData?.forEach(s => settings[s.key] = s.value);
+      
+      const printLayout = (settings['print_layout'] as any) || 'v1';
+      const paperSize = (settings['printer_paper_size'] as any) || '58mm';
+      const estimatedWaitTime = settings['estimated_wait_time'];
+      const showReady = printLayout === 'v2';
+
+      if (printLayout === 'v2') {
+        return generateProductionTicketHTML({
+          tabNumber: parseInt(orderNumber.replace('#', '')) || 0,
+          customerName: customerName,
+          items: items.map((i) => ({
+            productName: i.name,
+            quantity: i.quantity,
+            notes: i.notes || null
+          })),
+          createdAt: new Date(),
+          paperSize: paperSize,
+          referenceLabel: `PEDIDO #${orderNumber}`,
+          companyId: companyId,
+          layout: 'v2',
+          showReadyTime: showReady,
+          readyOffsetMinutes: showReady ? computeReadyOffsetMinutes(estimatedWaitTime, 30) : undefined,
+        });
+      }
+
+      // Fallback to simple text for V1 or others if not V2
       let text = `PEDIDO #${orderNumber}\n`;
       text += `CLIENTE: ${customerName}\n`;
       text += `ORIGEM: ${orderOrigin}\n`;
@@ -85,7 +124,7 @@ export async function enqueueProductionByStation(
       jobs.push({
         company_id: companyId,
         label: `Produção #${orderNumber} - ${customerName}`,
-        html_content: generateSimpleText(groupItems),
+        html_content: await generateSimpleText(groupItems),
         station_id: stationId,
         job_type: 'production',
         printed: false
@@ -97,7 +136,7 @@ export async function enqueueProductionByStation(
       jobs.push({
         company_id: companyId,
         label: `Produção #${orderNumber} - ${customerName}`,
-        html_content: generateSimpleText(defaultItems),
+        html_content: await generateSimpleText(defaultItems),
         station_id: null,
         job_type: 'production',
         printed: false
