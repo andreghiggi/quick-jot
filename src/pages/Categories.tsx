@@ -9,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen, Pencil, Check, X, Eye, EyeOff, FileText, UtensilsCrossed, Repeat, Power } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Image, FolderOpen, Pencil, Check, X, Eye, EyeOff, FileText, UtensilsCrossed, Repeat, Power, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
+import { usePrintStations } from '@/hooks/usePrintStations';
 
 export default function Categories() {
   const { company } = useAuthContext();
