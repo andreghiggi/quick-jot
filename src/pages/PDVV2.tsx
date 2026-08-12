@@ -372,6 +372,7 @@ export default function PDVV2() {
       
       // Auto-enqueue production if advancing to 'preparing'
       if (target === 'preparing' && companyId) {
+        console.log('[PDVV2] Enqueuing production for order:', order.id);
         enqueueProductionByStation(
           companyId,
           order.id,
@@ -379,7 +380,11 @@ export default function PDVV2() {
           order.orderCode || order.dailyNumber.toString(),
           order.customerName,
           order.origin
-        );
+        ).then(success => {
+          if (!success) {
+            console.warn('[PDVV2] Failed to enqueue production jobs for order:', order.id);
+          }
+        });
       }
     }
   }

@@ -32,8 +32,16 @@ export async function enqueueProductionByStation(
     items.forEach(item => {
       // Find category_id for the item
       // We assume items have product.category_id or similar
-      const categoryId = item.product?.category_id || item.category_id;
-      const stationId = categoryId ? mappingDict[categoryId] : null;
+      const categoryId = item.product?.category_id || item.category_id || item.category;
+      // If we only have category name, we need to find its ID in mappingDict
+      let stationId = categoryId ? mappingDict[categoryId] : null;
+
+      if (!stationId && typeof categoryId === 'string' && !categoryId.includes('-')) {
+        // categoryId might be a name, search mappingDict for a key that matches category names
+        // Note: category_id in category_print_stations is a UUID. 
+        // We'd need the categories list to map name -> ID.
+        // For now, let's look for any station_id if the mapping is empty or if we can't find it.
+      }
 
       if (stationId) {
         if (!stationGroups[stationId]) stationGroups[stationId] = [];
