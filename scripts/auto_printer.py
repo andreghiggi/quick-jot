@@ -162,8 +162,12 @@ def imprimir_html(html_content, station_id=None):
                 log(f"Usando impressora mapeada: {printer_name}", "STATION")
         
         if not printer_name:
-            printer_name = win32print.GetDefaultPrinter()
-            log(f"Usando impressora padrão: {printer_name}", "DEFAULT")
+            try:
+                printer_name = win32print.GetDefaultPrinter()
+                log(f"Usando impressora padrão: {printer_name}", "DEFAULT")
+            except Exception as e:
+                log(f"Falha ao obter impressora padrão do Windows: {e}", "ERRO")
+                return False
 
         # Simplificação extrema para o MVP: extrai texto do HTML
         class MyHTMLParser(HTMLParser):
