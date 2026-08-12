@@ -69,7 +69,7 @@ export function usePrintStations(companyId?: string) {
         .single();
 
       if (error) throw error;
-      setStations(prev => [...prev, data]);
+      setStations(prev => [...prev, data as any]);
       toast.success('Estação adicionada');
       return data;
     } catch (error) {
