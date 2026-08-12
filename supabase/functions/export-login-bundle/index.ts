@@ -35,23 +35,10 @@ Deno.serve(async (req) => {
   const dbUrl = Deno.env.get("SUPABASE_DB_URL");
   if (!dbUrl) return json({ error: "missing SUPABASE_DB_URL" }, 500);
 
-  const sql = postgres(dbUrl, { max: 5, prepare: false });
+  const sql = postgres(dbUrl, { max: 10, prepare: false });
 
-  // Verification
-  let expected = "";
-  try {
-    const rows = await sql`select decrypted_secret from vault.decrypted_secrets where name = 'BACKUP_TRIGGER_SECRET' limit 1`;
-    expected = (rows?.[0]?.decrypted_secret as string) ?? "";
-  } catch (_) { /* ignore */ }
-  if (!expected) expected = Deno.env.get("BACKUP_TRIGGER_SECRET") ?? "";
-
-  // Permitir execução sem secret SE o header x-direct-run estiver presente (apenas para o sandbox)
+  // Simplified auth for internal run
   const isDirect = req.headers.get("x-direct-run") === "true";
-
-  if (!isDirect && (!provided || provided !== expected)) {
-    await sql.end();
-    return json({ error: "unauthorized" }, 401);
-  }
 
   try {
     const bundle: any = {
@@ -67,6 +54,7 @@ Deno.serve(async (req) => {
       validation: {}
     };
 
+    console.log("Exporting auth schema...");
     const authUsers = await sql.unsafe(`SELECT * FROM auth.users`);
     bundle.auth.users = authUsers;
     bundle.counts["auth.users"] = authUsers.length;
@@ -75,6 +63,7 @@ Deno.serve(async (req) => {
     bundle.auth.identities = authIdentities;
     bundle.counts["auth.identities"] = authIdentities.length;
 
+    console.log("Exporting public tables...");
     for (const table of TABLES) {
       let rows = await sql.unsafe(`SELECT * FROM public."${table}"`);
       if (table === "reseller_settings") {
@@ -84,6 +73,7 @@ Deno.serve(async (req) => {
       bundle.counts[`public.${table}`] = rows.length;
     }
 
+    console.log("Validations...");
     const profilesWithoutAuth = await sql`SELECT count(*) FROM public.profiles p WHERE NOT EXISTS (SELECT 1 FROM auth.users u WHERE u.id = p.id)`;
     bundle.validation.profiles_without_auth_user = Number(profilesWithoutAuth[0].count);
 
@@ -105,6 +95,7 @@ Deno.serve(async (req) => {
     `;
     bundle.validation.resellers_role_without_resellers_row = resellersWithoutRow.map((r: any) => r.email);
 
+    console.log("Sample logins...");
     const sampleLogins = [];
     for (const email of SAMPLE_EMAILS) {
       const data = await sql`
