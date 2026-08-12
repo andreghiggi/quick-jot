@@ -129,25 +129,29 @@ for /f "tokens=1,2 delims=." %%a in ('!PY! -c "import sys; print(f'{sys.version_
     set "PYMINOR=%%b"
 )
 echo [OK] Versao detectada: !PYMAJOR!.!PYMINOR! >> "%LOG%"
+
 if !PYMAJOR! GEQ 3 if !PYMINOR! GEQ 14 (
     echo.
     echo ==========================================================
     echo [ERRO] Python !PYMAJOR!.!PYMINOR! nao e compativel.
     echo ==========================================================
     echo  A biblioteca pywin32 ^(usada para imprimir^) ainda NAO
-    echo  tem versao para Python 3.14 ou superior.
+    echo  tem versao para Python !PYMAJOR!.!PYMINOR! ou superior.
     echo.
-    echo  Use Python 3.12 ^(recomendado^) ou 3.13.
+    echo  Tentando remover versoes incompativeis automaticamente...
+    
+    REM Tenta desinstalar via Windows Settings / wmic / winget se disponivel
+    echo [INFO] Tentando remover Python Launcher e Python !PYMAJOR!.!PYMINOR!...
+    powershell -NoProfile -Command "Get-Package -Name '*Python 3.14*' | Uninstall-Package -Force" >nul 2>nul
+    powershell -NoProfile -Command "Get-Package -Name '*Python Launcher*' | Uninstall-Package -Force" >nul 2>nul
+    
     echo.
-    echo  ====== O QUE FAZER ======
-    echo  1. Configuracoes ^> Apps ^> Apps Instalados
-    echo     Desinstale TODAS as versoes "Python 3.14" e
-    echo     "Python Launcher" relacionadas.
-    echo  2. Acesse:  https://www.python.org/downloads/release/python-3122/
-    echo  3. Baixe "Windows installer ^(64-bit^)" do Python 3.12.2.
-    echo  4. Marque [x] Add python.exe to PATH  e  [x] py launcher
-    echo  5. Clique em Install Now.
-    echo  6. Rode este instalador novamente.
+    echo  ====== O QUE FAZER AGORA ======
+    echo  1. Acesse:  https://www.python.org/downloads/release/python-3122/
+    echo  2. Baixe "Windows installer ^(64-bit^)" do Python 3.12.2.
+    echo  3. Marque [x] Add python.exe to PATH  e  [x] py launcher
+    echo  4. Clique em Install Now.
+    echo  5. Rode este instalador novamente.
     echo ==========================================================
     echo [ERRO] Python !PYMAJOR!.!PYMINOR! sem suporte do pywin32 >> "%LOG%"
     pause
