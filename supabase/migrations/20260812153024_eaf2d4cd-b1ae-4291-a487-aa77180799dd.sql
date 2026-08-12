@@ -1,0 +1,1 @@
+UPDATE public.store_settings SET value = 'v1' WHERE id = '2e14c70b-9d80-4d9f-a579-1d181e5c5d08';
