@@ -9,7 +9,9 @@ import {
   FolderOpen,
   LogOut,
   ShieldCheck,
+  Activity,
 } from 'lucide-react';
+
 import {
   Sidebar,
   SidebarContent,
@@ -35,7 +37,9 @@ const adminMenuItems = [
   { title: 'Usuários', icon: Users, href: '/admin/usuarios' },
   { title: 'Campanhas (config)', icon: Megaphone, href: '/admin/campanhas-config' },
   { title: 'Mídia Kit', icon: FolderOpen, href: '/admin/midia-kit' },
+  { title: 'Monitor de Backup', icon: Activity, href: '/admin/backup-monitor' },
 ];
+
 
 export function AdminSidebar() {
   const location = useLocation();
