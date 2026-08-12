@@ -28,7 +28,7 @@ export function usePrintStations(companyId?: string) {
         .eq('company_id', companyId);
 
       if (error) throw error;
-      setStations(data || []);
+      setStations((data as any) || []);
     } catch (error) {
       console.error('Error fetching stations:', error);
     }
