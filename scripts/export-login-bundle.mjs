@@ -1,4 +1,4 @@
-import postgres from "npm:postgres@3.4.4";
+import postgres from "postgres";
 
 const TABLES = [
   "companies",
@@ -43,18 +43,15 @@ async function run() {
       validation: {}
     };
 
-    console.log("Exporting auth.users...");
     const authUsers = await sql.unsafe(`SELECT * FROM auth.users`);
     bundle.auth.users = authUsers;
     bundle.counts["auth.users"] = authUsers.length;
 
-    console.log("Exporting auth.identities...");
     const authIdentities = await sql.unsafe(`SELECT * FROM auth.identities`);
     bundle.auth.identities = authIdentities;
     bundle.counts["auth.identities"] = authIdentities.length;
 
     for (const table of TABLES) {
-      console.log(`Exporting public.${table}...`);
       let rows = await sql.unsafe(`SELECT * FROM public."${table}"`);
       
       if (table === "reseller_settings") {
@@ -65,7 +62,6 @@ async function run() {
       bundle.counts[`public.${table}`] = rows.length;
     }
 
-    console.log("Running validations...");
     const profilesWithoutAuth = await sql`
       SELECT count(*) FROM public.profiles p 
       WHERE NOT EXISTS (SELECT 1 FROM auth.users u WHERE u.id = p.id)
@@ -110,10 +106,10 @@ async function run() {
     }
     bundle.validation.sample_logins = sampleLogins;
 
-    console.log(JSON.stringify(bundle, null, 2));
+    process.stdout.write(JSON.stringify(bundle));
     await sql.end();
   } catch (err) {
-    console.error("Error:", err);
+    console.error(err);
     await sql.end();
     process.exit(1);
   }
