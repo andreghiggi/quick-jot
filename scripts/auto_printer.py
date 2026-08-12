@@ -10,7 +10,7 @@ from datetime import datetime
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.6.0"
+SCRIPT_VERSION = "1.6.1"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -162,8 +162,12 @@ def imprimir_html(html_content, station_id=None):
                 log(f"Usando impressora mapeada: {printer_name}", "STATION")
         
         if not printer_name:
-            printer_name = win32print.GetDefaultPrinter()
-            log(f"Usando impressora padrão: {printer_name}", "DEFAULT")
+            try:
+                printer_name = win32print.GetDefaultPrinter()
+                log(f"Usando impressora padrão: {printer_name}", "DEFAULT")
+            except Exception as e:
+                log(f"Falha ao obter impressora padrão do Windows: {e}", "ERRO")
+                return False
 
         # Simplificação extrema para o MVP: extrai texto do HTML
         class MyHTMLParser(HTMLParser):
@@ -177,7 +181,12 @@ def imprimir_html(html_content, station_id=None):
         parser.feed(html_content)
         texto_puro = parser.text.strip()
 
-        hPrinter = win32print.OpenPrinter(printer_name)
+        try:
+            hPrinter = win32print.OpenPrinter(printer_name)
+        except Exception as e:
+            log(f"Não foi possível abrir a impressora '{printer_name}': {e}", "ERRO")
+            return False
+            
         try:
             hJob = win32print.StartDocPrinter(hPrinter, 1, ("ComandaTech Print", None, "RAW"))
             win32print.StartPagePrinter(hPrinter)
