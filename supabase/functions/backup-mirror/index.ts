@@ -132,7 +132,6 @@ Deno.serve(async (req) => {
   // 0.5) Mirror Auth se solicitado ou se for início de backup completo
   let authResult: any = null;
   const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
-  const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
 
   const sendNotify = async (text: string) => {
     try {
