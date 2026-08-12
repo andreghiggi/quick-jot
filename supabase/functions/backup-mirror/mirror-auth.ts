@@ -46,28 +46,26 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     // 4. COPY USERS
     const users = await source.unsafe(`SELECT ${commonUserCols.map(c => `"${c}"`).join(",")} FROM auth.users`);
     if (users.length > 0) {
-      // Manual batch insert for auth schema (avoids postgres-js helper ambiguity in internal schemas)
+      // Manual batch insert for auth schema
       const colNames = commonUserCols.map(c => `"${c}"`).join(",");
-      const placeholders = users.map((_, i) => 
-        `(${commonUserCols.map((_, j) => `$${i * commonUserCols.length + j + 1}`).join(",")})`
-      ).join(",");
-      const values = users.flatMap(u => commonUserCols.map(c => u[c]));
-      
-      await target.unsafe(`INSERT INTO auth.users (${colNames}) VALUES ${placeholders}`, ...values);
-      results.users = users.length;
+      for (const user of users) {
+        const placeholders = commonUserCols.map((_, i) => `$${i + 1}`).join(",");
+        const values = commonUserCols.map(c => user[c]);
+        await target.unsafe(`INSERT INTO auth.users (${colNames}) VALUES (${placeholders})`, values);
+        results.users++;
+      }
     }
 
     // 5. COPY IDENTITIES
     const identities = await source.unsafe(`SELECT ${commonIdentCols.map(c => `"${c}"`).join(",")} FROM auth.identities`);
     if (identities.length > 0) {
       const colNames = commonIdentCols.map(c => `"${c}"`).join(",");
-      const placeholders = identities.map((_, i) => 
-        `(${commonIdentCols.map((_, j) => `$${i * commonIdentCols.length + j + 1}`).join(",")})`
-      ).join(",");
-      const values = identities.flatMap(id => commonIdentCols.map(c => id[c]));
-      
-      await target.unsafe(`INSERT INTO auth.identities (${colNames}) VALUES ${placeholders}`, ...values);
-      results.identities = identities.length;
+      for (const id of identities) {
+        const placeholders = commonIdentCols.map((_, i) => `$${i + 1}`).join(",");
+        const values = commonIdentCols.map(c => id[c]);
+        await target.unsafe(`INSERT INTO auth.identities (${colNames}) VALUES (${placeholders})`, values);
+        results.identities++;
+      }
     }
 
     const nowBrt = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
