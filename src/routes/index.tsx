@@ -1,2 +1,2 @@
 export const PLAN_READY = true;
-// pare de me enviar respostas aleatorias, preciso que me envie o retorno completo do plano que foi executado e como eu baixo a extensao do chrome.
+// Para rotear os produtos para impressoras diferentes, você deve ir em Categorias e usar o ícone de impressora que aparece ao lado de cada categoria. Ali você seleciona em qual estação (Cozinha, Bar, etc) aquela categoria deve imprimir. Todos os produtos dessa categoria seguirão essa regra.
