@@ -258,61 +258,38 @@ export default function Settings() {
 
   const generateBatScript = () => {
     const storeName = company?.name || 'Minha Loja';
+    const companyId = company?.id || '';
     
     return `@echo off
+setlocal EnableDelayedExpansion
 chcp 65001 >nul
 title ${storeName} - Impressao Automatica
 color 0A
 
-echo.
-echo ============================================
-echo   ${storeName} - Impressao Automatica
-echo ============================================
-echo.
+cd /d "%~dp0"
 
-echo [..] Verificando Python...
-python --version
-if %errorlevel% neq 0 (
-    color 0C
-    echo.
-    echo [ERRO] Python nao encontrado!
-    echo Instale em https://python.org
-    echo Marque "Add Python to PATH"
-    echo.
+set "PY="
+if exist "python_detectado.txt" (
+    set /p PY=<"python_detectado.txt"
+)
+
+if not defined PY (
+    where python >nul 2>nul && set "PY=python"
+)
+
+if not defined PY (
+    echo [ERRO] Python nao encontrado. Rode o instalador primeiro.
     pause
     exit /b 1
 )
-echo [OK] Python encontrado
-echo.
 
-if not exist "C:\\ComandaTech\\printer.py" (
-    color 0C
-    echo [ERRO] Arquivo printer.py nao encontrado!
+echo Iniciando impressao para: ${storeName}
+"!PY!" auto_printer.py --company_id "${companyId}" --company_name "${storeName}"
+if errorlevel 1 (
     echo.
-    echo Baixe o arquivo printer.py e salve em:
-    echo C:\\ComandaTech\\printer.py
-    echo.
+    echo [ERRO] Falha ao iniciar impressao.
     pause
-    exit /b 1
 )
-echo [OK] Arquivo printer.py encontrado
-echo.
-
-echo [..] Instalando dependencias...
-python -m pip install requests pywin32 -q
-echo [OK] Dependencias instaladas
-echo.
-
-echo ============================================
-echo   Iniciando impressao automatica...
-echo ============================================
-echo.
-
-cd /d "C:\\ComandaTech"
-python printer.py
-
-echo.
-pause
 `;
   };
 
