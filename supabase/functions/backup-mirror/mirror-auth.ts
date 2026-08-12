@@ -39,17 +39,6 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     const commonIdentCols = srcIdentCols
       .map(c => c.column_name as string)
       .filter(name => tgtIdentCols.some(tc => tc.column_name === name));
-    
-    // Check if target identities table has identity_data column
-    const tgtIdentDataCol = await target`
-      SELECT 1 FROM information_schema.columns 
-      WHERE table_schema = 'auth' AND table_name = 'identities' AND column_name = 'identity_data'
-    `;
-    const hasIdentityData = tgtIdentDataCol.length > 0;
-    
-    if (hasIdentityData) {
-      commonIdentCols.push('identity_data');
-    }
 
     // 3. CLEAN DESTINATION (Order: identities -> users)
     await target`SET session_replication_role = 'replica'`;
@@ -82,11 +71,26 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     const identities = await source.unsafe(`SELECT ${commonIdentCols.map(c => `"${c}"`).join(",")} FROM auth.identities`);
     if (identities.length > 0) {
       const colNames = commonIdentCols.map(c => `"${c}"`).join(",");
+      // Adicionamos identity_data com valor default se ele for obrigatório no destino
+      const hasIdentityDataInTarget = (await target`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'auth' AND table_name = 'identities' AND column_name = 'identity_data'
+      `).length > 0;
+
       for (const id of identities) {
         try {
-          const placeholders = commonIdentCols.map((_, i) => `$${i + 1}`).join(",");
-          const values = commonIdentCols.map(c => id[c]);
-          await target.unsafe(`INSERT INTO auth.identities (${colNames}) VALUES (${placeholders})`, values);
+          const finalCols = [...commonIdentCols];
+          const finalValues = commonIdentCols.map(c => id[c]);
+          
+          if (hasIdentityDataInTarget && !commonIdentCols.includes('identity_data')) {
+            finalCols.push('identity_data');
+            // Usamos o user_id como fallback para identity_data ou um JSON vazio
+            finalValues.push({ sub: id.user_id });
+          }
+
+          const placeholders = finalCols.map((_, i) => `$${i + 1}`).join(",");
+          const colNamesStr = finalCols.map(c => `"${c}"`).join(",");
+          await target.unsafe(`INSERT INTO auth.identities (${colNamesStr}) VALUES (${placeholders})`, finalValues);
           results.identities++;
         } catch (err) {
           results.errors.push(`Identity ${id.id} error: ${err instanceof Error ? err.message : String(err)}`);
