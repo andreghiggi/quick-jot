@@ -5,4 +5,4 @@
 // O mesmo arquivo precisa funcionar caso o sistema não tenha duas impressoras.
 // Erro na execução: crie uma verificação no Windows e, se precisar, inclua no arquivo a remoção deles para fazer isso automaticamente. Deixe o arquivo rodando de qualquer forma.
 // Mude a versão do python para 3.12 pra facilitar a instalação e faça tudo em um processo só.
-// Solução definitiva: o inicializador v1.6 agora passa dinamicamente o ID e o Nome da empresa para o script Python, garantindo que ele monitore a loja correta sem depender de valores fixos no código.
+// Próximos passos: Vá em Configurações > Impressão e baixe os 3 arquivos essenciais: 1. instalador_impressao.cmd (para preparar o Python e dependências), 2. iniciar_impressao.cmd (para abrir o monitoramento) e 3. auto_printer.py (o cérebro da impressão).
