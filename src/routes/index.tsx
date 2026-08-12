@@ -2,3 +2,4 @@
 // Baixe o arquivo auto_printer.py atualizado em Configurações > Impressão.
 // Utilize o arquivo printer_map.json (também disponível para download) para mapear os nomes das impressoras do Windows.
 // O script agora consulta a versão online do Comanda Tech por padrão.
+// O mesmo arquivo precisa funcionar caso o sistema não tenha duas impressoras.
