@@ -1,2 +1,2 @@
 export const PLAN_READY = true;
-// retorno em portugues
+// aonde eu baixo a extensao?
