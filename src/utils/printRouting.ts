@@ -87,21 +87,32 @@ export async function enqueueProductionByStation(
       const showReady = printLayout === 'v2';
 
       if (printLayout === 'v2') {
+        // Get order details for full layout features (like orderType, tableNumber, etc.)
+        const { data: orderData } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('id', orderId)
+          .single();
+
         return generateProductionTicketHTML({
-          tabNumber: parseInt(orderNumber.replace('#', '')) || 0,
+          tabNumber: orderData?.daily_number || parseInt(orderNumber.replace('#', '')) || 0,
+          tableNumber: orderData?.table_number,
           customerName: customerName,
           items: items.map((i) => ({
             productName: i.name,
             quantity: i.quantity,
-            notes: i.notes || null
+            notes: i.notes || null,
+            groupedOptionals: i.product?.groupedOptionals || i.groupedOptionals
           })),
           createdAt: new Date(),
           paperSize: paperSize,
-          referenceLabel: `PEDIDO #${orderNumber}`,
+          referenceLabel: orderData?.order_code || `PEDIDO #${orderNumber}`,
           companyId: companyId,
           layout: 'v2',
           showReadyTime: showReady,
           readyOffsetMinutes: showReady ? computeReadyOffsetMinutes(estimatedWaitTime, 30) : undefined,
+          orderType: orderData?.origin === 'mesa' ? 'table' : orderData?.origin === 'balcao' ? 'counter' : (orderData?.delivery_address ? 'delivery' : 'pickup'),
+          deliveryAddress: orderData?.delivery_address
         });
       }
 
