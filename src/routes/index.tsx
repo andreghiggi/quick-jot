@@ -1,1 +1,0 @@
-execue o plano
