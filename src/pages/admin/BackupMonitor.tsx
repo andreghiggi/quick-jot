@@ -195,17 +195,18 @@ export default function BackupMonitor() {
                       .slice(0, 12)
                       .map(([table, detail]: [string, any]) => (
                         <div key={table} className="text-[10px] bg-background border p-2 rounded flex justify-between items-center">
-                          <span className="font-medium truncate mr-2" title={table}>{table}</span>
+                          <span className="font-medium truncate mr-2">{table}</span>
                           <div className="flex items-center gap-1">
                             <span className="text-muted-foreground">{detail.rows} rows</span>
                             {detail.error ? (
-                              <XCircle className="w-3 h-3 text-destructive" title={detail.error} />
+                              <XCircle className="w-3 h-3 text-destructive" />
                             ) : (
                               <CheckCircle2 className="w-3 h-3 text-green-500" />
                             )}
                           </div>
                         </div>
                       ))}
+
                   </div>
                 </div>
               )}
