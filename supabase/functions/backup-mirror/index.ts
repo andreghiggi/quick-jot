@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
   const isSkipAuth = body?.skip_auth === true;
   const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
 
-  if (body?.mode !== "auth-only" && !isSkipAuth && !isContinuation && (!expected || provided !== expected)) {
+  if (body?.mode !== "auth-only" && !isSkipAuth && !isContinuation && body?.mode !== "health" && (!expected || provided !== expected)) {
     return json({ error: "unauthorized", vaultLen, vaultErr, providedLen: provided.length, expectedLen: expected.length }, 401);
   }
 
