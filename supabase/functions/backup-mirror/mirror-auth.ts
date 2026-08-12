@@ -53,7 +53,7 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
       ).join(",");
       const values = users.flatMap(u => commonUserCols.map(c => u[c]));
       
-      await target.unsafe(`INSERT INTO auth.users (${colNames}) VALUES ${placeholders}`, values);
+      await target.unsafe(`INSERT INTO auth.users (${colNames}) VALUES ${placeholders}`, ...values);
       results.users = users.length;
     }
 
@@ -66,7 +66,7 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
       ).join(",");
       const values = identities.flatMap(id => commonIdentCols.map(c => id[c]));
       
-      await target.unsafe(`INSERT INTO auth.identities (${colNames}) VALUES ${placeholders}`, values);
+      await target.unsafe(`INSERT INTO auth.identities (${colNames}) VALUES ${placeholders}`, ...values);
       results.identities = identities.length;
     }
 
