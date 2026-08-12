@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-set "LAUNCHER_VERSION=v1.4-cmd"
+set "LAUNCHER_VERSION=v1.5-cmd"
 title Comanda Tech - Impressao Automatica (.cmd) %LAUNCHER_VERSION%
 color 0A
 
@@ -20,7 +20,7 @@ if not defined PY (
 
 if not defined PY (
     echo [ERRO] Python nao encontrado.
-    echo Rode primeiro o arquivo  instalar_impressao.bat
+    echo Rode primeiro o arquivo instalar_impressao.cmd
     pause
     exit /b 1
 )
@@ -29,17 +29,19 @@ echo ==========================================================
 echo   Comanda Tech - Impressao Automatica em execucao
 echo ==========================================================
 echo  Versao do inicializador: %LAUNCHER_VERSION%
-echo  Python: %PY%
+echo  Python: "!PY!"
 echo  Mantenha esta janela ABERTA enquanto a loja estiver
 echo  funcionando. Para parar, feche esta janela.
 echo ==========================================================
 echo.
 
+:check_deps
 if exist "%~dp0verificar_pywin32.py" (
-    %PY% "%~dp0verificar_pywin32.py" >nul 2>nul
+    "!PY!" "%~dp0verificar_pywin32.py" >nul 2>nul
 ) else (
-    %PY% -c "import requests, win32print" >nul 2>nul
+    "!PY!" -c "import requests, win32print" >nul 2>nul
 )
+
 if errorlevel 1 (
     echo [AVISO] Dependencias da impressao nao estao prontas.
     echo Rodando instalador automaticamente antes de iniciar...
@@ -54,7 +56,10 @@ if errorlevel 1 (
     )
 )
 
-%PY% "%~dp0auto_printer.py" || (
+:retry_start
+echo [INFO] Iniciando script de impressao...
+"!PY!" "%~dp0auto_printer.py"
+if errorlevel 1 (
     echo.
     echo [ERRO] O script de impressao parou inesperadamente.
     echo Tentando reiniciar em 5 segundos...
@@ -62,8 +67,6 @@ if errorlevel 1 (
     goto :retry_start
 )
 
-:retry_start
-%PY% "%~dp0auto_printer.py" || goto :retry_start
 echo.
 echo [Servico encerrado] - pressione qualquer tecla para fechar.
 pause >nul
