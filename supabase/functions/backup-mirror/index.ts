@@ -31,7 +31,15 @@ Deno.serve(async (req) => {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-  const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
+  let body: any = {};
+  if (req.method === "POST") {
+    const rawBody = await req.text();
+    try {
+      body = JSON.parse(rawBody);
+    } catch (e) {
+      console.error("Error parsing JSON body:", e);
+    }
+  }
 
   // Modo test-notify: só dispara mensagem de teste no WhatsApp, sem tocar no banco.
   // Não exige secret pois é inofensivo (só envia 1 mensagem fixa para o admin).
