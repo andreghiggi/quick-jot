@@ -37,15 +37,17 @@ export default function BackupMonitor() {
         .limit(10);
 
       if (error) throw error;
-      setRuns(data || []);
+      const dataRows = (data || []) as unknown as BackupRun[];
+      setRuns(dataRows);
       
       // Update selected run if it's currently running or was just selected
       if (selectedRun) {
-        const updated = data?.find(r => r.id === selectedRun.id);
+        const updated = dataRows.find(r => r.id === selectedRun.id);
         if (updated) setSelectedRun(updated);
-      } else if (data && data.length > 0 && data[0].status === 'running') {
-        setSelectedRun(data[0]);
+      } else if (dataRows.length > 0 && dataRows[0].status === 'running') {
+        setSelectedRun(dataRows[0]);
       }
+
     } catch (error) {
       console.error('Error fetching backup runs:', error);
     } finally {
