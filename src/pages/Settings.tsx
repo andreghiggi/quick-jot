@@ -1435,12 +1435,32 @@ pause
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Estações de Impressão
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Estações de Impressão
+                  </h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => {
+                      const mapping = stations.reduce((acc, s) => ({ ...acc, [s.id]: "" }), {});
+                      const blob = new Blob([JSON.stringify(mapping, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'printer_map.json';
+                      a.click();
+                      toast({ title: "Mapa baixado", description: "Edite o arquivo colocando o nome das impressoras Windows." });
+                    }}
+                  >
+                    <Download className="w-4 h-4" />
+                    Baixar Mapa (printer_map.json)
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Crie estações lógicas (Ex: Cozinha, Bar) para separar as comandas por categoria de produto.
+                  Crie estações lógicas (Ex: Cozinha, Bar). Baixe o mapa, preencha os nomes das impressoras do Windows e coloque na pasta C:\ComandaTech.
                 </p>
                 <div className="flex gap-2">
                   <Input 
@@ -1460,7 +1480,10 @@ pause
                 <div className="space-y-2">
                   {stations.map((s) => (
                     <div key={s.id} className="flex items-center justify-between p-2 border rounded bg-background">
-                      <span className="text-sm font-medium">{s.name}</span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{s.name}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{s.id}</span>
+                      </div>
                       <Button variant="ghost" size="sm" onClick={() => deleteStation(s.id)} className="text-destructive h-8 w-8 p-0">
                         <Trash2 className="h-4 w-4" />
                       </Button>
