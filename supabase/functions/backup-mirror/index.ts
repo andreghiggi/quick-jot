@@ -5,7 +5,7 @@ import { mirrorAuth } from "./mirror-auth.ts";
 // Limites por invocação (mantidos baixos pra caber no CPU budget da edge function).
 // O backup é fatiado: cada chamada processa algumas tabelas e dispara a próxima via fetch.
 const BATCH_SIZE = 1000;
-const MAX_RUNTIME_MS = 30_000;
+const MAX_RUNTIME_MS = 50_000;
 const MAX_TABLES_PER_INVOCATION = 8;
 
 // Tabelas que NÃO devem ser espelhadas (logs voláteis e/ou pesados demais)
