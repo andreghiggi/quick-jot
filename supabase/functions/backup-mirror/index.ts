@@ -40,6 +40,12 @@ Deno.serve(async (req) => {
       console.error("Error parsing JSON body:", e);
     }
   }
+  if (body?.mode === "query-run") {
+    const sMeta = postgres(Deno.env.get("SUPABASE_DB_URL")!, { max: 1, prepare: false });
+    const [run] = await sMeta`SELECT * FROM public.backup_runs WHERE id = ${body.run_id}`;
+    await sMeta.end();
+    return json(run);
+  }
 
   // Modo test-notify: só dispara mensagem de teste no WhatsApp, sem tocar no banco.
   // Não exige secret pois é inofensivo (só envia 1 mensagem fixa para o admin).
