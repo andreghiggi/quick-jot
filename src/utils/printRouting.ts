@@ -118,8 +118,6 @@ export async function enqueueProductionByStation(
           deliveryAddress: (orderData as any)?.delivery_address
         });
 
-        // Para Amore Mio, se não houver estação definida, forçamos o envio para o script processar como texto rico
-        // O script 1.6.2 já tenta converter marcadores V2 para texto visual.
         return html;
       }
 

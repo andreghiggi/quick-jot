@@ -49,11 +49,12 @@ interface PrintTicketData {
 }
 
 // Allow-list ISOLADA: troca de "Comanda #<n>" por referenceLabel no cabeçalho.
-// Atualmente liberada APENAS para Lancheria da i9. Não alterar sem autorização.
+// Atualmente liberada para lojas que usam identificadores alfanuméricos curtos.
 const SHORT_CODE_HEADER_ALLOWLIST = new Set<string>([
   '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da i9
   'a0071b86-6f2a-43f5-80d9-26e3ecd4b70c', // Margen Pizzaria
   '96e53bb2-2b71-4ed3-86cd-0f97858aca73', // Império do Açaí
+  'f5f9eec3-67bc-497a-88a6-ce41d3b15df8', // Amore Mio
 ]);
 
 function shouldUseReferenceInHeader(data: PrintTicketData): boolean {
