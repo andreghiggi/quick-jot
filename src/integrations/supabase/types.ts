@@ -731,6 +731,7 @@ export type Database = {
           name: string
           pdv_item: boolean
           print_description: boolean
+          production_print: boolean | null
           swappable_in_order: boolean
           waiter_item: boolean
         }
@@ -747,6 +748,7 @@ export type Database = {
           name: string
           pdv_item?: boolean
           print_description?: boolean
+          production_print?: boolean | null
           swappable_in_order?: boolean
           waiter_item?: boolean
         }
@@ -763,6 +765,7 @@ export type Database = {
           name?: string
           pdv_item?: boolean
           print_description?: boolean
+          production_print?: boolean | null
           swappable_in_order?: boolean
           waiter_item?: boolean
         }

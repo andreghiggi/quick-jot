@@ -371,7 +371,6 @@ export default function Categories() {
                         </span>
                       </div>
                     )}
-                    )}
                     {sortMode === 'manual' && (
                       <>
                         <div className="relative group">
