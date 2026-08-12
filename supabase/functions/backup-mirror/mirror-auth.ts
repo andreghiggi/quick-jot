@@ -28,12 +28,12 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     const srcIdentCols = await source`
       SELECT column_name FROM information_schema.columns 
       WHERE table_schema = 'auth' AND table_name = 'identities'
-      AND column_name NOT IN ('email', 'identity_data')
+      AND column_name NOT IN ('email')
     `;
     const tgtIdentCols = await target`
       SELECT column_name FROM information_schema.columns 
       WHERE table_schema = 'auth' AND table_name = 'identities'
-      AND column_name NOT IN ('email', 'identity_data')
+      AND column_name NOT IN ('email')
     `;
 
     const commonIdentCols = srcIdentCols
@@ -70,8 +70,7 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     // 5. COPY IDENTITIES
     const identities = await source.unsafe(`SELECT ${commonIdentCols.map(c => `"${c}"`).join(",")} FROM auth.identities`);
     if (identities.length > 0) {
-      const colNames = commonIdentCols.map(c => `"${c}"`).join(",");
-      // Adicionamos identity_data com valor default se ele for obrigatório no destino
+      // Check if target identities table has identity_data column
       const hasIdentityDataInTarget = (await target`
         SELECT 1 FROM information_schema.columns 
         WHERE table_schema = 'auth' AND table_name = 'identities' AND column_name = 'identity_data'
@@ -84,8 +83,13 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
           
           if (hasIdentityDataInTarget && !commonIdentCols.includes('identity_data')) {
             finalCols.push('identity_data');
-            // Usamos o user_id como fallback para identity_data ou um JSON vazio
             finalValues.push({ sub: id.user_id });
+          } else if (hasIdentityDataInTarget && commonIdentCols.includes('identity_data')) {
+            // Se a coluna existe e o valor for null/undefined, garantimos que não viole a constraint
+            const idx = finalCols.indexOf('identity_data');
+            if (finalValues[idx] === null || finalValues[idx] === undefined) {
+              finalValues[idx] = { sub: id.user_id };
+            }
           }
 
           const placeholders = finalCols.map((_, i) => `$${i + 1}`).join(",");
