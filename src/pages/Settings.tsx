@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen, Image, Upload, AlertTriangle, Mail, DoorClosed, ArrowUpFromLine } from 'lucide-react';
+import { Loader2, Save, Building2, Phone, MapPin, Globe, Printer, Download, Truck, LayoutDashboard, Plus, Trash2, Clock, BookOpen, Image, Upload, AlertTriangle, Mail, DoorClosed, ArrowUpFromLine, ExternalLink } from 'lucide-react';
 import { VERSION } from '@/version';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -27,6 +27,7 @@ import instalarImpressaoCmd from '../../scripts/instalar_impressao.cmd?raw';
 import iniciarImpressaoCmd from '../../scripts/iniciar_impressao.cmd?raw';
 import verificarPywin32Py from '../../scripts/verificar_pywin32.py?raw';
 import autoPrinterWin11Py from '../../scripts/auto_printer.py?raw';
+import { usePrintStations } from '@/hooks/usePrintStations';
 
 const escapePythonString = (value: string) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
@@ -34,6 +35,8 @@ export default function Settings() {
   const { company, profile, refetchUserData, isSuperAdmin } = useAuthContext();
   const { toast } = useToast();
   const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
+  const { stations, addStation, deleteStation } = usePrintStations(company?.id);
+  const [newStationName, setNewStationName] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
   const [isBannerUploading, setIsBannerUploading] = useState(false);
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
@@ -1430,7 +1433,65 @@ pause
                 Imprime automaticamente uma comanda de produção (somente itens, sem preços) junto com o pedido do cardápio
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Estações de Impressão
+                  </h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => {
+                      const mapping = stations.reduce((acc, s) => ({ ...acc, [s.id]: "" }), {});
+                      const blob = new Blob([JSON.stringify(mapping, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'printer_map.json';
+                      a.click();
+                      toast({ title: "Mapa baixado", description: "Edite o arquivo colocando o nome das impressoras Windows." });
+                    }}
+                  >
+                    <Download className="w-4 h-4" />
+                    Baixar Mapa (printer_map.json)
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Crie estações lógicas (Ex: Cozinha, Bar). Baixe o mapa, preencha os nomes das impressoras do Windows e coloque na pasta C:\ComandaTech.
+                </p>
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="Nome da estação" 
+                    value={newStationName}
+                    onChange={(e) => setNewStationName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && newStationName.trim() && (addStation(newStationName.trim()), setNewStationName(''))}
+                  />
+                  <Button onClick={() => {
+                    if (newStationName.trim()) {
+                      addStation(newStationName.trim());
+                      setNewStationName('');
+                    }
+                  }}>Adicionar</Button>
+                </div>
+
+                <div className="space-y-2">
+                  {stations.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between p-2 border rounded bg-background">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{s.name}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{s.id}</span>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => deleteStation(s.id)} className="text-destructive h-8 w-8 p-0">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <p className="font-medium">Impressão Comanda Produção</p>

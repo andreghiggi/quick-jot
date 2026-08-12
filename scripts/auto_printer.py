@@ -10,7 +10,7 @@ from datetime import datetime
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.5.1"
+SCRIPT_VERSION = "1.6.0"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -18,6 +18,7 @@ LOG_FILE = "printer_log.txt"
 STORE_NAME = ""
 STORE_INFO = {}
 COMPANY_ID = "" # Injetado pelo frontend
+PRINTER_MAP_FILE = "printer_map.json"
 
 # Controle de sessão
 pedidos_impressos_sessao = []
@@ -108,7 +109,7 @@ def processar_fila(company_id):
                 if item['id'] in ids_processados: continue
                 
                 log(f"Imprimindo da fila: {item.get('label', 'Sem título')}", "FILA")
-                if imprimir_html(item.get('html_content', '')):
+                if imprimir_html(item.get('html_content', ''), item.get('station_id')):
                     remover_da_fila(item['id'])
                     ids_processados.add(item['id'])
             return len(fila)
@@ -130,7 +131,18 @@ def marcar_como_impresso(order_id):
     except Exception as e:
         log(f"Erro ao marcar como impresso: {e}", "ERRO")
 
-def imprimir_html(html_content):
+def get_printer_for_station(station_id):
+    """Lê o arquivo de mapeamento local para encontrar a impressora da estação"""
+    try:
+        if not os.path.exists(PRINTER_MAP_FILE):
+            return None
+        with open(PRINTER_MAP_FILE, "r", encoding="utf-8") as f:
+            mapping = json.load(f)
+            return mapping.get(station_id)
+    except:
+        return None
+
+def imprimir_html(html_content, station_id=None):
     """
     Envia HTML para a impressora térmica via Win32Print
     Requer: pip install pywin32
@@ -142,8 +154,18 @@ def imprimir_html(html_content):
         import win32ui
         from html.parser import HTMLParser
 
+        # Tenta encontrar impressora mapeada para a estação
+        printer_name = None
+        if station_id:
+            printer_name = get_printer_for_station(station_id)
+            if printer_name:
+                log(f"Usando impressora mapeada: {printer_name}", "STATION")
+        
+        if not printer_name:
+            printer_name = win32print.GetDefaultPrinter()
+            log(f"Usando impressora padrão: {printer_name}", "DEFAULT")
+
         # Simplificação extrema para o MVP: extrai texto do HTML
-        # Em produção, usaríamos uma lib de renderização ou ESC/POS
         class MyHTMLParser(HTMLParser):
             def __init__(self):
                 super().__init__()
@@ -155,7 +177,6 @@ def imprimir_html(html_content):
         parser.feed(html_content)
         texto_puro = parser.text.strip()
 
-        printer_name = win32print.GetDefaultPrinter()
         hPrinter = win32print.OpenPrinter(printer_name)
         try:
             hJob = win32print.StartDocPrinter(hPrinter, 1, ("ComandaTech Print", None, "RAW"))

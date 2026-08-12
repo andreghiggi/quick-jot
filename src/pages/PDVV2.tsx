@@ -47,6 +47,7 @@ import { ClipboardList, UtensilsCrossed, Zap } from 'lucide-react';
 import { PDVV2FastCheckout } from '@/components/pdv-v2/PDVV2FastCheckout';
 
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
+import { enqueueProductionByStation } from '@/utils/printRouting';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
@@ -366,7 +367,21 @@ export default function PDVV2() {
       delivered: null,
     };
     const target = next[order.status];
-    if (target) updateOrderStatus(order.id, target);
+    if (target) {
+      updateOrderStatus(order.id, target);
+      
+      // Auto-enqueue production if advancing to 'preparing'
+      if (target === 'preparing' && companyId) {
+        enqueueProductionByStation(
+          companyId,
+          order.id,
+          order.items,
+          order.orderCode || order.dailyNumber.toString(),
+          order.customerName,
+          order.origin
+        );
+      }
+    }
   }
 
 
