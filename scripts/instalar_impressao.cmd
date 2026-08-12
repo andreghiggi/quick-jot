@@ -44,119 +44,56 @@ REM ==========================================================
 REM  ETAPA 2 - Detecta Python
 REM  Prioridade: py launcher (oficial) > python > python3
 REM ==========================================================
-echo [1/7] Procurando Python instalado...
+echo [1/7] Verificando compatibilidade do Python...
 set "PY="
 set "PYPATH="
 
-where py >nul 2>nul
-if %ERRORLEVEL%==0 (
-    set "PY=py -3"
-    for /f "delims=" %%i in ('where py 2^>nul') do set "PYPATH=%%i" & goto detected
-)
+REM Tenta detectar se o Python 3.12 já está no PATH
 where python >nul 2>nul
 if %ERRORLEVEL%==0 (
-    for /f "delims=" %%i in ('where python 2^>nul') do (
-        set "PYPATH=%%i"
-        goto check_store
+    for /f "tokens=1,2 delims=." %%a in ('python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2^>nul') do (
+        if "%%a.%%b"=="3.12" (
+            set "PY=python"
+            goto python_ready
+        )
     )
 )
-where python3 >nul 2>nul
-if %ERRORLEVEL%==0 (
-    set "PY=python3"
-    for /f "delims=" %%i in ('where python3 2^>nul') do set "PYPATH=%%i" & goto detected
+
+echo [INFO] Python 3.12 não detectado ou versão incompatível.
+echo [INFO] Iniciando instalação automática do Python 3.12.2...
+
+set "PYTHON_EXE=python-3.12.2-amd64.exe"
+set "PYTHON_URL=https://www.python.org/ftp/python/3.12.2/python-3.12.2-amd64.exe"
+
+if not exist "%PYTHON_EXE%" (
+    echo [INFO] Baixando instalador do Python...
+    powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('%PYTHON_URL%', '%PYTHON_EXE%')"
 )
 
-REM Nao achou nenhum Python
-echo.
-echo [ERRO] Python nao esta instalado nesta maquina.
-echo.
-echo  ====== O QUE FAZER ======
-echo  1. Acesse:  https://www.python.org/downloads/windows/
-echo  2. Baixe a versao mais recente para Windows (64-bit).
-echo  3. NA PRIMEIRA TELA do instalador, MARQUE as 2 opcoes:
-echo        [x] Add python.exe to PATH
-echo        [x] py launcher
-echo  4. Clique em "Install Now".
-echo  5. Depois rode este arquivo novamente.
-echo.
-echo [ERRO] Python nao encontrado >> "%LOG%"
-pause
-exit /b 1
+echo [INFO] Instalando Python 3.12.2 (modo silencioso, aguarde)...
+start /wait "" "%PYTHON_EXE%" /quiet InstallAllUsers=1 PrependPath=1 Include_test=0 Include_pip=1
 
-:check_store
-REM Detecta se o python.exe e o da Microsoft Store (caminho contem WindowsApps)
-echo !PYPATH! | findstr /I "WindowsApps" >nul
+REM Limpeza do instalador
+del "%PYTHON_EXE%" /q >nul 2>nul
+
+REM Refresh PATH para a sessão atual do CMD
+for /f "tokens=2*" %%A in ('reg query "HKLM\System\CurrentControlSet\Control\Session Manager\Environment" /v Path') do set "NEWPATH=%%B"
+for /f "tokens=2*" %%A in ('reg query "HKCU\Environment" /v Path') do set "USERPATH=%%B"
+set "PATH=%NEWPATH%;%USERPATH%"
+
+:python_ready
+where python >nul 2>nul
 if %ERRORLEVEL%==0 (
-    echo.
-    echo [ERRO] Python da Microsoft Store detectado:
-    echo        !PYPATH!
-    echo.
-    echo Essa versao NAO funciona com impressoras termicas (pywin32
-    echo nao consegue registrar as DLLs em ambiente sandbox da Store).
-    echo.
-    echo  ====== O QUE FAZER ======
-    echo  1. Abra:  Configuracoes ^> Apps ^> Apps Instalados
-    echo  2. Desinstale TODAS as versoes "Python" e "Python Launcher".
-    echo  3. Configuracoes ^> Apps ^> Configuracoes avancadas de apps
-    echo     ^> Aliases de execucao de apps  --^>  DESATIVE python.exe e python3.exe
-    echo  4. Reinicie o computador.
-    echo  5. Instale o Python oficial: https://www.python.org/downloads/windows/
-    echo     Marque [x] Add python.exe to PATH  e  [x] py launcher
-    echo  6. Rode este .bat novamente.
-    echo.
-    echo [ERRO] Python da Microsoft Store em !PYPATH! >> "%LOG%"
+    set "PY=python"
+) else (
+    echo [ERRO] Falha ao instalar ou localizar o Python 3.12.
     pause
     exit /b 1
 )
-set "PY=python"
 
-:detected
-echo [OK] Python encontrado: !PY!  (!PYPATH!)
-echo [OK] Python: !PY! em !PYPATH! >> "%LOG%"
+echo [OK] Python 3.12 configurado.
 !PY! --version
-!PY! --version >> "%LOG%" 2>&1
 echo.
-
-REM ==========================================================
-REM  ETAPA 2.5 - Bloqueia Python sem suporte do pywin32
-REM  pywin32 hoje so tem wheel ate Python 3.13.
-REM  Python 3.14+ ainda nao e suportado.
-REM ==========================================================
-set "PYMAJOR=0"
-set "PYMINOR=0"
-for /f "tokens=1,2 delims=." %%a in ('!PY! -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2^>nul') do (
-    set "PYMAJOR=%%a"
-    set "PYMINOR=%%b"
-)
-echo [OK] Versao detectada: !PYMAJOR!.!PYMINOR! >> "%LOG%"
-
-if !PYMAJOR! GEQ 3 if !PYMINOR! GEQ 14 (
-    echo.
-    echo ==========================================================
-    echo [ERRO] Python !PYMAJOR!.!PYMINOR! nao e compativel.
-    echo ==========================================================
-    echo  A biblioteca pywin32 ^(usada para imprimir^) ainda NAO
-    echo  tem versao para Python !PYMAJOR!.!PYMINOR! ou superior.
-    echo.
-    echo  Tentando remover versoes incompativeis automaticamente...
-    
-    REM Tenta desinstalar via Windows Settings / wmic / winget se disponivel
-    echo [INFO] Tentando remover Python Launcher e Python !PYMAJOR!.!PYMINOR!...
-    powershell -NoProfile -Command "Get-Package -Name '*Python 3.14*' | Uninstall-Package -Force" >nul 2>nul
-    powershell -NoProfile -Command "Get-Package -Name '*Python Launcher*' | Uninstall-Package -Force" >nul 2>nul
-    
-    echo.
-    echo  ====== O QUE FAZER AGORA ======
-    echo  1. Acesse:  https://www.python.org/downloads/release/python-3122/
-    echo  2. Baixe "Windows installer ^(64-bit^)" do Python 3.12.2.
-    echo  3. Marque [x] Add python.exe to PATH  e  [x] py launcher
-    echo  4. Clique em Install Now.
-    echo  5. Rode este instalador novamente.
-    echo ==========================================================
-    echo [ERRO] Python !PYMAJOR!.!PYMINOR! sem suporte do pywin32 >> "%LOG%"
-    pause
-    exit /b 1
-)
 echo.
 
 REM ==========================================================
