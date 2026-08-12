@@ -86,15 +86,18 @@ export async function enqueueProductionByStation(
       const estimatedWaitTime = settings['estimated_wait_time'];
       const showReady = printLayout === 'v2';
 
+      const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
+      const isAmoreMio = companyId === AMORE_MIO_ID;
+
       if (printLayout === 'v2') {
-        // Get order details for full layout features (like orderType, tableNumber, etc.)
+        // Get order details for full layout features
         const { data: orderData } = await supabase
           .from('orders')
           .select('*')
           .eq('id', orderId)
           .single();
 
-        return generateProductionTicketHTML({
+        const html = generateProductionTicketHTML({
           tabNumber: (orderData as any)?.daily_number || parseInt(orderNumber.replace('#', '')) || 0,
           tableNumber: (orderData as any)?.table_number,
           customerName: customerName,
@@ -114,6 +117,10 @@ export async function enqueueProductionByStation(
           orderType: (orderData as any)?.origin === 'mesa' ? 'table' : (orderData as any)?.origin === 'balcao' ? 'counter' : ((orderData as any)?.delivery_address ? 'delivery' : 'pickup'),
           deliveryAddress: (orderData as any)?.delivery_address
         });
+
+        // Para Amore Mio, se não houver estação definida, forçamos o envio para o script processar como texto rico
+        // O script 1.6.2 já tenta converter marcadores V2 para texto visual.
+        return html;
       }
 
       // Fallback to simple text for V1 or others if not V2
@@ -131,6 +138,9 @@ export async function enqueueProductionByStation(
         }
       });
       text += `--------------------------------\n`;
+
+      // Amore Mio legacy compatibility: if somehow V2 is disabled but it's Amore Mio, 
+      // we still wrap in html/body so the script 1.6.2 parser can at least extract text.
       return `<html><body><pre>${text}</pre></body></html>`;
     };
 
