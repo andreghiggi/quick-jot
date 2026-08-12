@@ -72,11 +72,15 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
           if (hasIdentityDataInTarget) {
             finalCols.push('identity_data');
             let data = id.identity_data;
-            // Garantimos que seja um JSON válido e não-nulo
+            
+            // Critical fix: Ensure identity_data is never null or undefined
+            // and is provided as a valid JSON object or string
             if (data === null || data === undefined || data === "") {
-              data = { sub: id.user_id };
+              data = JSON.stringify({ sub: id.user_id });
+            } else if (typeof data === 'object') {
+              data = JSON.stringify(data);
             }
-            // Postgres.js lida com objetos enviando como JSON automaticamente
+            
             finalValues.push(data);
           }
 
