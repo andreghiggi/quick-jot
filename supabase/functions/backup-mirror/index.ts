@@ -118,8 +118,8 @@ Deno.serve(async (req) => {
   }
 
   const startedAt = Date.now();
-  const source = postgres(sourceUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
-  const target = postgres(targetUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
+  const source = postgres(sourceUrl, { max: 5, prepare: false, connect_timeout: 15, idle_timeout: 15 });
+  const target = postgres(targetUrl, { max: 5, prepare: false, connect_timeout: 15, idle_timeout: 15 });
 
   // Desliga triggers e FKs no destino
   try {
