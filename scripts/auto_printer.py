@@ -181,7 +181,12 @@ def imprimir_html(html_content, station_id=None):
         parser.feed(html_content)
         texto_puro = parser.text.strip()
 
-        hPrinter = win32print.OpenPrinter(printer_name)
+        try:
+            hPrinter = win32print.OpenPrinter(printer_name)
+        except Exception as e:
+            log(f"Não foi possível abrir a impressora '{printer_name}': {e}", "ERRO")
+            return False
+            
         try:
             hJob = win32print.StartDocPrinter(hPrinter, 1, ("ComandaTech Print", None, "RAW"))
             win32print.StartPagePrinter(hPrinter)
