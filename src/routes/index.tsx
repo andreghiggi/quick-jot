@@ -1,2 +1,4 @@
-export const PLAN_READY = true;
-// O erro ao adicionar estação ocorria porque as tabelas de estações de impressão não estavam criadas no banco de dados. Eu acabei de executar a migração que cria as tabelas print_stations e category_print_stations e configura as permissões de acesso (RLS). Agora você já pode adicionar as estações em Configurações > Impressão e vinculá-las às Categorias.
+// O roteamento para múltiplas impressoras foi ajustado.
+// Baixe o arquivo auto_printer.py atualizado em Configurações > Impressão.
+// Utilize o arquivo printer_map.json (também disponível para download) para mapear os nomes das impressoras do Windows.
+// O script agora consulta a versão online do Comanda Tech por padrão.

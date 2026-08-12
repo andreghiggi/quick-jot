@@ -26,7 +26,6 @@ import autoPrinterTemplate from '../../scripts/auto_printer.py?raw';
 import instalarImpressaoCmd from '../../scripts/instalar_impressao.cmd?raw';
 import iniciarImpressaoCmd from '../../scripts/iniciar_impressao.cmd?raw';
 import verificarPywin32Py from '../../scripts/verificar_pywin32.py?raw';
-import autoPrinterWin11Py from '../../scripts/auto_printer.py?raw';
 import { usePrintStations } from '@/hooks/usePrintStations';
 
 const escapePythonString = (value: string) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -319,38 +318,27 @@ pause
 
   const handleDownloadScript = () => {
     const script = generatePythonScript();
-    const blob = new Blob([script], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `printer.py`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: 'Script baixado',
-      description: 'O script Python atualizado foi baixado com sucesso.',
-    });
+    downloadTextFile(script, 'auto_printer.py');
   };
 
-  const handleDownloadBat = () => {
-    const script = generateBatScript();
-    const blob = new Blob([script], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `instalar_impressao_${company?.slug || 'loja'}.bat`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: 'Instalador baixado',
-      description: 'Salve na área de trabalho e execute como administrador.',
-    });
+  const handleDownloadInstalador = () => {
+    downloadTextFile(instalarImpressaoCmd, 'instalar_impressao.cmd');
+  };
+
+  const handleDownloadIniciar = () => {
+    downloadTextFile(iniciarImpressaoCmd, 'iniciar_impressao.cmd');
+  };
+
+  const handleDownloadVerificador = () => {
+    downloadTextFile(verificarPywin32Py, 'verificar_pywin32.py');
+  };
+
+  const handleDownloadPrinterMap = () => {
+    const defaultMap = {
+      "cozinha": "NOME_DA_IMPRESSORA_COZINHA",
+      "bar": "NOME_DA_IMPRESSORA_BAR"
+    };
+    downloadTextFile(JSON.stringify(defaultMap, null, 2), 'printer_map.json', 'application/json');
   };
 
   const downloadTextFile = (content: string, filename: string, mime = 'text/plain') => {
@@ -1560,11 +1548,11 @@ pause
                 <div className="grid grid-cols-2 gap-2">
                   <Button onClick={handleDownloadScript} size="lg" className="w-full">
                     <Download className="w-4 h-4 mr-2" />
-                    1. printer.py
+                    1. auto_printer.py
                   </Button>
-                  <Button onClick={handleDownloadBat} size="lg" variant="secondary" className="w-full">
+                  <Button onClick={handleDownloadInstalador} size="lg" variant="secondary" className="w-full">
                     <Download className="w-4 h-4 mr-2" />
-                    2. iniciar.bat
+                    2. instalar.cmd
                   </Button>
                 </div>
                 
@@ -1637,7 +1625,7 @@ pause
                     verificar_pywin32.py
                   </Button>
                   <Button
-                    onClick={() => downloadTextFile(autoPrinterWin11Py, 'auto_printer.py')}
+                    onClick={() => downloadTextFile(autoPrinterTemplate, 'auto_printer.py')}
                     size="sm"
                     variant="outline"
                     className="w-full"
