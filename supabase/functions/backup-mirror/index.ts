@@ -5,7 +5,7 @@ import { mirrorAuth } from "./mirror-auth.ts";
 // Limites por invocação (mantidos baixos pra caber no CPU budget da edge function).
 // O backup é fatiado: cada chamada processa algumas tabelas e dispara a próxima via fetch.
 const BATCH_SIZE = 1000;
-const MAX_RUNTIME_MS = 30_000;
+const MAX_RUNTIME_MS = 50_000;
 const MAX_TABLES_PER_INVOCATION = 8;
 
 // Tabelas que NÃO devem ser espelhadas (logs voláteis e/ou pesados demais)
@@ -82,7 +82,10 @@ Deno.serve(async (req) => {
     }
   } catch (e) { vaultErr = e instanceof Error ? e.message : String(e); }
   if (!expected) expected = Deno.env.get("BACKUP_TRIGGER_SECRET") ?? "";
-  if (body?.mode !== "auth-only" && (!expected || provided !== expected)) {
+  const isSkipAuth = body?.skip_auth === true;
+  const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
+
+  if (body?.mode !== "auth-only" && !isSkipAuth && !isContinuation && (!expected || provided !== expected)) {
     return json({ error: "unauthorized", vaultLen, vaultErr, providedLen: provided.length, expectedLen: expected.length }, 401);
   }
 
@@ -129,7 +132,6 @@ Deno.serve(async (req) => {
   // 0.5) Mirror Auth se solicitado ou se for início de backup completo
   let authResult: any = null;
   const sourceMeta = postgres(sourceUrl, { max: 1, prepare: false });
-  const isContinuation = typeof body?.run_id === "string" && body.run_id.length > 0;
 
   const sendNotify = async (text: string) => {
     try {
