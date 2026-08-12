@@ -95,8 +95,8 @@ export async function enqueueProductionByStation(
           .single();
 
         return generateProductionTicketHTML({
-          tabNumber: orderData?.daily_number || parseInt(orderNumber.replace('#', '')) || 0,
-          tableNumber: orderData?.table_number,
+          tabNumber: (orderData as any)?.daily_number || parseInt(orderNumber.replace('#', '')) || 0,
+          tableNumber: (orderData as any)?.table_number,
           customerName: customerName,
           items: items.map((i) => ({
             productName: i.name,
@@ -106,13 +106,13 @@ export async function enqueueProductionByStation(
           })),
           createdAt: new Date(),
           paperSize: paperSize,
-          referenceLabel: orderData?.order_code || `PEDIDO #${orderNumber}`,
+          referenceLabel: (orderData as any)?.order_code || `PEDIDO #${orderNumber}`,
           companyId: companyId,
           layout: 'v2',
           showReadyTime: showReady,
           readyOffsetMinutes: showReady ? computeReadyOffsetMinutes(estimatedWaitTime, 30) : undefined,
-          orderType: orderData?.origin === 'mesa' ? 'table' : orderData?.origin === 'balcao' ? 'counter' : (orderData?.delivery_address ? 'delivery' : 'pickup'),
-          deliveryAddress: orderData?.delivery_address
+          orderType: (orderData as any)?.origin === 'mesa' ? 'table' : (orderData as any)?.origin === 'balcao' ? 'counter' : ((orderData as any)?.delivery_address ? 'delivery' : 'pickup'),
+          deliveryAddress: (orderData as any)?.delivery_address
         });
       }
 
