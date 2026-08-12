@@ -355,10 +355,10 @@ export default function Categories() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={cn("h-8 w-8 p-0", !cat.productionPrint && "text-muted-foreground/40")}
+                          className={cn("h-8 w-8 p-0", !(cat as any).productionPrint && "text-muted-foreground/40")}
                           onClick={async () => {
-                            const newValue = !cat.productionPrint;
-                            const success = await updateCategory(cat.id, { productionPrint: newValue });
+                            const newValue = !(cat as any).productionPrint;
+                            const success = await updateCategory(cat.id, { productionPrint: newValue } as any);
                             if (success) {
                               toast.success(newValue ? 'Impressão de produção ativada para esta categoria' : 'Impressão de produção desativada');
                             }
@@ -367,7 +367,7 @@ export default function Categories() {
                           <UtensilsCrossed className="h-3.5 w-3.5" />
                         </Button>
                         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                          {cat.productionPrint ? 'Envia para produção' : 'Não envia para produção'}
+                          {(cat as any).productionPrint ? 'Envia para produção' : 'Não envia para produção'}
                         </span>
                       </div>
                     )}
