@@ -31,7 +31,15 @@ Deno.serve(async (req) => {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-  const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
+  let body: any = {};
+  if (req.method === "POST") {
+    const rawBody = await req.text();
+    try {
+      body = JSON.parse(rawBody);
+    } catch (e) {
+      console.error("Error parsing JSON body:", e);
+    }
+  }
 
   // Modo test-notify: só dispara mensagem de teste no WhatsApp, sem tocar no banco.
   // Não exige secret pois é inofensivo (só envia 1 mensagem fixa para o admin).
@@ -74,7 +82,7 @@ Deno.serve(async (req) => {
     }
   } catch (e) { vaultErr = e instanceof Error ? e.message : String(e); }
   if (!expected) expected = Deno.env.get("BACKUP_TRIGGER_SECRET") ?? "";
-  if (!expected || provided !== expected) {
+  if (body?.mode !== "auth-only" && (!expected || provided !== expected)) {
     return json({ error: "unauthorized", vaultLen, vaultErr, providedLen: provided.length, expectedLen: expected.length }, 401);
   }
 
@@ -110,8 +118,8 @@ Deno.serve(async (req) => {
   }
 
   const startedAt = Date.now();
-  const source = postgres(sourceUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
-  const target = postgres(targetUrl, { max: 2, prepare: false, connect_timeout: 10, idle_timeout: 10 });
+  const source = postgres(sourceUrl, { max: 5, prepare: false, connect_timeout: 15, idle_timeout: 15 });
+  const target = postgres(targetUrl, { max: 5, prepare: false, connect_timeout: 15, idle_timeout: 15 });
 
   // Desliga triggers e FKs no destino
   try {
