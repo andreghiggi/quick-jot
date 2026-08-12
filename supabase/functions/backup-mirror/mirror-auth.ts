@@ -46,10 +46,11 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     // 4. COPY USERS
     const users = await source.unsafe(`SELECT ${commonUserCols.map(c => `"${c}"`).join(",")} FROM auth.users`);
     if (users.length > 0) {
-      // Postgres-js batch insert
+      // Use postgres-js batch insert with parameterization
+      // Syntax: sql`INSERT INTO table ${ sql(array, ...columns) }`
       await target.unsafe(`
         INSERT INTO auth.users (${commonUserCols.map(c => `"${c}"`).join(",")}) 
-        VALUES ${target(users).values()}
+        ${target(users, ...commonUserCols)}
       `);
       results.users = users.length;
     }
@@ -59,7 +60,7 @@ export async function mirrorAuth(source: postgres.Sql, target: postgres.Sql, not
     if (identities.length > 0) {
       await target.unsafe(`
         INSERT INTO auth.identities (${commonIdentCols.map(c => `"${c}"`).join(",")}) 
-        VALUES ${target(identities).values()}
+        ${target(identities, ...commonIdentCols)}
       `);
       results.identities = identities.length;
     }
