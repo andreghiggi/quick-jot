@@ -147,6 +147,68 @@ def get_printer_for_station(station_id):
         return None
 
 def imprimir_html(html_content, station_id=None):
+    pass_placeholder = None
+    return _imprimir_html(html_content, station_id)
+
+
+def imprimir_gdi(printer_name, texto, largura_mm=58):
+    """
+    Renderiza o conteudo como PAGINA GRAFICA (GDI) usando win32ui.
+    Necessario para drivers que nao aceitam RAW (Microsoft Print to PDF,
+    drivers de POS instalados em modo grafico). Gera arquivo/pagina real,
+    eliminando o problema de PDF com 0 bytes.
+    """
+    try:
+        import win32ui
+        import win32con
+
+        dc = win32ui.CreateDC()
+        dc.CreatePrinterDC(printer_name)
+
+        # Area imprimivel em pixels
+        largura_px = dc.GetDeviceCaps(8)   # HORZRES
+        altura_px = dc.GetDeviceCaps(10)   # VERTRES
+        dpi_y = dc.GetDeviceCaps(90) or 203  # LOGPIXELSY
+
+        if largura_px <= 0:
+            largura_px = 384 if largura_mm == 58 else 576
+
+        # Fonte monoespacada dimensionada para caber ~32 colunas em 58mm
+        colunas = 32 if largura_mm == 58 else 48
+        altura_fonte = max(-int(dpi_y / 12), -40)
+        fonte = win32ui.CreateFont({
+            "name": "Consolas",
+            "height": altura_fonte,
+            "weight": 600,
+        })
+
+        dc.StartDoc("ComandaTech Comanda")
+        dc.StartPage()
+        dc.SelectObject(fonte)
+
+        tm = dc.GetTextMetrics()
+        linha_altura = tm["tmHeight"] + tm["tmExternalLeading"]
+        y = 0
+        for linha in texto.split("\n"):
+            if y + linha_altura > altura_px and altura_px > 0:
+                dc.EndPage()
+                dc.StartPage()
+                dc.SelectObject(fonte)
+                y = 0
+            dc.TextOut(0, y, linha[:colunas * 2])
+            y += linha_altura
+
+        dc.EndPage()
+        dc.EndDoc()
+        dc.DeleteDC()
+        log(f"Impressao GRAFICA (GDI) concluida em '{printer_name}'", "GDI")
+        return True
+    except Exception as e:
+        log(f"Falha no modo grafico (GDI): {e}", "ERRO")
+        return False
+
+
+def _imprimir_html(html_content, station_id=None):
     """
     Envia HTML para a impressora térmica via Win32Print
     Requer: pip install pywin32
