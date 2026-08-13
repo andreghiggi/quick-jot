@@ -211,11 +211,21 @@ def montar_linhas_estilizadas(texto, colunas=32):
         for i, parte in enumerate(_tw.wrap(txt, colunas) or [txt]):
             saida.append((parte, estilo))
 
-    for linha_raw in texto.split("\n"):
-        linha = linha_raw.strip()
+    linhas_src = texto.split("\n")
+    idx = 0
+    while idx < len(linhas_src):
+        linha = linhas_src[idx].strip()
+        idx += 1
         if not linha:
             saida.append(("", "normal"))
             continue
+
+        # Quantidade isolada ("1x") junta com o nome do produto da linha seguinte
+        if _re.match(r"^\d+\s*x$", linha, _re.I) and idx < len(linhas_src):
+            proximo = linhas_src[idx].strip()
+            if proximo:
+                linha = f"{linha} {proximo}"
+                idx += 1
 
         upper = linha.upper()
 
