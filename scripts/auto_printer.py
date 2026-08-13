@@ -362,7 +362,10 @@ def _imprimir_html(html_content, station_id=None):
         if not texto_puro:
             log("Conteudo vazio apos parsing - impressao abortada", "ERRO")
             return False
-        
+
+        # Converte marcadores do Layout V2 (padrao Rei do Acai / 58mm)
+        texto_puro = normalizar_marcadores(texto_puro)
+
         # Garante corte de papel/espaço no fim
         texto_puro += "\n\n\n\n\n"
 
