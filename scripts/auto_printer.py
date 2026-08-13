@@ -159,6 +159,39 @@ def imprimir_html(html_content, station_id=None):
     return _imprimir_html(html_content, station_id)
 
 
+def normalizar_marcadores(texto):
+    """
+    Converte os marcadores do Layout V2 ([CLIENTE], [ENDERECO], [ADD],
+    [ADDGROUP_LABEL]) na formatacao de texto usada nas comandas 58mm,
+    igual ao padrao das demais lojas.
+    """
+    import re as _re
+
+    def _cliente(m):
+        return f"CLIENTE: {m.group(1).strip().upper()}"
+
+    def _endereco(m):
+        return "-" * 32 + f"\nENDERECO: {m.group(1).strip().upper()}\n" + "-" * 32
+
+    texto = _re.sub(r"\[CLIENTE\](.*?)\[/CLIENTE\]", _cliente, texto, flags=_re.S)
+    texto = _re.sub(r"\[ENDERECO\](.*?)\[/ENDERECO\]", _endereco, texto, flags=_re.S)
+    texto = _re.sub(
+        r"\[ADDGROUP_LABEL\](.*?)\[/ADDGROUP_LABEL\]",
+        lambda m: f"  {m.group(1).strip()}:",
+        texto,
+        flags=_re.S,
+    )
+    texto = _re.sub(
+        r"\[ADD\](.*?)\[/ADD\]",
+        lambda m: f"  >> {m.group(1).strip().upper()}",
+        texto,
+        flags=_re.S,
+    )
+    # Remove qualquer marcador residual desconhecido
+    texto = _re.sub(r"\[/?(CLIENTE|ENDERECO|ADD|ADDGROUP_LABEL)\]", "", texto)
+    return texto
+
+
 def imprimir_gdi(printer_name, texto, largura_mm=58):
     """
     Renderiza o conteudo como PAGINA GRAFICA (GDI) usando win32ui.
