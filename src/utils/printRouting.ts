@@ -89,8 +89,9 @@ export async function enqueueProductionByStation(
       const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
       const isAmoreMio = companyId === AMORE_MIO_ID;
 
+      // Amore Mio: Enviar HTML puro sem marcadores para evitar conflito com parser v1.6.3
+      // se estiver gerando blocos vazios na extração.
       if (printLayout === 'v2') {
-        // Get order details for full layout features
         const { data: orderData } = await supabase
           .from('orders')
           .select('*')
@@ -118,6 +119,7 @@ export async function enqueueProductionByStation(
           deliveryAddress: (orderData as any)?.delivery_address
         });
 
+        if (isAmoreMio) return html;
         return `<!--HTML_START-->${html}<!--HTML_END-->`;
       }
 

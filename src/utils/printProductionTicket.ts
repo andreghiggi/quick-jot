@@ -330,16 +330,20 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
       <title>Comanda de Produção (v2)</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        html, body {
+          background-color: #fff !important;
+          color: #000 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
         body {
           font-family: 'Courier New', 'Lucida Console', monospace;
           width: ${paperWidth};
           max-width: ${paperWidth};
-          padding: 2mm;
-          margin: 0;
+          padding: 2mm !important;
           font-size: ${fontSize};
           font-weight: bold;
           line-height: ${bodyLH};
-          background-color: #fff;
         }
         .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: ${headerPadBottom}; margin-bottom: ${headerMarginBottom}; }
         .title { font-size: 11pt; font-weight: bold; letter-spacing: 1px; }
