@@ -10,7 +10,7 @@ from datetime import datetime
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.6.7"
+SCRIPT_VERSION = "1.6.8"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -192,6 +192,83 @@ def normalizar_marcadores(texto):
     return texto
 
 
+def montar_linhas_estilizadas(texto, colunas=32):
+    """
+    Converte o texto da comanda em linhas com estilo (normal/bold/invertido),
+    reproduzindo o layout de referencia da comanda de producao 58mm.
+    Retorna lista de tuplas (linha, estilo).
+    """
+    import re as _re
+    import textwrap as _tw
+
+    saida = []
+
+    def add(txt, estilo="normal"):
+        txt = txt.rstrip()
+        if not txt:
+            saida.append(("", "normal"))
+            return
+        for i, parte in enumerate(_tw.wrap(txt, colunas) or [txt]):
+            saida.append((parte, estilo))
+
+    for linha_raw in texto.split("\n"):
+        linha = linha_raw.strip()
+        if not linha:
+            saida.append(("", "normal"))
+            continue
+
+        upper = linha.upper()
+
+        # Cabecalho / titulo
+        if "COMANDA DE PRODU" in upper or upper.startswith("COMANDA #") or upper.startswith("PEDIDO #") or upper.startswith("#"):
+            add(linha, "bold")
+            continue
+
+        # Nome do cliente -> faixa invertida (fundo preto)
+        m_cli = _re.match(r"^CLIENTE:\s*(.+)$", linha, _re.I)
+        if m_cli:
+            add(m_cli.group(1).strip().upper(), "invert")
+            continue
+
+        # Tipo do pedido (RETIRADA / ENTREGA / MESA / BALCAO)
+        if upper.strip("= ") in ("RETIRADA", "ENTREGA", "MESA", "BALCAO", "BALCÃO", "DELIVERY"):
+            add(upper.strip("= "), "invert")
+            continue
+
+        # Linhas de separador do parser antigo
+        if set(linha) <= {"=", "-"} and len(linha) > 3:
+            continue
+
+        # Data / hora
+        if _re.match(r"^\d{2}/\d{2}/\d{4}", linha):
+            add(linha, "bold")
+            continue
+
+        # Item: "1x Produto"
+        m_item = _re.match(r"^(\d+)\s*x\s*(.+)$", linha, _re.I)
+        if m_item:
+            saida.append(("", "normal"))
+            add(f"{m_item.group(1)}x  {m_item.group(2).strip()}", "item")
+            continue
+
+        # Descricao / observacao
+        if upper.startswith("DESCRI") or upper.startswith("OBS"):
+            add(linha, "bold")
+            continue
+
+        # Adicionais
+        if linha.startswith(">>"):
+            add(">> " + linha.lstrip("> ").upper(), "bold")
+            continue
+
+        add(linha, "normal")
+
+    # Rodape padrao
+    saida.append(("", "normal"))
+    add("--- FIM DO PEDIDO ---", "bold")
+    return saida
+
+
 def imprimir_gdi(printer_name, texto, largura_mm=58):
     """
     Renderiza o conteudo como PAGINA GRAFICA (GDI) usando win32ui.
@@ -217,26 +294,45 @@ def imprimir_gdi(printer_name, texto, largura_mm=58):
         # Fonte monoespacada dimensionada para caber ~32 colunas em 58mm
         colunas = 32 if largura_mm == 58 else 48
         altura_fonte = max(-int(dpi_y / 12), -40)
-        fonte = win32ui.CreateFont({
+        fonte_normal = win32ui.CreateFont({
             "name": "Consolas",
             "height": altura_fonte,
-            "weight": 600,
+            "weight": 400,
+        })
+        fonte_bold = win32ui.CreateFont({
+            "name": "Consolas",
+            "height": altura_fonte,
+            "weight": 700,
         })
 
         dc.StartDoc("ComandaTech Comanda")
         dc.StartPage()
-        dc.SelectObject(fonte)
+        dc.SelectObject(fonte_bold)
 
         tm = dc.GetTextMetrics()
         linha_altura = tm["tmHeight"] + tm["tmExternalLeading"]
+        largura_char = tm["tmAveCharWidth"] or 10
         y = 0
-        for linha in texto.split("\n"):
+
+        linhas = montar_linhas_estilizadas(texto, colunas)
+        for linha, estilo in linhas:
             if y + linha_altura > altura_px and altura_px > 0:
                 dc.EndPage()
                 dc.StartPage()
-                dc.SelectObject(fonte)
                 y = 0
-            dc.TextOut(0, y, linha[:colunas * 2])
+            if estilo == "invert":
+                dc.SelectObject(fonte_bold)
+                largura_faixa = largura_px if largura_px > 0 else largura_char * colunas
+                dc.FillSolidRect((0, y, largura_faixa, y + linha_altura), 0x000000)
+                dc.SetBkMode(win32con.TRANSPARENT)
+                dc.SetTextColor(0xFFFFFF)
+                dc.TextOut(2, y, linha[:colunas])
+                dc.SetTextColor(0x000000)
+            else:
+                dc.SelectObject(fonte_bold if estilo in ("bold", "item") else fonte_normal)
+                dc.SetBkMode(win32con.TRANSPARENT)
+                dc.SetTextColor(0x000000)
+                dc.TextOut(0, y, linha[:colunas * 2])
             y += linha_altura
 
         dc.EndPage()
