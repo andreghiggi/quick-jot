@@ -219,8 +219,24 @@ def montar_linhas_estilizadas(texto, colunas=32):
 
         upper = linha.upper()
 
+        # Rodape antigo ("--- FIM ---") e removido: o padrao e adicionado no final
+        if _re.match(r"^-{2,}\s*FIM.*$", upper):
+            continue
+
+        # Tipo do pedido no formato ">> RETIRADA <<"
+        m_tipo = _re.match(r"^>>\s*([A-ZÀ-Ú ]+?)\s*<<$", upper)
+        if m_tipo:
+            add(m_tipo.group(1).strip(), "invert")
+            continue
+
         # Cabecalho / titulo
-        if "COMANDA DE PRODU" in upper or upper.startswith("COMANDA #") or upper.startswith("PEDIDO #") or upper.startswith("#"):
+        if ("COMANDA DE PRODU" in upper or upper.startswith("COMANDA #")
+                or upper.startswith("PEDIDO") or upper.startswith("#")):
+            add(linha, "bold")
+            continue
+
+        # Previsao de entrega/retirada
+        if upper.startswith("PRONTO AT") or upper.startswith("PREVIS"):
             add(linha, "bold")
             continue
 
