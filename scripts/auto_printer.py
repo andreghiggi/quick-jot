@@ -232,6 +232,16 @@ def imprimir_html(html_content, station_id=None):
         # Garante corte de papel/espaço no fim
         texto_puro += "\n\n\n\n\n"
 
+        # ------------------------------------------------------------------
+        # MODO GRAFICO (GDI) - exclusivo para lojas em GDI_COMPANY_IDS
+        # Corrige PDF de 0 bytes (Microsoft Print to PDF nao aceita RAW)
+        # e mantem o layout visual do V2 na POS 58mm.
+        # ------------------------------------------------------------------
+        if COMPANY_ID in GDI_COMPANY_IDS:
+            if imprimir_gdi(printer_name, texto_puro):
+                return True
+            log("Fallback para modo RAW apos falha no modo grafico", "AVISO")
+
         try:
             hPrinter = win32print.OpenPrinter(printer_name)
         except Exception as e:
