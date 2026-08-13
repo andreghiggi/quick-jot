@@ -255,8 +255,14 @@ def _imprimir_html(html_content, station_id=None):
                 self.in_badge = False
                 self.in_obs = False
                 self.in_add = False
+                self.skip_depth = 0  # style/script/head/title nao devem virar texto
             
             def handle_starttag(self, tag, attrs):
+                if tag in ("style", "script", "title", "head", "meta", "link"):
+                    self.skip_depth += 1
+                    return
+                if self.skip_depth:
+                    return
                 attrs_dict = dict(attrs)
                 classes = attrs_dict.get('class', '').split()
                 
@@ -274,6 +280,12 @@ def _imprimir_html(html_content, station_id=None):
                     self.text += "\n"
 
             def handle_endtag(self, tag):
+                if tag in ("style", "script", "title", "head"):
+                    if self.skip_depth:
+                        self.skip_depth -= 1
+                    return
+                if self.skip_depth:
+                    return
                 if self.in_badge:
                     self.text += "="*32 + "\n"
                     self.in_badge = False
@@ -284,6 +296,8 @@ def _imprimir_html(html_content, station_id=None):
                     self.in_add = False
 
             def handle_data(self, data):
+                if self.skip_depth:
+                    return
                 clean_data = data.strip()
                 if not clean_data: return
                 
