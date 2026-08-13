@@ -118,7 +118,7 @@ export async function enqueueProductionByStation(
           deliveryAddress: (orderData as any)?.delivery_address
         });
 
-        return html;
+        return `<!--HTML_START-->${html}<!--HTML_END-->`;
       }
 
       // Fallback to simple text for V1 or others if not V2
