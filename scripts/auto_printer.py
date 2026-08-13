@@ -169,9 +169,11 @@ def imprimir_html(html_content, station_id=None):
                 log(f"Falha ao obter impressora padrão do Windows: {e}", "ERRO")
                 return False
 
-        # Simplificação extrema para o MVP: extrai texto do HTML
-        # Mas para Layout V2, preservamos os marcadores de formatação básica
-        # e garantimos que o texto saia o mais próximo possível do layout original.
+        # Tenta extrair entre marcadores se houver
+        if "<!--HTML_START-->" in html_content and "<!--HTML_END-->" in html_content:
+            html_content = html_content.split("<!--HTML_START-->")[1].split("<!--HTML_END-->")[0]
+            log("Processando bloco HTML rico do PDV", "HTML")
+
         class MyHTMLParser(HTMLParser):
             def __init__(self):
                 super().__init__()

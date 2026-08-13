@@ -335,9 +335,11 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
           width: ${paperWidth};
           max-width: ${paperWidth};
           padding: 2mm;
+          margin: 0;
           font-size: ${fontSize};
           font-weight: bold;
           line-height: ${bodyLH};
+          background-color: #fff;
         }
         .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: ${headerPadBottom}; margin-bottom: ${headerMarginBottom}; }
         .title { font-size: 11pt; font-weight: bold; letter-spacing: 1px; }
