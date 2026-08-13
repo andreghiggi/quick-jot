@@ -10,7 +10,7 @@ from datetime import datetime
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.6.5"
+SCRIPT_VERSION = "1.6.6"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -258,7 +258,10 @@ def _imprimir_html(html_content, station_id=None):
                 self.skip_depth = 0  # style/script/head/title nao devem virar texto
             
             def handle_starttag(self, tag, attrs):
-                if tag in ("style", "script", "title", "head", "meta", "link"):
+                # Tags vazias (void) nunca fecham: nao podem entrar no skip_depth
+                if tag in ("meta", "link"):
+                    return
+                if tag in ("style", "script", "title", "head"):
                     self.skip_depth += 1
                     return
                 if self.skip_depth:
@@ -312,6 +315,20 @@ def _imprimir_html(html_content, station_id=None):
         parser = MyHTMLParser()
         parser.feed(html_content)
         texto_puro = parser.text.strip()
+
+        # Rede de seguranca: se o parser nao extraiu nada, cai para regex bruto
+        if not texto_puro:
+            import re as _re
+            bruto = _re.sub(r'(?is)<(style|script|head)[^>]*>.*?</\1>', ' ', html_content)
+            bruto = _re.sub(r'(?is)<br\s*/?>|</(div|p|tr|li|h[1-6])>', '\n', bruto)
+            bruto = _re.sub(r'(?s)<[^>]+>', '', bruto)
+            linhas = [l.strip() for l in bruto.split('\n')]
+            texto_puro = "\n".join([l for l in linhas if l]).strip()
+            log("Parser vazio: usando extracao alternativa por regex", "AVISO")
+
+        if not texto_puro:
+            log("Conteudo vazio apos parsing - impressao abortada", "ERRO")
+            return False
         
         # Garante corte de papel/espaço no fim
         texto_puro += "\n\n\n\n\n"

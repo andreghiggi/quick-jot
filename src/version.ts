@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.66.8-beta";
+export const VERSION = "1.66.9-beta";
 export const RELEASE_DATE = "2026-08-12"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Amore Mio — Comanda limpa e sem duplicidade";
+export const CODENAME = "Amore Mio — Fim da comanda em branco";
 
 
 export interface Release {
@@ -20,6 +20,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.66.9-beta",
+    date: "2026-08-12",
+    codename: "Amore Mio — Fim da comanda em branco",
+    changes: [
+      "auto_printer.py v1.6.6: corrigida a comanda saindo em branco (PDF e POS 58mm). As tags <meta> e <link> do layout V2 nunca 'fecham', e o filtro de CSS acabava descartando todo o conteúdo do pedido.",
+      "Adicionada extração alternativa automática caso a leitura principal retorne vazio, e bloqueio de envio quando não há conteúdo (evita página/PDF vazio).",
+      "Nenhuma outra loja ou rotina foi alterada.",
+    ],
+  },
   {
     version: "1.66.8-beta",
     date: "2026-08-12",
