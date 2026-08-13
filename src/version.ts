@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.66.7-beta";
+export const VERSION = "1.66.8-beta";
 export const RELEASE_DATE = "2026-08-12"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Amore Mio — Impressão Gráfica (GDI)";
+export const CODENAME = "Amore Mio — Comanda limpa e sem duplicidade";
 
 
 export interface Release {
@@ -20,6 +20,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.66.8-beta",
+    date: "2026-08-12",
+    codename: "Amore Mio — Comanda limpa e sem duplicidade",
+    changes: [
+      "auto_printer.py v1.6.5: o CSS/estilos do layout V2 não são mais impressos como texto (tags style/script/head ignoradas).",
+      "Correção de impressões repetidas: a fila agora é lida somente com itens não impressos e marcada como impressa após imprimir.",
+      "Liberada a remoção dos itens já concluídos da fila de impressão pelo programa local.",
+      "Fila acumulada da Amore Mio foi zerada para interromper as reimpressões.",
+    ],
+  },
   {
     version: "1.66.7-beta",
     date: "2026-08-12",
