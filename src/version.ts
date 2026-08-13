@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.66.6-beta";
+export const VERSION = "1.66.7-beta";
 export const RELEASE_DATE = "2026-08-12"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Amore Mio 0-byte Fix & Multi-Printer Routing";
+export const CODENAME = "Amore Mio — Impressão Gráfica (GDI)";
 
 
 export interface Release {
@@ -20,6 +20,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.66.7-beta",
+    date: "2026-08-12",
+    codename: "Amore Mio — Impressão Gráfica (GDI)",
+    changes: [
+      "auto_printer.py v1.6.4: novo modo de impressão GRÁFICA (GDI) usado exclusivamente na loja Amore Mio (isolado por company_id).",
+      "Corrige PDF de 0 bytes: o Microsoft Print to PDF não aceita dados RAW; agora a comanda é desenhada como página real.",
+      "POS 58mm passa a receber página renderizada com fonte monoespaçada (32 colunas) em vez de texto RAW cru.",
+      "Fallback automático para o modo RAW anterior caso o modo gráfico falhe. Nenhuma outra loja foi alterada.",
+    ],
+  },
   {
     version: "1.66.6-beta",
     date: "2026-08-12",
