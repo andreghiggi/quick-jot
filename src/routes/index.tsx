@@ -1,4 +1,4 @@
-// v1.66.5-beta: Corrigido erro de "0 bytes" na Amore Mio (ID: f5f9eec3-67bc-497a-88a6-ce41d3b15df8).
-// Adicionados marcadores <!--HTML_START-->/<!--HTML_END--> para garantir extração correta pelo script.
-// Adicionado reset de margens no CSS do corpo para evitar problemas de renderização no Win32Print.
-// Versão do script necessária: 1.6.3 (ou superior).
+// v1.66.6-beta - Corrigida renderização 0 bytes Amore Mio forçando HTML bruto e reset CSS total.
+// Removidos marcadores de bloco para Amore Mio para simplificar extração de emergência.
+// Adicionado reset agressivo de CSS (background, color, margin, padding) para evitar drivers abortarem.
+// Recomendação: Baixar script 1.6.3 se ainda houver problemas.
