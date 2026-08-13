@@ -211,16 +211,42 @@ def montar_linhas_estilizadas(texto, colunas=32):
         for i, parte in enumerate(_tw.wrap(txt, colunas) or [txt]):
             saida.append((parte, estilo))
 
-    for linha_raw in texto.split("\n"):
-        linha = linha_raw.strip()
+    linhas_src = texto.split("\n")
+    idx = 0
+    while idx < len(linhas_src):
+        linha = linhas_src[idx].strip()
+        idx += 1
         if not linha:
             saida.append(("", "normal"))
             continue
 
+        # Quantidade isolada ("1x") junta com o nome do produto da linha seguinte
+        if _re.match(r"^\d+\s*x$", linha, _re.I) and idx < len(linhas_src):
+            proximo = linhas_src[idx].strip()
+            if proximo:
+                linha = f"{linha} {proximo}"
+                idx += 1
+
         upper = linha.upper()
 
+        # Rodape antigo ("--- FIM ---") e removido: o padrao e adicionado no final
+        if _re.match(r"^-{2,}\s*FIM.*$", upper):
+            continue
+
+        # Tipo do pedido no formato ">> RETIRADA <<"
+        m_tipo = _re.match(r"^>>\s*([A-ZÀ-Ú ]+?)\s*<<$", upper)
+        if m_tipo:
+            add(m_tipo.group(1).strip(), "invert")
+            continue
+
         # Cabecalho / titulo
-        if "COMANDA DE PRODU" in upper or upper.startswith("COMANDA #") or upper.startswith("PEDIDO #") or upper.startswith("#"):
+        if ("COMANDA DE PRODU" in upper or upper.startswith("COMANDA #")
+                or upper.startswith("PEDIDO") or upper.startswith("#")):
+            add(linha, "bold")
+            continue
+
+        # Previsao de entrega/retirada
+        if upper.startswith("PRONTO AT") or upper.startswith("PREVIS"):
             add(linha, "bold")
             continue
 
