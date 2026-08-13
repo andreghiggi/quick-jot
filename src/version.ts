@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.65.7-beta";
-export const RELEASE_DATE = "2026-08-11"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Real Data Fetching in auto_printer.py";
+export const VERSION = "1.66.6-beta";
+export const RELEASE_DATE = "2026-08-12"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Amore Mio 0-byte Fix & Multi-Printer Routing";
 
 
 export interface Release {
@@ -20,6 +20,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.66.6-beta",
+    date: "2026-08-12",
+    codename: "Amore Mio 0-byte Fix & Multi-Printer Routing",
+    changes: [
+      "Corrigida renderização de 0 bytes na Amore Mio forçando HTML bruto e reset CSS total.",
+      "Implementado roteamento multi-impressora por categoria (v1.66.0).",
+      "Atualizado auto_printer.py para v1.6.3 com suporte a marcadores de extração segura.",
+      "Restaurada fidelidade total do Layout V2 na Amore Mio via wrapper de compatibilidade.",
+    ],
+  },
   {
     version: "1.65.7-beta",
     date: "2026-08-11",
