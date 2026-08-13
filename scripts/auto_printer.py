@@ -147,7 +147,6 @@ def get_printer_for_station(station_id):
         return None
 
 def imprimir_html(html_content, station_id=None):
-    pass_placeholder = None
     return _imprimir_html(html_content, station_id)
 
 
