@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.66.9-beta";
+export const VERSION = "1.66.10-beta";
 export const RELEASE_DATE = "2026-08-12"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Amore Mio — Fim da comanda em branco";
+export const CODENAME = "Amore Mio — Layout 58mm padrão Rei do Açaí";
 
 
 export interface Release {
