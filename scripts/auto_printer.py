@@ -10,7 +10,7 @@ from datetime import datetime
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.6.4"
+SCRIPT_VERSION = "1.6.5"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -103,9 +103,9 @@ def buscar_pedidos_nao_impressos(company_id):
     return []
 
 def processar_fila(company_id):
-    """Busca e processa itens na print_queue"""
+    """Busca e processa itens na print_queue ainda nao impressos"""
     try:
-        url = f"{API_URL}/print_queue?company_id=eq.{company_id}&select=*"
+        url = f"{API_URL}/print_queue?company_id=eq.{company_id}&printed=eq.false&select=*"
         response = requests.get(url, headers=get_headers())
         if response.status_code == 200:
             fila = response.json()
@@ -114,12 +114,21 @@ def processar_fila(company_id):
                 
                 log(f"Imprimindo da fila: {item.get('label', 'Sem título')}", "FILA")
                 if imprimir_html(item.get('html_content', ''), item.get('station_id')):
-                    remover_da_fila(item['id'])
                     ids_processados.add(item['id'])
+                    marcar_fila_impressa(item['id'])
+                    remover_da_fila(item['id'])
             return len(fila)
     except Exception as e:
         log(f"Erro ao processar fila: {e}", "ERRO")
     return 0
+
+def marcar_fila_impressa(item_id):
+    """Marca o job como impresso (evita reimpressao caso o DELETE seja bloqueado por RLS)"""
+    try:
+        url = f"{API_URL}/print_queue?id=eq.{item_id}"
+        requests.patch(url, headers=get_headers(), json={"printed": True})
+    except Exception as e:
+        log(f"Erro ao marcar job como impresso: {e}", "ERRO")
 
 def remover_da_fila(item_id):
     try:
