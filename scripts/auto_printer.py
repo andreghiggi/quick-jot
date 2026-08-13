@@ -351,7 +351,8 @@ def processar_pedido(pedido, store_name, store_info):
     return True
 
 def main(company_id, company_name):
-    global STORE_NAME
+    global STORE_NAME, COMPANY_ID
+    COMPANY_ID = company_id
     
     if not API_KEY:
         log("ERRO CRÍTICO: Chave de API (API_KEY) não encontrada. Baixe o script novamente pelo painel.", "ERRO")
