@@ -1445,11 +1445,20 @@ if errorlevel 1 (
 
                 <div className="space-y-2">
                   {stations.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between p-2 border rounded bg-background">
-                      <div className="flex flex-col">
+                     <div key={s.id} className="flex items-center gap-2 p-2 border rounded bg-background">
+                      <div className="flex flex-col min-w-[120px]">
                         <span className="text-sm font-medium">{s.name}</span>
                         <span className="text-[10px] text-muted-foreground font-mono">{s.id}</span>
                       </div>
+                      <Input
+                        className="h-8 flex-1"
+                        placeholder="Nome da impressora no Windows (ex: POS-58)"
+                        defaultValue={s.printer_name || ''}
+                        onBlur={(e) => {
+                          const val = e.target.value.trim();
+                          if (val !== (s.printer_name || '')) updateStationPrinter(s.id, val);
+                        }}
+                      />
                       <Button variant="ghost" size="sm" onClick={() => deleteStation(s.id)} className="text-destructive h-8 w-8 p-0">
                         <Trash2 className="h-4 w-4" />
                       </Button>
