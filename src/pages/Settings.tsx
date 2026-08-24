@@ -1410,7 +1410,7 @@ if errorlevel 1 (
                     size="sm" 
                     className="gap-2"
                     onClick={() => {
-                      const mapping = stations.reduce((acc, s) => ({ ...acc, [s.id]: "" }), {});
+                      const mapping = stations.reduce((acc, s) => ({ ...acc, [s.id]: s.printer_name || "" }), {});
                       const blob = new Blob([JSON.stringify(mapping, null, 2)], { type: 'application/json' });
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
