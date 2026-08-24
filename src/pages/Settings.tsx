@@ -1425,7 +1425,8 @@ if errorlevel 1 (
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Crie estações lógicas (Ex: Cozinha, Bar). Baixe o mapa, preencha os nomes das impressoras do Windows e coloque na pasta C:\ComandaTech.
+                  Crie estações lógicas (Ex: Cozinha, Bar) e informe o nome exato da impressora compartilhada do Windows em cada uma.
+                  Depois vincule as categorias às estações em Categorias. O download do mapa é apenas um plano B.
                 </p>
                 <div className="flex gap-2">
                   <Input 
