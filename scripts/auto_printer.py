@@ -614,6 +614,8 @@ def main(company_id, company_name):
     
     STORE_NAME = company_name
 
+    carregar_estacoes(force=True)
+
     log("Iniciando monitoramento...", "START")
     mostrar_status(company_id)
     
