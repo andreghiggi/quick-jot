@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.66.10-beta";
-export const RELEASE_DATE = "2026-08-12"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Amore Mio — Layout 58mm padrão Rei do Açaí";
+export const VERSION = "1.67.0-beta";
+export const RELEASE_DATE = "2026-08-24"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Amore Mio — Venda Rápida com fluxo padrão do PDV";
 
 
 export interface Release {
@@ -21,6 +21,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.67.0-beta",
+    date: "2026-08-24",
+    codename: "Amore Mio — Venda Rápida com fluxo padrão do PDV",
+    changes: [
+      "Venda Rápida (PDV V2) da Amore Mio agora finaliza pelo diálogo padrão de cobrança: formas de pagamento, desconto, modo de documento (NFC-e), TEF e impressão — em vez de fechar direto no clique da forma de pagamento.",
+      "Produto cadastrado sem preço: ao selecioná-lo na Venda Rápida, o sistema pede o preço de venda antes de adicionar ao carrinho.",
+      "Nenhuma outra loja foi alterada — a Venda Rápida das demais empresas continua com os botões de forma de pagamento e o comportamento atual.",
+    ],
+  },
+  {
+
     version: "1.66.9-beta",
     date: "2026-08-12",
     codename: "Amore Mio — Fim da comanda em branco",
