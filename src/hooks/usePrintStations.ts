@@ -6,6 +6,7 @@ export interface PrintStation {
   id: string;
   name: string;
   company_id: string;
+  printer_name?: string | null;
 }
 
 export interface CategoryPrintStation {
@@ -94,6 +95,22 @@ export function usePrintStations(companyId?: string) {
     }
   };
 
+  const updateStationPrinter = async (id: string, printerName: string) => {
+    try {
+      const { error } = await supabase
+        .from('print_stations' as any)
+        .update({ printer_name: printerName || null } as any)
+        .eq('id', id);
+
+      if (error) throw error;
+      setStations(prev => prev.map(s => (s.id === id ? { ...s, printer_name: printerName || null } : s)));
+      toast.success('Impressora da estação salva');
+    } catch (error) {
+      console.error('Error updating station printer:', error);
+      toast.error('Erro ao salvar impressora');
+    }
+  };
+
   const mapCategoryToStation = async (categoryId: string, stationId: string | null) => {
     if (!companyId) return;
     try {
@@ -133,6 +150,7 @@ export function usePrintStations(companyId?: string) {
     loading,
     addStation,
     deleteStation,
+    updateStationPrinter,
     mapCategoryToStation,
     refresh: () => Promise.all([fetchStations(), fetchMappings()])
   };

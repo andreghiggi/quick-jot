@@ -34,7 +34,7 @@ export default function Settings() {
   const { company, profile, refetchUserData, isSuperAdmin } = useAuthContext();
   const { toast } = useToast();
   const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
-  const { stations, addStation, deleteStation } = usePrintStations(company?.id);
+  const { stations, addStation, deleteStation, updateStationPrinter } = usePrintStations(company?.id);
   const [newStationName, setNewStationName] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
   const [isBannerUploading, setIsBannerUploading] = useState(false);
@@ -1410,7 +1410,7 @@ if errorlevel 1 (
                     size="sm" 
                     className="gap-2"
                     onClick={() => {
-                      const mapping = stations.reduce((acc, s) => ({ ...acc, [s.id]: "" }), {});
+                      const mapping = stations.reduce((acc, s) => ({ ...acc, [s.id]: s.printer_name || "" }), {});
                       const blob = new Blob([JSON.stringify(mapping, null, 2)], { type: 'application/json' });
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
@@ -1425,7 +1425,8 @@ if errorlevel 1 (
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Crie estações lógicas (Ex: Cozinha, Bar). Baixe o mapa, preencha os nomes das impressoras do Windows e coloque na pasta C:\ComandaTech.
+                  Crie estações lógicas (Ex: Cozinha, Bar) e informe o nome exato da impressora compartilhada do Windows em cada uma.
+                  Depois vincule as categorias às estações em Categorias. O download do mapa é apenas um plano B.
                 </p>
                 <div className="flex gap-2">
                   <Input 
@@ -1444,11 +1445,20 @@ if errorlevel 1 (
 
                 <div className="space-y-2">
                   {stations.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between p-2 border rounded bg-background">
-                      <div className="flex flex-col">
+                     <div key={s.id} className="flex items-center gap-2 p-2 border rounded bg-background">
+                      <div className="flex flex-col min-w-[120px]">
                         <span className="text-sm font-medium">{s.name}</span>
                         <span className="text-[10px] text-muted-foreground font-mono">{s.id}</span>
                       </div>
+                      <Input
+                        className="h-8 flex-1"
+                        placeholder="Nome da impressora no Windows (ex: POS-58)"
+                        defaultValue={s.printer_name || ''}
+                        onBlur={(e) => {
+                          const val = e.target.value.trim();
+                          if (val !== (s.printer_name || '')) updateStationPrinter(s.id, val);
+                        }}
+                      />
                       <Button variant="ghost" size="sm" onClick={() => deleteStation(s.id)} className="text-destructive h-8 w-8 p-0">
                         <Trash2 className="h-4 w-4" />
                       </Button>

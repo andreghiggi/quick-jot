@@ -3216,18 +3216,21 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          printer_name: string | null
         }
         Insert: {
           company_id: string
           created_at?: string | null
           id?: string
           name: string
+          printer_name?: string | null
         }
         Update: {
           company_id?: string
           created_at?: string | null
           id?: string
           name?: string
+          printer_name?: string | null
         }
         Relationships: [
           {

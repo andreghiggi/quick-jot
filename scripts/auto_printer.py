@@ -10,7 +10,7 @@ from datetime import datetime
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.6.8"
+SCRIPT_VERSION = "1.7.0"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -19,6 +19,11 @@ STORE_NAME = ""
 STORE_INFO = {}
 COMPANY_ID = "" # Injetado pelo frontend
 PRINTER_MAP_FILE = "printer_map.json"
+
+# Cache do mapeamento estacao -> impressora (vindo do painel)
+STATION_PRINTERS = {}
+STATIONS_LAST_SYNC = 0
+STATIONS_TTL = 300  # segundos
 
 # Lojas que usam renderizacao GRAFICA (GDI) em vez de RAW.
 # ISOLAMENTO: nao afeta nenhuma outra loja.
@@ -144,14 +149,57 @@ def marcar_como_impresso(order_id):
     except Exception as e:
         log(f"Erro ao marcar como impresso: {e}", "ERRO")
 
+def carregar_estacoes(force=False):
+    """
+    Busca no painel as estacoes da loja e monta o mapa
+    station_id -> nome da impressora compartilhada do Windows.
+    """
+    global STATION_PRINTERS, STATIONS_LAST_SYNC
+    agora = time.time()
+    if not force and STATION_PRINTERS and (agora - STATIONS_LAST_SYNC) < STATIONS_TTL:
+        return STATION_PRINTERS
+    if not COMPANY_ID:
+        return STATION_PRINTERS
+    try:
+        url = f"{API_URL}/print_stations?company_id=eq.{COMPANY_ID}&select=id,name,printer_name"
+        resp = requests.get(url, headers=get_headers(), timeout=15)
+        if resp.status_code == 200:
+            mapa = {}
+            for st in resp.json():
+                nome = (st.get("printer_name") or "").strip()
+                if nome:
+                    mapa[st["id"]] = nome
+            STATION_PRINTERS = mapa
+            STATIONS_LAST_SYNC = agora
+            if mapa:
+                log(f"Estacoes sincronizadas: {', '.join(mapa.values())}", "STATION")
+        else:
+            log(f"Erro ao buscar estacoes: {resp.status_code}", "AVISO")
+    except Exception as e:
+        log(f"Falha ao sincronizar estacoes: {e}", "AVISO")
+    return STATION_PRINTERS
+
+
 def get_printer_for_station(station_id):
-    """Lê o arquivo de mapeamento local para encontrar a impressora da estação"""
+    """
+    Resolve a impressora da estacao:
+    1) cadastro do painel (print_stations.printer_name)
+    2) arquivo local printer_map.json (plano B)
+    """
+    if not station_id:
+        return None
+
+    mapa = carregar_estacoes()
+    if mapa.get(station_id):
+        return mapa[station_id]
+
     try:
         if not os.path.exists(PRINTER_MAP_FILE):
             return None
         with open(PRINTER_MAP_FILE, "r", encoding="utf-8") as f:
             mapping = json.load(f)
-            return mapping.get(station_id)
+            nome = (mapping.get(station_id) or "").strip()
+            return nome or None
     except:
         return None
 
@@ -565,6 +613,8 @@ def main(company_id, company_name):
     print()
     
     STORE_NAME = company_name
+
+    carregar_estacoes(force=True)
 
     log("Iniciando monitoramento...", "START")
     mostrar_status(company_id)
