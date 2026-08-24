@@ -150,6 +150,7 @@ export function usePrintStations(companyId?: string) {
     loading,
     addStation,
     deleteStation,
+    updateStationPrinter,
     mapCategoryToStation,
     refresh: () => Promise.all([fetchStations(), fetchMappings()])
   };
