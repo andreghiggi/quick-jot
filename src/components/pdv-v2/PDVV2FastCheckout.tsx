@@ -29,9 +29,9 @@ import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
-import { emitirNFCe, type NFCeRecord } from '@/services/nfceService';
+import { emitirNFCe, type NFCeRecord, type NFCeItem, type NFCeTefData } from '@/services/nfceService';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
-import type { NFCeItem, NFCeTefData } from '@/types/order';
+
 
 
 interface Props {
