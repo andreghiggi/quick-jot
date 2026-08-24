@@ -34,7 +34,7 @@ export default function Settings() {
   const { company, profile, refetchUserData, isSuperAdmin } = useAuthContext();
   const { toast } = useToast();
   const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
-  const { stations, addStation, deleteStation } = usePrintStations(company?.id);
+  const { stations, addStation, deleteStation, updateStationPrinter } = usePrintStations(company?.id);
   const [newStationName, setNewStationName] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
   const [isBannerUploading, setIsBannerUploading] = useState(false);
