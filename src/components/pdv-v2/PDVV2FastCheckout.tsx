@@ -135,7 +135,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
 
     setCart(prev => [...prev, newItem]);
     setQuery('');
-    toast.success(`${p.name} adicionado`);
+    toast.success(`${p.name} adicionado`, isAmoreMio ? { duration: 1000 } : undefined);
   }
 
   function confirmManualPrice() {
