@@ -20,6 +20,11 @@ STORE_INFO = {}
 COMPANY_ID = "" # Injetado pelo frontend
 PRINTER_MAP_FILE = "printer_map.json"
 
+# Cache do mapeamento estacao -> impressora (vindo do painel)
+STATION_PRINTERS = {}
+STATIONS_LAST_SYNC = 0
+STATIONS_TTL = 300  # segundos
+
 # Lojas que usam renderizacao GRAFICA (GDI) em vez de RAW.
 # ISOLAMENTO: nao afeta nenhuma outra loja.
 GDI_COMPANY_IDS = {"f5f9eec3-67bc-497a-88a6-ce41d3b15df8"}  # Amore Mio
