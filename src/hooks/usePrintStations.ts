@@ -6,6 +6,7 @@ export interface PrintStation {
   id: string;
   name: string;
   company_id: string;
+  printer_name?: string | null;
 }
 
 export interface CategoryPrintStation {
