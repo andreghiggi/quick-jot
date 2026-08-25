@@ -36,12 +36,35 @@ export async function enqueueProductionByStation(
       categoryMapByName[c.name] = { id: c.id, production_print: c.production_print ?? true };
     });
 
+    // 1b. Resolve categoria pelo produto quando o item não trouxer essa info
+    const productIds = Array.from(
+      new Set(
+        items
+          .map((i: any) => i.product_id || i.productId || i.product?.id)
+          .filter((id: any) => typeof id === 'string' && id.length > 0)
+      )
+    );
+
+    const productInfo: Record<string, { category: string | null; category_id: string | null }> = {};
+    if (productIds.length > 0) {
+      const { data: prods } = await supabase
+        .from('products')
+        .select('id, category, category_id')
+        .in('id', productIds as string[]);
+      prods?.forEach((p: any) => {
+        productInfo[p.id] = { category: p.category ?? null, category_id: p.category_id ?? null };
+      });
+    }
+
     // 2. Group items by station
     const stationGroups: Record<string, any[]> = {};
     const defaultItems: any[] = [];
 
     items.forEach(item => {
-      const categoryName = item.category || (item as any).category_name;
+      const productId = item.product_id || (item as any).productId || item.product?.id;
+      const prod = productId ? productInfo[productId] : undefined;
+
+      const categoryName = item.category || (item as any).category_name || prod?.category;
       const categoryInfo = categoryName ? categoryMapByName[categoryName] : null;
 
       // Skip if production print is disabled for this category
@@ -51,7 +74,11 @@ export async function enqueueProductionByStation(
       }
 
       // Find category_id for the item
-      const categoryId = item.product?.category_id || item.category_id || categoryInfo?.id;
+      const categoryId =
+        item.product?.category_id ||
+        item.category_id ||
+        prod?.category_id ||
+        categoryInfo?.id;
       let stationId = categoryId ? mappingDict[categoryId] : null;
 
       if (stationId) {
@@ -61,6 +88,7 @@ export async function enqueueProductionByStation(
         defaultItems.push(item);
       }
     });
+
 
     // 3. Create jobs (Using HTML generation or JSON as per script requirements)
     const jobs: any[] = [];
