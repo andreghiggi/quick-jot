@@ -1391,7 +1391,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
           const sendGroupedOptionals =
             settings.printLayout === 'v2' || settings.printLayout === 'v3' || company?.id === I9_COMPANY_ID;
-          const productionItems = cart.flatMap(item => {
+          const buildProductionItems = (list: typeof cart) => list.flatMap(item => {
             // Build a clean list of additional names (without prices, without group prefix)
             const additionalNames: string[] = [];
             const groupedOptionals: { groupName: string; items: string }[] = [];
