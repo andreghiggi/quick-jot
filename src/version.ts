@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.68.0-beta";
-export const RELEASE_DATE = "2026-08-24"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Amore Mio — Venda Rápida com fluxo padrão do PDV";
+export const VERSION = "1.68.1-beta";
+export const RELEASE_DATE = "2026-08-25"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Pedido Express respeita a impressora da categoria";
 
 
 export interface Release {
@@ -20,6 +20,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.68.1-beta",
+    date: "2026-08-25",
+    codename: "Pedido Express respeita a impressora da categoria",
+    changes: [
+      "Pedido Express: a comanda de produção agora passa pelo roteamento por estação — itens de categorias vinculadas a uma impressora compartilhada saem nela, e o restante continua na impressora padrão.",
+      "Quando a loja não tem estação vinculada, o comportamento é exatamente o de antes: um único job de impressão.",
+      "Layout da comanda (V1/V2/V3), papel e demais configurações permanecem inalterados.",
+    ],
+  },
   {
     version: "1.67.0-beta",
     date: "2026-08-24",

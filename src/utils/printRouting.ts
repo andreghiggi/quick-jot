@@ -5,6 +5,62 @@ export interface ProductionJob {
   items: any[];
 }
 
+/**
+ * Agrupa uma lista de itens por estação de impressão (via categoria).
+ * Mantém a ordem original dos itens dentro de cada grupo.
+ *
+ * Se a loja não tiver estações/vínculos, retorna um único grupo com
+ * `station_id = null` — comportamento idêntico ao fluxo antigo.
+ */
+export async function groupItemsByStation<T>(
+  companyId: string,
+  items: T[],
+  getCategoryName: (item: T) => string | null | undefined
+): Promise<{ station_id: string | null; items: T[] }[]> {
+  if (items.length === 0) return [];
+  try {
+    const [{ data: mappings }, { data: dbCategories }] = await Promise.all([
+      supabase
+        .from('category_print_stations' as any)
+        .select('category_id, station_id')
+        .eq('company_id', companyId),
+      supabase.from('categories').select('id, name').eq('company_id', companyId),
+    ]);
+
+    if (!mappings || mappings.length === 0) {
+      return [{ station_id: null, items }];
+    }
+
+    const stationByCategoryId: Record<string, string> = {};
+    (mappings as any[]).forEach((m) => {
+      stationByCategoryId[m.category_id] = m.station_id;
+    });
+    const categoryIdByName: Record<string, string> = {};
+    dbCategories?.forEach((c: any) => {
+      categoryIdByName[c.name] = c.id;
+    });
+
+    const groups = new Map<string, T[]>();
+    items.forEach((item) => {
+      const catName = getCategoryName(item);
+      const catId = catName ? categoryIdByName[catName] : undefined;
+      const stationId = catId ? stationByCategoryId[catId] ?? null : null;
+      const key = stationId ?? '__default__';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(item);
+    });
+
+    return Array.from(groups.entries()).map(([key, groupItems]) => ({
+      station_id: key === '__default__' ? null : key,
+      items: groupItems,
+    }));
+  } catch (e) {
+    console.error('[PrintRouting] Falha ao agrupar por estação:', e);
+    return [{ station_id: null, items }];
+  }
+}
+
+
 export async function enqueueProductionByStation(
   companyId: string,
   orderId: string,

@@ -26,6 +26,7 @@ import { Product, ProductOptional, CartItem } from '@/types/product';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
 import { supabase } from '@/integrations/supabase/client';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
+import { groupItemsByStation } from '@/utils/printRouting';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
@@ -1390,7 +1391,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
           const sendGroupedOptionals =
             settings.printLayout === 'v2' || settings.printLayout === 'v3' || company?.id === I9_COMPANY_ID;
-          const productionItems = cart.flatMap(item => {
+          const buildProductionItems = (list: typeof cart) => list.flatMap(item => {
             // Build a clean list of additional names (without prices, without group prefix)
             const additionalNames: string[] = [];
             const groupedOptionals: { groupName: string; items: string }[] = [];
@@ -1449,33 +1450,47 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             }];
           });
 
-          const html = generateProductionTicketHTML({
-            tabNumber: createdDailyNumber,
-            customerName: customerName.trim(),
-            items: productionItems,
-            createdAt: new Date(),
-            paperSize: settings.printerPaperSize,
-            referenceLabel: createdShortCode
-              ? `PEDIDO ${createdShortCode}`
-              : 'PEDIDO EXPRESS',
-            layout: settings.printLayout,
-            companyId: company.id,
-            orderType: deliveryType === 'entrega' ? 'delivery' : deliveryType === 'retirada' ? 'pickup' : 'counter',
-            // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
-            showReadyTime: isLancheriaI9,
-            readyOffsetMinutes: isLancheriaI9
-              ? computeReadyOffsetMinutes(settings.estimatedWaitTime, 30)
-              : undefined,
-            deliveryAddress: deliveryType === 'entrega' && fullAddress ? fullAddress : null,
-          });
+          // Roteamento multi-impressora: separa os itens por estação (categoria → estação).
+          // Lojas sem estação vinculada continuam com um único job (station_id = null).
+          const stationGroups = await groupItemsByStation(
+            company.id,
+            cart,
+            (item) => item.product.category
+          );
 
-          await supabase.from('print_queue').insert({
-            company_id: company.id,
-            html_content: html,
-            label: createdShortCode
-              ? `Produção ${createdShortCode}`
-              : `Express - ${customerName.trim()}`,
-          });
+          const jobs = stationGroups
+            .filter((g) => g.items.length > 0)
+            .map((g) => ({
+              company_id: company.id,
+              html_content: generateProductionTicketHTML({
+                tabNumber: createdDailyNumber,
+                customerName: customerName.trim(),
+                items: buildProductionItems(g.items),
+                createdAt: new Date(),
+                paperSize: settings.printerPaperSize,
+                referenceLabel: createdShortCode
+                  ? `PEDIDO ${createdShortCode}`
+                  : 'PEDIDO EXPRESS',
+                layout: settings.printLayout,
+                companyId: company.id,
+                orderType: deliveryType === 'entrega' ? 'delivery' : deliveryType === 'retirada' ? 'pickup' : 'counter',
+                // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
+                showReadyTime: isLancheriaI9,
+                readyOffsetMinutes: isLancheriaI9
+                  ? computeReadyOffsetMinutes(settings.estimatedWaitTime, 30)
+                  : undefined,
+                deliveryAddress: deliveryType === 'entrega' && fullAddress ? fullAddress : null,
+              }),
+              label: createdShortCode
+                ? `Produção ${createdShortCode}`
+                : `Express - ${customerName.trim()}`,
+              station_id: g.station_id,
+              job_type: 'production',
+            }));
+
+          if (jobs.length > 0) {
+            await supabase.from('print_queue').insert(jobs as any);
+          }
         } catch (e) {
           console.error('Erro ao enfileirar comanda de produção:', e);
         }
