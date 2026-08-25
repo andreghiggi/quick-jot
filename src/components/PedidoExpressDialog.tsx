@@ -1450,33 +1450,47 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             }];
           });
 
-          const html = generateProductionTicketHTML({
-            tabNumber: createdDailyNumber,
-            customerName: customerName.trim(),
-            items: productionItems,
-            createdAt: new Date(),
-            paperSize: settings.printerPaperSize,
-            referenceLabel: createdShortCode
-              ? `PEDIDO ${createdShortCode}`
-              : 'PEDIDO EXPRESS',
-            layout: settings.printLayout,
-            companyId: company.id,
-            orderType: deliveryType === 'entrega' ? 'delivery' : deliveryType === 'retirada' ? 'pickup' : 'counter',
-            // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
-            showReadyTime: isLancheriaI9,
-            readyOffsetMinutes: isLancheriaI9
-              ? computeReadyOffsetMinutes(settings.estimatedWaitTime, 30)
-              : undefined,
-            deliveryAddress: deliveryType === 'entrega' && fullAddress ? fullAddress : null,
-          });
+          // Roteamento multi-impressora: separa os itens por estação (categoria → estação).
+          // Lojas sem estação vinculada continuam com um único job (station_id = null).
+          const stationGroups = await groupItemsByStation(
+            company.id,
+            cart,
+            (item) => item.product.category
+          );
 
-          await supabase.from('print_queue').insert({
-            company_id: company.id,
-            html_content: html,
-            label: createdShortCode
-              ? `Produção ${createdShortCode}`
-              : `Express - ${customerName.trim()}`,
-          });
+          const jobs = stationGroups
+            .filter((g) => g.items.length > 0)
+            .map((g) => ({
+              company_id: company.id,
+              html_content: generateProductionTicketHTML({
+                tabNumber: createdDailyNumber,
+                customerName: customerName.trim(),
+                items: buildProductionItems(g.items),
+                createdAt: new Date(),
+                paperSize: settings.printerPaperSize,
+                referenceLabel: createdShortCode
+                  ? `PEDIDO ${createdShortCode}`
+                  : 'PEDIDO EXPRESS',
+                layout: settings.printLayout,
+                companyId: company.id,
+                orderType: deliveryType === 'entrega' ? 'delivery' : deliveryType === 'retirada' ? 'pickup' : 'counter',
+                // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
+                showReadyTime: isLancheriaI9,
+                readyOffsetMinutes: isLancheriaI9
+                  ? computeReadyOffsetMinutes(settings.estimatedWaitTime, 30)
+                  : undefined,
+                deliveryAddress: deliveryType === 'entrega' && fullAddress ? fullAddress : null,
+              }),
+              label: createdShortCode
+                ? `Produção ${createdShortCode}`
+                : `Express - ${customerName.trim()}`,
+              station_id: g.station_id,
+              job_type: 'production',
+            }));
+
+          if (jobs.length > 0) {
+            await supabase.from('print_queue').insert(jobs as any);
+          }
         } catch (e) {
           console.error('Erro ao enfileirar comanda de produção:', e);
         }
