@@ -131,6 +131,9 @@ export function PDVV2FastCheckout({ companyId }: Props) {
       product_name: p.name + (weight ? ` [PESO: ${weight.toFixed(3)}kg]` : ''),
       quantity,
       unit_price: basePrice,
+      // usado pelo roteamento de impressão (categoria → estação → impressora)
+      category: p.category ?? null,
+      category_id: (p as any).category_id ?? null,
     };
 
     setCart(prev => [...prev, newItem]);
@@ -349,6 +352,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
               quantity: item.quantity,
               category: item.category,
               category_name: item.category,
+              category_id: item.category_id,
             }));
 
             await enqueueProductionByStation(
