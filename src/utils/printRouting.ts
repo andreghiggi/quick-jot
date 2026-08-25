@@ -45,14 +45,19 @@ export async function enqueueProductionByStation(
       )
     );
 
+    // `products` guarda apenas o NOME da categoria; o id vem de `categories`.
     const productInfo: Record<string, { category: string | null; category_id: string | null }> = {};
     if (productIds.length > 0) {
       const { data: prods } = await supabase
         .from('products')
-        .select('id, category, category_id')
+        .select('id, category')
         .in('id', productIds as string[]);
       prods?.forEach((p: any) => {
-        productInfo[p.id] = { category: p.category ?? null, category_id: p.category_id ?? null };
+        const catName = p.category ?? null;
+        productInfo[p.id] = {
+          category: catName,
+          category_id: catName ? (categoryMapByName[catName]?.id ?? null) : null,
+        };
       });
     }
 
