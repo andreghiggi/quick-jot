@@ -352,6 +352,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
               quantity: item.quantity,
               category: item.category,
               category_name: item.category,
+              category_id: item.category_id,
             }));
 
             await enqueueProductionByStation(
