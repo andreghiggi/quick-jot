@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.68.0-beta";
-export const RELEASE_DATE = "2026-08-24"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Amore Mio — Venda Rápida com fluxo padrão do PDV";
+export const VERSION = "1.68.1-beta";
+export const RELEASE_DATE = "2026-08-25"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Pedido Express respeita a impressora da categoria";
 
 
 export interface Release {
