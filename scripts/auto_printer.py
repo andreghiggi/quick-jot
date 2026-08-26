@@ -156,6 +156,42 @@ def marcar_como_impresso(order_id):
     except Exception as e:
         log(f"Erro ao marcar como impresso: {e}", "ERRO")
 
+def carregar_config_loja(force=False):
+    """
+    Le em store_settings o tamanho de papel (printer_paper_size) e o layout
+    (print_layout) configurados no painel. O renderizador grafico usa esses
+    valores para dimensionar a impressao conforme a configuracao da loja.
+    """
+    global PAPER_SIZE, PRINT_LAYOUT, CONFIG_LAST_SYNC
+    agora = time.time()
+    if not force and (agora - CONFIG_LAST_SYNC) < CONFIG_TTL:
+        return PAPER_SIZE
+    if not COMPANY_ID:
+        return PAPER_SIZE
+    try:
+        url = (
+            f"{API_URL}/store_settings?company_id=eq.{COMPANY_ID}"
+            f"&key=in.(printer_paper_size,print_layout)&select=key,value"
+        )
+        resp = requests.get(url, headers=get_headers(), timeout=15)
+        if resp.status_code == 200:
+            for row in resp.json():
+                valor = (row.get("value") or "").strip()
+                if not valor:
+                    continue
+                if row.get("key") == "printer_paper_size":
+                    PAPER_SIZE = valor
+                elif row.get("key") == "print_layout":
+                    PRINT_LAYOUT = valor
+            CONFIG_LAST_SYNC = agora
+            log(f"Config da loja: papel {PAPER_SIZE} / layout {PRINT_LAYOUT}", "CONFIG")
+        else:
+            log(f"Erro ao buscar configuracoes da loja: {resp.status_code}", "AVISO")
+    except Exception as e:
+        log(f"Falha ao sincronizar configuracoes da loja: {e}", "AVISO")
+    return PAPER_SIZE
+
+
 def carregar_estacoes(force=False):
     """
     Busca no painel as estacoes da loja e monta o mapa
