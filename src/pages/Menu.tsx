@@ -1446,10 +1446,48 @@ export default function Menu() {
                 html_content: productionHtml,
                 label: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}`,
               });
+
+            // Amore Mio: além da comanda, o recibo do pedido também sai
+            // automaticamente (mesmo número/short_code, layout V2).
+            const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
+            if (company.id === AMORE_MIO_ID) {
+              try {
+                const { printOnlyReceipt } = await import('@/utils/pdvV2Print');
+                const receiptItems = cart.map((item, idx) => ({
+                  name: item.product.name,
+                  quantity: item.quantity,
+                  price: calculateItemTotal(item) / (item.quantity || 1),
+                  notes: productionItems[idx]?.notes,
+                  groupedOptionals: productionItems[idx]?.groupedOptionals,
+                }));
+                const receiptNotes = [
+                  `Pagamento: ${paymentMethod}`,
+                  deliveryFee > 0 ? `Taxa de entrega: R$ ${deliveryFee.toFixed(2)}` : '',
+                  discountAmount > 0 ? `Desconto: R$ ${discountAmount.toFixed(2)}` : '',
+                ].filter(Boolean).join(' | ');
+                await printOnlyReceipt({
+                  companyId: company.id,
+                  orderCode: (newOrder as any).order_code || '',
+                  dailyNumber: newOrder.daily_number || 0,
+                  shortCode: (newOrder as any).short_code || undefined,
+                  customerName,
+                  items: receiptItems,
+                  total: orderTotal,
+                  notes: receiptNotes,
+                  paperSize: settings.printerPaperSize,
+                  printLayout: settings.printLayout,
+                  estimatedWaitTime: settings.estimatedWaitTime,
+                  deliveryAddress: deliveryType !== 'pickup' && fullAddress ? fullAddress : null,
+                });
+              } catch (receiptErr) {
+                console.error('Receipt print queue error:', receiptErr);
+              }
+            }
           } catch (printErr) {
             console.error('Production ticket print queue error:', printErr);
           }
         }
+
       }
 
       // Send scheduled order confirmation is handled server-side in notify-store-order
