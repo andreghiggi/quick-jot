@@ -400,3 +400,10 @@ export async function printOnlyReceipt(payload: PrintPayload) {
   const label = payload.shortCode || `#${payload.dailyNumber}`;
   await enqueue(payload.companyId, `Recibo ${label}`, buildReceiptHTMLForCompany(payload));
 }
+
+/** Gera o HTML do recibo (mesmo layout de printOnlyReceipt) sem enfileirar.
+ *  Usado quando o caller precisa direcionar o job para uma estação específica. */
+export function buildReceiptHtmlForQueue(payload: PrintPayload): string {
+  return buildReceiptHTMLForCompany(payload);
+}
+
