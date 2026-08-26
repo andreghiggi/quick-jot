@@ -34,6 +34,11 @@ interface PDVV2PaymentDialogProps {
   onSplitPaid?: (perPerson: number, totalPeople: number) => void;
   /** Show "Geração de Documentos" + "Impressão Automática" — habilitar para balcão/retirada/mesa */
   showDocumentMode?: boolean;
+  /**
+   * Quando true, o pop-up "Imprimir recibo de venda?" nunca é exibido —
+   * a venda é finalizada direto sem impressão. Usado pela Venda Rápida.
+   */
+  skipReceiptPrompt?: boolean;
   /** Permite adicionar itens à cobrança (mesa importada / retirada) */
   showAddItem?: boolean;
   /** Canal das formas de pagamento. Default: 'pdv' */
