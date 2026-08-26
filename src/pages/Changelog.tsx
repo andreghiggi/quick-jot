@@ -14,6 +14,13 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '26/08/2026',
+    version: '1.68.7-beta',
+    type: 'fix',
+    description: 'Impressão (somente Amore Mio): auto_printer.py v1.7.3 deixa a comanda e o recibo iguais aos PDFs de referência. O nome do produto não é mais cortado na margem direita (agora sai "1x Nome do item" com quebra de linha), a previsão volta à ordem correta ("Pronto até: 20:41"), o recibo recupera separadores tracejados, subtotal/total alinhados à direita, bloco de pagamento e o rodapé "Obrigado pela preferência!". Também acabou a sobreposição de linhas no rodapé, e as fontes ficaram maiores e com o peso correto no papel de 80mm. Para aplicar: baixar novamente o auto_printer.py em Configurações → Impressão e reiniciar o iniciar_impressao.cmd. Nenhuma outra loja foi alterada.',
+  },
+  {
+
+    date: '26/08/2026',
     version: '1.68.6-beta',
     type: 'fix',
     description: 'Impressão (somente Amore Mio): auto_printer.py v1.7.2 passa a interpretar os blocos reais do Layout V2, em vez de reduzir o HTML a texto simples. Comanda e recibo recuperam a hierarquia dos PDFs de referência, com fontes em pontos, títulos e pedido maiores, faixa preta, alinhamentos, itens e totais proporcionais. A largura fica limitada ao papel configurado (58mm/80mm), inclusive ao testar no Microsoft Print to PDF em A4. É necessário baixar o printer atualizado e reiniciar o iniciar_impressao.cmd.',
