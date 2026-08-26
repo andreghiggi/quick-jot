@@ -3150,6 +3150,28 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   <>Avançar <ArrowRight className="w-4 h-4" /></>
                 )}
               </Button>
+            ) : isAmoreMio ? (
+              // Amore Mio — cobra primeiro, depois envia para a cozinha (pedido já entregue)
+              !amoreChargeResult ? (
+                <Button
+                  className="flex-1 gap-2"
+                  onClick={() => setPickupChargeOpen(true)}
+                  disabled={cart.length === 0 || isSubmitting || tefProcessing}
+                >
+                  💳 Cobrar
+                </Button>
+              ) : (
+                <Button
+                  className="flex-1 gap-2"
+                  onClick={() => handleSubmit(amoreChargeResult)}
+                  disabled={isSubmitting || tefProcessing}
+                  title="Cria o pedido já entregue, imprime recibo + comanda e soma no caixa"
+                >
+                  {isSubmitting
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                    : '👨‍🍳 Enviar para Cozinha'}
+                </Button>
+              )
             ) : isLancheriaI9 ? (
               // Lancheria I9 — Dois botões: enviar p/ cozinha (sem pagamento) ou finalizar (paga + entrega)
               <>
