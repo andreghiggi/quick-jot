@@ -2448,6 +2448,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
         <DialogContent
           className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+          onOpenAutoFocus={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
           onFocusOutside={(e) => e.preventDefault()}
         >
