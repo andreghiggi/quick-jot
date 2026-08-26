@@ -242,21 +242,42 @@ def normalizar_marcadores(texto):
 
 def montar_linhas_estilizadas(texto, colunas=32):
     """
-    Converte o texto da comanda em linhas com estilo (normal/bold/invertido),
-    reproduzindo o layout de referencia da comanda de producao 58mm.
-    Retorna lista de tuplas (linha, estilo).
+    Converte o texto da comanda em linhas com PAPEL LOGICO (estilo por
+    elemento), reproduzindo a hierarquia do layout V2 de referencia:
+    titulo, modalidade, numero do pedido, faixa do cliente, data/hora,
+    "Pronto ate", itens, adicionais, observacoes e rodape.
+
+    Retorna lista de tuplas (linha, estilo). Estilos possiveis:
+      titulo | tipo | pedido | cliente | datetime | pronto |
+      item | add | obs | normal | rodape | espaco
     """
     import re as _re
     import textwrap as _tw
+
+    # Colunas efetivas por estilo (fontes maiores cabem menos caracteres)
+    fator = {
+        "titulo": 0.72,
+        "tipo": 0.72,
+        "pedido": 0.72,
+        "cliente": 0.80,
+        "datetime": 1.0,
+        "pronto": 0.85,
+        "item": 0.85,
+        "add": 0.90,
+        "obs": 0.90,
+        "normal": 1.0,
+        "rodape": 1.0,
+    }
 
     saida = []
 
     def add(txt, estilo="normal"):
         txt = txt.rstrip()
         if not txt:
-            saida.append(("", "normal"))
+            saida.append(("", "espaco"))
             return
-        for i, parte in enumerate(_tw.wrap(txt, colunas) or [txt]):
+        largura = max(8, int(colunas * fator.get(estilo, 1.0)))
+        for parte in (_tw.wrap(txt, largura) or [txt]):
             saida.append((parte, estilo))
 
     linhas_src = texto.split("\n")
@@ -265,7 +286,6 @@ def montar_linhas_estilizadas(texto, colunas=32):
         linha = linhas_src[idx].strip()
         idx += 1
         if not linha:
-            saida.append(("", "normal"))
             continue
 
         # Quantidade isolada ("1x") junta com o nome do produto da linha seguinte
@@ -281,138 +301,199 @@ def montar_linhas_estilizadas(texto, colunas=32):
         if _re.match(r"^-{2,}\s*FIM.*$", upper):
             continue
 
-        # Tipo do pedido no formato ">> RETIRADA <<"
+        # Linhas de separador do parser antigo
+        if set(linha) <= {"=", "-", ".", "_"} and len(linha) > 3:
+            continue
+
+        # Titulo da comanda
+        if "COMANDA DE PRODU" in upper:
+            add("COMANDA DE PRODUÇÃO", "titulo")
+            continue
+
+        # Modalidade no formato ">> RETIRADA <<"
         m_tipo = _re.match(r"^>>\s*([A-ZÀ-Ú ]+?)\s*<<$", upper)
         if m_tipo:
-            add(m_tipo.group(1).strip(), "invert")
+            add(f">> {m_tipo.group(1).strip()} <<", "tipo")
             continue
 
-        # Cabecalho / titulo
-        if ("COMANDA DE PRODU" in upper or upper.startswith("COMANDA #")
-                or upper.startswith("PEDIDO") or upper.startswith("#")):
-            add(linha, "bold")
+        # Modalidade solta (RETIRADA / ENTREGA / MESA / BALCAO)
+        if upper.strip("= ") in ("RETIRADA", "ENTREGA", "MESA", "BALCAO", "BALCÃO", "DELIVERY"):
+            add(f">> {upper.strip('= ')} <<", "tipo")
             continue
 
-        # Previsao de entrega/retirada
-        if upper.startswith("PRONTO AT") or upper.startswith("PREVIS"):
-            add(linha, "bold")
+        # Numero do pedido / comanda
+        if upper.startswith("PEDIDO") or upper.startswith("COMANDA #") or upper.startswith("#"):
+            add(upper, "pedido")
             continue
 
         # Nome do cliente -> faixa invertida (fundo preto)
         m_cli = _re.match(r"^CLIENTE:\s*(.+)$", linha, _re.I)
         if m_cli:
-            add(m_cli.group(1).strip().upper(), "invert")
+            add(m_cli.group(1).strip().upper(), "cliente")
             continue
 
-        # Tipo do pedido (RETIRADA / ENTREGA / MESA / BALCAO)
-        if upper.strip("= ") in ("RETIRADA", "ENTREGA", "MESA", "BALCAO", "BALCÃO", "DELIVERY"):
-            add(upper.strip("= "), "invert")
+        # Endereco de entrega -> tambem em faixa invertida
+        m_end = _re.match(r"^ENDERECO:\s*(.+)$", linha, _re.I)
+        if m_end:
+            add(m_end.group(1).strip().upper(), "cliente")
             continue
 
-        # Linhas de separador do parser antigo
-        if set(linha) <= {"=", "-"} and len(linha) > 3:
+        # Previsao de entrega/retirada
+        if upper.startswith("PRONTO AT") or upper.startswith("PREVIS"):
+            add(linha, "pronto")
             continue
 
         # Data / hora
         if _re.match(r"^\d{2}/\d{2}/\d{4}", linha):
-            add(linha, "bold")
+            add(linha, "datetime")
             continue
 
         # Item: "1x Produto"
         m_item = _re.match(r"^(\d+)\s*x\s*(.+)$", linha, _re.I)
         if m_item:
-            saida.append(("", "normal"))
+            saida.append(("", "espaco"))
             add(f"{m_item.group(1)}x  {m_item.group(2).strip()}", "item")
             continue
 
-        # Descricao / observacao
-        if upper.startswith("DESCRI") or upper.startswith("OBS"):
-            add(linha, "bold")
+        # Observacoes
+        if upper.startswith("OBS") or upper.startswith("DESCRI"):
+            add(linha, "obs")
             continue
 
         # Adicionais
         if linha.startswith(">>"):
-            add(">> " + linha.lstrip("> ").upper(), "bold")
+            add(">> " + linha.lstrip("> ").upper(), "add")
             continue
 
         add(linha, "normal")
 
-    # Rodape padrao
-    saida.append(("", "normal"))
-    add("--- FIM DO PEDIDO ---", "bold")
+    saida.append(("", "espaco"))
+    add("--- FIM ---", "rodape")
     return saida
 
 
-def imprimir_gdi(printer_name, texto, largura_mm=58):
+def imprimir_gdi(printer_name, texto, largura_mm=None):
     """
-    Renderiza o conteudo como PAGINA GRAFICA (GDI) usando win32ui.
+    Renderiza o conteudo como PAGINA GRAFICA (GDI) usando win32ui,
+    respeitando o TAMANHO DE PAPEL configurado na loja (58mm ou 80mm)
+    e reproduzindo a hierarquia visual do layout V2 de referencia.
+
     Necessario para drivers que nao aceitam RAW (Microsoft Print to PDF,
-    drivers de POS instalados em modo grafico). Gera arquivo/pagina real,
-    eliminando o problema de PDF com 0 bytes.
+    drivers de POS em modo grafico) e evita PDF com 0 bytes.
     """
     try:
         import win32ui
         import win32con
 
+        if not largura_mm:
+            largura_mm = 80 if str(PAPER_SIZE).startswith("80") else 58
+
         dc = win32ui.CreateDC()
         dc.CreatePrinterDC(printer_name)
 
-        # Area imprimivel em pixels
-        largura_px = dc.GetDeviceCaps(8)   # HORZRES
-        altura_px = dc.GetDeviceCaps(10)   # VERTRES
+        # Area imprimivel real
+        largura_px = dc.GetDeviceCaps(8)    # HORZRES
+        altura_px = dc.GetDeviceCaps(10)    # VERTRES
+        dpi_x = dc.GetDeviceCaps(88) or 203  # LOGPIXELSX
         dpi_y = dc.GetDeviceCaps(90) or 203  # LOGPIXELSY
 
+        # Se o driver nao informa a area, estima pela largura do papel
         if largura_px <= 0:
-            largura_px = 384 if largura_mm == 58 else 576
+            util_mm = largura_mm - 6
+            largura_px = int(dpi_x * util_mm / 25.4)
 
-        # Fonte monoespacada dimensionada para caber ~32 colunas em 58mm
-        colunas = 32 if largura_mm == 58 else 48
-        altura_fonte = max(-int(dpi_y / 12), -40)
-        fonte_normal = win32ui.CreateFont({
-            "name": "Consolas",
-            "height": altura_fonte,
-            "weight": 400,
-        })
-        fonte_bold = win32ui.CreateFont({
-            "name": "Consolas",
-            "height": altura_fonte,
-            "weight": 700,
-        })
+        # Corpo dimensionado pelo papel: ~32 colunas em 58mm, ~44 em 80mm
+        colunas_base = 44 if largura_mm >= 80 else 32
+        # Tamanho da fonte do corpo derivado da largura util (nao do DPI fixo),
+        # garantindo que o texto ocupe a largura do papel configurado.
+        largura_char_alvo = max(6, largura_px / colunas_base)
+        # Em fontes monoespacadas, altura ~ largura / 0.6
+        altura_corpo = max(12, int(largura_char_alvo / 0.6))
+
+        escala = {
+            "titulo": 1.30,
+            "tipo": 1.30,
+            "pedido": 1.30,
+            "cliente": 1.18,
+            "datetime": 1.00,
+            "pronto": 1.12,
+            "item": 1.12,
+            "add": 1.05,
+            "obs": 1.05,
+            "normal": 1.00,
+            "rodape": 1.00,
+            "espaco": 0.55,
+        }
+        peso = {
+            "titulo": 700,
+            "tipo": 700,
+            "pedido": 700,
+            "cliente": 700,
+            "datetime": 700,
+            "pronto": 700,
+            "item": 700,
+            "add": 700,
+            "obs": 700,
+            "normal": 400,
+            "rodape": 700,
+            "espaco": 400,
+        }
+        invertidos = {"cliente"}
+
+        cache_fontes = {}
+
+        def fonte(estilo):
+            if estilo not in cache_fontes:
+                cache_fontes[estilo] = win32ui.CreateFont({
+                    "name": "Consolas",
+                    "height": -max(8, int(altura_corpo * escala.get(estilo, 1.0))),
+                    "weight": peso.get(estilo, 400),
+                })
+            return cache_fontes[estilo]
 
         dc.StartDoc("ComandaTech Comanda")
         dc.StartPage()
-        dc.SelectObject(fonte_bold)
 
-        tm = dc.GetTextMetrics()
-        linha_altura = tm["tmHeight"] + tm["tmExternalLeading"]
-        largura_char = tm["tmAveCharWidth"] or 10
-        y = 0
+        linhas = montar_linhas_estilizadas(texto, colunas_base)
 
-        linhas = montar_linhas_estilizadas(texto, colunas)
+        margem = max(2, int(dpi_x * 1.0 / 25.4))
+        y = margem
         for linha, estilo in linhas:
-            if y + linha_altura > altura_px and altura_px > 0:
+            dc.SelectObject(fonte(estilo))
+            tm = dc.GetTextMetrics()
+            altura_linha = tm["tmHeight"] + tm["tmExternalLeading"]
+
+            if estilo == "espaco":
+                y += max(2, int(altura_linha * 0.5))
+                continue
+
+            if altura_px > 0 and y + altura_linha > altura_px:
                 dc.EndPage()
                 dc.StartPage()
-                y = 0
-            if estilo == "invert":
-                dc.SelectObject(fonte_bold)
-                largura_faixa = largura_px if largura_px > 0 else largura_char * colunas
-                dc.FillSolidRect((0, y, largura_faixa, y + linha_altura), 0x000000)
+                y = margem
+                dc.SelectObject(fonte(estilo))
+
+            if estilo in invertidos:
+                dc.FillSolidRect((0, y, largura_px, y + altura_linha), 0x000000)
                 dc.SetBkMode(win32con.TRANSPARENT)
                 dc.SetTextColor(0xFFFFFF)
-                dc.TextOut(2, y, linha[:colunas])
+                dc.TextOut(margem, y, linha)
                 dc.SetTextColor(0x000000)
             else:
-                dc.SelectObject(fonte_bold if estilo in ("bold", "item") else fonte_normal)
                 dc.SetBkMode(win32con.TRANSPARENT)
                 dc.SetTextColor(0x000000)
-                dc.TextOut(0, y, linha[:colunas * 2])
-            y += linha_altura
+                dc.TextOut(margem, y, linha)
+
+            y += altura_linha
 
         dc.EndPage()
         dc.EndDoc()
         dc.DeleteDC()
-        log(f"Impressao GRAFICA (GDI) concluida em '{printer_name}'", "GDI")
+        log(
+            f"Impressao GRAFICA (GDI) concluida em '{printer_name}' "
+            f"[papel {largura_mm}mm / {colunas_base} colunas]",
+            "GDI",
+        )
         return True
     except Exception as e:
         log(f"Falha no modo grafico (GDI): {e}", "ERRO")
