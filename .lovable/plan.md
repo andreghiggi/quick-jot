@@ -32,9 +32,9 @@ Escopo estrito: somente a impressão local da **Amore Mio** (`f5f9eec3-67bc-497a
 
 ## Critérios de aceite
 
-- Cabeçalho e informações principais ocupam a largura útil do papel, sem o aspecto minúsculo da foto atual.
-- `CLIENTE LOJA` aparece em faixa preta; título, modalidade, pedido, data e previsão seguem a hierarquia do PDF.
-- Item mostra quantidade em destaque e nome com peso normal, como na referência.
-- POS 58 mm imprime conteúdo; Microsoft Print to PDF gera arquivo válido e não vazio.
+- A impressão ocupa a largura do papel configurado na loja (hoje 80 mm), sem o aspecto estreito e minúsculo da foto atual.
+- O resultado é visualmente igual ao PDF de referência: título, modalidade, pedido, faixa preta do cliente, data, previsão, itens e rodapé.
+- Alterar o tamanho de papel nas configurações muda a impressão de acordo, sem editar o script.
+- POS imprime conteúdo; Microsoft Print to PDF gera arquivo válido e não vazio.
 - Cada job gera apenas uma impressão.
 - Nenhuma outra loja é afetada.
