@@ -2340,18 +2340,21 @@ export type Database = {
       order_short_code_counters: {
         Row: {
           company_id: string
+          counter_date: string | null
           next_value: number
           prefix: string
           updated_at: string
         }
         Insert: {
           company_id: string
+          counter_date?: string | null
           next_value?: number
           prefix: string
           updated_at?: string
         }
         Update: {
           company_id?: string
+          counter_date?: string | null
           next_value?: number
           prefix?: string
           updated_at?: string

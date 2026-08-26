@@ -55,6 +55,8 @@ async function enqueue(companyId: string, label: string, html: string) {
 
 function buildReceiptHTML(payload: PrintPayload): string {
   const w = payload.paperSize === '58mm' ? '58mm' : '80mm';
+  // Amore Mio: recibo não exibe o código hexadecimal interno (order_code).
+  const hideOrderCode = payload.companyId === 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
   // V2 layout: markers ([ADD] com valor, [ADDGROUP_LABEL], [ENDERECO], [CLIENTE])
   // são emitidos para todas as lojas que usam o layout V2. O auto_printer.py
   // v8.34+ interpreta; versões anteriores ignoram (retrocompatível).
@@ -128,7 +130,7 @@ function buildReceiptHTML(payload: PrintPayload): string {
   </style></head><body>
     <h2>RECIBO</h2>
     <div style="font-size:14px;font-weight:bold;">${payload.shortCode ? escapeHtml(payload.shortCode) : `Pedido #${payload.dailyNumber}`}</div>
-    <div style="font-size:10px;">${escapeHtml(payload.orderCode)}</div>
+    ${hideOrderCode ? '' : `<div style="font-size:10px;">${escapeHtml(payload.orderCode)}</div>`}
     <div style="font-size:12px;">${isV2 ? `[CLIENTE]${escapeHtml(payload.customerName)}[/CLIENTE]` : `Cliente: ${escapeHtml(payload.customerName)}`}</div>
     ${enderecoHtml}
     ${prontoAteHtml}

@@ -45,6 +45,9 @@ interface OrderCardChargeDialogProps {
  * - O notes do pedido recebe um sufixo "[COBRADO] Pagamento: <forma>" para
  *   o operador identificar visualmente que a cobrança foi realizada.
  */
+/** Amore Mio: Pedido Express "Cliente Loja" é finalizado (entregue) ao ser cobrado. */
+const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
+
 export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: OrderCardChargeDialogProps) {
   const { company } = useAuthContext();
   const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
@@ -54,6 +57,12 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const fiscalEnabled = isModuleEnabled('fiscal');
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
+
+  /** Amore Mio + Pedido Express "Cliente Loja": ao quitar, o pedido vai direto para entregue. */
+  const shouldFinalizeOnCharge =
+    company?.id === AMORE_MIO_ID &&
+    order.origin === 'balcao' &&
+    (order.customerName || '').trim() === 'Cliente Loja';
 
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
@@ -389,6 +398,9 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         paid_amount: isFullyPaid ? baseTotalAfterExtras : nextPaidAmount,
         paid_items: { ...((order.paidItems as any) || {}), paid_qtys: nextPaidItems },
       };
+      if (shouldFinalizeOnCharge && isFullyPaid) {
+        orderUpdate.status = 'delivered';
+      }
       // Atualiza/cria/limpa o split_state quando esta cobrança é por divisão
       // de pessoas. Mantém continuidade entre reaberturas do "Cobrar".
       if (isSplitByPeople && params.splitInfo) {
@@ -599,6 +611,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         notes: newNotes,
         payment_status: isFullyPaid ? 'paid' : 'partial',
         paid_amount: isFullyPaid ? baseTotal : nextPaidAmount,
+        ...(shouldFinalizeOnCharge && isFullyPaid ? { status: 'delivered' as const } : {}),
       }).eq('id', order.id);
 
       // NFC-e com pagamentos_split — só quando solicitado pelo dialog
