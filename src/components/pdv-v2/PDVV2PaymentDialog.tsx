@@ -1341,10 +1341,14 @@ export function PDVV2PaymentDialog({
                   size="lg"
                   variant="outline"
                   className="h-16 text-base"
-                  onClick={() => {
+                  onClick={async () => {
                     setPendingDocMode('sale_only');
                     setDocChoiceOpen(false);
-                    setPrintChoiceOpen(true);
+                    if (skipReceiptPrompt) {
+                      await finalizeConfirm('sale_only', false);
+                    } else {
+                      setPrintChoiceOpen(true);
+                    }
                   }}
                 >
                   Somente Venda
@@ -1439,7 +1443,7 @@ export function PDVV2PaymentDialog({
               onClick={() => {
                 setCustomerDocument('');
                 setCpfChoiceOpen(false);
-                if (isLancheriaI9 && showDocumentMode) {
+                if (isLancheriaI9 && showDocumentMode && !skipReceiptPrompt) {
                   setPrintChoiceOpen(true);
                 } else {
                   finalizeConfirm(pendingDocMode);
@@ -1453,7 +1457,7 @@ export function PDVV2PaymentDialog({
                 // Se o operador não digitou CPF/CNPJ, segue como "Sem CPF"
                 // (NFC-e sem destinatário). Caso contrário, usa o que foi digitado.
                 setCpfChoiceOpen(false);
-                if (isLancheriaI9 && showDocumentMode) {
+                if (isLancheriaI9 && showDocumentMode && !skipReceiptPrompt) {
                   setPrintChoiceOpen(true);
                 } else {
                   finalizeConfirm(pendingDocMode);
