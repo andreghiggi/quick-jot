@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '26/08/2026',
+    version: '1.68.3-beta',
+    type: 'improvement',
+    description: 'Venda Rápida (Amore Mio): agora é uma venda pura de caixa. Não pergunta mais "Imprimir recibo de venda?", não gera pedido e não envia comanda de produção. O valor entra no caixa na forma de pagamento escolhida e a venda aparece no Relatório de Vendas como Venda Rápida, com os itens no detalhe.',
+  },
+  {
     date: '26/07/2026',
     version: '1.63.4-beta',
     type: 'fix',
