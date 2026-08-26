@@ -99,6 +99,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Redeploy trigger: garantir isLancheriaI9=true em produção (Margen/Bon Appetit)
   const isLancheriaI9 = true;
 
+  // Amore Mio — fluxo mobile: produto → cliente → cobrar → enviar para cozinha (pedido já entregue).
+  const AMORE_MIO_COMPANY_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
+  const isAmoreMio = company?.id === AMORE_MIO_COMPANY_ID;
+  const [amoreChargeResult, setAmoreChargeResult] = useState<any | null>(null);
+
   // Para a Lancheria I9: usa TODAS as formas ativas (deduplicadas por nome+integração).
   // Demais lojas mantêm apenas as do canal Express.
   const activePaymentMethods = useMemo(() => {
