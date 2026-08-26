@@ -3483,6 +3483,26 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             // Caso contrário, mantém o diálogo aberto para cobrar a próxima parte
             return;
           }
+          // Amore Mio: a cobrança não cria o pedido — guarda o resultado e
+          // libera o botão "Enviar para Cozinha" (que grava e imprime tudo).
+          if (isAmoreMio && step === 5) {
+            setAmoreChargeResult({
+              paymentMethodId,
+              paymentName,
+              finalTotal,
+              discount,
+              finalizeNow: true,
+              documentMode: dm,
+              printDocument,
+              tefOptions,
+              tefIntegration,
+              customerDocument,
+              extraItems,
+            });
+            setPickupChargeOpen(false);
+            toast({ title: 'Pagamento registrado', description: 'Agora envie o pedido para a cozinha.' });
+            return;
+          }
           // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
           // e imprime apenas recibo. Caso contrário (Retirada vinda da etapa 4), mantém fluxo original.
           const finalizeNow = isLancheriaI9 && step === 5;
