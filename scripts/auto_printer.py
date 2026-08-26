@@ -707,14 +707,27 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
             altura_linha = max(12, tm["tmHeight"] + tm["tmExternalLeading"])
             espaco_depois = max(2, int(dpi_y * (1.2 if estilo in ("title", "type", "order", "inverse", "ready", "total") else 0.7) / 25.4))
 
+            # Separador tracejado ocupando toda a largura util (igual aos PDFs V2).
+            if estilo == "sep":
+                traco_px = max(1, dc.GetTextExtent("-")[0])
+                texto = "-" * max(8, largura_util // traco_px)
+                direita = ""
+
+            direita_propria = False
             if direita:
                 direita_px = dc.GetTextExtent(direita)[0]
-                limite_esquerda = max(int(largura_util * 0.45), largura_util - direita_px - margem)
-                linhas = quebrar(texto, estilo, limite_esquerda)
+                limite_esquerda = largura_util - direita_px - max(6, margem)
+                if limite_esquerda < int(largura_util * 0.35):
+                    # Nao cabe lado a lado: valor vai para a linha seguinte, alinhado a direita.
+                    direita_propria = True
+                    linhas = quebrar(texto, estilo, largura_util)
+                else:
+                    linhas = quebrar(texto, estilo, limite_esquerda)
             else:
                 linhas = quebrar(texto, estilo, largura_util)
 
-            bloco_altura = altura_linha * len(linhas) + espaco_depois
+            total_linhas = len(linhas) + (1 if direita_propria else 0)
+            bloco_altura = altura_linha * total_linhas + espaco_depois
             if altura_px > 0 and y + bloco_altura > altura_px:
                 dc.EndPage()
                 dc.StartPage()
@@ -740,10 +753,12 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
 
             if direita:
                 direita_px = dc.GetTextExtent(direita)[0]
-                dc.TextOut(margem + max(0, largura_util - direita_px), y, direita)
+                y_direita = y + (len(linhas) if direita_propria else 0) * altura_linha
+                dc.TextOut(margem + max(0, largura_util - direita_px), y_direita, direita)
 
             dc.SetTextColor(0x000000)
             y += bloco_altura
+
 
         dc.EndPage()
         dc.EndDoc()
