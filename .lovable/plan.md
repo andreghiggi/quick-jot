@@ -24,11 +24,17 @@ Prefixos: `B` balcão, `R` retirada, `D` entrega, `M` mesa.
 - No recibo V2, deixar de imprimir a linha do `order_code` para a Amore Mio, mantendo o código curto (`B-001`) em destaque.
 - A comanda de produção já não exibe esse número; nada muda nela.
 
+### 3. Pedido Express "Cliente Loja" finaliza ao cobrar
+- Na Amore Mio, quando o pedido do Pedido Express for do tipo Cliente Loja e o pagamento for cobrado com sucesso, o pedido passa direto para **Entregue**, sem parar em Pendente/Preparando/Pronto.
+- Vale apenas para esse fluxo; pedidos de cardápio, entrega e mesa seguem o fluxo normal de status.
+
 ## Detalhes técnicos
 
 - Migration: adicionar coluna de data ao `order_short_code_counters` e ajustar `assign_order_short_code()` para, nas empresas com reinício diário, comparar `(now() at time zone 'America/Sao_Paulo')::date` e reiniciar `next_value` quando a data mudar. Comportamento antigo preservado para as demais lojas.
 - Frontend: `src/utils/pdvV2Print.ts` passa a omitir a linha `orderCode` quando a loja for a Amore Mio (guarda por `company_id`, como nos demais ajustes exclusivos).
+- Finalização automática: após a cobrança do Pedido Express (Cliente Loja), atualizar o status do pedido para `delivered`, com guarda por `company_id` da Amore Mio.
 - Registrar nova versão em `src/version.ts` e em Novidades.
+
 
 ## Validação
 
