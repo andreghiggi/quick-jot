@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '26/08/2026',
+    version: '1.68.5-beta',
+    type: 'fix',
+    description: 'Impressão (Amore Mio): a comanda de produção voltou ao layout V2 de referência e agora respeita o tamanho de papel configurado em Configurações. O auto_printer.py v1.7.1 estava fixo em 58mm/32 colunas, fazendo a impressão sair estreita e minúscula no papel de 80mm da loja. Agora título, modalidade, número do pedido, faixa preta do cliente, data/hora, "Pronto até", itens e rodapé têm tamanhos e pesos próprios, e o script lê papel e layout direto do painel. Para aplicar: baixar novamente o auto_printer.py em Configurações → Impressão, substituir em C:\\ComandaTech e reiniciar o iniciar_impressao.cmd. Nenhuma outra loja foi alterada.',
+  },
+  {
+    date: '26/08/2026',
     version: '1.68.3-beta',
     type: 'improvement',
     description: 'Venda Rápida (Amore Mio): agora é uma venda pura de caixa. Não pergunta mais "Imprimir recibo de venda?", não gera pedido e não envia comanda de produção. O valor entra no caixa na forma de pagamento escolhida e a venda aparece no Relatório de Vendas como Venda Rápida, com os itens no detalhe.',
