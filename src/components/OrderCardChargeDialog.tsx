@@ -45,6 +45,9 @@ interface OrderCardChargeDialogProps {
  * - O notes do pedido recebe um sufixo "[COBRADO] Pagamento: <forma>" para
  *   o operador identificar visualmente que a cobrança foi realizada.
  */
+/** Amore Mio: Pedido Express "Cliente Loja" é finalizado (entregue) ao ser cobrado. */
+const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
+
 export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: OrderCardChargeDialogProps) {
   const { company } = useAuthContext();
   const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
