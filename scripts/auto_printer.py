@@ -10,7 +10,7 @@ from datetime import datetime
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.7.2"
+SCRIPT_VERSION = "1.7.3"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -492,11 +492,20 @@ def extrair_blocos_v2(html_content):
         value = _re.sub(r"\[/?(?:CLIENTE|ENDERECO|ADD|ADDGROUP_LABEL)\]", "", value)
         return _re.sub(r"\s+", " ", value).strip()
 
+    def normalizar_ready(value):
+        """Corrige a ordem invertida do DOM: '20:41 Pronto ate:' -> 'Pronto ate: 20:41'."""
+        value = clean_marker(value)
+        m = _re.match(r"^(\d{1,2}:\d{2})\s*(pronto at[eé]:?)\s*$", value, _re.I)
+        if m:
+            return f"Pronto até: {m.group(1)}"
+        return value
+
     def block(text, style="normal", align="left", right=None):
         text = clean_marker(text)
         if text or right:
             return {"text": text, "style": style, "align": align, "right": clean_marker(right or "")}
         return None
+
 
     blocos = []
     is_receipt = any(node.tag == "h2" and "RECIBO" in node.text().upper() for node in nodes)
@@ -522,10 +531,12 @@ def extrair_blocos_v2(html_content):
             blocos.append(block(datetimes[0].text(), "datetime", "center"))
         ready = by_class("ready-inline")
         if ready:
-            blocos.append(block(ready[0].text(), "ready", "center"))
+            blocos.append(block(normalizar_ready(ready[0].text()), "ready", "center"))
         address = next((node for node in infos if "[ENDERECO]" in node.text()), None)
         if address:
             blocos.append(block(address.text(), "inverse"))
+
+        blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
         for item in by_class("item"):
             # Ignora containers que apenas envolvem outros .item.
@@ -534,7 +545,9 @@ def extrair_blocos_v2(html_content):
             qty = next((node.text() for node in walk(item) if "qty" in node.classes()), "")
             name = next((node.text() for node in walk(item) if "name" in node.classes()), "")
             if qty or name:
-                blocos.append({"text": clean_marker(qty), "style": "item_qty", "align": "left", "right": clean_marker(name)})
+                # Uma unica coluna com quebra de linha: evita corte do nome na margem.
+                linha_item = " ".join(p for p in (clean_marker(qty), clean_marker(name)) if p)
+                blocos.append({"text": linha_item, "style": "item_qty", "align": "left", "right": ""})
             for node in walk(item):
                 classes = node.classes()
                 if "description" in classes:
@@ -548,13 +561,17 @@ def extrair_blocos_v2(html_content):
         blocos.append(block("--- FIM ---", "footer", "center"))
         return [b for b in blocos if b]
 
+
     if is_receipt:
         body = next((node for node in nodes if node.tag == "body"), parser.root)
         blocos.append(block(STORE_NAME or "COMANDATECH", "store", "center"))
         for child in body.children:
             text = child.text()
             classes = child.classes()
-            if not text or child.tag == "hr":
+            if child.tag == "hr":
+                blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
+                continue
+            if not text:
                 continue
             if child.tag == "h2":
                 continue
@@ -565,8 +582,8 @@ def extrair_blocos_v2(html_content):
                 blocos.append(block(text, "inverse"))
             elif "[ENDERECO]" in text:
                 blocos.append(block(text, "inverse"))
-            elif text.upper().startswith("PRONTO AT"):
-                blocos.append(block(text, "ready"))
+            elif text.upper().startswith("PRONTO AT") or _re.match(r"^\d{1,2}:\d{2}\s*pronto", text, _re.I):
+                blocos.append(block(normalizar_ready(text), "ready"))
             elif _re.match(r"^[A-Z]-\d{3,}$", text, _re.I) or text.upper().startswith("PEDIDO #"):
                 blocos.append(block(text, "order", "center"))
             elif _re.match(r"^[A-F0-9]{6,}$", text, _re.I):
@@ -577,12 +594,17 @@ def extrair_blocos_v2(html_content):
                 blocos.append(block(text.replace(">>", "+", 1), "additional"))
             elif child.tag == "div" and any(grand.tag == "span" for grand in child.children):
                 spans = [grand.text() for grand in child.children if grand.tag == "span"]
-                blocos.append({"text": clean_marker(spans[0]) if spans else clean_marker(text), "style": "item", "align": "left", "right": clean_marker(spans[1]) if len(spans) > 1 else ""})
+                estilo_linha = "total" if _re.match(r"^(sub\s*total|subtotal|total)", clean_marker(spans[0] if spans else text), _re.I) else "item"
+                blocos.append({"text": clean_marker(spans[0]) if spans else clean_marker(text), "style": estilo_linha, "align": "left", "right": clean_marker(spans[1]) if len(spans) > 1 else ""})
             elif _re.match(r"^\d{1,2}/\d{1,2}/\d{4}", text):
                 blocos.append(block(text, "datetime", "center"))
+            elif text.upper().startswith("PAGAMENTO"):
+                blocos.append(block(text.upper(), "ready"))
             else:
                 blocos.append(block(text, "normal"))
-        blocos.append(block("--- FIM ---", "footer", "center"))
+        blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
+        blocos.append(block("Obrigado pela preferência!", "footer", "center"))
+
         return [b for b in blocos if b]
 
     return []
@@ -619,20 +641,21 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
         largura_util = max(80, largura_canvas - (margem * 2))
 
         pontos = {
-            "store": 16, "title": 15, "type": 16, "order": 17,
-            "code": 11, "inverse": 14, "datetime": 12, "ready": 14,
-            "item_qty": 14, "item": 12, "description": 10,
-            "group": 12, "additional": 13, "normal": 11,
-            "total": 16, "footer": 11,
+            "store": 17, "title": 17, "type": 17, "order": 17,
+            "code": 12, "inverse": 16, "datetime": 15, "ready": 16,
+            "item_qty": 15, "item": 14, "description": 12,
+            "group": 13, "additional": 13, "normal": 14,
+            "total": 17, "footer": 14, "sep": 12,
         }
         pesos = {
             "store": 800, "title": 800, "type": 800, "order": 800,
-            "code": 500, "inverse": 800, "datetime": 600, "ready": 800,
-            "item_qty": 800, "item": 500, "description": 400,
-            "group": 800, "additional": 800, "normal": 500,
-            "total": 800, "footer": 800,
+            "code": 500, "inverse": 800, "datetime": 700, "ready": 800,
+            "item_qty": 800, "item": 600, "description": 500,
+            "group": 800, "additional": 700, "normal": 700,
+            "total": 800, "footer": 700, "sep": 700,
         }
         invertidos = {"inverse"}
+
 
         cache_fontes = {}
 
@@ -684,14 +707,27 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
             altura_linha = max(12, tm["tmHeight"] + tm["tmExternalLeading"])
             espaco_depois = max(2, int(dpi_y * (1.2 if estilo in ("title", "type", "order", "inverse", "ready", "total") else 0.7) / 25.4))
 
+            # Separador tracejado ocupando toda a largura util (igual aos PDFs V2).
+            if estilo == "sep":
+                traco_px = max(1, dc.GetTextExtent("-")[0])
+                texto = "-" * max(8, largura_util // traco_px)
+                direita = ""
+
+            direita_propria = False
             if direita:
                 direita_px = dc.GetTextExtent(direita)[0]
-                limite_esquerda = max(int(largura_util * 0.45), largura_util - direita_px - margem)
-                linhas = quebrar(texto, estilo, limite_esquerda)
+                limite_esquerda = largura_util - direita_px - max(6, margem)
+                if limite_esquerda < int(largura_util * 0.35):
+                    # Nao cabe lado a lado: valor vai para a linha seguinte, alinhado a direita.
+                    direita_propria = True
+                    linhas = quebrar(texto, estilo, largura_util)
+                else:
+                    linhas = quebrar(texto, estilo, limite_esquerda)
             else:
                 linhas = quebrar(texto, estilo, largura_util)
 
-            bloco_altura = altura_linha * len(linhas) + espaco_depois
+            total_linhas = len(linhas) + (1 if direita_propria else 0)
+            bloco_altura = altura_linha * total_linhas + espaco_depois
             if altura_px > 0 and y + bloco_altura > altura_px:
                 dc.EndPage()
                 dc.StartPage()
@@ -717,10 +753,12 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
 
             if direita:
                 direita_px = dc.GetTextExtent(direita)[0]
-                dc.TextOut(margem + max(0, largura_util - direita_px), y, direita)
+                y_direita = y + (len(linhas) if direita_propria else 0) * altura_linha
+                dc.TextOut(margem + max(0, largura_util - direita_px), y_direita, direita)
 
             dc.SetTextColor(0x000000)
             y += bloco_altura
+
 
         dc.EndPage()
         dc.EndDoc()
