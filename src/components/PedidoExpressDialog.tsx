@@ -1506,7 +1506,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           // Amore Mio: além da comanda, o recibo sai automaticamente
           // na MESMA estação da comanda, com o mesmo número (short_code).
           const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
-          if (company.id === AMORE_MIO_ID) {
+          if (company.id === AMORE_MIO_ID && !receiptEnqueuedRef) {
             try {
               const { buildReceiptHtmlForQueue } = await import('@/utils/pdvV2Print');
               const receiptItems = cart.map((item) => {
