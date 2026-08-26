@@ -58,6 +58,12 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const fiscalEnabled = isModuleEnabled('fiscal');
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
 
+  /** Amore Mio + Pedido Express "Cliente Loja": ao quitar, o pedido vai direto para entregue. */
+  const shouldFinalizeOnCharge =
+    company?.id === AMORE_MIO_ID &&
+    order.origin === 'balcao' &&
+    (order.customerName || '').trim() === 'Cliente Loja';
+
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
   const [nfceAutoPrint, setNfceAutoPrint] = useState(false);
