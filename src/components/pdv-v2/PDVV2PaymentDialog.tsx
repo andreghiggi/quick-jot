@@ -34,6 +34,11 @@ interface PDVV2PaymentDialogProps {
   onSplitPaid?: (perPerson: number, totalPeople: number) => void;
   /** Show "Geração de Documentos" + "Impressão Automática" — habilitar para balcão/retirada/mesa */
   showDocumentMode?: boolean;
+  /**
+   * Quando true, o pop-up "Imprimir recibo de venda?" nunca é exibido —
+   * a venda é finalizada direto sem impressão. Usado pela Venda Rápida.
+   */
+  skipReceiptPrompt?: boolean;
   /** Permite adicionar itens à cobrança (mesa importada / retirada) */
   showAddItem?: boolean;
   /** Canal das formas de pagamento. Default: 'pdv' */
@@ -112,6 +117,7 @@ export function PDVV2PaymentDialog({
   onItemsPaid,
   onSplitPaid,
   showDocumentMode = false,
+  skipReceiptPrompt = false,
   showAddItem = false,
   channel = 'pdv',
   cashOnly = false,
@@ -1335,10 +1341,14 @@ export function PDVV2PaymentDialog({
                   size="lg"
                   variant="outline"
                   className="h-16 text-base"
-                  onClick={() => {
+                  onClick={async () => {
                     setPendingDocMode('sale_only');
                     setDocChoiceOpen(false);
-                    setPrintChoiceOpen(true);
+                    if (skipReceiptPrompt) {
+                      await finalizeConfirm('sale_only', false);
+                    } else {
+                      setPrintChoiceOpen(true);
+                    }
                   }}
                 >
                   Somente Venda
@@ -1433,7 +1443,7 @@ export function PDVV2PaymentDialog({
               onClick={() => {
                 setCustomerDocument('');
                 setCpfChoiceOpen(false);
-                if (isLancheriaI9 && showDocumentMode) {
+                if (isLancheriaI9 && showDocumentMode && !skipReceiptPrompt) {
                   setPrintChoiceOpen(true);
                 } else {
                   finalizeConfirm(pendingDocMode);
@@ -1447,7 +1457,7 @@ export function PDVV2PaymentDialog({
                 // Se o operador não digitou CPF/CNPJ, segue como "Sem CPF"
                 // (NFC-e sem destinatário). Caso contrário, usa o que foi digitado.
                 setCpfChoiceOpen(false);
-                if (isLancheriaI9 && showDocumentMode) {
+                if (isLancheriaI9 && showDocumentMode && !skipReceiptPrompt) {
                   setPrintChoiceOpen(true);
                 } else {
                   finalizeConfirm(pendingDocMode);

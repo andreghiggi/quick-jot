@@ -13,7 +13,6 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { brl as formatPrice } from '@/components/pdv-v2/_format';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useOrders } from '@/hooks/useOrders';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { useTaxRules } from '@/hooks/useTaxRules';
@@ -22,9 +21,6 @@ import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { openCashDrawer } from '@/utils/cashDrawer';
-import { enqueueProductionByStation } from '@/utils/printRouting';
-import { printOnlyReceipt } from '@/utils/pdvV2Print';
-import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
@@ -46,7 +42,6 @@ export function PDVV2FastCheckout({ companyId }: Props) {
   const { settings: storeSettings } = useStoreSettings({ companyId });
   const { getWeight, reading: readingScale } = useScale();
   const { currentRegister, addSale } = useCashRegister({ companyId });
-  const { addOrder } = useOrders({ companyId });
   const { user } = useAuthContext();
   const { activePaymentMethods: pdvPaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
   const { taxRules } = useTaxRules({ companyId });
@@ -292,82 +287,11 @@ export function PDVV2FastCheckout({ companyId }: Props) {
       const { error: itemsError } = await supabase.from('pdv_sale_items').insert(saleItems);
       if (itemsError) throw itemsError;
 
-      // 4. Criar o pedido (opcional, mas bom para histórico unificado)
-      const created = await addOrder({
-        customerName: 'Cliente Balcão',
-        total: finalTotal,
-        status: 'delivered',
-        origin: 'balcao',
-        items: cart.map(it => ({
-          id: crypto.randomUUID(),
-          productId: it.product_id,
-          name: it.product_name,
-          quantity: it.quantity,
-          price: it.unit_price,
-        })),
-        notes: `[EXPRESS] [COBRADO] [VENDA RÁPIDA] Pagamento: ${opts.methodName}${tefNotesFragment}`,
-      });
-
+      // 4. Venda Rápida NÃO gera pedido nem comanda de produção.
+      //    É uma venda pura de caixa: aparece apenas no Relatório de Vendas.
       const shouldPrint = opts.printDocument !== false;
       const wantsNfce = (opts.tefIntegration ? true : opts.documentMode === 'sale_with_nfce')
         && fiscalEnabled;
-
-      if (created) {
-        // Impressão automática (mesmo padrão do Pedido Express)
-        try {
-          const createdShortCode = created.shortCode;
-          const createdOrderCode = created.orderCode || 'EXPRESS';
-          const createdDailyNumber = created.dailyNumber ?? 0;
-          const paperSize = storeSettings.printerPaperSize || '80mm';
-
-          // 1. Recibo de Venda
-          if (shouldPrint && !wantsNfce) {
-            const printItems = cart.map((item) => ({
-              name: item.product_name,
-              quantity: item.quantity,
-              price: item.unit_price,
-            }));
-
-            await printOnlyReceipt({
-              companyId,
-              orderCode: createdOrderCode,
-              dailyNumber: createdDailyNumber,
-              shortCode: createdShortCode,
-              customerName: 'Cliente Balcão',
-              items: printItems,
-              total: finalTotal,
-              notes: `Pagamento: ${opts.methodName}${discount > 0 ? ` | Desconto: R$ ${discount.toFixed(2)}` : ''} | [VENDA RÁPIDA]`,
-              paperSize,
-              printLayout: storeSettings.printLayout,
-            });
-          }
-
-          // 2. Comanda de Produção (Cozinha)
-          if (storeSettings.autoPrintProductionTicket) {
-            const productionItems = cart.map((item) => ({
-              id: item.product_id,
-              product_id: item.product_id,
-              name: item.product_name,
-              product_name: item.product_name,
-              quantity: item.quantity,
-              category: item.category,
-              category_name: item.category,
-              category_id: item.category_id,
-            }));
-
-            await enqueueProductionByStation(
-              companyId,
-              createdOrderCode,
-              productionItems,
-              createdShortCode || createdDailyNumber.toString(),
-              'Cliente Balcão',
-              'balcao'
-            );
-          }
-        } catch (printErr) {
-          console.error('[FastCheckout] Erro ao enfileirar impressão:', printErr);
-        }
-      }
 
       // 5. NFC-e (fluxo padrão do PDV)
       if (wantsNfce) {
@@ -537,6 +461,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
             title="Venda Rápida"
             channel="pdv"
             showDocumentMode
+            skipReceiptPrompt
             tefStatus={tefStatus}
             printLayout={storeSettings.printLayout as any}
             onConfirm={async (params) => {
