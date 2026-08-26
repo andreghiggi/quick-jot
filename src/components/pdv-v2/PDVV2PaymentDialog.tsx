@@ -1324,32 +1324,50 @@ export function PDVV2PaymentDialog({
       <Dialog open={docChoiceOpen} onOpenChange={setDocChoiceOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Geração de Documentos</DialogTitle>
+            <DialogTitle>
+              {fiscalEnabled ? 'Geração de Documentos' : 'Confirmar venda'}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 gap-3 py-2">
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-16 text-base"
-              onClick={() => {
-                setPendingDocMode('sale_only');
-                setDocChoiceOpen(false);
-                setPrintChoiceOpen(true);
-              }}
-            >
-              Somente Venda
-            </Button>
-            <Button
-              size="lg"
-              className="h-16 text-base"
-              onClick={() => {
-                setPendingDocMode('sale_with_nfce');
-                setDocChoiceOpen(false);
-                setNfceConfirmOpen(true);
-              }}
-            >
-              Venda com NFC-e
-            </Button>
+            {fiscalEnabled ? (
+              <>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-16 text-base"
+                  onClick={() => {
+                    setPendingDocMode('sale_only');
+                    setDocChoiceOpen(false);
+                    setPrintChoiceOpen(true);
+                  }}
+                >
+                  Somente Venda
+                </Button>
+                <Button
+                  size="lg"
+                  className="h-16 text-base"
+                  onClick={() => {
+                    setPendingDocMode('sale_with_nfce');
+                    setDocChoiceOpen(false);
+                    setNfceConfirmOpen(true);
+                  }}
+                >
+                  Venda com NFC-e
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="lg"
+                className="h-16 text-base"
+                onClick={async () => {
+                  setPendingDocMode('sale_only');
+                  setDocChoiceOpen(false);
+                  await finalizeConfirm('sale_only', false);
+                }}
+              >
+                Confirmar venda
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
