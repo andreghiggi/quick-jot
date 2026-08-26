@@ -2397,6 +2397,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
 
   function resetForm() {
+    setAmoreChargeResult(null);
     setStep(1);
     setCustomerPhone('');
     setCustomerName('');
