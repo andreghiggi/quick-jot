@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.68.3-beta";
+export const VERSION = "1.68.4-beta";
 export const RELEASE_DATE = "2026-08-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Venda Rápida é venda pura de caixa";
+export const CODENAME = "Recibo + comanda automáticos (Amore Mio)";
 
 
 export interface Release {
@@ -21,6 +21,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.68.4-beta",
+    date: "2026-08-26",
+    codename: "Recibo + comanda automáticos (Amore Mio)",
+    changes: [
+      "Amore Mio: pedidos do cardápio online agora imprimem automaticamente recibo E comanda de produção (antes só saía a comanda).",
+      "Pedido Express (Amore Mio): recibo e comanda saem sempre juntos, inclusive quando o pedido é finalizado na hora. O recibo sai na mesma impressora da comanda.",
+      "Recibo e comanda usam o mesmo número do sistema (ex.: B-003), com fallback para o número diário quando o pedido não tiver código curto.",
+      "Layout de impressão da Amore Mio realinhado ao padrão V2 usado por Bon Appetit, Império do Açaí e Rei do Açaí (removido o desvio de HTML exclusivo da loja).",
+    ],
+  },
+  {
     version: "1.68.3-beta",
     date: "2026-08-26",
     codename: "Venda Rápida é venda pura de caixa",
@@ -30,6 +41,7 @@ export const RELEASES: Release[] = [
       "A venda continua entrando no caixa na forma de pagamento escolhida e aparece no Relatório de Vendas como Venda Rápida, com os itens vendidos no detalhe.",
     ],
   },
+
   {
     version: "1.68.1-beta",
     date: "2026-08-25",
