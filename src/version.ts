@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.68.6-beta";
+export const VERSION = "1.68.7-beta";
 export const RELEASE_DATE = "2026-08-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "PDFs V2 fiéis no printer (Amore Mio)";
+export const CODENAME = "Impressão fiel aos PDFs (Amore Mio)";
 
 
 export interface Release {
@@ -21,6 +21,18 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.68.7-beta",
+    date: "2026-08-26",
+    codename: "Impressão fiel aos PDFs (Amore Mio)",
+    changes: [
+      "auto_printer.py v1.7.3 (somente Amore Mio): o nome do produto não é mais cortado na margem direita — a comanda passa a imprimir '1x Nome do item' com quebra de linha automática.",
+      "Corrigida a linha de previsão que saía invertida ('20:41 Pronto até:'); agora sai 'Pronto até: 20:41' na comanda e no recibo.",
+      "Recibo voltou a ter separadores tracejados, subtotal/total alinhados à direita, bloco de pagamento e o rodapé 'Obrigado pela preferência!'.",
+      "Eliminada a sobreposição de linhas no rodapé: a altura de cada bloco agora considera as linhas quebradas e o valor que desce para a linha seguinte.",
+      "Fontes maiores e com peso correto, mantendo o papel configurado (80mm na Amore Mio). Nenhuma outra loja foi alterada.",
+    ],
+  },
+  {
     version: "1.68.6-beta",
     date: "2026-08-26",
     codename: "PDFs V2 fiéis no printer (Amore Mio)",
@@ -30,6 +42,7 @@ export const RELEASES: Release[] = [
       "Comanda e recibo têm estilos próprios, faixa preta, alinhamentos, pesos, quebras e espaçamento equivalentes às referências fornecidas. Nenhuma outra loja foi alterada.",
     ],
   },
+
   {
     version: "1.68.5-beta",
     date: "2026-08-26",
