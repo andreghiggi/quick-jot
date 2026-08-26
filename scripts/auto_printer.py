@@ -10,7 +10,7 @@ from datetime import datetime
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.7.0"
+SCRIPT_VERSION = "1.7.1"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -19,6 +19,13 @@ STORE_NAME = ""
 STORE_INFO = {}
 COMPANY_ID = "" # Injetado pelo frontend
 PRINTER_MAP_FILE = "printer_map.json"
+
+# Tamanho de papel configurado na loja (store_settings.printer_paper_size).
+# Usado pelo renderizador grafico para dimensionar fonte, colunas e faixas.
+PAPER_SIZE = "58mm"
+PRINT_LAYOUT = "v1"
+CONFIG_LAST_SYNC = 0
+CONFIG_TTL = 300  # segundos
 
 # Cache do mapeamento estacao -> impressora (vindo do painel)
 STATION_PRINTERS = {}
