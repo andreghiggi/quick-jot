@@ -486,8 +486,8 @@ export function PDVV2PaymentDialog({
         setInternalTefStatus('');
         return;
       }
-      // TEF aprovado → segue para os pop-ups (CPF + Imprimir)
-      if (showDocumentMode) {
+      // TEF aprovado → segue para os pop-ups (CPF + Imprimir) apenas se fiscal ativo
+      if (showDocumentMode && fiscalEnabled) {
         // I9 com NFC-e forçada por TEF: diálogo único de confirmação
         setPendingDocMode('sale_with_nfce');
         setNfceConfirmOpen(true);
@@ -498,7 +498,8 @@ export function PDVV2PaymentDialog({
     }
 
     // I9 + showDocumentMode: abre pop-ups em sequência. TEF força NFC-e e pula pop-up 1.
-    if (isLancheriaI9 && showDocumentMode) {
+    // Se fiscal não estiver ativo, pula os pop-ups e finaliza como venda sem documento.
+    if (isLancheriaI9 && showDocumentMode && fiscalEnabled) {
       if (isTef) {
         setPendingDocMode('sale_with_nfce');
         setNfceConfirmOpen(true);
@@ -508,12 +509,12 @@ export function PDVV2PaymentDialog({
       return;
     }
     // Demais empresas: se a venda sair com NFC-e (ou TEF), abrir popup de CPF antes
-    if (effectiveDocumentMode === 'sale_with_nfce' || isTef) {
+    if ((effectiveDocumentMode === 'sale_with_nfce' || isTef) && fiscalEnabled) {
       setPendingDocMode('sale_with_nfce');
       setCpfChoiceOpen(true);
       return;
     }
-    await finalizeConfirm(effectiveDocumentMode);
+    await finalizeConfirm(fiscalEnabled ? effectiveDocumentMode : 'sale_only');
   }
 
   return (
