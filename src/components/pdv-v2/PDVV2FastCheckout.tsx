@@ -22,9 +22,6 @@ import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { openCashDrawer } from '@/utils/cashDrawer';
-import { enqueueProductionByStation } from '@/utils/printRouting';
-import { printOnlyReceipt } from '@/utils/pdvV2Print';
-import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
@@ -46,7 +43,6 @@ export function PDVV2FastCheckout({ companyId }: Props) {
   const { settings: storeSettings } = useStoreSettings({ companyId });
   const { getWeight, reading: readingScale } = useScale();
   const { currentRegister, addSale } = useCashRegister({ companyId });
-  const { addOrder } = useOrders({ companyId });
   const { user } = useAuthContext();
   const { activePaymentMethods: pdvPaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
   const { taxRules } = useTaxRules({ companyId });
