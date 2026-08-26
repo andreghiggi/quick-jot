@@ -117,6 +117,7 @@ export function PDVV2PaymentDialog({
   onItemsPaid,
   onSplitPaid,
   showDocumentMode = false,
+  skipReceiptPrompt = false,
   showAddItem = false,
   channel = 'pdv',
   cashOnly = false,
