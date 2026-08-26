@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.68.1-beta";
-export const RELEASE_DATE = "2026-08-25"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Pedido Express respeita a impressora da categoria";
+export const VERSION = "1.68.3-beta";
+export const RELEASE_DATE = "2026-08-26"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Venda Rápida é venda pura de caixa";
 
 
 export interface Release {
@@ -20,6 +20,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.68.3-beta",
+    date: "2026-08-26",
+    codename: "Venda Rápida é venda pura de caixa",
+    changes: [
+      "Venda Rápida (Amore Mio): não pergunta mais 'Imprimir recibo de venda?' — ao confirmar o pagamento a venda é finalizada direto.",
+      "Venda Rápida não gera mais pedido nem comanda de produção: é registrada apenas como venda de caixa.",
+      "A venda continua entrando no caixa na forma de pagamento escolhida e aparece no Relatório de Vendas como Venda Rápida, com os itens vendidos no detalhe.",
+    ],
+  },
   {
     version: "1.68.1-beta",
     date: "2026-08-25",
