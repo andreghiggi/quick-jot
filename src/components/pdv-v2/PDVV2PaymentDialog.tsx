@@ -16,6 +16,7 @@ import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
 import { openCashDrawer } from '@/utils/cashDrawer';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useFiscalEnabled } from '@/hooks/useFiscalEnabled';
 
 type CheckoutItem = { name: string; quantity: number; unit_price: number; id?: string; paid?: boolean; paidQty?: number };
 
@@ -146,6 +147,7 @@ export function PDVV2PaymentDialog({
   // resetava silenciosamente a fração para 1, cobrando o item inteiro).
   const [splitMemory, setSplitMemory] = useState<Map<number, number>>(new Map());
   const { settings: storeSettings } = useStoreSettings({ companyId });
+  const { enabled: fiscalEnabled } = useFiscalEnabled(companyId);
   const getPaidQty = (item: CheckoutItem) => Math.min(item.quantity, Math.max(0, item.paidQty ?? (item.paid ? item.quantity : 0)));
   const getPendingQty = (item: CheckoutItem) => Math.max(0, item.quantity - getPaidQty(item));
 
@@ -484,8 +486,8 @@ export function PDVV2PaymentDialog({
         setInternalTefStatus('');
         return;
       }
-      // TEF aprovado → segue para os pop-ups (CPF + Imprimir)
-      if (showDocumentMode) {
+      // TEF aprovado → segue para os pop-ups (CPF + Imprimir) apenas se fiscal ativo
+      if (showDocumentMode && fiscalEnabled) {
         // I9 com NFC-e forçada por TEF: diálogo único de confirmação
         setPendingDocMode('sale_with_nfce');
         setNfceConfirmOpen(true);
@@ -496,7 +498,8 @@ export function PDVV2PaymentDialog({
     }
 
     // I9 + showDocumentMode: abre pop-ups em sequência. TEF força NFC-e e pula pop-up 1.
-    if (isLancheriaI9 && showDocumentMode) {
+    // Se fiscal não estiver ativo, pula os pop-ups e finaliza como venda sem documento.
+    if (isLancheriaI9 && showDocumentMode && fiscalEnabled) {
       if (isTef) {
         setPendingDocMode('sale_with_nfce');
         setNfceConfirmOpen(true);
@@ -506,12 +509,12 @@ export function PDVV2PaymentDialog({
       return;
     }
     // Demais empresas: se a venda sair com NFC-e (ou TEF), abrir popup de CPF antes
-    if (effectiveDocumentMode === 'sale_with_nfce' || isTef) {
+    if ((effectiveDocumentMode === 'sale_with_nfce' || isTef) && fiscalEnabled) {
       setPendingDocMode('sale_with_nfce');
       setCpfChoiceOpen(true);
       return;
     }
-    await finalizeConfirm(effectiveDocumentMode);
+    await finalizeConfirm(fiscalEnabled ? effectiveDocumentMode : 'sale_only');
   }
 
   return (
@@ -1321,32 +1324,50 @@ export function PDVV2PaymentDialog({
       <Dialog open={docChoiceOpen} onOpenChange={setDocChoiceOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Geração de Documentos</DialogTitle>
+            <DialogTitle>
+              {fiscalEnabled ? 'Geração de Documentos' : 'Confirmar venda'}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 gap-3 py-2">
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-16 text-base"
-              onClick={() => {
-                setPendingDocMode('sale_only');
-                setDocChoiceOpen(false);
-                setPrintChoiceOpen(true);
-              }}
-            >
-              Somente Venda
-            </Button>
-            <Button
-              size="lg"
-              className="h-16 text-base"
-              onClick={() => {
-                setPendingDocMode('sale_with_nfce');
-                setDocChoiceOpen(false);
-                setNfceConfirmOpen(true);
-              }}
-            >
-              Venda com NFC-e
-            </Button>
+            {fiscalEnabled ? (
+              <>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-16 text-base"
+                  onClick={() => {
+                    setPendingDocMode('sale_only');
+                    setDocChoiceOpen(false);
+                    setPrintChoiceOpen(true);
+                  }}
+                >
+                  Somente Venda
+                </Button>
+                <Button
+                  size="lg"
+                  className="h-16 text-base"
+                  onClick={() => {
+                    setPendingDocMode('sale_with_nfce');
+                    setDocChoiceOpen(false);
+                    setNfceConfirmOpen(true);
+                  }}
+                >
+                  Venda com NFC-e
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="lg"
+                className="h-16 text-base"
+                onClick={async () => {
+                  setPendingDocMode('sale_only');
+                  setDocChoiceOpen(false);
+                  await finalizeConfirm('sale_only', false);
+                }}
+              >
+                Confirmar venda
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
