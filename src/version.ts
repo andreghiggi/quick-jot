@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.68.4-beta";
+export const VERSION = "1.68.5-beta";
 export const RELEASE_DATE = "2026-08-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Recibo + comanda automáticos (Amore Mio)";
+export const CODENAME = "Comanda V2 respeita o papel configurado (Amore Mio)";
 
 
 export interface Release {
@@ -20,6 +20,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.68.5-beta",
+    date: "2026-08-26",
+    codename: "Comanda V2 respeita o papel configurado (Amore Mio)",
+    changes: [
+      "auto_printer.py v1.7.1 (Amore Mio): a comanda de produção agora respeita o tamanho de papel configurado em Configurações (58mm ou 80mm). Antes o script estava fixo em 58mm/32 colunas, o que fazia a impressão sair estreita e minúscula no papel de 80mm.",
+      "Layout da comanda realinhado ao padrão de referência V2: título, modalidade (>> RETIRADA <<), número do pedido, faixa preta com o nome do cliente, data/hora, 'Pronto até', itens em destaque e rodapé — cada elemento com seu próprio tamanho e peso, em vez de tudo na mesma fonte pequena.",
+      "O script passa a ler o papel e o layout direto das configurações da loja: trocar o tamanho do papel no painel muda a impressão sem precisar editar ou rebaixar o arquivo.",
+      "Endereço de entrega também sai em faixa invertida, junto do nome do cliente.",
+      "Para aplicar: baixar novamente o auto_printer.py em Configurações → Impressão, substituir o arquivo em C:\\ComandaTech e reiniciar o iniciar_impressao.cmd. Nenhuma outra loja foi alterada.",
+    ],
+  },
   {
     version: "1.68.4-beta",
     date: "2026-08-26",
