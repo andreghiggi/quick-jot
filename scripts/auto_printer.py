@@ -492,11 +492,20 @@ def extrair_blocos_v2(html_content):
         value = _re.sub(r"\[/?(?:CLIENTE|ENDERECO|ADD|ADDGROUP_LABEL)\]", "", value)
         return _re.sub(r"\s+", " ", value).strip()
 
+    def normalizar_ready(value):
+        """Corrige a ordem invertida do DOM: '20:41 Pronto ate:' -> 'Pronto ate: 20:41'."""
+        value = clean_marker(value)
+        m = _re.match(r"^(\d{1,2}:\d{2})\s*(pronto at[eé]:?)\s*$", value, _re.I)
+        if m:
+            return f"Pronto até: {m.group(1)}"
+        return value
+
     def block(text, style="normal", align="left", right=None):
         text = clean_marker(text)
         if text or right:
             return {"text": text, "style": style, "align": align, "right": clean_marker(right or "")}
         return None
+
 
     blocos = []
     is_receipt = any(node.tag == "h2" and "RECIBO" in node.text().upper() for node in nodes)
