@@ -175,12 +175,8 @@ export async function enqueueProductionByStation(
       const estimatedWaitTime = settings['estimated_wait_time'];
       const showReady = printLayout === 'v2';
 
-      const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
-      const isAmoreMio = companyId === AMORE_MIO_ID;
-
-      // Amore Mio: Enviar HTML puro sem marcadores para evitar conflito com parser v1.6.3
-      // se estiver gerando blocos vazios na extração.
       if (printLayout === 'v2') {
+
         const { data: orderData } = await supabase
           .from('orders')
           .select('*')
