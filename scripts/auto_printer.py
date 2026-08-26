@@ -531,10 +531,12 @@ def extrair_blocos_v2(html_content):
             blocos.append(block(datetimes[0].text(), "datetime", "center"))
         ready = by_class("ready-inline")
         if ready:
-            blocos.append(block(ready[0].text(), "ready", "center"))
+            blocos.append(block(normalizar_ready(ready[0].text()), "ready", "center"))
         address = next((node for node in infos if "[ENDERECO]" in node.text()), None)
         if address:
             blocos.append(block(address.text(), "inverse"))
+
+        blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
         for item in by_class("item"):
             # Ignora containers que apenas envolvem outros .item.
@@ -543,7 +545,9 @@ def extrair_blocos_v2(html_content):
             qty = next((node.text() for node in walk(item) if "qty" in node.classes()), "")
             name = next((node.text() for node in walk(item) if "name" in node.classes()), "")
             if qty or name:
-                blocos.append({"text": clean_marker(qty), "style": "item_qty", "align": "left", "right": clean_marker(name)})
+                # Uma unica coluna com quebra de linha: evita corte do nome na margem.
+                linha_item = " ".join(p for p in (clean_marker(qty), clean_marker(name)) if p)
+                blocos.append({"text": linha_item, "style": "item_qty", "align": "left", "right": ""})
             for node in walk(item):
                 classes = node.classes()
                 if "description" in classes:
@@ -556,6 +560,7 @@ def extrair_blocos_v2(html_content):
                     blocos.append(block(node.text(), "inverse"))
         blocos.append(block("--- FIM ---", "footer", "center"))
         return [b for b in blocos if b]
+
 
     if is_receipt:
         body = next((node for node in nodes if node.tag == "body"), parser.root)
