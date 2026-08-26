@@ -1315,7 +1315,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       }
 
       // Fluxo "Finalizar Pedido" (I9): só imprime recibo, sem comanda de produção
+      let receiptEnqueuedRef = false;
       if (override?.finalizeNow && company?.id) {
+
         // Quando NFC-e foi solicitada, o pop-up pós-venda controla a impressão do DANFE.
         // Recibo simples só é gerado para "Somente Venda" + opção "Imprimir".
         const shouldPrintReceipt =
