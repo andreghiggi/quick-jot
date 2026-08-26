@@ -128,7 +128,7 @@ function buildReceiptHTML(payload: PrintPayload): string {
   </style></head><body>
     <h2>RECIBO</h2>
     <div style="font-size:14px;font-weight:bold;">${payload.shortCode ? escapeHtml(payload.shortCode) : `Pedido #${payload.dailyNumber}`}</div>
-    <div style="font-size:10px;">${escapeHtml(payload.orderCode)}</div>
+    ${hideOrderCode ? '' : `<div style="font-size:10px;">${escapeHtml(payload.orderCode)}</div>`}
     <div style="font-size:12px;">${isV2 ? `[CLIENTE]${escapeHtml(payload.customerName)}[/CLIENTE]` : `Cliente: ${escapeHtml(payload.customerName)}`}</div>
     ${enderecoHtml}
     ${prontoAteHtml}
