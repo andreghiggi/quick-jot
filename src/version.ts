@@ -21,6 +21,16 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.69.0-beta",
+    date: "2026-08-26",
+    codename: "Pedido Express mobile (Amore Mio)",
+    changes: [
+      "Pedido Express não abre mais com o teclado do celular aberto no campo de busca.",
+      "Amore Mio: novo fluxo do Pedido Express — produto → cliente → cobrar → 'Enviar para Cozinha'.",
+      "Amore Mio: ao enviar para a cozinha, o pedido já entra como entregue, soma no caixa e imprime recibo + comanda com o mesmo número.",
+    ],
+  },
+  {
     version: "1.68.8-beta",
     date: "2026-08-26",
     codename: "Numeração diária e recibo limpo (Amore Mio)",
