@@ -880,6 +880,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
   function goNext() {
     if (!canGoNext()) return;
+    // Amore Mio: após o cliente, vai direto para a cobrança (sem etapas de entrega/pagamento).
+    if (isAmoreMio && step === 3) {
+      if (!deliveryType) setDeliveryType('retirada');
+      setStep(5);
+      setPickupChargeOpen(true);
+      return;
+    }
     if (step === 3 && isClienteLoja) {
       // Cliente Loja = retirada, skip delivery step
       setStep(5);
@@ -899,7 +906,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   }
 
   function goBack() {
-    if (step === 5 && isClienteLoja) {
+    if (step === 5 && (isClienteLoja || isAmoreMio)) {
       setStep(3);
       return;
     }
