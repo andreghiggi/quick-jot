@@ -669,6 +669,7 @@ def _imprimir_html(html_content, station_id=None):
         # e mantem o layout visual do V2 na POS 58mm.
         # ------------------------------------------------------------------
         if COMPANY_ID in GDI_COMPANY_IDS:
+            carregar_config_loja()
             if imprimir_gdi(printer_name, texto_puro):
                 return True
             log("Fallback para modo RAW apos falha no modo grafico", "AVISO")
