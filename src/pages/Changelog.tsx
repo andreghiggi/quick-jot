@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '26/08/2026',
+    version: '1.68.6-beta',
+    type: 'fix',
+    description: 'Impressão (somente Amore Mio): auto_printer.py v1.7.2 passa a interpretar os blocos reais do Layout V2, em vez de reduzir o HTML a texto simples. Comanda e recibo recuperam a hierarquia dos PDFs de referência, com fontes em pontos, títulos e pedido maiores, faixa preta, alinhamentos, itens e totais proporcionais. A largura fica limitada ao papel configurado (58mm/80mm), inclusive ao testar no Microsoft Print to PDF em A4. É necessário baixar o printer atualizado e reiniciar o iniciar_impressao.cmd.',
+  },
+  {
+    date: '26/08/2026',
     version: '1.68.5-beta',
     type: 'fix',
     description: 'Impressão (Amore Mio): a comanda de produção voltou ao layout V2 de referência e agora respeita o tamanho de papel configurado em Configurações. O auto_printer.py v1.7.1 estava fixo em 58mm/32 colunas, fazendo a impressão sair estreita e minúscula no papel de 80mm da loja. Agora título, modalidade, número do pedido, faixa preta do cliente, data/hora, "Pronto até", itens e rodapé têm tamanhos e pesos próprios, e o script lê papel e layout direto do painel. Para aplicar: baixar novamente o auto_printer.py em Configurações → Impressão, substituir em C:\\ComandaTech e reiniciar o iniciar_impressao.cmd. Nenhuma outra loja foi alterada.',

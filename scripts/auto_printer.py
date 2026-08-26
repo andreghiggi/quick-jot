@@ -10,7 +10,7 @@ from datetime import datetime
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.7.1"
+SCRIPT_VERSION = "1.7.2"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -415,7 +415,180 @@ def montar_linhas_estilizadas(texto, colunas=32):
     return saida
 
 
-def imprimir_gdi(printer_name, texto, largura_mm=None):
+def extrair_blocos_v2(html_content):
+    """Transforma o HTML V2 em blocos semanticos sem descartar sua hierarquia."""
+    from html.parser import HTMLParser
+    import html as _html
+    import re as _re
+
+    class Node:
+        def __init__(self, tag="root", attrs=None, parent=None):
+            self.tag = tag
+            self.attrs = dict(attrs or [])
+            self.parent = parent
+            self.children = []
+            self.parts = []
+
+        def classes(self):
+            return set(self.attrs.get("class", "").split())
+
+        def text(self):
+            values = list(self.parts)
+            for child in self.children:
+                values.append(child.text())
+            return _re.sub(r"\s+", " ", _html.unescape(" ".join(values))).strip()
+
+    class TreeParser(HTMLParser):
+        VOID = {"br", "hr", "meta", "link", "img", "input"}
+
+        def __init__(self):
+            super().__init__()
+            self.root = Node()
+            self.current = self.root
+            self.skip_depth = 0
+
+        def handle_starttag(self, tag, attrs):
+            if tag in ("style", "script", "head", "title"):
+                self.skip_depth += 1
+                return
+            if self.skip_depth:
+                return
+            node = Node(tag, attrs, self.current)
+            self.current.children.append(node)
+            if tag not in self.VOID:
+                self.current = node
+
+        def handle_endtag(self, tag):
+            if tag in ("style", "script", "head", "title"):
+                if self.skip_depth:
+                    self.skip_depth -= 1
+                return
+            if self.skip_depth or tag in self.VOID:
+                return
+            probe = self.current
+            while probe.parent and probe.tag != tag:
+                probe = probe.parent
+            if probe.parent and probe.tag == tag:
+                self.current = probe.parent
+
+        def handle_data(self, data):
+            if not self.skip_depth and data.strip():
+                self.current.parts.append(data.strip())
+
+    parser = TreeParser()
+    parser.feed(html_content)
+
+    def walk(node):
+        yield node
+        for child in node.children:
+            yield from walk(child)
+
+    nodes = list(walk(parser.root))
+
+    def by_class(name):
+        return [node for node in nodes if name in node.classes()]
+
+    def clean_marker(value):
+        value = _re.sub(r"\[/?(?:CLIENTE|ENDERECO|ADD|ADDGROUP_LABEL)\]", "", value)
+        return _re.sub(r"\s+", " ", value).strip()
+
+    def block(text, style="normal", align="left", right=None):
+        text = clean_marker(text)
+        if text or right:
+            return {"text": text, "style": style, "align": align, "right": clean_marker(right or "")}
+        return None
+
+    blocos = []
+    is_receipt = any(node.tag == "h2" and "RECIBO" in node.text().upper() for node in nodes)
+
+    if not is_receipt and by_class("title"):
+        title = block(by_class("title")[0].text(), "title", "center")
+        if title:
+            blocos.append(title)
+        badges = by_class("order-type-badge")
+        if badges:
+            blocos.append(block(badges[0].text(), "type", "center"))
+        infos = by_class("info")
+        if infos:
+            blocos.append(block(infos[0].text(), "order", "center"))
+        table_infos = by_class("table-info")
+        if table_infos:
+            blocos.append(block(table_infos[0].text(), "type", "center"))
+        customer = next((node for node in infos if "[CLIENTE]" in node.text()), None)
+        if customer:
+            blocos.append(block(customer.text(), "inverse"))
+        datetimes = [node for node in by_class("datetime") if "ready-inline" not in node.classes()]
+        if datetimes:
+            blocos.append(block(datetimes[0].text(), "datetime", "center"))
+        ready = by_class("ready-inline")
+        if ready:
+            blocos.append(block(ready[0].text(), "ready", "center"))
+        address = next((node for node in infos if "[ENDERECO]" in node.text()), None)
+        if address:
+            blocos.append(block(address.text(), "inverse"))
+
+        for item in by_class("item"):
+            # Ignora containers que apenas envolvem outros .item.
+            if any("item" in child.classes() for child in item.children):
+                continue
+            qty = next((node.text() for node in walk(item) if "qty" in node.classes()), "")
+            name = next((node.text() for node in walk(item) if "name" in node.classes()), "")
+            if qty or name:
+                blocos.append({"text": clean_marker(qty), "style": "item_qty", "align": "left", "right": clean_marker(name)})
+            for node in walk(item):
+                classes = node.classes()
+                if "description" in classes:
+                    blocos.append(block(node.text(), "description"))
+                elif "add-group-label" in classes:
+                    blocos.append(block("■ " + node.text(), "group"))
+                elif "add-line" in classes:
+                    blocos.append(block(node.text().replace(">>", "+", 1), "additional"))
+                elif "obs-text" in classes:
+                    blocos.append(block(node.text(), "inverse"))
+        blocos.append(block("--- FIM ---", "footer", "center"))
+        return [b for b in blocos if b]
+
+    if is_receipt:
+        body = next((node for node in nodes if node.tag == "body"), parser.root)
+        blocos.append(block(STORE_NAME or "COMANDATECH", "store", "center"))
+        for child in body.children:
+            text = child.text()
+            classes = child.classes()
+            if not text or child.tag == "hr":
+                continue
+            if child.tag == "h2":
+                continue
+            if "total" in classes:
+                spans = [node.text() for node in child.children if node.tag == "span"]
+                blocos.append({"text": spans[0] if spans else "TOTAL", "style": "total", "align": "left", "right": spans[1] if len(spans) > 1 else ""})
+            elif "[CLIENTE]" in text:
+                blocos.append(block(text, "inverse"))
+            elif "[ENDERECO]" in text:
+                blocos.append(block(text, "inverse"))
+            elif text.upper().startswith("PRONTO AT"):
+                blocos.append(block(text, "ready"))
+            elif _re.match(r"^[A-Z]-\d{3,}$", text, _re.I) or text.upper().startswith("PEDIDO #"):
+                blocos.append(block(text, "order", "center"))
+            elif _re.match(r"^[A-F0-9]{6,}$", text, _re.I):
+                blocos.append(block(text, "code", "center"))
+            elif "add-group-label" in classes:
+                blocos.append(block("■ " + text, "group"))
+            elif "add-line" in classes:
+                blocos.append(block(text.replace(">>", "+", 1), "additional"))
+            elif child.tag == "div" and any(grand.tag == "span" for grand in child.children):
+                spans = [grand.text() for grand in child.children if grand.tag == "span"]
+                blocos.append({"text": clean_marker(spans[0]) if spans else clean_marker(text), "style": "item", "align": "left", "right": clean_marker(spans[1]) if len(spans) > 1 else ""})
+            elif _re.match(r"^\d{1,2}/\d{1,2}/\d{4}", text):
+                blocos.append(block(text, "datetime", "center"))
+            else:
+                blocos.append(block(text, "normal"))
+        blocos.append(block("--- FIM ---", "footer", "center"))
+        return [b for b in blocos if b]
+
+    return []
+
+
+def imprimir_gdi(printer_name, conteudo, largura_mm=None):
     """
     Renderiza o conteudo como PAGINA GRAFICA (GDI) usando win32ui,
     respeitando o TAMANHO DE PAPEL configurado na loja (58mm ou 80mm)
@@ -434,107 +607,127 @@ def imprimir_gdi(printer_name, texto, largura_mm=None):
         dc = win32ui.CreateDC()
         dc.CreatePrinterDC(printer_name)
 
-        # Area imprimivel real
+        # Area imprimivel real. Em drivers A4 (Microsoft Print to PDF), o
+        # canvas continua limitado ao papel termico selecionado no sistema.
         largura_px = dc.GetDeviceCaps(8)    # HORZRES
         altura_px = dc.GetDeviceCaps(10)    # VERTRES
         dpi_x = dc.GetDeviceCaps(88) or 203  # LOGPIXELSX
         dpi_y = dc.GetDeviceCaps(90) or 203  # LOGPIXELSY
+        largura_fisica_px = int(dpi_x * largura_mm / 25.4)
+        largura_canvas = min(largura_px, largura_fisica_px) if largura_px > 0 else largura_fisica_px
+        margem = max(4, int(dpi_x * 2.0 / 25.4))
+        largura_util = max(80, largura_canvas - (margem * 2))
 
-        # Se o driver nao informa a area, estima pela largura do papel
-        if largura_px <= 0:
-            util_mm = largura_mm - 6
-            largura_px = int(dpi_x * util_mm / 25.4)
-
-        # Corpo dimensionado pelo papel: ~32 colunas em 58mm, ~44 em 80mm
-        colunas_base = 44 if largura_mm >= 80 else 32
-        # Tamanho da fonte do corpo derivado da largura util (nao do DPI fixo),
-        # garantindo que o texto ocupe a largura do papel configurado.
-        largura_char_alvo = max(6, largura_px / colunas_base)
-        # Em fontes monoespacadas, altura ~ largura / 0.6
-        altura_corpo = max(12, int(largura_char_alvo / 0.6))
-
-        escala = {
-            "titulo": 1.30,
-            "tipo": 1.30,
-            "pedido": 1.30,
-            "cliente": 1.18,
-            "datetime": 1.00,
-            "pronto": 1.12,
-            "item": 1.12,
-            "add": 1.05,
-            "obs": 1.05,
-            "normal": 1.00,
-            "rodape": 1.00,
-            "espaco": 0.55,
+        pontos = {
+            "store": 16, "title": 15, "type": 16, "order": 17,
+            "code": 11, "inverse": 14, "datetime": 12, "ready": 14,
+            "item_qty": 14, "item": 12, "description": 10,
+            "group": 12, "additional": 13, "normal": 11,
+            "total": 16, "footer": 11,
         }
-        peso = {
-            "titulo": 700,
-            "tipo": 700,
-            "pedido": 700,
-            "cliente": 700,
-            "datetime": 700,
-            "pronto": 700,
-            "item": 700,
-            "add": 700,
-            "obs": 700,
-            "normal": 400,
-            "rodape": 700,
-            "espaco": 400,
+        pesos = {
+            "store": 800, "title": 800, "type": 800, "order": 800,
+            "code": 500, "inverse": 800, "datetime": 600, "ready": 800,
+            "item_qty": 800, "item": 500, "description": 400,
+            "group": 800, "additional": 800, "normal": 500,
+            "total": 800, "footer": 800,
         }
-        invertidos = {"cliente"}
+        invertidos = {"inverse"}
 
         cache_fontes = {}
 
         def fonte(estilo):
             if estilo not in cache_fontes:
                 cache_fontes[estilo] = win32ui.CreateFont({
-                    "name": "Consolas",
-                    "height": -max(8, int(altura_corpo * escala.get(estilo, 1.0))),
-                    "weight": peso.get(estilo, 400),
+                    "name": "Courier New",
+                    "height": -max(10, int(pontos.get(estilo, 11) * dpi_y / 72)),
+                    "weight": pesos.get(estilo, 500),
                 })
             return cache_fontes[estilo]
+
+        def quebrar(texto, estilo, limite_px):
+            dc.SelectObject(fonte(estilo))
+            palavras = texto.split()
+            if not palavras:
+                return [""]
+            linhas, atual = [], palavras[0]
+            for palavra in palavras[1:]:
+                candidato = atual + " " + palavra
+                if dc.GetTextExtent(candidato)[0] <= limite_px:
+                    atual = candidato
+                else:
+                    linhas.append(atual)
+                    atual = palavra
+            linhas.append(atual)
+            return linhas
 
         dc.StartDoc("ComandaTech Comanda")
         dc.StartPage()
 
-        linhas = montar_linhas_estilizadas(texto, colunas_base)
+        blocos = extrair_blocos_v2(conteudo) if "<" in conteudo else []
+        if not blocos:
+            # Compatibilidade para algum job antigo que ainda esteja em texto.
+            blocos = [
+                {"text": linha, "style": estilo, "align": "left", "right": ""}
+                for linha, estilo in montar_linhas_estilizadas(conteudo, 44 if largura_mm >= 80 else 32)
+                if estilo != "espaco"
+            ]
 
-        margem = max(2, int(dpi_x * 1.0 / 25.4))
         y = margem
-        for linha, estilo in linhas:
+        for bloco in blocos:
+            estilo = bloco.get("style", "normal")
+            texto = bloco.get("text", "")
+            direita = bloco.get("right", "")
+            alinhamento = bloco.get("align", "left")
             dc.SelectObject(fonte(estilo))
             tm = dc.GetTextMetrics()
-            altura_linha = tm["tmHeight"] + tm["tmExternalLeading"]
+            altura_linha = max(12, tm["tmHeight"] + tm["tmExternalLeading"])
+            espaco_depois = max(2, int(dpi_y * (1.2 if estilo in ("title", "type", "order", "inverse", "ready", "total") else 0.7) / 25.4))
 
-            if estilo == "espaco":
-                y += max(2, int(altura_linha * 0.5))
-                continue
+            if direita:
+                direita_px = dc.GetTextExtent(direita)[0]
+                limite_esquerda = max(int(largura_util * 0.45), largura_util - direita_px - margem)
+                linhas = quebrar(texto, estilo, limite_esquerda)
+            else:
+                linhas = quebrar(texto, estilo, largura_util)
 
-            if altura_px > 0 and y + altura_linha > altura_px:
+            bloco_altura = altura_linha * len(linhas) + espaco_depois
+            if altura_px > 0 and y + bloco_altura > altura_px:
                 dc.EndPage()
                 dc.StartPage()
                 y = margem
                 dc.SelectObject(fonte(estilo))
 
             if estilo in invertidos:
-                dc.FillSolidRect((0, y, largura_px, y + altura_linha), 0x000000)
-                dc.SetBkMode(win32con.TRANSPARENT)
+                dc.FillSolidRect((0, y, largura_canvas, y + bloco_altura), 0x000000)
                 dc.SetTextColor(0xFFFFFF)
-                dc.TextOut(margem, y, linha)
-                dc.SetTextColor(0x000000)
             else:
-                dc.SetBkMode(win32con.TRANSPARENT)
                 dc.SetTextColor(0x000000)
-                dc.TextOut(margem, y, linha)
+            dc.SetBkMode(win32con.TRANSPARENT)
 
-            y += altura_linha
+            for indice, linha in enumerate(linhas):
+                linha_px = dc.GetTextExtent(linha)[0]
+                if alinhamento == "center":
+                    x = margem + max(0, (largura_util - linha_px) // 2)
+                elif alinhamento == "right":
+                    x = margem + max(0, largura_util - linha_px)
+                else:
+                    x = margem
+                dc.TextOut(x, y + indice * altura_linha, linha)
+
+            if direita:
+                direita_px = dc.GetTextExtent(direita)[0]
+                dc.TextOut(margem + max(0, largura_util - direita_px), y, direita)
+
+            dc.SetTextColor(0x000000)
+            y += bloco_altura
 
         dc.EndPage()
         dc.EndDoc()
         dc.DeleteDC()
         log(
             f"Impressao GRAFICA (GDI) concluida em '{printer_name}' "
-            f"[papel {largura_mm}mm / {colunas_base} colunas]",
+            f"[papel {largura_mm}mm / canvas {largura_canvas}px / {len(blocos)} blocos V2]",
             "GDI",
         )
         return True
@@ -670,7 +863,7 @@ def _imprimir_html(html_content, station_id=None):
         # ------------------------------------------------------------------
         if COMPANY_ID in GDI_COMPANY_IDS:
             carregar_config_loja()
-            if imprimir_gdi(printer_name, texto_puro):
+            if imprimir_gdi(printer_name, html_content):
                 return True
             log("Fallback para modo RAW apos falha no modo grafico", "AVISO")
 

@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.68.5-beta";
+export const VERSION = "1.68.6-beta";
 export const RELEASE_DATE = "2026-08-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Comanda V2 respeita o papel configurado (Amore Mio)";
+export const CODENAME = "PDFs V2 fiéis no printer (Amore Mio)";
 
 
 export interface Release {
@@ -20,6 +20,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.68.6-beta",
+    date: "2026-08-26",
+    codename: "PDFs V2 fiéis no printer (Amore Mio)",
+    changes: [
+      "auto_printer.py v1.7.2 (somente Amore Mio): o modo gráfico não transforma mais o HTML V2 em texto simples; agora interpreta os blocos reais de comanda e recibo, preservando título, modalidade, pedido, cliente, previsão, itens, valores e total.",
+      "Fontes passaram a usar medidas tipográficas em pontos e o canvas fica limitado ao papel configurado (58mm/80mm), mesmo quando o Microsoft Print to PDF informa uma página A4. Isso corrige a impressão extremamente pequena e desproporcional.",
+      "Comanda e recibo têm estilos próprios, faixa preta, alinhamentos, pesos, quebras e espaçamento equivalentes às referências fornecidas. Nenhuma outra loja foi alterada.",
+    ],
+  },
   {
     version: "1.68.5-beta",
     date: "2026-08-26",
