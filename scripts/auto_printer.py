@@ -641,20 +641,21 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
         largura_util = max(80, largura_canvas - (margem * 2))
 
         pontos = {
-            "store": 16, "title": 15, "type": 16, "order": 17,
-            "code": 11, "inverse": 14, "datetime": 12, "ready": 14,
-            "item_qty": 14, "item": 12, "description": 10,
-            "group": 12, "additional": 13, "normal": 11,
-            "total": 16, "footer": 11,
+            "store": 17, "title": 17, "type": 17, "order": 17,
+            "code": 12, "inverse": 16, "datetime": 15, "ready": 16,
+            "item_qty": 15, "item": 14, "description": 12,
+            "group": 13, "additional": 13, "normal": 14,
+            "total": 17, "footer": 14, "sep": 12,
         }
         pesos = {
             "store": 800, "title": 800, "type": 800, "order": 800,
-            "code": 500, "inverse": 800, "datetime": 600, "ready": 800,
-            "item_qty": 800, "item": 500, "description": 400,
-            "group": 800, "additional": 800, "normal": 500,
-            "total": 800, "footer": 800,
+            "code": 500, "inverse": 800, "datetime": 700, "ready": 800,
+            "item_qty": 800, "item": 600, "description": 500,
+            "group": 800, "additional": 700, "normal": 700,
+            "total": 800, "footer": 700, "sep": 700,
         }
         invertidos = {"inverse"}
+
 
         cache_fontes = {}
 
