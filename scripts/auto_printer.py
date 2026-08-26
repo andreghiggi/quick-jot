@@ -568,7 +568,10 @@ def extrair_blocos_v2(html_content):
         for child in body.children:
             text = child.text()
             classes = child.classes()
-            if not text or child.tag == "hr":
+            if child.tag == "hr":
+                blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
+                continue
+            if not text:
                 continue
             if child.tag == "h2":
                 continue
@@ -579,8 +582,8 @@ def extrair_blocos_v2(html_content):
                 blocos.append(block(text, "inverse"))
             elif "[ENDERECO]" in text:
                 blocos.append(block(text, "inverse"))
-            elif text.upper().startswith("PRONTO AT"):
-                blocos.append(block(text, "ready"))
+            elif text.upper().startswith("PRONTO AT") or _re.match(r"^\d{1,2}:\d{2}\s*pronto", text, _re.I):
+                blocos.append(block(normalizar_ready(text), "ready"))
             elif _re.match(r"^[A-Z]-\d{3,}$", text, _re.I) or text.upper().startswith("PEDIDO #"):
                 blocos.append(block(text, "order", "center"))
             elif _re.match(r"^[A-F0-9]{6,}$", text, _re.I):
@@ -591,12 +594,17 @@ def extrair_blocos_v2(html_content):
                 blocos.append(block(text.replace(">>", "+", 1), "additional"))
             elif child.tag == "div" and any(grand.tag == "span" for grand in child.children):
                 spans = [grand.text() for grand in child.children if grand.tag == "span"]
-                blocos.append({"text": clean_marker(spans[0]) if spans else clean_marker(text), "style": "item", "align": "left", "right": clean_marker(spans[1]) if len(spans) > 1 else ""})
+                estilo_linha = "total" if _re.match(r"^(sub\s*total|subtotal|total)", clean_marker(spans[0] if spans else text), _re.I) else "item"
+                blocos.append({"text": clean_marker(spans[0]) if spans else clean_marker(text), "style": estilo_linha, "align": "left", "right": clean_marker(spans[1]) if len(spans) > 1 else ""})
             elif _re.match(r"^\d{1,2}/\d{1,2}/\d{4}", text):
                 blocos.append(block(text, "datetime", "center"))
+            elif text.upper().startswith("PAGAMENTO"):
+                blocos.append(block(text.upper(), "ready"))
             else:
                 blocos.append(block(text, "normal"))
-        blocos.append(block("--- FIM ---", "footer", "center"))
+        blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
+        blocos.append(block("Obrigado pela preferência!", "footer", "center"))
+
         return [b for b in blocos if b]
 
     return []
