@@ -611,6 +611,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         notes: newNotes,
         payment_status: isFullyPaid ? 'paid' : 'partial',
         paid_amount: isFullyPaid ? baseTotal : nextPaidAmount,
+        ...(shouldFinalizeOnCharge && isFullyPaid ? { status: 'delivered' as const } : {}),
       }).eq('id', order.id);
 
       // NFC-e com pagamentos_split — só quando solicitado pelo dialog
