@@ -1380,11 +1380,20 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 ? fullAddress
                 : null,
           });
+          receiptEnqueuedRef = true;
         } catch (e) {
           console.error('Erro ao enfileirar recibo:', e);
         }
         }
-      } else if (settings.autoPrintProductionTicket && company?.id) {
+      }
+      // Comanda de produção: fluxo padrão (não finalizado) e também na Amore Mio
+      // quando o pedido é finalizado na hora — lá recibo + comanda saem sempre.
+      if (
+        settings.autoPrintProductionTicket &&
+        company?.id &&
+        (!override?.finalizeNow || company.id === 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8')
+      ) {
+
         // Enfileira comanda de produção (mesmo padrão do Waiter).
         try {
           // V2+: envia adicionais agrupados para qualquer loja com Layout V2/V3 ativo.
