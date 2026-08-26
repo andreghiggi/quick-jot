@@ -398,6 +398,9 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         paid_amount: isFullyPaid ? baseTotalAfterExtras : nextPaidAmount,
         paid_items: { ...((order.paidItems as any) || {}), paid_qtys: nextPaidItems },
       };
+      if (shouldFinalizeOnCharge && isFullyPaid) {
+        orderUpdate.status = 'delivered';
+      }
       // Atualiza/cria/limpa o split_state quando esta cobrança é por divisão
       // de pessoas. Mantém continuidade entre reaberturas do "Cobrar".
       if (isSplitByPeople && params.splitInfo) {
