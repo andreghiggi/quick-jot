@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.68.7-beta";
+export const VERSION = "1.68.8-beta";
 export const RELEASE_DATE = "2026-08-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão fiel aos PDFs (Amore Mio)";
+export const CODENAME = "Numeração diária e recibo limpo (Amore Mio)";
 
 
 export interface Release {
