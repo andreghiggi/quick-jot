@@ -1315,7 +1315,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       }
 
       // Fluxo "Finalizar Pedido" (I9): só imprime recibo, sem comanda de produção
+      let receiptEnqueuedRef = false;
       if (override?.finalizeNow && company?.id) {
+
         // Quando NFC-e foi solicitada, o pop-up pós-venda controla a impressão do DANFE.
         // Recibo simples só é gerado para "Somente Venda" + opção "Imprimir".
         const shouldPrintReceipt =
@@ -1380,11 +1382,20 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 ? fullAddress
                 : null,
           });
+          receiptEnqueuedRef = true;
         } catch (e) {
           console.error('Erro ao enfileirar recibo:', e);
         }
         }
-      } else if (settings.autoPrintProductionTicket && company?.id) {
+      }
+      // Comanda de produção: fluxo padrão (não finalizado) e também na Amore Mio
+      // quando o pedido é finalizado na hora — lá recibo + comanda saem sempre.
+      if (
+        settings.autoPrintProductionTicket &&
+        company?.id &&
+        (!override?.finalizeNow || company.id === 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8')
+      ) {
+
         // Enfileira comanda de produção (mesmo padrão do Waiter).
         try {
           // V2+: envia adicionais agrupados para qualquer loja com Layout V2/V3 ativo.
@@ -1491,10 +1502,69 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           if (jobs.length > 0) {
             await supabase.from('print_queue').insert(jobs as any);
           }
+
+          // Amore Mio: além da comanda, o recibo sai automaticamente
+          // na MESMA estação da comanda, com o mesmo número (short_code).
+          const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
+          if (company.id === AMORE_MIO_ID && !receiptEnqueuedRef) {
+            try {
+              const { buildReceiptHtmlForQueue } = await import('@/utils/pdvV2Print');
+              const receiptItems = cart.map((item) => {
+                const groupedOptionals: { groupName: string; items: string }[] = [];
+                if (item.groupedOptionalNames && item.groupedOptionalNames.length > 0) {
+                  for (const entry of item.groupedOptionalNames) {
+                    const hasColon = entry.includes(':');
+                    const groupName = hasColon ? entry.split(':')[0].trim() : 'Adicionais';
+                    const after = hasColon ? entry.split(':').slice(1).join(':') : entry;
+                    const itemsStr = after.split(',').map((s) => s.trim()).filter(Boolean).join(', ');
+                    if (itemsStr) groupedOptionals.push({ groupName, items: itemsStr });
+                  }
+                } else if (item.selectedOptionals.length > 0) {
+                  groupedOptionals.push({
+                    groupName: 'Adicionais',
+                    items: item.selectedOptionals
+                      .map((o) => (o.price > 0 ? `${o.name} R$${o.price.toFixed(2).replace('.', ',')}` : o.name))
+                      .join(', '),
+                  });
+                }
+                return {
+                  name: item.product.name,
+                  quantity: item.quantity,
+                  price: item.product.price + item.selectedOptionals.reduce((s, o) => s + o.price, 0),
+                  notes: item.notes || undefined,
+                  groupedOptionals: groupedOptionals.length > 0 ? groupedOptionals : undefined,
+                };
+              });
+              const receiptHtml = buildReceiptHtmlForQueue({
+                companyId: company.id,
+                orderCode: createdOrderCode,
+                dailyNumber: createdDailyNumber,
+                shortCode: createdShortCode,
+                customerName: customerName.trim(),
+                items: receiptItems,
+                total: effectiveTotal,
+                notes: `Pagamento: ${paymentName}`,
+                paperSize: settings.printerPaperSize,
+                printLayout: settings.printLayout,
+                estimatedWaitTime: settings.estimatedWaitTime,
+                deliveryAddress: deliveryType === 'entrega' && fullAddress ? fullAddress : null,
+              });
+              await supabase.from('print_queue').insert({
+                company_id: company.id,
+                html_content: receiptHtml,
+                label: createdShortCode ? `Recibo ${createdShortCode}` : `Recibo Express - ${customerName.trim()}`,
+                station_id: jobs[0]?.station_id ?? null,
+                job_type: 'receipt',
+              } as any);
+            } catch (e) {
+              console.error('Erro ao enfileirar recibo Express:', e);
+            }
+          }
         } catch (e) {
           console.error('Erro ao enfileirar comanda de produção:', e);
         }
       }
+
 
       toast.success('Pedido Express criado com sucesso!');
       resetForm();
