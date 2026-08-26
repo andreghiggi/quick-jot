@@ -147,6 +147,7 @@ export function PDVV2PaymentDialog({
   // resetava silenciosamente a fração para 1, cobrando o item inteiro).
   const [splitMemory, setSplitMemory] = useState<Map<number, number>>(new Map());
   const { settings: storeSettings } = useStoreSettings({ companyId });
+  const { enabled: fiscalEnabled } = useFiscalEnabled(companyId);
   const getPaidQty = (item: CheckoutItem) => Math.min(item.quantity, Math.max(0, item.paidQty ?? (item.paid ? item.quantity : 0)));
   const getPendingQty = (item: CheckoutItem) => Math.max(0, item.quantity - getPaidQty(item));
 
