@@ -16,6 +16,7 @@ import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
 import { openCashDrawer } from '@/utils/cashDrawer';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useFiscalEnabled } from '@/hooks/useFiscalEnabled';
 
 type CheckoutItem = { name: string; quantity: number; unit_price: number; id?: string; paid?: boolean; paidQty?: number };
 
