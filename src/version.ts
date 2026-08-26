@@ -21,6 +21,16 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.68.8-beta",
+    date: "2026-08-26",
+    codename: "Numeração diária e recibo limpo (Amore Mio)",
+    changes: [
+      "Amore Mio: numeração dos pedidos reinicia todo dia à meia-noite (B-001, R-001, D-001, M-001).",
+      "Amore Mio: recibo não imprime mais o código interno hexadecimal abaixo do número do pedido.",
+      "Amore Mio: Pedido Express 'Cliente Loja' é finalizado como Entregue assim que a cobrança é concluída.",
+    ],
+  },
+  {
     version: "1.68.7-beta",
     date: "2026-08-26",
     codename: "Impressão fiel aos PDFs (Amore Mio)",
