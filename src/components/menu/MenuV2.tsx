@@ -111,6 +111,8 @@ export function MenuV2({
   isOpen,
   formattedHours,
   schedulingEnabled = false,
+  enableDelivery,
+  enablePickup,
   onProductSelect,
   onCartOpen,
   onNavigateBack,
