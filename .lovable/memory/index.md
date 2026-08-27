@@ -114,3 +114,4 @@
 - [FC Importar Pedido/Mesa](mem://features/fc-importar-pedido-mesa) — Frente de Caixa importa pedido cardápio ou mesa QR do dia (itens imutáveis) e fecha tudo num único cupom; vínculo via `orders.pdv_sale_id` / `pdv_sales.imported_order_id`.
 - [Editar Pedido Entrega](mem://features/order-edit-delivery-rich) — OrderEditDialog agora usa endereços salvos do cliente, campos estruturados, opções de entrega da loja (cidade/interior/bairro) e exige cliente real quando "Cliente Loja" vira Entrega.
 - [NFC-e financeira crediário](mem://features/nfce-financeira-crediario) — CRED-* financeiro: modelo 65, CFOP 5949, CSOSN 900, CST 49, alíquotas 0, cClassTrib 000001; sem aliases XML manuais.
+- [Express Amore Mio status](mem://features/express-amore-mio-status) — Express com telefone nasce `preparing` (libera Pronto/Entregar) e Cliente Loja nasce `delivered`; confirmação + em preparo no WhatsApp no envio para cozinha.
