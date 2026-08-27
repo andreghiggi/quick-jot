@@ -3338,6 +3338,7 @@ export type Database = {
           description: string | null
           display_order: number | null
           expiration_date: string | null
+          fast_hotkey: string | null
           gross_weight: number | null
           gtin: string | null
           icms_origin: string
@@ -3384,6 +3385,7 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           expiration_date?: string | null
+          fast_hotkey?: string | null
           gross_weight?: number | null
           gtin?: string | null
           icms_origin?: string
@@ -3430,6 +3432,7 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           expiration_date?: string | null
+          fast_hotkey?: string | null
           gross_weight?: number | null
           gtin?: string | null
           icms_origin?: string
