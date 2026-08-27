@@ -98,6 +98,28 @@ export function PDVV2FastCheckout({ companyId }: Props) {
 
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0), [cart]);
 
+  // Amore Mio: tecla de atalho (ex.: Ctrl) seleciona o produto vinculado no cadastro.
+  // Se o produto não tem preço, handleAddProduct abre o diálogo "Informar preço".
+  useEffect(() => {
+    if (!isAmoreMio) return;
+
+    const handler = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      // Não disparar com diálogos abertos (cobrança, preço, NFC-e)
+      if (payOpen || nfceDialogOpen || pendingPriceProduct) return;
+
+      const target = activeProducts.find((p) => (p as any).fastHotkey && (p as any).fastHotkey === e.key);
+      if (!target) return;
+
+      e.preventDefault();
+      handleAddProduct(target);
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAmoreMio, activeProducts, payOpen, nfceDialogOpen, pendingPriceProduct]);
+
   async function handleAddProduct(p: any, priceOverride?: number) {
     // Amore Mio: produto cadastrado sem preço → pedir valor antes de adicionar
     const basePrice = priceOverride ?? p.price;

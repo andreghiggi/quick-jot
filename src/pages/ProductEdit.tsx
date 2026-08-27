@@ -63,6 +63,8 @@ export default function ProductEdit() {
   );
 
   const mercadoEnabled = isModuleEnabled('mercado');
+  // Amore Mio: atalho de teclado na Venda Rápida (isolado por loja).
+  const isAmoreMio = company?.id === 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Tipo do produto (cardapio / mercado / ambos). Define UX e visibilidade automática.
@@ -116,6 +118,8 @@ export default function ProductEdit() {
   const [scaleBarcode, setScaleBarcode] = useState('');
   const [pricePerKg, setPricePerKg] = useState(false);
   const [sellByWeight, setSellByWeight] = useState(false);
+  // Amore Mio: tecla de atalho na Venda Rápida ('' = nenhuma, 'Control' = Ctrl)
+  const [fastHotkey, setFastHotkey] = useState('');
   // Lista de fornecedores (para o select). Só carrega se módulo Mercado ativo.
   const [suppliersList, setSuppliersList] = useState<Array<{ id: string; name: string }>>([]);
   // Snapshot do estoque atual no carregamento — usado para detectar ajuste manual na edição.
@@ -185,6 +189,7 @@ export default function ProductEdit() {
       setScaleBarcode(existing.scaleBarcode || '');
       setPricePerKg(!!existing.pricePerKg);
       setSellByWeight(!!(existing as any).sellByWeight);
+      setFastHotkey((existing as any).fastHotkey || '');
       setHydrated(true);
     }
   }, [existing, isNew, hydrated, categories, categoryName, productType, stockQuantity]);
@@ -365,6 +370,7 @@ export default function ProductEdit() {
         icmsOrigin: icmsOrigin || '0',
         costPrice: costPrice ? parseFloat(costPrice) : null,
         taxRuleId: taxRuleId || null,
+        fastHotkey: isAmoreMio ? (fastHotkey || null) : ((existing as any)?.fastHotkey || null),
         ncm: ncm.trim() || null,
         cest: cest.trim() || null,
         ...(mercadoEnabled
@@ -1083,6 +1089,29 @@ export default function ProductEdit() {
                 </>
               )}
             </div>
+          </Section>
+        )}
+
+        {/* ===================== VENDA RÁPIDA (Amore Mio) ===================== */}
+        {isAmoreMio && (
+          <Section
+            title="Venda Rápida"
+            description="Atalho de teclado para selecionar este produto instantaneamente na Venda Rápida do PDV."
+          >
+            <Field
+              label="Tecla de atalho na Venda Rápida"
+              hint="Ao pressionar a tecla na tela de Venda Rápida, este produto é selecionado na hora. Se ele não tiver preço cadastrado, o campo para informar o valor abre automaticamente."
+            >
+              <Select value={fastHotkey || 'none'} onValueChange={(v) => setFastHotkey(v === 'none' ? '' : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  <SelectItem value="Control">Ctrl</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
           </Section>
         )}
 

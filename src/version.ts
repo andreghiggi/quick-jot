@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.69.0-beta";
+export const VERSION = "1.70.0-beta";
 export const RELEASE_DATE = "2026-08-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Pedido Express mobile (Amore Mio)";
+export const CODENAME = "Atalho Ctrl na Venda Rápida (Amore Mio)";
 
 
 export interface Release {
@@ -20,6 +20,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.70.0-beta",
+    date: "2026-08-26",
+    codename: "Atalho Ctrl na Venda Rápida (Amore Mio)",
+    changes: [
+      "Amore Mio: novo campo 'Tecla de atalho na Venda Rápida' no cadastro do produto (opção Ctrl).",
+      "Amore Mio: ao pressionar Ctrl na Venda Rápida, o produto vinculado é selecionado na hora; se não tiver preço cadastrado, o campo para informar o valor abre automaticamente.",
+      "O atalho não dispara enquanto há diálogos abertos (cobrança, preço, NFC-e) e não interfere na digitação. Nenhuma outra loja foi alterada.",
+    ],
+  },
   {
     version: "1.69.0-beta",
     date: "2026-08-26",
