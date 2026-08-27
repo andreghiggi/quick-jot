@@ -85,6 +85,8 @@ interface MenuV2Props {
   isOpen: boolean;
   formattedHours: string;
   schedulingEnabled?: boolean;
+  enableDelivery?: boolean;
+  enablePickup?: boolean;
   onProductSelect: (product: Product) => void;
   onCartOpen: () => void;
   onNavigateBack: () => void;
