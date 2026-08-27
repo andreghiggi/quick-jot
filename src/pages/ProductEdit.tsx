@@ -370,6 +370,7 @@ export default function ProductEdit() {
         icmsOrigin: icmsOrigin || '0',
         costPrice: costPrice ? parseFloat(costPrice) : null,
         taxRuleId: taxRuleId || null,
+        fastHotkey: isAmoreMio ? (fastHotkey || null) : ((existing as any)?.fastHotkey || null),
         ncm: ncm.trim() || null,
         cest: cest.trim() || null,
         ...(mercadoEnabled
