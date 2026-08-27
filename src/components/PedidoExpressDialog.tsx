@@ -1205,6 +1205,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       });
     }
 
+    // Amore Mio: "Cliente Loja" já nasce entregue; cliente identificado entra
+    // em preparo para liberar o botão "Pronto" na dashboard.
+    const amoreFinalizeStatus: 'delivered' | 'preparing' =
+      customerName.trim() === 'Cliente Loja' ? 'delivered' : 'preparing';
+
     const created = await addOrder({
       customerName: customerName.trim(),
       customerPhone: phoneDigits || undefined,
@@ -1212,7 +1217,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       notes: noteStr,
       items: orderItems,
       total: effectiveTotal,
-      status: override?.finalizeNow ? 'ready' : 'pending',
+      status: override?.finalizeNow
+        ? (isAmoreMio ? amoreFinalizeStatus : 'ready')
+        : 'pending',
       origin: 'balcao',
     });
 
@@ -1222,6 +1229,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       const createdDailyNumber = created.dailyNumber ?? 0;
       // Salva/atualiza cliente para autofill futuro (best-effort).
       upsertCustomerBestEffort();
+      // Amore Mio: pedido nasce em "preparing" (sem transição de status), então
+      // dispara aqui a confirmação + aviso de "em preparo" no WhatsApp.
+      if (isAmoreMio && override?.finalizeNow && amoreFinalizeStatus === 'preparing' && phoneDigits && company?.id) {
+        void notifyExpressOrderCreated(company.id, created.id);
+      }
+
       // ===== NFC-e (I9 "Finalizar Pedido" com Venda + NFC-e) =====
       // Cria pdv_sale e dispara emissão. Pop-up de status abre ao final.
       const wantsNfce =
