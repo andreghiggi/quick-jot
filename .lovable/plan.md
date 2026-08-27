@@ -1,4 +1,4 @@
-# Pedido Express: botões + / - na quantidade do item (Amore Mio)
+# Pedido Express: + / - na quantidade + badge de modalidade no cardápio
 
 ## Situação atual (verificada)
 
