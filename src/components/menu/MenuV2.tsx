@@ -120,6 +120,8 @@ export function MenuV2({
   hideEstimatedWaitTime = false,
   publicCoupons = [],
 }: MenuV2Props) {
+  const AMORE_MIO_COMPANY_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
+  const isAmoreMio = company?.id === AMORE_MIO_COMPANY_ID;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
