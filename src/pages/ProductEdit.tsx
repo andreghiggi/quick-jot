@@ -1092,6 +1092,29 @@ export default function ProductEdit() {
           </Section>
         )}
 
+        {/* ===================== VENDA RÁPIDA (Amore Mio) ===================== */}
+        {isAmoreMio && (
+          <Section
+            title="Venda Rápida"
+            description="Atalho de teclado para selecionar este produto instantaneamente na Venda Rápida do PDV."
+          >
+            <Field
+              label="Tecla de atalho na Venda Rápida"
+              hint="Ao pressionar a tecla na tela de Venda Rápida, este produto é selecionado na hora. Se ele não tiver preço cadastrado, o campo para informar o valor abre automaticamente."
+            >
+              <Select value={fastHotkey || 'none'} onValueChange={(v) => setFastHotkey(v === 'none' ? '' : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  <SelectItem value="Control">Ctrl</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </Section>
+        )}
+
         {/* ===================== OPCIONAIS ===================== */}
         <Section
           title="Opcionais"
