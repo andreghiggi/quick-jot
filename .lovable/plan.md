@@ -35,3 +35,22 @@ Escopo: alteração exclusiva da Amore Mio (mesmo padrão dos demais ajustes rec
 - Botões `size="icon"` `variant="outline"` `h-7 w-7` com ícones `Minus`/`Plus` já importados, com `e.stopPropagation()`.
 - Sem mudanças em banco, impressão, cobrança, status do pedido ou WhatsApp.
 - Subir versão para 1.70.3-beta e registrar no changelog.
+
+---
+
+## Parte 2 — Cardápio: não mostrar "Entrega" quando a loja não faz delivery
+
+Situação verificada: no cabeçalho do cardápio a faixa verde é fixa — sempre exibe "🛵 Entrega · 🤲 Retirada: {tempo}", sem olhar as modalidades da loja. A Amore Mio está hoje com entrega desativada (`enable_delivery = false`) e mesmo assim aparece "Entrega" para o cliente.
+
+O que será feito (vale para qualquer loja, é uma correção da regra existente):
+
+- Loja só com retirada: `🤲 Retirada: 40-60`
+- Loja só com entrega: `🛵 Entrega: 40-60`
+- Loja com as duas: continua `🛵 Entrega · 🤲 Retirada: 40-60`
+- Loja sem nenhuma das duas: mostra apenas o tempo estimado.
+
+### Detalhes técnicos (parte 2)
+
+- Arquivo: `src/components/menu/MenuV2.tsx`, badge do cabeçalho.
+- Usar `settings.enableDelivery` e `settings.enablePickup`, já carregados por `useStoreSettings` (`enable_delivery` / `enable_pickup`, default `true`).
+- Montar o rótulo dinamicamente; nenhuma mudança em fluxo de checkout, que já respeita as modalidades.
