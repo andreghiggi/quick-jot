@@ -38,19 +38,23 @@ Escopo: alteração exclusiva da Amore Mio (mesmo padrão dos demais ajustes rec
 
 ---
 
-## Parte 2 — Cardápio: não mostrar "Entrega" quando a loja não faz delivery
+## Parte 2 — Cardápio Amore Mio: não mostrar "Entrega" quando delivery está desabilitado
 
 Situação verificada: no cabeçalho do cardápio a faixa verde é fixa — sempre exibe "🛵 Entrega · 🤲 Retirada: {tempo}", sem olhar as modalidades da loja. A Amore Mio está hoje com entrega desativada (`enable_delivery = false`) e mesmo assim aparece "Entrega" para o cliente.
 
-O que será feito (vale para qualquer loja, é uma correção da regra existente):
+O que será feito (exclusivo para Amore Mio):
 
-- Loja só com retirada: `🤲 Retirada: 40-60`
-- Loja só com entrega: `🛵 Entrega: 40-60`
-- Loja com as duas: continua `🛵 Entrega · 🤲 Retirada: 40-60`
-- Loja sem nenhuma das duas: mostra apenas o tempo estimado.
+- Amore Mio só com retirada: `🤲 Retirada: 40-60`
+- Amore Mio só com entrega: `🛵 Entrega: 40-60`
+- Amore Mio com as duas: continua `🛵 Entrega · 🤲 Retirada: 40-60`
+- Amore Mio sem nenhuma das duas: mostra apenas o tempo estimado.
+
+Demais lojas: continuam com o badge atual fixo, sem alteração.
 
 ### Detalhes técnicos (parte 2)
 
 - Arquivo: `src/components/menu/MenuV2.tsx`, badge do cabeçalho.
-- Usar `settings.enableDelivery` e `settings.enablePickup`, já carregados por `useStoreSettings` (`enable_delivery` / `enable_pickup`, default `true`).
+- Usar `settings.enableDelivery` e `settings.enablePickup` (carregados por `useStoreSettings`) somente quando `isAmoreMio` for true; fora isso, manter o texto fixo de antes.
 - Montar o rótulo dinamicamente; nenhuma mudança em fluxo de checkout, que já respeita as modalidades.
+- Subir versão para 1.70.3-beta e registrar no changelog.
+
