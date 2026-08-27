@@ -99,6 +99,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // Redeploy trigger: garantir isLancheriaI9=true em produção (Margen/Bon Appetit)
   const isLancheriaI9 = true;
 
+  // Amore Mio — fluxo mobile: produto → cliente → cobrar → enviar para cozinha (pedido já entregue).
+  const AMORE_MIO_COMPANY_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
+  const isAmoreMio = company?.id === AMORE_MIO_COMPANY_ID;
+  const [amoreChargeResult, setAmoreChargeResult] = useState<any | null>(null);
+
   // Para a Lancheria I9: usa TODAS as formas ativas (deduplicadas por nome+integração).
   // Demais lojas mantêm apenas as do canal Express.
   const activePaymentMethods = useMemo(() => {
@@ -875,6 +880,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
   function goNext() {
     if (!canGoNext()) return;
+    // Amore Mio: após o cliente, vai direto para a cobrança (sem etapas de entrega/pagamento).
+    if (isAmoreMio && step === 3) {
+      if (!deliveryType) setDeliveryType('retirada');
+      setStep(5);
+      setPickupChargeOpen(true);
+      return;
+    }
     if (step === 3 && isClienteLoja) {
       // Cliente Loja = retirada, skip delivery step
       setStep(5);
@@ -894,7 +906,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   }
 
   function goBack() {
-    if (step === 5 && isClienteLoja) {
+    if (step === 5 && (isClienteLoja || isAmoreMio)) {
       setStep(3);
       return;
     }
@@ -2385,6 +2397,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
 
   function resetForm() {
+    setAmoreChargeResult(null);
     setStep(1);
     setCustomerPhone('');
     setCustomerName('');
@@ -2436,6 +2449,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
         <DialogContent
           className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+          onOpenAutoFocus={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
           onFocusOutside={(e) => e.preventDefault()}
         >
@@ -3138,6 +3152,28 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   <>Avançar <ArrowRight className="w-4 h-4" /></>
                 )}
               </Button>
+            ) : isAmoreMio ? (
+              // Amore Mio — cobra primeiro, depois envia para a cozinha (pedido já entregue)
+              !amoreChargeResult ? (
+                <Button
+                  className="flex-1 gap-2"
+                  onClick={() => setPickupChargeOpen(true)}
+                  disabled={cart.length === 0 || isSubmitting || tefProcessing}
+                >
+                  💳 Cobrar
+                </Button>
+              ) : (
+                <Button
+                  className="flex-1 gap-2"
+                  onClick={() => handleSubmit(amoreChargeResult)}
+                  disabled={isSubmitting || tefProcessing}
+                  title="Cria o pedido já entregue, imprime recibo + comanda e soma no caixa"
+                >
+                  {isSubmitting
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                    : '👨‍🍳 Enviar para Cozinha'}
+                </Button>
+              )
             ) : isLancheriaI9 ? (
               // Lancheria I9 — Dois botões: enviar p/ cozinha (sem pagamento) ou finalizar (paga + entrega)
               <>
@@ -3469,6 +3505,26 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             });
             if (done) setPickupChargeOpen(false);
             // Caso contrário, mantém o diálogo aberto para cobrar a próxima parte
+            return;
+          }
+          // Amore Mio: a cobrança não cria o pedido — guarda o resultado e
+          // libera o botão "Enviar para Cozinha" (que grava e imprime tudo).
+          if (isAmoreMio && step === 5) {
+            setAmoreChargeResult({
+              paymentMethodId,
+              paymentName,
+              finalTotal,
+              discount,
+              finalizeNow: true,
+              documentMode: dm,
+              printDocument,
+              tefOptions,
+              tefIntegration,
+              customerDocument,
+              extraItems,
+            });
+            setPickupChargeOpen(false);
+            toast.success('Pagamento registrado — agora envie o pedido para a cozinha.');
             return;
           }
           // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
