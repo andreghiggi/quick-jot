@@ -89,6 +89,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         batchNumber: (product as any).batch_number ?? null,
         isScaleItem: (product as any).is_scale_item ?? false,
         scaleBarcode: (product as any).scale_barcode ?? null,
+        fastHotkey: (product as any).fast_hotkey ?? null,
         pricePerKg: (product as any).price_per_kg ?? false,
         sellByWeight: (product as any).sell_by_weight ?? false,
         optionals: optionalsData
@@ -176,6 +177,7 @@ export function useProducts(options: UseProductsOptions = {}) {
           batch_number: (productData as any).batchNumber ?? null,
           is_scale_item: (productData as any).isScaleItem ?? false,
           scale_barcode: (productData as any).scaleBarcode ?? null,
+          fast_hotkey: (productData as any).fastHotkey ?? null,
           price_per_kg: (productData as any).pricePerKg ?? false,
           sell_by_weight: (productData as any).sellByWeight ?? false,
         } as any)
@@ -232,6 +234,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       if ((productData as any).batchNumber !== undefined) (updateData as any).batch_number = (productData as any).batchNumber || null;
       if ((productData as any).isScaleItem !== undefined) (updateData as any).is_scale_item = !!(productData as any).isScaleItem;
       if ((productData as any).scaleBarcode !== undefined) (updateData as any).scale_barcode = (productData as any).scaleBarcode || null;
+      if ((productData as any).fastHotkey !== undefined) (updateData as any).fast_hotkey = (productData as any).fastHotkey || null;
       if ((productData as any).pricePerKg !== undefined) (updateData as any).price_per_kg = !!(productData as any).pricePerKg;
       if ((productData as any).sellByWeight !== undefined) (updateData as any).sell_by_weight = !!(productData as any).sellByWeight;
 
