@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.70.1-beta";
-export const RELEASE_DATE = "2026-08-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Preço manual com máscara de moeda (Venda Rápida)";
+export const VERSION = "1.70.2-beta";
+export const RELEASE_DATE = "2026-08-27"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Pedido Express: status e avisos no WhatsApp (Amore Mio)";
 
 
 export interface Release {
