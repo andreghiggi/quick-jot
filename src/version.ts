@@ -21,6 +21,16 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.70.2-beta",
+    date: "2026-08-27",
+    codename: "Pedido Express: status e avisos no WhatsApp (Amore Mio)",
+    changes: [
+      "Amore Mio: pedido express com telefone/nome do cliente entra como 'Em preparo' após 'Enviar para Cozinha', liberando o botão 'Pronto' e depois 'Entregar'.",
+      "Amore Mio: pedido express 'Cliente Loja' continua nascendo entregue, saindo da dashboard e somando no caixa.",
+      "Amore Mio: ao enviar para a cozinha, o cliente recebe no WhatsApp a confirmação do pedido e, na sequência, o aviso de 'em preparo'. As mensagens de 'pronto' e 'entregue' seguem no clique dos botões.",
+    ],
+  },
+  {
     version: "1.70.1-beta",
     date: "2026-08-26",
     codename: "Preço manual com máscara de moeda (Venda Rápida)",
