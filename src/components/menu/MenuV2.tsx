@@ -373,7 +373,14 @@ export function MenuV2({
               {isOpen && settings.estimatedWaitTime && !hideEstimatedWaitTime && (
                 <div className="mt-1">
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-normal bg-[#22C55E]/15 text-[#16a34a] border border-[#22C55E]">
-                    🛵 Entrega · 🤲 Retirada: {settings.estimatedWaitTime}
+                    {(() => {
+                      const hasDelivery = isAmoreMio ? enableDelivery !== false : true;
+                      const hasPickup = isAmoreMio ? enablePickup !== false : true;
+                      if (hasDelivery && hasPickup) return <>🛵 Entrega · 🤲 Retirada: {settings.estimatedWaitTime}</>;
+                      if (hasDelivery) return <>🛵 Entrega: {settings.estimatedWaitTime}</>;
+                      if (hasPickup) return <>🤲 Retirada: {settings.estimatedWaitTime}</>;
+                      return <>{settings.estimatedWaitTime}</>;
+                    })()}
                   </span>
                 </div>
               )}
