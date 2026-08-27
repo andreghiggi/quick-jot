@@ -63,6 +63,8 @@ export default function ProductEdit() {
   );
 
   const mercadoEnabled = isModuleEnabled('mercado');
+  // Amore Mio: atalho de teclado na Venda Rápida (isolado por loja).
+  const isAmoreMio = company?.id === 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Tipo do produto (cardapio / mercado / ambos). Define UX e visibilidade automática.
@@ -116,6 +118,8 @@ export default function ProductEdit() {
   const [scaleBarcode, setScaleBarcode] = useState('');
   const [pricePerKg, setPricePerKg] = useState(false);
   const [sellByWeight, setSellByWeight] = useState(false);
+  // Amore Mio: tecla de atalho na Venda Rápida ('' = nenhuma, 'Control' = Ctrl)
+  const [fastHotkey, setFastHotkey] = useState('');
   // Lista de fornecedores (para o select). Só carrega se módulo Mercado ativo.
   const [suppliersList, setSuppliersList] = useState<Array<{ id: string; name: string }>>([]);
   // Snapshot do estoque atual no carregamento — usado para detectar ajuste manual na edição.
@@ -185,6 +189,7 @@ export default function ProductEdit() {
       setScaleBarcode(existing.scaleBarcode || '');
       setPricePerKg(!!existing.pricePerKg);
       setSellByWeight(!!(existing as any).sellByWeight);
+      setFastHotkey((existing as any).fastHotkey || '');
       setHydrated(true);
     }
   }, [existing, isNew, hydrated, categories, categoryName, productType, stockQuantity]);
