@@ -3053,7 +3053,34 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                             )}
                             <div className="flex-1 min-w-0">
                               <div className="flex justify-between items-start">
-                                <p className="text-sm font-medium">{item.quantity}x {item.product.name}</p>
+                                {isAmoreMio && paidQty === 0 ? (
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="outline"
+                                      className="h-7 w-7"
+                                      onClick={(e) => { e.stopPropagation(); updateCartQuantity(index, -1); }}
+                                      disabled={isSubmitting || tefProcessing}
+                                    >
+                                      <Minus className="w-3 h-3" />
+                                    </Button>
+                                    <span className="w-5 text-center text-sm tabular-nums font-bold">{item.quantity}</span>
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="outline"
+                                      className="h-7 w-7"
+                                      onClick={(e) => { e.stopPropagation(); updateCartQuantity(index, 1); }}
+                                      disabled={isSubmitting || tefProcessing}
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                    </Button>
+                                    <span className="text-sm font-medium">{item.product.name}</span>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm font-medium">{item.quantity}x {item.product.name}</p>
+                                )}
                                 <p className="text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap ml-2">R$ {itemTotal.toFixed(2)}</p>
                               </div>
                               {paidQty > 0 && (
