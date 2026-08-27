@@ -1687,6 +1687,8 @@ export default function Menu() {
         isOpen={isOpen}
         formattedHours={formattedHours}
         schedulingEnabled={schedulingEnabled}
+        enableDelivery={settings.enableDelivery}
+        enablePickup={settings.enablePickup}
         onProductSelect={handleProductSelect}
         onCartOpen={() => setIsCartOpen(true)}
         onNavigateBack={() => navigate(-1)}
