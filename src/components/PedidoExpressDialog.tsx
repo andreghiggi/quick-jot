@@ -56,6 +56,7 @@ import { Plus, Minus, ShoppingBag, X, Loader2, ArrowLeft, ArrowRight, Phone, Use
 import { cn, formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
 import { openCashDrawer } from '@/utils/cashDrawer';
+import { notifyExpressOrderCreated } from '@/utils/expressWhatsappNotify';
 
 interface PedidoExpressDialogProps {
   open: boolean;
