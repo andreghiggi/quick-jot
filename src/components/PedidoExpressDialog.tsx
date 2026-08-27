@@ -3524,7 +3524,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               extraItems,
             });
             setPickupChargeOpen(false);
-            toast({ title: 'Pagamento registrado', description: 'Agora envie o pedido para a cozinha.' });
+            toast.success('Pagamento registrado — agora envie o pedido para a cozinha.');
             return;
           }
           // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
