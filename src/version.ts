@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.70.0-beta";
+export const VERSION = "1.70.1-beta";
 export const RELEASE_DATE = "2026-08-26"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Atalho Ctrl na Venda Rápida (Amore Mio)";
+export const CODENAME = "Preço manual com máscara de moeda (Venda Rápida)";
 
 
 export interface Release {
@@ -20,6 +20,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.70.1-beta",
+    date: "2026-08-26",
+    codename: "Preço manual com máscara de moeda (Venda Rápida)",
+    changes: [
+      "Venda Rápida: o campo 'Informar preço' (produto sem preço cadastrado) agora funciona como máscara de moeda em centavos — digitar 135 vira R$ 1,35 e 1180 vira R$ 11,80, sem precisar digitar vírgula.",
+      "O valor confirmado é exatamente o exibido na tela. Mantidos autofocus, Enter para confirmar e validação de valor maior que zero.",
+    ],
+  },
   {
     version: "1.70.0-beta",
     date: "2026-08-26",
