@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { useProducts } from '@/hooks/useProducts';
 import { useScale } from '@/hooks/useScale';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
-import { brl as formatPrice } from '@/components/pdv-v2/_format';
+import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput } from '@/components/pdv-v2/_format';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useCashRegister } from '@/hooks/useCashRegister';
@@ -159,7 +159,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
   }
 
   function confirmManualPrice() {
-    const parsed = parseFloat(priceInput.replace(',', '.'));
+    const parsed = parseCurrencyInput(priceInput);
     if (!parsed || parsed <= 0) {
       toast.error('Informe um preço válido');
       return;
@@ -522,10 +522,10 @@ export function PDVV2FastCheckout({ companyId }: Props) {
                 <Input
                   id="fast-price"
                   autoFocus
-                  inputMode="decimal"
-                  placeholder="0,00"
+                  inputMode="numeric"
+                  placeholder="R$ 0,00"
                   value={priceInput}
-                  onChange={(e) => setPriceInput(e.target.value)}
+                  onChange={(e) => setPriceInput(maskCurrencyInput(e.target.value))}
                   onKeyDown={(e) => { if (e.key === 'Enter') confirmManualPrice(); }}
                 />
               </div>
