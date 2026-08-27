@@ -85,6 +85,8 @@ interface MenuV2Props {
   isOpen: boolean;
   formattedHours: string;
   schedulingEnabled?: boolean;
+  enableDelivery?: boolean;
+  enablePickup?: boolean;
   onProductSelect: (product: Product) => void;
   onCartOpen: () => void;
   onNavigateBack: () => void;
@@ -109,6 +111,8 @@ export function MenuV2({
   isOpen,
   formattedHours,
   schedulingEnabled = false,
+  enableDelivery,
+  enablePickup,
   onProductSelect,
   onCartOpen,
   onNavigateBack,
@@ -116,6 +120,8 @@ export function MenuV2({
   hideEstimatedWaitTime = false,
   publicCoupons = [],
 }: MenuV2Props) {
+  const AMORE_MIO_COMPANY_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
+  const isAmoreMio = company?.id === AMORE_MIO_COMPANY_ID;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -367,7 +373,14 @@ export function MenuV2({
               {isOpen && settings.estimatedWaitTime && !hideEstimatedWaitTime && (
                 <div className="mt-1">
                   <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-normal bg-[#22C55E]/15 text-[#16a34a] border border-[#22C55E]">
-                    🛵 Entrega · 🤲 Retirada: {settings.estimatedWaitTime}
+                    {(() => {
+                      const hasDelivery = isAmoreMio ? enableDelivery !== false : true;
+                      const hasPickup = isAmoreMio ? enablePickup !== false : true;
+                      if (hasDelivery && hasPickup) return <>🛵 Entrega · 🤲 Retirada: {settings.estimatedWaitTime}</>;
+                      if (hasDelivery) return <>🛵 Entrega: {settings.estimatedWaitTime}</>;
+                      if (hasPickup) return <>🤲 Retirada: {settings.estimatedWaitTime}</>;
+                      return <>{settings.estimatedWaitTime}</>;
+                    })()}
                   </span>
                 </div>
               )}

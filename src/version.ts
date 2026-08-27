@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.70.2-beta";
+export const VERSION = "1.70.3-beta";
 export const RELEASE_DATE = "2026-08-27"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Pedido Express: status e avisos no WhatsApp (Amore Mio)";
+export const CODENAME = "Pedido Express: ajustes quantidade + badge de modalidades (Amore Mio)";
 
 
 export interface Release {
@@ -20,6 +20,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.70.3-beta",
+    date: "2026-08-27",
+    codename: "Pedido Express: ajustes quantidade + badge de modalidades (Amore Mio)",
+    changes: [
+      "Amore Mio: no Pedido Express o resumo e a revisão do carrinho agora mostram botões + e − ao lado do item, permitindo alterar a quantidade sem voltar à busca. Quando a quantidade chega a zero o item sai do carrinho.",
+      "Amore Mio: no cardápio online o badge de modalidades agora respeita a configuração da loja. Se a entrega estiver desabilitada, mostra apenas 'Retirada'; se a retirada estiver desabilitada, mostra apenas 'Entrega'. Demais lojas permanecem com o badge fixo como antes.",
+    ],
+  },
   {
     version: "1.70.2-beta",
     date: "2026-08-27",
