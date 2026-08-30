@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.70.3-beta";
-export const RELEASE_DATE = "2026-08-27"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Pedido Express: ajustes quantidade + badge de modalidades (Amore Mio)";
+export const VERSION = "1.70.4-beta";
+export const RELEASE_DATE = "2026-08-30"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Correção: CPF na nota voltou a ser solicitado";
 
 
 export interface Release {
@@ -20,6 +20,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.70.4-beta",
+    date: "2026-08-30",
+    codename: "Correção: CPF na nota voltou a ser solicitado",
+    changes: [
+      "Corrigido: o pop-up 'CPF/CNPJ na nota?' voltou a aparecer ao concluir a forma de pagamento. A detecção de loja com fiscal ativo não reconhecia o token fiscal usado pelas lojas, o que também fazia a venda ser registrada como 'somente venda'.",
+      "Backup automático diário do banco espelho foi desativado. A execução manual continua disponível na tela de monitoramento.",
+    ],
+  },
+
   {
     version: "1.70.3-beta",
     date: "2026-08-27",
