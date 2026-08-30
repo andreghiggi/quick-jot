@@ -17,14 +17,14 @@ export function useFiscalEnabled(companyId?: string | null) {
           .from('store_settings')
           .select('key, value')
           .eq('company_id', companyId)
-          .in('key', ['fiscal_token', 'focus_nfe_token', 'focus_nfe_environment']);
+          .in('key', ['fiscal_flow_api_token', 'fiscal_token', 'focus_nfe_token', 'focus_nfe_environment']);
 
         if (error) throw error;
 
         // Se tiver qualquer token fiscal configurado
-        const hasToken = data?.some(s => 
-          (s.key === 'fiscal_token' || s.key === 'focus_nfe_token') && 
-          s.value && 
+        const hasToken = data?.some(s =>
+          (s.key === 'fiscal_flow_api_token' || s.key === 'fiscal_token' || s.key === 'focus_nfe_token') &&
+          s.value &&
           s.value.trim() !== ''
         );
 
