@@ -1041,6 +1041,11 @@ def main(company_id, company_name):
     carregar_estacoes(force=True)
     carregar_config_loja(force=True)
 
+    if company_id in SKIP_BACKLOG_COMPANY_IDS:
+        log("Descartando impressoes pendentes antigas antes de iniciar...", "START")
+        descartar_backlog(company_id)
+
+
     log("Iniciando monitoramento...", "START")
     mostrar_status(company_id)
     
