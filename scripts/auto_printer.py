@@ -36,6 +36,12 @@ STATIONS_TTL = 300  # segundos
 # ISOLAMENTO: nao afeta nenhuma outra loja.
 GDI_COMPANY_IDS = {"f5f9eec3-67bc-497a-88a6-ce41d3b15df8"}  # Amore Mio
 
+# Lojas que DESCARTAM o backlog ao iniciar o script (nao imprimem acumulo antigo).
+# ISOLAMENTO: nao afeta nenhuma outra loja.
+SKIP_BACKLOG_COMPANY_IDS = {"f5f9eec3-67bc-497a-88a6-ce41d3b15df8"}  # Amore Mio
+
+
+
 # Controle de sessão
 pedidos_impressos_sessao = []
 ids_com_falha = set()
