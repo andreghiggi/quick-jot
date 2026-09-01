@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.70.4-beta";
-export const RELEASE_DATE = "2026-08-30"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Correção: CPF na nota voltou a ser solicitado";
+export const VERSION = "1.70.5-beta";
+export const RELEASE_DATE = "2026-09-01"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Impressão: descarte de backlog ao iniciar (Amore Mio)";
 
 
 export interface Release {
