@@ -21,6 +21,16 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.70.5-beta",
+    date: "2026-09-01",
+    codename: "Impressão: descarte de backlog ao iniciar (Amore Mio)",
+    changes: [
+      "auto_printer.py v1.7.4 (somente Amore Mio): ao abrir o iniciar_impressao.cmd, o script não processa mais o acúmulo antigo. Todas as pendências existentes são marcadas como processadas, sem imprimir, e o monitoramento passa a imprimir apenas o que chegar dali em diante.",
+      "O console mostra quantos pedidos e itens de fila foram descartados na inicialização.",
+      "Para aplicar: baixar novamente o auto_printer.py em Configurações → Impressão e substituir o arquivo em C:\\ComandaTech. Nenhuma outra loja foi alterada.",
+    ],
+  },
+  {
     version: "1.70.4-beta",
     date: "2026-08-30",
     codename: "Correção: CPF na nota voltou a ser solicitado",
