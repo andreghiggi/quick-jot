@@ -162,6 +162,68 @@ def marcar_como_impresso(order_id):
     except Exception as e:
         log(f"Erro ao marcar como impresso: {e}", "ERRO")
 
+def descartar_backlog(company_id):
+    """
+    Ao iniciar, marca como ja processadas todas as pendencias antigas (pedidos e
+    itens de fila) SEM imprimir nada. Assim o operador nao recebe uma enxurrada
+    de impressoes acumuladas quando abre o cmd.
+    Exclusivo para lojas em SKIP_BACKLOG_COMPANY_IDS.
+    """
+    pedidos_desc = 0
+    fila_desc = 0
+    agora_iso = datetime.now().isoformat()
+
+    try:
+        url = f"{API_URL}/orders?company_id=eq.{company_id}&printed=eq.false&select=id"
+        resp = requests.get(url, headers=get_headers(), timeout=30)
+        if resp.status_code == 200:
+            for pedido in resp.json():
+                try:
+                    requests.patch(
+                        f"{API_URL}/orders?id=eq.{pedido['id']}",
+                        headers=get_headers(),
+                        json={"printed": True},
+                        timeout=30,
+                    )
+                    ids_processados.add(pedido["id"])
+                    pedidos_desc += 1
+                except Exception as e:
+                    log(f"Falha ao descartar pedido {pedido.get('id')}: {e}", "AVISO")
+        else:
+            log(f"Erro ao buscar backlog de pedidos: {resp.status_code}", "ERRO")
+    except Exception as e:
+        log(f"Falha ao consultar backlog de pedidos: {e}", "ERRO")
+
+    try:
+        url = f"{API_URL}/print_queue?company_id=eq.{company_id}&printed=eq.false&select=id"
+        resp = requests.get(url, headers=get_headers(), timeout=30)
+        if resp.status_code == 200:
+            for item in resp.json():
+                try:
+                    requests.patch(
+                        f"{API_URL}/print_queue?id=eq.{item['id']}",
+                        headers=get_headers(),
+                        json={"printed": True, "printed_at": agora_iso},
+                        timeout=30,
+                    )
+                    ids_processados.add(item["id"])
+                    fila_desc += 1
+                except Exception as e:
+                    log(f"Falha ao descartar job {item.get('id')}: {e}", "AVISO")
+        else:
+            log(f"Erro ao buscar backlog da fila: {resp.status_code}", "ERRO")
+    except Exception as e:
+        log(f"Falha ao consultar backlog da fila: {e}", "ERRO")
+
+    log(
+        f"Backlog descartado: {pedidos_desc} pedido(s) e {fila_desc} item(ns) de fila. "
+        "Imprimindo apenas novos a partir de agora.",
+        "START",
+    )
+    return pedidos_desc, fila_desc
+
+
+
 def carregar_config_loja(force=False):
     """
     Le em store_settings o tamanho de papel (printer_paper_size) e o layout
