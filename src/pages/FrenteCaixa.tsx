@@ -2099,6 +2099,7 @@ export default function FrenteCaixa() {
         tefReceiptLines={consolidatedTef?.receiptLines || null}
         tefDefaultMode={(consolidatedTef?.defaultMode as TefAutoPrintMode) || 'ambas'}
         tefOrderCode={consolidatedTef?.orderCode}
+        tefAlreadyPrinted={consolidatedTefPrinted}
         initialNfceRecord={consolidatedRecord}
         nfceError={consolidatedNfceError}
         emittingNfce={consolidatedEmitting}
@@ -2107,6 +2108,7 @@ export default function FrenteCaixa() {
         onClosed={() => {
           setConsolidatedRecord(null);
           setConsolidatedTef(null);
+          setConsolidatedTefPrinted(false);
           setConsolidatedNfceError(null);
           setConsolidatedEmitting(false);
           setTimeout(() => inputRef.current?.focus(), 100);
