@@ -1,41 +1,36 @@
-# Cozinha da Ruiva — demora de 40s a 1min para imprimir após o TEF
+# Comprovante do TEF sai na hora (Frente de Caixa — piloto)
 
-## O que os dados mostram
+Hoje, na Frente de Caixa, as vias do cartão só são impressas no diálogo final, depois que a nota fiscal resolve. Quando a nota demora, o comprovante — que já estava pronto no segundo em que o pagamento foi aprovado — espera junto. Resultado: 40 s a 1 min de sensação de travamento.
 
-Fiz a análise dos logs reais da loja (TEF, proxy fiscal e notas emitidas). O gargalo **não é o PinPad nem o navegador do operador**.
+A mudança: assim que o pinpad aprova, as vias do TEF vão direto para a impressora. A nota continua sendo emitida em paralelo e o DANFE sai quando a SEFAZ autorizar.
 
-**1. O TEF está rápido.** Os registros de comunicação com a Multiplus nos últimos 7 dias mostram média de ~70 ms por consulta de status e ~300–400 ms para iniciar a transação. Nenhum indício de lentidão do lado do pinpad.
+## Lojas do piloto
 
-**2. O gargalo é a emissão da NFC-e.** As chamadas ao nosso proxy fiscal hoje tiveram mediana de ~2 s, mas com casos de 4 s, 12 s e uma de **73 segundos** — exatamente a faixa que a loja relatou.
+- Cozinha da Ruiva
+- Lancheria da I9
 
-**3. Hoje há um problema ativo e crítico:** as 4 últimas tentativas de nota voltaram com **"Invalid or expired API key"** (token da API fiscal inválido/expirado) e 1 nota ficou presa em "processando" após timeout. Ou seja, além da lentidão, a loja está sem conseguir emitir hoje. Até 02/09 as notas saíam normalmente (nº 14343 a 14379, todas autorizadas).
+Todas as demais lojas continuam exatamente com o comportamento atual.
 
-**4. O desenho atual soma esperas.** Quando a emissão demora, o pior caso encadeia: 20 s de timeout da emissão + 10 s da chamada de "abortar online" + 20 s da reemissão em contingência. Só depois disso a tela libera a impressão. E hoje o **comprovante do TEF só é impresso junto com a nota** — se a nota demora, o comprovante do cartão espera junto, mesmo já estando pronto desde o primeiro segundo.
+## Comportamento novo (só no piloto)
 
-## Plano de ação
-
-### 1. Destravar a emissão (urgente, hoje)
-- Validar/renovar o token da API fiscal da loja e confirmar que a nota volta a autorizar.
-- Reconciliar a nota presa em "processando" pelo Monitor NFC-e (sem gerar nova numeração).
-
-### 2. Imprimir o comprovante do TEF imediatamente (fim do "espera junto")
-Assim que o pagamento é aprovado no pinpad, as vias do TEF vão para impressão na hora, sem aguardar a NFC-e. O DANFE sai em seguida, quando a SEFAZ responder. Percepção do operador cai para poucos segundos.
-
-### 3. Reduzir o pior caso da emissão
-- Baixar o timeout da emissão online de 20 s para 8–10 s, e o do "abortar online" de 10 s para 5 s. Pior caso cai de ~50–70 s para ~20–25 s.
-- Em erro de autenticação (401), falhar imediatamente em vez de percorrer todo o fluxo de contingência — hoje uma chave inválida custa mais de 10 s por venda.
-
-### 4. Acelerar a confirmação na tela
-- Primeira consulta de status em 800 ms (hoje 2 s) e consultas em todas as rodadas iniciais, em vez de alternadas.
-- Aproveitar o webhook fiscal como caminho principal de atualização, com a consulta apenas como rede de segurança.
-
-### 5. Sinalizar corretamente ao operador
-- Mostrar no overlay o tempo decorrido e a etapa ("aguardando SEFAZ há 12s"), para o operador não achar que o sistema travou.
-- Aviso claro e imediato quando o erro for de token/credencial, com orientação de acionar o suporte — em vez da nota cair silenciosamente em contingência.
-
-## Sobre "falha do usuário"
-Não há evidência de que tempo logado ou falta de refresh causem isso. A sessão é renovada automaticamente e as chamadas lentas foram lentas do lado do servidor fiscal, não do navegador.
+1. Pagamento aprovado no pinpad → vias do TEF impressas imediatamente, usando a preferência já configurada da loja (ambas as vias / só estabelecimento / nenhuma).
+2. Emissão da nota segue em paralelo, sem nenhuma alteração de prazo, contingência ou numeração.
+3. Diálogo final passa a tratar só do DANFE. A seção do TEF aparece como "vias já impressas", com um botão de reimprimir caso o papel tenha falhado.
+4. Se a preferência da loja for "não imprimir", nada muda: o operador continua decidindo no diálogo.
 
 ## Detalhes técnicos
-- Arquivos envolvidos: `supabase/functions/nfce-proxy/index.ts` (timeouts `EMIT_TIMEOUT_MS`, tratamento de 401 antes do fluxo de contingência), `src/components/frente-caixa/FrenteCaixaPostSaleDialog.tsx` (desacoplar impressão TEF da resolução da NFC-e, intervalo de polling), `src/pages/FrenteCaixa.tsx` (overlay `silentPhase` com tempo decorrido).
-- Alterações restritas ao fluxo da Frente de Caixa; nenhuma mudança em TEF/PinPad (mantido congelado) e nenhuma alteração de numeração ou de idempotência por `external_id`.
+
+- Novo arquivo `src/utils/frenteCaixaTefEarlyPrint.ts`:
+  - `TEF_EARLY_PRINT_PILOT_IDS` = `55181771-8b10-4af1-afc3-472c090a49be` (Cozinha da Ruiva), `8c9e7a0e-dbb6-49b9-8344-c23155a71164` (Lancheria da I9).
+  - `isTefEarlyPrintPilot(companyId?: string | null): boolean`.
+  - `imprimirViasTefImediato(payload: TefPrintPromptPayload): Promise<boolean>` — retorna `false` quando `defaultMode === 'none'` ou não há `receiptLines`; caso contrário chama `executarImpressaoTefVias(receiptLines, defaultMode, orderCode)` dentro de try/catch (best-effort, nunca derruba o fluxo da venda).
+- `src/pages/FrenteCaixa.tsx`, bloco `useConsolidatedPostSale` do `handleConfirmPayment` (por volta da linha 1096):
+  - após ler `tefCapturedRef.current`, se `isTefEarlyPrintPilot(company?.id)` e houver vias, dispara `imprimirViasTefImediato` **antes** de iniciar a emissão da NFC-e (sem `await` bloqueante do fluxo fiscal).
+  - quando a impressão antecipada acontece: passa `consolidatedTef` mantendo as linhas, mas com nova prop `tefAlreadyPrinted` para o diálogo; e o cálculo de `silentAutoNfce` passa a desconsiderar `hasTef` (modo `auto` + só NFC-e volta a ser silencioso, sem diálogo desnecessário).
+  - se não houver NFC-e (`hasNfce === false`) e as vias já saíram, nenhum diálogo é aberto.
+- `src/components/frente-caixa/FrenteCaixaPostSaleDialog.tsx`: nova prop opcional `tefAlreadyPrinted?: boolean`. Quando `true`, os checkboxes de via nascem desmarcados, a seção mostra "Vias do TEF já impressas" e um botão secundário "Reimprimir vias" chamando `executarImpressaoTefVias`. Sem a prop, o componente segue idêntico.
+- Bump em `src/version.ts` + entrada no changelog.
+
+## Fora do escopo (intocado)
+
+`tef-webservice`, `pinpadService.ts`, `pdvV2Tef.ts`, `tefOrderActions.ts`, `nfce-proxy` (timeouts, contingência, abortar-online, idempotência), `PDVV2NFCePostSaleDialog`, `TefPrintPromptDialog`, `PedidoExpressDialog`, `OrderCardChargeDialog`, `PDVV2.tsx`, `external_id` `FCX-{saleId}`, numeração fiscal e payload da NFC-e.
