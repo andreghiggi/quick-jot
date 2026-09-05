@@ -115,3 +115,4 @@
 - [Editar Pedido Entrega](mem://features/order-edit-delivery-rich) — OrderEditDialog agora usa endereços salvos do cliente, campos estruturados, opções de entrega da loja (cidade/interior/bairro) e exige cliente real quando "Cliente Loja" vira Entrega.
 - [NFC-e financeira crediário](mem://features/nfce-financeira-crediario) — CRED-* financeiro: modelo 65, CFOP 5949, CSOSN 900, CST 49, alíquotas 0, cClassTrib 000001; sem aliases XML manuais.
 - [Express Amore Mio status](mem://features/express-amore-mio-status) — Express com telefone nasce `preparing` (libera Pronto/Entregar) e Cliente Loja nasce `delivered`; confirmação + em preparo no WhatsApp no envio para cozinha.
+- [TEF Early Print piloto](mem://features/tef-early-print-piloto.md) — v1.71.0-beta: vias TEF na aprovação do pinpad (FC, Cozinha da Ruiva + I9); liberar geral = 1 linha
