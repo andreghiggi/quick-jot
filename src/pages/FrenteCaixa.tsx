@@ -1133,7 +1133,7 @@ export default function FrenteCaixa() {
         const tefPendingDialog = hasTef && !tefEarlyPrinted;
         const silentAutoNfce = autoMode && !tefPendingDialog && hasNfce;
         if ((tefPendingDialog || hasNfce) && !silentAutoNfce) {
-          setConsolidatedTef(tefEarlyPrinted ? capturedTef : capturedTef);
+          setConsolidatedTef(capturedTef);
           setConsolidatedRecord(null);
           setConsolidatedNfceError(null);
           setConsolidatedEmitting(hasNfce);
