@@ -1107,14 +1107,33 @@ export default function FrenteCaixa() {
         const hasNfce = !!(nfcePayload && company?.id);
         const hasTef = !!(capturedTef && capturedTef.receiptLines?.length);
         const autoMode = pdvSettings.print_on_finish_mode === 'auto';
+
+        // ── Piloto TEF EARLY-PRINT (Cozinha da Ruiva / Lancheria I9) ──────
+        // Imprime as vias do TEF IMEDIATAMENTE, em paralelo com a NFC-e,
+        // respeitando `tef_auto_print_vias` da loja. Se o modo for 'none',
+        // `tefEarlyPrinted` fica false e o diálogo mantém a escolha manual.
+        let tefEarlyPrinted = false;
+        if (hasTef && isTefEarlyPrintPilot(company?.id)) {
+          try {
+            tefEarlyPrinted = await imprimirViasTefImediato(capturedTef);
+          } catch (e) {
+            console.error('[FrenteCaixa] early TEF print falhou:', e);
+            tefEarlyPrinted = false;
+          }
+        }
+        setConsolidatedTefPrinted(tefEarlyPrinted);
+
         // v1.52.7-beta — Silenciar diálogo pós-venda no modo `auto` sem TEF.
         // Se TEF: mantém o diálogo consolidado (vias cliente/estabelecimento).
         // Se modo `ask`/`off`: mantém diálogo (operador decide).
         // Se modo `auto` e só NFC-e: emite em background, imprime DANFE direto
         // (janela nativa do Chrome) e não abre diálogo — a menos que dê erro.
-        const silentAutoNfce = autoMode && !hasTef && hasNfce;
-        if ((hasTef || hasNfce) && !silentAutoNfce) {
-          setConsolidatedTef(capturedTef);
+        // Piloto early-print: TEF já impresso conta como "sem TEF pendente" —
+        // o diálogo só é necessário se sobrar algo pra decidir/imprimir.
+        const tefPendingDialog = hasTef && !tefEarlyPrinted;
+        const silentAutoNfce = autoMode && !tefPendingDialog && hasNfce;
+        if ((tefPendingDialog || hasNfce) && !silentAutoNfce) {
+          setConsolidatedTef(tefEarlyPrinted ? capturedTef : capturedTef);
           setConsolidatedRecord(null);
           setConsolidatedNfceError(null);
           setConsolidatedEmitting(hasNfce);
