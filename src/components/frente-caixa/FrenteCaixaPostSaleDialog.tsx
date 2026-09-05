@@ -51,6 +51,8 @@ export interface FrenteCaixaPostSaleDialogProps {
   tefReceiptLines?: string[] | null;
   tefDefaultMode?: TefAutoPrintMode;
   tefOrderCode?: string;
+  /** Piloto early-print: as vias do TEF já saíram na aprovação do pinpad. */
+  tefAlreadyPrinted?: boolean;
   /** Registro inicial da NFC-e — null se a venda não emitiu NFC-e. */
   initialNfceRecord: NFCeRecord | null;
   /** Erro de emissão da NFC-e (quando há). */
