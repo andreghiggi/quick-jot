@@ -326,7 +326,38 @@ export function FrenteCaixaPostSaleDialog({
 
             {/* Checkboxes */}
             <div className="space-y-2">
-              {hasTef && (
+              {hasTef && tefAlreadyPrinted && (
+                <div className="rounded border border-green-600/40 bg-green-600/5 p-3 text-sm flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-medium">Vias do TEF já impressas</p>
+                    <p className="text-xs text-muted-foreground">
+                      Enviadas para a impressora assim que o pinpad aprovou o pagamento.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={printing}
+                    onClick={async () => {
+                      setPrinting(true);
+                      try {
+                        const mode: Exclude<TefAutoPrintMode, 'none'> =
+                          tefDefaultMode === 'ambas' && canPrintCliente ? 'ambas' : 'estabelecimento';
+                        await executarImpressaoTefVias(tefReceiptLines!, mode, tefOrderCode);
+                      } catch {
+                        toast.error('Falha ao reimprimir vias do TEF');
+                      } finally {
+                        setPrinting(false);
+                      }
+                    }}
+                  >
+                    Reimprimir vias
+                  </Button>
+                </div>
+              )}
+              {hasTef && !tefAlreadyPrinted && (
                 <>
                   <label className="flex items-center gap-3 p-2 rounded border cursor-pointer hover:bg-muted/40">
                     <Checkbox
