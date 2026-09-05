@@ -73,6 +73,7 @@ export function FrenteCaixaPostSaleDialog({
   tefReceiptLines,
   tefDefaultMode = 'ambas',
   tefOrderCode,
+  tefAlreadyPrinted = false,
   initialNfceRecord,
   nfceError,
   emittingNfce,
@@ -128,8 +129,10 @@ export function FrenteCaixaPostSaleDialog({
     );
     setRetryCount(0);
     setAutoFired(false);
-    setCheckEstab(hasTef && tefDefaultMode !== 'none');
-    setCheckCliente(hasTef && tefDefaultMode === 'ambas' && canPrintCliente);
+    // Early-print: vias já saíram na aprovação do pinpad — nascem desmarcadas
+    // para o operador não imprimir de novo por engano (reimpressão disponível).
+    setCheckEstab(hasTef && !tefAlreadyPrinted && tefDefaultMode !== 'none');
+    setCheckCliente(hasTef && !tefAlreadyPrinted && tefDefaultMode === 'ambas' && canPrintCliente);
     setCheckDanfe(!!initialNfceRecord || emittingNfce);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
