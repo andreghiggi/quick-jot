@@ -96,6 +96,10 @@ import {
   type TefAutoPrintMode,
   type TefPrintPromptPayload,
 } from '@/utils/tefAutoPrint';
+import {
+  isTefEarlyPrintPilot,
+  imprimirViasTefImediato,
+} from '@/utils/frenteCaixaTefEarlyPrint';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { buildPagamentosSplit } from '@/utils/pdvV2MultiPayment';
 import { supabase } from '@/integrations/supabase/client';
@@ -176,6 +180,9 @@ export default function FrenteCaixa() {
   const [consolidatedRecord, setConsolidatedRecord] = useState<NFCeRecord | null>(null);
   const [consolidatedNfceError, setConsolidatedNfceError] = useState<string | null>(null);
   const [consolidatedEmitting, setConsolidatedEmitting] = useState(false);
+  /** Piloto TEF early-print: marca quando as vias já foram impressas na
+   *  aprovação do pinpad, antes da NFC-e resolver. */
+  const [consolidatedTefPrinted, setConsolidatedTefPrinted] = useState(false);
   /** Opções de renderização do DANFE calculadas a partir do checkout atual
    *  + configurações da Frente de Caixa. Recalculado em cada `handleConfirmPayment`. */
   const [danfeOpts, setDanfeOpts] = useState<DanfePrintOptions | undefined>(undefined);
@@ -1100,13 +1107,32 @@ export default function FrenteCaixa() {
         const hasNfce = !!(nfcePayload && company?.id);
         const hasTef = !!(capturedTef && capturedTef.receiptLines?.length);
         const autoMode = pdvSettings.print_on_finish_mode === 'auto';
+
+        // ── Piloto TEF EARLY-PRINT (Cozinha da Ruiva / Lancheria I9) ──────
+        // Imprime as vias do TEF IMEDIATAMENTE, em paralelo com a NFC-e,
+        // respeitando `tef_auto_print_vias` da loja. Se o modo for 'none',
+        // `tefEarlyPrinted` fica false e o diálogo mantém a escolha manual.
+        let tefEarlyPrinted = false;
+        if (hasTef && isTefEarlyPrintPilot(company?.id)) {
+          try {
+            tefEarlyPrinted = await imprimirViasTefImediato(capturedTef);
+          } catch (e) {
+            console.error('[FrenteCaixa] early TEF print falhou:', e);
+            tefEarlyPrinted = false;
+          }
+        }
+        setConsolidatedTefPrinted(tefEarlyPrinted);
+
         // v1.52.7-beta — Silenciar diálogo pós-venda no modo `auto` sem TEF.
         // Se TEF: mantém o diálogo consolidado (vias cliente/estabelecimento).
         // Se modo `ask`/`off`: mantém diálogo (operador decide).
         // Se modo `auto` e só NFC-e: emite em background, imprime DANFE direto
         // (janela nativa do Chrome) e não abre diálogo — a menos que dê erro.
-        const silentAutoNfce = autoMode && !hasTef && hasNfce;
-        if ((hasTef || hasNfce) && !silentAutoNfce) {
+        // Piloto early-print: TEF já impresso conta como "sem TEF pendente" —
+        // o diálogo só é necessário se sobrar algo pra decidir/imprimir.
+        const tefPendingDialog = hasTef && !tefEarlyPrinted;
+        const silentAutoNfce = autoMode && !tefPendingDialog && hasNfce;
+        if ((tefPendingDialog || hasNfce) && !silentAutoNfce) {
           setConsolidatedTef(capturedTef);
           setConsolidatedRecord(null);
           setConsolidatedNfceError(null);
@@ -2073,6 +2099,7 @@ export default function FrenteCaixa() {
         tefReceiptLines={consolidatedTef?.receiptLines || null}
         tefDefaultMode={(consolidatedTef?.defaultMode as TefAutoPrintMode) || 'ambas'}
         tefOrderCode={consolidatedTef?.orderCode}
+        tefAlreadyPrinted={consolidatedTefPrinted}
         initialNfceRecord={consolidatedRecord}
         nfceError={consolidatedNfceError}
         emittingNfce={consolidatedEmitting}
@@ -2081,6 +2108,7 @@ export default function FrenteCaixa() {
         onClosed={() => {
           setConsolidatedRecord(null);
           setConsolidatedTef(null);
+          setConsolidatedTefPrinted(false);
           setConsolidatedNfceError(null);
           setConsolidatedEmitting(false);
           setTimeout(() => inputRef.current?.focus(), 100);

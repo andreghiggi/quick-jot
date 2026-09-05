@@ -55,7 +55,11 @@ async function fetchAutoPrintMode(companyId: string): Promise<TefAutoPrintMode> 
   }
 }
 
-function buildHtml(receiptText: string, viaLabel: string, orderCode?: string): string {
+/**
+ * Exportado como `buildTefViaHtml` para reuso pela impressão antecipada da
+ * Frente de Caixa (frenteCaixaTefEarlyPrint.ts). Comportamento inalterado.
+ */
+export function buildTefViaHtml(receiptText: string, viaLabel: string, orderCode?: string): string {
   const safe = receiptText
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -210,7 +214,7 @@ export async function executarImpressaoTefVias(
         console.warn('[tefAutoPrint] pop-up bloqueado — usar reimpressão manual');
         return;
       }
-      w.document.write(buildHtml(jobs[i].body, jobs[i].label, orderCode));
+      w.document.write(buildTefViaHtml(jobs[i].body, jobs[i].label, orderCode));
       w.document.close();
       if (i < jobs.length - 1) {
         await new Promise((r) => setTimeout(r, 400));

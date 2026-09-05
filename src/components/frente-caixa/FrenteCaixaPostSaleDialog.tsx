@@ -51,6 +51,8 @@ export interface FrenteCaixaPostSaleDialogProps {
   tefReceiptLines?: string[] | null;
   tefDefaultMode?: TefAutoPrintMode;
   tefOrderCode?: string;
+  /** Piloto early-print: as vias do TEF já saíram na aprovação do pinpad. */
+  tefAlreadyPrinted?: boolean;
   /** Registro inicial da NFC-e — null se a venda não emitiu NFC-e. */
   initialNfceRecord: NFCeRecord | null;
   /** Erro de emissão da NFC-e (quando há). */
@@ -71,6 +73,7 @@ export function FrenteCaixaPostSaleDialog({
   tefReceiptLines,
   tefDefaultMode = 'ambas',
   tefOrderCode,
+  tefAlreadyPrinted = false,
   initialNfceRecord,
   nfceError,
   emittingNfce,
@@ -126,8 +129,10 @@ export function FrenteCaixaPostSaleDialog({
     );
     setRetryCount(0);
     setAutoFired(false);
-    setCheckEstab(hasTef && tefDefaultMode !== 'none');
-    setCheckCliente(hasTef && tefDefaultMode === 'ambas' && canPrintCliente);
+    // Early-print: vias já saíram na aprovação do pinpad — nascem desmarcadas
+    // para o operador não imprimir de novo por engano (reimpressão disponível).
+    setCheckEstab(hasTef && !tefAlreadyPrinted && tefDefaultMode !== 'none');
+    setCheckCliente(hasTef && !tefAlreadyPrinted && tefDefaultMode === 'ambas' && canPrintCliente);
     setCheckDanfe(!!initialNfceRecord || emittingNfce);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -321,7 +326,38 @@ export function FrenteCaixaPostSaleDialog({
 
             {/* Checkboxes */}
             <div className="space-y-2">
-              {hasTef && (
+              {hasTef && tefAlreadyPrinted && (
+                <div className="rounded border border-green-600/40 bg-green-600/5 p-3 text-sm flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-medium">Vias do TEF já impressas</p>
+                    <p className="text-xs text-muted-foreground">
+                      Enviadas para a impressora assim que o pinpad aprovou o pagamento.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={printing}
+                    onClick={async () => {
+                      setPrinting(true);
+                      try {
+                        const mode: Exclude<TefAutoPrintMode, 'none'> =
+                          tefDefaultMode === 'ambas' && canPrintCliente ? 'ambas' : 'estabelecimento';
+                        await executarImpressaoTefVias(tefReceiptLines!, mode, tefOrderCode);
+                      } catch {
+                        toast.error('Falha ao reimprimir vias do TEF');
+                      } finally {
+                        setPrinting(false);
+                      }
+                    }}
+                  >
+                    Reimprimir vias
+                  </Button>
+                </div>
+              )}
+              {hasTef && !tefAlreadyPrinted && (
                 <>
                   <label className="flex items-center gap-3 p-2 rounded border cursor-pointer hover:bg-muted/40">
                     <Checkbox
