@@ -180,6 +180,9 @@ export default function FrenteCaixa() {
   const [consolidatedRecord, setConsolidatedRecord] = useState<NFCeRecord | null>(null);
   const [consolidatedNfceError, setConsolidatedNfceError] = useState<string | null>(null);
   const [consolidatedEmitting, setConsolidatedEmitting] = useState(false);
+  /** Piloto TEF early-print: marca quando as vias já foram impressas na
+   *  aprovação do pinpad, antes da NFC-e resolver. */
+  const [consolidatedTefPrinted, setConsolidatedTefPrinted] = useState(false);
   /** Opções de renderização do DANFE calculadas a partir do checkout atual
    *  + configurações da Frente de Caixa. Recalculado em cada `handleConfirmPayment`. */
   const [danfeOpts, setDanfeOpts] = useState<DanfePrintOptions | undefined>(undefined);
