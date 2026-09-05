@@ -7,9 +7,10 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.70.5-beta";
-export const RELEASE_DATE = "2026-09-01"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão: descarte de backlog ao iniciar (Amore Mio)";
+export const VERSION = "1.71.0-beta";
+export const RELEASE_DATE = "2026-09-05"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Frente de Caixa: comprovante TEF impresso na hora (piloto)";
+
 
 
 export interface Release {
@@ -20,6 +21,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.71.0-beta",
+    date: "2026-09-05",
+    codename: "Frente de Caixa: comprovante TEF impresso na hora (piloto)",
+    changes: [
+      "Piloto (Cozinha da Ruiva e Lancheria da I9): na Frente de Caixa, as vias do comprovante do cartão (TEF) agora são impressas IMEDIATAMENTE após a aprovação no pinpad, sem esperar a NFC-e. Acaba a espera de 40s–1min quando a SEFAZ está lenta.",
+      "A NFC-e continua sendo emitida em paralelo e o DANFE sai normalmente quando autorizada. Nada mudou em numeração, contingência ou comunicação com o pinpad.",
+      "A preferência de cada loja é respeitada: quem configurou 'não imprimir' segue decidindo no diálogo final, como antes.",
+      "Se a impressão automática for bloqueada pelo navegador, o sistema usa um caminho alternativo (iframe oculto) e, em último caso, o diálogo final continua oferecendo as vias.",
+      "O diálogo pós-venda passa a mostrar 'Vias do TEF já impressas' com botão de reimpressão, e os checkboxes de via nascem desmarcados para evitar impressão duplicada.",
+      "Demais lojas: comportamento inalterado.",
+    ],
+  },
   {
     version: "1.70.5-beta",
     date: "2026-09-01",
