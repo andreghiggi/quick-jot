@@ -96,6 +96,10 @@ import {
   type TefAutoPrintMode,
   type TefPrintPromptPayload,
 } from '@/utils/tefAutoPrint';
+import {
+  isTefEarlyPrintPilot,
+  imprimirViasTefImediato,
+} from '@/utils/frenteCaixaTefEarlyPrint';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { buildPagamentosSplit } from '@/utils/pdvV2MultiPayment';
 import { supabase } from '@/integrations/supabase/client';
