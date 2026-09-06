@@ -243,7 +243,17 @@ export function PDVV2CloseCashDialog({
 
   const mainBody = (
     <div className="space-y-4 py-2">
+      {registerOpenDays >= 1 && (
+        <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
+          <p className="font-medium">Caixa aberto desde outro dia</p>
+          <p className="text-xs text-muted-foreground">
+            Este caixa está aberto há {registerOpenDays === 1 ? '1 dia' : `${registerOpenDays} dias`}.
+            Os valores abaixo somam todos os dias do período. Feche o caixa ao final de cada turno.
+          </p>
+        </div>
+      )}
       <div className="rounded-md border p-3 bg-muted/40">
+
         <p className="text-sm text-muted-foreground">Valor em dinheiro esperado em caixa</p>
         <p className="text-2xl font-bold tabular-nums">{formatPrice(expectedAmount)}</p>
         <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
