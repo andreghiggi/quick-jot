@@ -24,7 +24,9 @@ import {
 const TEF_EARLY_PRINT_PILOT_IDS = new Set<string>([
   '55181771-8b10-4af1-afc3-472c090a49be', // Cozinha da Ruiva
   '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da I9
+  '32b71649-461d-4cb6-b26c-12390b090feb', // Lancheria Bon Appetit
 ]);
+
 
 export function isTefEarlyPrintPilot(companyId?: string | null): boolean {
   return !!companyId && TEF_EARLY_PRINT_PILOT_IDS.has(companyId);
