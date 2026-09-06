@@ -43,6 +43,9 @@ interface PDVV2CloseCashDialogProps {
   onOpenChange: (o: boolean) => void;
   expectedAmount: number;
   openingAmount?: number;
+  /** Momento da abertura do caixa — usado para avisar sobre turno atravessando dias. */
+  openedAt?: string | null;
+
   cashMovements?: CloseCashMovement[];
   sales: CloseCashSale[];
   paymentMethods?: CloseCashPaymentMethod[];
