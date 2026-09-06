@@ -31,7 +31,8 @@ export const RELEASES: Release[] = [
       "Ao adicionar um produto que já está na lista de itens extras, aparece um aviso para conferir a quantidade e evitar duplicidade.",
       "Bon Appétit: o fechamento de caixa passa a exigir o valor contado na gaveta; não é mais possível confirmar em branco (que gravava R$ 0,00 e gerava diferença falsa).",
       "Aviso quando o caixa está aberto desde outro dia, lembrando que os valores somam todo o período.",
-      "Nada foi alterado em impressão, nota fiscal, TEF ou nas demais lojas.",
+      "Bon Appétit entrou no piloto de impressão antecipada do comprovante do cartão na Frente de Caixa: as vias saem assim que o pinpad aprova, sem esperar a nota fiscal.",
+      "Nada foi alterado em nota fiscal, comunicação com o pinpad ou nas demais lojas.",
     ],
   },
   {
