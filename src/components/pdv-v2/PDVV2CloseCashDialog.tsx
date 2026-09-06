@@ -169,10 +169,12 @@ export function PDVV2CloseCashDialog({
   }, [sales]);
 
   async function handleConfirm() {
-    const v = useCurrencyMask
-      ? parseCurrencyInput(closingAmount)
-      : parseFloat(closingAmount.replace(',', '.')) || 0;
+    const v = parsedClosingAmount;
+    if (requireCountedAmount && !hasCountedAmount) {
+      return;
+    }
     setSubmitting(true);
+
 
     // Build reconciliation note
     const reconcileLines: string[] = [];
