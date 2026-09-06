@@ -349,6 +349,29 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         return;
       }
 
+      // Venda registrada com sucesso — só agora os itens extras entram no
+      // pedido (evita item pendurado quando o pagamento é cancelado).
+      if (extras.length > 0 && company?.id) {
+        const insertPayload = extras.map((ex) => ({
+          order_id: order.id,
+          company_id: company.id,
+          product_id: ex.product_id,
+          name: ex.product_name,
+          quantity: ex.quantity,
+          price: ex.unit_price,
+          notes: ex.notes || null,
+          added_after: true,
+        }));
+        const { error: insertErr } = await supabase
+          .from('order_items')
+          .insert(insertPayload as any);
+        if (insertErr) {
+          console.error('[OrderCardCharge] erro ao inserir extras:', insertErr);
+          toast.error('Itens extras não foram gravados no pedido — confira o pedido.');
+        }
+      }
+
+
       // 2) Atualiza o progresso da cobrança. Só marca [COBRADO] quando não
       //    resta saldo de itens, preservando o botão Cobrar para frações pendentes.
       const currentPaidAmount = Number(order.paidAmount || 0);
