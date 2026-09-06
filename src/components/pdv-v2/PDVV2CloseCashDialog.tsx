@@ -91,6 +91,15 @@ export function PDVV2CloseCashDialog({
   // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
   const useCurrencyMask = true;
 
+  // Rollout isolado (Bon Appétit): exige o valor contado antes de fechar.
+  // Fechamentos em branco estavam gravando R$ 0,00 e gerando diferença falsa.
+  const requireCountedAmount = companyId === '32b71649-461d-4cb6-b26c-12390b090feb';
+  const parsedClosingAmount = useCurrencyMask
+    ? parseCurrencyInput(closingAmount)
+    : parseFloat(closingAmount.replace(',', '.')) || 0;
+  const hasCountedAmount = closingAmount.trim() !== '' && parsedClosingAmount > 0;
+
+
   // Group: { [origin]: { [paymentName]: total } }
   const grouped = useMemo(() => {
     const out: Record<string, Record<string, number>> = {};
