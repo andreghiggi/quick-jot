@@ -435,7 +435,10 @@ export function PDVV2CloseCashDialog({
                 Imprimir Detalhado
               </Button>
             )}
-            <Button onClick={handleConfirm} disabled={submitting}>
+            <Button
+              onClick={handleConfirm}
+              disabled={submitting || (requireCountedAmount && !hasCountedAmount)}
+            >
               Confirmar Fechamento
             </Button>
           </DialogFooter>
