@@ -104,6 +104,15 @@ export function PDVV2CloseCashDialog({
     : parseFloat(closingAmount.replace(',', '.')) || 0;
   const hasCountedAmount = closingAmount.trim() !== '' && parsedClosingAmount > 0;
 
+  /** Dias completos desde a abertura do caixa (0 = aberto hoje). */
+  const registerOpenDays = useMemo(() => {
+    if (!openedAt) return 0;
+    const t = new Date(openedAt).getTime();
+    if (Number.isNaN(t)) return 0;
+    return Math.floor((Date.now() - t) / 86400000);
+  }, [openedAt, open]);
+
+
 
   // Group: { [origin]: { [paymentName]: total } }
   const grouped = useMemo(() => {
