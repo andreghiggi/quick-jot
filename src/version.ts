@@ -7,9 +7,10 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.71.0-beta";
-export const RELEASE_DATE = "2026-09-05"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: comprovante TEF impresso na hora (piloto)";
+export const VERSION = "1.71.1-beta";
+export const RELEASE_DATE = "2026-09-06"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Bon Appétit: itens extras e fechamento de caixa mais seguros";
+
 
 
 
