@@ -268,10 +268,16 @@ export function PDVV2AddItemSearch({ companyId, items, onChange }: Props) {
       quantity,
       unit_price: unitPrice,
     };
+    const alreadyAdded = items.some((it) => it.product_name === newItem.product_name);
     onChange([...items, newItem]);
-    toast.success(`${p.name} adicionado`);
+    if (alreadyAdded) {
+      toast.warning(`${p.name} já estava na lista — confira a quantidade`);
+    } else {
+      toast.success(`${p.name} adicionado`);
+    }
     setQuery('');
   }
+
 
   function updateQty(id: string, delta: number) {
     onChange(
