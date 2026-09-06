@@ -7,9 +7,10 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.71.0-beta";
-export const RELEASE_DATE = "2026-09-05"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Frente de Caixa: comprovante TEF impresso na hora (piloto)";
+export const VERSION = "1.71.1-beta";
+export const RELEASE_DATE = "2026-09-06"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Bon Appétit: itens extras e fechamento de caixa mais seguros";
+
 
 
 
@@ -22,6 +23,19 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.71.1-beta",
+    date: "2026-09-06",
+    codename: "Bon Appétit: itens extras e fechamento de caixa mais seguros",
+    changes: [
+      "Itens adicionados na hora de cobrar só entram no pedido depois que o pagamento é confirmado. Antes, se a cobrança fosse cancelada no pinpad, o item ficava no pedido sem nunca ser cobrado — causa dos pedidos fechados por valor menor.",
+      "Ao adicionar um produto que já está na lista de itens extras, aparece um aviso para conferir a quantidade e evitar duplicidade.",
+      "Bon Appétit: o fechamento de caixa passa a exigir o valor contado na gaveta; não é mais possível confirmar em branco (que gravava R$ 0,00 e gerava diferença falsa).",
+      "Aviso quando o caixa está aberto desde outro dia, lembrando que os valores somam todo o período.",
+      "Nada foi alterado em impressão, nota fiscal, TEF ou nas demais lojas.",
+    ],
+  },
+  {
+
     version: "1.71.0-beta",
     date: "2026-09-05",
     codename: "Frente de Caixa: comprovante TEF impresso na hora (piloto)",

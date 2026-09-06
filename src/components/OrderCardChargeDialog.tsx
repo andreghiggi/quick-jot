@@ -295,26 +295,11 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         return;
       }
 
-      if (extras.length > 0 && company?.id) {
-        const insertPayload = extras.map((ex) => ({
-          order_id: order.id,
-          company_id: company.id,
-          product_id: ex.product_id,
-          name: ex.product_name,
-          quantity: ex.quantity,
-          price: ex.unit_price,
-          notes: ex.notes || null,
-          added_after: true,
-        }));
-        const { error: insertErr } = await supabase
-          .from('order_items')
-          .insert(insertPayload as any);
-        if (insertErr) {
-          console.error('[OrderCardCharge] erro ao inserir extras:', insertErr);
-          toast.error('Erro ao adicionar itens extras ao pedido.');
-          return;
-        }
-      }
+      // Os itens extras NÃO são gravados aqui. Se o pagamento for cancelado no
+      // pinpad (ou falhar), eles ficariam pendurados no pedido sem nunca serem
+      // cobrados — foi a causa de pedidos fechados por valor menor. A gravação
+      // acontece somente após a venda ser registrada com sucesso (ver abaixo).
+
 
       // ===== TEF: executa ANTES de criar a venda (mesmo fluxo de Mesa) =====
       let tefData: NFCeTefData | undefined;
@@ -363,6 +348,29 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         // addSale já exibe toast em caso de erro
         return;
       }
+
+      // Venda registrada com sucesso — só agora os itens extras entram no
+      // pedido (evita item pendurado quando o pagamento é cancelado).
+      if (extras.length > 0 && company?.id) {
+        const insertPayload = extras.map((ex) => ({
+          order_id: order.id,
+          company_id: company.id,
+          product_id: ex.product_id,
+          name: ex.product_name,
+          quantity: ex.quantity,
+          price: ex.unit_price,
+          notes: ex.notes || null,
+          added_after: true,
+        }));
+        const { error: insertErr } = await supabase
+          .from('order_items')
+          .insert(insertPayload as any);
+        if (insertErr) {
+          console.error('[OrderCardCharge] erro ao inserir extras:', insertErr);
+          toast.error('Itens extras não foram gravados no pedido — confira o pedido.');
+        }
+      }
+
 
       // 2) Atualiza o progresso da cobrança. Só marca [COBRADO] quando não
       //    resta saldo de itens, preservando o botão Cobrar para frações pendentes.

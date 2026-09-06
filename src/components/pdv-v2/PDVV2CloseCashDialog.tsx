@@ -43,6 +43,9 @@ interface PDVV2CloseCashDialogProps {
   onOpenChange: (o: boolean) => void;
   expectedAmount: number;
   openingAmount?: number;
+  /** Momento da abertura do caixa — usado para avisar sobre turno atravessando dias. */
+  openedAt?: string | null;
+
   cashMovements?: CloseCashMovement[];
   sales: CloseCashSale[];
   paymentMethods?: CloseCashPaymentMethod[];
@@ -73,6 +76,8 @@ export function PDVV2CloseCashDialog({
   onOpenChange,
   expectedAmount,
   openingAmount = 0,
+  openedAt,
+
   cashMovements = [],
   sales,
   paymentMethods = [],
@@ -90,6 +95,24 @@ export function PDVV2CloseCashDialog({
   const [openOrigin, setOpenOrigin] = useState<CloseCashSale['origin'] | null>(null);
   // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
   const useCurrencyMask = true;
+
+  // Rollout isolado (Bon Appétit): exige o valor contado antes de fechar.
+  // Fechamentos em branco estavam gravando R$ 0,00 e gerando diferença falsa.
+  const requireCountedAmount = companyId === '32b71649-461d-4cb6-b26c-12390b090feb';
+  const parsedClosingAmount = useCurrencyMask
+    ? parseCurrencyInput(closingAmount)
+    : parseFloat(closingAmount.replace(',', '.')) || 0;
+  const hasCountedAmount = closingAmount.trim() !== '' && parsedClosingAmount > 0;
+
+  /** Dias completos desde a abertura do caixa (0 = aberto hoje). */
+  const registerOpenDays = useMemo(() => {
+    if (!openedAt) return 0;
+    const t = new Date(openedAt).getTime();
+    if (Number.isNaN(t)) return 0;
+    return Math.floor((Date.now() - t) / 86400000);
+  }, [openedAt, open]);
+
+
 
   // Group: { [origin]: { [paymentName]: total } }
   const grouped = useMemo(() => {
@@ -160,10 +183,12 @@ export function PDVV2CloseCashDialog({
   }, [sales]);
 
   async function handleConfirm() {
-    const v = useCurrencyMask
-      ? parseCurrencyInput(closingAmount)
-      : parseFloat(closingAmount.replace(',', '.')) || 0;
+    const v = parsedClosingAmount;
+    if (requireCountedAmount && !hasCountedAmount) {
+      return;
+    }
     setSubmitting(true);
+
 
     // Build reconciliation note
     const reconcileLines: string[] = [];
@@ -227,7 +252,17 @@ export function PDVV2CloseCashDialog({
 
   const mainBody = (
     <div className="space-y-4 py-2">
+      {registerOpenDays >= 1 && (
+        <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
+          <p className="font-medium">Caixa aberto desde outro dia</p>
+          <p className="text-xs text-muted-foreground">
+            Este caixa está aberto há {registerOpenDays === 1 ? '1 dia' : `${registerOpenDays} dias`}.
+            Os valores abaixo somam todos os dias do período. Feche o caixa ao final de cada turno.
+          </p>
+        </div>
+      )}
       <div className="rounded-md border p-3 bg-muted/40">
+
         <p className="text-sm text-muted-foreground">Valor em dinheiro esperado em caixa</p>
         <p className="text-2xl font-bold tabular-nums">{formatPrice(expectedAmount)}</p>
         <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -347,7 +382,19 @@ export function PDVV2CloseCashDialog({
             )
           }
         />
+        {requireCountedAmount && (
+          <p className="text-xs text-muted-foreground">
+            Informe quanto há de dinheiro na gaveta. O sistema espera{' '}
+            <span className="font-semibold">{formatPrice(expectedAmount)}</span>.
+          </p>
+        )}
+        {requireCountedAmount && !hasCountedAmount && (
+          <p className="text-xs text-destructive">
+            Obrigatório informar o valor contado para fechar o caixa.
+          </p>
+        )}
       </div>
+
 
       <div className="space-y-2">
         <Label>Observações (opcional)</Label>
@@ -388,7 +435,10 @@ export function PDVV2CloseCashDialog({
                 Imprimir Detalhado
               </Button>
             )}
-            <Button onClick={handleConfirm} disabled={submitting}>
+            <Button
+              onClick={handleConfirm}
+              disabled={submitting || (requireCountedAmount && !hasCountedAmount)}
+            >
               Confirmar Fechamento
             </Button>
           </DialogFooter>
