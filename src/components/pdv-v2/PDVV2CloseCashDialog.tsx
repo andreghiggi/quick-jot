@@ -76,6 +76,8 @@ export function PDVV2CloseCashDialog({
   onOpenChange,
   expectedAmount,
   openingAmount = 0,
+  openedAt,
+
   cashMovements = [],
   sales,
   paymentMethods = [],
