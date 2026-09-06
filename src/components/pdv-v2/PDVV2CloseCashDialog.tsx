@@ -347,7 +347,19 @@ export function PDVV2CloseCashDialog({
             )
           }
         />
+        {requireCountedAmount && (
+          <p className="text-xs text-muted-foreground">
+            Informe quanto há de dinheiro na gaveta. O sistema espera{' '}
+            <span className="font-semibold">{formatPrice(expectedAmount)}</span>.
+          </p>
+        )}
+        {requireCountedAmount && !hasCountedAmount && (
+          <p className="text-xs text-destructive">
+            Obrigatório informar o valor contado para fechar o caixa.
+          </p>
+        )}
       </div>
+
 
       <div className="space-y-2">
         <Label>Observações (opcional)</Label>
