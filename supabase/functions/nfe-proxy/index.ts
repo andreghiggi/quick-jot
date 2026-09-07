@@ -9,6 +9,7 @@
 // `NFE_API_URL` (preferencial) ou de `NFCE_API_URL` trocando `/nfce` por `/nfe`.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { resolveNfeApiUrl } from '../_shared/fiscal-api-url.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,15 +17,8 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type',
 }
 
-function deriveNfeBaseUrl(): string | null {
-  const explicit = Deno.env.get('NFE_API_URL')
-  if (explicit) return explicit.replace(/\/$/, '')
-  const nfce = Deno.env.get('NFCE_API_URL')
-  if (!nfce) return null
-  // Substitui o segmento /nfce por /nfe preservando host e demais segmentos.
-  const url = nfce.replace(/\/$/, '')
-  if (url.includes('/nfce')) return url.replace('/nfce', '/nfe')
-  return url + '/nfe'
+function deriveNfeBaseUrl(): string {
+  return resolveNfeApiUrl()
 }
 
 Deno.serve(async (req) => {
@@ -56,12 +50,6 @@ Deno.serve(async (req) => {
     }
 
     const NFE_API_URL = deriveNfeBaseUrl()
-    if (!NFE_API_URL) {
-      return new Response(
-        JSON.stringify({ error: 'NF-e API não configurada (URL ausente)' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      )
-    }
 
     const body = await req.json()
     const { action, companyId, nfeId, recordId, payload } = body as {

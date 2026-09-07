@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { resolveDfeApiUrl } from '../_shared/fiscal-api-url.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,7 +7,7 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-const FF_BASE = 'https://vdzkhealunurfgrujekg.supabase.co/functions/v1/dfe-api'
+const FF_BASE = resolveDfeApiUrl()
 
 function j(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

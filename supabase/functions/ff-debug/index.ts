@@ -1,6 +1,7 @@
 // Temporário: consulta detalhes de NFC-e rejeitadas direto na Fiscal Flow
 // para diagnóstico da rejeição 725 (Cozinha da Ruiva).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { resolveNfceApiUrl } from '../_shared/fiscal-api-url.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +15,7 @@ Deno.serve(async (req) => {
     const companyId = body.companyId || '55181771-8b10-4af1-afc3-472c090a49be'
     const ids: string[] = body.ids || ['9f795779-ea06-4885-8d0f-ee734304ab96']
     const probeUpdate: boolean = body.probeUpdate === true
-    const NFCE_API_URL = Deno.env.get('NFCE_API_URL')!
+    const NFCE_API_URL = resolveNfceApiUrl()
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,

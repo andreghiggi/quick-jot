@@ -8,6 +8,7 @@
 // contingência são reconciliadas com a SEFAZ automaticamente.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { fiscalFlowBaseFromNfceUrl, resolveNfceApiUrl } from '../_shared/fiscal-api-url.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,14 +45,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const NFCE_API_URL = Deno.env.get('NFCE_API_URL')
+    const NFCE_API_URL = resolveNfceApiUrl()
     const GLOBAL_NFCE_API_KEY = Deno.env.get('NFCE_API_KEY') ?? null
-    if (!NFCE_API_URL) {
-      return new Response(JSON.stringify({ error: 'NFCE_API_URL ausente' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -119,7 +114,7 @@ Deno.serve(async (req) => {
     let errors = 0
     let reconciled = 0
 
-    const FF_BASE_URL = NFCE_API_URL.replace(/\/emitir\/?$/i, '').replace(/\/+$/, '')
+    const FF_BASE_URL = fiscalFlowBaseFromNfceUrl(NFCE_API_URL)
 
     async function consultarPorExternalId(apiKey: string, externalId: string): Promise<any | null> {
       const encoded = encodeURIComponent(externalId)
