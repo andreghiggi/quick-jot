@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    let apiResponse: Response
+    let apiResponse!: Response
     let result: any
 
     async function safeJson(resp: Response): Promise<any> {
