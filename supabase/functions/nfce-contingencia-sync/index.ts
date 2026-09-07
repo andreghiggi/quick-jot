@@ -94,6 +94,23 @@ Deno.serve(async (req) => {
       console.log(`[nfce-contingencia-sync] ${orphans.length} órfãs para reconciliar`)
     }
 
+    // Notas com nfce_id mas presas em processando/pendente (>5 min) — consulta VPS
+    const corteStuck = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+    const { data: stuckWithId } = await supabase
+      .from('nfce_records')
+      .select('id, company_id, nfce_id, external_id, ambiente, status')
+      .not('nfce_id', 'is', null)
+      .in('status', ['processando', 'pendente'])
+      .lt('updated_at', corteStuck)
+      .order('updated_at', { ascending: true })
+      .limit(80)
+
+    if (stuckWithId && stuckWithId.length > 0) {
+      console.log(`[nfce-contingencia-sync] ${stuckWithId.length} presas com nfce_id para sincronizar`)
+    }
+
+    let stuckSynced = 0
+
     // Cache de token por empresa para não consultar store_settings repetidas vezes
     const tokenCache = new Map<string, string | null>()
     async function tokenFor(companyId: string): Promise<string | null> {
@@ -134,6 +151,44 @@ Deno.serve(async (req) => {
       }
 
       return null
+    }
+
+    for (const record of (stuckWithId || [])) {
+      try {
+        const apiKey = await tokenFor(record.company_id)
+        if (!apiKey) continue
+        const resp = await fetch(`${NFCE_API_URL}/${record.nfce_id}`, {
+          headers: { 'x-api-key': apiKey },
+        })
+        const text = await resp.text()
+        let result: any
+        try { result = JSON.parse(text) } catch { continue }
+        const d = result?.data || result
+        if (!d?.status) continue
+        const rawStatus = String(d.status || '').toLowerCase()
+        const chave = d.chave_acesso || d.chave || d.access_key || null
+        const upd: Record<string, any> = {
+          status: rawStatus.includes('autoriz') ? 'autorizada' : rawStatus,
+          chave_acesso: chave,
+          protocolo: d.protocolo || d.protocol || d.nProt || null,
+          qrcode_url: d.qrcode_url || d.qr_code_url || (chave ? buildQrcodeUrl(chave, record.ambiente || 'producao') : null),
+          xml_url: d.xml_url || d.url_xml || null,
+          ambiente: record.ambiente || 'producao',
+          updated_at: new Date().toISOString(),
+          webhook_payload: { recovered_from: 'contingencia-sync-stuck', response: d },
+        }
+        if (rawStatus === 'rejeitada') {
+          upd.motivo_rejeicao = d.motivo_rejeicao || d.motivo || d.motivo_retorno || d.erro || null
+        }
+        const { error: upErr } = await supabase.from('nfce_records').update(upd).eq('id', record.id)
+        if (!upErr) {
+          stuckSynced++
+          console.log(`[nfce-contingencia-sync] Presa sincronizada: ${record.external_id?.slice(0, 30)} → ${upd.status}`)
+        } else errors++
+      } catch (err) {
+        console.error('[nfce-contingencia-sync] Erro presa', record.id, err)
+        errors++
+      }
     }
 
     for (const record of (orphans || [])) {
@@ -273,7 +328,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, checked: pending?.length ?? 0, effected, reconciled, errors }),
+      JSON.stringify({ ok: true, checked: pending?.length ?? 0, effected, reconciled, stuckSynced, errors }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (err) {

@@ -1027,7 +1027,7 @@ Deno.serve(async (req) => {
                 external_id: payload.external_id,
                 nfce_id: ffId,
                 status: ffData?.status || 'processando',
-                ambiente: emitPayload?.ambiente || payload?.ambiente || 'homologacao',
+                ambiente: emitPayload?.ambiente || payload?.ambiente || 'producao',
                 valor_total: emitPayload?.itens
                   ? emitPayload.itens.reduce((sum: number, item: any) =>
                       sum + Number(item.quantidade || 1) * Number(item.valor_unitario || 0), 0)
@@ -1064,10 +1064,8 @@ Deno.serve(async (req) => {
         if (emitData && (emitData.id || emitData.nfce_id)) {
           const chave = emitData.chave_acesso || emitData.chave || emitData.access_key || null
           const fromChave = chave ? extractFromChave(chave) : { numero: null, serie: null }
-          // Fallback chain: API response → XML tpAmb → request payload (what we
-          // actually sent to SEFAZ) → 'homologacao'. Using emitPayload.ambiente
-          // prevents authorized production NFC-es from being mis-tagged as
-          // homologação when the API response omits the ambiente field.
+          // Fallback chain: API response → XML tpAmb → request payload → producao
+          // (Bon/Ruiva operam sempre em produção; homologação só I9 testes)
           const ambienteResolved =
             emitData.ambiente ||
             emitData.environment ||
@@ -1075,7 +1073,7 @@ Deno.serve(async (req) => {
             emitPayload?.ambiente ||
             emitPayload?.environment ||
             payload?.ambiente ||
-            'homologacao'
+            'producao'
           // Detecta tpEmis real no XML autorizado: se a Focus emitiu em modo
           // normal (tpEmis=1) mesmo depois de termos pedido contingência, NÃO
           // marcamos como contingência — isso acontece quando o timeout de 8s
@@ -1140,7 +1138,7 @@ Deno.serve(async (req) => {
             emitPayload?.ambiente ||
             emitPayload?.environment ||
             payload?.ambiente ||
-            'homologacao'
+            'producao'
 
           try {
             const rejectedRecord = {
