@@ -84,17 +84,13 @@ export default function Menu() {
         if (error || !data) {
           setCompanyNotFound(true);
         } else {
-          // 🔁 Redirect automático: se a loja tem subdomínio configurado e estamos no
-          // domínio antigo OU acessando via /cardapio/:slug no domínio novo, redireciona
-          // para o subdomínio limpo (lancheriadai9.comandatech.com.br).
+          // 🔁 Redirect automático APENAS a partir do domínio legado (agilizeerp).
+          // Em app.comandatech.com.br/cardapio/:slug o cardápio renderiza na própria rota.
           const host = window.location.hostname.toLowerCase();
-          const onComandatech = host === COMANDATECH_ROOT || host.endsWith(`.${COMANDATECH_ROOT}`);
+          const onLegacy = host === LEGACY_HOST || host.endsWith('.agilizeerp.com.br');
           const onSubdomain = subdomainFromHost !== null;
 
-          // Só redireciona em produção (não em localhost / preview)
-          // Caso 1: domínio novo via /cardapio/:slug → vira subdomínio
-          // Caso 2: domínio antigo via /cardapio/:slug → vira subdomínio do novo domínio
-          if (data.subdomain && !onSubdomain && (onComandatech || host.endsWith('.com.br'))) {
+          if (data.subdomain && !onSubdomain && onLegacy) {
             const target = `https://${data.subdomain}.${COMANDATECH_ROOT}/`;
             window.location.replace(target);
             return;
