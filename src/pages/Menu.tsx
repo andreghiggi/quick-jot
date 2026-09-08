@@ -33,7 +33,7 @@ import { cn, formatPrice } from '@/lib/utils';
 import { MenuV2 } from '@/components/menu/MenuV2';
 import { AddedToCartDialog } from '@/components/menu/AddedToCartDialog';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
-import { detectDomainContext, COMANDATECH_ROOT } from '@/utils/domainRouting';
+import { detectDomainContext, COMANDATECH_ROOT, LEGACY_HOST } from '@/utils/domainRouting';
 import { useCustomerAddresses, CustomerAddress } from '@/hooks/useCustomerAddresses';
 import { CustomerAddressPicker } from '@/components/menu/CustomerAddressPicker';
 import { usePublicCoupons } from '@/hooks/usePublicCoupons';
@@ -84,17 +84,13 @@ export default function Menu() {
         if (error || !data) {
           setCompanyNotFound(true);
         } else {
-          // 🔁 Redirect automático: se a loja tem subdomínio configurado e estamos no
-          // domínio antigo OU acessando via /cardapio/:slug no domínio novo, redireciona
-          // para o subdomínio limpo (lancheriadai9.comandatech.com.br).
+          // 🔁 Redirect automático APENAS a partir do domínio legado (agilizeerp).
+          // Em app.comandatech.com.br/cardapio/:slug o cardápio renderiza na própria rota.
           const host = window.location.hostname.toLowerCase();
-          const onComandatech = host === COMANDATECH_ROOT || host.endsWith(`.${COMANDATECH_ROOT}`);
+          const onLegacy = host === LEGACY_HOST || host.endsWith('.agilizeerp.com.br');
           const onSubdomain = subdomainFromHost !== null;
 
-          // Só redireciona em produção (não em localhost / preview)
-          // Caso 1: domínio novo via /cardapio/:slug → vira subdomínio
-          // Caso 2: domínio antigo via /cardapio/:slug → vira subdomínio do novo domínio
-          if (data.subdomain && !onSubdomain && (onComandatech || host.endsWith('.com.br'))) {
+          if (data.subdomain && !onSubdomain && onLegacy) {
             const target = `https://${data.subdomain}.${COMANDATECH_ROOT}/`;
             window.location.replace(target);
             return;
@@ -258,7 +254,7 @@ export default function Menu() {
     setCustomerCpf(formatted);
   }
 
-  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading || neighborhoodsLoading || hoursLoading || groupsLoading;
+  const loading = companyLoading || productsLoading || categoriesLoading;
 
   // Build category name -> id map for optional groups
   const categoryIdByName = useMemo(() => {

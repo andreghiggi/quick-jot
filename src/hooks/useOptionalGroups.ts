@@ -56,20 +56,25 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
     }
 
     try {
-      const [groupsRes, itemsRes, catLinksRes, prodLinksRes] = await Promise.all([
+      const [groupsRes, itemsRes] = await Promise.all([
         supabase.from('optional_groups').select('*').eq('company_id', companyId).order('display_order'),
         supabase.from('optional_group_items').select('*').eq('company_id', companyId).order('display_order'),
-        supabase.from('optional_group_categories').select('*'),
-        supabase.from('optional_group_products').select('*'),
       ]);
 
       if (groupsRes.error) throw groupsRes.error;
 
+      const groupIds = (groupsRes.data || []).map(g => g.id);
+
+      const [catLinksRes, prodLinksRes] = groupIds.length
+        ? await Promise.all([
+            supabase.from('optional_group_categories').select('*').in('group_id', groupIds),
+            supabase.from('optional_group_products').select('*').in('group_id', groupIds),
+          ])
+        : [{ data: [] as any[] }, { data: [] as any[] }];
+
       const items = itemsRes.data || [];
       const catLinks = catLinksRes.data || [];
       const prodLinks = prodLinksRes.data || [];
-
-      const groupIds = (groupsRes.data || []).map(g => g.id);
 
       const mapped: OptionalGroup[] = (groupsRes.data || []).map(g => ({
         id: g.id,

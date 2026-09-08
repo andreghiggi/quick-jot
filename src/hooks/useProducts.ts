@@ -20,6 +20,8 @@ export function useProducts(options: UseProductsOptions = {}) {
       return;
     }
 
+    setLoading(true);
+
     try {
       let productsQuery = supabase
         .from('products')
