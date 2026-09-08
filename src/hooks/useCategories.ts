@@ -24,6 +24,8 @@ export function useCategories(options: UseCategoriesOptions = {}) {
       return;
     }
 
+    setLoading(true);
+
     try {
       let query = supabase
         .from('categories')
