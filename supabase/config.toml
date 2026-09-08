@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.process-sales-campaigns]
 verify_jwt = false
+
+[functions.export-migration]
+verify_jwt = false
