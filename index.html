@@ -10,6 +10,21 @@
     <meta name="theme-color" content="#E63946" />
 
     <script>
+      // Limpa sessões/caches apontando para o backend antigo (projeto iwmrtx...)
+      (function () {
+        try {
+          for (var i = localStorage.length - 1; i >= 0; i--) {
+            var k = localStorage.key(i);
+            if (!k) continue;
+            if (k.indexOf('iwmrtxdzlkasuzutxvhh') !== -1 || k.indexOf('sb-iwmrtx') === 0) {
+              localStorage.removeItem(k);
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
+
+    <script>
       // Redireciona automaticamente o domínio antigo para o novo,
       // preservando rota completa (ex: /cardapio/lancheria-da-i9-263ee29a)
       (function () {
