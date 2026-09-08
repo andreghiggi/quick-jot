@@ -33,7 +33,7 @@ import { cn, formatPrice } from '@/lib/utils';
 import { MenuV2 } from '@/components/menu/MenuV2';
 import { AddedToCartDialog } from '@/components/menu/AddedToCartDialog';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
-import { detectDomainContext, COMANDATECH_ROOT } from '@/utils/domainRouting';
+import { detectDomainContext, COMANDATECH_ROOT, LEGACY_HOST } from '@/utils/domainRouting';
 import { useCustomerAddresses, CustomerAddress } from '@/hooks/useCustomerAddresses';
 import { CustomerAddressPicker } from '@/components/menu/CustomerAddressPicker';
 import { usePublicCoupons } from '@/hooks/usePublicCoupons';
