@@ -254,7 +254,7 @@ export default function Menu() {
     setCustomerCpf(formatted);
   }
 
-  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading || neighborhoodsLoading || hoursLoading || groupsLoading;
+  const loading = companyLoading || productsLoading || categoriesLoading;
 
   // Build category name -> id map for optional groups
   const categoryIdByName = useMemo(() => {
