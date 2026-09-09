@@ -296,6 +296,8 @@ if errorlevel 1 (
   const handleDownloadScript = () => {
     const script = generatePythonScript();
     downloadTextFile(script, 'auto_printer.py');
+    // Fallback: grava a identificação da loja ao lado do script.
+    downloadTextFile(company?.id || '', 'company_id.txt');
   };
 
   const handleDownloadInstalador = () => {
@@ -303,7 +305,8 @@ if errorlevel 1 (
   };
 
   const handleDownloadIniciar = () => {
-    downloadTextFile(iniciarImpressaoCmd, 'iniciar_impressao.cmd');
+    // Gera o iniciador já com o nome e a identificação da loja embutidos.
+    downloadTextFile(generateBatScript(), 'iniciar_impressao.cmd');
   };
 
   const handleDownloadVerificador = () => {
@@ -319,7 +322,10 @@ if errorlevel 1 (
   };
 
   const downloadTextFile = (content: string, filename: string, mime = 'text/plain') => {
-    const blob = new Blob([content], { type: mime });
+    // Windows exige CRLF em .bat/.cmd/.txt — com LF o cmd.exe quebra as linhas.
+    const needsCrlf = /\.(bat|cmd|txt)$/i.test(filename);
+    const payload = needsCrlf ? content.replace(/\r?\n/g, '\r\n') : content;
+    const blob = new Blob([payload], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1612,7 +1618,7 @@ if errorlevel 1 (
                     verificar_pywin32.py
                   </Button>
                   <Button
-                    onClick={() => downloadTextFile(autoPrinterTemplate, 'auto_printer.py')}
+                    onClick={handleDownloadScript}
                     size="sm"
                     variant="outline"
                     className="w-full"

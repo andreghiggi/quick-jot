@@ -34,7 +34,10 @@ STATIONS_TTL = 300  # segundos
 
 # Lojas que usam renderizacao GRAFICA (GDI) em vez de RAW.
 # ISOLAMENTO: nao afeta nenhuma outra loja.
-GDI_COMPANY_IDS = {"f5f9eec3-67bc-497a-88a6-ce41d3b15df8"}  # Amore Mio
+GDI_COMPANY_IDS = {
+    "f5f9eec3-67bc-497a-88a6-ce41d3b15df8",  # Amore Mio
+    "b2f97590-ff21-4951-95dc-e3e2b19d4ccb",  # Rei do Acai
+}
 
 # Lojas que DESCARTAM o backlog ao iniciar o script (nao imprimem acumulo antigo).
 # ISOLAMENTO: nao afeta nenhuma outra loja.
@@ -1098,12 +1101,26 @@ if __name__ == "__main__":
     parser.add_argument("--company_name", help="Nome da empresa")
     args = parser.parse_args()
 
-    # Fallback para variáveis injetadas via build se não vier por argumento
+    # Ordem: argumento > valor injetado no download > company_id.txt > variavel de ambiente
     company_id = args.company_id or COMPANY_ID
     company_name = args.company_name or STORE_NAME
 
     if not company_id:
-        print("ERRO: company_id nao fornecido.")
+        try:
+            txt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "company_id.txt")
+            if os.path.exists(txt):
+                with open(txt, "r", encoding="utf-8-sig") as f:
+                    company_id = f.read().strip()
+        except Exception:
+            pass
+
+    if not company_id:
+        company_id = os.environ.get("COMANDATECH_COMPANY_ID", "").strip()
+
+    if not company_id:
+        print("ERRO: a loja nao foi identificada neste arquivo.")
+        print("Baixe novamente o auto_printer.py e o iniciar_impressao.cmd em")
+        print("Configuracoes > Impressao, no painel da sua loja, e substitua os arquivos da pasta.")
         sys.exit(1)
 
     main(company_id, company_name)
