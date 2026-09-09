@@ -44,7 +44,7 @@ export default function Categories() {
     if (success) setNewCategoryName('');
   };
 
-  if (loading) {
+  if (!company?.id || loading) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64">
@@ -243,7 +243,7 @@ export default function Categories() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="_default">Padrão</SelectItem>
-                        {stations.filter((s) => s.active).map((s) => (
+                        {stations.filter((s) => (s as { active?: boolean }).active !== false).map((s) => (
                           <SelectItem key={s.id} value={s.id}>
                             {s.name}
                           </SelectItem>

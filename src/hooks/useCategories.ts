@@ -58,6 +58,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
       setCategories(mapped);
     } catch (error) {
       console.error('Error fetching categories:', error);
+      toast.error('Erro ao carregar categorias');
     } finally {
       setLoading(false);
     }

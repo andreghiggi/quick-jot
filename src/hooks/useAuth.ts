@@ -70,7 +70,7 @@ export function useAuth() {
   useEffect(() => {
     let mounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const applySession = (session: Session | null) => {
       if (!mounted) return;
 
       setSession(session);
@@ -90,6 +90,17 @@ export function useAuth() {
         sessionStorage.removeItem(IMPERSONATED_RESELLER_KEY);
         setUserDataReady(false);
       }
+    };
+
+    // Bootstrap explícito — onAuthStateChange sozinho falha com storage async.
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      applySession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      if (event === 'INITIAL_SESSION') return;
+      applySession(session);
     });
 
     const safetyTimeoutMs = 3000;
@@ -112,22 +123,13 @@ export function useAuth() {
     fetchUserIdRef.current = userId;
     setUserDataReady(false);
 
-    const fetchTimeoutMs = 8000;
-    const timeout = new Promise<never>((_, reject) =>
-      window.setTimeout(
-        () => reject(new Error(`fetchUserData timeout after ${fetchTimeoutMs}ms`)),
-        fetchTimeoutMs,
-      ),
-    );
-
     try {
-      await Promise.race([fetchUserDataInner(userId), timeout]);
+      await fetchUserDataInner(userId);
     } catch (error) {
       console.error('Error fetching user data:', error);
+      fetchUserIdRef.current = null;
     } finally {
-      if (fetchUserIdRef.current === userId) {
-        setUserDataReady(true);
-      }
+      setUserDataReady(true);
     }
   }
 

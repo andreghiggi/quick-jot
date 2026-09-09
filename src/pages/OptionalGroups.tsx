@@ -339,7 +339,7 @@ export default function OptionalGroups() {
     return map;
   }, [products]);
 
-  if (loading) {
+  if (!company?.id || loading) {
     return (
       <AppLayout title="Grupos de Adicionais">
         <div className="flex items-center justify-center py-20">

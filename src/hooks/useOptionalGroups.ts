@@ -55,6 +55,8 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
       return;
     }
 
+    setLoading(true);
+
     try {
       const [groupsRes, itemsRes] = await Promise.all([
         supabase.from('optional_groups').select('*').eq('company_id', companyId).order('display_order'),
@@ -62,6 +64,7 @@ export function useOptionalGroups({ companyId }: UseOptionalGroupsOptions = {}) 
       ]);
 
       if (groupsRes.error) throw groupsRes.error;
+      if (itemsRes.error) throw itemsRes.error;
 
       const groupIds = (groupsRes.data || []).map(g => g.id);
 
