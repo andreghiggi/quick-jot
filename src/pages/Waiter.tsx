@@ -10,7 +10,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { PDVOptionalsDialog } from '@/components/pdv/PDVOptionalsDialog';
 import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import { supabase } from '@/integrations/supabase/client';
-import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
+import { enqueueProductionByStation } from '@/utils/printRouting';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -376,53 +376,42 @@ export default function Waiter() {
       await addMultipleItemsToTab(selectedTab.id, itemsToAdd);
 
       if (shouldPrint && company?.id) {
-        // Send to print queue for auto_printer.py on computer
-        const html = generateProductionTicketHTML({
-          tabNumber: selectedTab.tab_number,
-          tableNumber: selectedTab.table?.number,
-          customerName: selectedTab.customer_name,
-          orderType: 'table',
-          items: cart.map(item => {
-            // Fix v2 print: PDVOptionalsDialog appends "[obs]" into productName.
-            // Extract trailing [xxx] and move it to notes so the v2 layout
-            // renders the observation with inverted (black bg / white text) style.
-            // Only affects the printed HTML — DB / cart / screens stay untouched.
-            const m = item.productName.match(/^(.*?)\s*\[(.+)\]\s*$/);
-            const cleanName = m ? m[1].trim() : item.productName;
-            const extractedObs = m ? m[2].trim() : '';
-            const mergedNotes = [item.notes, extractedObs]
-              .filter(Boolean)
-              .join(' | ') || undefined;
-            return {
-              productName: cleanName,
-              quantity: item.quantity,
-              notes: mergedNotes,
-            };
-          }),
-          createdAt: new Date(),
-          paperSize: storeSettings.printerPaperSize,
-          layout: storeSettings.printLayout,
-          // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
-          showReadyTime: true,
-          readyOffsetMinutes:
-            true
-              ? computeReadyOffsetMinutes(storeSettings.estimatedWaitTime, 30)
-              : undefined,
+        const routableItems = cart.map((item) => {
+          const m = item.productName.match(/^(.*?)\s*\[(.+)\]\s*$/);
+          const cleanName = m ? m[1].trim() : item.productName;
+          const extractedObs = m ? m[2].trim() : '';
+          const mergedNotes = [item.notes, extractedObs].filter(Boolean).join(' | ') || undefined;
+          const product = products.find((p) => p.id === item.productId);
+          const categoryId = product ? categoryIdByName[product.category] : undefined;
+          return {
+            productName: cleanName,
+            quantity: item.quantity,
+            notes: mergedNotes,
+            categoryId: categoryId ?? null,
+          };
         });
-        
-        const { error: printError } = await supabase
-          .from('print_queue')
-          .insert({
-            company_id: company.id,
-            html_content: html,
-            label: `Comanda #${selectedTab.tab_number}`,
+
+        try {
+          await enqueueProductionByStation({
+            companyId: company.id,
+            items: routableItems,
+            labelPrefix: `Comanda #${selectedTab.tab_number}`,
+            ticketBase: {
+              tabNumber: selectedTab.tab_number,
+              tableNumber: selectedTab.table?.number,
+              customerName: selectedTab.customer_name,
+              orderType: 'table',
+              createdAt: new Date(),
+              paperSize: storeSettings.printerPaperSize,
+              layout: storeSettings.printLayout,
+              showReadyTime: true,
+              readyOffsetMinutes: computeReadyOffsetMinutes(storeSettings.estimatedWaitTime, 30),
+            },
           });
-        
-        if (printError) {
+          toast.success('Pedido enviado para impressão!');
+        } catch (printError) {
           console.error('Print queue error:', printError);
           toast.error('Erro ao enviar para impressão');
-        } else {
-          toast.success(`Pedido enviado para impressão!`);
         }
       } else {
         toast.success(`Itens adicionados à Comanda #${selectedTab.tab_number}!`);

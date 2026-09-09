@@ -9,7 +9,13 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "mirror-auth": "node scripts/mirror-auth.mjs"
+    "mirror-auth": "node scripts/mirror-auth.mjs",
+    "import-login-bundle": "node scripts/import-login-bundle.mjs",
+    "setup-local-login": "scripts\\setup-local-login.cmd",
+    "verify-local-env": "node scripts/verify-local-env.mjs",
+    "validate-bundle": "node scripts/validate-bundle.mjs",
+    "validate-prod": "node scripts/validate-prod-bundle.mjs",
+    "fix-mirror-grants": "node scripts/fix-mirror-grants.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

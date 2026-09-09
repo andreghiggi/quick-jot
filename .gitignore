@@ -11,9 +11,15 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.production.local
 
 # Backup DB URLs (postgres) — nunca commitar
 .env.backup
+login-bundle.json
+login-bundle-response.json
+docs/print-settings-vps.json
+scripts/printer.local.env
 
 # Editor directories and files
 .vscode/*

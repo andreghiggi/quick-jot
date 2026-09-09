@@ -65,6 +65,7 @@ import { brl } from '@/components/pdv-v2/_format';
 import {
   printDanfeFromRecord,
   emitirNFCe,
+  findBlockingNfceForSale,
   consultarNFCe,
   cancelarNFCe,
   type NFCeItem,
@@ -503,8 +504,13 @@ export default function FrenteCaixaLista() {
    */
   async function emitNfceRetroativa(sale: SaleRow) {
     if (!company?.id) return;
-    if (sale.nfce?.status === 'autorizada' || sale.nfce?.status === 'processando') {
-      toast.info('Esta venda já possui NFC-e em andamento.');
+    const blocking = await findBlockingNfceForSale(company.id, sale.id);
+    if (blocking) {
+      toast.info(
+        blocking.status === 'autorizada'
+          ? 'Esta venda já possui NFC-e autorizada.'
+          : 'Esta venda já possui NFC-e em andamento.',
+      );
       return;
     }
     setEmittingId(sale.id);
@@ -534,7 +540,7 @@ export default function FrenteCaixaLista() {
           ...buildNfceFiscalFields({ product: product as any, taxRule, mercadoEnabled: true, fallbackNcm }),
         };
       });
-      const externalId = `FCX-RETRO-${sale.id.substring(0, 8)}-${Date.now()}`;
+      const externalId = `FCX-RETRO-${sale.id}`;
       await emitirNFCe(company.id, sale.id, {
         external_id: externalId,
         itens: nfceItems,

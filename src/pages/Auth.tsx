@@ -52,7 +52,7 @@ const signupSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, signIn, signUp, isSuperAdmin, isWaiter } = useAuthContext();
+  const { user, loading: authLoading, userDataReady, signIn, signUp, isSuperAdmin, isWaiter, isReseller } = useAuthContext();
   
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -81,17 +81,18 @@ export default function Auth() {
   const [signupCnpj, setSignupCnpj] = useState('');
 
   useEffect(() => {
-    if (user && !authLoading) {
-      // Redirect based on role
+    if (user && !authLoading && userDataReady) {
       if (isSuperAdmin()) {
         navigate('/admin');
+      } else if (isReseller()) {
+        navigate('/revendedor/home');
       } else if (isWaiter()) {
         navigate('/garcom');
       } else {
         navigate('/');
       }
     }
-  }, [user, authLoading, navigate, isSuperAdmin, isWaiter]);
+  }, [user, authLoading, userDataReady, navigate, isSuperAdmin, isWaiter, isReseller]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -205,14 +206,6 @@ export default function Auth() {
     });
     setIsLoading(false);
     // Redirect is handled by useEffect
-  }
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
   }
 
   return (

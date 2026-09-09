@@ -12,107 +12,31 @@ import { TefPrintPromptDialog } from "@/components/TefPrintPromptDialog";
 import { VersionBadge } from "@/components/VersionBadge";
 import { useCompanyModules } from "@/hooks/useCompanyModules";
 import { detectDomainContext, COMANDATECH_ROOT } from "@/utils/domainRouting";
-import { useEffect, type ReactNode } from "react";
-
-// Pages
+import { Suspense, useEffect, type ReactNode } from "react";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
-import Index from "./pages/Index";
-import Products from "./pages/Products";
-import ProductEdit from "./pages/ProductEdit";
-import CadastrosConfiguracoes from "./pages/CadastrosConfiguracoes";
-import Orders from "./pages/Orders";
-import Settings from "./pages/Settings";
-import Menu from "./pages/Menu";
-import NoCompany from "./pages/NoCompany";
-import NotFound from "./pages/NotFound";
-import PDVPage from "./pages/PDV";
-import PaymentMethods from "./pages/PaymentMethods";
-import CashRegisters from "./pages/CashRegisters";
-import TablesConfig from "./pages/TablesConfig";
-import Waiter from "./pages/Waiter";
-import WaitersConfig from "./pages/WaitersConfig";
-import POS from "./pages/POS";
-import SalesReport from "./pages/SalesReport";
-import CashReport from "./pages/CashReport";
-import TefReport from "./pages/TefReport";
-import TefAdm from "./pages/TefAdm";
-import WhatsAppSettings from "./pages/WhatsAppSettings";
-import Changelog from "./pages/Changelog";
-import Fiscal from "./pages/Fiscal";
-import NFCeMonitor from "./pages/NFCeMonitor";
-import EspelhoFiscal from "./pages/fiscal/EspelhoFiscal";
-import Suggestions from "./pages/Suggestions";
-import MenuImport from "./pages/MenuImport";
-import OptionalGroups from "./pages/OptionalGroups";
-import Categories from "./pages/Categories";
-import Subcategories from "./pages/Subcategories";
-import Combos from "./pages/Combos";
-import ComboEdit from "./pages/ComboEdit";
-import CustomerReport from "./pages/CustomerReport";
-import ABCReport from "./pages/ABCReport";
-import SalesCampaigns from "./pages/SalesCampaigns";
-import Customers from "./pages/Customers";
-import Suppliers from "./pages/Suppliers";
-import PDVV2 from "./pages/PDVV2";
-import PDVV2ComandasHistorico from "./pages/PDVV2ComandasHistorico";
-import CouponsPage from "./pages/Coupons";
-import MesaQR from "./pages/MesaQR";
-import FrenteCaixa from "./pages/FrenteCaixa";
-import FrenteCaixaLista from "./pages/FrenteCaixaLista";
-import FrenteCaixaConfiguracoes from "./pages/FrenteCaixaConfiguracoes";
-import Receitas from "./pages/financeiro/Receitas";
-import Despesas from "./pages/financeiro/Despesas";
-import FluxoCaixa from "./pages/financeiro/FluxoCaixa";
-import Inadimplencia from "./pages/financeiro/Inadimplencia";
-import {
-  ReceitasRelatorios, DespesasRelatorios,
-  ReceitasConfiguracoes, DespesasConfiguracoes,
-  PlanosDeContas, CentrosDeCustos,
-} from "./pages/financeiro/FinancePlaceholderPages";
-import EstoqueRelatorio from "./pages/EstoqueRelatorio";
-import InventarioContagem from "./pages/InventarioContagem";
-import InventarioLivro from "./pages/InventarioLivro";
-import InventarioCMV from "./pages/InventarioCMV";
-import InventarioKardex from "./pages/InventarioKardex";
-import RelatoriosHub from "./pages/RelatoriosHub";
-import DfeManifestacao from "./pages/compras/DfeManifestacao";
-import PurchaseImportXml from "./pages/compras/PurchaseImportXml";
-import PurchaseInvoices from "./pages/compras/PurchaseInvoices";
-import Compras from "./pages/compras/Compras";
-import ComprasRelatorios from "./pages/compras/ComprasRelatorios";
-import ComprasConfiguracoes from "./pages/compras/ComprasConfiguracoes";
-import NovaCompra from "./pages/compras/NovaCompra";
-import NFeList from "./pages/nfe/NFeList";
-import NFeEmissaoAvulsa from "./pages/nfe/NFeEmissaoAvulsa";
+import * as P from "./routes/lazyPages";
+import { PageLoader } from "@/components/PageLoader";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
 import { useFinanceiroEnabled } from "@/hooks/useFinanceiroEnabled";
 import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
 
-// Admin Pages
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import IntegrationsPage from "./pages/admin/IntegrationsPage";
-import CompanyModulesPage from "./pages/admin/CompanyModulesPage";
-import SuggestionsAdmin from "./pages/admin/SuggestionsAdmin";
-import ResellersPage from "./pages/admin/ResellersPage";
-import AdminSettings from "./pages/admin/AdminSettings";
-import CampaignSettings from "./pages/admin/CampaignSettings";
-import MediaKitAdmin from "./pages/admin/MediaKitAdmin";
-import ResellerMediaKit from "./pages/reseller/ResellerMediaKit";
-import ResellerHome from "./pages/reseller/ResellerHome";
-import ResellerLojas from "./pages/reseller/ResellerLojas";
-import ResellerConfiguracoes from "./pages/reseller/ResellerConfiguracoes";
-
 const queryClient = new QueryClient();
 
 function RootRedirect() {
-  const { user, loading, isSuperAdmin, isWaiter, isReseller, company, impersonatedCompany } = useAuthContext();
+  const { user, loading, userDataReady, isSuperAdmin, isWaiter, isReseller, company, impersonatedCompany } = useAuthContext();
   const { enabled: pdvV2Enabled, loading: pdvV2Loading } = usePdvV2Enabled(company?.id);
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { enabled: cardapioEnabled, loading: cardapioLoading } = useCardapioEnabled(company?.id);
 
-  if (loading) return null;
+  if (loading || (user && !userDataReady)) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
   if (!user) return <Navigate to="/auth" replace />;
   // Quando super_admin/revendedor está impersonando uma loja, comporta-se como a loja.
   if (!impersonatedCompany) {
@@ -126,7 +50,7 @@ function RootRedirect() {
     return <Navigate to="/frente-caixa" replace />;
   }
 
-  return <Index />;
+  return <P.Index />;
 }
 
 /**
@@ -148,8 +72,8 @@ function PDVV2Guard({ children }: { children: ReactNode }) {
 function FrenteCaixaGuard({ children }: { children: ReactNode }) {
   const { company } = useAuthContext();
   const { enabled, loading } = useMercadoEnabled(company?.id);
-  if (loading) return null;
-  if (!enabled) return <Navigate to="/" replace />;
+  if (loading) return <PageLoader />;
+  if (!enabled) return <Navigate to="/pdv-v2" replace />;
   return <>{children}</>;
 }
 
@@ -180,15 +104,17 @@ function AppRoutes() {
   // a rota raiz "/" deve carregar o cardápio dessa loja diretamente.
   if (domainCtx.kind === 'store') {
     return (
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/auth" element={<Auth />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/cardapio/:slug" element={<Menu />} />
-        <Route path="/mesa/:slug" element={<MesaQR />} />
+        <Route path="/cardapio/:slug" element={<P.Menu />} />
+        <Route path="/mesa/:slug" element={<P.MesaQR />} />
         {/* Rota raiz do subdomínio → cardápio da loja */}
-        <Route path="/" element={<Menu />} />
-        <Route path="*" element={<Menu />} />
+        <Route path="/" element={<P.Menu />} />
+        <Route path="*" element={<P.Menu />} />
       </Routes>
+      </Suspense>
     );
   }
 
@@ -198,12 +124,13 @@ function AppRoutes() {
   }
 
   return (
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       {/* Public Routes */}
       <Route path="/auth" element={<Auth />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/cardapio/:slug" element={<Menu />} />
-      <Route path="/mesa/:slug" element={<MesaQR />} />
+      <Route path="/cardapio/:slug" element={<P.Menu />} />
+      <Route path="/mesa/:slug" element={<P.MesaQR />} />
       
       {/* Root with redirect logic */}
       <Route path="/" element={<RootRedirect />} />
@@ -211,47 +138,47 @@ function AppRoutes() {
       {/* Protected Routes */}
       <Route path="/pedidos" element={
         <ProtectedRoute requireCompany>
-          <Orders />
+          <P.Orders />
         </ProtectedRoute>
       } />
       
       <Route path="/produtos" element={
         <ProtectedRoute requireCompany>
-          <Products />
+          <P.Products />
         </ProtectedRoute>
       } />
       <Route path="/produtos/novo" element={
         <ProtectedRoute requireCompany>
-          <ProductEdit />
+          <P.ProductEdit />
         </ProtectedRoute>
       } />
       <Route path="/produtos/:id" element={
         <ProtectedRoute requireCompany>
-          <ProductEdit />
+          <P.ProductEdit />
         </ProtectedRoute>
       } />
 
       <Route path="/cadastros/configuracoes" element={
         <ProtectedRoute requireCompany>
-          <CadastrosConfiguracoes />
+          <P.CadastrosConfiguracoes />
         </ProtectedRoute>
       } />
 
       <Route path="/configuracoes" element={
         <ProtectedRoute requireCompany>
-          <Settings />
+          <P.Settings />
         </ProtectedRoute>
       } />
       
       <Route path="/pdv" element={
         <ProtectedRoute requireCompany>
-          <PDVPage />
+          <P.PDVPage />
         </ProtectedRoute>
       } />
       
       <Route path="/pos" element={
         <ProtectedRoute requireCompany>
-          <POS />
+          <P.POS />
         </ProtectedRoute>
       } />
 
@@ -259,7 +186,7 @@ function AppRoutes() {
       <Route path="/pdv-v2" element={
         <ProtectedRoute requireCompany>
           <PDVV2Guard>
-            <PDVV2 />
+            <P.PDVV2 />
           </PDVV2Guard>
         </ProtectedRoute>
       } />
@@ -267,7 +194,7 @@ function AppRoutes() {
       <Route path="/pdv-v2/comandas-historico" element={
         <ProtectedRoute requireCompany>
           <PDVV2Guard>
-            <PDVV2ComandasHistorico />
+            <P.PDVV2ComandasHistorico />
           </PDVV2Guard>
         </ProtectedRoute>
       } />
@@ -276,7 +203,7 @@ function AppRoutes() {
       <Route path="/frente-caixa" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <FrenteCaixa />
+            <P.FrenteCaixa />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
@@ -284,7 +211,7 @@ function AppRoutes() {
       <Route path="/frente-caixa/lista" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <FrenteCaixaLista />
+            <P.FrenteCaixaLista />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
@@ -292,7 +219,7 @@ function AppRoutes() {
       <Route path="/frente-caixa/configuracoes" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <FrenteCaixaConfiguracoes />
+            <P.FrenteCaixaConfiguracoes />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
@@ -301,97 +228,97 @@ function AppRoutes() {
       <Route path="/financeiro/contas-a-receber" element={
         <ProtectedRoute requireCompany>
           <FinanceiroGuard>
-            <Receitas />
+            <P.Receitas />
           </FinanceiroGuard>
         </ProtectedRoute>
       } />
       <Route path="/financeiro/receitas" element={
         <ProtectedRoute requireCompany>
           <FinanceiroGuard>
-            <Receitas />
+            <P.Receitas />
           </FinanceiroGuard>
         </ProtectedRoute>
       } />
       <Route path="/financeiro/contas-a-pagar" element={
         <ProtectedRoute requireCompany>
           <FinanceiroGuard>
-            <Despesas />
+            <P.Despesas />
           </FinanceiroGuard>
         </ProtectedRoute>
       } />
       <Route path="/financeiro/despesas" element={
         <ProtectedRoute requireCompany>
           <FinanceiroGuard>
-            <Despesas />
+            <P.Despesas />
           </FinanceiroGuard>
         </ProtectedRoute>
       } />
       <Route path="/financeiro/fluxo-de-caixa" element={
         <ProtectedRoute requireCompany>
           <FinanceiroGuard>
-            <FluxoCaixa />
+            <P.FluxoCaixa />
           </FinanceiroGuard>
         </ProtectedRoute>
       } />
       <Route path="/financeiro/inadimplencia" element={
         <ProtectedRoute requireCompany>
           <FinanceiroGuard>
-            <Inadimplencia />
+            <P.Inadimplencia />
           </FinanceiroGuard>
         </ProtectedRoute>
       } />
       <Route path="/financeiro/receitas/relatorios" element={
-        <ProtectedRoute requireCompany><FinanceiroGuard><ReceitasRelatorios /></FinanceiroGuard></ProtectedRoute>
+        <ProtectedRoute requireCompany><FinanceiroGuard><P.ReceitasRelatorios /></FinanceiroGuard></ProtectedRoute>
       } />
       <Route path="/financeiro/receitas/configuracoes" element={
-        <ProtectedRoute requireCompany><FinanceiroGuard><ReceitasConfiguracoes /></FinanceiroGuard></ProtectedRoute>
+        <ProtectedRoute requireCompany><FinanceiroGuard><P.ReceitasConfiguracoes /></FinanceiroGuard></ProtectedRoute>
       } />
       <Route path="/financeiro/despesas/relatorios" element={
-        <ProtectedRoute requireCompany><FinanceiroGuard><DespesasRelatorios /></FinanceiroGuard></ProtectedRoute>
+        <ProtectedRoute requireCompany><FinanceiroGuard><P.DespesasRelatorios /></FinanceiroGuard></ProtectedRoute>
       } />
       <Route path="/financeiro/despesas/configuracoes" element={
-        <ProtectedRoute requireCompany><FinanceiroGuard><DespesasConfiguracoes /></FinanceiroGuard></ProtectedRoute>
+        <ProtectedRoute requireCompany><FinanceiroGuard><P.DespesasConfiguracoes /></FinanceiroGuard></ProtectedRoute>
       } />
       <Route path="/financeiro/planos-de-contas" element={
-        <ProtectedRoute requireCompany><FinanceiroGuard><PlanosDeContas /></FinanceiroGuard></ProtectedRoute>
+        <ProtectedRoute requireCompany><FinanceiroGuard><P.PlanosDeContas /></FinanceiroGuard></ProtectedRoute>
       } />
       <Route path="/financeiro/centros-de-custos" element={
-        <ProtectedRoute requireCompany><FinanceiroGuard><CentrosDeCustos /></FinanceiroGuard></ProtectedRoute>
+        <ProtectedRoute requireCompany><FinanceiroGuard><P.CentrosDeCustos /></FinanceiroGuard></ProtectedRoute>
       } />
 
       {/* Estoque (módulo mercado) — guard interno via useMercadoEnabled */}
       <Route path="/estoque" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <EstoqueRelatorio />
+            <P.EstoqueRelatorio />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
       <Route path="/estoque/inventario" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <InventarioContagem />
+            <P.InventarioContagem />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
       <Route path="/estoque/livro-inventario" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <InventarioLivro />
+            <P.InventarioLivro />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
       <Route path="/estoque/cmv" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <InventarioCMV />
+            <P.InventarioCMV />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
       <Route path="/estoque/kardex" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <InventarioKardex />
+            <P.InventarioKardex />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
@@ -400,49 +327,49 @@ function AppRoutes() {
       <Route path="/compras" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <Compras />
+            <P.Compras />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
       <Route path="/compras/manifestacao" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <DfeManifestacao />
+            <P.DfeManifestacao />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
       <Route path="/compras/importar-xml" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <PurchaseImportXml />
+            <P.PurchaseImportXml />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
       <Route path="/compras/entradas" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <PurchaseInvoices />
+            <P.PurchaseInvoices />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
       <Route path="/compras/relatorios" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <ComprasRelatorios />
+            <P.ComprasRelatorios />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
       <Route path="/compras/configuracoes" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <ComprasConfiguracoes />
+            <P.ComprasConfiguracoes />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
       <Route path="/compras/nova" element={
         <ProtectedRoute requireCompany>
           <FrenteCaixaGuard>
-            <NovaCompra />
+            <P.NovaCompra />
           </FrenteCaixaGuard>
         </ProtectedRoute>
       } />
@@ -450,269 +377,270 @@ function AppRoutes() {
       {/* NF-e (modelo 55) — módulo `nfe`. Isolado do fluxo NFC-e. */}
       <Route path="/nfe" element={
         <ProtectedRoute requireCompany>
-          <NFeList />
+          <P.NFeList />
         </ProtectedRoute>
       } />
       <Route path="/nfe/nova" element={
         <ProtectedRoute requireCompany>
-          <NFeEmissaoAvulsa />
+          <P.NFeEmissaoAvulsa />
         </ProtectedRoute>
       } />
 
       <Route path="/formas-pagamento" element={
         <ProtectedRoute requireCompany>
-          <PaymentMethods />
+          <P.PaymentMethods />
         </ProtectedRoute>
       } />
       
       <Route path="/financeiro/caixa" element={
         <ProtectedRoute requireCompany>
-          <CashRegisters />
+          <P.CashRegisters />
         </ProtectedRoute>
       } />
       
       <Route path="/relatorios/vendas" element={
         <ProtectedRoute requireCompany>
-          <SalesReport />
+          <P.SalesReport />
         </ProtectedRoute>
       } />
       <Route path="/financeiro/relatorios" element={<Navigate to="/relatorios/vendas" replace />} />
 
       <Route path="/relatorios" element={
         <ProtectedRoute requireCompany>
-          <RelatoriosHub />
+          <P.RelatoriosHub />
         </ProtectedRoute>
       } />
 
       <Route path="/relatorios/caixa" element={
         <ProtectedRoute requireCompany>
-          <CashReport />
+          <P.CashReport />
         </ProtectedRoute>
       } />
 
       <Route path="/relatorios/tef" element={
         <ProtectedRoute requireCompany>
-          <TefReport />
+          <P.TefReport />
         </ProtectedRoute>
       } />
 
       <Route path="/tef-adm" element={
         <ProtectedRoute requireCompany>
-          <TefAdm />
+          <P.TefAdm />
         </ProtectedRoute>
       } />
       
       <Route path="/configuracoes/mesas" element={
         <ProtectedRoute requireCompany>
-          <TablesConfig />
+          <P.TablesConfig />
         </ProtectedRoute>
       } />
       
       <Route path="/configuracoes/garcons" element={
         <ProtectedRoute requireCompany>
-          <WaitersConfig />
+          <P.WaitersConfig />
         </ProtectedRoute>
       } />
       
       <Route path="/configuracoes/whatsapp" element={
         <ProtectedRoute requireCompany>
-          <WhatsAppSettings />
+          <P.WhatsAppSettings />
         </ProtectedRoute>
       } />
       
       <Route path="/fiscal" element={
         <ProtectedRoute requireCompany>
-          <Fiscal />
+          <P.Fiscal />
         </ProtectedRoute>
       } />
       
       <Route path="/nfce" element={
         <ProtectedRoute requireCompany>
-          <NFCeMonitor />
+          <P.NFCeMonitor />
         </ProtectedRoute>
       } />
 
       <Route path="/fiscal/espelho" element={
         <ProtectedRoute requireCompany>
-          <EspelhoFiscal />
+          <P.EspelhoFiscal />
         </ProtectedRoute>
       } />
       
       <Route path="/novidades" element={
         <ProtectedRoute requireCompany>
-          <Changelog />
+          <P.Changelog />
         </ProtectedRoute>
       } />
       
       <Route path="/sugestoes" element={
         <ProtectedRoute requireCompany>
-          <Suggestions />
+          <P.Suggestions />
         </ProtectedRoute>
       } />
       
       <Route path="/importar-cardapio" element={
         <ProtectedRoute requireCompany>
-          <MenuImport />
+          <P.MenuImport />
         </ProtectedRoute>
       } />
       
       <Route path="/adicionais" element={
         <ProtectedRoute requireCompany>
-          <OptionalGroups />
+          <P.OptionalGroups />
         </ProtectedRoute>
       } />
 
       <Route path="/combos" element={
         <ProtectedRoute requireCompany>
-          <Combos />
+          <P.Combos />
         </ProtectedRoute>
       } />
 
       <Route path="/combos/novo" element={
         <ProtectedRoute requireCompany>
-          <ComboEdit />
+          <P.ComboEdit />
         </ProtectedRoute>
       } />
 
       <Route path="/combos/:id" element={
         <ProtectedRoute requireCompany>
-          <ComboEdit />
+          <P.ComboEdit />
         </ProtectedRoute>
       } />
       
       <Route path="/categorias" element={
         <ProtectedRoute requireCompany>
-          <Categories />
+          <P.Categories />
         </ProtectedRoute>
       } />
       
       <Route path="/subcategorias" element={
         <ProtectedRoute requireCompany>
-          <Subcategories />
+          <P.Subcategories />
         </ProtectedRoute>
       } />
       
       <Route path="/relatorios/clientes" element={
         <ProtectedRoute requireCompany>
-          <CustomerReport />
+          <P.CustomerReport />
         </ProtectedRoute>
       } />
 
       <Route path="/clientes" element={
         <ProtectedRoute requireCompany>
-          <Customers />
+          <P.Customers />
         </ProtectedRoute>
       } />
 
       <Route path="/fornecedores" element={
         <ProtectedRoute requireCompany>
-          <Suppliers />
+          <P.Suppliers />
         </ProtectedRoute>
       } />
       
       <Route path="/relatorios/curva-abc" element={
         <ProtectedRoute requireCompany>
-          <ABCReport />
+          <P.ABCReport />
         </ProtectedRoute>
       } />
 
       <Route path="/campanhas" element={
         <ProtectedRoute requireCompany>
-          <SalesCampaigns />
+          <P.SalesCampaigns />
         </ProtectedRoute>
       } />
 
       <Route path="/cupons" element={
         <ProtectedRoute requireCompany>
-          <CouponsPage />
+          <P.CouponsPage />
         </ProtectedRoute>
       } />
       
       <Route path="/garcom" element={
         <ProtectedRoute requireCompany>
-          <Waiter />
+          <P.Waiter />
         </ProtectedRoute>
       } />
       
       {/* Admin Routes */}
       <Route path="/admin" element={
         <ProtectedRoute requiredRole="super_admin">
-          <AdminDashboard />
+          <P.AdminDashboard />
         </ProtectedRoute>
       } />
       
       <Route path="/admin/empresa/:companyId/modulos" element={
         <ProtectedRoute requiredRole="super_admin">
-          <CompanyModulesPage />
+          <P.CompanyModulesPage />
         </ProtectedRoute>
       } />
       
       <Route path="/configuracoes/integracoes" element={
         <ProtectedRoute requireCompany>
-          <IntegrationsPage />
+          <P.IntegrationsPage />
         </ProtectedRoute>
       } />
       
       <Route path="/admin/revendedores" element={
         <ProtectedRoute requiredRole="super_admin">
-          <ResellersPage />
+          <P.ResellersPage />
         </ProtectedRoute>
       } />
       
       <Route path="/admin/sugestoes" element={
         <ProtectedRoute requiredRole="super_admin">
-          <SuggestionsAdmin />
+          <P.SuggestionsAdmin />
         </ProtectedRoute>
       } />
       
       <Route path="/admin/dados-empresa" element={
         <ProtectedRoute requiredRole="super_admin">
-          <AdminSettings />
+          <P.AdminSettings />
         </ProtectedRoute>
       } />
 
       <Route path="/admin/campanhas-config" element={
         <ProtectedRoute requiredRole="super_admin">
-          <CampaignSettings />
+          <P.CampaignSettings />
         </ProtectedRoute>
       } />
 
       <Route path="/admin/midia-kit" element={
         <ProtectedRoute requiredRole="super_admin">
-          <MediaKitAdmin />
+          <P.MediaKitAdmin />
         </ProtectedRoute>
       } />
 
       {/* Reseller Routes */}
       <Route path="/revendedor/home" element={
         <ProtectedRoute requiredRole="reseller">
-          <ResellerHome />
+          <P.ResellerHome />
         </ProtectedRoute>
       } />
       <Route path="/revendedor/lojas" element={
         <ProtectedRoute requiredRole="reseller">
-          <ResellerLojas />
+          <P.ResellerLojas />
         </ProtectedRoute>
       } />
       {/* Financeiro foi embutido em /revendedor/lojas (Faturas por loja) */}
       <Route path="/revendedor/financeiro" element={<Navigate to="/revendedor/lojas" replace />} />
       <Route path="/revendedor/configuracoes" element={
         <ProtectedRoute requiredRole="reseller">
-          <ResellerConfiguracoes />
+          <P.ResellerConfiguracoes />
         </ProtectedRoute>
       } />
       <Route path="/revendedor/midia-kit" element={
         <ProtectedRoute requiredRole="reseller">
-          <ResellerMediaKit />
+          <P.ResellerMediaKit />
         </ProtectedRoute>
       } />
       
       {/* No Company Page */}
-      <Route path="/sem-empresa" element={<NoCompany />} />
+      <Route path="/sem-empresa" element={<P.NoCompany />} />
       
       {/* Catch-all */}
-      <Route path="*" element={<NotFound />} />
+      <Route path="*" element={<P.NotFound />} />
     </Routes>
+    </Suspense>
   );
 }
 

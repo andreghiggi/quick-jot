@@ -80,6 +80,7 @@ import { usePdvSettings } from '@/hooks/usePdvSettings';
 import { useTaxRules } from '@/hooks/useTaxRules';
 import {
   emitirNFCe,
+  findBlockingNfceForSale,
   getNFCeRecordBySaleId,
   printDanfeFromRecord,
   enqueueDanfePrintJob,
@@ -1091,13 +1092,25 @@ export default function FrenteCaixa() {
       }
       setPaymentOpen(false);
 
+      let existingNfceForSale: NFCeRecord | null = null;
+      if (nfcePayload && company?.id) {
+        try {
+          existingNfceForSale = await findBlockingNfceForSale(company.id, saleId);
+          if (existingNfceForSale) {
+            toast.info('NFC-e já emitida para esta venda.');
+          }
+        } catch (e) {
+          console.error('[FrenteCaixa] NFC-e guard check failed:', e);
+        }
+      }
+
       // ── Fluxo CONSOLIDADO (Frente de Caixa, allow-list) ────────────────
       // Junta TEF + DANFE em um único prompt no final. Captura prévia do TEF
       // veio pelo interceptor `setTefPromptCapture` instalado no useEffect.
       if (useConsolidatedPostSale) {
         const capturedTef = tefCapturedRef.current;
         tefCapturedRef.current = null;
-        const hasNfce = !!(nfcePayload && company?.id);
+        const hasNfce = !!(nfcePayload && company?.id && !existingNfceForSale);
         const hasTef = !!(capturedTef && capturedTef.receiptLines?.length);
         const autoMode = pdvSettings.print_on_finish_mode === 'auto';
         // v1.52.7-beta — Silenciar diálogo pós-venda no modo `auto` sem TEF.
@@ -1106,9 +1119,9 @@ export default function FrenteCaixa() {
         // Se modo `auto` e só NFC-e: emite em background, imprime DANFE direto
         // (janela nativa do Chrome) e não abre diálogo — a menos que dê erro.
         const silentAutoNfce = autoMode && !hasTef && hasNfce;
-        if ((hasTef || hasNfce) && !silentAutoNfce) {
+        if ((hasTef || hasNfce || existingNfceForSale) && !silentAutoNfce) {
           setConsolidatedTef(capturedTef);
-          setConsolidatedRecord(null);
+          setConsolidatedRecord(existingNfceForSale);
           setConsolidatedNfceError(null);
           setConsolidatedEmitting(hasNfce);
           setConsolidatedOpen(true);
@@ -1229,6 +1242,10 @@ export default function FrenteCaixa() {
         }
       } else if (nfcePayload && company?.id) {
         // Fluxo legado (demais lojas) — mantém comportamento atual.
+        if (existingNfceForSale) {
+          setPostSaleRecord(existingNfceForSale);
+          setPostSaleOpen(true);
+        } else {
         setNfceEmitting(true);
         (async () => {
           try {
@@ -1251,6 +1268,7 @@ export default function FrenteCaixa() {
             setNfceEmitting(false);
           }
         })();
+        }
       }
 
       // ── Toggle: auto_open_drawer_cash — abre a gaveta no pagamento em dinheiro.

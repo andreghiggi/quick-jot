@@ -1,4 +1,5 @@
-project_id = "iwmrtxdzlkasuzutxvhh"
+# Self-hosted VPS — não usar `supabase link` para Lovable Cloud
+project_id = "comandatech-vps"
 
 [functions.public-customer]
 verify_jwt = false

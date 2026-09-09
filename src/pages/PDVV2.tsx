@@ -46,7 +46,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ClipboardList, UtensilsCrossed } from 'lucide-react';
 
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
-import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
+import { emitirNFCe, findBlockingNfceForSale, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog';
@@ -406,6 +406,19 @@ export default function PDVV2() {
     if (!companyId || !currentRegister) return false;
     setIsEmittingNfce(true);
     try {
+      const existingNfce = await findBlockingNfceForSale(companyId, saleId);
+      if (existingNfce) {
+        setNfceRecord(existingNfce);
+        setNfceAutoPrint(shouldPrint);
+        if (!(isI9Company && tefPromptOpenRef.current)) {
+          setNfceDialogOpen(true);
+        } else {
+          setPendingNfceOpen(true);
+        }
+        toast.info('NFC-e já emitida para esta venda.');
+        return true;
+      }
+
       const nfceItems: NFCeItem[] = items.map((it) => {
         const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
         const taxRule = product?.taxRuleId ? taxRules.find((tr) => tr.id === product.taxRuleId) : null;
@@ -423,7 +436,7 @@ export default function PDVV2() {
         };
       });
 
-      const externalId = `PDVV2-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+      const externalId = `PDVV2-${saleId}`;
       const cleanDoc = (customerDocument || '').replace(/\D/g, '');
       const destinatario = cleanDoc.length === 11
         ? { cpf: cleanDoc, nome: customerName || undefined }
@@ -661,6 +674,13 @@ export default function PDVV2() {
         try {
           setIsEmittingNfce(true);
           setMultiPayStatus('Emitindo NFC-e…');
+          const blockingMulti = await findBlockingNfceForSale(companyId, saleId);
+          if (blockingMulti) {
+            toast.info('NFC-e já emitida para esta venda.');
+            setMultiPayStatus('');
+            setIsEmittingNfce(false);
+            return;
+          }
           const nfceItems: NFCeItem[] = saleItems.map((it) => {
             const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
             const taxRule = product?.taxRuleId
@@ -675,7 +695,7 @@ export default function PDVV2() {
               ...buildNfceFiscalFields({ product, taxRule, mercadoEnabled }),
             };
           });
-          const externalId = `TAB-MULTI-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+          const externalId = `TAB-MULTI-${saleId}`;
           await emitirNFCe(companyId, saleId, {
             external_id: externalId,
             itens: nfceItems,

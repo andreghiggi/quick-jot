@@ -351,7 +351,7 @@ async function sendNotificationsAndProcess(supabase: any) {
     const name = reseller.name.split(" ")[0];
     const formattedValue = Number(invoice.total_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
     const monthLabel = getMonthLabel(invoice.month);
-    const portalLink = `${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".lovable.app")}/revendedor/lojas`;
+    const portalLink = "https://app.comandatech.com.br/revendedor/lojas";
 
     let message: string;
     if (diffDays === -3) {

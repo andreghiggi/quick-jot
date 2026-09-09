@@ -43,6 +43,8 @@
     <link rel="canonical" href="/" />
 
     <link rel="manifest" href="/manifest.json" />
+    <link rel="preconnect" href="https://api.comandatech.com.br" crossorigin />
+    <link rel="dns-prefetch" href="https://api.comandatech.com.br" />
     <meta property="og:title" content="ComandaTech - Software para Restaurantes">
   <meta name="twitter:title" content="ComandaTech - Software para Restaurantes">
   <meta property="og:description" content="ComandaTech - Software simples e eficiente para gerenciar pedidos do seu restaurante. Controle pedidos, acompanhe o status e aumente suas vendas.">
@@ -50,7 +52,31 @@
 </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot-splash" style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;color:#737373;background:#fafafa">
+        Carregando ComandaTech…
+      </div>
+    </div>
+    <script>
+      (function () {
+        try {
+          Object.keys(localStorage).forEach(function (k) {
+            if (
+              k.indexOf('iwmrtxdzlkasuzutxvhh') !== -1 ||
+              k.indexOf('sb-iwmrtx') === 0 ||
+              k.indexOf('sb-iwmrtxdzlkasuzutxvhh') === 0
+            ) {
+              localStorage.removeItem(k);
+            }
+          });
+        } catch (e) {}
+        window.addEventListener('error', function (ev) {
+          var root = document.getElementById('root');
+          if (!root || root.querySelector('form')) return;
+          root.innerHTML = '<div style="font-family:system-ui,sans-serif;padding:2rem;max-width:32rem;margin:4rem auto;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:8px"><strong>Erro ao carregar o app</strong><p style="margin:1rem 0 0">Tente Ctrl+Shift+R ou abra em aba anônima. Se persistir, contate o suporte.</p></div>';
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

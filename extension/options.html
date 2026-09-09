@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>ComandaTech — Multi-impressora</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 24px auto; padding: 0 16px; }
+    label { display: block; margin-top: 12px; font-weight: 600; }
+    input, select { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+    button { margin-top: 16px; padding: 10px 16px; cursor: pointer; }
+    .station { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-top: 12px; }
+    .status { margin-top: 12px; padding: 8px; border-radius: 6px; background: #f4f4f5; }
+    .err { color: #b91c1c; }
+    .ok { color: #15803d; }
+  </style>
+</head>
+<body>
+  <h1>ComandaTech Multi-impressora</h1>
+  <p>Mapeie cada estação (Cozinha, Bar, Caixa) para a impressora física deste PC.</p>
+
+  <label>Supabase URL (dev: externo)</label>
+  <input id="supabaseUrl" placeholder="https://api.comandatech.com.br" />
+
+  <label>Chave Supabase (publishable / anon)</label>
+  <input id="supabaseKey" placeholder="sb_publishable_... ou eyJ..." />
+
+  <label>Company ID</label>
+  <input id="companyId" placeholder="UUID da empresa" />
+
+  <label>Impressora fallback</label>
+  <select id="fallbackPrinter"></select>
+
+  <div id="stations"></div>
+
+  <button id="saveBtn">Salvar mapa local</button>
+  <button id="testBtn" type="button">Testar impressora fallback</button>
+
+  <div id="status" class="status"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>

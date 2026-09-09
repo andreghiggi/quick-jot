@@ -25,8 +25,14 @@ from pathlib import Path
 # ============================================
 # CONFIGURAÇÃO
 # ============================================
-SUPABASE_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bXJ0eGR6bGthc3V6dXR4dmhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3OTExODMsImV4cCI6MjA4MDM2NzE4M30.VsnT1zdVUwJdv8gBlg8CthBx_bccZp-LsOs2PRq1Uik"
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://api.comandatech.com.br")
+SUPABASE_KEY = os.environ.get(
+    "SUPABASE_ANON_KEY",
+    os.environ.get(
+        "SUPABASE_KEY",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc4ODgzMDk1OSwiZXhwIjoyMTA0MTkwOTU5LCJyb2xlIjoiYW5vbiJ9.d7XOE2KQm-SIDaaYEGrKDNBq8mzixU9I3EHyVGRq-_k",
+    ),
+)
 CHECK_INTERVAL = 5  # segundos entre verificações
 STORE_NAME = "Comanda Tech"
 COMPANY_ID = ""  # Será preenchido automaticamente pelo slug
@@ -42,7 +48,37 @@ PRINT_LAYOUT = "v1"  # Será carregado das configurações (v1, v2 ou v3)
 SCRIPT_VERSION = "v8.39.4"  # v8.39.3 + normalização de GetTextMetrics no fallback win32gui (tmHeight/tmExternalLeading)
 I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
 LOG_FILE = Path(__file__).with_name("auto_printer.log")
+PRINTER_MAP_PATH = Path(os.environ.get("LOCALAPPDATA", "")) / "ComandaTech" / "printer_map.json"
+PRINTER_LOCAL_ENV = Path(__file__).with_name("printer.local.env")
 _PYWIN32_DLL_HANDLES = []
+
+def load_printer_local_env():
+    """Carrega scripts/printer.local.env (gerado por setup-impressao-local)."""
+    global SUPABASE_URL, SUPABASE_KEY, COMPANY_SLUG, COMPANY_ID, HEADERS
+    if not PRINTER_LOCAL_ENV.exists():
+        return
+    values = {}
+    for line in PRINTER_LOCAL_ENV.read_text(encoding="utf-8").splitlines():
+        t = line.strip()
+        if not t or t.startswith("#") or "=" not in t:
+            continue
+        k, v = t.split("=", 1)
+        values[k.strip()] = v.strip().strip('"').strip("'")
+    if values.get("SUPABASE_URL"):
+        SUPABASE_URL = values["SUPABASE_URL"]
+    if values.get("SUPABASE_KEY"):
+        SUPABASE_KEY = values["SUPABASE_KEY"]
+    if values.get("COMPANY_SLUG"):
+        COMPANY_SLUG = values["COMPANY_SLUG"]
+    if values.get("COMPANY_ID"):
+        COMPANY_ID = values["COMPANY_ID"]
+    global HEADERS
+    HEADERS = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation",
+    }
 
 # ============================================
 # HEADERS para API
@@ -51,8 +87,39 @@ HEADERS = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
     "Content-Type": "application/json",
-    "Prefer": "return=representation"
+    "Prefer": "return=representation",
 }
+
+load_printer_local_env()
+
+def load_printer_map():
+    """Mapa estação lógica → impressora Windows (gravado pela extensão Chrome)."""
+    try:
+        if PRINTER_MAP_PATH.exists():
+            import json
+            with open(PRINTER_MAP_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        log(f"Erro ao ler printer_map.json: {e}", "AVISO")
+    return {}
+
+
+def resolve_printer(station_id=None):
+    """Resolve impressora física para station_id ou fallback/padrão Windows."""
+    import win32print
+    data = load_printer_map()
+    station_printers = data.get("station_printers") or {}
+    if station_id and station_id in station_printers and station_printers[station_id]:
+        name = station_printers[station_id]
+        log(f"Estação {station_id} → {name}", "CONFIG")
+        return name
+    fallback = data.get("fallback_printer")
+    if fallback:
+        log(f"Fallback mapa → {fallback}", "CONFIG")
+        return fallback
+    default = win32print.GetDefaultPrinter()
+    log(f"Impressora padrão Windows → {default}", "CONFIG")
+    return default
 
 # Histórico de pedidos impressos nesta sessão
 pedidos_impressos_sessao = []
@@ -1123,8 +1190,8 @@ def html_para_texto(html):
     return text.strip()
 
 
-def imprimir_html(html, order_number):
-    """Imprime direto na impressora padrão via GDI (win32ui) — 100% silencioso, sem navegador"""
+def imprimir_html(html, order_number, printer_name=None, station_id=None):
+    """Imprime direto na impressora via GDI (win32ui) — 100% silencioso, sem navegador"""
     try:
         preparar_pywin32_runtime()
         import win32print
@@ -1140,8 +1207,8 @@ def imprimir_html(html, order_number):
         texto = html_para_texto(html)
         linhas = texto.split('\n')
 
-        printer_name = win32print.GetDefaultPrinter()
-        log(f"Impressora padrão: {printer_name}", "PRINT")
+        printer_name = printer_name or resolve_printer(station_id)
+        log(f"Impressora: {printer_name}", "PRINT")
 
         # Cria Device Context para a impressora
         hDC = win32ui.CreateDC()
@@ -1904,9 +1971,10 @@ def processar_fila(company_id):
     log(f"Encontrados {len(jobs)} job(s) na fila de impressão!", "FILA")
     for job in jobs:
         label = job.get('label', 'Impressão')
+        station_id = job.get('station_id')
         log(f"Imprimindo: {label}...", "FILA")
         html = job.get('html_content', '')
-        if html and imprimir_html(html, label.replace('#', '').replace(' ', '_')):
+        if html and imprimir_html(html, label.replace('#', '').replace(' ', '_'), station_id=station_id):
             if marcar_fila_impressa(job['id']):
                 log(f"Job '{label}' impresso e marcado na fila!", "OK")
             else:
@@ -1941,7 +2009,28 @@ if __name__ == "__main__":
         exit(1)
     
     log(f"Buscando empresa: {slug}...", "INFO")
-    company_id, company_name, company_address, company_info = buscar_empresa_por_slug(slug)
+    if COMPANY_ID:
+        company_id = COMPANY_ID
+        company_name = STORE_NAME
+        company_address = ""
+        company_info = {}
+        # Re-busca nome/dados no espelho local
+        try:
+            r = requests.get(
+                f"{SUPABASE_URL.rstrip('/')}/rest/v1/companies",
+                params={"id": f"eq.{company_id}", "select": "id,name,address,phone,cnpj,slug"},
+                headers=HEADERS,
+                timeout=15,
+            )
+            if r.ok and r.json():
+                row = r.json()[0]
+                company_name = row.get("name") or company_name
+                company_address = row.get("address") or ""
+                company_info = row
+        except Exception as e:
+            log(f"Aviso ao buscar empresa por ID: {e}", "AVISO")
+    else:
+        company_id, company_name, company_address, company_info = buscar_empresa_por_slug(slug)
     STORE_INFO = company_info or {}
     
     if not company_id:

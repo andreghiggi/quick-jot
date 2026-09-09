@@ -20,6 +20,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
 import { ButtonColorPicker } from '@/components/settings/ButtonColorPicker';
+import { PrintStationsSettings } from '@/components/settings/PrintStationsSettings';
 import autoPrinterTemplate from '../../scripts/auto_printer.py?raw';
 import instalarImpressaoCmd from '../../scripts/instalar_impressao.cmd?raw';
 import iniciarImpressaoCmd from '../../scripts/iniciar_impressao.cmd?raw';
@@ -1251,6 +1252,7 @@ pause
 
         {/* Tab Impressão */}
         <TabsContent value="impressao" className="space-y-6">
+          <PrintStationsSettings companyId={company?.id} />
           {/* TEF Auto Print v1 — disponível para todas as lojas com PDV V2 */}
           {(
             <Card className="border-primary/40">

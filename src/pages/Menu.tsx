@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { z } from 'zod';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
+import { enqueueProductionByStation } from '@/utils/printRouting';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { Progress } from '@/components/ui/progress';
 import { NovidadesSlideshow } from '@/components/menu/NovidadesSlideshow';
@@ -258,7 +259,8 @@ export default function Menu() {
     setCustomerCpf(formatted);
   }
 
-  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading || neighborhoodsLoading || hoursLoading || groupsLoading;
+  // Grupos de adicionais carregam em paralelo; não bloqueiam o cardápio público.
+  const loading = companyLoading || productsLoading || settingsLoading || categoriesLoading || neighborhoodsLoading || hoursLoading;
 
   // Build category name -> id map for optional groups
   const categoryIdByName = useMemo(() => {
@@ -1417,35 +1419,29 @@ export default function Menu() {
                 description,
                 groupedOptionals:
                   sendGroupedOptionals && groupedOptionals.length > 0 ? groupedOptionals : undefined,
+                categoryId: categories.find((c) => c.name === item.product.category)?.id ?? null,
               };
             });
 
-            const productionHtml = generateProductionTicketHTML({
-              tabNumber: newOrder.daily_number || 0,
-              customerName,
-              items: productionItems,
-              createdAt: new Date(),
-              paperSize: settings.printerPaperSize,
-              referenceLabel: `PEDIDO ${(newOrder as any).short_code || '#' + (newOrder.daily_number || newOrder.order_code)}`,
-              layout: settings.printLayout,
+            await enqueueProductionByStation({
               companyId: company.id,
-              orderType: deliveryType === 'pickup' ? 'pickup' : 'delivery',
-              // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
-              showReadyTime: true,
-              readyOffsetMinutes:
-                true
-                  ? computeReadyOffsetMinutes(settings.estimatedWaitTime, 30)
-                  : undefined,
-              deliveryAddress: deliveryType !== 'pickup' && fullAddress ? fullAddress : null,
+              items: productionItems,
+              labelPrefix: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}`,
+              sourceOrderId: newOrder.id,
+              ticketBase: {
+                tabNumber: newOrder.daily_number || 0,
+                customerName,
+                createdAt: new Date(),
+                paperSize: settings.printerPaperSize,
+                referenceLabel: `PEDIDO ${(newOrder as any).short_code || '#' + (newOrder.daily_number || newOrder.order_code)}`,
+                layout: settings.printLayout,
+                companyId: company.id,
+                orderType: deliveryType === 'pickup' ? 'pickup' : 'delivery',
+                showReadyTime: true,
+                readyOffsetMinutes: computeReadyOffsetMinutes(settings.estimatedWaitTime, 30),
+                deliveryAddress: deliveryType !== 'pickup' && fullAddress ? fullAddress : null,
+              },
             });
-
-            await supabase
-              .from('print_queue')
-              .insert({
-                company_id: company.id,
-                html_content: productionHtml,
-                label: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}`,
-              });
           } catch (printErr) {
             console.error('Production ticket print queue error:', printErr);
           }

@@ -537,6 +537,32 @@ export async function getNFCeRecords(companyId: string, limit = 50): Promise<NFC
   return (data || []) as unknown as NFCeRecord[];
 }
 
+/** Status que bloqueiam nova emissão para o mesmo sale_id (qualquer prefixo external_id). */
+export const BLOCKING_NFCE_STATUSES = ['autorizada', 'processando', 'pendente'] as const;
+
+/**
+ * Retorna NFC-e ativa vinculada à venda, se existir.
+ * Usado antes de emitir em PDVV2, FrenteCaixa e FrenteCaixaLista para evitar
+ * duplicata FCX vs FCX-RETRO ou PDV vs PDVV2.
+ */
+export async function findBlockingNfceForSale(
+  companyId: string,
+  saleId: string,
+): Promise<NFCeRecord | null> {
+  const { data, error } = await supabase
+    .from('nfce_records')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('sale_id', saleId)
+    .in('status', [...BLOCKING_NFCE_STATUSES])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as unknown as NFCeRecord) || null;
+}
+
 export async function getNFCeRecordBySaleId(saleId: string): Promise<NFCeRecord | null> {
   const { data, error } = await supabase
     .from('nfce_records')

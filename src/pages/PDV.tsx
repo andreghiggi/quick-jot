@@ -11,6 +11,7 @@ import { useTaxRules } from '@/hooks/useTaxRules';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useNfceRecordWatch } from '@/hooks/useNfceRecordWatch';
 import { useOptionalGroups, OptionalGroup } from '@/hooks/useOptionalGroups';
 import { useCategories } from '@/hooks/useCategories';
 import { useSubcategories } from '@/hooks/useSubcategories';
@@ -240,20 +241,28 @@ export default function PDV() {
     paymentMethodId: string;
   }>>([]);
 
-  // NFC-e polling and countdown for post-sale dialog
+  // Realtime: webhook/edge atualiza nfce_records → UI reage sem poll Fiscal Flow
+  useNfceRecordWatch(
+    nfcePostSaleRecord?.id,
+    (data) => {
+      setNfcePostSaleRecord(data as unknown as NFCeRecord);
+      setNfceStatus((data.status as string) || 'processando');
+    },
+    nfcePostSaleDialog && !!nfcePostSaleRecord,
+  );
+
+  // NFC-e polling fallback and countdown for post-sale dialog
   useEffect(() => {
     if (!nfcePostSaleDialog || !nfcePostSaleRecord) return;
     
-    // If NFC-e is still processing, poll for updates
+    // If NFC-e is still processing, poll for updates (fallback se Realtime cair)
     if (nfceStatus === 'processando' || nfceStatus === 'pendente') {
       setNfcePolling(true);
       let pollCount = 0;
       const pollInterval = setInterval(async () => {
         pollCount++;
         
-        // Alternate: odd polls just check DB, even polls also consult external API
-        // First poll always consults external API for fastest response
-        const shouldConsultApi = pollCount <= 2 || pollCount % 2 === 0;
+        const shouldConsultApi = pollCount === 1 || pollCount % 4 === 0;
         
         if (shouldConsultApi && nfcePostSaleRecord.nfce_id && company?.id) {
           try {
@@ -307,7 +316,7 @@ export default function PDV() {
             }
           }
         }
-      }, 2000);
+      }, 8000);
       
       return () => clearInterval(pollInterval);
     }
@@ -849,8 +858,9 @@ export default function PDV() {
               };
             });
 
-            const externalId = `PDV-${currentRegister?.id?.substring(0, 8)}-${Date.now()}`;
-            
+            // external_id determinístico por venda — idempotência no nfce-proxy
+            const externalId = `PDV-${saleId}`;
+
             const nfceResult = await emitirNFCe(company.id, saleId, {
               external_id: externalId,
               itens: nfceItems,
@@ -2335,7 +2345,23 @@ export default function PDV() {
                                     };
                                   });
 
-                                  const externalId = `PDV-${sale.cash_register_id?.substring(0, 8)}-${Date.now()}`;
+                                  const { data: existingNfce } = await supabase
+                                    .from('nfce_records')
+                                    .select('*')
+                                    .eq('sale_id', sale.id)
+                                    .in('status', ['autorizada', 'processando', 'pendente'])
+                                    .maybeSingle();
+                                  if (existingNfce) {
+                                    setSalesNfceStatus(prev => ({ ...prev, [sale.id]: { status: existingNfce.status, loading: false } }));
+                                    setSalesDialogRaw(false);
+                                    setNfcePostSaleRecord(existingNfce);
+                                    setNfceRetryCount(0);
+                                    setNfceStatus(existingNfce.status);
+                                    setNfcePostSaleDialog(true);
+                                    toast.info('NFC-e já emitida para esta venda.');
+                                    return;
+                                  }
+                                  const externalId = `PDV-${sale.id}`;
                                   await emitirNFCe(company.id, sale.id, {
                                     external_id: externalId,
                                     itens: nfceItems,

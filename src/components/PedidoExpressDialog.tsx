@@ -25,7 +25,7 @@ import { OrderItem } from '@/types/order';
 import { Product, ProductOptional, CartItem } from '@/types/product';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
 import { supabase } from '@/integrations/supabase/client';
-import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
+import { enqueueProductionByStation } from '@/utils/printRouting';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { PDVV2DocumentModeSelector, DocumentMode } from '@/components/pdv-v2/PDVV2DocumentModeSelector';
@@ -1435,35 +1435,33 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               description,
               groupedOptionals:
                 sendGroupedOptionals && groupedOptionals.length > 0 ? groupedOptionals : undefined,
+              categoryId: categories.find((c) => c.name === item.product.category)?.id ?? null,
             }];
           });
 
-          const html = generateProductionTicketHTML({
-            tabNumber: createdDailyNumber,
-            customerName: customerName.trim(),
-            items: productionItems,
-            createdAt: new Date(),
-            paperSize: settings.printerPaperSize,
-            referenceLabel: createdShortCode
-              ? `PEDIDO ${createdShortCode}`
-              : 'PEDIDO EXPRESS',
-            layout: settings.printLayout,
+          await enqueueProductionByStation({
             companyId: company.id,
-            orderType: deliveryType === 'entrega' ? 'delivery' : deliveryType === 'retirada' ? 'pickup' : 'counter',
-            // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
-            showReadyTime: isLancheriaI9,
-            readyOffsetMinutes: isLancheriaI9
-              ? computeReadyOffsetMinutes(settings.estimatedWaitTime, 30)
-              : undefined,
-            deliveryAddress: deliveryType === 'entrega' && fullAddress ? fullAddress : null,
-          });
-
-          await supabase.from('print_queue').insert({
-            company_id: company.id,
-            html_content: html,
-            label: createdShortCode
+            items: productionItems,
+            labelPrefix: createdShortCode
               ? `Produção ${createdShortCode}`
               : `Express - ${customerName.trim()}`,
+            ticketBase: {
+              tabNumber: createdDailyNumber,
+              customerName: customerName.trim(),
+              createdAt: new Date(),
+              paperSize: settings.printerPaperSize,
+              referenceLabel: createdShortCode
+                ? `PEDIDO ${createdShortCode}`
+                : 'PEDIDO EXPRESS',
+              layout: settings.printLayout,
+              companyId: company.id,
+              orderType: deliveryType === 'entrega' ? 'delivery' : deliveryType === 'retirada' ? 'pickup' : 'counter',
+              showReadyTime: isLancheriaI9,
+              readyOffsetMinutes: isLancheriaI9
+                ? computeReadyOffsetMinutes(settings.estimatedWaitTime, 30)
+                : undefined,
+              deliveryAddress: deliveryType === 'entrega' && fullAddress ? fullAddress : null,
+            },
           });
         } catch (e) {
           console.error('Erro ao enfileirar comanda de produção:', e);

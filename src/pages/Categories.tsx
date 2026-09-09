@@ -15,11 +15,13 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadCompressedImage } from '@/utils/imageUtils';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
+import { usePrintStations } from '@/hooks/usePrintStations';
 
 export default function Categories() {
   const { company } = useAuthContext();
   const showPrintDescriptionToggle = true;
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
+  const { stations, categoryStationMap, setCategoryStation } = usePrintStations(company?.id);
   const {
     categories,
     loading,
@@ -228,6 +230,26 @@ export default function Categories() {
                       </span>
                     )}
                   </div>
+                  {stations.length > 0 && (
+                    <Select
+                      value={categoryStationMap[cat.id] ?? '_default'}
+                      onValueChange={(v) =>
+                        void setCategoryStation(cat.id, v === '_default' ? null : v)
+                      }
+                    >
+                      <SelectTrigger className="w-[130px] h-8 text-xs">
+                        <SelectValue placeholder="Impressora" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_default">Padrão</SelectItem>
+                        {stations.filter((s) => s.active).map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <div className="relative group">
                       <Button

@@ -517,7 +517,8 @@ Deno.serve(async (req) => {
 
   // Se ainda tem mais tabelas, dispara próxima invocação (fire-and-forget)
   if (hasMore && lastTable) {
-    const selfUrl = `https://iwmrtxdzlkasuzutxvhh.supabase.co/functions/v1/backup-mirror`;
+    const baseUrl = (Deno.env.get("SUPABASE_URL") || "https://api.comandatech.com.br").replace(/\/$/, "");
+    const selfUrl = `${baseUrl}/functions/v1/backup-mirror`;
     const p = fetch(selfUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-backup-secret": expected },

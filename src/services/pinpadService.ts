@@ -35,8 +35,21 @@ export interface PinpadTransactionResult {
 // Store settings keys for PinPad config
 const SETTINGS_KEYS = ['pinpad_tef_token', 'pinpad_tef_cnpj', 'pinpad_tef_pdv'];
 
-// Get PinPad TEF config from store_settings
+const pinpadConfigCache = new Map<string, { config: PinpadConfig | null; ts: number }>();
+const PINPAD_CONFIG_TTL_MS = 5 * 60 * 1000;
+
+export function clearPinpadConfigCache(companyId?: string) {
+  if (companyId) pinpadConfigCache.delete(companyId);
+  else pinpadConfigCache.clear();
+}
+
+// Get PinPad TEF config from store_settings (cached per company for payment session)
 export async function getPinpadConfig(companyId: string): Promise<PinpadConfig | null> {
+  const hit = pinpadConfigCache.get(companyId);
+  if (hit && Date.now() - hit.ts < PINPAD_CONFIG_TTL_MS) {
+    return hit.config;
+  }
+
   const { data, error } = await supabase
     .from('store_settings')
     .select('key, value')
@@ -49,14 +62,17 @@ export async function getPinpadConfig(companyId: string): Promise<PinpadConfig |
   data.forEach(s => { if (s.value) config[s.key] = s.value; });
 
   if (!config.pinpad_tef_token || !config.pinpad_tef_cnpj || !config.pinpad_tef_pdv) {
+    pinpadConfigCache.set(companyId, { config: null, ts: Date.now() });
     return null;
   }
 
-  return {
+  const resolved = {
     token: config.pinpad_tef_token,
     cnpj: config.pinpad_tef_cnpj,
     pdv: config.pinpad_tef_pdv,
   };
+  pinpadConfigCache.set(companyId, { config: resolved, ts: Date.now() });
+  return resolved;
 }
 
 // Save PinPad TEF config
@@ -94,6 +110,7 @@ export async function savePinpadConfig(companyId: string, config: PinpadConfig):
       return false;
     }
   }
+  clearPinpadConfigCache(companyId);
   return true;
 }
 
@@ -186,9 +203,10 @@ export async function sendPinpadPayment(
 // Poll transaction status (GetVendasTef)
 export async function pollPinpadStatus(
   companyId: string,
-  hash: string
+  hash: string,
+  cachedConfig?: PinpadConfig | null,
 ): Promise<PinpadTransactionResult> {
-  const config = await getPinpadConfig(companyId);
+  const config = cachedConfig ?? await getPinpadConfig(companyId);
   if (!config) return { success: false, status: 'error', errorMessage: 'PinPad não configurado' };
 
   try {

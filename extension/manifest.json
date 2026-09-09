@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "ComandaTech Multi-Impressora",
+  "version": "1.0.0",
+  "description": "Mapeia estações de impressão ComandaTech para impressoras Windows",
+  "permissions": ["storage", "nativeMessaging", "alarms"],
+  "host_permissions": [
+    "http://localhost:8080/*",
+    "http://localhost:8081/*",
+    "http://localhost:8082/*",
+    "https://app.comandatech.com.br/*",
+    "https://api.comandatech.com.br/*",
+    "https://*.comandatech.com.br/*",
+    "https://*.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html",
+  "action": {
+    "default_title": "ComandaTech Impressão"
+  }
+}

@@ -10,6 +10,7 @@ interface AuthContextType {
   company: Company | null;
   realCompany: Company | null;
   loading: boolean;
+  userDataReady: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string, companyName?: string, addressData?: { street: string; number: string; complement?: string; neighborhood: string; reference?: string; cnpj?: string }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;

@@ -8,8 +8,7 @@
  *  - mesa (garçom)      → apenas produção
  *  - importMesa         → apenas recibo
  */
-import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
-import { supabase } from '@/integrations/supabase/client';
+import { enqueueProductionByStation, enqueueReceiptJob } from '@/utils/printRouting';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 
 interface PrintItem {
@@ -17,6 +16,7 @@ interface PrintItem {
   quantity: number;
   price: number;
   notes?: string;
+  categoryId?: string | null;
   /** Adicionais agrupados. Quando presente, recibo V2 e comanda V2
    *  renderizam rótulo do grupo (■ sublinhado) + itens (+ CAPS). 1 grupo
    *  esconde o rótulo. Quando ausente, comportamento legado preservado. */
@@ -43,14 +43,6 @@ interface PrintPayload {
   /** Endereço de entrega no V2. Renderizado em bloco invertido no recibo
    *  e propagado para a comanda V2. */
   deliveryAddress?: string | null;
-}
-
-async function enqueue(companyId: string, label: string, html: string) {
-  await supabase.from('print_queue').insert({
-    company_id: companyId,
-    html_content: html,
-    label,
-  });
 }
 
 function buildReceiptHTML(payload: PrintPayload): string {
@@ -362,41 +354,49 @@ function buildReceiptHTMLForCompany(payload: PrintPayload): string {
   return buildReceiptHTML(payload);
 }
 
-function buildProductionHtml(payload: PrintPayload, ref: string) {
-  // "Pronto até" na comanda de produção: ativo para todas as lojas com
-  // layout V2 (cálculo: criação + máx. prazo estimado − 10 min, fallback 30).
-  const showReady = payload.printLayout === 'v2' || !payload.printLayout;
-  return generateProductionTicketHTML({
-    tabNumber: payload.dailyNumber,
-    customerName: payload.customerName,
-    items: payload.items.map((i) => ({
-      productName: i.name,
-      quantity: i.quantity,
-      notes: i.notes || null,
-      groupedOptionals: i.groupedOptionals,
-    })),
-    createdAt: new Date(),
-    paperSize: payload.paperSize || '80mm',
-    referenceLabel: ref,
-    companyId: payload.companyId,
-    layout: payload.printLayout,
-    deliveryAddress: payload.deliveryAddress || null,
-    showReadyTime: showReady,
-    readyOffsetMinutes: showReady
-      ? computeReadyOffsetMinutes(payload.estimatedWaitTime, 30)
-      : undefined,
-  });
-}
-
 export async function printOnlineOrBalcao(payload: PrintPayload) {
   const ref = payload.shortCode ? `PEDIDO ${payload.shortCode}` : `PEDIDO #${payload.dailyNumber}`;
   const label = payload.shortCode || `#${payload.dailyNumber}`;
-  const productionHtml = buildProductionHtml(payload, ref);
-  await enqueue(payload.companyId, `Produção ${label}`, productionHtml);
-  await enqueue(payload.companyId, `Recibo ${label}`, buildReceiptHTMLForCompany(payload));
+  const showReady = payload.printLayout === 'v2' || !payload.printLayout;
+
+  await enqueueProductionByStation({
+    companyId: payload.companyId,
+    items: payload.items.map((i) => ({
+      productName: i.name,
+      quantity: i.quantity,
+      notes: i.notes ?? null,
+      groupedOptionals: i.groupedOptionals,
+      categoryId: i.categoryId ?? null,
+    })),
+    labelPrefix: `Produção ${label}`,
+    ticketBase: {
+      tabNumber: payload.dailyNumber,
+      customerName: payload.customerName,
+      createdAt: new Date(),
+      paperSize: payload.paperSize || '80mm',
+      referenceLabel: ref,
+      companyId: payload.companyId,
+      layout: payload.printLayout,
+      deliveryAddress: payload.deliveryAddress ?? null,
+      showReadyTime: showReady,
+      readyOffsetMinutes: showReady
+        ? computeReadyOffsetMinutes(payload.estimatedWaitTime, 30)
+        : undefined,
+    },
+  });
+
+  await enqueueReceiptJob({
+    companyId: payload.companyId,
+    html: buildReceiptHTMLForCompany(payload),
+    label: `Recibo ${label}`,
+  });
 }
 
 export async function printOnlyReceipt(payload: PrintPayload) {
   const label = payload.shortCode || `#${payload.dailyNumber}`;
-  await enqueue(payload.companyId, `Recibo ${label}`, buildReceiptHTMLForCompany(payload));
+  await enqueueReceiptJob({
+    companyId: payload.companyId,
+    html: buildReceiptHTMLForCompany(payload),
+    label: `Recibo ${label}`,
+  });
 }
