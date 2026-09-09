@@ -19,6 +19,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
   const prevPendingCountRef = useRef<number | null>(null);
   const isInitialLoadRef = useRef(true);
   const prevOrdersJsonRef = useRef<string>('');
+  const realtimeReadyRef = useRef(false);
 
   async function fetchOrders() {
     // Don't fetch if no companyId - prevents showing orders from other companies
@@ -29,10 +30,12 @@ export function useOrders(options: UseOrdersOptions = {}) {
     }
 
     try {
+      const since48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
       const ordersQuery = supabase
         .from('orders')
         .select('*')
         .eq('company_id', companyId)
+        .or(`created_at.gte.${since48h},status.in.(pending,preparing,ready)`)
         .order('created_at', { ascending: false });
 
       const { data: ordersData, error: ordersError } = await ordersQuery;
@@ -44,39 +47,17 @@ export function useOrders(options: UseOrdersOptions = {}) {
       
       let itemsData: any[] = [];
       if (orderIds.length > 0) {
-        const BON_APPETIT_COMPANY_ID = '32b71649-461d-4cb6-b26c-12390b090feb';
+        // Só itens dos pedidos da janela atual (48h/pendentes) — nunca histórico inteiro.
+        const CHUNK = 200;
+        for (let i = 0; i < orderIds.length; i += CHUNK) {
+          const slice = orderIds.slice(i, i + CHUNK);
+          const { data, error: itemsError } = await supabase
+            .from('order_items')
+            .select('*')
+            .in('order_id', slice);
 
-        if (companyId === BON_APPETIT_COMPANY_ID) {
-          // Bon Appetit has a high historical order volume; fetching items by
-          // company with pagination avoids long IN URLs and the 1000-row limit.
-          const PAGE_SIZE = 1000;
-          for (let from = 0; ; from += PAGE_SIZE) {
-            const { data, error: itemsError } = await supabase
-              .from('order_items')
-              .select('*')
-              .eq('company_id', companyId)
-              .order('created_at', { ascending: false })
-              .range(from, from + PAGE_SIZE - 1);
-
-            if (itemsError) throw itemsError;
-            if (data) itemsData = itemsData.concat(data);
-            if (!data || data.length < PAGE_SIZE) break;
-          }
-        } else {
-          // Chunk the IN filter to avoid hitting PostgREST URL length limits when
-          // a company has many orders. 200 UUIDs per batch keeps the URL well below
-          // the ~16KB limit for the general path.
-          const CHUNK = 200;
-          for (let i = 0; i < orderIds.length; i += CHUNK) {
-            const slice = orderIds.slice(i, i + CHUNK);
-            const { data, error: itemsError } = await supabase
-              .from('order_items')
-              .select('*')
-              .in('order_id', slice);
-
-            if (itemsError) throw itemsError;
-            if (data) itemsData = itemsData.concat(data);
-          }
+          if (itemsError) throw itemsError;
+          if (data) itemsData = itemsData.concat(data);
         }
       }
 
@@ -167,14 +148,15 @@ export function useOrders(options: UseOrdersOptions = {}) {
           fetchOrders();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        realtimeReadyRef.current = status === 'SUBSCRIBED';
+      });
 
-    // Polling silencioso a cada 5s — só atualiza state se houver mudança real (JSON diff em fetchOrders).
-    // Garante chegada de novos pedidos mesmo se Realtime cair, sem provocar flicker.
+    // Fallback: poll só se Realtime não estiver conectado (evita carga duplicada no Postgres).
     const pollInterval = companyId
       ? window.setInterval(() => {
-          fetchOrders();
-        }, 5000)
+          if (!realtimeReadyRef.current) fetchOrders();
+        }, 15000)
       : null;
 
     return () => {

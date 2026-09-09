@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { hasStoredSupabaseSession } from '@/utils/authBootstrap';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -41,7 +42,10 @@ export function useAuth() {
   const [company, setCompany] = useState<Company | null>(null);
   const [impersonatedCompany, setImpersonatedCompany] = useState<Company | null>(null);
   const [impersonatedReseller, setImpersonatedReseller] = useState<ImpersonatedReseller | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Sem sessão em localStorage → login aparece na hora (sem esperar rede).
+  const [loading, setLoading] = useState(() => hasStoredSupabaseSession());
+  const [userDataReady, setUserDataReady] = useState(false);
+  const fetchUserIdRef = useRef<string | null>(null);
 
   // Restore impersonation state from sessionStorage on mount
   useEffect(() => {
@@ -64,87 +68,108 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserData(session.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
-          setRoles([]);
-          setCompany(null);
-          setImpersonatedCompany(null);
-          setImpersonatedReseller(null);
-          sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
-          sessionStorage.removeItem(IMPERSONATED_RESELLER_KEY);
-          setLoading(false);
-        }
-      }
-    );
+    let mounted = true;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+
       setSession(session);
       setUser(session?.user ?? null);
-      
+      setLoading(false);
+
       if (session?.user) {
-        fetchUserData(session.user.id);
+        void fetchUserData(session.user.id);
       } else {
-        setLoading(false);
+        fetchUserIdRef.current = null;
+        setProfile(null);
+        setRoles([]);
+        setCompany(null);
+        setImpersonatedCompany(null);
+        setImpersonatedReseller(null);
+        sessionStorage.removeItem(IMPERSONATED_COMPANY_KEY);
+        sessionStorage.removeItem(IMPERSONATED_RESELLER_KEY);
+        setUserDataReady(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    const safetyTimeoutMs = 3000;
+    const safetyTimer = window.setTimeout(() => {
+      if (mounted) {
+        console.warn(`[auth] safety timeout after ${safetyTimeoutMs}ms — liberando UI`);
+        setLoading(false);
+      }
+    }, safetyTimeoutMs);
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(safetyTimer);
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function fetchUserData(userId: string) {
+    if (fetchUserIdRef.current === userId) return;
+    fetchUserIdRef.current = userId;
+    setUserDataReady(false);
+
+    const fetchTimeoutMs = 8000;
+    const timeout = new Promise<never>((_, reject) =>
+      window.setTimeout(
+        () => reject(new Error(`fetchUserData timeout after ${fetchTimeoutMs}ms`)),
+        fetchTimeoutMs,
+      ),
+    );
+
     try {
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (profileData) {
-        setProfile(profileData);
-      }
-
-      // Fetch roles
-      const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId);
-
-      if (rolesData) {
-        setRoles(rolesData.map(r => r.role as AppRole));
-      }
-
-      // Fetch company
-      const { data: companyUserData } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', userId)
-        .single();
-
-      if (companyUserData) {
-        const { data: companyData } = await supabase
-          .from('companies')
-          .select('*')
-          .eq('id', companyUserData.company_id)
-          .single();
-
-        if (companyData) {
-          setCompany(companyData);
-        }
-      }
+      await Promise.race([fetchUserDataInner(userId), timeout]);
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
-      setLoading(false);
+      if (fetchUserIdRef.current === userId) {
+        setUserDataReady(true);
+      }
+    }
+  }
+
+  async function fetchUserDataInner(userId: string) {
+    const [profileResult, rolesResult, companyUserResult] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+      supabase.from('user_roles').select('role').eq('user_id', userId),
+      supabase
+        .from('company_users')
+        .select('company_id, companies(*)')
+        .eq('user_id', userId)
+        .maybeSingle(),
+    ]);
+
+    if (profileResult.error) {
+      console.error('profiles:', profileResult.error.message);
+    } else if (profileResult.data) {
+      setProfile(profileResult.data);
+    }
+
+    if (rolesResult.error) {
+      console.error('user_roles:', rolesResult.error.message);
+    } else if (rolesResult.data) {
+      setRoles(rolesResult.data.map((r) => r.role as AppRole));
+    }
+
+    if (companyUserResult.error) {
+      console.error('company_users:', companyUserResult.error.message);
+    } else if (companyUserResult.data?.companies) {
+      setCompany(companyUserResult.data.companies as Company);
+    } else if (companyUserResult.data?.company_id) {
+      const { data: companyData, error: companyError } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', companyUserResult.data.company_id)
+        .maybeSingle();
+
+      if (companyError) {
+        console.error('companies:', companyError.message);
+      } else if (companyData) {
+        setCompany(companyData);
+      }
     }
   }
 
@@ -357,6 +382,7 @@ export function useAuth() {
     company: effectiveCompany,
     realCompany: company,
     loading,
+    userDataReady,
     signIn,
     signUp,
     signOut,
@@ -365,7 +391,12 @@ export function useAuth() {
     isCompanyAdmin,
     isWaiter,
     isReseller: () => hasEffectiveRole('reseller'),
-    refetchUserData: () => user && fetchUserData(user.id),
+    refetchUserData: () => {
+      if (user) {
+        fetchUserIdRef.current = null;
+        void fetchUserData(user.id);
+      }
+    },
     // Impersonation
     isImpersonating,
     impersonatedCompany,

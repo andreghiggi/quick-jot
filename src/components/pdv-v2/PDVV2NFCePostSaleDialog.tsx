@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, Receipt, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useNfceRecordWatch } from '@/hooks/useNfceRecordWatch';
 import {
   consultarNFCe,
   reprocessarNFCe,
@@ -70,7 +71,16 @@ export function PDVV2NFCePostSaleDialog({
     }
   }, [open, status, record, autoPrint, autoPrinted, danfeOptions]);
 
-  // Polling para acompanhar status na SEFAZ
+  useNfceRecordWatch(
+    record?.id,
+    (data) => {
+      setRecord(data as unknown as NFCeRecord);
+      setStatus((data.status as string) || 'processando');
+    },
+    open && !!record,
+  );
+
+  // Polling fallback para acompanhar status na SEFAZ
   useEffect(() => {
     if (!open || !record) return;
     if (status !== 'processando' && status !== 'pendente') return;
@@ -79,7 +89,7 @@ export function PDVV2NFCePostSaleDialog({
     let pollCount = 0;
     const interval = setInterval(async () => {
       pollCount++;
-      const shouldConsultApi = pollCount <= 2 || pollCount % 2 === 0;
+      const shouldConsultApi = pollCount === 1 || pollCount % 4 === 0;
 
       if (shouldConsultApi && record.nfce_id && companyId) {
         try {
@@ -135,7 +145,7 @@ export function PDVV2NFCePostSaleDialog({
           );
         }
       }
-    }, 2000);
+    }, 8000);
 
     return () => clearInterval(interval);
   }, [open, record, status, retryCount, companyId, autoPrint, autoPrinted]);

@@ -23,7 +23,7 @@ interface SuspendInfo {
 }
 
 export function ProtectedRoute({ children, requiredRole, requireCompany = false }: ProtectedRouteProps) {
-  const { user, loading, hasRole, company, isImpersonating } = useAuthContext();
+  const { user, loading, userDataReady, hasRole, company, isImpersonating } = useAuthContext();
   const [suspendCheck, setSuspendCheck] = useState<SuspendInfo | null>(null);
   const [checking, setChecking] = useState(false);
 
@@ -39,9 +39,19 @@ export function ProtectedRoute({ children, requiredRole, requireCompany = false 
   async function checkSuspension(companyId: string) {
     setChecking(true);
     try {
-      const { data: suspended } = await supabase.rpc('is_company_suspended', {
+      const suspensionRpc = supabase.rpc('is_company_suspended', {
         _company_id: companyId,
       });
+      const timeoutMs = 4000;
+      const { data: suspended } = await Promise.race([
+        suspensionRpc,
+        new Promise<{ data: false }>((resolve) =>
+          setTimeout(() => {
+            console.warn(`is_company_suspended timeout after ${timeoutMs}ms for ${companyId}`);
+            resolve({ data: false });
+          }, timeoutMs)
+        ),
+      ]);
 
       if (suspended) {
         const { data: comp } = await supabase
@@ -81,7 +91,7 @@ export function ProtectedRoute({ children, requiredRole, requireCompany = false 
     }
   }
 
-  if (loading || checking) {
+  if (loading || (user && !userDataReady) || checking) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

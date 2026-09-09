@@ -3,8 +3,24 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { brokeredPreviewStorage } from './previewAuthStorage';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+const SUPABASE_PUBLISHABLE_KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim();
+
+function reportConfigError(message: string): never {
+  const html = `<div style="font-family:system-ui,sans-serif;padding:2rem;max-width:32rem;margin:4rem auto;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:8px"><strong>ComandaTech — configuração inválida</strong><p style="margin:1rem 0 0;line-height:1.5">${message}</p><p style="margin-top:1rem;font-size:0.875rem;color:#444">Contate o suporte. Ref: build sem VITE_SUPABASE_*</p></div>`;
+  const root = document.getElementById('root');
+  if (root) root.innerHTML = html;
+  throw new Error(message);
+}
+
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  reportConfigError(
+    'URL ou chave Supabase ausente no build. O app não pode conectar ao banco (anon key vazia).',
+  );
+}
+if (SUPABASE_URL.includes('.supabase.co') && !SUPABASE_URL.includes('comandatech')) {
+  reportConfigError('Build aponta para Supabase Cloud legado. Use api.comandatech.com.br.');
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
@@ -14,5 +30,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: brokeredPreviewStorage(),
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 5,
+    },
+  },
 });

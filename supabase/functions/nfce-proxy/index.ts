@@ -1,9 +1,73 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { fiscalFlowBaseFromNfceUrl, resolveNfceApiUrl } from '../_shared/fiscal-api-url.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+}
+
+const fiscalTokenCache = new Map<string, { token: string | null; ts: number }>()
+const FISCAL_TOKEN_TTL_MS = 5 * 60 * 1000
+
+const BLOCKING_NFCE_STATUSES = ['autorizada', 'processando', 'pendente']
+
+function dedupedNfceResponse(existing: Record<string, unknown>) {
+  console.warn('[nfce-proxy][idempotency] devolvendo registro existente numero=',
+    existing.numero, 'external_id=', existing.external_id, 'sale_id=', existing.sale_id)
+  return new Response(JSON.stringify({
+    success: true,
+    deduped: true,
+    data: {
+      id: existing.nfce_id,
+      numero: existing.numero,
+      serie: existing.serie,
+      chave_acesso: existing.chave_acesso,
+      status: existing.status,
+      protocolo: existing.protocolo,
+      qrcode_url: existing.qrcode_url,
+      xml_url: existing.xml_url,
+      ambiente: existing.ambiente,
+    },
+  }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+}
+
+function isUniqueViolation(err: { code?: string; message?: string } | null | undefined): boolean {
+  if (!err) return false
+  return err.code === '23505' || String(err.message || '').includes('duplicate key')
+}
+
+async function resolveFiscalFlowToken(
+  supabase: ReturnType<typeof createClient>,
+  companyId: string,
+  globalKey: string | null | undefined,
+  isI9: boolean,
+): Promise<string | null> {
+  const cached = fiscalTokenCache.get(companyId)
+  if (cached && Date.now() - cached.ts < FISCAL_TOKEN_TTL_MS) {
+    if (cached.token) return cached.token
+    if (isI9) return null
+    return globalKey ?? null
+  }
+
+  let resolved: string | null = globalKey ?? null
+  try {
+    const { data: tokenRow } = await supabase
+      .from('store_settings')
+      .select('value')
+      .eq('company_id', companyId)
+      .eq('key', 'fiscal_flow_api_token')
+      .maybeSingle()
+    const perCompanyToken = (tokenRow?.value || '').trim()
+    if (perCompanyToken) {
+      resolved = perCompanyToken
+    } else if (isI9) {
+      resolved = null
+    }
+  } catch (err) {
+    console.error('[nfce-proxy] Error loading per-company token:', err)
+  }
+
+  fiscalTokenCache.set(companyId, { token: resolved, ts: Date.now() })
+  return resolved
 }
 
 Deno.serve(async (req) => {
@@ -41,7 +105,11 @@ Deno.serve(async (req) => {
       userId = user.id
     }
     const GLOBAL_NFCE_API_KEY = Deno.env.get('NFCE_API_KEY')
-    const NFCE_API_URL = resolveNfceApiUrl()
+    const NFCE_API_URL = Deno.env.get('NFCE_API_URL')
+
+    if (!NFCE_API_URL) {
+      return new Response(JSON.stringify({ error: 'NFC-e API não configurada (URL ausente)' }), { status: 500, headers: corsHeaders })
+    }
 
     const body = await req.json()
     const { action, companyId, saleId, nfceId, payload } = body
@@ -74,8 +142,8 @@ Deno.serve(async (req) => {
     //     - 409: SEFAZ já autorizou a original — usamos ela, sem duplicar.
     //     - outro: mantém como "processando" para consulta posterior.
     //  3) Idempotência por (company_id, external_id) impede duplicidade.
-    const EMIT_TIMEOUT_MS = 20000
-    const FF_BASE_URL = fiscalFlowBaseFromNfceUrl(NFCE_API_URL)
+    const EMIT_TIMEOUT_MS = 35000
+    const FF_BASE_URL = NFCE_API_URL.replace(/\/emitir\/?$/i, '').replace(/\/+$/, '')
 
     async function fetchWithTimeout(url: string, init: RequestInit, ms: number) {
       const ctrl = new AbortController()
@@ -87,28 +155,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    let NFCE_API_KEY: string | null = GLOBAL_NFCE_API_KEY ?? null
-    try {
-      const { data: tokenRow } = await supabase
-        .from('store_settings')
-        .select('value')
-        .eq('company_id', companyId)
-        .eq('key', 'fiscal_flow_api_token')
-        .maybeSingle()
-      const perCompanyToken = (tokenRow?.value || '').trim()
-      if (perCompanyToken) {
-        NFCE_API_KEY = perCompanyToken
-        console.log('[nfce-proxy] Using per-company Fiscal Flow token for', companyId)
-      } else if (isI9) {
-        return new Response(
-          JSON.stringify({
-            error: 'Token Fiscal Flow não configurado para esta loja. Configure em Fiscal → Token da API Fiscal Flow.',
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-    } catch (err) {
-      console.error('[nfce-proxy] Error loading per-company token:', err)
+    const NFCE_API_KEY = await resolveFiscalFlowToken(supabase, companyId, GLOBAL_NFCE_API_KEY, isI9)
+
+    if (isI9 && !NFCE_API_KEY) {
+      return new Response(
+        JSON.stringify({
+          error: 'Token Fiscal Flow não configurado para esta loja. Configure em Fiscal → Token da API Fiscal Flow.',
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     if (!NFCE_API_KEY) {
@@ -118,7 +173,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    let apiResponse!: Response
+    let apiResponse: Response
     let result: any
 
     async function safeJson(resp: Response): Promise<any> {
@@ -889,42 +944,39 @@ Deno.serve(async (req) => {
         }
 
         // -------------------------------------------------------------------
-        // IDEMPOTÊNCIA: antes de emitir, verifica se já existe uma NFC-e para
-        // este (company_id, external_id). Se existir e estiver autorizada,
-        // processando ou pendente, devolve o registro existente em vez de
-        // gerar uma nova numeração. Isso protege contra:
-        //  - cliques duplicados / retries do frontend após timeout
-        //  - reemissão automática indevida
-        //  - reprocesso via job/scheduler
+        // IDEMPOTÊNCIA por sale_id (qualquer prefixo FCX/FCX-RETRO/PDV/PDVV2)
+        // e por external_id (retry do mesmo canal).
         // -------------------------------------------------------------------
+        if (saleId) {
+          const { data: existingBySale } = await supabase
+            .from('nfce_records')
+            .select('*')
+            .eq('company_id', companyId)
+            .eq('sale_id', saleId)
+            .in('status', BLOCKING_NFCE_STATUSES)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (existingBySale) {
+            console.warn('[nfce-proxy][idempotency] sale_id já possui NFC-e ativa:', saleId)
+            return dedupedNfceResponse(existingBySale)
+          }
+        }
+
         if (payload.external_id) {
           const { data: existing } = await supabase
             .from('nfce_records')
             .select('*')
             .eq('company_id', companyId)
             .eq('external_id', payload.external_id)
-            .in('status', ['autorizada', 'processando', 'pendente', 'rejeitada'])
+            .in('status', [...BLOCKING_NFCE_STATUSES, 'rejeitada'])
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle()
           if (existing && existing.status !== 'rejeitada') {
             console.warn('[nfce-proxy][idempotency] external_id já emitido:',
               payload.external_id, '→ devolvendo registro existente numero=', existing.numero)
-            return new Response(JSON.stringify({
-              success: true,
-              deduped: true,
-              data: {
-                id: existing.nfce_id,
-                numero: existing.numero,
-                serie: existing.serie,
-                chave_acesso: existing.chave_acesso,
-                status: existing.status,
-                protocolo: existing.protocolo,
-                qrcode_url: existing.qrcode_url,
-                xml_url: existing.xml_url,
-                ambiente: existing.ambiente,
-              },
-            }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+            return dedupedNfceResponse(existing)
           }
         }
 
@@ -1021,13 +1073,13 @@ Deno.serve(async (req) => {
             }
 
             try {
-              await supabase.from('nfce_records').insert({
+              const { error: orphanInsertErr } = await supabase.from('nfce_records').insert({
                 company_id: companyId,
                 sale_id: saleId || null,
                 external_id: payload.external_id,
                 nfce_id: ffId,
                 status: ffData?.status || 'processando',
-                ambiente: emitPayload?.ambiente || payload?.ambiente || 'producao',
+                ambiente: emitPayload?.ambiente || payload?.ambiente || 'homologacao',
                 valor_total: emitPayload?.itens
                   ? emitPayload.itens.reduce((sum: number, item: any) =>
                       sum + Number(item.quantidade || 1) * Number(item.valor_unitario || 0), 0)
@@ -1042,6 +1094,15 @@ Deno.serve(async (req) => {
                 contingencia_offline: false,
                 contingencia_efetivada: false,
               })
+              if (orphanInsertErr && isUniqueViolation(orphanInsertErr)) {
+                const { data: dup } = await supabase
+                  .from('nfce_records')
+                  .select('*')
+                  .eq('company_id', companyId)
+                  .eq('external_id', payload.external_id)
+                  .maybeSingle()
+                if (dup) return dedupedNfceResponse(dup)
+              }
             } catch (e) {
               console.error('[nfce-proxy] Falha ao gravar processando:', e)
             }
@@ -1064,8 +1125,10 @@ Deno.serve(async (req) => {
         if (emitData && (emitData.id || emitData.nfce_id)) {
           const chave = emitData.chave_acesso || emitData.chave || emitData.access_key || null
           const fromChave = chave ? extractFromChave(chave) : { numero: null, serie: null }
-          // Fallback chain: API response → XML tpAmb → request payload → producao
-          // (Bon/Ruiva operam sempre em produção; homologação só I9 testes)
+          // Fallback chain: API response → XML tpAmb → request payload (what we
+          // actually sent to SEFAZ) → 'homologacao'. Using emitPayload.ambiente
+          // prevents authorized production NFC-es from being mis-tagged as
+          // homologação when the API response omits the ambiente field.
           const ambienteResolved =
             emitData.ambiente ||
             emitData.environment ||
@@ -1073,7 +1136,7 @@ Deno.serve(async (req) => {
             emitPayload?.ambiente ||
             emitPayload?.environment ||
             payload?.ambiente ||
-            'producao'
+            'homologacao'
           // Detecta tpEmis real no XML autorizado: se a Focus emitiu em modo
           // normal (tpEmis=1) mesmo depois de termos pedido contingência, NÃO
           // marcamos como contingência — isso acontece quando o timeout de 8s
@@ -1112,7 +1175,25 @@ Deno.serve(async (req) => {
           }
           console.log('[nfce-proxy] Inserting record:', JSON.stringify(nfceRecord))
           const { error: insertError } = await supabase.from('nfce_records').insert(nfceRecord)
-          if (insertError) console.error('[nfce-proxy] Insert error:', insertError)
+          if (insertError) {
+            console.error('[nfce-proxy] Insert error:', insertError)
+            if (isUniqueViolation(insertError)) {
+              let dupQuery = supabase
+                .from('nfce_records')
+                .select('*')
+                .eq('company_id', companyId)
+              if (payload.external_id) {
+                dupQuery = dupQuery.eq('external_id', payload.external_id)
+              } else if (saleId) {
+                dupQuery = dupQuery.eq('sale_id', saleId).in('status', BLOCKING_NFCE_STATUSES)
+              }
+              const { data: dup } = await dupQuery
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+              if (dup) return dedupedNfceResponse(dup)
+            }
+          }
         } else {
           // Rejeição da Focus/SEFAZ (ex.: NCM inválido, total divergente, CFOP
           // incompatível). Antes, jogávamos o motivo fora e a UI só via um
@@ -1138,7 +1219,7 @@ Deno.serve(async (req) => {
             emitPayload?.ambiente ||
             emitPayload?.environment ||
             payload?.ambiente ||
-            'producao'
+            'homologacao'
 
           try {
             const rejectedRecord = {

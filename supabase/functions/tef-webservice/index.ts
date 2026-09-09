@@ -236,7 +236,7 @@ async function handleTef(req: Request): Promise<Response> {
           });
           const atvText = await atvResponse.text();
           console.log('[TEF-WS] I9 pre-CRT ATV response:', atvText);
-          await new Promise((resolve) => setTimeout(resolve, 800));
+          await new Promise((resolve) => setTimeout(resolve, 400));
         } catch (error) {
           console.error('[TEF-WS] I9 pre-CRT ATV error:', error);
         }
@@ -784,13 +784,20 @@ serve(async (req) => {
     // non-JSON body — skip
   }
 
-  // Fire-and-forget; never await, never throw
-  logTefCall(
-    reqBodyForLog,
-    resBodyForLog,
-    response.status,
-    Date.now() - startedAt,
-  ).catch(() => {});
+  const action = reqBodyForLog?.action;
+  const pollStatus = resBodyForLog?.status;
+  const skipPollLog =
+    action === 'get-status' &&
+    (pollStatus === 'processing' || pollStatus === 'pending' || pollStatus === 'pendente');
+
+  if (!skipPollLog) {
+    logTefCall(
+      reqBodyForLog,
+      resBodyForLog,
+      response.status,
+      Date.now() - startedAt,
+    ).catch(() => {});
+  }
 
   return response;
 });

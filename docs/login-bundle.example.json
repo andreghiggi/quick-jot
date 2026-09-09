@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "version": "1.0",
+    "exported_at": "2026-08-12T03:00:00.000Z",
+    "source_project": "iwmrtxdzlkasuzutxvhh",
+    "description": "Bundle mínimo para login + roteamento (loja, garçom, revendedor, admin)"
+  },
+  "counts": {
+    "auth.users": 0,
+    "auth.identities": 0,
+    "public.companies": 0,
+    "public.profiles": 0,
+    "public.user_roles": 0,
+    "public.company_users": 0,
+    "public.resellers": 0,
+    "public.reseller_settings": 0,
+    "public.reseller_companies": 0,
+    "public.company_modules": 0,
+    "public.company_plans": 0,
+    "public.store_settings": 0
+  },
+  "auth": {
+    "users": [],
+    "identities": []
+  },
+  "public": {
+    "companies": [],
+    "profiles": [],
+    "user_roles": [],
+    "company_users": [],
+    "resellers": [],
+    "reseller_settings": [],
+    "reseller_companies": [],
+    "company_modules": [],
+    "company_plans": [],
+    "store_settings": []
+  },
+  "validation": {
+    "profiles_without_auth_user": 0,
+    "company_users_without_auth_user": 0,
+    "admins_without_company_users": [],
+    "resellers_role_without_resellers_row": [],
+    "sample_logins": [
+      {
+        "email": "deboraboscato@hotmail.com",
+        "expected_roles": ["waiter"],
+        "expected_company": "Lancheria da i9"
+      }
+    ]
+  }
+}

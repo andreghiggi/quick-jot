@@ -1,0 +1,9 @@
+{
+  "name": "com.comandatech.print_host",
+  "description": "ComandaTech Native Messaging Host",
+  "path": "C:\\xampp\\htdocs\\comandatech\\scripts\\comandatech_native_host.py",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://bhlllmhkehdcjibclpleopnojipjhfli/"
+  ]
+}

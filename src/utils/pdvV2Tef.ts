@@ -8,6 +8,7 @@ import {
   pollPinpadStatus,
   confirmPinpadTransaction,
   cancelPinpadTransaction,
+  getPinpadConfig,
 } from '@/services/pinpadService';
 import {
   sendPaymentToMultiplusCard,
@@ -71,6 +72,7 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
   if (integration === 'tef_pinpad') {
     onStatus?.('Enviando para PinPad...');
     try {
+      const pinpadConfig = await getPinpadConfig(companyId);
       const createResult = await sendPinpadPayment(companyId, {
         amount,
         paymentType: tefPaymentType,
@@ -88,7 +90,7 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
 
       for (let i = 0; i < 120; i++) {
         await new Promise((r) => setTimeout(r, 1000));
-        const statusResult = await pollPinpadStatus(companyId, createResult.hash);
+        const statusResult = await pollPinpadStatus(companyId, createResult.hash, pinpadConfig);
 
         if (statusResult.status === 'processing') {
           onStatus?.('Processando pagamento no PinPad...');
