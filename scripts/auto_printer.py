@@ -34,7 +34,10 @@ STATIONS_TTL = 300  # segundos
 
 # Lojas que usam renderizacao GRAFICA (GDI) em vez de RAW.
 # ISOLAMENTO: nao afeta nenhuma outra loja.
-GDI_COMPANY_IDS = {"f5f9eec3-67bc-497a-88a6-ce41d3b15df8"}  # Amore Mio
+GDI_COMPANY_IDS = {
+    "f5f9eec3-67bc-497a-88a6-ce41d3b15df8",  # Amore Mio
+    "b2f97590-ff21-4951-95dc-e3e2b19d4ccb",  # Rei do Acai
+}
 
 # Lojas que DESCARTAM o backlog ao iniciar o script (nao imprimem acumulo antigo).
 # ISOLAMENTO: nao afeta nenhuma outra loja.
