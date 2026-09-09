@@ -20,6 +20,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
   const isInitialLoadRef = useRef(true);
   const prevOrdersJsonRef = useRef<string>('');
   const realtimeReadyRef = useRef(false);
+  const fetchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function fetchOrders() {
     // Don't fetch if no companyId - prevents showing orders from other companies
@@ -128,8 +129,16 @@ export function useOrders(options: UseOrdersOptions = {}) {
     }
   }
 
+  function scheduleFetchOrders() {
+    if (fetchDebounceRef.current) window.clearTimeout(fetchDebounceRef.current);
+    fetchDebounceRef.current = window.setTimeout(() => {
+      fetchDebounceRef.current = null;
+      void fetchOrders();
+    }, 400);
+  }
+
   useEffect(() => {
-    fetchOrders();
+    void fetchOrders();
 
     // Subscribe to realtime updates
     const channel = supabase
@@ -138,14 +147,14 @@ export function useOrders(options: UseOrdersOptions = {}) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders', filter: `company_id=eq.${companyId}` },
         () => {
-          fetchOrders();
+          scheduleFetchOrders();
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'order_items', filter: `company_id=eq.${companyId}` },
         () => {
-          fetchOrders();
+          scheduleFetchOrders();
         }
       )
       .subscribe((status) => {
@@ -155,11 +164,12 @@ export function useOrders(options: UseOrdersOptions = {}) {
     // Fallback: poll só se Realtime não estiver conectado (evita carga duplicada no Postgres).
     const pollInterval = companyId
       ? window.setInterval(() => {
-          if (!realtimeReadyRef.current) fetchOrders();
+          if (!realtimeReadyRef.current) void fetchOrders();
         }, 15000)
       : null;
 
     return () => {
+      if (fetchDebounceRef.current) window.clearTimeout(fetchDebounceRef.current);
       supabase.removeChannel(channel);
       if (pollInterval) window.clearInterval(pollInterval);
     };
