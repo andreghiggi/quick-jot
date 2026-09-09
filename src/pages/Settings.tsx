@@ -296,6 +296,8 @@ if errorlevel 1 (
   const handleDownloadScript = () => {
     const script = generatePythonScript();
     downloadTextFile(script, 'auto_printer.py');
+    // Fallback: grava a identificação da loja ao lado do script.
+    downloadTextFile(company?.id || '', 'company_id.txt');
   };
 
   const handleDownloadInstalador = () => {
@@ -1612,7 +1614,7 @@ if errorlevel 1 (
                     verificar_pywin32.py
                   </Button>
                   <Button
-                    onClick={() => downloadTextFile(autoPrinterTemplate, 'auto_printer.py')}
+                    onClick={handleDownloadScript}
                     size="sm"
                     variant="outline"
                     className="w-full"
