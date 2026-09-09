@@ -1101,12 +1101,26 @@ if __name__ == "__main__":
     parser.add_argument("--company_name", help="Nome da empresa")
     args = parser.parse_args()
 
-    # Fallback para variáveis injetadas via build se não vier por argumento
+    # Ordem: argumento > valor injetado no download > company_id.txt > variavel de ambiente
     company_id = args.company_id or COMPANY_ID
     company_name = args.company_name or STORE_NAME
 
     if not company_id:
-        print("ERRO: company_id nao fornecido.")
+        try:
+            txt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "company_id.txt")
+            if os.path.exists(txt):
+                with open(txt, "r", encoding="utf-8-sig") as f:
+                    company_id = f.read().strip()
+        except Exception:
+            pass
+
+    if not company_id:
+        company_id = os.environ.get("COMANDATECH_COMPANY_ID", "").strip()
+
+    if not company_id:
+        print("ERRO: a loja nao foi identificada neste arquivo.")
+        print("Baixe novamente o auto_printer.py e o iniciar_impressao.cmd em")
+        print("Configuracoes > Impressao, no painel da sua loja, e substitua os arquivos da pasta.")
         sys.exit(1)
 
     main(company_id, company_name)
