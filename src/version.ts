@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.71.2-beta";
+export const VERSION = "1.71.3-beta";
 export const RELEASE_DATE = "2026-09-09"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão automática: fila confirmada de ponta a ponta";
+export const CODENAME = "Garçom: envio confiável para o Auto Printer";
 
 
 
@@ -22,6 +22,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.71.3-beta",
+    date: "2026-09-09",
+    codename: "Garçom: envio confiável para o Auto Printer",
+    changes: [
+      "Comandas enviadas pelo Garçom passam a entrar na fila geral mesmo quando a loja não possui estações de impressão cadastradas ou o roteamento está indisponível.",
+      "A confirmação de envio agora depende da criação real da comanda pendente, com erro visível quando o banco recusar o registro.",
+      "Layouts V1, V2 e V3, tamanhos de papel, impressora padrão, estações e modos exclusivos de cada loja foram preservados.",
+    ],
+  },
   {
     version: "1.71.2-beta",
     date: "2026-09-09",

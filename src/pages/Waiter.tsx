@@ -404,6 +404,7 @@ export default function Waiter() {
               createdAt: new Date(),
               paperSize: storeSettings.printerPaperSize,
               layout: storeSettings.printLayout,
+              companyId: company.id,
               showReadyTime: true,
               readyOffsetMinutes: computeReadyOffsetMinutes(storeSettings.estimatedWaitTime, 30),
             },
