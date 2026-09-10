@@ -305,8 +305,6 @@ export interface ProductionTicketBase {
 interface PrintStationRow {
   id: string;
   name: string;
-  is_default: boolean;
-  active: boolean;
 }
 
 interface CategoryMapRow {
@@ -318,9 +316,8 @@ async function loadRouting(companyId: string) {
   const [{ data: stations }, { data: mappings }] = await Promise.all([
     supabase
       .from('print_stations' as never)
-      .select('id, name, is_default, active')
-      .eq('company_id', companyId)
-      .eq('active', true),
+      .select('id, name')
+      .eq('company_id', companyId),
     supabase
       .from('category_print_stations' as never)
       .select('category_id, station_id')
@@ -332,10 +329,11 @@ async function loadRouting(companyId: string) {
   for (const m of (mappings ?? []) as CategoryMapRow[]) {
     categoryToStation.set(m.category_id, m.station_id);
   }
-  const defaultStation = activeStations.find((s) => s.is_default) ?? activeStations[0] ?? null;
+  const defaultStation = activeStations[0] ?? null;
 
   return { activeStations, categoryToStation, defaultStation };
 }
+
 
 function resolveStationId(
   categoryId: string | null | undefined,
@@ -402,7 +400,6 @@ async function enqueueProductionByStationParams(params: {
       label: `${labelPrefix} (${stationLabel})`,
       station_id: stationId,
       job_type: 'production',
-      source_order_id: sourceOrderId ?? null,
     } as never);
     if (error) throw error;
   };
@@ -417,7 +414,6 @@ async function enqueueProductionByStationParams(params: {
       html_content: html,
       label: labelPrefix,
       job_type: 'production',
-      source_order_id: sourceOrderId ?? null,
     } as never);
     if (error) throw error;
     return 1;
@@ -434,20 +430,18 @@ async function enqueueProductionByStationParams(params: {
   return count;
 }
 
-/** Recibo completo → estação que recebe recibos (handles_receipt) ou padrão. */
+/** Recibo completo → primeira estação cadastrada da loja (ou fila geral). */
 export async function enqueueReceiptJob(params: {
   companyId: string;
   html: string;
   label: string;
   sourceOrderId?: string;
 }) {
-  const { companyId, html, label, sourceOrderId } = params;
+  const { companyId, html, label } = params;
   const { data: stations } = await supabase
     .from('print_stations' as never)
     .select('id')
     .eq('company_id', companyId)
-    .eq('handles_receipt', true)
-    .eq('active', true)
     .limit(1);
 
   const receiptStation = (stations as { id: string }[] | null)?.[0]?.id ?? null;
@@ -458,10 +452,10 @@ export async function enqueueReceiptJob(params: {
     label,
     station_id: receiptStation,
     job_type: 'receipt',
-    source_order_id: sourceOrderId ?? null,
   } as never);
   if (error) throw error;
 }
+
 
 type EnqueueProductionParams = {
   companyId: string;

@@ -409,9 +409,10 @@ export default function Waiter() {
             },
           });
           toast.success('Pedido enviado para impressão!');
-        } catch (printError) {
+        } catch (printError: any) {
           console.error('Print queue error:', printError);
-          toast.error('Erro ao enviar para impressão');
+          const detail = printError?.message || printError?.details || '';
+          toast.error(detail ? `Erro ao enviar para impressão: ${detail}` : 'Erro ao enviar para impressão');
         }
       } else {
         toast.success(`Itens adicionados à Comanda #${selectedTab.tab_number}!`);
