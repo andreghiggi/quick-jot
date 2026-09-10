@@ -358,6 +358,7 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
       return null;
     }
 
+    const pendingKey = `pending_sale_${companyId}`;
     try {
       const total = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
       const finalTotal = total - discount;
