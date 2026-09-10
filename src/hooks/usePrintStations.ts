@@ -7,7 +7,12 @@ export interface PrintStation {
   name: string;
   company_id: string;
   printer_name?: string | null;
+  isDefault?: boolean | null;
+  handlesReceipt?: boolean | null;
+  active?: boolean | null;
 }
+
+export type PrintStationUpdate = Partial<Pick<PrintStation, 'isDefault' | 'handlesReceipt' | 'active' | 'printer_name' | 'name'>>;
 
 export interface CategoryPrintStation {
   id: string;

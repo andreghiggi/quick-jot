@@ -130,8 +130,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
   }
 
   function scheduleFetchOrders() {
-    if (fetchDebounceRef.current) window.clearTimeout(fetchDebounceRef.current);
-    fetchDebounceRef.current = window.setTimeout(() => {
+    if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
+    fetchDebounceRef.current = setTimeout(() => {
       fetchDebounceRef.current = null;
       void fetchOrders();
     }, 400);
