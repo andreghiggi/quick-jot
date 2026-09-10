@@ -313,7 +313,7 @@ interface CategoryMapRow {
 }
 
 async function loadRouting(companyId: string) {
-  const [{ data: stations }, { data: mappings }] = await Promise.all([
+  const [stationsResult, mappingsResult] = await Promise.all([
     supabase
       .from('print_stations' as never)
       .select('id, name')
@@ -324,9 +324,24 @@ async function loadRouting(companyId: string) {
       .eq('company_id', companyId),
   ]);
 
-  const activeStations = (stations ?? []) as PrintStationRow[];
+  // O Garçom não pode deixar de enfileirar quando a loja não usa estações ou
+  // quando o usuário local não tem acesso ao cadastro de roteamento. Nesses
+  // casos, o Auto Printer usa a impressora padrão do Windows.
+  if (stationsResult.error || mappingsResult.error) {
+    console.warn('[PrintRouting] Roteamento indisponível; usando fila geral', {
+      stations: stationsResult.error?.message,
+      mappings: mappingsResult.error?.message,
+    });
+    return {
+      activeStations: [] as PrintStationRow[],
+      categoryToStation: new Map<string, string>(),
+      defaultStation: null as PrintStationRow | null,
+    };
+  }
+
+  const activeStations = (stationsResult.data ?? []) as PrintStationRow[];
   const categoryToStation = new Map<string, string>();
-  for (const m of (mappings ?? []) as CategoryMapRow[]) {
+  for (const m of (mappingsResult.data ?? []) as CategoryMapRow[]) {
     categoryToStation.set(m.category_id, m.station_id);
   }
   const defaultStation = activeStations[0] ?? null;
@@ -338,22 +353,23 @@ async function loadRouting(companyId: string) {
 function resolveStationId(
   categoryId: string | null | undefined,
   categoryToStation: Map<string, string>,
-  defaultStationId: string | null,
 ): string | null {
-  if (categoryId && categoryToStation.has(categoryId)) {
-    return categoryToStation.get(categoryId)!;
+  if (categoryId) {
+    const mappedStationId = categoryToStation.get(categoryId);
+    if (mappedStationId) return mappedStationId;
   }
-  return defaultStationId;
+  // Mesmo padrão do fluxo legado: categoria sem vínculo explícito segue para
+  // a fila geral e usa a impressora padrão do Windows.
+  return null;
 }
 
 function groupRoutableItemsByStation(
   items: RoutablePrintItem[],
   categoryToStation: Map<string, string>,
-  defaultStationId: string | null,
 ): Map<string | null, RoutablePrintItem[]> {
   const groups = new Map<string | null, RoutablePrintItem[]>();
   for (const item of items) {
-    const stationId = resolveStationId(item.categoryId, categoryToStation, defaultStationId);
+    const stationId = resolveStationId(item.categoryId, categoryToStation);
     const list = groups.get(stationId) ?? [];
     list.push(item);
     groups.set(stationId, list);
@@ -373,10 +389,10 @@ async function enqueueProductionByStationParams(params: {
   labelPrefix: string;
   sourceOrderId?: string;
 }): Promise<number> {
-  const { companyId, items, ticketBase, labelPrefix, sourceOrderId } = params;
+  const { companyId, items, ticketBase, labelPrefix } = params;
   if (!items.length) return 0;
 
-  const { activeStations, categoryToStation, defaultStation } = await loadRouting(companyId);
+  const { activeStations, categoryToStation } = await loadRouting(companyId);
   const stationNameById = new Map(activeStations.map((s) => [s.id, s.name]));
 
   const insertJob = async (
@@ -400,6 +416,7 @@ async function enqueueProductionByStationParams(params: {
       label: `${labelPrefix} (${stationLabel})`,
       station_id: stationId,
       job_type: 'production',
+      printed: false,
     } as never);
     if (error) throw error;
   };
@@ -413,13 +430,15 @@ async function enqueueProductionByStationParams(params: {
       company_id: companyId,
       html_content: html,
       label: labelPrefix,
+      station_id: null,
       job_type: 'production',
+      printed: false,
     } as never);
     if (error) throw error;
     return 1;
   }
 
-  const groups = groupRoutableItemsByStation(items, categoryToStation, defaultStation?.id ?? null);
+  const groups = groupRoutableItemsByStation(items, categoryToStation);
   let count = 0;
   for (const [stationId, stationItems] of groups) {
     if (!stationItems.length) continue;
@@ -452,6 +471,7 @@ export async function enqueueReceiptJob(params: {
     label,
     station_id: receiptStation,
     job_type: 'receipt',
+    printed: false,
   } as never);
   if (error) throw error;
 }
@@ -487,12 +507,15 @@ export async function enqueueProductionByStation(
   if (typeof companyIdOrParams === 'object') {
     return enqueueProductionByStationParams(companyIdOrParams);
   }
+  if (!orderId || !items || !orderNumber || !customerName) {
+    throw new Error('Dados incompletos para enviar a comanda à impressão');
+  }
   return enqueueProductionByStationLegacy(
     companyIdOrParams,
-    orderId!,
-    items!,
-    orderNumber!,
-    customerName!,
+    orderId,
+    items,
+    orderNumber,
+    customerName,
     orderOrigin,
   );
 }
