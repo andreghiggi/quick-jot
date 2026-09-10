@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.71.3-beta";
-export const RELEASE_DATE = "2026-09-09"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Garçom: envio confiável para o Auto Printer";
+export const VERSION = "1.71.4-beta";
+export const RELEASE_DATE = "2026-09-10"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Venda registra de novo: numeração e caixas recuperados";
 
 
 
