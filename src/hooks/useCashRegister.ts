@@ -385,13 +385,27 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
         insertData.source_module = sourceModule;
       }
 
-      const { data: saleData, error: saleError } = await supabase
-        .from('pdv_sales')
-        .insert(insertData)
-        .select()
-        .single();
+      // Guarda a venda como pendente até confirmar a gravação: se a tela for
+      // fechada ou recarregada no meio, ela pode ser retomada.
+      try {
+        localStorage.setItem(
+          pendingKey,
+          JSON.stringify({ insertData, items, at: new Date().toISOString() }),
+        );
+      } catch { /* storage indisponível — segue a venda */ }
 
-      if (saleError) throw saleError;
+      // Tenta gravar até 3 vezes: falhas rápidas de rede deixam de virar erro na tela.
+      let saleData: any = null;
+      let saleError: any = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const res = await supabase.from('pdv_sales').insert(insertData).select().single();
+        if (!res.error) { saleData = res.data; saleError = null; break; }
+        saleError = res.error;
+        console.error(`[addSale] tentativa ${attempt}/3 falhou:`, res.error);
+        if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 800));
+      }
+
+      if (saleError || !saleData) throw saleError || new Error('Venda não retornada pelo servidor');
 
       // Create sale items
       const saleItems = items.map(item => ({
