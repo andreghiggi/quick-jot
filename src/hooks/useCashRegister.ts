@@ -439,9 +439,28 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
       const detail =
         error?.message || error?.details || error?.hint || 'motivo não informado pelo servidor';
       toast.error(`Erro ao registrar venda: ${detail}`, {
-        duration: 12000,
+        duration: 20000,
         description:
-          'Se o cartão já foi aprovado na maquininha, NÃO cobre de novo — tente registrar novamente antes de refazer a cobrança.',
+          'Se o cartão já foi aprovado na maquininha, NÃO cobre de novo — use "Tentar registrar de novo".',
+        action: _isRetry
+          ? undefined
+          : {
+              label: 'Tentar registrar de novo',
+              onClick: () => {
+                void addSale(
+                  items,
+                  paymentMethodId,
+                  userId,
+                  discount,
+                  customerName,
+                  notes,
+                  orderId,
+                  fiscalMode,
+                  sourceModule,
+                  true,
+                );
+              },
+            },
       });
       return null;
     }
