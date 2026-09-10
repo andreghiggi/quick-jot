@@ -1009,8 +1009,21 @@ def _imprimir_html(html_content, station_id=None):
         try:
             hPrinter = win32print.OpenPrinter(printer_name)
         except Exception as e:
-            log(f"Não foi possível abrir a impressora '{printer_name}': {e}", "ERRO")
-            return False
+            if station_id:
+                log(
+                    f"Impressora mapeada '{printer_name}' indisponível: {e}. Tentando a impressora padrão.",
+                    "AVISO",
+                )
+                try:
+                    printer_name = win32print.GetDefaultPrinter()
+                    hPrinter = win32print.OpenPrinter(printer_name)
+                    log(f"Fallback para impressora padrão: {printer_name}", "DEFAULT")
+                except Exception as fallback_error:
+                    log(f"Não foi possível abrir a impressora padrão: {fallback_error}", "ERRO")
+                    return False
+            else:
+                log(f"Não foi possível abrir a impressora '{printer_name}': {e}", "ERRO")
+                return False
             
         try:
             # Tenta enviar como RAW para a impressora

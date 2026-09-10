@@ -353,23 +353,23 @@ async function loadRouting(companyId: string) {
 function resolveStationId(
   categoryId: string | null | undefined,
   categoryToStation: Map<string, string>,
-  defaultStationId: string | null,
 ): string | null {
   if (categoryId) {
     const mappedStationId = categoryToStation.get(categoryId);
     if (mappedStationId) return mappedStationId;
   }
-  return defaultStationId;
+  // Mesmo padrão do fluxo legado: categoria sem vínculo explícito segue para
+  // a fila geral e usa a impressora padrão do Windows.
+  return null;
 }
 
 function groupRoutableItemsByStation(
   items: RoutablePrintItem[],
   categoryToStation: Map<string, string>,
-  defaultStationId: string | null,
 ): Map<string | null, RoutablePrintItem[]> {
   const groups = new Map<string | null, RoutablePrintItem[]>();
   for (const item of items) {
-    const stationId = resolveStationId(item.categoryId, categoryToStation, defaultStationId);
+    const stationId = resolveStationId(item.categoryId, categoryToStation);
     const list = groups.get(stationId) ?? [];
     list.push(item);
     groups.set(stationId, list);
@@ -392,7 +392,7 @@ async function enqueueProductionByStationParams(params: {
   const { companyId, items, ticketBase, labelPrefix } = params;
   if (!items.length) return 0;
 
-  const { activeStations, categoryToStation, defaultStation } = await loadRouting(companyId);
+  const { activeStations, categoryToStation } = await loadRouting(companyId);
   const stationNameById = new Map(activeStations.map((s) => [s.id, s.name]));
 
   const insertJob = async (
@@ -438,7 +438,7 @@ async function enqueueProductionByStationParams(params: {
     return 1;
   }
 
-  const groups = groupRoutableItemsByStation(items, categoryToStation, defaultStation?.id ?? null);
+  const groups = groupRoutableItemsByStation(items, categoryToStation);
   let count = 0;
   for (const [stationId, stationItems] of groups) {
     if (!stationItems.length) continue;
