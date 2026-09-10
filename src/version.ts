@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.71.1-beta";
-export const RELEASE_DATE = "2026-09-06"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Bon Appétit: itens extras e fechamento de caixa mais seguros";
+export const VERSION = "1.71.2-beta";
+export const RELEASE_DATE = "2026-09-09"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Impressão automática: fila confirmada de ponta a ponta";
 
 
 
@@ -22,6 +22,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.71.2-beta",
+    date: "2026-09-09",
+    codename: "Impressão automática: fila confirmada de ponta a ponta",
+    changes: [
+      "Auto Printer v1.7.5: a fila de comandas agora é processada primeiro e cada impressão registra conexão, impressora escolhida, envio e confirmação.",
+      "Pedidos sem uma comanda pronta na fila não são mais marcados como impressos silenciosamente.",
+      "Layouts, tamanhos de papel e modos exclusivos de cada loja foram preservados; nenhuma regra fiscal ou de TEF foi alterada.",
+    ],
+  },
   {
     version: "1.71.1-beta",
     date: "2026-09-06",
