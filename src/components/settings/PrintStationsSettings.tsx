@@ -3,27 +3,24 @@ import { usePrintStations } from '@/hooks/usePrintStations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Printer, Plus, Trash2, Star } from 'lucide-react';
-import { toast } from 'sonner';
+import { Printer, Plus, Trash2 } from 'lucide-react';
 
 interface PrintStationsSettingsProps {
   companyId?: string | null;
 }
 
 export function PrintStationsSettings({ companyId }: PrintStationsSettingsProps) {
-  const { stations, loading, addStation, updateStation, deleteStation } = usePrintStations(companyId);
+  const { stations, loading, addStation, deleteStation, updateStationPrinter } = usePrintStations(
+    companyId ?? undefined,
+  );
   const [newName, setNewName] = useState('');
+  const [printerDrafts, setPrinterDrafts] = useState<Record<string, string>>({});
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
-    const ok = await addStation(newName.trim());
-    if (ok) {
-      setNewName('');
-      toast.success('Estação criada');
-    }
+    const created = await addStation(newName.trim());
+    if (created) setNewName('');
   };
 
   return (
@@ -63,52 +60,22 @@ export function PrintStationsSettings({ companyId }: PrintStationsSettingsProps)
           <ul className="space-y-3">
             {stations.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center gap-3 p-3 border rounded-lg">
-                <div className="flex-1 min-w-[120px]">
-                  <div className="font-medium flex items-center gap-2">
-                    {s.name}
-                    {s.isDefault && (
-                      <Badge variant="outline" className="text-xs">
-                        <Star className="w-3 h-3 mr-1" />
-                        Padrão
-                      </Badge>
-                    )}
-                    {s.handlesReceipt && (
-                      <Badge variant="secondary" className="text-xs">
-                        Caixa / Recibo
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor={`default-${s.id}`} className="text-xs whitespace-nowrap">
-                    Padrão
-                  </Label>
-                  <Switch
-                    id={`default-${s.id}`}
-                    checked={s.isDefault}
-                    onCheckedChange={(v) => void updateStation(s.id, { isDefault: v })}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor={`receipt-${s.id}`} className="text-xs whitespace-nowrap">
-                    Recibo
-                  </Label>
-                  <Switch
-                    id={`receipt-${s.id}`}
-                    checked={s.handlesReceipt}
-                    onCheckedChange={(v) => void updateStation(s.id, { handlesReceipt: v })}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor={`active-${s.id}`} className="text-xs whitespace-nowrap">
-                    Ativa
-                  </Label>
-                  <Switch
-                    id={`active-${s.id}`}
-                    checked={s.active}
-                    onCheckedChange={(v) => void updateStation(s.id, { active: v })}
-                  />
-                </div>
+                <div className="flex-1 min-w-[120px] font-medium">{s.name}</div>
+                <Input
+                  className="w-56"
+                  placeholder="Nome da impressora no Windows"
+                  value={printerDrafts[s.id] ?? s.printer_name ?? ''}
+                  onChange={(e) => setPrinterDrafts((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    void updateStationPrinter(s.id, printerDrafts[s.id] ?? s.printer_name ?? '')
+                  }
+                >
+                  Salvar
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
