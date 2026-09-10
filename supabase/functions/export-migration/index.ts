@@ -67,11 +67,14 @@ Deno.serve(async (req) => {
         }
         const conflictCols = pkCols.map((c) => `"${c}"`).join(",");
         const updateCols = cols.filter((c) => !pkCols.includes(c)).map((c) => `"${c}" = EXCLUDED."${c}"`).join(", ");
-        await sql.unsafe(
-          `INSERT INTO public."${table}" (${quotedCols}) VALUES ${placeholders.join(",")} ON CONFLICT (${conflictCols}) DO UPDATE SET ${updateCols}`,
+        const insertOnly = body?.on_conflict === "nothing" || !updateCols;
+        const res = await sql.unsafe(
+          insertOnly
+            ? `INSERT INTO public."${table}" (${quotedCols}) VALUES ${placeholders.join(",")} ON CONFLICT (${conflictCols}) DO NOTHING`
+            : `INSERT INTO public."${table}" (${quotedCols}) VALUES ${placeholders.join(",")} ON CONFLICT (${conflictCols}) DO UPDATE SET ${updateCols}`,
           flat,
         );
-        upserted += batch.length;
+        upserted += insertOnly ? (res.count ?? 0) : batch.length;
       }
       await sql`SET session_replication_role = 'origin'`;
       await sql.end();
