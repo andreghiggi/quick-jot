@@ -102,10 +102,14 @@ export function FrenteCaixaCheckoutDialog({
   onConfirm,
 }: Props) {
   const { settings: storeSettings } = useStoreSettings({ companyId });
-  const { activePaymentMethods: allActivePaymentMethods } = usePaymentMethods({
+  const { activePaymentMethods: pdvPaymentMethods } = usePaymentMethods({
     companyId,
     channel: 'pdv',
   });
+  // Fallback: canal PDV sem formas cadastradas travaria a finalização da venda.
+  const { activePaymentMethods: anyChannelPaymentMethods } = usePaymentMethods({ companyId });
+  const allActivePaymentMethods =
+    pdvPaymentMethods.length > 0 ? pdvPaymentMethods : anyChannelPaymentMethods;
 
   /**
    * Crediário aparece como uma linha normal da lista, com letra de atalho

@@ -43,7 +43,11 @@ export function PDVV2FastCheckout({ companyId }: Props) {
   const { getWeight, reading: readingScale } = useScale();
   const { currentRegister, addSale } = useCashRegister({ companyId });
   const { user } = useAuthContext();
-  const { activePaymentMethods: pdvPaymentMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
+  const { activePaymentMethods: pdvChannelMethods } = usePaymentMethods({ companyId, channel: 'pdv' });
+  // Fallback: canal PDV sem formas cadastradas travaria a cobrança.
+  const { activePaymentMethods: anyChannelMethods } = usePaymentMethods({ companyId });
+  const pdvPaymentMethods =
+    pdvChannelMethods.length > 0 ? pdvChannelMethods : anyChannelMethods;
   const { taxRules } = useTaxRules({ companyId });
   const { enabled: fiscalEnabled } = useFiscalEnabled(companyId);
   const { enabled: mercadoEnabled } = useMercadoEnabled(companyId);
