@@ -4948,6 +4948,7 @@ export type Database = {
         Returns: string
       }
       process_overdue_invoices: { Args: never; Returns: Json }
+      sync_pdv_sale_counters: { Args: never; Returns: Json }
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
