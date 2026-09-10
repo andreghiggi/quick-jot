@@ -9,6 +9,12 @@ LIVE="${APP_DIR}/dist"
 
 cd "$APP_DIR"
 
+# .env local sobrescreve .env.production — isolar durante build Lovable
+if [[ -f .env ]]; then
+  mv .env .env.vps-api-bak
+  trap '[[ -f .env.vps-api-bak ]] && mv .env.vps-api-bak .env' EXIT
+fi
+
 # Garante .env de produção (fallback se .env local ausente)
 if [[ ! -f .env.production ]] && [[ -f .env.production.local ]]; then
   cp .env.production.local .env.production

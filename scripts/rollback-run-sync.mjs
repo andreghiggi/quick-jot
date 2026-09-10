@@ -1,16 +1,14 @@
 #!/usr/bin/env node
 /**
- * Sync VPS → Lovable via export-migration POST (import UPSERT).
- * Requer export-migration deployada na Lovable com handler POST.
+ * Sync VPS → Lovable via Supabase REST (VPS service role + Lovable anon upsert).
  */
 import { createClient } from '@supabase/supabase-js';
 
 const VPS_URL = process.env.VPS_URL || 'https://api.comandatech.com.br';
 const VPS_KEY = process.env.VPS_SERVICE_KEY;
 const LOVABLE_URL = process.env.LOVABLE_URL || 'https://iwmrtxdzlkasuzutxvhh.supabase.co';
-const LOVABLE_ANON = process.env.LOVABLE_ANON_KEY;
-const TOKEN = process.env.MIGRATION_TOKEN || 'comanda-mig-2026-vps';
-const BATCH = 100;
+const LOVABLE_KEY = process.env.LOVABLE_ANON_KEY || process.env.LOVABLE_SERVICE_KEY;
+const BATCH = 200;
 
 const TABLES = [
   'companies', 'profiles', 'user_roles', 'company_users', 'company_modules', 'company_plans',
@@ -21,12 +19,13 @@ const TABLES = [
   'customers', 'customer_addresses', 'pinpad_settings', 'print_settings',
 ];
 
-if (!VPS_KEY || !LOVABLE_ANON) {
+if (!VPS_KEY || !LOVABLE_KEY) {
   console.error('Defina VPS_SERVICE_KEY e LOVABLE_ANON_KEY');
   process.exit(1);
 }
 
 const src = createClient(VPS_URL, VPS_KEY, { auth: { persistSession: false } });
+const tgt = createClient(LOVABLE_URL, LOVABLE_KEY, { auth: { persistSession: false } });
 
 async function fetchAll(table) {
   const rows = [];
@@ -43,31 +42,26 @@ async function fetchAll(table) {
   return rows;
 }
 
-async function pushRows(table, rows) {
+async function upsertTable(table, rows) {
+  if (!rows.length) return 0;
   let done = 0;
   for (let i = 0; i < rows.length; i += BATCH) {
     const chunk = rows.slice(i, i + BATCH);
-    const res = await fetch(`${LOVABLE_URL}/functions/v1/export-migration`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-migration-token': TOKEN,
-      },
-      body: JSON.stringify({ table, rows: chunk }),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(`${table}: ${body.error || res.status}`);
+    const { error } = await tgt.from(table).upsert(chunk, { onConflict: 'id' });
+    if (error) throw new Error(`${table} upsert: ${error.message}`);
     done += chunk.length;
     process.stdout.write(`\r  ${table}: ${done}/${rows.length}   `);
   }
   console.log('');
+  return done;
 }
 
-console.log('==> Sync VPS → Lovable (export-migration POST)\n');
+console.log('==> Sync VPS → Lovable (REST upsert)\n');
+let total = 0;
 for (const table of TABLES) {
   process.stdout.write(`  ${table}: lendo...`);
   const rows = await fetchAll(table);
   process.stdout.write(` ${rows.length} linhas\n`);
-  if (rows.length) await pushRows(table, rows);
+  if (rows.length) total += await upsertTable(table, rows);
 }
-console.log('\n✅ Sync concluído');
+console.log(`\n✅ ${total} linhas sincronizadas`);

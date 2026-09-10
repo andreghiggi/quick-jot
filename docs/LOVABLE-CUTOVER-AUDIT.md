@@ -1,43 +1,29 @@
-# Auditoria Lovable → VPS (checklist)
+# Auditoria Lovable — pós-rollback (2026-09-10)
 
-Produção oficial: **VPS** (`app.comandatech.com.br` + `api.comandatech.com.br`).
+Produção: **Lovable Cloud** (`iwmrtxdzlkasuzutxvhh.supabase.co`) + frontend VPS (`app.comandatech.com.br`).
 
-Lovable permanece **somente** para prompts (`.lovable/`) e IA de importação (`extract-menu`, `extract-optionals` via `ai.gateway.lovable.dev`).
+## Concluído
 
-## Verificação automática (repo/VPS)
+- [x] Frontend bundle aponta para Lovable (`validate-prod-bundle.mjs` PASS)
+- [x] Backup VPS `pre-rollback-vps-20260910-003224.dump` (14 MB)
+- [x] Backup Lovable contagens JSON + dump cloud 7.6 MB
+- [x] Sync pedidos VPS → Lovable (delta 0 por loja)
+- [x] Crons VPS `nfce-contingencia-sync` e `validate-prod-bundle` removidos
+- [x] Session-killer removido do `index.html`
+
+## Pendente (manual)
+
+- [ ] **GitHub Secrets** → URL + anon key Lovable ([GITHUB-ACTIONS-SECRETS-VPS.md](./GITHUB-ACTIONS-SECRETS-VPS.md))
+- [ ] **Sync config** payment_methods, store_settings, nfce_records ([ROLLBACK-LOVABLE-SYNC.md](./ROLLBACK-LOVABLE-SYNC.md))
+- [ ] **Fiscal Flow** webhooks → `https://iwmrtxdzlkasuzutxvhh.supabase.co/functions/v1/nfce-webhook`
+- [ ] **Lovable Publish** reativar no painel
+- [ ] **Edge functions** deploy via GitHub Actions (`deploy-supabase-functions.yml`) — requer `SUPABASE_ACCESS_TOKEN`
+- [ ] **auto_printer** redistribuir nas lojas (URL já é Lovable em `scripts/auto_printer.py`)
+- [ ] Parar Docker Supabase VPS após sync config confirmado (manter backups 30 dias)
+
+## Verificação
 
 ```bash
-# Bundle prod deve conter api.comandatech.com.br (não iwmrtxdzlkasuzutxvhh)
-curl -s https://app.comandatech.com.br/ | grep -o 'api\.comandatech\.com\.br'
-
-# Auditoria lojas
-SUPABASE_URL=https://api.comandatech.com.br SUPABASE_SERVICE_ROLE_KEY=... node scripts/vps-audit-companies.mjs
+node scripts/validate-prod-bundle.mjs
+node scripts/rollback-compare-api.mjs   # com VPS_SERVICE_KEY + LOVABLE_ANON_KEY
 ```
-
-## Painel Lovable (manual)
-
-- [x] Desativar **Publish** / auto-deploy do projeto (concluído 2026-09-09)
-- [ ] App preview `*.lovableproject.com` não usado por lojas
-- [ ] Manter projeto apenas para edição/prompts
-
-## Supabase Cloud `iwmrtxdzlkasuzutxvhh` (manual)
-
-- [ ] Edge Functions duplicadas: desabilitar se VPS já serve
-- [ ] **Database → Extensions → pg_cron**: listar jobs; desativar backup-mirror para cloud
-- [ ] **Database Webhooks**: nenhum apontando para cloud em produção
-- [ ] Auth: nenhuma loja usando anon key cloud (validar bundle prod)
-
-## VPS (manual pós-deploy)
-
-- [ ] Realtime health interno = 200
-- [ ] `docker ps` — todos healthy
-- [ ] pg_cron job `nfce-contingencia-sync` ativo (migration `20260909120000_*`)
-- [ ] Lojas com `auto_printer.py` atualizado (`SUPABASE_URL=https://api.comandatech.com.br`)
-
-## Exceções permitidas
-
-| Serviço | Motivo |
-|---------|--------|
-| `extract-menu` / `extract-optionals` | IA via Lovable gateway (acordado) |
-| `dfe-fiscalflow-proxy` → `vdzkhealunurfgrujekg` | Infra FiscalFlow (terceiro) |
-| `.lovable/`, `lovable-tagger` (dev) | Prompts / dev only |

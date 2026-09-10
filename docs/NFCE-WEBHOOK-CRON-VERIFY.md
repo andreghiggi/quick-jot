@@ -6,11 +6,11 @@
 
 | Item | Valor esperado |
 |------|----------------|
-| URL | `https://api.comandatech.com.br/functions/v1/nfce-webhook` |
+| URL | `https://iwmrtxdzlkasuzutxvhh.supabase.co/functions/v1/nfce-webhook` |
 | Método | POST com assinatura HMAC (`x-webhook-signature`) |
 | Health sem auth | HTTP **401** (endpoint ativo, rejeita sem assinatura) |
 
-**Ação manual no painel Fiscal Flow:** confirmar que o webhook de cada CNPJ aponta para a URL acima (não para `iwmrtxdzlkasuzutxvhh.supabase.co`).
+**Ação manual no painel Fiscal Flow:** confirmar que o webhook de cada CNPJ aponta para a URL Lovable acima (não para `api.comandatech.com.br`).
 
 ## Cron contingência-sync
 
