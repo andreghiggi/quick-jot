@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.71.3-beta";
-export const RELEASE_DATE = "2026-09-09"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Garçom: envio confiável para o Auto Printer";
+export const VERSION = "1.71.4-beta";
+export const RELEASE_DATE = "2026-09-10"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Venda registra de novo: numeração e caixas recuperados";
 
 
 
@@ -22,6 +22,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.71.4-beta",
+    date: "2026-09-10",
+    codename: "Venda registra de novo: numeração e caixas recuperados",
+    changes: [
+      "Corrigido o 'Erro ao registrar venda': após a recuperação dos dados, o contador de número da venda ficou atrás do último número já usado, e cada venda nova era recusada por número repetido. A numeração de todas as lojas foi acertada.",
+      "Nova verificação automática diária mantém a numeração sempre à frente do último número usado, evitando que o problema volte.",
+      "As vendas dos dias 08 e 09/09 recuperadas do servidor antigo voltaram a aparecer no fechamento de caixa e nos relatórios (Cozinha da Ruiva, Bon Appetit e Margen Pizzaria).",
+      "Quando o registro da venda falhar, o sistema tenta novamente sozinho, mostra o motivo real da recusa e oferece o botão 'Tentar registrar de novo' — com aviso para não cobrar o cartão duas vezes.",
+      "Nenhuma nota fiscal foi emitida, reemitida ou inutilizada; TEF, impressão e layouts das lojas não foram alterados.",
+    ],
+  },
   {
     version: "1.71.3-beta",
     date: "2026-09-09",

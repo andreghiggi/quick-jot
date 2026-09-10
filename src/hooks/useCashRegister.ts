@@ -351,13 +351,16 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
     notes?: string,
     orderId?: string,
     fiscalMode?: 'fiscal' | 'nao_fiscal',
-    sourceModule?: 'pdv' | 'mercado'
+    sourceModule?: 'pdv' | 'mercado',
+    /** Uso interno: evita loop infinito no botão "Tentar registrar de novo". */
+    _isRetry?: boolean
   ): Promise<string | null> {
     if (!currentRegister || !companyId) {
       toast.error('Nenhum caixa aberto!');
       return null;
     }
 
+    const pendingKey = `pending_sale_${companyId}`;
     try {
       const total = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
       const finalTotal = total - discount;
@@ -384,13 +387,27 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
         insertData.source_module = sourceModule;
       }
 
-      const { data: saleData, error: saleError } = await supabase
-        .from('pdv_sales')
-        .insert(insertData)
-        .select()
-        .single();
+      // Guarda a venda como pendente até confirmar a gravação: se a tela for
+      // fechada ou recarregada no meio, ela pode ser retomada.
+      try {
+        localStorage.setItem(
+          pendingKey,
+          JSON.stringify({ insertData, items, at: new Date().toISOString() }),
+        );
+      } catch { /* storage indisponível — segue a venda */ }
 
-      if (saleError) throw saleError;
+      // Tenta gravar até 3 vezes: falhas rápidas de rede deixam de virar erro na tela.
+      let saleData: any = null;
+      let saleError: any = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const res = await supabase.from('pdv_sales').insert(insertData).select().single();
+        if (!res.error) { saleData = res.data; saleError = null; break; }
+        saleError = res.error;
+        console.error(`[addSale] tentativa ${attempt}/3 falhou:`, res.error);
+        if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 800));
+      }
+
+      if (saleError || !saleData) throw saleError || new Error('Venda não retornada pelo servidor');
 
       // Create sale items
       const saleItems = items.map(item => ({
@@ -402,18 +419,49 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
         total_price: item.unit_price * item.quantity
       }));
 
-      const { error: itemsError } = await supabase
-        .from('pdv_sale_items')
-        .insert(saleItems);
+      let itemsError: any = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const res = await supabase.from('pdv_sale_items').insert(saleItems);
+        if (!res.error) { itemsError = null; break; }
+        itemsError = res.error;
+        console.error(`[addSale/itens] tentativa ${attempt}/3 falhou:`, res.error);
+        if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 800));
+      }
 
       if (itemsError) throw itemsError;
 
+      try { localStorage.removeItem(pendingKey); } catch { /* ignore */ }
       await fetchSales(currentRegister.id);
       toast.success('Venda registrada!');
       return saleData.id;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding sale:', error);
-      toast.error('Erro ao registrar venda');
+      const detail =
+        error?.message || error?.details || error?.hint || 'motivo não informado pelo servidor';
+      toast.error(`Erro ao registrar venda: ${detail}`, {
+        duration: 20000,
+        description:
+          'Se o cartão já foi aprovado na maquininha, NÃO cobre de novo — use "Tentar registrar de novo".',
+        action: _isRetry
+          ? undefined
+          : {
+              label: 'Tentar registrar de novo',
+              onClick: () => {
+                void addSale(
+                  items,
+                  paymentMethodId,
+                  userId,
+                  discount,
+                  customerName,
+                  notes,
+                  orderId,
+                  fiscalMode,
+                  sourceModule,
+                  true,
+                );
+              },
+            },
+      });
       return null;
     }
   }
