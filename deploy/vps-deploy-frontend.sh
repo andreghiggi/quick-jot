@@ -24,14 +24,18 @@ if [[ -z "${VITE_SUPABASE_URL:-}" ]] || [[ -z "${VITE_SUPABASE_PUBLISHABLE_KEY:-
   echo "ERRO: VITE_SUPABASE_URL ou VITE_SUPABASE_PUBLISHABLE_KEY ausente" >&2
   exit 1
 fi
-if echo "$VITE_SUPABASE_URL" | grep -qE 'iwmrtxdzlkasuzutxvhh|\.supabase\.co'; then
-  echo "ERRO: VITE_SUPABASE_URL aponta para Lovable Cloud" >&2
+if echo "$VITE_SUPABASE_URL" | grep -q 'api.comandatech.com.br'; then
+  echo "ERRO: VITE_SUPABASE_URL aponta para VPS API (use Lovable Cloud)" >&2
+  exit 1
+fi
+if ! echo "$VITE_SUPABASE_URL" | grep -qE 'iwmrtxdzlkasuzutxvhh|\.supabase\.co'; then
+  echo "ERRO: VITE_SUPABASE_URL deve ser iwmrtxdzlkasuzutxvhh.supabase.co" >&2
   exit 1
 fi
 
 echo "==> Build (URL=$VITE_SUPABASE_URL)"
 export VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY
-export VITE_SUPABASE_PROJECT_ID="${VITE_SUPABASE_PROJECT_ID:-comandatech-vps}"
+export VITE_SUPABASE_PROJECT_ID="${VITE_SUPABASE_PROJECT_ID:-iwmrtxdzlkasuzutxvhh}"
 
 if command -v bun >/dev/null 2>&1; then
   bun run build
