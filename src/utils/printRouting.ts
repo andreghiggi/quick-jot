@@ -400,7 +400,6 @@ async function enqueueProductionByStationParams(params: {
       label: `${labelPrefix} (${stationLabel})`,
       station_id: stationId,
       job_type: 'production',
-      source_order_id: sourceOrderId ?? null,
     } as never);
     if (error) throw error;
   };
@@ -415,7 +414,6 @@ async function enqueueProductionByStationParams(params: {
       html_content: html,
       label: labelPrefix,
       job_type: 'production',
-      source_order_id: sourceOrderId ?? null,
     } as never);
     if (error) throw error;
     return 1;
@@ -432,20 +430,18 @@ async function enqueueProductionByStationParams(params: {
   return count;
 }
 
-/** Recibo completo → estação que recebe recibos (handles_receipt) ou padrão. */
+/** Recibo completo → primeira estação cadastrada da loja (ou fila geral). */
 export async function enqueueReceiptJob(params: {
   companyId: string;
   html: string;
   label: string;
   sourceOrderId?: string;
 }) {
-  const { companyId, html, label, sourceOrderId } = params;
+  const { companyId, html, label } = params;
   const { data: stations } = await supabase
     .from('print_stations' as never)
     .select('id')
     .eq('company_id', companyId)
-    .eq('handles_receipt', true)
-    .eq('active', true)
     .limit(1);
 
   const receiptStation = (stations as { id: string }[] | null)?.[0]?.id ?? null;
@@ -456,10 +452,10 @@ export async function enqueueReceiptJob(params: {
     label,
     station_id: receiptStation,
     job_type: 'receipt',
-    source_order_id: sourceOrderId ?? null,
   } as never);
   if (error) throw error;
 }
+
 
 type EnqueueProductionParams = {
   companyId: string;
