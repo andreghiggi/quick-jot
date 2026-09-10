@@ -22,7 +22,13 @@ Recriar os turnos de caixa dos dias 08 e 09/09 que ficaram faltando (como caixas
 ### 4. Resolver a cobrança de R$ 103,00 sem venda
 Vou levantar os dados dessa cobrança e apresentar para você decidir: registrar a venda com o comprovante da maquininha, ou estornar. **Não faço nada nessa cobrança sem sua confirmação.**
 
-### 5. Conferência final
+### 5. Evitar que o erro atrapalhe a venda de novo
+- Se o registro da venda falhar, tentar novamente automaticamente antes de mostrar erro (falhas rápidas de conexão deixam de virar erro na tela).
+- Quando o cartão já foi aprovado e o registro falha, a tela passa a avisar claramente que **o cliente já foi cobrado** e oferece o botão "Tentar registrar de novo", em vez de deixar o operador no escuro.
+- Guardar a venda pendente no próprio caixa: se o operador fechar a tela sem querer, ela reaparece para ser concluída.
+- Conferência automática diária de vendas sem caixa e de numeração atrasada, para eu detectar antes da loja perceber.
+
+### 6. Conferência final
 Depois de aplicar: conferir fechamento do dia, totais por forma de pagamento, pedidos do dia e histórico do TEF da Cozinha da Ruiva, e repetir a conferência de vendas soltas nas demais lojas.
 
 ## Limites
