@@ -305,8 +305,6 @@ export interface ProductionTicketBase {
 interface PrintStationRow {
   id: string;
   name: string;
-  is_default: boolean;
-  active: boolean;
 }
 
 interface CategoryMapRow {
@@ -318,9 +316,8 @@ async function loadRouting(companyId: string) {
   const [{ data: stations }, { data: mappings }] = await Promise.all([
     supabase
       .from('print_stations' as never)
-      .select('id, name, is_default, active')
-      .eq('company_id', companyId)
-      .eq('active', true),
+      .select('id, name')
+      .eq('company_id', companyId),
     supabase
       .from('category_print_stations' as never)
       .select('category_id, station_id')
@@ -332,10 +329,11 @@ async function loadRouting(companyId: string) {
   for (const m of (mappings ?? []) as CategoryMapRow[]) {
     categoryToStation.set(m.category_id, m.station_id);
   }
-  const defaultStation = activeStations.find((s) => s.is_default) ?? activeStations[0] ?? null;
+  const defaultStation = activeStations[0] ?? null;
 
   return { activeStations, categoryToStation, defaultStation };
 }
+
 
 function resolveStationId(
   categoryId: string | null | undefined,
