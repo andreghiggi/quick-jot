@@ -351,7 +351,9 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
     notes?: string,
     orderId?: string,
     fiscalMode?: 'fiscal' | 'nao_fiscal',
-    sourceModule?: 'pdv' | 'mercado'
+    sourceModule?: 'pdv' | 'mercado',
+    /** Uso interno: evita loop infinito no botão "Tentar registrar de novo". */
+    _isRetry?: boolean
   ): Promise<string | null> {
     if (!currentRegister || !companyId) {
       toast.error('Nenhum caixa aberto!');
