@@ -417,18 +417,30 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
         total_price: item.unit_price * item.quantity
       }));
 
-      const { error: itemsError } = await supabase
-        .from('pdv_sale_items')
-        .insert(saleItems);
+      let itemsError: any = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const res = await supabase.from('pdv_sale_items').insert(saleItems);
+        if (!res.error) { itemsError = null; break; }
+        itemsError = res.error;
+        console.error(`[addSale/itens] tentativa ${attempt}/3 falhou:`, res.error);
+        if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 800));
+      }
 
       if (itemsError) throw itemsError;
 
+      try { localStorage.removeItem(pendingKey); } catch { /* ignore */ }
       await fetchSales(currentRegister.id);
       toast.success('Venda registrada!');
       return saleData.id;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding sale:', error);
-      toast.error('Erro ao registrar venda');
+      const detail =
+        error?.message || error?.details || error?.hint || 'motivo não informado pelo servidor';
+      toast.error(`Erro ao registrar venda: ${detail}`, {
+        duration: 12000,
+        description:
+          'Se o cartão já foi aprovado na maquininha, NÃO cobre de novo — tente registrar novamente antes de refazer a cobrança.',
+      });
       return null;
     }
   }
