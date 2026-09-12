@@ -726,19 +726,27 @@ Deno.serve(async (req) => {
           // Quando recebia em maiúsculas (CPF/CNPJ), ela montava um destinatário
           // vazio + xNome em posição inválida no XML, gerando rejeição SEFAZ.
           // Em homologação, omitimos xNome (a SEFAZ exige nome fictício específico).
+          // ORDEM XML SEFAZ: CNPJ/CPF → xNome → indIEDest (rejeição se xNome antes do doc).
           const destOrdered: Record<string, string> = {}
           if (dest.cnpj) destOrdered.cnpj = String(dest.cnpj).replace(/\D/g, '')
           else if (dest.cpf) destOrdered.cpf = String(dest.cpf).replace(/\D/g, '')
-          destOrdered.indIEDest = '9' // Não contribuinte
           const nomeTrim = String(dest.nome || '').trim()
           if (nomeTrim) {
-            destOrdered.nome = nomeTrim
+            destOrdered.nome = nomeTrim.substring(0, 60)
           } else if (destOrdered.cnpj) {
             // CNPJ exige xNome no XML; fallback evita emitir sem destinatário identificado.
             destOrdered.nome = 'CONSUMIDOR'
           }
+          destOrdered.indIEDest = '9' // Não contribuinte — sempre após documento e nome
           emitPayload.destinatario = destOrdered
-          console.log('[nfce-proxy] Destinatário identificado:', JSON.stringify(emitPayload.destinatario))
+          // Fiscal Flow (emit.agilizeerp) lê o bloco `cliente`, não `destinatario`.
+          // Sem `cliente`, a API autoriza sem <dest> no XML mesmo com destinatario preenchido.
+          const cliente: Record<string, string> = {}
+          if (destOrdered.cnpj) cliente.cnpj = destOrdered.cnpj
+          else if (destOrdered.cpf) cliente.cpf = destOrdered.cpf
+          if (destOrdered.nome) cliente.nome = destOrdered.nome
+          emitPayload.cliente = cliente
+          console.log('[nfce-proxy] Destinatário identificado:', JSON.stringify(emitPayload.destinatario), 'cliente:', JSON.stringify(cliente))
         } else {
           // Garante que nada sobre dest vá para a API: evita XML inválido
           delete emitPayload.destinatario
