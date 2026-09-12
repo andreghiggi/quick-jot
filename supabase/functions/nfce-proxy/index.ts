@@ -730,6 +730,13 @@ Deno.serve(async (req) => {
           if (dest.cnpj) destOrdered.cnpj = String(dest.cnpj).replace(/\D/g, '')
           else if (dest.cpf) destOrdered.cpf = String(dest.cpf).replace(/\D/g, '')
           destOrdered.indIEDest = '9' // Não contribuinte
+          const nomeTrim = String(dest.nome || '').trim()
+          if (nomeTrim) {
+            destOrdered.nome = nomeTrim
+          } else if (destOrdered.cnpj) {
+            // CNPJ exige xNome no XML; fallback evita emitir sem destinatário identificado.
+            destOrdered.nome = 'CONSUMIDOR'
+          }
           emitPayload.destinatario = destOrdered
           console.log('[nfce-proxy] Destinatário identificado:', JSON.stringify(emitPayload.destinatario))
         } else {

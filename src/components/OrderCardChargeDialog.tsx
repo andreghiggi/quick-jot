@@ -21,6 +21,12 @@ import { emitirNFCe, type NFCeItem, type NFCeRecord, type NFCeTefData } from '@/
 import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import { recordSalePayments } from '@/utils/recordSalePayments';
+import { usePaymentMethods } from '@/hooks/usePaymentMethods';
+import {
+  hasActiveTefPaymentMethod,
+  shouldChargeTefBeforePopups,
+  useLightNfceEmitOverlay,
+} from '@/utils/tefChargeFlow';
 interface OrderCardChargeDialogProps {
   order: Order;
   open: boolean;
@@ -47,7 +53,6 @@ interface OrderCardChargeDialogProps {
  */
 /** Amore Mio: Pedido Express "Cliente Loja" é finalizado (entregue) ao ser cobrado. */
 const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
-
 export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: OrderCardChargeDialogProps) {
   const { company } = useAuthContext();
   const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
@@ -56,6 +61,16 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const fiscalEnabled = isModuleEnabled('fiscal');
+  const { activePaymentMethods } = usePaymentMethods({ companyId: company?.id });
+  const hasTefPaymentMethod = useMemo(
+    () => hasActiveTefPaymentMethod(activePaymentMethods),
+    [activePaymentMethods],
+  );
+  const chargeTefBeforePopups = shouldChargeTefBeforePopups({
+    companyId: company?.id,
+    fiscalEnabled,
+    hasTefPaymentMethod,
+  });
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
 
   /** Amore Mio + Pedido Express "Cliente Loja": ao quitar, o pedido vai direto para entregue. */
@@ -75,6 +90,11 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
   const [multiPayStatus, setMultiPayStatus] = useState('');
   const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const isI9Company = company?.id === I9_COMPANY_ID;
+  const lightNfceOverlay = useLightNfceEmitOverlay({
+    companyId: company?.id,
+    fiscalEnabled,
+    isI9Company,
+  });
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
   const tefPromptOpenRef = useRef(false);
   const [pendingNfceOpen, setPendingNfceOpen] = useState(false);
@@ -304,7 +324,10 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       // ===== TEF: executa ANTES de criar a venda (mesmo fluxo de Mesa) =====
       let tefData: NFCeTefData | undefined;
       let tefNote = '';
-      if (params.tefIntegration && params.tefOptions) {
+      if (params.prechargedTef?.tefData) {
+        tefData = params.prechargedTef.tefData;
+        tefNote = params.prechargedTef.notesFragment ? ` | ${params.prechargedTef.notesFragment}` : '';
+      } else if (params.tefIntegration && params.tefOptions) {
         const result = await runTefPayment({
           companyId: company.id,
           integration: params.tefIntegration,
@@ -312,6 +335,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
           options: params.tefOptions,
           description: order.customerName ? `Cardápio - ${order.customerName}` : 'Pedido Cardápio',
           onStatus: setTefStatus,
+          tefFirstFlow: chargeTefBeforePopups,
         });
         setTefStatus('');
         if (!result.success) {
@@ -687,13 +711,13 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
 
   return (
     <>
-      {isEmittingNfce && isI9Company && (
+      {isEmittingNfce && lightNfceOverlay && (
         <div className="fixed bottom-4 right-4 z-40 bg-card border rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 pointer-events-none">
           <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
           <p className="text-sm font-medium text-foreground">Emitindo NFC-e…</p>
         </div>
       )}
-      {isEmittingNfce && !isI9Company && (
+      {isEmittingNfce && !lightNfceOverlay && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
           <div className="bg-card rounded-lg px-8 py-6 shadow-xl flex flex-col items-center gap-3">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -711,6 +735,9 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         showDocumentMode
         showAddItem
         tefStatus={tefStatus}
+        chargeTefBeforePopups={chargeTefBeforePopups}
+        tefFirstFlow={false}
+        autoFinalizeAfterPrechargedTef
         deliveryFilter={order.deliveryAddress && order.deliveryAddress.trim().length > 0 ? 'delivery' : 'pickup'}
         checkoutItems={checkoutItems}
         activeSplit={activeSplit}

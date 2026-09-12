@@ -50,6 +50,11 @@ import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { enqueueProductionByStation } from '@/utils/printRouting';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
+import {
+  hasActiveTefPaymentMethod,
+  shouldChargeTefBeforePopups,
+  useLightNfceEmitOverlay,
+} from '@/utils/tefChargeFlow';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog';
 import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2SequentialPaymentDialog';
@@ -114,6 +119,15 @@ export default function PDVV2() {
   const { taxRules } = useTaxRules({ companyId });
   const { enabled: mercadoEnabled } = useMercadoEnabled(companyId);
   const fiscalEnabled = isModuleEnabled('fiscal');
+  const hasTefPaymentMethod = useMemo(
+    () => hasActiveTefPaymentMethod([...activePaymentMethods, ...menuPaymentMethods]),
+    [activePaymentMethods, menuPaymentMethods],
+  );
+  const chargeTefBeforePopups = shouldChargeTefBeforePopups({
+    companyId,
+    fiscalEnabled,
+    hasTefPaymentMethod,
+  });
 
   const [showCash, setShowCash] = useState(false);
   const [showRevenue, setShowRevenue] = useState(false);
@@ -193,6 +207,11 @@ export default function PDVV2() {
   // depois que o operador fecha o prompt de impressão TEF.
   const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const isI9Company = companyId === I9_COMPANY_ID;
+  const lightNfceOverlay = useLightNfceEmitOverlay({
+    companyId,
+    fiscalEnabled,
+    isI9Company,
+  });
   const [tefPromptOpen, setTefPromptOpen] = useState(false);
   const tefPromptOpenRef = useRef(false);
   // Trava síncrona anti duplo-clique para os fluxos de cobrança de comanda.
@@ -509,7 +528,8 @@ export default function PDVV2() {
     tefOptions,
     tefIntegration,
     customerDocument,
-  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean; tefOptions?: TefOptions; tefIntegration?: 'tef_pinpad' | 'tef_smartpos'; customerDocument?: string }) {
+    prechargedTef,
+  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean; tefOptions?: TefOptions; tefIntegration?: 'tef_pinpad' | 'tef_smartpos'; customerDocument?: string; prechargedTef?: { tefData?: NFCeTefData; notesFragment?: string } }) {
     if (confirmImportTabGuardRef.current) return;
     confirmImportTabGuardRef.current = true;
     try {
@@ -536,7 +556,10 @@ export default function PDVV2() {
     // ===== TEF: roda ANTES de criar a venda (igual PDV V1). Aborta se falhar.
     let tefData: NFCeTefData | undefined;
     let tefNotesFragment = '';
-    if (tefIntegration && tefOptions) {
+    if (prechargedTef?.tefData) {
+      tefData = prechargedTef.tefData;
+      tefNotesFragment = prechargedTef.notesFragment ? ` | ${prechargedTef.notesFragment}` : '';
+    } else if (tefIntegration && tefOptions) {
       const result = await runTefPayment({
         companyId,
         integration: tefIntegration,
@@ -544,6 +567,7 @@ export default function PDVV2() {
         options: tefOptions,
         description: `Comanda #${fullTab.tab_number} - ${customer}`,
         onStatus: setTefStatus,
+        tefFirstFlow: chargeTefBeforePopups,
       });
       setTefStatus('');
       if (!result.success) return;
@@ -806,7 +830,10 @@ export default function PDVV2() {
       // ===== TEF: roda ANTES de criar a venda (igual PDV V1). Aborta se falhar.
       let tefData: NFCeTefData | undefined;
       let tefNotesFragment = '';
-      if (params.tefIntegration && params.tefOptions) {
+      if (params.prechargedTef?.tefData) {
+        tefData = params.prechargedTef.tefData;
+        tefNotesFragment = params.prechargedTef.notesFragment ? ` | ${params.prechargedTef.notesFragment}` : '';
+      } else if (params.tefIntegration && params.tefOptions) {
         const result = await runTefPayment({
           companyId,
           integration: params.tefIntegration,
@@ -814,6 +841,7 @@ export default function PDVV2() {
           options: params.tefOptions,
           description: `Comanda #${tabNumber} - ${personLabel.replace('/', ' de ')}`,
           onStatus: setTefStatus,
+          tefFirstFlow: chargeTefBeforePopups,
         });
         setTefStatus('');
         if (!result.success) return;
@@ -956,7 +984,10 @@ export default function PDVV2() {
       // ===== TEF: roda ANTES de criar a venda. Aborta se falhar.
       let tefData: NFCeTefData | undefined;
       let tefNotesFragment = '';
-      if (params.tefIntegration && params.tefOptions) {
+      if (params.prechargedTef?.tefData) {
+        tefData = params.prechargedTef.tefData;
+        tefNotesFragment = params.prechargedTef.notesFragment ? ` | ${params.prechargedTef.notesFragment}` : '';
+      } else if (params.tefIntegration && params.tefOptions) {
         const result = await runTefPayment({
           companyId,
           integration: params.tefIntegration,
@@ -964,6 +995,7 @@ export default function PDVV2() {
           options: params.tefOptions,
           description: `Comanda #${tabNumber} - Itens selecionados`,
           onStatus: setTefStatus,
+          tefFirstFlow: chargeTefBeforePopups,
         });
         setTefStatus('');
         if (!result.success) return;
@@ -1504,6 +1536,7 @@ export default function PDVV2() {
         showDocumentMode
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
+        chargeTefBeforePopups={chargeTefBeforePopups}
         onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
         onSplitPayments={() => {
           // Fecha o checkout single-payment e abre o multi-pagamento
@@ -1626,13 +1659,13 @@ export default function PDVV2() {
     {/* Overlay de bloqueio enquanto NFC-e é emitida */}
     {/* Na Lancheria I9 trocamos o overlay bloqueante por um indicador
         discreto no canto, para não sobrepor o prompt de impressão TEF. */}
-    {isEmittingNfce && isI9Company && (
+    {isEmittingNfce && lightNfceOverlay && (
       <div className="fixed bottom-4 right-4 z-40 bg-card border rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 pointer-events-none">
         <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
         <p className="text-sm font-medium text-foreground">Emitindo NFC-e…</p>
       </div>
     )}
-    {isEmittingNfce && !isI9Company && (
+    {isEmittingNfce && !lightNfceOverlay && (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
         <div className="bg-card rounded-lg px-8 py-6 shadow-xl flex flex-col items-center gap-3">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />

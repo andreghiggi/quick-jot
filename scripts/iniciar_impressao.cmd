@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-set "LAUNCHER_VERSION=v1.5-cmd"
+set "LAUNCHER_VERSION=v1.7-cmd"
 title Comanda Tech - Impressao Automatica (.cmd) %LAUNCHER_VERSION%
 color 0A
 
@@ -36,14 +36,23 @@ echo ==========================================================
 echo.
 
 :check_deps
+set "DEPS_OK=0"
 if exist "%~dp0verificar_pywin32.py" (
-    "!PY!" "%~dp0verificar_pywin32.py" >nul 2>nul
+    "!PY!" "%~dp0verificar_pywin32.py"
+    if not errorlevel 1 set "DEPS_OK=1"
 ) else (
-    "!PY!" -c "import requests, win32print" >nul 2>nul
+    "!PY!" -c "import requests, win32print"
+    if not errorlevel 1 set "DEPS_OK=1"
 )
 
-if errorlevel 1 (
+if "!DEPS_OK!"=="0" (
+    echo.
     echo [AVISO] Dependencias da impressao nao estao prontas.
+    echo Erro comum: DLL load failed while importing win32print/win32ui
+    echo.
+    echo Correcao: clique com botao direito em instalar_impressao.cmd
+    echo             e escolha "Executar como administrador".
+    echo.
     echo Rodando instalador automaticamente antes de iniciar...
     echo.
     cmd.exe /d /c ""%~dp0instalar_impressao.cmd""
@@ -53,6 +62,18 @@ if errorlevel 1 (
         echo Abra o arquivo instalar_impressao.log e envie o conteudo para suporte.
         pause
         exit /b 1
+    )
+    echo.
+    echo [INFO] Revalidando dependencias apos instalacao...
+    if exist "%~dp0verificar_pywin32.py" (
+        "!PY!" "%~dp0verificar_pywin32.py"
+        if errorlevel 1 (
+            echo.
+            echo [ERRO] pywin32 ainda falhou apos instalacao.
+            echo Reinicie o Windows e rode instalar_impressao.cmd como Administrador.
+            pause
+            exit /b 1
+        )
     )
 )
 

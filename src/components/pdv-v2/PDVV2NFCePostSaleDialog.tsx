@@ -89,7 +89,7 @@ export function PDVV2NFCePostSaleDialog({
     let pollCount = 0;
     const interval = setInterval(async () => {
       pollCount++;
-      const shouldConsultApi = pollCount === 1 || pollCount % 4 === 0;
+      const shouldConsultApi = pollCount % 4 === 1;
 
       if (shouldConsultApi && record.nfce_id && companyId) {
         try {
@@ -145,7 +145,7 @@ export function PDVV2NFCePostSaleDialog({
           );
         }
       }
-    }, 8000);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, [open, record, status, retryCount, companyId, autoPrint, autoPrinted]);

@@ -16,7 +16,10 @@ import {
   abortMultiplusCardSale,
 } from '@/services/multiplusCardService';
 import type { NFCeTefData } from '@/services/nfceService';
-import { imprimirComprovanteTefAutomatico } from '@/utils/tefAutoPrint';
+import {
+  imprimirComprovanteTefAutomatico,
+  imprimirComprovanteTefImediato,
+} from '@/utils/tefAutoPrint';
 
 export type TefIntegration = 'tef_pinpad' | 'tef_smartpos';
 
@@ -37,6 +40,8 @@ export interface RunTefArgs {
   /** Descrição opcional (ex.: nome do cliente) — apenas SmartPOS */
   description?: string;
   onStatus?: (msg: string) => void;
+  /** Impressão TEF imediata (iframe) — setado quando fiscal+TEF ativo no checkout. */
+  tefFirstFlow?: boolean;
 }
 
 export interface RunTefResult {
@@ -54,7 +59,7 @@ export interface RunTefResult {
  * a venda em qualquer falha — exatamente como o PDV V1.
  */
 export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
-  const { companyId, integration, amount, options, description, onStatus } = args;
+  const { companyId, integration, amount, options, description, onStatus, tefFirstFlow } = args;
   const tefPaymentType: 'credit' | 'debit' | 'pix' =
     options.modality === 'debit'
       ? 'debit'
@@ -108,14 +113,20 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
             finalizacao: statusResult.finalizacao,
           });
 
-          // Auto-print v1 (allow-list interna; respeita store_settings.tef_auto_print_vias)
-          // Awaited para garantir que o prompt TEF seja despachado ANTES do dialog de NFC-e
-          // abrir por cima, permitindo que o guard `tefPromptOpenRef` funcione corretamente.
+          // Lojas piloto: impressão imediata não bloqueante (iframe).
+          // Demais lojas: modal awaited antes do pop-up NFC-e.
           try {
-            await imprimirComprovanteTefAutomatico({
-              companyId,
-              receiptLines: statusResult.receiptLines,
-            });
+            if (tefFirstFlow) {
+              void imprimirComprovanteTefImediato({
+                companyId,
+                receiptLines: statusResult.receiptLines,
+              });
+            } else {
+              await imprimirComprovanteTefAutomatico({
+                companyId,
+                receiptLines: statusResult.receiptLines,
+              });
+            }
           } catch (e) {
             console.error('[pdvV2Tef] auto-print falhou:', e);
           }
@@ -204,13 +215,18 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
         onStatus?.('Pagamento aprovado!');
         toast.success(`TEF aprovado! NSU: ${statusResult.nsu}`);
 
-        // Auto-print v1 (idêntico ao PinPad): awaited para despachar o prompt TEF
-        // ANTES do dialog de NFC-e abrir por cima.
         try {
-          await imprimirComprovanteTefAutomatico({
-            companyId,
-            receiptLines: (statusResult as any).receiptLines,
-          });
+          if (tefFirstFlow) {
+            void imprimirComprovanteTefImediato({
+              companyId,
+              receiptLines: (statusResult as any).receiptLines,
+            });
+          } else {
+            await imprimirComprovanteTefAutomatico({
+              companyId,
+              receiptLines: (statusResult as any).receiptLines,
+            });
+          }
         } catch (e) {
           console.error('[pdvV2Tef] auto-print SmartPOS falhou:', e);
         }

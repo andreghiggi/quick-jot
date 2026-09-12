@@ -70,17 +70,61 @@ Deno.serve(async (req) => {
   const vpsKey = (body?.vps_service_key as string) || Deno.env.get("VPS_SERVICE_ROLE_KEY") || "";
   if (!vpsKey) return json({ error: "missing vps_service_key" }, 400);
 
-  const table = String(body?.table ?? "");
-  const syncAll = body?.sync_all === true;
-  const targets = syncAll ? TABLES : table ? [table] : [];
-  if (!targets.length) return json({ error: "inform table or sync_all" }, 400);
-
   const vps = createClient(VPS_URL, vpsKey, { auth: { persistSession: false } });
   const sql = postgres(dbUrl, { max: 3, prepare: false, connect_timeout: 20 });
-  const report: Record<string, number | string> = {};
+  const report: Record<string, number | string | string[]> = {};
 
   try {
     await sql`SET session_replication_role = 'replica'`;
+
+    // Bon Appetit / rollback: fecha caixa fantasma no Lovable e upsert do caixa aberto na VPS
+    // (evita one_open_per_company ao sync em massa). Não exige fechar caixa na UI da loja.
+    if (body?.fix_company_cash === true) {
+      const companyId = String(body?.company_id ?? "");
+      if (!companyId) {
+        await sql.end();
+        return json({ error: "missing company_id" }, 400);
+      }
+
+      const { data: vpsOpen, error: vpsErr } = await vps
+        .from("cash_registers")
+        .select("*")
+        .eq("company_id", companyId)
+        .eq("status", "open")
+        .maybeSingle();
+
+      if (vpsErr || !vpsOpen) {
+        await sql.end();
+        return json({ error: vpsErr?.message || "no open cash_register on VPS" }, 400);
+      }
+
+      const closed = await sql`
+        UPDATE public.cash_registers
+        SET status = 'closed',
+            closed_at = COALESCE(closed_at, now()),
+            updated_at = now()
+        WHERE company_id = ${companyId}::uuid AND status = 'open'
+        RETURNING id
+      `;
+      report.closed_count = closed.length;
+      report.closed_ids = closed.map((r) => String(r.id));
+      report.upserted_open = await upsertRows(sql, "cash_registers", [
+        vpsOpen as Record<string, unknown>,
+      ]);
+      report.open_register_id = vpsOpen.id as string;
+
+      await sql`SET session_replication_role = 'origin'`;
+      await sql.end();
+      return json({ ok: true, fix: "company_cash", report });
+    }
+
+    const table = String(body?.table ?? "");
+    const syncAll = body?.sync_all === true;
+    const targets = syncAll ? TABLES : table ? [table] : [];
+    if (!targets.length) {
+      await sql.end();
+      return json({ error: "inform table, sync_all, or fix_company_cash" }, 400);
+    }
 
     if (body?.sync_auth === true) {
       report.auth = "skip: use npm run mirror-auth com SOURCE_DB_URL=VPS e TARGET_DB_URL=Lovable";

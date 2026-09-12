@@ -14,6 +14,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { supabase } from '@/integrations/supabase/client';
+import { imprimirViasTefImediato } from '@/utils/frenteCaixaTefEarlyPrint';
 
 export type TefAutoPrintMode = 'none' | 'estabelecimento' | 'ambas';
 
@@ -265,6 +266,22 @@ export function splitTefVias(receiptLines: string[]): {
  * PedidoExpressDialog. Se a empresa não estiver na allow-list ou não houver
  * receiptLines, é no-op.
  */
+/**
+ * Impressão imediata das vias TEF (iframe), sem modal bloqueante.
+ * Usado em lojas piloto (Bon Appetit, Cozinha da Ruiva) após aprovação no pinpad.
+ */
+export async function imprimirComprovanteTefImediato(
+  args: ImprimirComprovanteTefAutomaticoArgs,
+): Promise<void> {
+  const { companyId, receiptLines, orderCode } = args;
+  if (!receiptLines || receiptLines.length === 0) return;
+  const allowed = await isTefAutoPrintAllowed(companyId);
+  if (!allowed) return;
+
+  const defaultMode = await fetchAutoPrintMode(companyId);
+  void imprimirViasTefImediato({ receiptLines, orderCode, defaultMode });
+}
+
 export async function imprimirComprovanteTefAutomatico(
   args: ImprimirComprovanteTefAutomaticoArgs,
 ): Promise<void> {

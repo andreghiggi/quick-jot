@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -74,6 +74,16 @@ interface PDVV2PaymentDialogProps {
    * cobrar primeiro e só responder NFC-e/impressão após aprovação.
    */
   chargeTefBeforePopups?: boolean;
+  /**
+   * Quando true, imprime comprovante TEF imediatamente (sem modal de vias).
+   * Default: igual a chargeTefBeforePopups. Pedido Express passa false.
+   */
+  tefFirstFlow?: boolean;
+  /**
+   * Após TEF pré-aprovado (chargeTefBeforePopups), finaliza direto sem
+   * abrir nfceConfirmOpen. Usado pelo Pedido Express.
+   */
+  autoFinalizeAfterPrechargedTef?: boolean;
   onConfirm: (params: {
     paymentMethodId: string;
     paymentName: string;
@@ -124,12 +134,15 @@ export function PDVV2PaymentDialog({
   deliveryFilter,
   tefStatus,
   chargeTefBeforePopups = false,
+  tefFirstFlow,
+  autoFinalizeAfterPrechargedTef = false,
   onConfirm,
   activeSplit,
   transferLog,
   onSplitPayments,
   printLayout,
 }: PDVV2PaymentDialogProps) {
+  const effectiveTefFirstFlow = tefFirstFlow ?? chargeTefBeforePopups;
   // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
   const [selectedItemQtys, setSelectedItemQtys] = useState<Map<number, number>>(new Map());
@@ -211,6 +224,7 @@ export function PDVV2PaymentDialog({
   const baseList =
     rawActivePaymentMethods.length > 0 ? rawActivePaymentMethods : allActivePaymentMethods;
   const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const BON_APPETIT_ID = '32b71649-461d-4cb6-b26c-12390b090feb';
   // Filtro Entrega/Retirada — liberado para todas as lojas (NÃO confundir com isI9Company de fluxo).
   const isI9PaymentSplit = true;
   const cashFilteredList = cashOnly
@@ -256,6 +270,11 @@ export function PDVV2PaymentDialog({
     tefData?: NFCeTefData;
     notesFragment?: string;
   } | null>(null);
+  /** Sync com finalizeConfirm — evita race do setState após TEF aprovado. */
+  const prechargedTefRef = useRef<{
+    tefData?: NFCeTefData;
+    notesFragment?: string;
+  } | null>(null);
   const [internalTefStatus, setInternalTefStatus] = useState('');
   const [chargingTef, setChargingTef] = useState(false);
 
@@ -268,9 +287,14 @@ export function PDVV2PaymentDialog({
 
   useEffect(() => {
     if (open && activePaymentMethods.length > 0 && !paymentMethodId) {
-      setPaymentMethodId(activePaymentMethods[0].id);
+      const tefMethod = activePaymentMethods.find(
+        (m) => m.integration_type === 'tef_pinpad' || m.integration_type === 'tef_smartpos',
+      );
+      const defaultId =
+        companyId === BON_APPETIT_ID && tefMethod ? tefMethod.id : activePaymentMethods[0].id;
+      setPaymentMethodId(defaultId);
     }
-  }, [open, activePaymentMethods, paymentMethodId]);
+  }, [open, activePaymentMethods, paymentMethodId, companyId]);
 
   useEffect(() => {
     if (!open) {
@@ -289,6 +313,7 @@ export function PDVV2PaymentDialog({
       setTefInstallmentType('adm');
       setCustomerDocument('');
       setPrechargedTef(null);
+      prechargedTefRef.current = null;
       setInternalTefStatus('');
       setChargingTef(false);
       setI9Mode('');
@@ -367,9 +392,15 @@ export function PDVV2PaymentDialog({
     : parseFloat(amountReceived.replace(',', '.')) || 0;
   const change = isCash ? Math.max(0, receivedValue - finalTotal) : 0;
 
-  async function finalizeConfirm(docMode: DocumentMode, printDocument?: boolean) {
+  async function finalizeConfirm(
+    docMode: DocumentMode,
+    printDocument?: boolean,
+    prechargedOverride?: { tefData?: NFCeTefData; notesFragment?: string },
+  ) {
     const method = activePaymentMethods.find((m) => m.id === paymentMethodId);
     if (!method) return;
+    const effectivePrecharged =
+      prechargedOverride ?? prechargedTefRef.current ?? prechargedTef ?? undefined;
     const tefOptions: TefOptions | undefined = isTef
       ? {
           modality: tefModality,
@@ -391,56 +422,59 @@ export function PDVV2PaymentDialog({
     }
 
     setSubmitting(true);
-    await onConfirm({
-      paymentMethodId,
-      paymentName: method.name,
-      discount: discountValue,
-      finalTotal,
-      documentMode: docMode,
-      extraItems,
-      printDocument,
-      tefOptions,
-      tefIntegration: isTef ? (integration as 'tef_pinpad' | 'tef_smartpos') : undefined,
-      customerDocument: isNfce && (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : undefined,
-      prechargedTef: prechargedTef ?? undefined,
-      splitInfo: isLancheriaI9 && i9Mode === 'split'
-        ? (() => {
-            const totalPeople = activeSplit?.totalPeople ?? splitPeople;
-            const basePerPerson = activeSplit
-              ? activeSplit.perPerson
-              : Math.round((grossTotal / Math.max(1, splitPeople)) * 100) / 100;
-            const maxParts = activeSplit
-              ? Math.max(1, activeSplit.totalPeople - activeSplit.currentPerson + 1)
-              : Math.max(1, splitPeople);
-            const parts = Math.max(1, Math.min(splitPartsToCharge, maxParts));
-            return { perPerson: basePerPerson, totalPeople, partsToCharge: parts };
-          })()
-        : undefined,
-      itemsInfo: isLancheriaI9 && i9Mode === 'items' && checkoutItems
-        ? (() => {
-            const items: Array<{ id: string; paidQty: number }> = [];
-            selectedItemQtys.forEach((qty, idx) => {
-              const it = checkoutItems[idx];
-              const pendingQty = it ? getPendingQty(it) : 0;
-              const qtyToCharge = Math.min(qty, pendingQty);
-              if (it?.id && qtyToCharge > 0) items.push({ id: it.id, paidQty: qtyToCharge });
-            });
-            return items.length > 0 ? items : undefined;
-          })()
-        : undefined,
-      extraItemsInfo: isLancheriaI9 && i9Mode === 'items' && extraItems.length > 0
-        ? (() => {
-            const items: Array<{ id: string; paidQty: number }> = [];
-            selectedExtraQtys.forEach((qty, id) => {
-              if (qty > 0) items.push({ id, paidQty: qty });
-            });
-            return items.length > 0 ? items : undefined;
-          })()
-        : undefined,
-    });
-    // I9: callbacks pós-pagamento
-    // NOTE: onItemsPaid is no longer called here — confirmImportTabI9 handles DB updates + loop
-    setSubmitting(false);
+    try {
+      await onConfirm({
+        paymentMethodId,
+        paymentName: method.name,
+        discount: discountValue,
+        finalTotal,
+        documentMode: docMode,
+        extraItems,
+        printDocument,
+        tefOptions,
+        tefIntegration: isTef ? (integration as 'tef_pinpad' | 'tef_smartpos') : undefined,
+        customerDocument: isNfce && (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : undefined,
+        prechargedTef: effectivePrecharged,
+        splitInfo: isLancheriaI9 && i9Mode === 'split'
+          ? (() => {
+              const totalPeople = activeSplit?.totalPeople ?? splitPeople;
+              const basePerPerson = activeSplit
+                ? activeSplit.perPerson
+                : Math.round((grossTotal / Math.max(1, splitPeople)) * 100) / 100;
+              const maxParts = activeSplit
+                ? Math.max(1, activeSplit.totalPeople - activeSplit.currentPerson + 1)
+                : Math.max(1, splitPeople);
+              const parts = Math.max(1, Math.min(splitPartsToCharge, maxParts));
+              return { perPerson: basePerPerson, totalPeople, partsToCharge: parts };
+            })()
+          : undefined,
+        itemsInfo: isLancheriaI9 && i9Mode === 'items' && checkoutItems
+          ? (() => {
+              const items: Array<{ id: string; paidQty: number }> = [];
+              selectedItemQtys.forEach((qty, idx) => {
+                const it = checkoutItems[idx];
+                const pendingQty = it ? getPendingQty(it) : 0;
+                const qtyToCharge = Math.min(qty, pendingQty);
+                if (it?.id && qtyToCharge > 0) items.push({ id: it.id, paidQty: qtyToCharge });
+              });
+              return items.length > 0 ? items : undefined;
+            })()
+          : undefined,
+        extraItemsInfo: isLancheriaI9 && i9Mode === 'items' && extraItems.length > 0
+          ? (() => {
+              const items: Array<{ id: string; paidQty: number }> = [];
+              selectedExtraQtys.forEach((qty, id) => {
+                if (qty > 0) items.push({ id, paidQty: qty });
+              });
+              return items.length > 0 ? items : undefined;
+            })()
+          : undefined,
+      });
+      // I9: callbacks pós-pagamento
+      // NOTE: onItemsPaid is no longer called here — confirmImportTabI9 handles DB updates + loop
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleConfirm() {
@@ -449,13 +483,7 @@ export function PDVV2PaymentDialog({
     // ===== I9 + Pedido Express: cobrar TEF ANTES dos pop-ups =====
     // Se a cobrança não for aprovada, abortamos e o lojista pode tentar de novo
     // (ou trocar a forma) sem ter respondido NFC-e/impressão à toa.
-    if (
-      chargeTefBeforePopups &&
-      isLancheriaI9 &&
-      isTef &&
-      companyId &&
-      !prechargedTef
-    ) {
+    if (chargeTefBeforePopups && isTef && companyId && !prechargedTefRef.current && !prechargedTef) {
       const tefOptions: TefOptions = {
         modality: tefModality,
         installments:
@@ -471,6 +499,7 @@ export function PDVV2PaymentDialog({
           amount: finalTotal,
           options: tefOptions,
           onStatus: (msg) => setInternalTefStatus(msg),
+          tefFirstFlow: effectiveTefFirstFlow,
         });
         if (!result.success) {
           // toast já exibido pelo helper; aborta sem seguir pra NFC-e/impressão
@@ -478,13 +507,26 @@ export function PDVV2PaymentDialog({
           setInternalTefStatus('');
           return;
         }
-        setPrechargedTef({
+        const precharged = {
           tefData: result.tefData,
           notesFragment: result.notesFragment,
-        });
+        };
+        prechargedTefRef.current = precharged;
+        setPrechargedTef(precharged);
         setChargingTef(false);
         setInternalTefStatus('');
-        toast.success('Pagamento aprovado. Confirme os dados da nota.');
+        if (!autoFinalizeAfterPrechargedTef) {
+          toast.success('Pagamento aprovado. Confirme os dados da nota.');
+        }
+        // TEF aprovado → Express finaliza direto (passa precharged sync — evita race do setState)
+        if (autoFinalizeAfterPrechargedTef) {
+          await finalizeConfirm(
+            fiscalEnabled ? 'sale_with_nfce' : 'sale_only',
+            false,
+            precharged,
+          );
+          return;
+        }
       } catch (e: any) {
         console.error('[PDVV2PaymentDialog] TEF pre-charge error:', e);
         toast.error(`Erro TEF: ${e?.message || 'falha na cobrança'}`);
@@ -492,13 +534,15 @@ export function PDVV2PaymentDialog({
         setInternalTefStatus('');
         return;
       }
-      // TEF aprovado → segue para os pop-ups (CPF + Imprimir) apenas se fiscal ativo
       if (showDocumentMode && fiscalEnabled) {
-        // I9 com NFC-e forçada por TEF: diálogo único de confirmação
         setPendingDocMode('sale_with_nfce');
         setNfceConfirmOpen(true);
       } else {
-        await finalizeConfirm('sale_with_nfce');
+        await finalizeConfirm(
+          fiscalEnabled ? 'sale_with_nfce' : 'sale_only',
+          false,
+          prechargedTefRef.current ?? undefined,
+        );
       }
       return;
     }
@@ -1397,7 +1441,11 @@ export function PDVV2PaymentDialog({
               className="h-16 text-base"
               onClick={async () => {
                 setPrintChoiceOpen(false);
-                await finalizeConfirm(pendingDocMode, false);
+                await finalizeConfirm(
+                  pendingDocMode,
+                  false,
+                  prechargedTefRef.current ?? undefined,
+                );
               }}
             >
               Não imprimir
@@ -1407,7 +1455,11 @@ export function PDVV2PaymentDialog({
               className="h-16 text-base"
               onClick={async () => {
                 setPrintChoiceOpen(false);
-                await finalizeConfirm(pendingDocMode, true);
+                await finalizeConfirm(
+                  pendingDocMode,
+                  true,
+                  prechargedTefRef.current ?? undefined,
+                );
               }}
             >
               Imprimir
@@ -1446,7 +1498,7 @@ export function PDVV2PaymentDialog({
                 if (isLancheriaI9 && showDocumentMode && !skipReceiptPrompt) {
                   setPrintChoiceOpen(true);
                 } else {
-                  finalizeConfirm(pendingDocMode);
+                  finalizeConfirm(pendingDocMode, false, prechargedTefRef.current ?? undefined);
                 }
               }}
             >
@@ -1460,7 +1512,7 @@ export function PDVV2PaymentDialog({
                 if (isLancheriaI9 && showDocumentMode && !skipReceiptPrompt) {
                   setPrintChoiceOpen(true);
                 } else {
-                  finalizeConfirm(pendingDocMode);
+                  finalizeConfirm(pendingDocMode, false, prechargedTefRef.current ?? undefined);
                 }
               }}
             >
@@ -1471,78 +1523,85 @@ export function PDVV2PaymentDialog({
       </Dialog>
 
       {/* I9 — Diálogo único de confirmação NFC-e (CPF opcional + imprimir opcional) */}
-      <Dialog open={nfceConfirmOpen} onOpenChange={setNfceConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Emitir NFC-e — {formatPrice(finalTotal)}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            {!showCpfField ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setShowCpfField(true)}
-              >
-                + Adicionar CPF/CNPJ (opcional)
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <Label htmlFor="cpf-cnpj-nfce">CPF ou CNPJ do consumidor</Label>
-                <Input
-                  id="cpf-cnpj-nfce"
-                  inputMode="numeric"
-                  placeholder="Somente números"
-                  value={customerDocument}
-                  onChange={(e) => setCustomerDocument(e.target.value.replace(/[^\d./-]/g, ''))}
-                  maxLength={18}
-                  autoFocus
-                />
-                <button
+      {nfceConfirmOpen && typeof document !== 'undefined' && createPortal(
+        <Dialog open={nfceConfirmOpen} onOpenChange={setNfceConfirmOpen}>
+          <DialogContent className="sm:max-w-md z-[250]">
+            <DialogHeader>
+              <DialogTitle>Emitir NFC-e — {formatPrice(finalTotal)}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              {!showCpfField ? (
+                <Button
                   type="button"
-                  className="text-xs text-muted-foreground underline"
-                  onClick={() => {
-                    setCustomerDocument('');
-                    setShowCpfField(false);
-                  }}
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => setShowCpfField(true)}
                 >
-                  Remover CPF/CNPJ
-                </button>
-              </div>
-            )}
+                  + Adicionar CPF/CNPJ (opcional)
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="cpf-cnpj-nfce">CPF ou CNPJ do consumidor</Label>
+                  <Input
+                    id="cpf-cnpj-nfce"
+                    inputMode="numeric"
+                    placeholder="Somente números"
+                    value={customerDocument}
+                    onChange={(e) => setCustomerDocument(e.target.value.replace(/[^\d./-]/g, ''))}
+                    maxLength={18}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline"
+                    onClick={() => {
+                      setCustomerDocument('');
+                      setShowCpfField(false);
+                    }}
+                  >
+                    Remover CPF/CNPJ
+                  </button>
+                </div>
+              )}
 
-            <div className="flex items-center gap-2 rounded-md border p-3">
-              <Checkbox
-                id="print-after-emit"
-                checked={printAfterEmit}
-                onCheckedChange={(c) => setPrintAfterEmit(c === true)}
-              />
-              <Label htmlFor="print-after-emit" className="cursor-pointer text-sm font-normal">
-                Imprimir DANFE após emissão
-              </Label>
+              <div className="flex items-center gap-2 rounded-md border p-3">
+                <Checkbox
+                  id="print-after-emit"
+                  checked={printAfterEmit}
+                  onCheckedChange={(c) => setPrintAfterEmit(c === true)}
+                />
+                <Label htmlFor="print-after-emit" className="cursor-pointer text-sm font-normal">
+                  Imprimir DANFE após emissão
+                </Label>
+              </div>
             </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setNfceConfirmOpen(false)}
-              disabled={submitting}
-            >
-              Cancelar
-            </Button>
-            <Button
-              autoFocus
-              disabled={submitting}
-              onClick={async () => {
-                setNfceConfirmOpen(false);
-                await finalizeConfirm(pendingDocMode, printAfterEmit);
-              }}
-            >
-              Emitir NFC-e
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setNfceConfirmOpen(false)}
+                disabled={submitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                autoFocus
+                disabled={submitting}
+                onClick={async () => {
+                  setNfceConfirmOpen(false);
+                  await finalizeConfirm(
+                    pendingDocMode,
+                    printAfterEmit,
+                    prechargedTefRef.current ?? undefined,
+                  );
+                }}
+              >
+                Emitir NFC-e
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>,
+        document.body,
+      )}
     </Dialog>
   );
 }
