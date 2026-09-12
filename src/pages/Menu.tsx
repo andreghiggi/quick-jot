@@ -1443,12 +1443,11 @@ export default function Menu() {
                 label: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}`,
               });
 
-            // Amore Mio: além da comanda, o recibo do pedido também sai
-            // automaticamente (mesmo número/short_code, layout V2).
-            const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
-            if (company.id === AMORE_MIO_ID) {
+            // Lojas GDI (Amore Mio, Rei do Açaí): além da comanda, o recibo V39
+            // também sai automaticamente (mesmo número/short_code, layout V2).
+            const { printOnlyReceipt, isGdiReceiptCompany } = await import('@/utils/pdvV2Print');
+            if (isGdiReceiptCompany(company.id)) {
               try {
-                const { printOnlyReceipt } = await import('@/utils/pdvV2Print');
                 const receiptItems = cart.map((item, idx) => ({
                   name: item.product.name,
                   quantity: item.quantity,
@@ -1467,6 +1466,12 @@ export default function Menu() {
                   dailyNumber: newOrder.daily_number || 0,
                   shortCode: (newOrder as any).short_code || undefined,
                   customerName,
+                  customerPhone: customerPhone
+                    ? customerPhone.replace(/\D/g, '') || undefined
+                    : undefined,
+                  storeName: company.name,
+                  orderOrigin: 'cardapio',
+                  deliveryFee,
                   items: receiptItems,
                   total: orderTotal,
                   notes: receiptNotes,

@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "sync:printer": "node -e \"require('fs').copyFileSync('scripts/auto_printer.py','public/auto_printer.py')\"",
+    "prebuild": "npm run sync:printer",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

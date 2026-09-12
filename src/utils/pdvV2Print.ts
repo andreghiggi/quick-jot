@@ -10,6 +10,17 @@
  */
 import { enqueueProductionByStation, enqueueReceiptJob } from '@/utils/printRouting';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
+import { extractPaymentName } from '@/utils/orderNotesDisplay';
+
+/** Lojas que usam renderização GDI (espelha GDI_COMPANY_IDS em auto_printer.py). */
+export const GDI_COMPANY_IDS = new Set([
+  'f5f9eec3-67bc-497a-88a6-ce41d3b15df8', // Amore Mio
+  'b2f97590-ff21-4951-95dc-e3e2b19d4ccb', // Rei do Açaí
+]);
+
+export function isGdiReceiptCompany(companyId: string): boolean {
+  return GDI_COMPANY_IDS.has(companyId);
+}
 
 interface PrintItem {
   name: string;
@@ -43,6 +54,12 @@ interface PrintPayload {
   /** Endereço de entrega no V2. Renderizado em bloco invertido no recibo
    *  e propagado para a comanda V2. */
   deliveryAddress?: string | null;
+  /** Nome da loja no cabeçalho do recibo rico V39. */
+  storeName?: string;
+  customerPhone?: string;
+  orderOrigin?: 'cardapio' | 'balcao' | 'express' | 'waiter';
+  /** Taxa de entrega explícita; se omitida, calculada como total − subtotal dos itens. */
+  deliveryFee?: number;
 }
 
 function buildReceiptHTML(payload: PrintPayload): string {
@@ -138,6 +155,200 @@ function buildReceiptHTML(payload: PrintPayload): string {
 
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+}
+
+function resolveOrigemLabel(payload: PrintPayload): string {
+  const notes = payload.notes || '';
+  if (payload.orderOrigin === 'express' || notes.includes('[EXPRESS]')) {
+    return '⚡ PEDIDO EXPRESS';
+  }
+  if (payload.orderOrigin === 'waiter') return '🍽️ PEDIDO GARÇOM';
+  if (payload.orderOrigin === 'balcao') return '⚡ PEDIDO EXPRESS';
+  return '📱 CARDÁPIO ONLINE';
+}
+
+function resolvePaymentHtml(notes: string | undefined): string {
+  if (!notes) return '';
+  const payMatch = notes.match(/Pagamento:\s*([^(|]+)/i);
+  const trocoMatch = notes.match(/Troco para R\$\s*([^)]+)/i);
+  const pixMatch = notes.match(/Chave PIX:\s*([^)]+)\)/i);
+  let html = '';
+  const payName = payMatch ? payMatch[1].trim() : extractPaymentName(notes);
+  if (payName) {
+    html += `<p><span class="label">PAGAMENTO:</span> ${escapeHtml(payName)}</p>`;
+  }
+  if (trocoMatch) {
+    html += `<p><span class="label">TROCO PARA:</span> R$ ${escapeHtml(trocoMatch[1].trim())}</p>`;
+  }
+  if (pixMatch) {
+    html += `<p><span class="label">CHAVE PIX:</span> ${escapeHtml(pixMatch[1].trim())}</p>`;
+  }
+  return html;
+}
+
+/**
+ * Recibo V2 rico — estrutura V39 (OrderCard / GDI extrair_blocos_v2).
+ * Usado por lojas em GDI_COMPANY_IDS com print_layout v2.
+ */
+function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
+  const paperSize = payload.paperSize === '58mm' ? '58mm' : '80mm';
+  const fontSize = paperSize === '80mm' ? '11pt' : '10pt';
+  const storeName = (payload.storeName || 'LOJA').toUpperCase();
+  const orderRef = payload.shortCode || String(payload.dailyNumber);
+  const dt = new Date().toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const offset = computeReadyOffsetMinutes(payload.estimatedWaitTime, 30);
+  const readyTs = new Date(Date.now() + offset * 60 * 1000).toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const subtotal = payload.items.reduce((s, it) => s + it.price * it.quantity, 0);
+  const deliveryFee =
+    typeof payload.deliveryFee === 'number'
+      ? payload.deliveryFee
+      : Math.max(0, payload.total - subtotal);
+  const paymentHtml = resolvePaymentHtml(payload.notes);
+  const phoneHtml = payload.customerPhone
+    ? `<p><span class="label">Tel:</span> ${escapeHtml(payload.customerPhone)}</p>`
+    : '';
+  const deliverySection = payload.deliveryAddress
+    ? `<div class="delivery-badge">🛵 ENTREGA</div>
+       <div class="section"><p>[ENDERECO]${escapeHtml(payload.deliveryAddress)}[/ENDERECO]</p></div>`
+    : '<div class="delivery-badge">🏪 RETIRADA NO LOCAL</div>';
+
+  const itemsHtml = payload.items
+    .map((it, idx) => {
+      const lineTotal = (it.price * it.quantity).toFixed(2).replace('.', ',');
+      let additionalsHtml = '';
+      if (it.groupedOptionals && it.groupedOptionals.length > 0) {
+        const groups = it.groupedOptionals;
+        additionalsHtml = '<div class="additionals">';
+        for (const g of groups) {
+          const single =
+            groups.length === 1 && g.groupName.trim().toLowerCase() === 'adicionais';
+          if (!single) {
+            additionalsHtml += `<div class="add-group-label">[ADDGROUP_LABEL]${escapeHtml(g.groupName)}[/ADDGROUP_LABEL]`;
+          }
+          for (const ad of g.items.split(',').map((s) => s.trim()).filter(Boolean)) {
+            const mPrice = ad.match(/\s*R\$\s*([\d.,]+)\s*$/);
+            const adClean = ad.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
+            const priceSuffix = mPrice ? `  R$ ${mPrice[1]}` : '';
+            additionalsHtml += `<div class="add-line">+ ${escapeHtml(adClean.toUpperCase() + priceSuffix)}</div>`;
+          }
+        }
+        additionalsHtml += '</div>';
+      }
+      let block = `<div class="item">
+        <div class="item-name">${it.quantity}x ${escapeHtml(it.name)}</div>`;
+      if (additionalsHtml) block += additionalsHtml;
+      if (it.notes) {
+        block += `<div class="item-notes">Obs: ${escapeHtml(it.notes)}</div>`;
+      }
+      block += `<div class="item-detail">R$ ${lineTotal}</div></div>`;
+      if (idx < payload.items.length - 1) {
+        block += '<div class="item-sep">................................</div>';
+      }
+      return block;
+    })
+    .join('');
+
+  const deliveryFeeHtml =
+    deliveryFee > 0.009
+      ? `<div class="total-line"><span>Entrega:</span><span>R$ ${deliveryFee.toFixed(2).replace('.', ',')}</span></div>`
+      : '';
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Recibo PEDIDO #${escapeHtml(orderRef)}</title>
+  <style>
+    @page { margin: 0; size: ${paperSize} auto; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Courier New', 'Lucida Console', monospace;
+      font-size: ${fontSize};
+      font-weight: bold;
+      width: ${paperSize};
+      max-width: ${paperSize};
+      padding: 2mm;
+      line-height: 1.3;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .header { text-align: center; margin-bottom: 2mm; }
+    .store-name { font-size: 12pt; font-weight: bold; }
+    .order-num { font-size: 16pt; font-weight: bold; margin: 1mm 0; }
+    .origem { font-size: 10pt; font-weight: bold; margin: 0.5mm 0; }
+    .date { font-size: 9pt; }
+    .ready-inline { font-size: 11pt; font-weight: 900; margin-top: 0.5mm; text-transform: uppercase; }
+    .divider { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
+    .label { font-size: 9pt; font-weight: bold; }
+    .section { margin: 1mm 0; }
+    .section p { margin: 0.5mm 0; font-size: 10pt; }
+    .item { margin: 1.5mm 0; }
+    .item-name { font-size: 11pt; font-weight: bold; text-transform: uppercase; }
+    .item-detail { font-size: 10pt; margin-left: 2mm; font-weight: bold; }
+    .item-notes { font-size: 9pt; font-style: italic; margin-left: 2mm; }
+    .item-sep { font-size: 10pt; line-height: 1; margin: 1mm 0; }
+    .additionals { margin: 1mm 0 0 2mm; }
+    .add-line { font-size: 10pt; font-weight: 900; line-height: 1.3; text-transform: uppercase; }
+    .add-group-label { font-size: 10pt; font-weight: bold; text-decoration: underline; margin-top: 1mm; }
+    .total-line { display: flex; justify-content: space-between; font-size: 10pt; margin: 0.5mm 0; }
+    .grand-total { display: flex; justify-content: space-between; font-size: 13pt; font-weight: bold; margin: 1mm 0; }
+    .footer { text-align: center; font-size: 9pt; margin-top: 2mm; }
+    .delivery-badge {
+      text-align: center;
+      font-size: 11pt;
+      font-weight: bold;
+      padding: 1mm;
+      margin: 1mm 0;
+      border: 1px solid #000;
+    }
+  </style>
+</head>
+<body>
+  <!--BOX_START-->
+  <div class="header">
+    <div class="store-name">${escapeHtml(storeName)}</div>
+    <div class="order-num">PEDIDO #${escapeHtml(orderRef)}</div>
+    <div class="origem">${escapeHtml(resolveOrigemLabel(payload))}</div>
+    <div class="date">${dt}</div>
+    <div class="ready-inline">Pronto até: ${readyTs}</div>
+  </div>
+  <hr class="divider">
+  <div class="section">
+    <p>[CLIENTE]${escapeHtml(payload.customerName)}[/CLIENTE]</p>
+    ${phoneHtml}
+    ${paymentHtml}
+  </div>
+  <!--BOX_END-->
+  ${deliverySection}
+  <hr class="divider">
+  <div class="section">
+    ${itemsHtml}
+  </div>
+  <hr class="divider">
+  <div class="total-line">
+    <span>Subtotal:</span>
+    <span>R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
+  </div>
+  ${deliveryFeeHtml}
+  <div class="grand-total">
+    <span>TOTAL:</span>
+    <span>R$ ${payload.total.toFixed(2).replace('.', ',')}</span>
+  </div>
+  <hr class="divider">
+  <p class="footer">Obrigado pela preferência!</p>
+</body>
+</html>`;
 }
 
 /**
@@ -349,10 +560,17 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
 function buildReceiptHTMLForCompany(payload: PrintPayload): string {
   // Quando o caller informa explicitamente o layout, respeita a escolha do lojista.
   if (payload.printLayout === 'v3') return buildReceiptHTMLv3(payload);
+  if (
+    payload.printLayout === 'v2' &&
+    isGdiReceiptCompany(payload.companyId)
+  ) {
+    return buildReceiptHtmlV2Rich(payload);
+  }
   if (payload.printLayout === 'v1' || payload.printLayout === 'v2') return buildReceiptHTML(payload);
   // Compat legado: callers que ainda não passam printLayout caem no comportamento antigo
   // (I9 forçado em V3). Será removido quando todos os callers passarem o campo.
   if (payload.companyId === I9_COMPANY_ID_V3) return buildReceiptHTMLv3(payload);
+  if (isGdiReceiptCompany(payload.companyId)) return buildReceiptHtmlV2Rich(payload);
   return buildReceiptHTML(payload);
 }
 

@@ -36,6 +36,11 @@ import { PDVV2CategoryBrowser } from '@/components/pdv-v2/PDVV2CategoryBrowser';
 import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDialog';
 import type { ExtraItem } from '@/components/pdv-v2/PDVV2AddItemSearch';
 import { runTefPayment, TefOptions } from '@/utils/pdvV2Tef';
+import {
+  hasActiveTefPaymentMethod,
+  shouldChargeTefBeforePopups,
+  useLightNfceEmitOverlay,
+} from '@/utils/tefChargeFlow';
 import { imprimirComprovanteTefAutomatico } from '@/utils/tefAutoPrint';
 import { TEF_PRINT_PROMPT_CLOSED_EVENT } from '@/components/TefPrintPromptDialog';
 import { emitirNFCe, NFCeItem, NFCeTefData, NFCeRecord } from '@/services/nfceService';
@@ -84,6 +89,20 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const fiscalEnabled = isModuleEnabled('fiscal');
   const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const isI9Company = company?.id === I9_COMPANY_ID;
+  const hasTefPaymentMethod = useMemo(
+    () => hasActiveTefPaymentMethod(allActivePaymentMethods),
+    [allActivePaymentMethods],
+  );
+  const chargeTefBeforePopups = shouldChargeTefBeforePopups({
+    companyId: company?.id,
+    fiscalEnabled,
+    hasTefPaymentMethod,
+  });
+  const lightNfceOverlay = useLightNfceEmitOverlay({
+    companyId: company?.id,
+    fiscalEnabled,
+    isI9Company,
+  });
   // Filtro Entrega/Retirada das formas de pagamento — liberado para todas as lojas.
   // NÃO altera nenhum outro comportamento I9-only (Cliente Loja, Finalizar Pedido, TEF, etc.).
   const isPaymentSplitCompany = true;
@@ -841,6 +860,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   }
 
   const isClienteLoja = customerName === 'Cliente Loja';
+  /** Cliente Loja + retirada + TEF: prioriza "Finalizar Pedido" (cobrar no pinpad agora). */
+  const preferFinalizeWithTef =
+    isLancheriaI9 &&
+    isClienteLoja &&
+    deliveryType === 'retirada' &&
+    hasTefPaymentMethod &&
+    chargeTefBeforePopups;
 
   // Cliente Loja: aceita apenas Dinheiro ou PIX (não pode TEF/Máquina/Crédito/Débito)
   const baseVisiblePaymentMethods = isClienteLoja
@@ -932,6 +958,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     printDocument?: boolean;
     /** Itens extras adicionados na tela de cobrança. */
     extraItems?: ExtraItem[];
+    /** TEF já cobrado no PDVV2PaymentDialog (chargeTefBeforePopups). */
+    prechargedTef?: { tefData?: NFCeTefData; notesFragment?: string };
   }) {
     if (!override && !canGoNext()) return;
     if (handleSubmitGuardRef.current) return;
@@ -1119,10 +1147,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
 
     // ===== TEF a partir do PDVV2PaymentDialog (I9 "Finalizar Pedido") =====
-    // Mesmo padrão do PDV V2: executa runTefPayment ANTES de criar o pedido.
+    // Mesmo padrão do OrderCardChargeDialog: reutiliza prechargedTef ou executa runTefPayment.
     let overrideTefData: NFCeTefData | undefined;
     let overrideTefNote = '';
-    if (override?.tefIntegration && override?.tefOptions && company?.id) {
+    if (override?.prechargedTef?.tefData) {
+      overrideTefData = override.prechargedTef.tefData;
+      overrideTefNote = override.prechargedTef.notesFragment ? ` | ${override.prechargedTef.notesFragment}` : '';
+    } else if (override?.tefIntegration && override?.tefOptions && company?.id) {
       const result = await runTefPayment({
         companyId: company.id,
         integration: override.tefIntegration,
@@ -1130,6 +1161,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         options: override.tefOptions,
         description: customerName ? `Express - ${customerName}` : 'Pedido Express',
         onStatus: setTefStatus,
+        tefFirstFlow: chargeTefBeforePopups,
       });
       setTefStatus('');
       if (!result.success) {
@@ -1239,16 +1271,17 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       // ===== NFC-e (I9 "Finalizar Pedido" com Venda + NFC-e) =====
       // Cria pdv_sale e dispara emissão. Pop-up de status abre ao final.
       const wantsNfce =
-        override?.finalizeNow &&
-        override?.documentMode === 'sale_with_nfce' &&
+        !!override &&
+        (override.tefIntegration ||
+          override.prechargedTef?.tefData ||
+          override.documentMode === 'sale_with_nfce') &&
         fiscalEnabled &&
         !!company?.id;
-      if (wantsNfce) {
-        if (!currentRegister) {
-          toast.error('Caixa precisa estar aberto para emitir NFC-e.');
-          setIsSubmitting(false);
-          return;
-        }
+      if (wantsNfce && !currentRegister) {
+        toast.error(
+          'Caixa precisa estar aberto para emitir NFC-e. Feche e reabra o caixa no app, depois emita a nota manualmente.',
+        );
+      } else if (wantsNfce && currentRegister) {
         try {
           setIsEmittingNfce(true);
           const saleItems = cart.map((item) => ({
@@ -1391,12 +1424,18 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               groupedOptionals: groupedOptionals.length > 0 ? groupedOptionals : undefined,
             };
           });
+          const expressDeliveryFee =
+            deliveryType === 'entrega' && deliveryFee > 0 ? deliveryFee : 0;
           await printOnlyReceipt({
             companyId: company.id,
             orderCode: createdOrderCode,
             dailyNumber: createdDailyNumber,
             shortCode: createdShortCode,
             customerName: customerName.trim(),
+            customerPhone: phoneDigits || undefined,
+            storeName: company?.name,
+            orderOrigin: 'express',
+            deliveryFee: expressDeliveryFee,
             items: printItems,
             total: effectiveTotal,
             notes: `Pagamento: ${paymentName}${override.discount > 0 ? ` | Desconto: R$ ${override.discount.toFixed(2)}` : ''}`,
@@ -1567,6 +1606,11 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 dailyNumber: createdDailyNumber,
                 shortCode: createdShortCode,
                 customerName: customerName.trim(),
+                customerPhone: phoneDigits || undefined,
+                storeName: company?.name,
+                orderOrigin: 'express',
+                deliveryFee:
+                  deliveryType === 'entrega' && deliveryFee > 0 ? deliveryFee : 0,
                 items: receiptItems,
                 total: effectiveTotal,
                 notes: `Pagamento: ${paymentName}`,
@@ -1981,6 +2025,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           options: params.tefOptions,
           description: `Express - Divisão ${personLabel} - ${orderLabel}`,
           onStatus: setTefStatus,
+          tefFirstFlow: chargeTefBeforePopups,
         });
         setTefStatus('');
         if (!result.success) return false;
@@ -2219,6 +2264,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           options: params.tefOptions,
           description: `Express - Itens parciais - ${orderLabel}`,
           onStatus: setTefStatus,
+          tefFirstFlow: chargeTefBeforePopups,
         });
         setTefStatus('');
         if (!result.success) return false;
@@ -3244,21 +3290,26 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               // Lancheria I9 — Dois botões: enviar p/ cozinha (sem pagamento) ou finalizar (paga + entrega)
               <>
                 <Button
-                  variant="outline"
-                  className="flex-1 gap-2"
+                  variant={preferFinalizeWithTef ? 'default' : 'outline'}
+                  className={cn('flex-1 gap-2', preferFinalizeWithTef && 'bg-destructive hover:bg-destructive/90 text-destructive-foreground')}
                   onClick={() => setPickupChargeOpen(true)}
                   disabled={cart.length === 0 || isSubmitting || tefProcessing}
-                  title="Cobra agora e marca como entregue (sem comanda de produção)"
+                  title={preferFinalizeWithTef
+                    ? 'Cobra no pinpad (TEF/PIX) e marca como entregue — recomendado'
+                    : 'Cobra agora e marca como entregue (sem comanda de produção)'}
                 >
                   Finalizar Pedido
                 </Button>
                 <Button
+                  variant={preferFinalizeWithTef ? 'outline' : 'default'}
                   className="flex-1 gap-2"
                   onClick={() => handleSubmit()}
                   disabled={!canGoNext() || isSubmitting || tefProcessing || (deliveryType === 'entrega' && !paymentMethod)}
-                  title={deliveryType === 'entrega' && !paymentMethod
-                    ? 'Selecione a forma de pagamento antes de enviar para a cozinha'
-                    : 'Cria pedido pendente e imprime comanda de produção (pagamento depois)'}
+                  title={preferFinalizeWithTef
+                    ? 'Use somente se for cobrar depois (Cobrar no card)'
+                    : deliveryType === 'entrega' && !paymentMethod
+                      ? 'Selecione a forma de pagamento antes de enviar para a cozinha'
+                      : 'Cria pedido pendente e imprime comanda de produção (pagamento depois)'}
                 >
                   {isSubmitting
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
@@ -3511,6 +3562,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         showDocumentMode
         showAddItem
         tefStatus={tefStatus}
+        chargeTefBeforePopups={chargeTefBeforePopups}
+        tefFirstFlow={false}
+        autoFinalizeAfterPrechargedTef
         onSplitPayments={() => {
           // Fecha o checkout single-payment e abre o multi-pagamento.
           // A orquestração (runMultiPayment + addSale + NFC-e) já existe em
@@ -3546,6 +3600,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           tefIntegration,
           customerDocument,
           extraItems,
+          prechargedTef,
           splitInfo,
           itemsInfo,
           extraItemsInfo,
@@ -3608,6 +3663,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             tefIntegration,
             customerDocument,
             extraItems,
+            prechargedTef,
           });
           setPickupChargeOpen(false);
         }}
@@ -3640,13 +3696,13 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       />
 
       {/* Overlay de bloqueio enquanto NFC-e é emitida */}
-      {isEmittingNfce && isI9Company && (
+      {isEmittingNfce && lightNfceOverlay && (
         <div className="fixed bottom-4 right-4 z-40 bg-card border rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 pointer-events-none">
           <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
           <p className="text-sm font-medium text-foreground">Emitindo NFC-e…</p>
         </div>
       )}
-      {isEmittingNfce && !isI9Company && (
+      {isEmittingNfce && !lightNfceOverlay && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
           <div className="bg-card rounded-lg px-8 py-6 shadow-xl flex flex-col items-center gap-3">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />

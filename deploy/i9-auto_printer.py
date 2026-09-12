@@ -98,17 +98,17 @@ _prepare_pywin32_dll_path()
 SCRIPT_VERSION = "1.7.8"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
-API_KEY = "" # Injetado pelo frontend
+API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bXJ0eGR6bGthc3V6dXR4dmhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3OTExODMsImV4cCI6MjA4MDM2NzE4M30.VsnT1zdVUwJdv8gBlg8CthBx_bccZp-LsOs2PRq1Uik" # Injetado pelo frontend
 LOG_FILE = "printer_log.txt"
-STORE_NAME = ""
+STORE_NAME = "Lancheria I9"
 STORE_INFO = {}
-COMPANY_ID = "" # Injetado pelo frontend
+COMPANY_ID = "8c9e7a0e-dbb6-49b9-8344-c23155a71164" # Injetado pelo frontend
 PRINTER_MAP_FILE = "printer_map.json"
 
 # Tamanho de papel configurado na loja (store_settings.printer_paper_size).
 # Usado pelo renderizador grafico para dimensionar fonte, colunas e faixas.
-PAPER_SIZE = "58mm"
-PRINT_LAYOUT = "v1"
+PAPER_SIZE = "80mm"
+PRINT_LAYOUT = "v3"
 CONFIG_LAST_SYNC = 0
 CONFIG_TTL = 300  # segundos
 
@@ -134,7 +134,6 @@ SKIP_BACKLOG_COMPANY_IDS = {"f5f9eec3-67bc-497a-88a6-ce41d3b15df8"}  # Amore Mio
 pedidos_impressos_sessao = []
 ids_com_falha = set()
 ids_processados = set()
-QUEUE_CONNECTION_CONFIRMED = False
 
 def log(mensagem, tipo="INFO"):
     agora = datetime.now().strftime("%H:%M:%S")
@@ -211,38 +210,20 @@ def buscar_pedidos_nao_impressos(company_id):
 
 def processar_fila(company_id):
     """Busca e processa itens na print_queue ainda nao impressos"""
-    global QUEUE_CONNECTION_CONFIRMED
     try:
-        url = f"{API_URL}/print_queue?company_id=eq.{company_id}&printed=eq.false&select=*&order=created_at.asc"
-        response = requests.get(url, headers=get_headers(), timeout=30)
+        url = f"{API_URL}/print_queue?company_id=eq.{company_id}&printed=eq.false&select=*"
+        response = requests.get(url, headers=get_headers())
         if response.status_code == 200:
             fila = response.json()
-            if not QUEUE_CONNECTION_CONFIRMED:
-                log("Conexao com a fila de impressao confirmada", "FILA")
-                QUEUE_CONNECTION_CONFIRMED = True
-            if fila:
-                log(f"Encontrada(s) {len(fila)} comanda(s) pendente(s)", "FILA")
             for item in fila:
                 if item['id'] in ids_processados: continue
-
+                
                 log(f"Imprimindo da fila: {item.get('label', 'Sem título')}", "FILA")
                 if imprimir_html(item.get('html_content', ''), item.get('station_id')):
-                    if marcar_fila_impressa(item['id']):
-                        ids_processados.add(item['id'])
-                        remover_da_fila(item['id'])
-                        log(f"Comanda concluida: {item.get('label', item['id'])}", "OK")
-                    else:
-                        log(
-                            f"A comanda saiu na impressora, mas a fila nao confirmou a conclusao: {item['id']}",
-                            "ERRO",
-                        )
-                else:
-                    log(
-                        f"Falha ao enviar a comanda para a impressora: {item.get('label', item['id'])}",
-                        "ERRO",
-                    )
+                    ids_processados.add(item['id'])
+                    marcar_fila_impressa(item['id'])
+                    remover_da_fila(item['id'])
             return len(fila)
-        log(f"Erro ao consultar fila: HTTP {response.status_code} - {response.text[:200]}", "ERRO")
     except Exception as e:
         log(f"Erro ao processar fila: {e}", "ERRO")
     return 0
@@ -251,27 +232,16 @@ def marcar_fila_impressa(item_id):
     """Marca o job como impresso (evita reimpressao caso o DELETE seja bloqueado por RLS)"""
     try:
         url = f"{API_URL}/print_queue?id=eq.{item_id}"
-        response = requests.patch(
-            url,
-            headers=get_headers(),
-            json={"printed": True, "printed_at": datetime.now().isoformat()},
-            timeout=30,
-        )
-        if response.status_code in (200, 204):
-            return True
-        log(f"Fila nao confirmou conclusao: HTTP {response.status_code} - {response.text[:200]}", "ERRO")
+        requests.patch(url, headers=get_headers(), json={"printed": True})
     except Exception as e:
         log(f"Erro ao marcar job como impresso: {e}", "ERRO")
-    return False
 
 def remover_da_fila(item_id):
     try:
         url = f"{API_URL}/print_queue?id=eq.{item_id}"
-        response = requests.delete(url, headers=get_headers(), timeout=30)
-        if response.status_code not in (200, 204):
-            log(f"Historico da fila foi mantido (HTTP {response.status_code})", "INFO")
-    except Exception as e:
-        log(f"Historico da fila foi mantido: {e}", "INFO")
+        requests.delete(url, headers=get_headers())
+    except:
+        pass
 
 def marcar_como_impresso(order_id):
     try:
@@ -1173,21 +1143,8 @@ def _imprimir_html(html_content, station_id=None):
         try:
             hPrinter = win32print.OpenPrinter(printer_name)
         except Exception as e:
-            if station_id:
-                log(
-                    f"Impressora mapeada '{printer_name}' indisponível: {e}. Tentando a impressora padrão.",
-                    "AVISO",
-                )
-                try:
-                    printer_name = win32print.GetDefaultPrinter()
-                    hPrinter = win32print.OpenPrinter(printer_name)
-                    log(f"Fallback para impressora padrão: {printer_name}", "DEFAULT")
-                except Exception as fallback_error:
-                    log(f"Não foi possível abrir a impressora padrão: {fallback_error}", "ERRO")
-                    return False
-            else:
-                log(f"Não foi possível abrir a impressora '{printer_name}': {e}", "ERRO")
-                return False
+            log(f"Não foi possível abrir a impressora '{printer_name}': {e}", "ERRO")
+            return False
             
         try:
             # Tenta enviar como RAW para a impressora
@@ -1204,10 +1161,6 @@ def _imprimir_html(html_content, station_id=None):
             win32print.WritePrinter(hPrinter, raw_data)
             win32print.EndPagePrinter(hPrinter)
             win32print.EndDocPrinter(hPrinter)
-            log(
-                f"Comanda enviada para '{printer_name}' ({len(raw_data)} bytes)",
-                "IMPRESSORA",
-            )
         finally:
             win32print.ClosePrinter(hPrinter)
         return True
@@ -1217,11 +1170,22 @@ def _imprimir_html(html_content, station_id=None):
 
 def processar_pedido(pedido, store_name, store_info):
     order_code = pedido.get('order_code', '---')
-    log(
-        f"Pedido #{order_code} sem comanda na fila; mantido como nao impresso para evitar perda silenciosa",
-        "AVISO",
-    )
-    return False
+    log(f"Processando pedido #{order_code}...", "PEDIDO")
+    
+    # Se o pedido já vem com HTML de impressão no banco (campo opcional futuro)
+    # ou se precisamos gerar o HTML aqui. Por enquanto, a maioria vem pela print_queue
+    # Mas para pedidos do cardápio que não geraram print_queue:
+    
+    # Marcar como impresso para não repetir
+    marcar_como_impresso(pedido['id'])
+    
+    info_sessao = {
+        "numero": order_code,
+        "cliente": pedido.get('customer_name', 'Cliente'),
+        "hora": datetime.now().strftime("%H:%M")
+    }
+    pedidos_impressos_sessao.append(info_sessao)
+    return True
 
 def main(company_id, company_name):
     global STORE_NAME, COMPANY_ID
@@ -1261,14 +1225,23 @@ def main(company_id, company_name):
         scale_thread.start()
 
         while True:
-            # A print_queue contem a comanda pronta e e a unica fonte que pode
-            # confirmar uma impressao real. Nao marque orders isolados como
-            # impressos: isso escondia pedidos sem enviar papel para a impressora.
-            fila_count = processar_fila(company_id)
-
-            if fila_count > 0:
+            # 1. Pedidos do cardápio online / express / garçom
+            pedidos = buscar_pedidos_nao_impressos(company_id)
+            pedidos = [p for p in pedidos if p.get('id') not in ids_com_falha]
+            
+            if pedidos:
+                log(f"Encontrados {len(pedidos)} pedido(s) para imprimir!", "INFO")
+                for pedido in pedidos:
+                    ok = processar_pedido(pedido, STORE_NAME, STORE_INFO)
+                    if not ok:
+                        ids_com_falha.add(pedido.get('id'))
+                        log(f"Pedido {pedido.get('order_code','')} adicionado à lista de falhas", "AVISO")
                 mostrar_status(company_id)
-            else:
+            
+            # 2. Fila de impressão (garçom / mesa - print_queue)
+            fila_count = processar_fila(company_id)
+            
+            if not pedidos and fila_count == 0:
                 contador += 1
                 if contador >= 12:
                     mostrar_status(company_id)

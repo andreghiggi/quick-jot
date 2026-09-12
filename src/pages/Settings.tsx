@@ -30,6 +30,21 @@ import { usePrintStations } from '@/hooks/usePrintStations';
 
 const escapePythonString = (value: string) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
+/** Gera literal Python com aspas escapadas (evita SyntaxError em JWT longos). */
+const toPythonLiteral = (value: string) => JSON.stringify(value);
+
+function jwtRole(key: string): string | null {
+  try {
+    const part = key.split('.')[1];
+    if (!part) return null;
+    const padded = part.replace(/-/g, '+').replace(/_/g, '/');
+    const json = atob(padded.padEnd(padded.length + ((4 - (padded.length % 4)) % 4), '='));
+    return (JSON.parse(json) as { role?: string }).role ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Settings() {
   const { company, profile, refetchUserData, isSuperAdmin } = useAuthContext();
   const { toast } = useToast();
@@ -239,21 +254,32 @@ export default function Settings() {
     });
   };
 
-  const generatePythonScript = () => {
-    const storeName = escapePythonString(company?.name || 'Minha Loja');
-    const companySlug = escapePythonString(company?.slug || '');
+  const injectPrinterConfig = (template: string) => {
     const paperSize = storeSettings.printerPaperSize === '80mm' ? '80mm' : '58mm';
     const printLayout = storeSettings.printLayout || 'v1';
-
-    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+    const anonKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim();
     const companyId = company?.id || '';
 
-    return autoPrinterTemplate
-      .replace('STORE_NAME = ""', `STORE_NAME = "${storeName}"`)
-      .replace('COMPANY_ID = ""', `COMPANY_ID = "${companyId}"`)
-      .replace('API_KEY = ""', `API_KEY = "${anonKey}"`)
-      .replace('PAPER_SIZE = "58mm"', `PAPER_SIZE = "${paperSize}"`)
-      .replace('PRINT_LAYOUT = "v1"', `PRINT_LAYOUT = "${printLayout}"`);
+    return template
+      .replace('STORE_NAME = ""', `STORE_NAME = ${toPythonLiteral(company?.name || 'Minha Loja')}`)
+      .replace('COMPANY_ID = ""', `COMPANY_ID = ${toPythonLiteral(companyId)}`)
+      .replace('API_KEY = ""', `API_KEY = ${toPythonLiteral(anonKey)}`)
+      .replace('PAPER_SIZE = "58mm"', `PAPER_SIZE = ${toPythonLiteral(paperSize)}`)
+      .replace('PRINT_LAYOUT = "v1"', `PRINT_LAYOUT = ${toPythonLiteral(printLayout)}`);
+  };
+
+  const generatePythonScript = () => injectPrinterConfig(autoPrinterTemplate);
+
+  /** Busca auto_printer.py publicado em /auto_printer.py (sempre a versão mais recente no servidor). */
+  const fetchRemotePrinterTemplate = async (): Promise<string | null> => {
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}auto_printer.py?nocache=${Date.now()}`);
+      if (!res.ok) return null;
+      const text = await res.text();
+      return text.includes('SCRIPT_VERSION') ? text : null;
+    } catch {
+      return null;
+    }
   };
 
   const generateBatScript = () => {
@@ -293,11 +319,37 @@ if errorlevel 1 (
 `;
   };
 
-  const handleDownloadScript = () => {
-    const script = generatePythonScript();
+  const handleDownloadScript = async () => {
+    const anonKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim();
+    const role = jwtRole(anonKey);
+    if (!anonKey) {
+      toast({
+        title: 'Chave ausente',
+        description: 'VITE_SUPABASE_PUBLISHABLE_KEY não configurada no build.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (role && role !== 'anon') {
+      toast({
+        title: 'Chave incorreta',
+        description: `Use a chave anon (pública), não ${role}. Baixe novamente após corrigir o deploy.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    const remoteTemplate = await fetchRemotePrinterTemplate();
+    const template = remoteTemplate ?? autoPrinterTemplate;
+    const script = injectPrinterConfig(template);
+    const versionMatch = script.match(/SCRIPT_VERSION\s*=\s*"([^"]+)"/);
     downloadTextFile(script, 'auto_printer.py');
-    // Fallback: grava a identificação da loja ao lado do script.
     downloadTextFile(company?.id || '', 'company_id.txt');
+    toast({
+      title: 'auto_printer.py baixado',
+      description: versionMatch
+        ? `Versão ${versionMatch[1]}${remoteTemplate ? ' (servidor)' : ' (embutida no painel — faça Ctrl+Shift+R)'}`
+        : 'Arquivo gerado com as configurações da loja.',
+    });
   };
 
   const handleDownloadInstalador = () => {
@@ -1558,7 +1610,7 @@ if errorlevel 1 (
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
                   <div>
-                    <h4 className="font-medium">Windows 11 — Correção pywin32 (v1.4 / auto_printer v8.39.4)</h4>
+                    <h4 className="font-medium">Windows 11 — Recibo V39 GDI (launcher v1.7 / auto_printer v1.7.8)</h4>
                     <p className="text-xs text-muted-foreground mt-1">
                       Use estes arquivos <strong>apenas se o Windows 11 não reconhecer o .bat acima</strong> ou
                       exibir o erro <code className="bg-background px-1 rounded">DLL load failed while importing win32print/win32ui</code>.
