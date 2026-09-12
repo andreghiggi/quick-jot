@@ -17,6 +17,14 @@ description: >-
 | **Dev Cursor** | branch `Cursor`, localhost, Supabase externo `vyotbtmnnosiejyltlxc` | Sim |
 | **Espelho/backup** | Supabase externo (destino do mirror) | Sim (escrita no destino) |
 
+## Fiscal (NFC-e / NFe)
+
+**Sempre** carregar também `comandatech-fiscal-no-emit`.
+
+Regra do usuário: *Nunca mais gere mais NFC-e e nenhuma nota sem eu pedir. Não emita mais NFC-e de nenhuma empresa.*
+
+Sem pedido explícito: não emitir, cancelar, reemitir nem inutilizar notas em produção.
+
 ## Proibido sem pedido explícito do usuário
 
 - Push ou merge na branch `main`

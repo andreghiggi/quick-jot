@@ -19,13 +19,15 @@ Ao receber uma tarefa, **leia as skills listadas abaixo** antes de agir.
 | Supabase, migration, edge function, query, auth | `comandatech-supabase` |
 | Deploy, VPS, CI, cutover, produção vs Cursor | `comandatech-deploy` |
 | Backup, espelho, mirror-auth, login no externo | `comandatech-supabase` + `docs/BACKUP-AUTH-MIRROR.md` |
+| NFC-e, NFe, Fiscal Flow, SEFAZ, cancelamento fiscal | `comandatech-fiscal-no-emit` (**sempre**) |
 | **Qualquer alteração que possa afetar produção** | `comandatech-prod-safe` (**sempre**) |
 
 ## Regra padrão
 
-1. **`comandatech-prod-safe`** — assume produção intocável até o usuário pedir o contrário
-2. **`comandatech-git-workflow`** — branch Cursor, commits `Cursor - `
-3. Skill de domínio conforme a tabela acima
+1. **`comandatech-fiscal-no-emit`** — nunca emitir/cancelar nota fiscal sem pedido explícito
+2. **`comandatech-prod-safe`** — assume produção intocável até o usuário pedir o contrário
+3. **`comandatech-git-workflow`** — branch Cursor, commits `Cursor - `
+4. Skill de domínio conforme a tabela acima
 
 ## Skills disponíveis (`.cursor/skills/`)
 
@@ -35,6 +37,7 @@ Ao receber uma tarefa, **leia as skills listadas abaixo** antes de agir.
 - `comandatech-supabase`
 - `comandatech-deploy`
 - `comandatech-prod-safe`
+- `comandatech-fiscal-no-emit`
 - `comandatech-skills-router` (este arquivo)
 
 ## Regra Cursor (automática)

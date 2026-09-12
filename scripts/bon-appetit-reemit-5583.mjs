@@ -1,4 +1,14 @@
 #!/usr/bin/env node
+/**
+ * DO NOT RUN — emissão fiscal em produção bloqueada por padrão.
+ * Só executar se o usuário pedir explicitamente E definir ALLOW_FISCAL_EMIT=1.
+ * Ver .cursor/skills/comandatech-fiscal-no-emit/SKILL.md
+ */
+if (process.env.ALLOW_FISCAL_EMIT !== '1') {
+  console.error('BLOQUEADO: emissão fiscal requer ALLOW_FISCAL_EMIT=1 e pedido explícito do usuário.');
+  process.exit(1);
+}
+
 /** Reemite NFC-e 5583 Bon Appetit com CNPJ via Fiscal Flow (campo `cliente`). */
 const FF_TOKEN = process.env.FF_TOKEN || 'nfce_67705607baf043aa8d70a97f2291c8e8';
 const FF_URL = 'https://emit.agilizeerp.com.br/functions/v1/nfce-api';

@@ -78,6 +78,12 @@ export interface NFCeEmitRequest {
     cnpj?: string;
     nome?: string;
   };
+  /** Enviado à Fiscal Flow; monta bloco `<dest>` no XML (CPF/CNPJ). */
+  cliente?: {
+    cpf?: string;
+    cnpj?: string;
+    nome?: string;
+  };
 }
 
 export interface NFCeRecord {
@@ -137,11 +143,25 @@ export async function emitirNFCe(
   saleId: string | null,
   payload: NFCeEmitRequest
 ) {
+  // Fiscal Flow monta <dest> só com `cliente`, não `destinatario`. Enviar aqui
+  // garante CPF/CNPJ mesmo antes do deploy do nfce-proxy no Lovable.
+  const emitPayload: NFCeEmitRequest = { ...payload };
+  const dest = payload.destinatario;
+  if (dest && (dest.cpf || dest.cnpj)) {
+    const cliente: { cpf?: string; cnpj?: string; nome?: string } = {};
+    if (dest.cnpj) cliente.cnpj = String(dest.cnpj).replace(/\D/g, '');
+    else if (dest.cpf) cliente.cpf = String(dest.cpf).replace(/\D/g, '');
+    const nome = String(dest.nome || '').trim();
+    if (nome) cliente.nome = nome.substring(0, 60);
+    else if (cliente.cnpj) cliente.nome = 'CONSUMIDOR';
+    emitPayload.cliente = cliente;
+  }
+
   return callNFCeProxy({
     action: 'emitir',
     companyId,
     saleId,
-    payload,
+    payload: emitPayload,
   });
 }
 
