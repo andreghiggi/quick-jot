@@ -39,6 +39,15 @@ Correção publicada em:
 
 Após deploy: informar CPF/CNPJ no PDV → próxima venda deve incluir documento no XML.
 
+## Deploy pendente (2026-09-12)
+
+| Item | Commit | Status |
+|------|--------|--------|
+| Frontend (`nfceService.ts`) | `afb60759` | Push OK — GitHub Actions **Deploy to VPS** falhou (verificar `VPS_SSH_KEY` / secrets) |
+| Edge `nfce-proxy` | `0689dc5a` | Código em `main` — deploy Lovable pendente (prompt abaixo ou `SUPABASE_ACCESS_TOKEN`) |
+
+**Frontend no ar ainda:** bundle `index-Debw0eHP.js` — após deploy bem-sucedido, loja faz Ctrl+Shift+R.
+
 ## Regra para agentes
 
 > Nunca mais gere mais NFC-e e nenhuma nota sem eu pedir. Não emita mais NFC-e de nenhuma empresa.
