@@ -18,9 +18,6 @@ if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     'URL ou chave Supabase ausente no build. O app não pode conectar ao banco (anon key vazia).',
   );
 }
-if (SUPABASE_URL.includes('comandatech.com.br') && !SUPABASE_URL.includes('supabase.co')) {
-  reportConfigError('Build aponta para API self-hosted. Use Supabase Cloud (Lovable).');
-}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
