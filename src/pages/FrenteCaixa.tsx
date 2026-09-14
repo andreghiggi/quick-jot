@@ -1108,10 +1108,17 @@ export default function FrenteCaixa() {
         const hasTef = !!(capturedTef && capturedTef.receiptLines?.length);
         const autoMode = pdvSettings.print_on_finish_mode === 'auto';
 
+        // Inicia a NFC-e antes da impressão antecipada para que o diálogo
+        // nativo de impressão nunca adie o envio fiscal. A mesma promise é
+        // reutilizada abaixo; não existe uma segunda emissão.
+        const nfcePromise = hasNfce
+          ? emitirNFCe(company!.id, saleId, nfcePayload!)
+          : null;
+
         // ── Piloto TEF EARLY-PRINT (Cozinha da Ruiva / Lancheria I9) ──────
-        // Imprime as vias do TEF IMEDIATAMENTE, em paralelo com a NFC-e,
-        // respeitando `tef_auto_print_vias` da loja. Se o modo for 'none',
-        // `tefEarlyPrinted` fica false e o diálogo mantém a escolha manual.
+        // Solicita as vias do TEF enquanto a NFC-e já está em andamento.
+        // O retorno confirma apenas que o navegador aceitou a solicitação;
+        // o diálogo continua disponível para conferência/reimpressão.
         let tefEarlyPrinted = false;
         if (hasTef && isTefEarlyPrintPilot(company?.id)) {
           try {
@@ -1128,11 +1135,9 @@ export default function FrenteCaixa() {
         // Se modo `ask`/`off`: mantém diálogo (operador decide).
         // Se modo `auto` e só NFC-e: emite em background, imprime DANFE direto
         // (janela nativa do Chrome) e não abre diálogo — a menos que dê erro.
-        // Piloto early-print: TEF já impresso conta como "sem TEF pendente" —
-        // o diálogo só é necessário se sobrar algo pra decidir/imprimir.
         const tefPendingDialog = hasTef && !tefEarlyPrinted;
-        const silentAutoNfce = autoMode && !tefPendingDialog && hasNfce;
-        if ((tefPendingDialog || hasNfce) && !silentAutoNfce) {
+        const silentAutoNfce = autoMode && !hasTef && hasNfce;
+        if ((hasTef || hasNfce) && !silentAutoNfce) {
           setConsolidatedTef(capturedTef);
           setConsolidatedRecord(null);
           setConsolidatedNfceError(null);
@@ -1142,7 +1147,7 @@ export default function FrenteCaixa() {
         if (hasNfce && !silentAutoNfce) {
           (async () => {
             try {
-              await emitirNFCe(company!.id, saleId, nfcePayload!);
+              await nfcePromise;
               await new Promise((r) => setTimeout(r, 400));
               const rec = await getNFCeRecordBySaleId(saleId);
               if (rec) {
@@ -1177,7 +1182,7 @@ export default function FrenteCaixa() {
           (async () => {
             setSilentPhase({ label: 'Emitindo NFC-e...', detail: 'Enviando dados para a SEFAZ' });
             try {
-              await emitirNFCe(company!.id, saleId, nfcePayload!);
+              await nfcePromise;
               // A resposta da API já criou o registro em `nfce_records` com o
               // status devolvido pela SEFAZ (na maioria das vezes 'autorizada').
               // Delay mínimo pro insert propagar e busca única.

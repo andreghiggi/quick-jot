@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.71.4-beta";
-export const RELEASE_DATE = "2026-09-10"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Venda registra de novo: numeração e caixas recuperados";
+export const VERSION = "1.71.5-beta";
+export const RELEASE_DATE = "2026-09-14"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Pedidos, impressão e recuperação protegidos";
 
 
 
@@ -22,6 +22,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.71.5-beta",
+    date: "2026-09-14",
+    codename: "Pedidos, impressão e recuperação protegidos",
+    changes: [
+      "Comandas sem nome de cliente agora seguem normalmente para a cozinha, com identificação neutra.",
+      "O cardápio aguarda adicionais, horários, configurações e formas de pagamento antes de liberar pedidos.",
+      "Na Frente de Caixa, a NFC-e começa sem esperar o diálogo das vias do cartão; a conferência e reimpressão das vias continuam acessíveis.",
+      "A recuperação automática de NFC-e não apaga chave, protocolo, QR Code ou XML ausentes na resposta e não sobrescreve uma autorização concorrente.",
+      "No Pedido Express, itens parcialmente cobrados não perdem a identificação ao ajustar quantidades na etapa de pagamento.",
+      "Nenhuma nota foi emitida, reemitida ou inutilizada por esta atualização.",
+    ],
+  },
   {
     version: "1.71.4-beta",
     date: "2026-09-10",

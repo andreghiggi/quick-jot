@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '14/09/2026',
+    version: '1.71.5-beta',
+    type: 'fix',
+    description: 'Mais segurança no atendimento: comandas sem nome chegam à cozinha; o cardápio aguarda adicionais e horários antes de liberar pedidos; a NFC-e inicia sem esperar a impressão das vias do cartão; a reimpressão TEF permanece acessível; ajustes de quantidade não trocam marcações de itens pagos; e a recuperação fiscal preserva chave, protocolo, QR Code e XML já gravados.',
+  },
+  {
     date: '26/08/2026',
     version: '1.70.1-beta',
     type: 'improvement',
