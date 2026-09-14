@@ -51,7 +51,7 @@ export interface FrenteCaixaPostSaleDialogProps {
   tefReceiptLines?: string[] | null;
   tefDefaultMode?: TefAutoPrintMode;
   tefOrderCode?: string;
-  /** Piloto early-print: as vias do TEF já saíram na aprovação do pinpad. */
+  /** Piloto early-print: o navegador recebeu a solicitação antecipada das vias. */
   tefAlreadyPrinted?: boolean;
   /** Registro inicial da NFC-e — null se a venda não emitiu NFC-e. */
   initialNfceRecord: NFCeRecord | null;
@@ -330,9 +330,9 @@ export function FrenteCaixaPostSaleDialog({
                 <div className="rounded border border-green-600/40 bg-green-600/5 p-3 text-sm flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
                   <div className="flex-1">
-                    <p className="font-medium">Vias do TEF já impressas</p>
+                    <p className="font-medium">Impressão das vias do TEF solicitada</p>
                     <p className="text-xs text-muted-foreground">
-                      Enviadas para a impressora assim que o pinpad aprovou o pagamento.
+                      Confira a saída na impressora. Se necessário, reimprima abaixo.
                     </p>
                   </div>
                   <Button

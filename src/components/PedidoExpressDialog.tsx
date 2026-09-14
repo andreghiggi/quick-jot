@@ -3107,7 +3107,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                                       variant="outline"
                                       className="h-7 w-7"
                                       onClick={(e) => { e.stopPropagation(); updateCartQuantity(index, -1); }}
-                                      disabled={isSubmitting || tefProcessing}
+                                      disabled={isSubmitting || tefProcessing || item.quantity <= 1}
                                     >
                                       <Minus className="w-3 h-3" />
                                     </Button>

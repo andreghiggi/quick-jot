@@ -98,9 +98,10 @@ Deno.serve(async (req) => {
     const corteStuck = new Date(Date.now() - 5 * 60 * 1000).toISOString()
     const { data: stuckWithId } = await supabase
       .from('nfce_records')
-      .select('id, company_id, nfce_id, external_id, ambiente, status')
+      .select('id, company_id, nfce_id, external_id, ambiente, status, updated_at')
       .not('nfce_id', 'is', null)
       .in('status', ['processando', 'pendente'])
+      .or('contingencia_offline.is.null,contingencia_offline.eq.false')
       .lt('updated_at', corteStuck)
       .order('updated_at', { ascending: true })
       .limit(80)
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
     // Cache de token por empresa para não consultar store_settings repetidas vezes
     const tokenCache = new Map<string, string | null>()
     async function tokenFor(companyId: string): Promise<string | null> {
-      if (tokenCache.has(companyId)) return tokenCache.get(companyId)!
+      if (tokenCache.has(companyId)) return tokenCache.get(companyId) ?? null
       const { data } = await supabase
         .from('store_settings')
         .select('value')
@@ -166,25 +167,36 @@ Deno.serve(async (req) => {
         const d = result?.data || result
         if (!d?.status) continue
         const rawStatus = String(d.status || '').toLowerCase()
-        const chave = d.chave_acesso || d.chave || d.access_key || null
+        const chave = d.chave_acesso || d.chave || d.access_key || d.chnfe || null
+        const protocolo = d.protocolo || d.protocol || d.nProt || null
+        const qr = d.qrcode_url || d.qr_code_url || d.url_qrcode || d.qrcode || d.qr_code || d.url_consulta_qrcode || null
+        const xml = d.xml_url || d.url_xml || null
         const upd: Record<string, any> = {
           status: rawStatus.includes('autoriz') ? 'autorizada' : rawStatus,
-          chave_acesso: chave,
-          protocolo: d.protocolo || d.protocol || d.nProt || null,
-          qrcode_url: d.qrcode_url || d.qr_code_url || (chave ? buildQrcodeUrl(chave, record.ambiente || 'producao') : null),
-          xml_url: d.xml_url || d.url_xml || null,
           ambiente: record.ambiente || 'producao',
           updated_at: new Date().toISOString(),
           webhook_payload: { recovered_from: 'contingencia-sync-stuck', response: d },
         }
+        if (chave) upd.chave_acesso = chave
+        if (protocolo) upd.protocolo = protocolo
+        if (qr) upd.qrcode_url = qr
+        else if (chave) upd.qrcode_url = buildQrcodeUrl(chave, record.ambiente || 'producao')
+        if (xml) upd.xml_url = xml
         if (rawStatus === 'rejeitada') {
           upd.motivo_rejeicao = d.motivo_rejeicao || d.motivo || d.motivo_retorno || d.erro || null
         }
-        const { error: upErr } = await supabase.from('nfce_records').update(upd).eq('id', record.id)
-        if (!upErr) {
+        const { data: updated, error: upErr } = await supabase
+          .from('nfce_records')
+          .update(upd)
+          .eq('id', record.id)
+          .eq('updated_at', record.updated_at)
+          .in('status', ['processando', 'pendente'])
+          .select('id')
+          .maybeSingle()
+        if (!upErr && updated) {
           stuckSynced++
           console.log(`[nfce-contingencia-sync] Presa sincronizada: ${record.external_id?.slice(0, 30)} → ${upd.status}`)
-        } else errors++
+        } else if (upErr) errors++
       } catch (err) {
         console.error('[nfce-contingencia-sync] Erro presa', record.id, err)
         errors++
@@ -195,7 +207,9 @@ Deno.serve(async (req) => {
       try {
         const apiKey = await tokenFor(record.company_id)
         if (!apiKey) continue
-        const d = await consultarPorExternalId(apiKey, record.external_id!) || {}
+        const externalId = record.external_id
+        if (!externalId) continue
+        const d = await consultarPorExternalId(apiKey, externalId) || {}
         const remoteId = d?.id || d?.nfce_id || null
         if (!remoteId && !d?.chave_acesso) continue
 

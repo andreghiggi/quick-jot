@@ -403,6 +403,8 @@ export default function PDVV2() {
           if (!success) {
             console.warn('[PDVV2] Failed to enqueue production jobs for order:', order.id);
           }
+        }).catch(error => {
+          console.error('[PDVV2] Error enqueuing production jobs for order:', order.id, error);
         });
       }
     }

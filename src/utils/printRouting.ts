@@ -71,10 +71,11 @@ async function enqueueProductionByStationLegacy(
   orderId: string,
   items: any[],
   orderNumber: string,
-  customerName: string,
+  customerName: string | null | undefined,
   orderOrigin: string = 'cardápio'
 ) {
   try {
+    const customerLabel = customerName?.trim() || 'Cliente não informado';
     // 1. Fetch category mappings and category settings
     const [{ data: mappings }, { data: dbCategories }] = await Promise.all([
       supabase
@@ -191,7 +192,7 @@ async function enqueueProductionByStationLegacy(
         const html = generateProductionTicketHTML({
           tabNumber: (orderData as any)?.daily_number || parseInt(orderNumber.replace('#', '')) || 0,
           tableNumber: (orderData as any)?.table_number,
-          customerName: customerName,
+          customerName: customerLabel,
           items: items.map((i) => ({
             productName: i.name,
             quantity: i.quantity,
@@ -217,7 +218,7 @@ async function enqueueProductionByStationLegacy(
 
       // Fallback to simple text for V1 or others if not V2
       let text = `PEDIDO #${orderNumber}\n`;
-      text += `CLIENTE: ${customerName}\n`;
+       text += `CLIENTE: ${customerLabel}\n`;
       text += `ORIGEM: ${orderOrigin}\n`;
       text += `DATA: ${new Date().toLocaleString('pt-BR')}\n`;
       text += `--------------------------------\n`;
@@ -240,7 +241,7 @@ async function enqueueProductionByStationLegacy(
     for (const [stationId, groupItems] of Object.entries(stationGroups)) {
       jobs.push({
         company_id: companyId,
-        label: `Produção #${orderNumber} - ${customerName}`,
+        label: `Produção #${orderNumber} - ${customerLabel}`,
         html_content: await generateSimpleText(groupItems),
         station_id: stationId,
         job_type: 'production',
@@ -252,7 +253,7 @@ async function enqueueProductionByStationLegacy(
     if (defaultItems.length > 0) {
       jobs.push({
         company_id: companyId,
-        label: `Produção #${orderNumber} - ${customerName}`,
+        label: `Produção #${orderNumber} - ${customerLabel}`,
         html_content: await generateSimpleText(defaultItems),
         station_id: null,
         job_type: 'production',
@@ -490,7 +491,7 @@ export async function enqueueProductionByStation(
   orderId: string,
   items: any[],
   orderNumber: string,
-  customerName: string,
+  customerName: string | null | undefined,
   orderOrigin?: string,
 ): Promise<boolean>;
 export async function enqueueProductionByStation(
@@ -507,7 +508,7 @@ export async function enqueueProductionByStation(
   if (typeof companyIdOrParams === 'object') {
     return enqueueProductionByStationParams(companyIdOrParams);
   }
-  if (!orderId || !items || !orderNumber || !customerName) {
+  if (!orderId || !items || !orderNumber) {
     throw new Error('Dados incompletos para enviar a comanda à impressão');
   }
   return enqueueProductionByStationLegacy(
