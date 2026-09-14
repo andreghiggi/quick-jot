@@ -1135,7 +1135,6 @@ export default function FrenteCaixa() {
         // Se modo `ask`/`off`: mantém diálogo (operador decide).
         // Se modo `auto` e só NFC-e: emite em background, imprime DANFE direto
         // (janela nativa do Chrome) e não abre diálogo — a menos que dê erro.
-        const tefPendingDialog = hasTef && !tefEarlyPrinted;
         const silentAutoNfce = autoMode && !hasTef && hasNfce;
         if ((hasTef || hasNfce) && !silentAutoNfce) {
           setConsolidatedTef(capturedTef);
