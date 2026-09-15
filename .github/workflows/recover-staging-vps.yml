@@ -1,0 +1,64 @@
+name: Recover Staging VPS (via prod SSH)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  recover-staging:
+    name: Recover ComandaTech STAGING (prod intocada)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout staging v2 scripts
+        uses: actions/checkout@v4
+        with:
+          repository: andreghiggi/comandatech-staging-v2
+          ref: main
+          path: staging-v2
+
+      - name: Setup SSH key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null
+          HOST="$(echo "$VPS_HOST" | tr -d '[:space:]')"
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -o BatchMode=yes -o ConnectTimeout=15 -i ~/.ssh/deploy_key "root@${HOST}" "echo SSH_OK"
+
+      - name: Upload staging scripts and run recover
+        run: |
+          set -euo pipefail
+          HOST="${{ secrets.VPS_HOST }}"
+          SRC="staging-v2"
+          scp -i ~/.ssh/deploy_key -r "$SRC/deploy/staging" root@${HOST}:/var/www/comandatech/deploy/
+          scp -i ~/.ssh/deploy_key "$SRC/deploy/docker/docker-compose.staging.yml" \
+            root@${HOST}:/var/www/comandatech/deploy/docker/
+          scp -i ~/.ssh/deploy_key "$SRC/deploy/nginx/api-staging.comandatech.com.br.conf" \
+            "$SRC/deploy/nginx/staging.comandatech.com.br.conf" \
+            root@${HOST}:/var/www/comandatech/deploy/nginx/
+          scp -i ~/.ssh/deploy_key -r "$SRC/deploy/supabase/functions/main" \
+            root@${HOST}:/var/www/comandatech/deploy/supabase/functions/ 2>/dev/null || true
+          ssh -i ~/.ssh/deploy_key root@${HOST} "mkdir -p /var/www/comandatech/supabase/migrations /var/www/comandatech/supabase/functions /var/www/comandatech/scripts"
+          scp -i ~/.ssh/deploy_key "$SRC/supabase/migrations/20260915000000_web_print_tokens.sql" \
+            root@${HOST}:/var/www/comandatech/supabase/migrations/
+          scp -i ~/.ssh/deploy_key -r "$SRC/supabase/functions/web-print-session" \
+            root@${HOST}:/var/www/comandatech/supabase/functions/
+          scp -i ~/.ssh/deploy_key "$SRC/scripts/verify-staging-health.mjs" \
+            root@${HOST}:/var/www/comandatech/scripts/
+          ssh -i ~/.ssh/deploy_key root@${HOST} bash -s << 'ENDSSH'
+            set -e
+            chmod +x /var/www/comandatech/deploy/staging/*.sh
+            bash /var/www/comandatech/deploy/staging/recover-staging-full.sh
+          ENDSSH
+
+      - name: Verify staging health externally
+        working-directory: staging-v2
+        env:
+          STAGING_ANON_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          node scripts/verify-staging-health.mjs || echo "Verificação externa pendente — checar logs na VPS"
