@@ -59,23 +59,42 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy dist to VPS
+      - name: Deploy dist and failover monitor to VPS
+        env:
+          LOVABLE_ANON: ${{ secrets.LOVABLE_SUPABASE_ANON_KEY }}
+          VPS_ANON: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           tar -C dist -czf /tmp/comandatech-dist.tar.gz .
           scp -i ~/.ssh/deploy_key /tmp/comandatech-dist.tar.gz root@${{ secrets.VPS_HOST }}:/tmp/comandatech-dist.tar.gz
-          ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} << 'ENDSSH'
+          scp -i ~/.ssh/deploy_key scripts/failover-monitor.mjs scripts/install-failover-cron.sh root@${{ secrets.VPS_HOST }}:/var/www/comandatech/scripts/
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} bash -s << ENDSSH
             set -e
             echo "==> Preparing static deploy"
             rm -rf /tmp/comandatech-dist
-            mkdir -p /tmp/comandatech-dist /var/www/comandatech/dist
+            mkdir -p /tmp/comandatech-dist /var/www/comandatech/dist /etc/comandatech /var/lib/comandatech /var/log/comandatech
             tar -xzf /tmp/comandatech-dist.tar.gz -C /tmp/comandatech-dist
             echo "==> Publishing dist"
             rm -rf /var/www/comandatech/dist/*
             cp -a /tmp/comandatech-dist/. /var/www/comandatech/dist/
             rm -f /tmp/comandatech-dist.tar.gz
+            chmod +x /var/www/comandatech/scripts/install-failover-cron.sh
+            echo "==> Failover env"
+            printf '%s\n' \
+              'LOVABLE_URL=https://iwmrtxdzlkasuzutxvhh.supabase.co' \
+              "LOVABLE_ANON=${LOVABLE_ANON}" \
+              'VPS_URL=https://api.comandatech.com.br' \
+              "VPS_ANON=${VPS_ANON}" \
+              'FAILBACK_AFTER_OK=3' \
+              'RUNTIME_CONFIG_PATH=/var/www/comandatech/dist/runtime-config.json' \
+              'FAILOVER_STATE_PATH=/var/lib/comandatech/failover-state.json' \
+              'FAILOVER_LOG_PATH=/var/log/comandatech/failover.log' \
+              > /etc/comandatech/failover.env
+            echo "==> Failover cron + runtime-config.json"
+            bash /var/www/comandatech/scripts/install-failover-cron.sh
             echo "==> Reloading Nginx"
             systemctl reload nginx
             echo "==> Smoke test produção"
             cd /var/www/comandatech && node scripts/validate-prod-bundle.mjs || exit 1
+            test -f /var/www/comandatech/dist/runtime-config.json || (echo "FAIL: runtime-config.json ausente" && exit 1)
             echo "==> Deploy complete!"
           ENDSSH
