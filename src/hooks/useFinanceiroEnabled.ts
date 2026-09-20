@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { scheduleModuleFlagTimeout } from '@/hooks/moduleFlagTimeout';
 
 /**
  * Hook isolado que verifica se a empresa tem o módulo `financeiro` ativo.
@@ -76,6 +77,10 @@ export function useFinanceiroEnabled(companyId?: string | null) {
       setLoading(true);
     }
 
+    const timer = scheduleModuleFlagTimeout('financeiro', companyId, () => {
+      if (!cancelled) setLoading(false);
+    });
+
     supabase
       .from('company_modules')
       .select('enabled')
@@ -83,6 +88,7 @@ export function useFinanceiroEnabled(companyId?: string | null) {
       .eq('module_name', 'financeiro')
       .maybeSingle()
       .then(({ data }) => {
+        window.clearTimeout(timer);
         if (cancelled) return;
         const value = !!data?.enabled;
         setEnabled(value);
@@ -92,6 +98,7 @@ export function useFinanceiroEnabled(companyId?: string | null) {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [companyId, reloadTick]);
 

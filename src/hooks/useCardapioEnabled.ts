@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { scheduleModuleFlagTimeout } from '@/hooks/moduleFlagTimeout';
 
 /**
  * Hook que verifica se o módulo `cardapio` está ATIVO para a loja.
@@ -57,6 +58,10 @@ export function useCardapioEnabled(companyId?: string | null) {
       setLoading(true);
     }
 
+    const timer = scheduleModuleFlagTimeout('cardapio', companyId, () => {
+      if (!cancelled) setLoading(false);
+    });
+
     supabase
       .from('company_modules')
       .select('enabled')
@@ -64,6 +69,7 @@ export function useCardapioEnabled(companyId?: string | null) {
       .eq('module_name', 'cardapio')
       .maybeSingle()
       .then(({ data }) => {
+        window.clearTimeout(timer);
         if (cancelled) return;
         // Sem linha → padrão TRUE (loja tem cardápio).
         const value = data ? !!data.enabled : true;
@@ -74,6 +80,7 @@ export function useCardapioEnabled(companyId?: string | null) {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [companyId]);
 

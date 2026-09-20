@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { scheduleModuleFlagTimeout } from '@/hooks/moduleFlagTimeout';
 
 /**
  * Hook isolado que verifica se a empresa tem o módulo `mercado` ativo.
@@ -52,6 +53,10 @@ export function useMercadoEnabled(companyId?: string | null) {
       setLoading(true);
     }
 
+    const timer = scheduleModuleFlagTimeout('mercado', companyId, () => {
+      if (!cancelled) setLoading(false);
+    });
+
     supabase
       .from('company_modules')
       .select('enabled')
@@ -59,6 +64,7 @@ export function useMercadoEnabled(companyId?: string | null) {
       .eq('module_name', 'mercado')
       .maybeSingle()
       .then(({ data }) => {
+        window.clearTimeout(timer);
         if (cancelled) return;
         const value = !!data?.enabled;
         setEnabled(value);
@@ -68,6 +74,7 @@ export function useMercadoEnabled(companyId?: string | null) {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [companyId]);
 
