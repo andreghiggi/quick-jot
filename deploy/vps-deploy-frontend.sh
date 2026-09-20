@@ -9,7 +9,7 @@ LIVE="${APP_DIR}/dist"
 
 cd "$APP_DIR"
 
-# .env local sobrescreve .env.production — isolar durante build Lovable
+# .env local sobrescreve .env.production — isolar durante build de produção
 if [[ -f .env ]]; then
   mv .env .env.vps-api-bak
   trap '[[ -f .env.vps-api-bak ]] && mv .env.vps-api-bak .env' EXIT
@@ -30,18 +30,14 @@ if [[ -z "${VITE_SUPABASE_URL:-}" ]] || [[ -z "${VITE_SUPABASE_PUBLISHABLE_KEY:-
   echo "ERRO: VITE_SUPABASE_URL ou VITE_SUPABASE_PUBLISHABLE_KEY ausente" >&2
   exit 1
 fi
-if echo "$VITE_SUPABASE_URL" | grep -q 'api.comandatech.com.br'; then
-  echo "ERRO: VITE_SUPABASE_URL aponta para VPS API (use Lovable Cloud)" >&2
-  exit 1
-fi
-if ! echo "$VITE_SUPABASE_URL" | grep -qE 'iwmrtxdzlkasuzutxvhh|\.supabase\.co'; then
-  echo "ERRO: VITE_SUPABASE_URL deve ser iwmrtxdzlkasuzutxvhh.supabase.co" >&2
+if [[ "$VITE_SUPABASE_URL" != "https://api.comandatech.com.br" ]]; then
+  echo "ERRO: VITE_SUPABASE_URL deve ser https://api.comandatech.com.br" >&2
   exit 1
 fi
 
 echo "==> Build (URL=$VITE_SUPABASE_URL)"
 export VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY
-export VITE_SUPABASE_PROJECT_ID="${VITE_SUPABASE_PROJECT_ID:-iwmrtxdzlkasuzutxvhh}"
+export VITE_SUPABASE_PROJECT_ID="${VITE_SUPABASE_PROJECT_ID:-comandatech-vps}"
 
 if command -v bun >/dev/null 2>&1; then
   bun run build

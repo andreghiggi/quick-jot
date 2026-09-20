@@ -59,23 +59,36 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy dist to VPS
+      - name: Deploy dist to VPS with immediate rollback
         run: |
           tar -C dist -czf /tmp/comandatech-dist.tar.gz .
           scp -i ~/.ssh/deploy_key /tmp/comandatech-dist.tar.gz root@${{ secrets.VPS_HOST }}:/tmp/comandatech-dist.tar.gz
           ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} << 'ENDSSH'
             set -e
             echo "==> Preparing static deploy"
-            rm -rf /tmp/comandatech-dist
-            mkdir -p /tmp/comandatech-dist /var/www/comandatech/dist
+            stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+            release="/var/www/comandatech/releases/$stamp"
+            previous="/var/www/comandatech/releases/${stamp}-previous"
+            rm -rf /tmp/comandatech-dist "$release" "$previous"
+            mkdir -p /tmp/comandatech-dist "$release" /var/www/comandatech/releases
             tar -xzf /tmp/comandatech-dist.tar.gz -C /tmp/comandatech-dist
+            cp -a /tmp/comandatech-dist/. "$release/"
+            if [ -d /var/www/comandatech/dist ]; then
+              cp -a /var/www/comandatech/dist "$previous"
+            fi
             echo "==> Publishing dist"
-            rm -rf /var/www/comandatech/dist/*
-            cp -a /tmp/comandatech-dist/. /var/www/comandatech/dist/
+            rsync -a --delete "$release/" /var/www/comandatech/dist/
             rm -f /tmp/comandatech-dist.tar.gz
             echo "==> Reloading Nginx"
             systemctl reload nginx
             echo "==> Smoke test produção"
-            cd /var/www/comandatech && node scripts/validate-prod-bundle.mjs || exit 1
+            if ! (cd /var/www/comandatech && node scripts/validate-prod-bundle.mjs); then
+              echo "==> Smoke test falhou; restaurando bundle anterior"
+              if [ -d "$previous" ]; then
+                rsync -a --delete "$previous/" /var/www/comandatech/dist/
+                systemctl reload nginx
+              fi
+              exit 1
+            fi
             echo "==> Deploy complete!"
           ENDSSH
