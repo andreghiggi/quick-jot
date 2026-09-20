@@ -21,6 +21,16 @@ A VPS permanece como fonte única da produção. O Lovable Cloud não receberá 
 - Esta sessão não possui chave SSH direta da VPS. O repositório possui um caminho de acesso por publicação automatizada, mas o acesso efetivo à máquina ainda precisa ser comprovado com uma verificação somente leitura antes de qualquer mudança.
 - A Lancheria da I9 será a primeira loja validada. O TEF/PinPad homologado continuará congelado: não haverá alteração em seu código ou configuração sem autorização separada.
 
+## Execução agendada
+
+- **Início:** 21/09/2026 às **00:00**, horário de Brasília (`America/Sao_Paulo`).
+- Após a aprovação deste plano, preparar um acionamento único e auditável para essa data; ele não ficará recorrente.
+- Às 00:00 poderão iniciar automaticamente apenas o diagnóstico, a confirmação de acesso, os backups, o inventário e a preparação em staging.
+- Nenhuma troca do frontend ativo, correção de dados/configurações, operação fiscal ou expansão para outras lojas será automática.
+- A publicação do piloto dependerá de: acesso à VPS comprovado, backup confirmado, comparações sem divergência crítica e responsável da I9 disponível para validar a operação real.
+- Se algum requisito não estiver pronto à meia-noite, o processo para em segurança, mantém a produção atual intacta e registra claramente o bloqueio; não tentará contornar nem executar parcialmente a virada.
+- Como esta sessão ainda não possui chave SSH da VPS, o agendamento só poderá ser confirmado como efetivamente instalado depois que o acesso for comprovado. Até lá, a data está definida no plano, mas nenhuma automação foi instalada.
+
 ## Etapas, do menor para o maior risco
 
 ### 1. Congelar e registrar o estado atual — somente leitura
@@ -37,7 +47,7 @@ A VPS permanece como fonte única da produção. O Lovable Cloud não receberá 
 - Comprovar acesso à VPS por comando somente leitura, preferencialmente pelo caminho automatizado já configurado; nenhuma senha ou chave será exibida.
 - Confirmar que há backup utilizável do banco, funções, arquivos e frontend atual antes de alterações.
 - Guardar o bundle atualmente publicado para retorno imediato.
-- Definir uma janela curta de menor movimento com responsável da I9 disponível.
+- Usar a janela iniciada em 21/09/2026 às 00:00, com responsável da I9 disponível antes de liberar o piloto.
 
 **Bloqueio:** nenhuma alteração na VPS começa sem acesso comprovado e cópia de retorno confirmada.
 
