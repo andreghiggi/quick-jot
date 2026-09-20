@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.71.5-beta";
-export const RELEASE_DATE = "2026-09-14"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Pedidos, impressão e recuperação protegidos";
+export const VERSION = "1.72.0-beta";
+export const RELEASE_DATE = "2026-09-20"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Produção unificada e retorno rápido";
 
 
 
@@ -22,6 +22,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.72.0-beta",
+    date: "2026-09-20",
+    codename: "Produção unificada e retorno rápido",
+    changes: [
+      "Publicação do sistema passa a usar um único endereço de produção, evitando pacotes publicados no destino errado.",
+      "Se a verificação após a publicação falhar, a versão anterior volta automaticamente no ar.",
+      "Instaladores de impressão passam a usar o endereço de produção atual, com possibilidade de ajuste por loja.",
+      "Preparada uma verificação única de madrugada que apenas confere o ambiente e guarda cópia de retorno, sem alterar dados.",
+      "Nenhuma nota fiscal, cobrança TEF, configuração de loja ou dado foi alterado.",
+    ],
+  },
   {
     version: "1.71.5-beta",
     date: "2026-09-14",
