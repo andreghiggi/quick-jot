@@ -1,52 +1,61 @@
-# Tela branca no site das lojas — diagnosticar e proteger
+# Tela branca na Bon Appetit — diagnosticar e proteger, sem afetar as outras lojas
+
+## Escopo
+
+- Loja afetada: **Lancheria Bon Appetit** (`32b71649-461d-4cb6-b26c-12390b090feb`).
+- Nenhum dado será apagado ou alterado em massa.
+- Nenhuma outra loja será parada, alterada ou publicada por causa desta correção.
 
 ## O que já está confirmado agora
 
 - O site `app.comandatech.com.br` responde e a tela de login carrega normalmente (versão publicada 1.71.5-beta, anterior aos ajustes de hoje).
-- O servidor das lojas responde: login, dados e cardápio atendem às chamadas de verificação.
+- O servidor das lojas responde a login, dados e cardápio nas verificações feitas.
 - Nenhum erro de JavaScript apareceu nas telas públicas testadas.
-- Portanto, a tela branca **não** está na abertura do site nem foi causada pela publicação de hoje.
+- Logo, a tela branca **não** está na abertura do site e **não** foi causada por publicação de hoje.
 
-O que ainda não está confirmado é em qual ponto a tela fica branca (após entrar, em uma loja específica, ou em uma tela interna). A primeira etapa do plano é justamente descobrir isso — sem alterar dados.
+O ponto exato da tela branca na Bon Appetit ainda não está confirmado. A primeira etapa é justamente identificar isso sem alterar nada.
 
-## Etapa 1 — Reproduzir e localizar (sem mudar nada)
+## Etapa 1 — Reproduzir e localizar (somente leitura)
 
-- Reproduzir a tela branca com um acesso real de loja, acompanhando o que o sistema tenta carregar naquele momento.
-- Registrar: loja, tela, horário, se acontece sempre ou de vez em quando, e se acontece em outros aparelhos/navegadores.
-- Verificar se o servidor demora ou falha em alguma das consultas que a tela precisa para aparecer.
+- Reproduzir a tela branca com um acesso real da Bon Appetit, observando o que o sistema tenta carregar naquele instante.
+- Registrar: tela em que ocorre, se é antes ou depois de entrar, horário, se recarregar resolve e se ocorre em outro aparelho.
+- Conferir, apenas lendo, a configuração da Bon Appetit: vínculo de usuário e empresa, módulos ativos, situação da licença e configurações de loja.
+- Comparar com uma loja que está funcionando, para isolar o que é específico dessa loja.
 
-**Saída:** causa identificada com evidência, não suposição.
+**Saída:** causa comprovada, não suposição. Enquanto isso, nada é alterado.
 
-## Etapa 2 — Proteger contra tela branca (independe da causa)
+## Etapa 2 — Proteger contra tela branca (melhoria geral e segura)
 
-Hoje o sistema tem pontos que mostram literalmente nada enquanto uma verificação não responde. Se o servidor demorar, o usuário vê tela branca sem mensagem nem saída.
+Hoje existem pontos do sistema que não mostram nada enquanto uma verificação de acesso não responde. Se o servidor demorar, o resultado é tela branca sem mensagem nem saída.
 
 Ajustes previstos:
 
-- Trocar as telas vazias por indicador de carregamento em todos os pontos de bloqueio de acesso.
-- Aplicar um limite de espera: se a verificação não responder a tempo, o sistema segue com a tela e avisa, em vez de ficar branco.
-- Mostrar uma mensagem clara com botão "tentar de novo" quando a consulta falhar, em vez de tela vazia.
-- Registrar o motivo no console para diagnóstico rápido em atendimento.
+- Substituir as telas vazias por indicador de carregamento nos pontos de verificação de acesso.
+- Aplicar limite de espera: se a verificação não responder a tempo, o sistema continua e avisa, em vez de ficar branco.
+- Exibir mensagem clara com opção de tentar novamente quando a consulta falhar.
+- Registrar o motivo para diagnóstico rápido em atendimento.
 
-Nada disso muda regras de venda, caixa, cardápio, impressão, TEF ou fiscal.
+Isso não muda regras de venda, caixa, cardápio, impressão, TEF ou fiscal, e não altera dados de nenhuma loja.
 
-## Etapa 3 — Corrigir a causa encontrada
+## Etapa 3 — Corrigir a causa da Bon Appetit
 
-Depois da Etapa 1, aplicar a correção específica, restrita à loja ou à tela afetada, com comparação antes/depois.
+- Aplicar a correção específica encontrada na Etapa 1, restrita à Bon Appetit.
+- Se for configuração da loja, ajustar apenas os campos divergentes, com comparação antes e depois.
+- Nenhum acerto retroativo de vendas, caixas, notas ou filas de impressão.
 
-## Etapa 4 — Validar e publicar
+## Etapa 4 — Validar e liberar
 
-- Testar em uma loja, confirmando entrada, cardápio, pedidos, caixa e impressão.
-- Publicar com verificação automática e retorno imediato à versão anterior em caso de falha.
+- Validar na Bon Appetit: entrada, cardápio, pedidos, impressão, caixa e pagamento, acompanhando a operação real.
+- Publicar com verificação automática e retorno imediato à versão anterior se o teste falhar, evitando impacto nas demais lojas.
 - Registrar a correção em **Novidades**.
 
 ## Regras de segurança
 
-- Nenhum dado será apagado ou alterado em massa.
-- Nenhuma nota fiscal será emitida, reemitida, cancelada ou inutilizada.
-- Nenhuma cobrança TEF de teste será criada; TEF/PinPad permanece congelado.
-- Cada mudança será validada antes de liberar para as demais lojas.
+- Nenhum dado apagado, redefinido ou substituído.
+- Nenhuma nota fiscal emitida, reemitida, cancelada ou inutilizada.
+- Nenhuma cobrança TEF de teste; TEF/PinPad permanece congelado.
+- Ajustes restritos à Bon Appetit; demais lojas seguem operando sem interrupção.
 
-## Informação que acelera muito o diagnóstico
+## Informação que acelera o diagnóstico
 
-Se possível, informe: qual loja, se a tela branca aparece antes ou depois de entrar com usuário e senha, e se recarregar a página resolve temporariamente.
+Se possível, diga se a tela branca na Bon Appetit aparece antes ou depois de entrar com usuário e senha, e se recarregar a página resolve por algum tempo.
