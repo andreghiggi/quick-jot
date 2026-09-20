@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '20/09/2026',
+    version: '1.72.0-beta',
+    type: 'improvement',
+    description: 'Retomada com mínimo impacto: a publicação do sistema agora usa um único endereço de produção, impedindo que um pacote suba apontando para o lugar errado. Depois de publicar, o sistema é testado automaticamente e, se algo falhar, a versão anterior volta imediatamente ao ar. Os instaladores de impressão passaram a usar o endereço atual de produção, ainda podendo ser ajustados por loja. Também foi preparada uma verificação única de madrugada que apenas confere se tudo está saudável e guarda uma cópia de retorno, sem publicar nada, sem tocar em dados, notas fiscais, TEF ou configurações das lojas.',
+  },
+  {
     date: '14/09/2026',
     version: '1.71.5-beta',
     type: 'fix',

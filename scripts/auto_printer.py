@@ -97,7 +97,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 SCRIPT_VERSION = "1.7.8"
 CHECK_INTERVAL = 5  # Segundos entre verificações
-API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
+API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
 LOG_FILE = "printer_log.txt"
 STORE_NAME = ""
