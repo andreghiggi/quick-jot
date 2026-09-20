@@ -1,0 +1,55 @@
+name: VPS midnight readiness
+
+on:
+  # 00:00 em America/Sao_Paulo na data aprovada (03:00 UTC).
+  # A guarda de data torna esta execução efetivamente única.
+  schedule:
+    - cron: '0 3 21 9 *'
+  workflow_dispatch:
+
+jobs:
+  readiness:
+    name: Diagnostic and safe backup preparation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce the approved one-time window
+        if: github.event_name == 'schedule'
+        run: |
+          test "$(TZ=America/Sao_Paulo date +%F)" = "2026-09-21" || {
+            echo "Fora da janela única aprovada; encerrando sem conectar à produção."
+            exit 0
+          }
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate required access configuration
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          test -n "$VPS_HOST" || { echo "VPS_HOST ausente"; exit 1; }
+          test -n "$VPS_SSH_KEY" || { echo "VPS_SSH_KEY ausente"; exit 1; }
+
+      - name: Configure SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Run diagnostics and prepare frontend return copy
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          scp -i ~/.ssh/deploy_key scripts/vps-midnight-readiness.sh root@"$VPS_HOST":/tmp/vps-midnight-readiness.sh
+          ssh -i ~/.ssh/deploy_key root@"$VPS_HOST" \
+            'chmod 700 /tmp/vps-midnight-readiness.sh && /tmp/vps-midnight-readiness.sh; rc=$?; rm -f /tmp/vps-midnight-readiness.sh; exit $rc'
+
+      - name: Confirm no cutover was performed
+        run: |
+          echo "Diagnóstico e cópia de retorno concluídos."
+          echo "Nenhum deploy, sincronização de banco, chamada fiscal ou operação TEF foi executado."

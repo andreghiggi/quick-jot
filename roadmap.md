@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Preparar acionamento único para 21/09/2026 00:00 BRT, somente diagnóstico e backups seguros
+- [x] Preparar acionamento único para 21/09/2026 00:00 BRT, somente diagnóstico e cópia de retorno do frontend
 - [ ] Confirmar acesso efetivo à VPS sem expor credenciais
 - [ ] Inventariar produção e divergências por loja
 - [ ] Padronizar publicação do frontend para a API da VPS
