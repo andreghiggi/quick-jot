@@ -97,7 +97,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 SCRIPT_VERSION = "1.7.8"
 CHECK_INTERVAL = 5  # Segundos entre verificações
-API_URL = "https://iwmrtxdzlkasuzutxvhh.supabase.co/rest/v1"
+API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bXJ0eGR6bGthc3V6dXR4dmhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3OTExODMsImV4cCI6MjA4MDM2NzE4M30.VsnT1zdVUwJdv8gBlg8CthBx_bccZp-LsOs2PRq1Uik" # Injetado pelo frontend
 LOG_FILE = "printer_log.txt"
 STORE_NAME = "Bon Appetit"
