@@ -60,7 +60,7 @@ function RootRedirect() {
 function PDVV2Guard({ children }: { children: ReactNode }) {
   const { company } = useAuthContext();
   const { enabled, loading } = usePdvV2Enabled(company?.id);
-  if (loading) return null;
+  if (loading) return <PageLoader />;
   if (!enabled) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
@@ -84,7 +84,7 @@ function FrenteCaixaGuard({ children }: { children: ReactNode }) {
 function FinanceiroGuard({ children }: { children: ReactNode }) {
   const { company } = useAuthContext();
   const { enabled, loading } = useFinanceiroEnabled(company?.id);
-  if (loading) return null;
+  if (loading) return <PageLoader />;
   if (!enabled) return <Navigate to="/" replace />;
   return <>{children}</>;
 }

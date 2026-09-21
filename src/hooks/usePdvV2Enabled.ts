@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { scheduleModuleFlagTimeout } from '@/hooks/moduleFlagTimeout';
 
 /**
  * Hook isolado que verifica se a empresa tem o módulo PDV V2 ativo.
@@ -50,6 +51,10 @@ export function usePdvV2Enabled(companyId?: string | null) {
       setLoading(true);
     }
 
+    const timer = scheduleModuleFlagTimeout('pdv_v2', companyId, () => {
+      if (!cancelled) setLoading(false);
+    });
+
     supabase
       .from('company_modules')
       .select('enabled')
@@ -57,6 +62,7 @@ export function usePdvV2Enabled(companyId?: string | null) {
       .eq('module_name', 'pdv_v2')
       .maybeSingle()
       .then(({ data }) => {
+        window.clearTimeout(timer);
         if (cancelled) return;
         const value = !!data?.enabled;
         setEnabled(value);
@@ -66,6 +72,7 @@ export function usePdvV2Enabled(companyId?: string | null) {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [companyId]);
 

@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '21/09/2026',
+    version: '1.72.1-beta',
+    type: 'fix',
+    description: 'Proteção contra tela branca: enquanto o sistema confere as permissões da loja, aparece o indicador de carregamento em vez de uma tela vazia. Se alguma verificação não responder em poucos segundos, a tela é liberada com a última informação conhecida e o aviso fica registrado para análise. A entrada no sistema também deixa de ficar presa quando os dados do usuário demoram a chegar. Nenhuma regra de venda, caixa, cardápio, impressão, TEF ou fiscal foi alterada.',
+  },
+  {
     date: '20/09/2026',
     version: '1.72.0-beta',
     type: 'improvement',
