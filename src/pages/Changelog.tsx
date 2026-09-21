@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '21/09/2026',
+    version: '1.72.5-beta',
+    type: 'fix',
+    description: 'Bon Appetit: corrigida a queda da Dashboard poucos segundos após abrir. Pedidos com a situação "Cancelado" não tinham aparência definida e derrubavam a tela inteira quando a lista de pedidos terminava de carregar. Agora o pedido cancelado é exibido normalmente, reconhecido pela própria situação, e qualquer situação desconhecida passa a aparecer de forma neutra sem quebrar Dashboard, PDV ou abas. Nenhum pedido, venda, caixa, impressão, TEF ou documento fiscal foi alterado.',
+  },
+  {
+    date: '21/09/2026',
     version: '1.72.4-beta',
     type: 'fix',
     description: 'Bon Appetit: corrigida a falha de abertura do PDV em alguns iPhones. A tela principal deixa de depender do carregamento separado que o Safari não conseguia resolver e a abertura da gaveta aguarda a identificação segura da loja. Mensagens futuras também aparecem completas para diagnóstico. Nenhum dado, pagamento, impressão, TEF ou documento fiscal foi alterado.',
