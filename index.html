@@ -101,7 +101,7 @@
             if (isResource) {
               var src = target.src || target.href || '';
               if (src.indexOf('/assets/') === -1 && src.indexOf('/src/') === -1) return;
-              showBootError(src);
+              if (!appStarted()) showBootError(src);
               return;
             }
             window.setTimeout(function () {
