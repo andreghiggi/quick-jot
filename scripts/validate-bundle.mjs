@@ -31,18 +31,10 @@ if (!/https:\/\/api\.comandatech\.com\.br/.test(js)) {
   errors.push('não contém api.comandatech.com.br');
 }
 
-const afterUrl = js.match(/https:\/\/api\.comandatech\.com\.br[^"]*".{0,80}/);
-if (!afterUrl) {
-  errors.push('não encontrou createClient com URL VPS');
-} else if (/=\s*""/.test(afterUrl[0]) && !/eyJhbG/.test(afterUrl[0])) {
-  errors.push('anon key VAZIA — app trava em Carregando');
-} else if (
-  !/eyJhbGciOiJIUzI1Ni/.test(afterUrl[0]) &&
-  !/eyJhbG/.test(
-    js.slice(js.indexOf('api.comandatech.com.br'), js.indexOf('api.comandatech.com.br') + 250),
-  )
-) {
-  errors.push('anon key JWT ausente após URL VPS');
+// A compactação pode afastar a chave da URL no arquivo final. Valide cada
+// requisito no bundle inteiro, sem exigir uma posição específica.
+if (!/eyJhbGciOiJIUzI1Ni/.test(js)) {
+  errors.push('anon key JWT ausente no bundle');
 }
 
 if (errors.length) {
