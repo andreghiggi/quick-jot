@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.72.2-beta";
+export const VERSION = "1.72.3-beta";
 export const RELEASE_DATE = "2026-09-21"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Fim da tela branca";
+export const CODENAME = "Abertura sempre visível";
 
 
 
@@ -22,6 +22,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.72.3-beta",
+    date: "2026-09-21",
+    codename: "Abertura sempre visível",
+    changes: [
+      "A abertura passa a ter uma proteção independente do aplicativo: se nada aparecer, uma tela de recuperação com botão Recarregar é exibida.",
+      "Carregamentos e redirecionamentos deixam de renderizar uma área vazia e passam a mostrar o estado da abertura.",
+      "Arquivos técnicos antigos são limpos somente quando uma atualização não consegue carregar; sessão e dados da loja são preservados.",
+      "Nenhuma regra de venda, caixa, cardápio, impressão, TEF ou fiscal foi alterada.",
+    ],
+  },
   {
     version: "1.72.2-beta",
     date: "2026-09-21",

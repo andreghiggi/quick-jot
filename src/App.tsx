@@ -31,11 +31,7 @@ function RootRedirect() {
   const { enabled: cardapioEnabled, loading: cardapioLoading } = useCardapioEnabled(company?.id);
 
   if (loading || (user && !userDataReady)) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+    return <PageLoader />;
   }
   if (!user) return <Navigate to="/auth" replace />;
   // Quando super_admin/revendedor está impersonando uma loja, comporta-se como a loja.
@@ -118,9 +114,16 @@ function AppRoutes() {
     );
   }
 
-  // Tela em branco enquanto o redirect do domínio raiz acontece
+  // Mantém uma saída visível caso o navegador bloqueie ou atrase o redirect.
   if (domainCtx.kind === 'root-redirect') {
-    return null;
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <PageLoader />
+        <a className="text-sm font-medium text-primary underline" href={`https://app.${COMANDATECH_ROOT}`}>
+          Abrir ComandaTech
+        </a>
+      </div>
+    );
   }
 
   return (
